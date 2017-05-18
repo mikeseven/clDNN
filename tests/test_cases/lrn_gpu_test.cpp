@@ -862,9 +862,9 @@ public:
             const auto chans = format::traits(p->fmt).order;
 
             res << "_" << "Input" << i;
-            for (unsigned int j = 0; j < p->input_layouts[i].sizes(p->fmt).size(); ++j)
+            for (unsigned int j = 0; j < p->input_layouts[i].size.sizes(p->fmt).size(); ++j)
             {
-                res << chans[j] << p->input_layouts[i].sizes()[j];
+                res << chans[j] << p->input_layouts[i].size.sizes()[j];
             }
         }
 

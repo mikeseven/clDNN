@@ -740,13 +740,13 @@ public:
 
 	static std::vector<std::tuple<test_params*, cldnn::primitive*>> generate_specific_test_params()
 	{
-		generic_test::generate_generic_test_params(all_generic_params, true);
+		generic_test::generate_generic_test_params(all_generic_params);
 
 		const std::vector<cldnn::data_types> data_types = { cldnn::data_types::f32 ,  cldnn::data_types::f16 };
 
 		for (auto test_param : all_generic_params)
 		{
-			cldnn::tensor input_tensor = test_param->input_layouts[0];
+			cldnn::tensor input_tensor = test_param->input_layouts[0].size;
 
 			std::vector<cldnn::layout> output_layouts = {};
 

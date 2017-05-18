@@ -469,14 +469,14 @@ public:
 		// Prepare scale input for normalize layer (size should be 1 since the scale is shared across the channels).
 		for (tests::test_params* test_param : all_generic_params_scale_shared)
 		{
-			test_param->input_layouts.push_back(cldnn::tensor(1, 1, 1, 1));
+			test_param->input_layouts.push_back(cldnn::layout(test_param->data_type, test_param->fmt, cldnn::tensor(1, 1, 1, 1)));
 		}
 
 		// Prepare scale input for normalize layer (size should be equal to input feature size - one scale per channel).
 		for (tests::test_params* test_param : all_generic_params_scale_per_channel)
 		{
-			cldnn::tensor input_size = test_param->input_layouts[0];
-			test_param->input_layouts.push_back(cldnn::tensor(1, 1, input_size.feature[0], 1));
+			cldnn::tensor input_size = test_param->input_layouts[0].size;
+			test_param->input_layouts.push_back(cldnn::layout(test_param->data_type, test_param->fmt, cldnn::tensor(1, 1, input_size.feature[0], 1)));
 		}
 
 		// Create all the combinations for the test.

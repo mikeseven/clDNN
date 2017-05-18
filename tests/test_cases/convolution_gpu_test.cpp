@@ -2364,3 +2364,342 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxfb_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
 
 #undef USE_OLD_WEIGHTS_FORMAT
 }
+
+class convolution_test : public tests::generic_test
+{
+
+public:
+
+	static void TearDownTestCase() 
+	{
+		for (auto generic_params : all_generic_params)
+		{
+			delete generic_params;
+		}
+
+		for (auto layer_params : all_layer_params)
+		{
+			delete layer_params;
+		}
+	}
+
+	static std::vector<cldnn::primitive*> generate_specific_test_params()
+	{
+		// TODO: check split 
+
+		// TODO: check convolution without bias 
+
+		const std::vector<primitive_id>& weights = { "input1" };
+		const std::vector<primitive_id>& bias = { "input2" };
+
+		std::vector<tensor> stride_sizes = { tensor(1, 1, 1, 1), tensor(1, 1, 2, 3), tensor(1, 1, 4, 1), tensor(1, 1, 5, 5) };
+		std::vector<tensor> dilation_sizes = { tensor(1, 1, 1, 1), tensor(1, 1, 5, 4), tensor(1, 1, 1, 3), tensor(1, 1, 7, 2) };
+		std::vector<tensor> input_offset_sizes = { tensor(0, 0, 0, 0), tensor(0, 0, 2, 2), tensor(0, 0, -5, -2), tensor(0, 0, 3, -3) };
+
+		std::vector<bool> activations = { false, true };
+		std::vector<float> activation_slopes = { 0.f, -2.3f };
+
+		// No padding
+		all_layer_params.push_back(new convolution("convolution", "input0", weights, bias, stride_sizes[0], input_offset_sizes[0], dilation_sizes[0], activations[0], activation_slopes[0]));
+		all_layer_params.push_back(new convolution("convolution", "input0", weights, bias, stride_sizes[1], input_offset_sizes[1], dilation_sizes[1], activations[0], activation_slopes[0]));
+		all_layer_params.push_back(new convolution("convolution", "input0", weights, bias, stride_sizes[2], input_offset_sizes[2], dilation_sizes[2], activations[1], activation_slopes[0]));
+		all_layer_params.push_back(new convolution("convolution", "input0", weights, bias, stride_sizes[3], input_offset_sizes[3], dilation_sizes[3], activations[1], activation_slopes[1]));
+
+		// Input padding
+		all_layer_params.push_back(new convolution("convolution", "reorder0", weights, bias, stride_sizes[1], input_offset_sizes[1], dilation_sizes[1], activations[0], activation_slopes[0]));
+		all_layer_params.push_back(new convolution("convolution", "reorder0", weights, bias, stride_sizes[3], input_offset_sizes[3], dilation_sizes[3], activations[1], activation_slopes[1]));
+
+		// Output padding
+		all_layer_params.push_back(new convolution("convolution", "input0", weights, bias, stride_sizes[1], input_offset_sizes[1], dilation_sizes[1], activations[0], activation_slopes[0], { { 0, 0, 2, 4 },{ 0, 0, 0, 19 } }));
+		all_layer_params.push_back(new convolution("convolution", "input0", weights, bias, stride_sizes[2], input_offset_sizes[2], dilation_sizes[2], activations[1], activation_slopes[0], { { 0, 0, 1, 0 },{ 0, 0, 13, 9 } }));
+
+		// Input + Output padding
+		all_layer_params.push_back(new convolution("convolution", "reorder0", weights, bias, stride_sizes[0], input_offset_sizes[0], dilation_sizes[0], activations[0], activation_slopes[0], { { 0, 0, 1, 5 },{ 0, 0, 19, 4 } }));
+		all_layer_params.push_back(new convolution("convolution", "reorder0", weights, bias, stride_sizes[3], input_offset_sizes[3], dilation_sizes[3], activations[1], activation_slopes[1], { { 0, 0, 1, 2 },{ 0, 0, 3, 4 } }));
+
+		return all_layer_params;
+	}
+
+	static std::vector<std::tuple<tests::test_params*, cldnn::primitive*>> generate_all_test_params()
+	{
+		generate_specific_test_params();
+
+		std::vector<cldnn::format> input_formats = { cldnn::format::bfyx, cldnn::format::yxfb };
+		std::vector<cldnn::format> weights_formats = { cldnn::format::bfyx, cldnn::format::yxfb };
+
+		std::vector<int32_t> output_features_sizes = { 1, 3, 16 };
+		std::vector<cldnn::tensor> kernel_sizes = { tensor(1, 1, 1, 1), tensor(1, 1, 4, 7), tensor(1, 1, 5, 3) };
+
+		std::vector<tensor> input_tensor_size = { tensor(1, 5, 59, 72), tensor(8, 3, 63, 56), tensor(16, 2, 50, 50), tensor(32, 1, 44, 62) };
+
+		for (cldnn::data_types data_type : test_data_types)
+		{
+			for (cldnn::format input_format : input_formats)
+			{
+				for (cldnn::format weights_format : weights_formats)
+				{
+					if ((input_format == cldnn::format::yxfb) && (weights_format == cldnn::format::bfyx) && (data_type == cldnn::data_types::f16))
+					{
+						// yxfb oiyx convolution not supported in FP16.
+						continue;
+					}
+					cldnn::build_options network_build_options;
+					if (input_format == cldnn::format::bfyx)
+					{
+						network_build_options.set_option(cldnn::build_option::optimize_data(true));
+					}
+					for (cldnn::tensor input_size : input_tensor_size)
+					{
+						for (cldnn::tensor kernel_size : kernel_sizes)
+						{
+							for (auto output_features : output_features_sizes)
+							{
+								test_params* params = new test_params(data_type, input_format, input_size.batch[0], input_size.feature[0], tensor(1, 1, input_size.spatial[0], input_size.spatial[1]), network_build_options);
+								int input_features = params->input_layouts[0].size.feature[0];
+								params->input_layouts.push_back(cldnn::layout(params->data_type, weights_format, cldnn::tensor(output_features, input_features, kernel_size.spatial[0], kernel_size.spatial[1]))); // weights
+								params->input_layouts.push_back(cldnn::layout(params->data_type, params->fmt, cldnn::tensor(1, 1, output_features, 1))); // biases
+								all_generic_params.push_back(params);
+							}
+						}
+					}
+				}
+			}		
+		}
+
+		// Create all the combinations for the test.
+		for (cldnn::primitive* layer_param : all_layer_params)
+		{
+			for (tests::test_params* test_param : all_generic_params)
+			{
+				const cldnn::convolution* convolution = (cldnn::convolution*)layer_param;
+				if ((test_param->fmt == cldnn::format::yxfb) && (convolution->input[0] == "reorder0"))
+				{
+					// Input padding not support in yxfb convolution.
+					continue;
+				}
+				all_test_params.push_back(std::make_tuple(test_param, layer_param));
+			}
+		}
+
+		return all_test_params;
+	}
+
+	virtual bool is_format_supported(cldnn::format format)
+	{
+		return ((format == cldnn_format_type::cldnn_format_bfyx) || (format == cldnn_format_type::cldnn_format_yxfb));
+	}
+
+	virtual cldnn::tensor get_expected_output_tensor()
+	{
+		const cldnn::convolution* convolution = (cldnn::convolution*)layer_params;
+		tensor input_size = generic_params->input_layouts[0].size;
+		tensor dilation = convolution->dilation;
+		tensor stride = convolution->stride;
+		tensor input_offset = convolution->input_offset;
+		tensor weights_size = generic_params->input_layouts[1].size;
+
+		int kernel_extent_y = dilation.spatial[1] * (weights_size.spatial[1] - 1) + 1;
+		int kernel_extent_x = dilation.spatial[0] * (weights_size.spatial[0] - 1) + 1;
+
+		// Calculate output size
+		int output_size_y = 1 + (input_size.spatial[1] - kernel_extent_y - 2 * input_offset.spatial[1]) / stride.spatial[1];
+		int output_size_x = 1 + (input_size.spatial[0] - kernel_extent_x - 2 * input_offset.spatial[0]) / stride.spatial[0];
+		int output_features = weights_size.batch[0];
+
+		return cldnn::tensor(input_size.batch[0], output_features, output_size_x, output_size_y);
+	}
+
+	virtual void prepare_input_for_test(std::vector<cldnn::memory>& inputs)
+	{
+		if (generic_params->data_type == data_types::f32)
+		{
+			prepare_input_for_test_typed<float>(inputs);
+		}
+		else
+		{
+			prepare_input_for_test_typed<FLOAT16>(inputs);
+		}
+	}
+
+	template<typename Type>
+	void prepare_input_for_test_typed(std::vector<cldnn::memory>& inputs)
+	{
+		int k = (generic_params->data_type == data_types::f32) ? 8 : 4;
+
+		// Update inputs.
+		auto input = inputs[0];
+		auto input_size = inputs[0].get_layout().size;
+		VVVVF<Type> input_rnd = generate_random_4d<Type>(input_size.batch[0], input_size.feature[0], input_size.spatial[1], input_size.spatial[0], -2, 2, k);
+		VF<Type> input_rnd_vec = flatten_4d<Type>(input.get_layout().format, input_rnd);
+		set_values(input, input_rnd_vec);
+
+		// Update weights.
+		auto weight_input = inputs[1];
+		auto weight_size = inputs[1].get_layout().size;
+		VVVVF<Type> weight_rnd = generate_random_4d<Type>(weight_size.batch[0], weight_size.feature[0], weight_size.spatial[1], weight_size.spatial[0], -2, 2, k);
+		VF<Type> weight_rnd_vec = flatten_4d<Type>(weight_input.get_layout().format, weight_rnd);
+		set_values(weight_input, weight_rnd_vec);
+
+		// Update biases.
+		auto bias_input = inputs[2];
+		auto bias_size = inputs[2].get_layout().size;
+		VF<Type> bias_rnd = generate_random_1d<Type>(bias_size.spatial[0], -2, 2, k);
+		set_values(bias_input, bias_rnd);
+	}
+
+	template<typename Type>
+	memory generate_reference_typed(const std::vector<cldnn::memory>& inputs)
+	{
+		// Output reference is always bfyx.
+
+		const cldnn::convolution* convolution = (cldnn::convolution*)layer_params;
+
+        data_types dt = inputs[0].get_layout().data_type;
+		
+		tensor input_size = inputs[0].get_layout().size;
+		tensor dilation = convolution->dilation;
+		tensor stride = convolution->stride;
+		bool is_relu_fused = convolution->with_activation;
+		float activation_slope = convolution->activation_negative_slope;
+		tensor input_offset = convolution->input_offset;
+		tensor weights_size = inputs[1].get_layout().size;
+		padding output_padding = convolution->output_padding;
+
+		tensor output_size = get_expected_output_tensor();
+
+		// Calculate output size
+		int output_size_y = output_size.spatial[1];
+		int output_size_x = output_size.spatial[0];
+		int output_features = weights_size.batch[0];
+		int input_features = weights_size.feature[0];
+
+		auto output = memory::allocate( engine, cldnn::layout(dt, cldnn::format::bfyx, output_size, output_padding) );
+
+		auto input_mem = inputs[0].pointer<Type>();
+		auto weights_mem = inputs[1].pointer<Type>();
+		auto bias_mem = inputs[2].pointer<Type>();
+		auto output_mem = output.pointer<Type>();
+
+		tensor output_buffer_size = output.get_layout().get_buffer_size();
+
+		// Initialized output with zeros.
+        std::fill(output_mem.begin(), output_mem.end(), static_cast<Type>(0));
+	
+		// Add the bias
+		for (int b = 0; b < input_size.batch[0]; b++)
+		{
+			for (int out_f = 0; out_f < output_features; out_f++)
+			{
+				for (int y = 0; y < output_size_y; y++)
+				{
+					for (int x = 0; x < output_size_x; x++)
+					{
+						int output_index = (b * output_buffer_size.feature[0] + out_f) * output_buffer_size.spatial[1] * output_buffer_size.spatial[0];
+						tensor lower_output_padding = convolution->output_padding.lower_size();
+						output_index += (lower_output_padding.spatial[1] + y) * output_buffer_size.spatial[0] + lower_output_padding.spatial[0] + x;
+
+						output_mem[output_index] += bias_mem[out_f];
+					}
+				}
+			}
+		}
+
+		// Convolve with weights
+		for (int b = 0; b < input_size.batch[0]; b++)
+		{
+			int input_bi = b;
+			for (int out_f = 0; out_f < output_features; out_f++)
+			{
+				for (int in_f = 0; in_f < input_features; in_f++)
+				{
+					int input_fi = in_f;
+					for (int y = 0; y < output_size_y; y++)
+					{
+						for (int x = 0; x < output_size_x; x++)
+						{
+							int output_bi = b;
+							int output_fi = out_f;
+							int output_yi = y;
+							int output_xi = x;
+							int output_index = (output_bi * output_buffer_size.feature[0] + output_fi) * output_buffer_size.spatial[1] * output_buffer_size.spatial[0];
+							tensor lower_output_padding = convolution->output_padding.lower_size();
+							output_index += (lower_output_padding.spatial[1] + output_yi) * output_buffer_size.spatial[0] + lower_output_padding.spatial[0] + output_xi;
+
+							for (int kernel_y = 0; kernel_y < weights_size.spatial[1]; kernel_y++)
+							{
+								int input_yi = y * stride.spatial[1] + input_offset.spatial[1] + kernel_y * dilation.spatial[1];
+								if ((input_yi < 0) || (input_yi >= input_size.spatial[1]))
+								{
+									continue;
+								}
+
+								for (int kernel_x = 0; kernel_x < weights_size.spatial[0]; kernel_x++)
+								{
+									int input_xi = x * stride.spatial[0] + input_offset.spatial[0] + kernel_x * dilation.spatial[0];
+									if ((input_xi < 0) || (input_xi >= input_size.spatial[0]))
+									{
+										continue;
+									}
+
+									size_t input_index = get_linear_index(inputs[0].get_layout(), input_bi, input_fi, input_yi, input_xi);
+
+									int weight_bi = out_f;
+									int weight_fi = in_f;
+									int weight_yi = kernel_y;
+									int weight_xi = kernel_x;
+									size_t weight_index = get_linear_index(inputs[1].get_layout(), weight_bi, weight_fi, weight_yi, weight_xi);					
+
+									output_mem[output_index] += input_mem[input_index] * weights_mem[weight_index];
+								}
+							}		
+						}
+					}
+				}
+			}
+		}
+
+		// Relu activation
+		if (is_relu_fused)
+		{
+			for (int i = 0; i < (int)output_buffer_size.count(); i++)
+			{
+				output_mem[i] = (output_mem[i] > 0.f) ? output_mem[i] : (output_mem[i] * (Type)activation_slope);
+			}
+		}
+
+		return output;
+	}
+
+	virtual memory generate_reference(const std::vector<cldnn::memory>& inputs)
+	{
+		if (generic_params->data_type == data_types::f32)
+		{
+			return generate_reference_typed<float>(inputs);
+		}
+		else
+		{
+			return generate_reference_typed<FLOAT16>(inputs);
+		}		
+	}
+
+private:
+
+	static std::vector<tests::test_params*> all_generic_params;
+	static std::vector<cldnn::primitive*> all_layer_params;
+	static std::vector<std::tuple<tests::test_params*, cldnn::primitive*>> all_test_params;
+	
+};
+
+std::vector<tests::test_params*> convolution_test::all_generic_params = {};
+std::vector<cldnn::primitive*> convolution_test::all_layer_params = {};
+std::vector<std::tuple<tests::test_params*, cldnn::primitive*>> convolution_test::all_test_params = {};
+
+TEST_P(convolution_test, DISABLED_test_all)
+{
+	run_single_test();
+}
+
+INSTANTIATE_TEST_CASE_P(CONVOLUTION, 
+						convolution_test, 
+						::testing::ValuesIn(convolution_test::generate_all_test_params()),
+						tests::generic_test::custom_param_name_functor());

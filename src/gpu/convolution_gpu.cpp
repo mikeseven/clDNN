@@ -394,7 +394,8 @@ convolution_gpu::kernel_data default_yxio_f32_b8(const convolution_node& arg)
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.lws0 = batch_size == 8 ? 8 : 16;
-    if (filter_buffer_size.batch[0] * batch_size % kd.lws0 != 0)
+	if ((filter_buffer_size.batch[0] * batch_size % kd.lws0 != 0) ||
+		output_layout.data_padding)
     {
         kd = default_yxio_f32(arg);
     }
@@ -432,7 +433,8 @@ convolution_gpu::kernel_data default_yxio_f32_b32(const convolution_node& arg)
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.lws0 = 16;
-    if (filter_buffer_size.batch[0] * batch_size % kd.lws0 != 0)
+    if ((filter_buffer_size.batch[0] * batch_size % kd.lws0 != 0) ||
+		output_layout.data_padding)
     {
         kd = default_yxio_f32(arg);
     }
@@ -478,7 +480,8 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution_node& arg)
     // Number of output features is positive and dividable by minimum number of output features processed inside work item.
     if (filter_ofm_num > 0 && filter_ofm_num % min_ofm_per_wi == 0 &&
         // Batch size is positive and dividable by minimum number of batches processed when smallest local work size is used.
-        batch_size > 0 && batch_size % (min_batches_per_wi * min_lws) == 0)
+        batch_size > 0 && batch_size % (min_batches_per_wi * min_lws) == 0
+		&& !output_layout.data_padding)
     {
         kd.ofm_per_work_item = min_ofm_per_wi;
         if (batch_size % (4 * min_batches_per_wi * min_lws) == 0)

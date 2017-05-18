@@ -19,6 +19,7 @@
 #include "api/CPP/memory.hpp"
 #include <api/CPP/primitive.hpp>
 #include <api/CPP/input_layout.hpp>
+#include <api/CPP/data.hpp>
 #include <api/CPP/topology.hpp>
 #include <api/CPP/network.hpp>
 #include <api/CPP/engine.hpp>
@@ -42,9 +43,11 @@ namespace tests
         
         std::vector<memory> input_mems;
 
+		std::vector<std::string> input_layouts_names = {};
+
         for (size_t i = 0 ; i < generic_params->input_layouts.size() ; i++)
         {           
-            input_mems.push_back( memory::allocate(engine, { generic_params->data_type, generic_params->fmt, generic_params->input_layouts[i] }) );
+            input_mems.push_back( memory::allocate(engine, generic_params->input_layouts[i]) );
             
             if (generic_params->data_type == data_types::f32)
             {
@@ -55,8 +58,24 @@ namespace tests
                 tests::set_random_values<FLOAT16>(input_mems[i], -100, 100);
             }   
             
-            std::string layer_name = "input" + std::to_string(i);
-            topology.add(input_layout(layer_name, input_mems[i].get_layout()));            
+            std::string input_name = "input" + std::to_string(i);
+			if ( (i == 0) && generic_params->network_build_options.get<cldnn::build_option_type::optimize_data>()->enabled() )
+			{
+				// Add reorder after the first input in case of optimize data flag since it might change the input layout.
+				input_name = "input0_init";
+			}
+
+			// First input is provided to the network as input_layout.
+			// Other inputs are provided as input_layout if optimize data flag is off. Otherwise they are provided as data.
+			if ( (i == 0) || !generic_params->network_build_options.get<cldnn::build_option_type::optimize_data>()->enabled())
+			{
+				topology.add(input_layout(input_name, input_mems[i].get_layout()));
+				input_layouts_names.push_back(input_name);
+			}
+			else
+			{
+				topology.add(data(input_name, input_mems[i]));
+			}
             
             if (!is_format_supported(generic_params->fmt))
             {
@@ -64,21 +83,27 @@ namespace tests
                 return;
             }       
         }
+
+		if (generic_params->network_build_options.get<cldnn::build_option_type::optimize_data>()->enabled())
+		{
+			// Add reorder after the first input in case of optimize data flag since it might change the input layout.
+			topology.add(reorder("input0", "input0_init", input_mems[0].get_layout()));
+		}
+
 		if (layer_params->input[0] == "reorder0")
 		{
 			// Add reorder layer with output padding as input to the tested layer.
 			topology.add(reorder("reorder0", "input0", input_mems[0].get_layout().with_padding({ { 0, 0, 1, 3 },{ 0, 0, 5, 2 } })));
 		}
-        		
-		network network(engine, topology);
 
-        for (size_t i = 0 ; i < generic_params->input_layouts.size() ; i++)
+		prepare_input_for_test(input_mems);
+
+		network network(engine, topology, generic_params->network_build_options);
+
+        for (size_t i = 0 ; i < input_layouts_names.size() ; i++)
         {
-            std::string layer_name = "input" + std::to_string(i);
-            network.set_input_data(layer_name, input_mems[i]);
-        }		
-        
-        prepare_input_for_test(input_mems);
+			network.set_input_data(input_layouts_names[i], input_mems[i]);
+        }
 
 		auto outputs = network.execute();
 		EXPECT_EQ(outputs.size(), size_t(1));
@@ -263,24 +288,19 @@ namespace tests
 	//Default implementation. Should be overridden in derived class otherwise.
 	cldnn::tensor generic_test::get_expected_output_tensor()
 	{
-		return generic_params->input_layouts[0];
+		return generic_params->input_layouts[0].size;
 	}
 
-	std::vector<test_params*> generic_test::generate_generic_test_params(std::vector<test_params*>& all_generic_params, bool use_weight_formats)
+	std::vector<test_params*> generic_test::generate_generic_test_params(std::vector<test_params*>& all_generic_params)
 	{
 		// , { format::yx,{ 531,777 } } , { format::yx,{ 4096,1980 } } ,
 		//{ format::bfyx,{ 1,1,1,1 } } , { format::bfyx,{ 1,1,2,2 } } , { format::yx,{ 3,3 } } , { format::yx,{ 4,4 } } , { format::bfyx,{ 1,1,5,5 } } , { format::yx,{ 6,6 } } , { format::yx,{ 7,7 } } ,
 		//{ format::yx,{ 8,8 } } , { format::yx,{ 9,9 } } , { format::yx,{ 10,10 } } , { format::yx,{ 11,11 } } , { format::yx,{ 12,12 } } , { format::yx,{ 13,13 } } ,
 		//{ format::yx,{ 14,14 } } , { format::yx,{ 15,15 } } , { format::yx,{ 16,16 } } };
-		std::vector<cldnn::format> all_test_formats = { test_input_formats };
-		if (use_weight_formats)
-		{
-			all_test_formats.insert(all_test_formats.end(), test_weight_formats.begin(), test_weight_formats.end());
-		}
 
 		for (cldnn::data_types data_type : test_data_types)
 		{
-			for (cldnn::format fmt : all_test_formats)
+			for (cldnn::format fmt : test_input_formats)
 			{
 				for (int batch_size : test_batch_sizes)
 				{
@@ -316,7 +336,7 @@ namespace tests
 
         for (int j = 0 ; j < (int)input_layouts.size(); j++)
         {
-            const cldnn::tensor& t = input_layouts[j];
+            const cldnn::tensor& t = input_layouts[j].size;
             
 			str << "Input " << j << ": " << print_tensor(t) << std::endl;
         }
@@ -325,7 +345,6 @@ namespace tests
     
     std::vector<cldnn::data_types> generic_test::test_data_types = { cldnn::data_types::f32 , cldnn::data_types::f16 };
     std::vector<cldnn::format> generic_test::test_input_formats = { cldnn::format::bfyx , cldnn::format::yxfb, cldnn::format::fyxb, cldnn::format::byxf };
-	std::vector<cldnn::format> generic_test::test_weight_formats = { cldnn::format::bfyx , cldnn::format::yxfb , cldnn::format::fyxb };
     std::vector<int32_t> generic_test::test_batch_sizes = { 1, 2 };// 4, 8, 16};
     std::vector<int32_t> generic_test::test_feature_sizes = { 1, 2 };// , 3, 15};
     std::vector<tensor> generic_test::test_input_sizes = { { 1, 1, 100,100 } ,{ 1, 1, 227,227 } ,{ 1, 1, 400,600 } };

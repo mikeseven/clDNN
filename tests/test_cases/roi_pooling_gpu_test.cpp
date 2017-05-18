@@ -253,8 +253,8 @@ public:
                                 test_params* tp = new test_params();
 
                                 tp->data_type = data_type;
-                                tp->input_layouts.push_back(cldnn::tensor(batch_size, feature_size, input_size.spatial[0], input_size.spatial[1]));
-                                tp->input_layouts.push_back(cldnn::tensor(num_rois, 1, CLDNN_ROI_VECTOR_SIZE, 1));
+                                tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor(batch_size, feature_size, input_size.spatial[0], input_size.spatial[1])));
+                                tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor(num_rois, 1, CLDNN_ROI_VECTOR_SIZE, 1)));
 
                                 all_generic_params.push_back(tp);
                             }
@@ -348,9 +348,9 @@ public:
             const auto chans = format::traits(p->fmt).order;
 
             res << "_" << "Input" << i;
-            for (unsigned int j = 0; j < p->input_layouts[i].sizes(p->fmt).size(); ++j)
+            for (unsigned int j = 0; j < p->input_layouts[i].size.sizes(p->fmt).size(); ++j)
             {
-                res << chans[j] << p->input_layouts[i].sizes(p->fmt)[j];
+                res << chans[j] << p->input_layouts[i].size.sizes(p->fmt)[j];
             }
         }
 
@@ -535,8 +535,8 @@ private:
     {
         const cldnn::roi_pooling* roi_pooling = (cldnn::roi_pooling*)layer_params;
         
-        int fm = generic_params->input_layouts[0].feature[0];
-        int num_rois = generic_params->input_layouts[1].batch[0];
+        int fm = generic_params->input_layouts[0].size.feature[0];
+        int num_rois = generic_params->input_layouts[1].size.batch[0];
         cldnn::tensor output_layout = { num_rois, fm, roi_pooling->pooled_width, roi_pooling->pooled_height };
         return output_layout;
     }

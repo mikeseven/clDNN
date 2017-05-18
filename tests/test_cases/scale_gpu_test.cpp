@@ -1215,10 +1215,10 @@ public:
                     test_params * tp = new test_params();
                     tp->data_type = dt;
 
-                    tp->input_layouts.push_back( cldnn::tensor(  b, f, w, h  ));
-                    tp->input_layouts.push_back( cldnn::tensor(  mb, mf, mw, mh  ));
+                    tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor(  b, f, w, h  )));
+                    tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor(  mb, mf, mw, mh  )));
                     if (variant)
-                            tp->input_layouts.push_back( cldnn::tensor(  mb, mf, mw, mh  ));
+                            tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor(  mb, mf, mw, mh  )));
 
                     all_generic_params.emplace_back(tp);
                 }
@@ -1368,9 +1368,9 @@ public:
 
             const auto chans = format::traits(p->fmt).order;
 
-            for (unsigned int j = 0; j < p->input_layouts[i].sizes(p->fmt).size(); ++j)
+            for (unsigned int j = 0; j < p->input_layouts[i].size.sizes(p->fmt).size(); ++j)
             {
-                res << chans[j] << p->input_layouts[i].sizes(p->fmt)[j];
+                res << chans[j] << p->input_layouts[i].size.sizes(p->fmt)[j];
             }
         }
         return res.str();
