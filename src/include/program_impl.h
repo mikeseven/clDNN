@@ -236,8 +236,28 @@ public:
 
     std::list<std::shared_ptr<program_node>> get_nodes() const;
 
-    auto& get_node(primitive_id const& id) { return *nodes_map.at(id); }
-    auto const& get_node(primitive_id const& id) const { return *nodes_map.at(id); }
+    auto& get_node(primitive_id const& id) 
+    {
+        try 
+        {
+            return *nodes_map.at(id);
+        }
+        catch (...)
+        {
+            throw std::runtime_error("Program doesn't contain primtive node: " + id);
+        }
+    }
+    auto const& get_node(primitive_id const& id) const
+    {
+        try
+        {
+            return *nodes_map.at(id);
+        }
+        catch (...)
+        {
+            throw std::runtime_error("Program doesn't contain primtive node: " + id);
+        }
+    }
 
 private:
     engine_impl::ptr engine;

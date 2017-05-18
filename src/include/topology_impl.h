@@ -49,7 +49,18 @@ public:
         _primitives.insert({ id, desc });
     }
 
-    const auto& at(primitive_id id) const { return _primitives.at(id); }
+    const auto& at(primitive_id id) const 
+    {
+        try
+        {
+            return _primitives.at(id);
+        }
+        catch (...)
+        {
+            throw std::runtime_error("Topology doesn't contain primtive: " + id);
+        }
+        
+    }
 
     const topology_map& get_primitives() const { return _primitives; }
 

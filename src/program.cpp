@@ -224,9 +224,15 @@ void program_impl::init_graph(topology_impl const& topology)
         //add pointers to node's dependencies
         for (auto& dep : deps)
         {
-            auto dep_node = nodes_map.at(dep);
-            node->dependencies.push_back(dep_node.get());
-            dep_node->users.push_back(node);
+            try {
+                auto dep_node = nodes_map.at(dep);
+                node->dependencies.push_back(dep_node.get());
+                dep_node->users.push_back(node);
+            }
+            catch(...) {
+                throw std::runtime_error("Program doesn't contain primitive: " + dep +
+                    " that is input to: " + node->get_primitive()->id);
+            }
         }
 
         //primitive has dependencies so remove it from 'inputs'
