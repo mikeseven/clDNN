@@ -34,9 +34,9 @@ using namespace cldnn;
 using namespace tests;
 using namespace testing;
 
-TEST(permute_gpu_f32, basic_permute_xy)
+TEST(permute_gpu_f32, basic_bfyx_permute_0_1_3_2)
 {
-    //  Input               : bfyx:2x2xx2
+    //  Input               : bfyx:2x2x3x2
     //  Permute order       : { 0,1,3,2 }
     //
     //  Input:
@@ -111,7 +111,7 @@ TEST(permute_gpu_f32, basic_permute_xy)
 
 }
 
-TEST(permute_gpu_f32, basic_yxfb_bfyx)
+TEST(permute_gpu_f32, basic_yxfb_permute_2_3_1_0)
 {
     //  Input               : yxfb:2x2x2x2
     //
