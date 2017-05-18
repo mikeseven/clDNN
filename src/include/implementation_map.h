@@ -33,6 +33,7 @@ class singleton_map : public std::map<T, U> {
 
 namespace cldnn {
 
+struct permute;
 struct reorder;
 struct reshape;
 struct data;
@@ -51,6 +52,16 @@ struct implementation_key
     type operator()(engine_types engine_type, const typed_program_node<primitive_kind>& primitive)
     {
         return std::make_tuple(engine_type, primitive.get_dependency(0).get_output_layout().data_type, primitive.get_dependency(0).get_output_layout().format);
+    }
+};
+
+template<>
+struct implementation_key<permute>
+{
+    typedef cldnn::engine_types type;
+    type operator()(engine_types engine_type, const typed_program_node<permute>&)
+    {
+        return engine_type;
     }
 };
 
