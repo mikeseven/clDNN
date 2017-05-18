@@ -434,21 +434,9 @@ mark_as_advanced(CLDNN__INCLUDE_CORE)
 
 # ======================================================================================================
 
-# Include and build: Examples of usage of clDNN framework.
-set(CLDNN__INCLUDE_KERNEL_SELECTOR ON CACHE BOOL "Include and build: clDNN kernel selector.")
-mark_as_advanced(CLDNN__INCLUDE_KERNEL_SELECTOR)
-
-# ======================================================================================================
-
 # Include and build: Tests (unit tests and small acceptance tests) for clDNN framework.
 set(CLDNN__INCLUDE_TESTS ON CACHE BOOL "Include and build: clDNN framework's tests.")
 mark_as_advanced(CLDNN__INCLUDE_TESTS)
-
-# ======================================================================================================
-
-# Include and build: Tests (unit tests and small acceptance tests) for clDNN framework.
-set(CLDNN__INCLUDE_COST_MODEL ON CACHE BOOL "Include and build: clDNN cost model.")
-mark_as_advanced(CLDNN__INCLUDE_COST_MODEL)
 
 # ======================================================================================================
 
@@ -682,10 +670,8 @@ message(STATUS "[clDNN]  - FreeImage v. used to build:    ${CLDNN__FREEIMAGE_VER
 message(STATUS "[clDNN]  - boost ver. used to build:      ${CLDNN__BOOST_VERSION}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Include/Build cldnn core:      ${CLDNN__INCLUDE_CORE}")
-message(STATUS "[clDNN]  - Include/Build kernel selector: ${CLDNN__INCLUDE_KERNEL_SELECTOR}")
 message(STATUS "[clDNN]  - Include/Build examples:        ${CLDNN__INCLUDE_EXAMPLES}")
 message(STATUS "[clDNN]  - Include/Build tests:           ${CLDNN__INCLUDE_TESTS}")
-message(STATUS "[clDNN]  - Include/Build cost_model:      ${CLDNN__INCLUDE_COST_MODEL}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Run tests:                     ${CLDNN__RUN_TESTS}")
 message(STATUS "[clDNN]")
@@ -1151,12 +1137,6 @@ if(CLDNN__INCLUDE_EXAMPLES)
 endif()
 if(CLDNN__INCLUDE_TESTS)
   add_subdirectory(tests)
-endif()
-if(CLDNN__INCLUDE_KERNEL_SELECTOR)
-  add_subdirectory(kernel_selector)
-endif()
-if(CLDNN__INCLUDE_COST_MODEL)
-  add_subdirectory(cost_model)
 endif()
 add_subdirectory(docs)
 
