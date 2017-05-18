@@ -87,6 +87,14 @@ struct normalize_gpu : typed_primitive_impl<normalize>
         if (input_layout.data_padding.filling_value() != 0.0f)
             throw std::runtime_error("Unknown padding mode in normalize");
 
+        kd.gws0 = input_layout.size.batch[0];
+        kd.gws1 = 1;
+        kd.gws2 = 1;
+
+        kd.lws0 = kd.gws0;
+        kd.lws1 = 1;
+        kd.lws2 = 1;
+
         return kd;
     }
 
@@ -159,13 +167,6 @@ normalize_gpu::kernel_data get_kernel_across_spatial(const normalize_node& arg, 
 		throw std::invalid_argument("Unsupported normalize across spatial format - " + cldnn::format::traits(format).order);
 	}
 	auto input_layout = arg.input().get_output_layout();
-	kd.gws0 = input_layout.size.batch[0];
-	kd.gws1 = 1;
-	kd.gws2 = 1;
-
-	kd.lws0 = kd.gws0;
-	kd.lws1 = 1;
-	kd.lws2 = 1;
 
 	return kd;
 }
