@@ -260,6 +260,13 @@ typedef struct
     size_t size;       ///< Size (in floats) of the array.
 } cldnn_float_arr;
 
+/// @brief Represents reference to an array of uint16_t.
+typedef struct
+{
+    const uint16_t* data; ///< Pointer to uint16_t array.
+    size_t size;       ///< Size (in uint16_t) of the array.
+} cldnn_uint16_t_arr;
+
 /// @brief Globally unique primitive's type id
 typedef const struct cldnn_primitive_type* cldnn_primitive_type_id;
 
