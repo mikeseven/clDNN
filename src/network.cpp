@@ -79,21 +79,22 @@ void network_impl::reset_execution(bool wait)
 
 void network_impl::set_input_data(const primitive_id& id, memory_impl* data)
 {
+    std::shared_ptr<primitive_inst> primitive_inst;
     try {
-        auto& primitive_inst = _primitives.at(id);
-        if (primitive_inst->type() != input_layout::type_id())
-            throw std::invalid_argument("primitive " + id + " is not an input");
-
-        auto input = std::static_pointer_cast<input_layout_inst>(primitive_inst);
-
-        //Wait for previous execution completion
-        reset_execution(true);
-        input->set_data(data);
+        primitive_inst = _primitives.at(id);
     }
     catch (...)
     {
         throw std::runtime_error("topology doesn't contain prmitive:" + id);
-    }   
+    }
+    if (primitive_inst->type() != input_layout::type_id())
+        throw std::invalid_argument("primitive " + id + " is not an input");
+
+    auto input = std::static_pointer_cast<input_layout_inst>(primitive_inst);
+
+    //Wait for previous execution completion
+    reset_execution(true);
+    input->set_data(data);
 }
 
 std::string network_impl::get_primitive_info(const primitive_id& id) const
