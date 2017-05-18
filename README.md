@@ -11,9 +11,11 @@ Iris™ Graphics.
 convolutional neural networks (CNN) with C and C++ interfaces. We created
 this project to enable the DL community to innovate on Intel® processors.
 
-This release is our 1<sup>st</sup> drop with functionality necessary to accelerate
-image recognition topologies, including AlexNet, VGG, GoogleNet and
-ResNet. As with any technical preview, APIs may change in future updates.
+**Usages supported:** Image recognition, image detection, and image segmentation.
+
+**Topologies:** AlexNet\*, VGG\*, GoogleNet\* and ResNet\*.
+
+As with any technical preview, APIs may change in future updates.
 
 ## License
 clDNN is licensed is licensed under
@@ -21,8 +23,8 @@ clDNN is licensed is licensed under
 
 ### Attached licenses
 clDNN uses 3<sup>rd</sup>-party components licensed under following licenses:
-- *boost* under [Boost Software License - Version 1.0](http://www.boost.org/LICENSE_1_0.txt)
-- *googletest* under [Google License](https://github.com/google/googletest/blob/master/googletest/LICENSE)
+- *boost* under [Boost\* Software License - Version 1.0](http://www.boost.org/LICENSE_1_0.txt)
+- *googletest* under [Google\* License](https://github.com/google/googletest/blob/master/googletest/LICENSE)
 - *OpenCL™ ICD and C++ Wrapper* under [Khronos™ License](https://github.com/KhronosGroup/OpenCL-CLHPP/blob/master/LICENSE.txt)
 
 ## Documentation
@@ -47,25 +49,22 @@ We will review your contribution and, if any additional fixes or modifications
 are necessary, may provide feedback to guide you. When accepted, your pull
 request will be merged into our internal and GitHub repositories.
 
-** TODO: WHAT TESTS??? HOW TO ADD THEM IF WE DO NOT INCLUDE THEM??? **
-
 ## System Requirements
-System Requirements
 clDNN supports Intel® HD Graphics and Intel® Iris™ Graphics and is optimized for
 - Codename *Skylake*:
-    * HD Graphics 510 (GT1, *consumer* market)
-    * HD Graphics 515 (GT2, *consumer* market)
-    * HD Graphics 520 (GT2, *consumer* market)
-    * HD Graphics 530 (GT2, *consumer* market)
-    * Iris™ Graphics 540 (GT3e, *consumer* market)
-    * Iris™ Graphics 550 (GT3e, *consumer* market)
-    * Iris™ Pro Graphics 580 (GT4e, *consumer* market)
-    * HD Graphics P530 (GT2, *server* market)
-    * Iris™ Pro Graphics P555 (GT3e, *server* market)
-    * Iris™ Pro Graphics P580 (GT4e, *server* market)
+    * Intel® HD Graphics 510 (GT1, *consumer* market)
+    * Intel® HD Graphics 515 (GT2, *consumer* market)
+    * Intel® HD Graphics 520 (GT2, *consumer* market)
+    * Intel® HD Graphics 530 (GT2, *consumer* market)
+    * Intel® Iris™ Graphics 540 (GT3e, *consumer* market)
+    * Intel® Iris™ Graphics 550 (GT3e, *consumer* market)
+    * Intel® Iris™ Pro Graphics 580 (GT4e, *consumer* market)
+    * Intel® HD Graphics P530 (GT2, *server* market)
+    * Intel® Iris™ Pro Graphics P555 (GT3e, *server* market)
+    * Intel® Iris™ Pro Graphics P580 (GT4e, *server* market)
 - Codename *Apollolake*:
-    * HD Graphics 500
-    * HD Graphics 505
+    * Intel® HD Graphics 500
+    * Intel® HD Graphics 505
 
 clDNN currently uses OpenCL™ with multiple Intel® OpenCL™ extensions and requires Intel® Graphics Driver to run.
 
@@ -74,11 +73,11 @@ clDNN requires CPU with SSE/AVX support.
 ---
 
 The software dependencies are:
-- [CMake](https://cmake.org/download/) 3.6 or later  
+- [CMake\*](https://cmake.org/download/) 3.6 or later  
 (the project is compatible with CMake 3.1, but, due to issues with boost libraries resolution
 in CMake 3.4.3 and with CheckCXXCompilerFlag module in CMake 3.5.2, we strongly recommend 3.6+)
 - C++ compiler with partiall or full C++14 standard support compatible with:
-    * GNU Compiler Collection 5.2 or later
+    * GNU\* Compiler Collection 5.2 or later
     * clang 3.5 or later
     * [Intel® C++ Compiler](https://software.intel.com/en-us/intel-parallel-studio-xe) 17.0 or later
     * Visual C++ 2015 (MSVC++ 19.0) or later
@@ -86,16 +85,16 @@ in CMake 3.4.3 and with CheckCXXCompilerFlag module in CMake 3.5.2, we strongly 
 > Intel® CPU intrinsics header (`<immintrin.h>`) must be available during compilation.
 
 - [python™](https://www.python.org/downloads/) 2.7 or later (scripts are both compatible with python™ 2.7.x and python™ 3.x)
-- *(optional)* [Doxygen](http://www.stack.nl/~dimitri/doxygen/download.html) 1.8.13 or later  
+- *(optional)* [Doxygen\*](http://www.stack.nl/~dimitri/doxygen/download.html) 1.8.13 or later  
     Needed for manual generation of documentation from inline comments or running `docs` custom target which will generate it automatically.
 
-> [GraphViz](http://www.graphviz.org/Download..php) (2.38 or later) is also recommended to generate documentation with all embedded diagrams.  
+> [GraphViz\*](http://www.graphviz.org/Download..php) (2.38 or later) is also recommended to generate documentation with all embedded diagrams.  
 (Make sure that `dot` application is visible in the `PATH` environment variable.)
 
 ---
 
 The software was validated on:
-- CentOS 7 with GNU Compiler Collection 5.2 (64-bit only)
+- CentOS\* 7 with GNU\* Compiler Collection 5.2 (64-bit only)
 - Windows® 10 and Windows® Server 2012 R2 with MSVC 14.0
 
 We have validated using [Intel® intel-opencl-r4.1 (SRB4.1) Linux driver package](http://registrationcenter-download.intel.com/akdlm/irc_nas/11396/SRB4.1_linux64.zip).
@@ -113,7 +112,7 @@ or clone the repository to your system:
 
 Satisfy all software dependencies and ensure that the versions are correct before building.
 
-clDNN uses multiple 3<sup>rd</sup>-party components. They are stored in binary form in `common` subdirectory. Currently they are prepared for MSVC++ and GCC. They will be cloned with repository.
+clDNN uses multiple 3<sup>rd</sup>-party components. They are stored in binary form in `common` subdirectory. Currently they are prepared for MSVC++ and GCC\*. They will be cloned with repository.
 
 ---
 
@@ -138,8 +137,8 @@ For Unix and Linux systems:
 
 You can call also scripts in main directory of project which will create solutions/makefiles for clDNN (they
 will generate solutions/makefiles in `build` subdirectory and binary outputs will be written to `build/out` subdirectory):
-- `create_msvc_mscc.bat` (Windows, Visual Studio 2015)
-- `create_unixmake_gcc.sh [Y|N] [<devtoolset-version>]` (Linux, GNU or Ninja makefiles, optional devtoolset support)
+- `create_msvc_mscc.bat` (Windows\*, Visual Studio\* 2015)
+- `create_unixmake_gcc.sh [Y|N] [<devtoolset-version>]` (Linux\*, GNU\* or Ninja\* makefiles, optional devtoolset support)
     * If you specify the first parameter as `Y`, the Ninja makefiles will be generated.
     * If you specify second parameter (number), the CMake will be called via `scl` with selected `devtoolset` version.
 
@@ -148,7 +147,7 @@ CMake solution offers multiple options which you can specify using normal CMake 
 | CMake option                              | Type     | Description                                                                  |
 |:------------------------------------------|:---------|:-----------------------------------------------------------------------------|
 | CMAKE\_BUILD\_TYPE                        | STRING   | Build configuration that will be used by generated makefiles (it does not affect multi-configuration generators like generators for Visual Studio solutions). Currently supported: `Debug` (default), `Release` |
-| CMAKE\_INSTALL\_PREFIX                    | PATH     | Install directory prefix. (** TODO: SUPPORT MAKE INSTALL **)                 |
+| CMAKE\_INSTALL\_PREFIX                    | PATH     | Install directory prefix.                                                    |
 | CLDNN\_\_ARCHITECTURE\_TARGET             | STRING   | Architecture of target system (where binary output will be deployed). CMake will try to detect it automatically (based on selected generator type, host OS and compiler properties). Specify this option only if CMake has problem with detection. Currently supported: `Windows32`, `Windows64`, `Linux64` |
 | CLDNN\_\_OUTPUT\_DIR (CLDNN\_\_OUTPUT\_BIN\_DIR, CLDNN\_\_OUTPUT\_LIB\_DIR) | PATH | Location where built artifacts will be written to. It is set automatically to roughly `build/out/<arch-target>/<build-type>` subdirectory. For more control use: `CLDNN__OUTPUT_LIB_DIR` (specifies output path for static libraries) or `CLDNN__OUTPUT_BIN_DIR` (for shared libs and executables). |
 |                                           |          |                                                                              |
@@ -181,7 +180,7 @@ clDNN includes unit tests implemented using the googletest framework. To validat
 ### Generating documentation
 
 Documentation is provided inline and can be generated in HTML format with Doxygen. We recommend to use latest
-[Doxygen](http://www.stack.nl/~dimitri/doxygen/download.html) and [GraphViz](http://www.graphviz.org/Download..php).
+[Doxygen\*](http://www.stack.nl/~dimitri/doxygen/download.html) and [GraphViz\*](http://www.graphviz.org/Download..php).
 
 Documentation templates and configuration files are stored in `docs` subdirectory. You can simply call:
 
@@ -201,3 +200,37 @@ in order to create it.
 Special `install` target will place the API header files and libraries in `/usr/local`
 (`C:/Program Files/clDNN` or `C:/Program Files (x86)/clDNN` on Windows). To change
 the installation path, use the option `-DCMAKE_INSTALL_PREFIX=<prefix>` when invoking CMake.
+
+## Disclaimers, Warranties, Legal Notices and Limitations of Liability
+> You may not use or facilitate the use of this document in connection with any
+infringement or other legal analysis concerning Intel products described herein.
+You agree to grant Intel® a non-exclusive, royalty-free license to any patent claim
+thereafter drafted which includes subject matter disclosed herein.  
+No license (express or implied, by estoppel or otherwise) to any intellectual property
+rights is granted by this document.  
+Intel® technologies' features and benefits depend on system configuration and may require
+enabled hardware, software or service activation. Performance varies depending on system
+configuration. No computer system can be absolutely secure. Check with your system manufacturer
+or retailer or learn more at [intel.com](http://www.intel.com).  
+Intel® technologies may require enabled hardware, specific software, or services activation.
+Check with your system manufacturer or retailer.  
+The products described may contain design defects or errors known as errata which may cause
+the product to deviate from published specifications. Current characterized errata are
+available on request.  
+Intel® disclaims all express and implied warranties, including without limitation, the implied
+warranties of merchantability, fitness for a particular purpose, and non-infringement,
+as well as any warranty arising from course of performance, course of dealing, or usage in trade.  
+All information provided here is subject to change without notice. Contact your Intel®
+representative to obtain the latest Intel product specifications and roadmaps.  
+Copies of documents which have an order number and are referenced in this document may be
+obtained by calling 1-800-548-4725 or visit [here](http://www.intel.com/design/literature.htm).  
+Intel, Centrino, vPro, Core, Thunderbolt, Ultrabook and the Intel logo are trademarks of
+Intel® Corporation in the U.S. and other countries.
+
+
+---
+
+
+\* Other names and brands may be claimed as the property of others.
+
+Copyright © 2017, Intel® Corporation
