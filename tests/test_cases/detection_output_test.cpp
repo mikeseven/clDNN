@@ -41,8 +41,16 @@ public:
 		nms_threshold(0.1f)
 	{}
 
-	void init_buffers(bool share_location, T* prior_data, T* confidence_data, T* location_data)
+	void init_buffers(bool share_location, cldnn::memory prior_memory, cldnn::memory confidence_memory, cldnn::memory location_memory)
 	{
+		auto location_ptr = location_memory.pointer<T>();
+		auto confidence_ptr = confidence_memory.pointer<T>();
+		auto prior_box_ptr = prior_memory.pointer<T>();
+
+		T* prior_data = prior_box_ptr.data();
+		T* confidence_data = confidence_ptr.data();
+		T* location_data = location_ptr.data();
+
 		// Fill prior-box data.
 		const float step = 0.5f;
 		const float box_size = 0.3f;
@@ -146,7 +154,7 @@ TYPED_TEST(detection_output_test, test_setup_basic)
 	cldnn::engine engine;
 	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
 	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4} });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 1, 2, 1, this->num_priors * 4} });
 
 	topology topology;
 	topology.add(input_layout("input_location", input_location.get_layout()));
@@ -180,13 +188,9 @@ TYPED_TEST(detection_output_test, test_forward_share_location)
 	cldnn::engine engine;
 	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
 	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4} });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 1, 2, 1, this->num_priors * 4} });
 
-	auto location_ptr = input_location.pointer<TypeParam>();
-	auto confidence_ptr = input_confidence.pointer<TypeParam>();
-	auto prior_box_ptr = input_prior_box.pointer<TypeParam>();
-
-	this->init_buffers(share_location, prior_box_ptr.data(), confidence_ptr.data(), location_ptr.data());
+	this->init_buffers(share_location, input_prior_box, input_confidence, input_location);
 
 	topology topology;
 	topology.add(input_layout("input_location", input_location.get_layout()));
@@ -231,13 +235,9 @@ TYPED_TEST(detection_output_test, test_forward_num_detections_greater_than_keep_
 	cldnn::engine engine;
 	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
 	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4} });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 1, 2, 1, this->num_priors * 4} });
 
-	auto location_ptr = input_location.pointer<TypeParam>();
-	auto confidence_ptr = input_confidence.pointer<TypeParam>();
-	auto prior_box_ptr = input_prior_box.pointer<TypeParam>();
-
-	this->init_buffers(share_location, prior_box_ptr.data(), confidence_ptr.data(), location_ptr.data());
+	this->init_buffers(share_location, input_prior_box, input_confidence, input_location);
 
 	topology topology;
 	topology.add(input_layout("input_location", input_location.get_layout()));
@@ -276,13 +276,9 @@ TYPED_TEST(detection_output_test, test_forward_num_detections_smaller_than_keep_
 	cldnn::engine engine;
 	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
 	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4} });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 1, 2, 1, this->num_priors * 4} });
 
-	auto location_ptr = input_location.pointer<TypeParam>();
-	auto confidence_ptr = input_confidence.pointer<TypeParam>();
-	auto prior_box_ptr = input_prior_box.pointer<TypeParam>();
-
-	this->init_buffers(share_location, prior_box_ptr.data(), confidence_ptr.data(), location_ptr.data());
+	this->init_buffers(share_location, input_prior_box, input_confidence, input_location);
 
 	topology topology;
 	topology.add(input_layout("input_location", input_location.get_layout()));
@@ -332,13 +328,9 @@ TYPED_TEST(detection_output_test, test_forward_share_location_top_k)
 	cldnn::engine engine;
 	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
 	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 1, 2, 1, this->num_priors * 4 } });
 
-	auto location_ptr = input_location.pointer<TypeParam>();
-	auto confidence_ptr = input_confidence.pointer<TypeParam>();
-	auto prior_box_ptr = input_prior_box.pointer<TypeParam>();
-
-	this->init_buffers(share_location, prior_box_ptr.data(), confidence_ptr.data(), location_ptr.data());
+	this->init_buffers(share_location, input_prior_box, input_confidence, input_location);
 
 	topology topology;
 	topology.add(input_layout("input_location", input_location.get_layout()));
@@ -379,13 +371,9 @@ TYPED_TEST(detection_output_test, test_forward_no_share_location)
 	cldnn::engine engine;
 	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
 	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 1, 2, 1, this->num_priors * 4 } });
 
-	auto location_ptr = input_location.pointer<TypeParam>();
-	auto confidence_ptr = input_confidence.pointer<TypeParam>();
-	auto prior_box_ptr = input_prior_box.pointer<TypeParam>();
-
-	this->init_buffers(share_location, prior_box_ptr.data(), confidence_ptr.data(), location_ptr.data());
+	this->init_buffers(share_location, input_prior_box, input_confidence, input_location);
 
 	topology topology;
 	topology.add(input_layout("input_location", input_location.get_layout()));
@@ -443,13 +431,9 @@ TYPED_TEST(detection_output_test, test_forward_no_share_location_top_k)
 	cldnn::engine engine;
 	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
 	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 1, 2, 1, this->num_priors * 4 } });
 
-	auto location_ptr = input_location.pointer<TypeParam>();
-	auto confidence_ptr = input_confidence.pointer<TypeParam>();
-	auto prior_box_ptr = input_prior_box.pointer<TypeParam>();
-
-	this->init_buffers(share_location, prior_box_ptr.data(), confidence_ptr.data(), location_ptr.data());
+	this->init_buffers(share_location, input_prior_box, input_confidence, input_location);
 
 	topology topology;
 	topology.add(input_layout("input_location", input_location.get_layout()));
@@ -494,13 +478,9 @@ TYPED_TEST(detection_output_test, test_forward_no_share_location_neg_0)
 	cldnn::engine engine;
 	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
 	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, 2, 1, this->num_priors * 4 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 1, 2, 1, this->num_priors * 4 } });
 
-	auto location_ptr = input_location.pointer<TypeParam>();
-	auto confidence_ptr = input_confidence.pointer<TypeParam>();
-	auto prior_box_ptr = input_prior_box.pointer<TypeParam>();
-
-	this->init_buffers(share_location, prior_box_ptr.data(), confidence_ptr.data(), location_ptr.data());
+	this->init_buffers(share_location, input_prior_box, input_confidence, input_location);
 
 	topology topology;
 	topology.add(input_layout("input_location", input_location.get_layout()));
@@ -548,13 +528,9 @@ TYPED_TEST(detection_output_test, test_forward_no_share_location_neg_0_top_k)
 	cldnn::engine engine;
 	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx, { this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
 	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx, { this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
-	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx, { this->num_of_images, 2, 1, this->num_priors * 4 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx, { 1, 2, 1, this->num_priors * 4 } });
 
-	auto location_ptr = input_location.pointer<TypeParam>();
-	auto confidence_ptr = input_confidence.pointer<TypeParam>();
-	auto prior_box_ptr = input_prior_box.pointer<TypeParam>();
-
-	this->init_buffers(share_location, prior_box_ptr.data(), confidence_ptr.data(), location_ptr.data());
+	this->init_buffers(share_location, input_prior_box, input_confidence, input_location);
 
 	topology topology;
 	topology.add(input_layout("input_location", input_location.get_layout()));
@@ -583,5 +559,55 @@ TYPED_TEST(detection_output_test, test_forward_no_share_location_neg_0_top_k)
 	this->check_results(output_prim, 1, "0 1 0.8 0.50 0.20 0.80 0.50");
 	this->check_results(output_prim, 2, "1 1 0.6 0.40 0.40 0.70 0.70");
 	this->check_results(output_prim, 3, "-1 0 0 0 0 0 0");
+}
+
+TYPED_TEST(detection_output_test, test_forward_no_share_location_top_k_input_padding)
+{
+	const bool share_location = false;
+	const int num_loc_classes = share_location ? 1 : this->num_classes;
+	const int keep_top_k = 4;
+	const int background_label_id = -1;
+	const int top_k = 2;
+
+	cldnn::engine engine;
+	cldnn::memory input_location = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * num_loc_classes * 4, 1, 1 } });
+	cldnn::memory input_confidence = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ this->num_of_images, this->num_priors * this->num_classes, 1, 1 } });
+	cldnn::memory input_prior_box = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 1, 2, 1, this->num_priors * 4 } });
+
+	this->init_buffers(share_location, input_prior_box, input_confidence, input_location);
+
+	topology topology;
+	topology.add(input_layout("input_location", input_location.get_layout()));
+	topology.add(input_layout("input_confidence", input_confidence.get_layout()));
+	topology.add(input_layout("input_prior_box", input_prior_box.get_layout()));
+	topology.add(reorder("input_location_padded", "input_location", input_location.get_layout().with_padding({ { 0, 0, 12, 3 },{ 0, 0, 5, 11 } })));
+	topology.add(reorder("input_confidence_padded", "input_confidence", input_location.get_layout().with_padding({ { 0, 0, 2, 7 },{ 0, 0, 13, 1 } })));
+
+	topology.add(detection_output("detection_output", "input_location_padded", "input_confidence_padded", "input_prior_box", this->num_classes, keep_top_k, share_location, background_label_id, this->nms_threshold, top_k));
+	network network(engine, topology);
+	network.set_input_data("input_location", input_location);
+	network.set_input_data("input_confidence", input_confidence);
+	network.set_input_data("input_prior_box", input_prior_box);
+
+	auto outputs = network.execute();
+
+	EXPECT_EQ(outputs.size(), size_t(1));
+	EXPECT_EQ(outputs.begin()->first, "detection_output");
+
+	EXPECT_EQ(outputs.begin()->second.get_memory().get_layout().size.batch[0], 1);
+	EXPECT_EQ(outputs.begin()->second.get_memory().get_layout().size.feature[0], 1);
+	EXPECT_EQ(outputs.begin()->second.get_memory().get_layout().size.spatial[1], keep_top_k * this->num_of_images);
+	EXPECT_EQ(outputs.begin()->second.get_memory().get_layout().size.spatial[0], 7);
+
+	auto output_prim = outputs.begin()->second.get_memory();
+
+	this->check_results(output_prim, 0, "0 0 0.6 0.55 0.55 0.85 0.85");
+	this->check_results(output_prim, 1, "0 0 0.4 0.15 0.55 0.45 0.85");
+	this->check_results(output_prim, 2, "0 1 1.0 0.20 0.20 0.50 0.50");
+	this->check_results(output_prim, 3, "0 1 0.8 0.50 0.20 0.80 0.50");
+	this->check_results(output_prim, 4, "1 0 1.0 0.25 0.25 0.55 0.55");
+	this->check_results(output_prim, 5, "1 1 0.6 0.40 0.40 0.70 0.70");
+	this->check_results(output_prim, 6, "-1 0 0 0 0 0 0");
+	this->check_results(output_prim, 7, "-1 0 0 0 0 0 0");
 }
 

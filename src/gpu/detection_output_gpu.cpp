@@ -364,6 +364,24 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 		}
 	}
 
+	// Compute the linear index taking the padding into account.
+	static int get_linear_feature_index(int batch_id, int feature_id, const layout& input_layout)
+	{
+		// This helper function assumes input layout with x_size = 1 and y_size = 1;
+		// Location and confidence inputs should be tensors with size {b,f,1,1}.
+		// This is validated in detection output primitive instance creation.
+		assert(input_layout.size.spatial[0] == 1);
+		assert(input_layout.size.spatial[1] == 1);
+		
+		padding input_padding = input_layout.data_padding;
+		auto input_buffer_size = input_layout.get_buffer_size();
+
+		int input_idx = (batch_id * input_layout.size.feature[0] + feature_id) * input_buffer_size.spatial[1] * input_buffer_size.spatial[0];
+		input_idx += input_padding.lower_size().spatial[1] * input_buffer_size.spatial[0] + input_padding.lower_size().spatial[0];
+
+		return input_idx;
+	}
+
 	template<typename dtype>
 	void extract_locations_per_image(detection_output_inst& instance, std::vector<std::map<int, std::vector<bounding_box> >>& locations, const int num_of_priors, const int num_loc_classes)
 	{
@@ -373,6 +391,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 		const dtype* location_data = location_ptr.data();
 		const int num_of_images = (int)locations.size();
 
+		assert(num_of_priors * num_loc_classes * PRIOR_BOX_SIZE == input_location.get_layout().size.feature[0]);
 		for (int image = 0; image < num_of_images; ++image)
 		{
 			std::map<int, std::vector<bounding_box> >& label_to_bbox = locations[image];
@@ -386,13 +405,12 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 					{
 						label_to_bbox[label].resize(num_of_priors);
 					}
-					label_to_bbox[label][prior].xmin = (float)(location_data[idx + cls * PRIOR_BOX_SIZE]);
-					label_to_bbox[label][prior].ymin = (float)(location_data[idx + cls * PRIOR_BOX_SIZE + 1]);
-					label_to_bbox[label][prior].xmax = (float)(location_data[idx + cls * PRIOR_BOX_SIZE + 2]);
-					label_to_bbox[label][prior].ymax = (float)(location_data[idx + cls * PRIOR_BOX_SIZE + 3]);
+					label_to_bbox[label][prior].xmin = (float)(location_data[get_linear_feature_index(image, idx + cls * PRIOR_BOX_SIZE, input_location.get_layout())]);
+					label_to_bbox[label][prior].ymin = (float)(location_data[get_linear_feature_index(image, idx + cls * PRIOR_BOX_SIZE + 1, input_location.get_layout())]);
+					label_to_bbox[label][prior].xmax = (float)(location_data[get_linear_feature_index(image, idx + cls * PRIOR_BOX_SIZE + 2, input_location.get_layout())]);
+					label_to_bbox[label][prior].ymax = (float)(location_data[get_linear_feature_index(image, idx + cls * PRIOR_BOX_SIZE + 3, input_location.get_layout())]);
 				}
 			}
-			location_data += num_of_priors * num_loc_classes * PRIOR_BOX_SIZE;
 		}
 	}
 
@@ -430,6 +448,9 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 		const auto& input_confidence = instance.confidence_memory();
 		auto confidence_ptr = input_confidence.pointer<dtype>();
 		const dtype* confidence_data = confidence_ptr.data();
+
+		assert(num_of_priors * (int)args.num_classes == input_confidence.get_layout().size.feature[0]);
+
 		for (int image = 0; image < num_of_images; ++image)
 		{
 			std::map<int, std::vector<float> >& label_to_scores = confidences[image];
@@ -437,11 +458,10 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 				int idx = prior * args.num_classes;
 				for (int cls = 0; cls < (int)args.num_classes; ++cls)
 				{
-					label_to_scores[cls].push_back((float)(confidence_data[idx + cls]));
+					label_to_scores[cls].push_back((float)(confidence_data[get_linear_feature_index(image, idx + cls, input_confidence.get_layout())]));
 				}
 			}
-			confidence_data += num_of_priors * args.num_classes;
-		}
+		}	
 	}
 
 	template<typename dtype>
