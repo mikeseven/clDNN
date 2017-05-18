@@ -66,7 +66,7 @@ namespace KernelSelctor
         const auto& out = newParams.outDims;
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "normalization");
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "normalization", ROUND_ROBIN, "");
         kernel.args_desc = GetArgumentDesc(1, false, false);
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;

@@ -24,11 +24,13 @@ namespace KernelSelctor
     {
         ParamsKey k;
         k.SetDataType(Datatype::F16);
+        k.SetDataType(Datatype::F32);
         k.SetInputLayout(bfyx);
         k.SetOutputLayout(bfyx);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
         k.SetSubGroupSupport();
+        k.SetDilationSupport();
         k.SetBiasPerFeatureMap();
         k.SetBiasPerOutput();
         k.SetNumDims(4);
@@ -129,7 +131,10 @@ namespace KernelSelctor
         }
         else
         {
-            throw std::runtime_error("Unsupported stride (!= 1,2,4) in bfyx convolution");
+            run_info.block_width = 4;
+            run_info.block_height = 3;
+            run_info.prefetch = 5;
+            run_info.effiency = FORCE_PRIORITY_9;
         }
 
 
@@ -166,7 +171,8 @@ namespace KernelSelctor
         const bool bInputPadded = optParams.allow_padding || bProperInputDesc;
         const bool bSupportedActivation =
             orgParams.activationFunc == ActivationFunction::NONE ||
-            orgParams.activationFunc == ActivationFunction::RELU;
+            orgParams.activationFunc == ActivationFunction::RELU || 
+            orgParams.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE;
         
         if (!bInputPadded || !bSupportedActivation)
         {

@@ -47,6 +47,7 @@ namespace KernelSelctor {
             << "#define INPUT_SLICE_PITCH1 (" << newParams.eltwiseParams.inDesc1.pitches.y << ")\n"
             << "#define INPUT_BATCH_PITCH1 (" << newParams.eltwiseParams.inDesc1.pitches.z << ")\n"
             << "#define ELTWISE_MODE_" << toString(newParams.eltwiseParams.mode) << "\n"
+            << "#define ELTWISE_SCALAR_MODE_" << toString(newParams.eltwiseParams.scalar_mode) << "\n"
             << "#define SCALAR (" << newParams.eltwiseParams.scalar << ")\n";
 
         const auto& out = newParams.outDims;

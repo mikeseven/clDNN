@@ -1,5 +1,4 @@
-/*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2016-2017 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-*/
+
 
 // Extensions and additional capabilities.
 #if FP16_SUPPORTED
@@ -31,8 +30,6 @@
 //                           (step 1 in in X or Y dimension of output) is computed.
 //  - INPUT_OFFSET         - [tensor] Offset between input and output (only spatial). Non-positive values that describe
 //                           initial offset input position of application of convolution filter and output position.
-//  - OUTPUT_OFFSET        - [tensor] Offset of ouput writes (only spatial). Non-negative values that describe
-//                           shift (in X and Y) of output writes for output position.
 //  - FP16_SUPPORTED       - [0/1] Value indicating whether device supports FP16 OpenCL extension (cl_khr_fp16).
 //  - FP16_UNIT_USED       - [0/1] Value indicating that current kernel should use FP16.
 //  - UNIT_TYPE            - Type of unit of input/output/weight/bias.
@@ -67,9 +64,11 @@ if (_kernel_data.leftovers)
 
 // Activation function used in ReLU.
 #if RELU && FP16_UNIT_USED
-    #define ACTIVATION(output, input) output = max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h);
+    #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
+    input : -convert_half(NEGATIVE_SLOPE)) : (fmax(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * fmin(input, 0.0h));
 #elif RELU
-    #define ACTIVATION(output, input) output = max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f);
+    #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
+    input : -NEGATIVE_SLOPE) : (fmax(input, 0.0f) + NEGATIVE_SLOPE * fmin(input, 0.0f));
 #else
     #define ACTIVATION(output, input) output = input;
 #endif
@@ -91,14 +90,16 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
     const __global UNIT_TYPE* input,
     __global UNIT_TYPE* output,
     const __global UNIT_TYPE* weights,
+#if BIAS_TERM
     const __global UNIT_TYPE* bias,
+#endif   
     uint split_idx) // TODO: removing this parameter cause a performance degradation... :)
 {
-    const uint oc  = get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column 
-    const uint or  = get_global_id(1) * OUT_BLOCK_HEIGHT; // or = Output Row
-    const uint fm  = get_global_id(2);                    // fm = Feature Map = od = Output Depth 
+    const uint oc  = (uint)get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column
+    const uint or  = (uint)get_global_id(1) * OUT_BLOCK_HEIGHT; // or = Output Row
+    const uint fm  = get_global_id(2);                    // fm = Feature Map = od = Output Depth
     const uint lid = get_sub_group_local_id();
-    
+
     uint batch_idx = fm / FEATURES_THREADS_PER_BATCH;
     uint feature_idx = fm % FEATURES_THREADS_PER_BATCH;
     uint fmg = feature_idx / SUB_GROUP_SIZE;
@@ -108,8 +109,8 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
     UNIT_TYPE w[PREFETCH];
     uint in_addr;
     uint weight_addr = fmg * FILTER_INPUT_FEATURE_NUM * FILTER_SIZE_X * FILTER_SIZE_Y * SUB_GROUP_SIZE + lid;
-    
-    for(int i = 0; i < (OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT); i++) { 
+
+    for(int i = 0; i < (OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT); i++) {
         out[i] = UNIT_VAL_ZERO;
     }
 
@@ -181,16 +182,16 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
             uint kc = 0; // kc = Kernel Column
             LOOP(FILTER_SIZE_X, kc,
             {
-                //w = weights[weight_addr];	
+                //w = weights[weight_addr];
                 for(uint br=0; br<OUT_BLOCK_HEIGHT; br++) {
                     for(uint bc=0; bc<OUT_BLOCK_WIDTH; bc++) {
 
 #if IN_BLOCK_WIDTH != SUB_GROUP_SIZE
-                        //if we fix the programming model, then we could use a nice simple 2d array: val = in[br * STRIDE_SIZE_Y + kr][bc * STRIDE_SIZE_X + kc]; 
-                        UNIT_TYPE val = intel_sub_group_shuffle( in[(((br * STRIDE_SIZE_Y + kr) * IN_BLOCK_WIDTH) + (bc * STRIDE_SIZE_X + kc)) / SUB_GROUP_SIZE],
-                                                                    (((br * STRIDE_SIZE_Y + kr) * IN_BLOCK_WIDTH) + (bc * STRIDE_SIZE_X + kc)) % SUB_GROUP_SIZE);
+                        //if we fix the programming model, then we could use a nice simple 2d array: val = in[br * STRIDE_SIZE_Y + kr][bc * STRIDE_SIZE_X + kc];
+                        UNIT_TYPE val = intel_sub_group_shuffle( in[(((br * STRIDE_SIZE_Y + kr * DILATION_SIZE_Y) * IN_BLOCK_WIDTH) + (bc * STRIDE_SIZE_X + kc * DILATION_SIZE_X)) / SUB_GROUP_SIZE],
+                                                                    (((br * STRIDE_SIZE_Y + kr * DILATION_SIZE_Y) * IN_BLOCK_WIDTH) + (bc * STRIDE_SIZE_X + kc * DILATION_SIZE_X)) % SUB_GROUP_SIZE);
 #else
-                        UNIT_TYPE val = intel_sub_group_shuffle( in[br * STRIDE_SIZE_X + kr], bc * STRIDE_SIZE_X + kc);	
+                        UNIT_TYPE val = intel_sub_group_shuffle( in[br * STRIDE_SIZE_Y + kr * DILATION_SIZE_Y], bc * STRIDE_SIZE_X + kc * DILATION_SIZE_X);
 #endif
 
                         out[br * OUT_BLOCK_WIDTH + bc] = mad(w[wi % PREFETCH], val, out[br * OUT_BLOCK_WIDTH + bc]);
@@ -204,13 +205,14 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
         // addr went beyond due to prefetch so move it back to correct location.
         weight_addr -= PREFETCH * SUB_GROUP_SIZE;
     }
-    
+
     uint out_split_offset = split_idx * OUT_SLICE_PITCH * FILTER_OUTPUT_FEATURE_NUM;
     uint out_addr = OUTPUT_OFFSET;
     out_addr += batch_idx * OUT_BATCH_PITCH;
     out_addr += out_split_offset + feature_idx * OUT_SLICE_PITCH; // out_addr indices into start of 16 feature maps.
     out_addr += or * OUT_ROW_PITCH + oc;  // offset for the 4x3 block that this workitem is working on;
 
+#if BIAS_TERM
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
 #ifdef BIAS_PER_OUTPUT
@@ -221,6 +223,8 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
             out[r * OUT_BLOCK_WIDTH + c] += bias[bias_index];
         }
     }
+#endif
+
 
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {

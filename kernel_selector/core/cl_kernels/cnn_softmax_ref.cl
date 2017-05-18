@@ -31,7 +31,7 @@ __kernel void softmax(__global DATA_TYPE* input, __global DATA_TYPE* output)
     for (int srcZ = 0; srcZ < INPUT_DEPTH; ++srcZ)
     {
         const unsigned int index = in_depth_offset + srcZ*INPUT_SLICE_PITCH;
-        max_value = max(max_value, input[index]);
+        max_value = fmax(max_value, input[index]);
     }
 
     // TODO: currently we calculate on float32 because it's lot of "add" operation and it stuck on the value "8192.0f"
@@ -48,6 +48,6 @@ __kernel void softmax(__global DATA_TYPE* input, __global DATA_TYPE* output)
         const unsigned int input_idx  = in_depth_offset + srcZ*INPUT_SLICE_PITCH;
         const unsigned int output_idx = out_depth_offset + srcZ*OUT_SLICE_PITCH;
         const DATA_TYPE res = exp(input[input_idx] - max_value) / (DATA_TYPE)denominator;
-        output[output_idx] = res;
+        output[output_idx] = activation_function(res, NL_M, NL_N);
     }
 }

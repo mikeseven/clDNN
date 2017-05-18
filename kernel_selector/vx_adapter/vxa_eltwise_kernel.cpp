@@ -29,6 +29,7 @@ namespace clDNN
         InitBaseParams(params, ksParams);
         ksParams.eltwiseParams.inDesc1 = params.eltwiseParams.inDesc1;
         ksParams.eltwiseParams.mode = params.eltwiseParams.mode;
+        ksParams.eltwiseParams.scalar_mode = params.eltwiseParams.mode;
         ksParams.eltwiseParams.scalar = params.eltwiseParams.scalar;
 
         KernelSelctor::EltwiseOptionalParams ksOptParams;

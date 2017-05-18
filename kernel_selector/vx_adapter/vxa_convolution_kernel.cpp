@@ -14,6 +14,7 @@
 // limitations under the License.
 */
 
+#include <algorithm>
 #include "vxa_convolution_kernel.h"
 #include "convolution/convolution_kernel_selector.h"
 
@@ -27,10 +28,17 @@ namespace clDNN
         KernelSelctor::ConvolutionParams ksParams;
         
         InitBaseParams(params, ksParams);
-        ksParams.convParams.filterSize = params.convParams.filterSize;
-        ksParams.convParams.padding = params.convParams.padding;
-        ksParams.convParams.stride = params.convParams.stride;
-        ksParams.convParams.biasPerOutputResult = params.convParams.biasPerOutputResult;
+        auto& cp = ksParams.convParams;
+        cp.filterSize           = params.convParams.filterSize;
+        cp.padding              = params.convParams.padding;
+        cp.stride               = params.convParams.stride;
+        cp.dilation             = params.convParams.dilation;
+        cp.biasPerOutputResult  = params.convParams.biasPerOutputResult;
+
+        cp.stride.x = std::max(cp.stride.x, 1U);
+        cp.stride.y = std::max(cp.stride.y, 1U);
+        cp.dilation.x = std::max(cp.dilation.x, 1U);
+        cp.dilation.y = std::max(cp.dilation.y, 1U);
 
         KernelSelctor::ConvolutionOptionalParams ksOptParams;
         ksOptParams.allow_padding = params.bAllowChangeInputTensor;

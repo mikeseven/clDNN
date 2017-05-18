@@ -41,8 +41,18 @@ namespace KernelSelctor
         TensorDesc td;
 
         const auto& cp = params.convParams;
-        const uint paddedInputWidth = params.inDims.x + (cp.padding.x * 2);
-        const uint paddedInputHeight = params.inDims.y + (cp.padding.y * 2);
+
+        const uint left_padding = cp.padding.x;
+        const uint top_padding = cp.padding.y;
+
+        const uint input_limit_x = (params.outDims.x - 1) * cp.stride.x + (cp.filterSize.x - 1) * cp.dilation.x + 1;
+        const uint input_limit_y = (params.outDims.y - 1) * cp.stride.y + (cp.filterSize.y - 1) * cp.dilation.y + 1;
+
+        const uint right_padding = (uint)std::max((int)input_limit_x - (int)params.inDims.x - (int)left_padding, (int)0);
+        const uint bottom_padding = (uint)std::max((int)input_limit_y - (int)params.inDims.y - (int)top_padding, (int)0);
+
+        const uint paddedInputWidth = params.inDims.x + left_padding + right_padding;
+        const uint paddedInputHeight = params.inDims.y + top_padding + bottom_padding;
         const uint offest = paddedInputWidth*params.convParams.padding.y + params.convParams.padding.x;
 
         td.offset = offest;

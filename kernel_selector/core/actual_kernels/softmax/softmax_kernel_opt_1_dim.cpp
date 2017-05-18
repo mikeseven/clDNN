@@ -37,6 +37,12 @@ namespace KernelSelctor
         KernelData kd = KernelData::Default<SoftMaxParams>(params, 1);
 
         SoftMaxParams& newParams = *static_cast<SoftMaxParams*>(kd.params.get());
+
+        if (newParams.activationFunc != ActivationFunction::NONE)
+        {
+            return{};
+        }
+
         newParams.inputLayout = newParams.outputLayout = bx;
 
         const uint maxLocalWorkGroup    = 32;

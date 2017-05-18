@@ -67,6 +67,7 @@ namespace clDNN
         {
             uSize filterSize;
             uSize stride;
+            uSize dilation;
             uSize padding;
             bool  biasPerOutputResult = false;
         };

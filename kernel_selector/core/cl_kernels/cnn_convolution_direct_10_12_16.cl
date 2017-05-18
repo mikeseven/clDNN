@@ -32,13 +32,16 @@ __kernel void convolution_f16_10x12x16(
     const __global half *src0,
     __global half *dst,
     const __global half *src1,
-    const __global half *biases)
+#ifdef OUTPUT_BIASED
+    const __global half *biases,
+#endif
+    uint split_idx)
 {
     const unsigned global_x = get_global_id(0);
     const unsigned global_y = get_global_id(1);
     const unsigned global_z = get_global_id(2);
-    const unsigned out_fm   = global_z % WIDTH1;
-    const unsigned batch_id = global_z / WIDTH1;
+    const unsigned out_fm   = global_z % ALIGNED_OFM;
+    const unsigned batch_id = global_z / ALIGNED_OFM;
     const unsigned group_x = get_group_id(0);
     const unsigned group_z = get_group_id(2);
     const unsigned max_group_x = get_num_groups(0);
@@ -46,7 +49,9 @@ __kernel void convolution_f16_10x12x16(
 
     half blockC[TILE_M * TILE_K] = { 0 };
 
+    const uint in_split_offset = split_idx * INPUT_SLICE_PITCH * INPUT_DEPTH;
     uint src0_offset_tile = INPUT_OFFEST_FOR_PADDED_PART    // data offset
+     + in_split_offset
      + batch_id * INPUT_BATCH_PITCH                         // batch offset
      + ( global_y * TILE_M * STRIDE_Y ) * INPUT_ROW_PITCH   // y offset
      + ( global_x * TILE_K * STRIDE_X );                    // x offset
@@ -54,7 +59,7 @@ __kernel void convolution_f16_10x12x16(
      + ( local_z / ( TILE_X / 4 ) ) * INPUT_ROW_PITCH       // y tile offset
      + ( local_z % ( TILE_X / 4 ) ) * 4;                    // x tile offset
 
-    const __global half *src1_read = src1 + ( group_z * TILE_N % WIDTH1 ) * 2;
+    const __global half *src1_read = src1 + ( group_z * TILE_N % ALIGNED_OFM ) * 2;
 
     unsigned patch_depth = 0;
     __attribute__((opencl_unroll_hint(3)))
@@ -95,12 +100,12 @@ __kernel void convolution_f16_10x12x16(
         LOOP(KERNEL_SLICE_DIV2, interleaved_y,
         {
             p2BlockB[interleaved_y] = intel_sub_group_block_read_us2( (const __global ushort*)src1_read );
-            src1_read += WIDTH1 * 2;
+            src1_read += ALIGNED_OFM * 2;
         } )
         if ( kernel_slice_is_odd )
         {
             pBlockB[KERNEL_WIDTH * KERNEL_HEIGHT - 1] = intel_sub_group_block_read_us( (const __global ushort*)src1_read );
-            src1_read += WIDTH1 * 2;
+            src1_read += ALIGNED_OFM * 2;
         }
 
 #define BLOCK_A(n) ( (n < 60) \
@@ -140,7 +145,8 @@ __kernel void convolution_f16_10x12x16(
     // TILE_K x TILE_M x SIMD.  Partial writes most likely generated if output padding used.
     // Group stores into vectors to expedite writeback.  One large write is faster than many
     // small saves. Right-most column may be smaller if output width not divisible by tile width.
-    __global half *out = dst + OUT_OFFSET +
+    const uint out_split_offset = split_idx * OUT_SLICE_PITCH * OUT_DEPTH;
+    __global half *out = dst + OUT_OFFSET + out_split_offset +
      + batch_id * OUT_BATCH_PITCH            // batch offset
      + out_fm * OUT_SLICE_PITCH              // channel offset
      + ( global_y * TILE_M ) * OUT_ROW_PITCH // y offset
@@ -148,15 +154,16 @@ __kernel void convolution_f16_10x12x16(
 
     if ( batch_id < OUT_BATCH && out_fm < OUT_DEPTH )
     {
-#ifndef BIAS_PER_OUTPUT
-        half bias = biases[out_fm];
+#if !defined OUTPUT_BIASED
+        const half bias = 0.h;
+#elif defined BIAS_PER_OFM
+        const half bias = biases[out_fm];
 #endif
         
         if ( OUT_WIDTH % TILE_K == 0 ||
              group_x < max_group_x - 1 )
         {
             typedef CAT( half, TILE_K ) half_t;
-            half bias = biases[out_fm];
             for( unsigned y = 0; y < TILE_M; y++ )
             {
                 if ( global_y * TILE_M + y < OUT_HEIGHT )
@@ -167,11 +174,12 @@ __kernel void convolution_f16_10x12x16(
                     {
                     #ifdef BIAS_PER_OUTPUT
                         const unsigned bias_index = out_fm*OUT_WIDTH*OUT_HEIGHT + ( global_y * TILE_M + y )*OUT_WIDTH + ( global_x * TILE_K + i);
-                        half bias = biases[bias_index];
+                        const half bias = biases[bias_index];
                     #endif
                         pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                        ((__global half*)(out + y * OUT_ROW_PITCH))[i] = pvBlockC[i];
                     }
-                    *(__global half_t*)(out + y * OUT_ROW_PITCH) = vBlockC;
+                    //*(__global half_t*)(out + y * OUT_ROW_PITCH) = vBlockC;
                 }
             }
         }
@@ -188,11 +196,12 @@ __kernel void convolution_f16_10x12x16(
                     {
                     #ifdef BIAS_PER_OUTPUT
                         const unsigned bias_index = out_fm*OUT_WIDTH*OUT_HEIGHT + ( global_y * TILE_M + y )*OUT_WIDTH + ( global_x * TILE_K + i);
-                        half bias = biases[bias_index];
+                        const half bias = biases[bias_index];
                     #endif
                         pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                        ((__global half*)(out + y * OUT_ROW_PITCH))[i] = pvBlockC[i];
                     }
-                    *(__global half_t*)(out + y * OUT_ROW_PITCH) = vBlockC;
+                    //*(__global half_t*)(out + y * OUT_ROW_PITCH) = vBlockC;
                 }
             }
         }

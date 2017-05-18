@@ -51,5 +51,5 @@ __kernel void convert(
     const unsigned src_index = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;
     const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
 
-    output[dst_index] = (DATA_TYPE)input[src_index];
+    output[dst_index] = activation_function((DATA_TYPE)input[src_index], NL_M, NL_N);
 }

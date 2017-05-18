@@ -39,5 +39,5 @@ __kernel void table_lookup(
     unsigned lut_idx = (unsigned)input[src_index];
     
     DATA_TYPE val = (lut_idx < TABLE_SIZE) ? (DATA_TYPE)lut[lut_idx] : 0;
-    output[dst_index] = val;
+    output[dst_index] = activation_function(val, NL_M, NL_N);
 }

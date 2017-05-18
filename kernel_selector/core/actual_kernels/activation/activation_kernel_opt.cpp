@@ -27,6 +27,7 @@ namespace KernelSelctor {
         k.EnableAllOutputLayout();
         k.SetOffsetSupport();
         k.SetPitchesSupport();
+        k.SetSubGroupSupport();
         k.SetNumDims(3);
         return k;
     }
@@ -38,6 +39,14 @@ namespace KernelSelctor {
         KernelData kd = KernelData::Default<ActivationParams>(params, 1);
 
         ActivationParams& newParams = *static_cast<ActivationParams*>(kd.params.get());
+
+        const uint32_t line_alignment = 4 / BytesPerElement(newParams.inputType);
+        if ((newParams.activationFunc != ActivationFunction::NONE) ||
+            (newParams.inDesc.pitches.x % line_alignment) != 0)
+        {
+            return{};
+        }
+
         newParams.inputLayout = newParams.outputLayout = bfyx;
 
         static const int NUM_ROWS_WI = 1;

@@ -98,7 +98,7 @@ namespace KernelSelctor {
         return desc;
     }
 
-    KernelString CNNKernelBase::GetKernelString(std::string name, std::string jit, std::string entry_point, std::string exe_mode) const
+    KernelString CNNKernelBase::GetKernelString(std::string name, std::string jit, std::string entry_point, std::string exe_mode, std::string default_build_flags) const
     {
         KernelString kernel_string;
 
@@ -108,8 +108,7 @@ namespace KernelSelctor {
         {
             kernel_string.str = codes[0];
             kernel_string.jit = jit;
-            //kernel_string.options = " -cl-no-subgroup-ifp  -cl-unsafe-math-optimizations";
-            kernel_string.options = exe_mode + " -cl-unsafe-math-optimizations";
+            kernel_string.options = exe_mode + " " + default_build_flags;
             kernel_string.entry_point = entry_point;
         }
 

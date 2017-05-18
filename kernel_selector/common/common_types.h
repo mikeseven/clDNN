@@ -73,6 +73,7 @@ namespace KernelSelctor
         LOGISTIC,
         HYPERBOLIC_TAN,
         RELU,
+        RELU_NEGATIVE_SLOPE,
         BRELU,
         SOFTRELU,
         ABS,

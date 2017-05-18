@@ -52,6 +52,7 @@ namespace KernelSelctor {
         kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "convolution");
         kernel.args_desc = GetArgumentDesc(1, true, true);
+        kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::UINT32, 0 });
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 

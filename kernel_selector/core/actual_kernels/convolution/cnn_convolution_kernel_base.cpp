@@ -36,15 +36,15 @@ namespace KernelSelctor
 
             jit << "#define INPUT_OFFEST_FOR_PADDED_PART " << inputOffsetForPaddedPart << "\n";
         }
-        jit << "#define KERNEL_WIDTH " << cp.filterSize.x << "\n"
-            << "#define KERNEL_HEIGHT " << cp.filterSize.y << "\n"
-            << "#define STRIDE_X (" << cp.stride.x << ")\n"
-            << "#define STRIDE_Y (" << cp.stride.y << ")\n"
-            << "#define INPUT_PADDING_X (" << cp.padding.x << ")\n"
-            << "#define INPUT_PADDING_Y (" << cp.padding.y << ")\n"
-            << "#define WIDTH1 (" << CLDNN_ALIGN(params.outDims.z, run_info.subBlockDimN) << ")\n"
-            << "#define DY " << run_info.globalWorkSizeDY << "\n"
-            << "#define DX " << run_info.globalWorkSizeDX << "\n"
+        jit << "#define KERNEL_WIDTH "      << cp.filterSize.x << "\n"
+            << "#define KERNEL_HEIGHT "     << cp.filterSize.y << "\n"
+            << "#define STRIDE_X ("         << cp.stride.x << ")\n"
+            << "#define STRIDE_Y ("         << cp.stride.y << ")\n"
+            << "#define INPUT_PADDING_X ("  << cp.padding.x << ")\n"
+            << "#define INPUT_PADDING_Y ("  << cp.padding.y << ")\n"
+            << "#define ALIGNED_OFM ("      << CLDNN_ALIGN(params.outDims.z, run_info.subBlockDimN) << ")\n"
+            << "#define DY "                << run_info.globalWorkSizeDY << "\n"
+            << "#define DX "                << run_info.globalWorkSizeDX << "\n"
             << "#define KERNEL_WIDTH_DIV2 " << cp.filterSize.x / 2 << "\n"
             << "#define KERNEL_SLICE_DIV2 " << (cp.filterSize.x * cp.filterSize.y) / 2 << "\n";
 
@@ -53,6 +53,10 @@ namespace KernelSelctor
         if (cp.biasPerOutputResult)
         {
             jit << "#define BIAS_PER_OUTPUT \n";
+        }
+        else
+        {
+            jit << "#define BIAS_PER_OFM \n";
         }
 
         return jit.str();

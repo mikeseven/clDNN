@@ -46,7 +46,7 @@ binary_data gpu_compiler::compile(context* context, kernel kernel) // throws cl:
 
         if (CL_SUCCESS != status)
         {
-#ifndef NDEBUG
+//#ifndef NDEBUG
             if (CL_BUILD_PROGRAM_FAILURE == status)
             {
                 cl_int getLogStatus;
@@ -64,7 +64,7 @@ binary_data gpu_compiler::compile(context* context, kernel kernel) // throws cl:
 
                 std::cout << buildLog + "\n";
             }
-#endif
+//#endif
         }
     }
 

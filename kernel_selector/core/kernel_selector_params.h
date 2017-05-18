@@ -81,6 +81,7 @@ namespace KernelSelctor
                         } pooling;
                         struct conv_t 
                         {
+                            uint dilation : 1;
                             uint biasPerFeatureMap : 1;
                             uint biasPerOutput : 1;
                         } conv;
@@ -206,6 +207,11 @@ namespace KernelSelctor
             default:
                 break;
             }
+        }
+
+        void SetDilationSupport()
+        {
+            key.restrict.val.dedicated.conv.dilation = 1;
         }
 
         void SetBiasPerFeatureMap()
@@ -334,6 +340,7 @@ namespace KernelSelctor
         {
             uSize filterSize;
             uSize stride;
+            uSize dilation;
             uSize padding;
             bool  biasPerOutputResult = false;
         };
@@ -352,6 +359,12 @@ namespace KernelSelctor
             else
             {
                 k.SetBiasPerFeatureMap();
+            }
+
+            if (convParams.dilation.x != 1 ||
+                convParams.dilation.y != 1)
+            {
+                k.SetDilationSupport();
             }
 
             return k;
@@ -503,7 +516,8 @@ namespace KernelSelctor
         {
             TensorDesc  inDesc1; // TODO: Support multi Inputs
             EltwiseMode mode = EltwiseMode::ADD;
-            float scalar = 0;
+            EltwiseMode scalar_mode = EltwiseMode::ADD;
+            float       scalar = 0;
         };
 
         DedicatedParams eltwiseParams;
@@ -515,7 +529,7 @@ namespace KernelSelctor
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // SoftMaxParams
+    // ReorderVxParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct ReorderVxParams : public BaseParams
     {

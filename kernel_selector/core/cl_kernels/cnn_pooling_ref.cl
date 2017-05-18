@@ -50,7 +50,7 @@ __kernel void pooling(__global DATA_TYPE *src, __global DATA_TYPE *out)
             {
                 DATA_TYPE tmpRes = src_ptr[src_y * INPUT_ROW_PITCH + src_x];
                 #ifdef MAX_POOLING
-                    res = max(res, tmpRes);
+                    res = fmax(res, tmpRes);
                 #else
                     res += tmpRes;
                 #endif 

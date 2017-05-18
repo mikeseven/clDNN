@@ -125,6 +125,7 @@ namespace KernelSelctor
 
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), entry_point, AGE_BASED);
         kernel.args_desc = GetArgumentDesc(1, true, true);
+        kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::UINT32, 0 });
 
         auto cpu_kernel = CPUCNNConvolutionReorder(CPUCNNConvolutionReorder::WeightsReorderMode::CONVOLUTION_GEMM, params_ptr, run_info);
         kd.weights_reorder_params.engine = WeightsReorderParams::Engine::CPU;

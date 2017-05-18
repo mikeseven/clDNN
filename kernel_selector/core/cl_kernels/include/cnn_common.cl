@@ -239,326 +239,98 @@ __constant float1 float_zeros     = (float1){0};
     #define DATA_TYPE_ZERO 0.0f
 #endif
 
-// This macro variable indicates whether activation function requires float or half data 
-#if (defined(ACTIVATION_FUNCTION_LOGISTIC) || defined(ACTIVATION_FUNCTION_HYPERBOLIC_TAN) || \
-     defined(ACTIVATION_FUNCTION_SOFTRELU) || defined(ACTIVATION_FUNCTION_ABS) || defined(ACTIVATION_FUNCTION_SQRT))
-     #define ACTIVATION_REQUIRES_FLOAT_DATA
+#if defined ACTIVATION_FUNCTION_LOGISTIC
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return (TYPE_T)(1.0) / ((TYPE_T)(1.0) + exp(-value)); }
+
+#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return tanh(value); }
+
+#elif defined ACTIVATION_FUNCTION_RELU
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return fmax(value, (TYPE_T)(0)); }
+
+#elif defined ACTIVATION_FUNCTION_SOFTRELU
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return log( (TYPE_T)(1) + exp(value)); }
+    
+#elif defined ACTIVATION_FUNCTION_RELU_NEGATIVE_SLOPE
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    return isinf(NEGATIVE_SLOPE) ? ((in_f >= (TYPE_T)0) ? in_f : -(TYPE_T)NEGATIVE_SLOPE) : (fmax(in_f, (TYPE_T)0) + (TYPE_T)NEGATIVE_SLOPE * fmin(in_f, (TYPE_T)0));
+
+#elif defined ACTIVATION_FUNCTION_ABS
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return fabs(value); }
+
+#elif defined ACTIVATION_FUNCTION_SQUARE
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return value * value; }
+
+#elif defined ACTIVATION_FUNCTION_SQRT
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return sqrt(value); }
+
+#elif defined ACTIVATION_FUNCTION_BRELU
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return fmin((TYPE_T)(m), fmax((TYPE_T)(0), value)); }
+
+#elif defined ACTIVATION_FUNCTION_LINEAR
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return (TYPE_T)(m) * value + (TYPE_T)(n); }
+
+#else
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return value; }
+
 #endif
 
+ACTIVATION_FUNCTION(half)
+ACTIVATION_FUNCTION(half2)
+ACTIVATION_FUNCTION(half3)
+ACTIVATION_FUNCTION(half4)
+//ACTIVATION_FUNCTION(half5)
+//ACTIVATION_FUNCTION(half6)
+//ACTIVATION_FUNCTION(half7)
+//ACTIVATION_FUNCTION(half8)
+//ACTIVATION_FUNCTION(half9)
+//ACTIVATION_FUNCTION(half10)
+//ACTIVATION_FUNCTION(half11)
+//ACTIVATION_FUNCTION(half12)
+//ACTIVATION_FUNCTION(half13)
+//ACTIVATION_FUNCTION(half14)
+//ACTIVATION_FUNCTION(half15)
+ACTIVATION_FUNCTION(half16)
+
+ACTIVATION_FUNCTION(float)
+ACTIVATION_FUNCTION(float2)
+ACTIVATION_FUNCTION(float3)
+ACTIVATION_FUNCTION(float4)
+//ACTIVATION_FUNCTION(float5)
+//ACTIVATION_FUNCTION(float6)
+//ACTIVATION_FUNCTION(float7)
+ACTIVATION_FUNCTION(float8)
+//ACTIVATION_FUNCTION(float9)
+//ACTIVATION_FUNCTION(float10)
+//ACTIVATION_FUNCTION(float11)
+//ACTIVATION_FUNCTION(float12)
+//ACTIVATION_FUNCTION(float13)
+//ACTIVATION_FUNCTION(float14)
+//ACTIVATION_FUNCTION(float15)
+//ACTIVATION_FUNCTION(float16)
 
 inline DATA_TYPE activation_function(DATA_TYPE in_f, float m, float n)
 {
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    DATA_TYPE res = (DATA_TYPE)1.0 / ((DATA_TYPE)1.0 + exp(-in_f));
-    return isinf(res) ? (DATA_TYPE)0 : res;
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(in_f);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return (in_f > (DATA_TYPE)0 ? in_f : (DATA_TYPE)0);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return min((DATA_TYPE)m, max((DATA_TYPE)0, in_f));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    DATA_TYPE res = log(1 + exp(in_f));
-    return isinf(res) ? (DATA_TYPE)0 : res;
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(in_f);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return in_f * in_f;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(in_f);
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (DATA_TYPE)m * in_f + (DATA_TYPE)n;
-#else
-    return in_f;
-#endif
-}
-
-inline half2 activation_function_half2(half2 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (half2)(1.0) / ((half2)(1.0) + exp(-value));
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return max(value, (half2)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (half2)(1) + exp(value));
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return min((half2)(m), max((half2)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (half2)(m) * value + (half2)(n);
-
-#else
-    return value;
-
-#endif
-}
-
-inline half3 activation_function_half3(half3 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (half3)(1.0) / ((half3)(1.0) + exp(-value));
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return max(value, (half3)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (half3)(1) + exp(value));
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return min((half3)(m), max((half3)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (half3)(m) * value + (half3)(n);
-
-#else
-    return value;
-
-#endif
-}
-
-inline half4 activation_function_half4(half4 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (half4)(1.0) / ((half4)(1.0) + exp(-value));
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return max(value, (half4)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (half4)(1) + exp(value));
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return min((half4)(m), max((half4)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (half4)(m) * value + (half4)(n);
-
-#else
-    return value;
-
-#endif
-}
-
-
-inline half16 activation_function_half16(half16 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (half16)(1.0) / ((half16)(1.0) + exp(-value));
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return fmax(value, (half16)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (half16)(1) + exp(value));
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return fmin((half16)(m), fmax((half16)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (half16)(m) * value + (half16)(n);
-
-#else
-    return value;
-
-#endif
-}
-
-inline float2 activation_function_float2(float2 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (float2)(1.0) / ((float2)(1.0) + exp(-value));
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return max(value, (float2)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (float2)(1) + exp(value));
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return min((float2)(m), max((float2)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (float2)(m) * value + (float2)(n);
-
-#else
-    return value;
-
-#endif
-}
-
-inline float3 activation_function_float3(float3 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (float3)(1.0) / ((float3)(1.0) + exp(-value));
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return max(value, (float3)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (float3)(1) + exp(value));
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return min((float3)(m), max((float3)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (float3)(m) * value + (float3)(n);
-
-#else
-    return value;
-
-#endif
-}
-
-inline float4 activation_function_float4(float4 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (float4)(1.0) / ((float4)(1.0) + exp(-value));
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return max(value, (float4)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (float4)(1) + exp(value));
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return min((float4)(m), max((float4)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (float4)(m) * value + (float4)(n);
-
-#else
-    return value;
-
-#endif
-}
-
-
-inline float8 activation_function_float8(float8 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (float8)(1.0) / ((float8)(1.0) + exp(-value));
- 
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return fmax(value, (float8)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (float8)(1) + exp(value));
- 
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return fmin((float8)(m), fmax((float8)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (float8)(m) * value + (float8)(n);
-
-#else
-    return value;
-
-#endif
+    return CAT(activation_function_, DATA_TYPE)(in_f, m ,n);
 }

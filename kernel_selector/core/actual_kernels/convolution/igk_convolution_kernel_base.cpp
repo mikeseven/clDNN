@@ -19,16 +19,14 @@
 
 namespace KernelSelctor 
 {
-    void CPUIGKConvolutionReorder::Execute(void* input, std::size_t, void* output, std::size_t) const
+    template <typename T>
+    void CPUIGKConvolutionReorder::ExecuteT(T* input, size_t, T* output, size_t) const
     {
         assert(input_layout == WeightsReorderLayout::oiyx);
         assert(output_layout == WeightsReorderLayout::os_iyx_osv16);
         constexpr uint32_t sub_group_size = 16;
 
-        short* input_ptr = (short*)input;
-        short* output_ptr = (short*)output;
-
-        uint size[5] = {
+        size_t size[5] = {
             params->outDims.w,
             params->outDims.z,
             params->inDims.z,
@@ -43,19 +41,35 @@ namespace KernelSelctor
                 {
                     for (uint32_t x = 0; x < params->convParams.filterSize.x; x++)
                     {
-                        std::size_t input_idx = x + size[3] * (y + size[4] * (ifm + size[2] * ofm));
-                        const uint slice_id = ofm / sub_group_size;
-                        const uint id_in_slice = ofm % sub_group_size;
-                        std::size_t output_idx = id_in_slice + 16 * (x + size[3] * (y + size[4] * (ifm + slice_id * size[2])));
+                        size_t input_idx = x + size[3] * (y + size[4] * (ifm + size[2] * ofm));
+                        const uint32_t slice_id = ofm / sub_group_size;
+                        const uint32_t id_in_slice = ofm % sub_group_size;
+                        size_t output_idx = id_in_slice + 16 * (x + size[3] * (y + size[4] * (ifm + slice_id * size[2])));
                         //assert(input_idx*bpp < input_size && output_idx*bpp < output_size);
-                        output_ptr[output_idx] = input_ptr[input_idx];
+                        output[output_idx] = input[input_idx];
                     }
                 }
             }
         }
     }
 
-    std::size_t CPUIGKConvolutionReorder::GetNewWeightBufferSizeInBytes() const
+    void CPUIGKConvolutionReorder::Execute(void* input, size_t input_size, void* output, size_t output_size) const
+    {
+        switch (params->inputType)
+        {
+        case Datatype::F16:
+            ExecuteT((short*)input, input_size, (short*)output, output_size);
+            break;
+        case Datatype::F32:
+            ExecuteT((float*)input, input_size, (float*)output, output_size);
+            break;
+        default:
+            assert(0);
+            break;
+        }
+    }
+
+    size_t CPUIGKConvolutionReorder::GetNewWeightBufferSizeInBytes() const
     {
         constexpr uint32_t sub_group_size = 16;
         return
@@ -141,13 +155,24 @@ namespace KernelSelctor
             cldnn::format::yx,
             { (cldnn::tensor::value_type)0,
               (cldnn::tensor::value_type)0 });
+        cldnn::tensor dilation = cldnn::tensor(
+            cldnn::format::yx,
+            { (cldnn::tensor::value_type)cp.dilation.y,
+              (cldnn::tensor::value_type)cp.dilation.x });
         auto input_offset_with_padding = params.inDesc.offset - cp.padding.x - params.inDesc.pitches.x*cp.padding.y;
+
+        const bool relu =
+            params.activationFunc == ActivationFunction::RELU ||
+            params.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE;
+        const float negative_slope =
+            params.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE ?
+            params.nlParams.m : 0.f;
 
         jit_constants mem_consts{
             neural::gpu::make_jit_constant("INPUT",                     input_tensor),
             neural::gpu::make_jit_constant("OUTPUT",                    output_tensor),
             neural::gpu::make_jit_constant("STRIDE",                    stride),
-            neural::gpu::make_jit_constant("INPUT_OFFSET",              params.inDesc.offset), // should contains data for split also
+            neural::gpu::make_jit_constant("INPUT_OFFSET",              params.inDesc.offset),
             neural::gpu::make_jit_constant("INPUT_OFFSET_WITH_PADDING", input_offset_with_padding),
             neural::gpu::make_jit_constant("OUTPUT_OFFSET",             params.outDesc.offset),
             neural::gpu::make_jit_constant("OUTPUT_LIMIT",              params.outDesc.pitches.w),
@@ -157,12 +182,14 @@ namespace KernelSelctor
             neural::gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
             neural::gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"),
             neural::gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM",  "FILTER_FEATURE_NUM_1"),
-            neural::gpu::make_jit_constant("FP16_SUPPORTED",            static_cast<int>(kd.fp16_unit_used)), // TODO: why do we need it? FP16_UNIT_USED is enough.
+            neural::gpu::make_jit_constant("FP16_SUPPORTED",            static_cast<int>(kd.fp16_unit_used)),   // TODO: use engine
             neural::gpu::make_jit_constant("FP16_UNIT_USED",            static_cast<int>(kd.fp16_unit_used)),
             neural::gpu::make_jit_constant("UNIT_TYPE",                 kd.fp16_unit_used ? "half" : "float"),
             neural::gpu::make_jit_constant("UNIT_VAL_ZERO",             kd.fp16_unit_used ? "0.0h" : "0.0f"),
-            neural::gpu::make_jit_constant("RELU",                      static_cast<int>(params.activationFunc == ActivationFunction::RELU)),
-            neural::gpu::make_jit_constant("NEGATIVE_SLOPE",            0.f), // TODO - add it to params
+            neural::gpu::make_jit_constant("RELU",                      static_cast<int>(relu)),
+            neural::gpu::make_jit_constant("NEGATIVE_SLOPE",            negative_slope),
+            neural::gpu::make_jit_constant("BIAS_TERM",                 static_cast<int>(1)),
+            neural::gpu::make_jit_constant("DILATION",                  dilation),
             neural::gpu::make_jit_constant("INPUT_ROW_PITCH",           params.inDesc.pitches.x),
             neural::gpu::make_jit_constant("INPUT_SLICE_PITCH",         params.inDesc.pitches.y),
             neural::gpu::make_jit_constant("INPUT_BATCH_PITCH",         params.inDesc.pitches.z),
@@ -190,7 +217,6 @@ namespace KernelSelctor
             }
         }
 #endif
-
         if (params.inputLayout == bfyx)
         {
             mem_consts.add_constant(neural::gpu::make_jit_constant("SUB_GROUP_SIZE", kd.lws2));
@@ -208,22 +234,24 @@ namespace KernelSelctor
 
     DispatchData IGKConvolutionKernelBase::set_default(const ConvolutionParams& params) const
     {
-        auto split = 1;  // TODO: do we need to support split (from performance aspect)?
         auto batch_size = params.outDims.w;
-        auto input_fetures = params.outDims.z;
+        auto output_features = params.outDims.z;
 
         DispatchData kd;
 
         kd.fp16_unit_used = params.inputType == Datatype::F16;
-        std::size_t gws0 = (input_fetures * batch_size) / split;
-        std::size_t lws0 = std::min(gws0, static_cast<size_t>(32));
+        size_t gws0 = output_features * batch_size;
+        size_t lws0 = std::min(gws0, static_cast<size_t>(32));
         while (gws0 % lws0)
         {
             lws0--;
         }
+        kd.gws0 = gws0;
         kd.gws1 = params.outDims.x;
         kd.gws2 = params.outDims.y;
-        kd.lws1 = kd.lws2 = 1;
+        kd.lws0 = lws0;
+        kd.lws1 = 1;
+        kd.lws2 = 1;
         kd.ofm_per_work_item = 1;
         kd.batches_per_work_item = 1;
         kd.block_width = 1;

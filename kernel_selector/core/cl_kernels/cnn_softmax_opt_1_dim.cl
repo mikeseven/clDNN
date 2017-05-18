@@ -29,9 +29,9 @@ DATA_TYPE find_max_value(__local DATA_TYPE* partial_max, const int idx, const __
     DATA_TYPE value = -DATA_TYPE_MAX;
     for(int i = 0; i < ITEMS_NUM; i++)
     {
-        value = max(value, input[LWS * i + idx]);
+        value = fmax(value, input[LWS * i + idx]);
     }
-    value = max(value, idx < LEFTOVERS? input[LWS * ITEMS_NUM + idx] : -DATA_TYPE_MAX);
+    value = fmax(value, idx < LEFTOVERS? input[LWS * ITEMS_NUM + idx] : -DATA_TYPE_MAX);
     partial_max[idx] = value;
 
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -39,7 +39,7 @@ DATA_TYPE find_max_value(__local DATA_TYPE* partial_max, const int idx, const __
     {
         for(int i = 1; i < LWS; i++)
         {
-            partial_max[0] = max(partial_max[0], partial_max[i]);
+            partial_max[0] = fmax(partial_max[0], partial_max[i]);
         };
     }
     barrier(CLK_LOCAL_MEM_FENCE);

@@ -26,7 +26,10 @@ __kernel void convolution_f16(
     const __global half *src0,
     __global half *dst,
     const __global half *src1,
-    const __global half *bias)
+#ifdef OUTPUT_BIASED
+    const __global half *bias,
+#endif
+    uint split_idx)
 {
     const unsigned group_x = get_group_id(0);
     const unsigned group_y = get_group_id(1);
@@ -43,11 +46,12 @@ __kernel void convolution_f16(
     half16  blockC00 = 0.f;
     half16  blockC10 = 0.f;
 
+    const uint in_split_offset = split_idx * INPUT_SLICE_PITCH * INPUT_DEPTH;
     // Src0 (patch input) is directly used as atile.
     // Each work item points to the start of a different patch.
     // atile is M rows x K columns.
 #if defined(INPUT_BUFFER_WIDTH_PADDED) && defined(INPUT_BUFFER_HEIGHT_PADDED)
-    uint src0_read_offset = INPUT_OFFEST_FOR_PADDED_PART
+    uint src0_read_offset = INPUT_OFFEST_FOR_PADDED_PART + in_split_offset
      + INPUT_BATCH_PITCH * global_z                                   // batch offset
      + ( ( global_y / OUT_WIDTH ) * STRIDE_Y * INPUT_ROW_PITCH )      // y offset
      + ( ( global_y % OUT_WIDTH ) * STRIDE_X );                 // x offset
@@ -55,7 +59,7 @@ __kernel void convolution_f16(
     #pragma error - fix this path
     const int y_offset = ( global_y / OUT_WIDTH ) * STRIDE_Y - INPUT_PADDING_Y;
     const int x_offset = ( global_y % OUT_WIDTH ) * STRIDE_X - INPUT_PADDING_X;
-    uint src0_read_offset = INPUT_OFFSET + INPUT_BATCH_PITCH * global_z
+    uint src0_read_offset = INPUT_OFFSET + in_split_offset + INPUT_BATCH_PITCH * global_z
                             + y_offset * INPUT_ROW_PITCH;
 
     int partial_left = 0, partial_right = 0;
@@ -78,7 +82,7 @@ __kernel void convolution_f16(
     #pragma error - fix this path
     // TODO: Handle offset
     const int y_offset = ( global_y / OUT_WIDTH ) * STRIDE_Y -INPUT_PADDING_Y;
-    int src0_read_offset = INPUT_BATCH_PITCH * global_z        // batch offset
+    int src0_read_offset = in_split_offset + INPUT_BATCH_PITCH * global_z        // batch offset
      + y_offset * INPUT_ROW_PITCH                              // y offset
      + ( ( global_y % OUT_WIDTH ) * STRIDE_X );                // x offset
 #endif
@@ -117,7 +121,7 @@ __kernel void convolution_f16(
     __attribute__((opencl_unroll_hint(1)))
     do
     {
-        unsigned patch_row = 0;
+        int patch_row = 0;
         __attribute__((opencl_unroll_hint(1)))
         do
         {
@@ -198,12 +202,12 @@ __kernel void convolution_f16(
             LOOP(KERNEL_WIDTH_DIV2, interleaved_y,
             {
                 p4BlockB00[interleaved_y] = intel_sub_group_block_read_us4( (const __global ushort*)src1_read );
-                src1_read += WIDTH1 * 2;
+                src1_read += ALIGNED_OFM * 2;
             } )
             if ( kernel_width_is_odd )
             {
                 p2BlockB00[KERNEL_WIDTH - 1] = intel_sub_group_block_read_us2( (const __global ushort*)src1_read );
-                src1_read += WIDTH1 * 2;
+                src1_read += ALIGNED_OFM * 2;
             }
 
             // Perform MADs
@@ -232,9 +236,10 @@ __kernel void convolution_f16(
 
     #undef DOT_PRODUCT_16
 
+    const uint out_split_offset = split_idx * OUT_SLICE_PITCH * OUT_DEPTH;
     // Dst resembles a cube of width x height x (output channel * batches).  Each tile writes:
     // (SIMD * TILE_M) x 1 x TILE_N.  Partial writes most likely generated if padding used.
-    __global half *out = dst + OUT_OFFSET
+    __global half *out = dst + OUT_OFFSET + out_split_offset
      + global_z * OUT_BATCH_PITCH                                                   // batch offset
      + ( group_x * TILE_N ) * OUT_SLICE_PITCH                                       // channel offset
      + ( ( global_y * TILE_M ) / OUT_WIDTH ) * OUT_ROW_PITCH  // y offset
@@ -360,7 +365,10 @@ __kernel void convolution_f32(
     const __global float *src0,
     __global float *dst,
     const __global float *src1,
-    const __global float *bias)
+#ifdef OUTPUT_BIASED
+    const __global float *bias,
+#endif
+    uint split_idx)
 {
     const unsigned group_x = get_group_id(0);
     const unsigned group_y = get_group_id(1);
@@ -382,13 +390,16 @@ __kernel void convolution_f32(
     float8  blockC21 = 0.f;
     float8  blockC31 = 0.f;
 
+    const uint in_split_offset = split_idx * INPUT_SLICE_PITCH * INPUT_DEPTH;
     // Src0 (patch input) is directly used as atile.
     // Each work item points to the start of a different patch.
     // atile is M rows x K columns.
-    int src0_read_offset0 = INPUT_BATCH_PITCH * global_z                            // batch offset
+    int src0_read_offset0 = INPUT_OFFEST_FOR_PADDED_PART + in_split_offset
+     + INPUT_BATCH_PITCH * global_z                                                 // batch offset
      + ( ( ( global_y * TILE_M + 0 ) / OUT_WIDTH ) * STRIDE_Y * INPUT_ROW_PITCH )   // y offset
      + ( ( ( global_y * TILE_M + 0 ) % OUT_WIDTH ) * STRIDE_X );                    // x offset
-    int src0_read_offset1 = INPUT_BATCH_PITCH * global_z                            // batch offset
+    int src0_read_offset1 = INPUT_OFFEST_FOR_PADDED_PART + in_split_offset
+     + INPUT_BATCH_PITCH * global_z                                                 // batch offset
      + ( ( ( global_y * TILE_M + 1 ) / OUT_WIDTH ) * STRIDE_Y * INPUT_ROW_PITCH )   // y offset
      + ( ( ( global_y * TILE_M + 1 ) % OUT_WIDTH ) * STRIDE_X );                    // x offset
 
@@ -463,12 +474,12 @@ __kernel void convolution_f32(
             LOOP(KERNEL_WIDTH_DIV2, interleaved_y,
             {
                 p8BlockB00[interleaved_y] = as_float8( intel_sub_group_block_read8( (const __global uint*)src1_read ) );
-                src1_read += WIDTH1 * 2;
+                src1_read += ALIGNED_OFM * 2;
             } )
             if ( kernel_width_is_odd )
             {
                 p4BlockB00[KERNEL_WIDTH - 1] = as_float4( intel_sub_group_block_read4( (const __global uint*)src1_read ) );
-                src1_read += WIDTH1 * 2;
+                src1_read += ALIGNED_OFM * 2;
             }
 
             // Perform MADs
@@ -517,14 +528,15 @@ __kernel void convolution_f32(
     //while ( ++patch_depth < 1 );  //debug
     while ( ++patch_depth < INPUT_DEPTH );
 
+    const uint out_split_offset = split_idx * OUT_SLICE_PITCH * OUT_DEPTH;
     // Dst resembles a cube of width x height x (output channel * batches).  Each tile writes:
     // (SIMD * TILE_M) x 1 x TILE_N.  Partial writes most likely generated if padding used.
-    __global float *out0 = dst + OUT_OFFSET
+    __global float *out0 = dst + OUT_OFFSET + out_split_offset
      + global_z * OUT_BATCH_PITCH                                                       // batch offset
      + ( group_x * TILE_N ) * OUT_SLICE_PITCH                                           // channel offset
      + ( ( global_y * TILE_M + 0 ) / OUT_WIDTH ) * OUT_ROW_PITCH // y offset
      + ( ( global_y * TILE_M + 0 ) % OUT_WIDTH );               // x offset
-    __global float *out1 = dst + OUT_OFFSET
+    __global float *out1 = dst + OUT_OFFSET + out_split_offset
      + global_z * OUT_BATCH_PITCH                                                       // batch offset
      + ( group_x * TILE_N ) * OUT_SLICE_PITCH                                           // channel offset
      + ( ( global_y * TILE_M + 1 ) / OUT_WIDTH ) * OUT_ROW_PITCH // y offset

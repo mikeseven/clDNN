@@ -58,7 +58,9 @@ namespace KernelSelctor
             params(_params),
             kd(kd) {}
 
-        virtual void Execute(void* input, std::size_t input_size, void* output, std::size_t output_size) const;
+        virtual void Execute(void* input, size_t input_size, void* output, size_t output_size) const;
+        template<typename T>
+        void ExecuteT(T* input, size_t input_size, T* output, size_t output_size) const;
         std::size_t GetNewWeightBufferSizeInBytes() const;
     };
 
