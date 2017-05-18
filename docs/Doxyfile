@@ -3,8 +3,8 @@ EXTENSION_MAPPING      = h=C c=C hpp=C++ cpp=C++
 INLINE_SIMPLE_STRUCTS  = YES
 TYPEDEF_HIDES_STRUCT   = YES
 HIDE_FRIEND_COMPOUNDS  = YES
-INPUT                  = ../../api
-IMAGE_PATH			   = ../
+INPUT                  = ../api
+IMAGE_PATH             = ./img
 RECURSIVE              = YES
 EXAMPLE_PATH           = examples
 SOURCE_BROWSER         = YES

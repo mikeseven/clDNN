@@ -145,6 +145,38 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_format, expected_tensor);
 }
 
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const deconvolution>, boost::optional<layout> const& output_layout)
+{
+    auto expected_tensor = current_layout.size;
+    auto expected_data_type = current_layout.data_type;
+    auto expected_format = current_layout.format;
+
+    if (output_layout)
+    {
+        expected_data_type = output_layout.get().data_type;
+    }
+    else if (type != data_type::input)
+        throw std::runtime_error("'output_layout' is required parameter for weights/bias optimization");
+
+    switch (type)
+    {
+    case data_type::bias: //convolution bias
+        expected_tensor = cldnn::tensor(1, 1, static_cast<tensor::value_type>(current_layout.count()), 1);
+        expected_format = cldnn::format::bfyx;
+        break;
+
+    case data_type::weights: //convolution weights
+        expected_tensor = current_layout.size;
+        expected_format = cldnn::format::bfyx;
+        break;
+
+    default:
+        throw std::runtime_error("Unsupported data type in layout_optimizer::get_expected_layout for convolution primitive");
+    }
+
+    return layout(expected_data_type, expected_format, expected_tensor);
+}
+
 std::pair<std::shared_ptr<cldnn::reorder>, bool>
 layout_optimizer::create_reorder_if_needed(const layout& current_layout, const cldnn::primitive_id& memid, layout const& expected_layout)
 {

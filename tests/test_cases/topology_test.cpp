@@ -16,7 +16,7 @@
 #include <api/CPP/eltwise.hpp>
 #include <api/CPP/softmax.hpp>
 #include <api/CPP/activation.hpp>
-#include <api/CPP/depth_concatenate.hpp>
+#include <api/CPP/concatenation.hpp>
 #include <deque>
 #include <set>
 
@@ -280,7 +280,7 @@ protected:
                 input_layouts.push_back({ input_id1, input_layout1 });
                 input_layouts.push_back({ input_id2, input_layout2 });
                 
-                topology.add(cldnn::depth_concatenate(id, { input_id1,input_id2 }));
+                topology.add(cldnn::concatenation(id, { input_id1,input_id2 }, cldnn::concatenation::along_f));
                 return true;
             }
         };

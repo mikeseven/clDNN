@@ -22,8 +22,8 @@
 
 #include "primitive_type.h"
 #include "api/CPP/convolution.hpp"
+#include "api/CPP/deconvolution.hpp"
 #include "api/CPP/data.hpp"
-#include "api/CPP/depth_concatenate.hpp"
 #include "api/CPP/eltwise.hpp"
 #include "api/CPP/input_layout.hpp"
 #include "api/CPP/pooling.hpp"
@@ -468,9 +468,10 @@ void program_impl::optimize_weights(layout_optimizer& lo)
     {
         auto& prim = *p.second;
 
-        do_for_types<convolution, fully_connected>(prim,
+        do_for_types<convolution, fully_connected, deconvolution>(prim,
             prep_opt,   //case for convolution
-            prep_opt    //case for fully_connected
+            prep_opt,   //case for fully_connected
+            prep_opt    //case for deconvolution
             );
     }
 

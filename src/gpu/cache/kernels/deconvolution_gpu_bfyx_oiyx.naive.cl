@@ -13,40 +13,55 @@
 // limitations under the License.
 
 
-#if RELU
+#if FP16_UNIT_USED
+    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
+
+#if RELU && FP16_UNIT_USED
+    #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
+    input : -convert_half(NEGATIVE_SLOPE)) : (max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h));
+#elif RELU
     #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
     input : -NEGATIVE_SLOPE) : (max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f));
 #else
     #define ACTIVATION(output, input) output = input;
 #endif
 
-KERNEL(convolution_gpu_yxfb_oiyx)(
-    const __global float* input,
-    __global float* output,
-    const __global float* filter,
-    const __global float* bias,
+KERNEL(deconvolution_gpu_bfyx_oiyx)(
+    const __global UNIT_TYPE* input,
+    __global UNIT_TYPE* output,
+    const __global UNIT_TYPE* filter,
+#if BIAS_TERM
+    const __global UNIT_TYPE* bias,
+#endif
     uint split_idx)
 {
     const int batch_num = INPUT_BATCH_NUM;
-
-    const uint linear_id = get_global_id(1) + get_global_size(1) * (get_global_id(2) + get_global_size(2) * get_global_id(0));
-    const int bifn_num = batch_num * FILTER_OUTPUT_FEATURE_NUM;
-    int global_id = linear_id % bifn_num + (linear_id / bifn_num) * bifn_num * FILTER_ARRAY_NUM + split_idx * bifn_num;
-
-    const int ofm_offset = (global_id / batch_num) % FILTER_OUTPUT_FEATURE_NUM;
-
-    float result = bias[ofm_offset];
-
-    bool finish = false;
+    const uint batch_id = get_global_id(0) % INPUT_BATCH_NUM;
+    const uint feature_id = get_global_id(0) / INPUT_BATCH_NUM;
     const uint out_x = get_global_id(1);
     const uint out_y = get_global_id(2);
+
+    const uint linear_id = out_x + OUTPUT_SIZE_X * (out_y + OUTPUT_SIZE_Y * (feature_id + OUTPUT_FEATURE_NUM * batch_id));
+    const int bifn_num = batch_num * OUTPUT_SIZE_X * OUTPUT_SIZE_Y * FILTER_OUTPUT_FEATURE_NUM;
+    int global_id = linear_id % bifn_num + (linear_id / bifn_num) * bifn_num * FILTER_ARRAY_NUM + split_idx * bifn_num;
+
+    const int ofm_offset = (global_id / (OUTPUT_SIZE_X * OUTPUT_SIZE_Y * INPUT_FEATURE_NUM)) % FILTER_OUTPUT_FEATURE_NUM;
+
+#if BIAS_TERM
+    UNIT_TYPE result = bias[ofm_offset];
+#else
+    UNIT_TYPE result = UNIT_VAL_ZERO;
+#endif
+
+    bool finish = false;
 
     finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_PADDING_LOWER_SIZE_X;
     finish = (out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_PADDING_LOWER_SIZE_Y) ? true : finish;
 
     if(!finish)
     {
-        const int batch_offset = global_id / (FILTER_OUTPUT_FEATURE_NUM * INPUT_SIZE_X * INPUT_SIZE_Y);
+        const int batch_offset = global_id / (OUTPUT_FEATURE_NUM * OUTPUT_SIZE_X * OUTPUT_SIZE_Y);
 
         const int f_ofm_offset = ofm_offset * FILTER_SIZE_Y * FILTER_SIZE_X * FILTER_INPUT_FEATURE_NUM;
 
@@ -69,13 +84,18 @@ KERNEL(convolution_gpu_yxfb_oiyx)(
                     {
                         int input_idx = (input_offset_x / STRIDE_SIZE_X + (input_offset_y * INPUT_SIZE_X / STRIDE_SIZE_Y));
                         input_idx += split_idx * FILTER_INPUT_FEATURE_NUM;
+                        input_idx += (feature_id - ofm_offset) * INPUT_SIZE_X * INPUT_SIZE_Y;
                         input_idx += batch_offset * FILTER_OUTPUT_FEATURE_NUM * INPUT_SIZE_X * INPUT_SIZE_Y;
 
                         uint filter_idx = ((FILTER_SIZE_X * FILTER_SIZE_Y - 1) - (i * FILTER_SIZE_X + j)) + f_ofm_offset;
 
                         for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
                         {
+#if FP16_UNIT_USED
+                            result = fma(input[input_idx], filter[filter_idx], result);
+#else
                             result = mad(input[input_idx], filter[filter_idx], result);
+#endif
                             filter_idx += FILTER_SIZE_Y * FILTER_SIZE_X;
                             input_idx += INPUT_SIZE_X * INPUT_SIZE_Y;
                         }

@@ -275,6 +275,19 @@ inline std::vector<float> float_arr_to_vector(const cldnn_float_arr& arr)
     return result;
 }
 
+///
+/// \brief Converts C API float array to std::vector<uint16_t>
+///
+inline std::vector<uint16_t> uint16_t_arr_to_vector(const cldnn_uint16_t_arr& arr)
+{
+    std::vector<uint16_t> result(arr.size);
+    for (size_t i = 0; i < arr.size; i++)
+    {
+        result[i] = arr.data[i];
+    }
+    return result;
+}
+
 
 ///
 /// \brief Converts std::vector<float> to C API float_array
@@ -282,6 +295,14 @@ inline std::vector<float> float_arr_to_vector(const cldnn_float_arr& arr)
 inline cldnn_float_arr float_vector_to_arr(const std::vector<float>& stor)
 {
     return { stor.data(), stor.size() };
+}
+
+///
+/// \brief Converts std::vector<uint16_t> to C API float_array
+///
+inline cldnn_uint16_t_arr uint16_t_vector_to_arr(const std::vector<uint16_t>& stor)
+{
+    return{ stor.data(), stor.size() };
 }
 
 /// @}

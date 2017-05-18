@@ -64,6 +64,8 @@ reshape_inst::typed_primitive_inst(network_impl& network, reshape_node const& no
     //then create new memory object as the reinterpreted output of the previous primitive
     if (!node.is_in_place())
         _output = allocate_output();
+    else
+        reuse_input();
 }
 
 void reshape_inst::on_execute()
@@ -74,6 +76,11 @@ void reshape_inst::on_execute()
     if (_output && _output->is_the_same_buffer(input_memory()))
         return;
 
+    reuse_input();
+}
+
+void reshape_inst::reuse_input()
+{
     _output = api_cast(_network.get_engine()->reinterpret_buffer(api_cast(input_memory().get()), node.get_output_layout()));
 }
 

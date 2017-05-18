@@ -14,38 +14,39 @@
 // limitations under the License.
 */
 
-#include "depth_concatenate_inst.h"
+#include "concatenation_inst.h"
 #include "primitive_type_base.h"
 
 namespace cldnn
 {
-primitive_type_id depth_concatenate_type_id()
+primitive_type_id concatenation_type_id()
 {
-    static primitive_type_base<depth_concatenate, depth_concatenate_inst> instance;
+    static primitive_type_base<concatenation, concatenation_inst> instance;
     return &instance;
 }
 
-layout depth_concatenate_inst::calc_output_layout(depth_concatenate_node const& node)
+layout concatenation_inst::calc_output_layout(concatenation_node const& node)
 {
     auto desc = node.get_primitive();
 
     auto input_layout = node.input(0).get_output_layout();
     auto input_format = input_layout.format;
     auto result_sizes = input_layout.size.sizes();
-    auto feature_index = CLDNN_TENSOR_BATCH_DIM_MAX;
+
+    auto axis_index = node.get_primitive()->axis;
 
     // calculate sum of features from all inputs
-    result_sizes[feature_index] = 0;
+    result_sizes[axis_index] = 0;
     for (size_t i = 0; i < desc->input.size(); ++i)
     {
         auto input_sizes = node.input(i).get_output_layout().size.sizes();
-        result_sizes[feature_index] += input_sizes[feature_index];
+        result_sizes[axis_index] += input_sizes[axis_index];
     }
 
     return layout{ input_layout.data_type, input_format, result_sizes };
 }
 
-std::string depth_concatenate_inst::to_string(depth_concatenate_node const& node)
+std::string concatenation_inst::to_string(concatenation_node const& node)
 {
     std::stringstream           primitive_description;
     auto desc                   = node.get_primitive();
@@ -58,6 +59,7 @@ std::string depth_concatenate_inst::to_string(depth_concatenate_node const& node
     }
 
     primitive_description << "id: " << desc->id << ", type: depth_concatenate" << 
+        "\n\tconcat axis: " << desc->axis <<
         "\n\tinputs count: " << node.inputs_count() << 
         "\n\tinputs: " << ss_inputs.str() << 
         "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
@@ -67,13 +69,13 @@ std::string depth_concatenate_inst::to_string(depth_concatenate_node const& node
     return primitive_description.str();
 }
 
-depth_concatenate_inst::typed_primitive_inst(network_impl& network, depth_concatenate_node const& node)
+concatenation_inst::typed_primitive_inst(network_impl& network, concatenation_node const& node)
     :parent(network, node)
 {
     auto input_format = input_memory(0).get_layout().fused_format();
     auto output_format = output_memory().get_layout().fused_format();
 
-    tensor::value_type depth_count = 0;
+    tensor::value_type concat_count = 0;
     auto input_size = input_memory(0).get_layout().size;;
     auto output_size = output_memory().get_layout().size;
     for (const auto& i : _deps)
@@ -83,33 +85,33 @@ depth_concatenate_inst::typed_primitive_inst(network_impl& network, depth_concat
         if (input_mem.get_layout().fused_format() != input_format)
             throw std::runtime_error("Every input must have the same format!");
 
-        if (input_mem_size.batch[0] != input_size.batch[0])
-            throw std::runtime_error("Every input must have the same number of batches!");
-
-        if (input_mem_size.spatial[0] != input_size.spatial[0])
-            throw std::runtime_error("Every input must have the same size in X dimension!");
-
-        if (input_size.spatial.size() > 1)
-            if (input_mem_size.spatial[1] != input_size.spatial[1])
-                throw std::runtime_error("Every input must have the same size in Y dimension!");
-
-        depth_count += input_mem.get_layout().size.feature[0];
+        for (int dim = concatenation::along_b; dim <= concatenation::along_y; ++dim)
+        {
+            if (dim == node.get_primitive()->axis)
+                concat_count += input_mem_size.raw[dim];
+            else
+            {
+                if (input_size.raw[dim] != input_mem_size.raw[dim])
+                    throw std::runtime_error("Every input must have the same size");
+            }
+        }
     }
 
     if (output_format != input_format)
         throw std::runtime_error("Input and output must have the same format!");
 
-    if (depth_count != output_size.feature[0])
-        throw std::runtime_error("Output depth count mismatch sum of input depths!");
-
-    if (output_size.batch[0] != input_size.batch[0])
-        throw std::runtime_error("Output batch size must match input batch size!");
-
-    if (output_size.spatial[0] != input_size.spatial[0])
-        throw std::runtime_error("Output X size must match input X size!");
-
-    if (input_size.spatial.size() > 1)
-        if (output_size.spatial[1] != input_size.spatial[1])
-            throw std::runtime_error("Output Y size must match input Y size!");
+    for (int dim = concatenation::along_b; dim <= concatenation::along_y; ++dim)
+    {
+        if (dim == node.get_primitive()->axis)
+        {
+            if (concat_count != output_size.raw[dim])
+                throw std::runtime_error("Output size in concatenated dimension mismatch sum of inputs!");
+        }
+        else
+        {
+            if (input_size.raw[dim] != output_size.raw[dim])
+                throw std::runtime_error("Output size in non-concatenated dimension mistmatch input");
+        }
+    }
 }
 }

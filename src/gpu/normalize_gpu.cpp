@@ -103,11 +103,13 @@ struct normalize_gpu : typed_primitive_impl<normalize>
 		auto output_padding = outer.get_primitive()->output_padding;
 		auto output_size = outer.get_output_layout().size;
 
+		auto scale_feature_size = outer.scale().get_output_layout().size.spatial[0];
+
         gpu::jit_constants mem_consts {
             gpu::make_jit_constant("INPUT",                         input_size),
-			gpu::make_jit_constant("EPSILON",						outer.get_primitive()->epsilon),
-			gpu::make_jit_constant("SCALE",							outer.get_primitive()->scale_factor),
+			gpu::make_jit_constant("SCALE_INDEX",					(scale_feature_size == 1) ? "0" : "f"),
             gpu::make_jit_constant("OUTPUT",                        outer.get_output_layout().size),
+			gpu::make_jit_constant("EPSILON",						outer.get_primitive()->epsilon),
             gpu::make_jit_constant("FP16_SUPPORTED",                static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",                static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",                     data.fp16_unit_used ? "half" : "float"),
@@ -126,11 +128,12 @@ struct normalize_gpu : typed_primitive_impl<normalize>
     {
         const auto& kd    = _kernel_data;
 
-        return _kernel.run<gpu::input_mem, gpu::output_mem>
+        return _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem>
             ({{ kd.gws0, kd.gws1, kd.gws2 }, { kd.lws0, kd.lws1, kd.lws2 }},
                 events,
                 instance.input_memory(),
-                instance.output_memory());
+                instance.output_memory(),
+				instance.scale_memory());
     }
 
 

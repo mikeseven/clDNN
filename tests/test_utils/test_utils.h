@@ -26,7 +26,7 @@
 #include <gtest/gtest.h>
 #include <api/CPP/primitive.hpp>
 #include "float16.h"
-#include "api/CPP/depth_concatenate.hpp"
+#include "api/CPP/concatenation.hpp"
 #include "api/CPP/lrn.hpp"
 #include "api/CPP/roi_pooling.hpp"
 #include "api/CPP/scale.hpp"
@@ -341,9 +341,9 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
 
     //TODO: do layers not have param dumping? we could consider adding it
 
-    if (primitive->type == cldnn::depth_concatenate::type_id())
+    if (primitive->type == cldnn::concatenation::type_id())
     {
-        auto dc = static_cast<cldnn::depth_concatenate *>(primitive);
+        auto dc = static_cast<cldnn::concatenation*>(primitive);
         (void)dc;
     }
     else if(primitive->type == cldnn::lrn::type_id())
@@ -382,7 +382,7 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
 	{
 		auto normalize = static_cast<cldnn::normalize*>(primitive);
 		std::string norm_region = normalize->across_spatial ? "across_spatial" : "within_spatial";
-		str << "Norm region: " << norm_region << " Epsilon: " << normalize->epsilon << " Scale factor: " << normalize->scale_factor;
+		str << "Norm region: " << norm_region << " Epsilon: " << normalize->epsilon << " Scale input id: " << normalize->scale_input;
 	}
     else
     {

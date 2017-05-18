@@ -18,7 +18,7 @@
 #endif
 
 
-KERNEL (depth_concatenate_gpu_bfyx)(__global UNIT_TYPE* input, __global UNIT_TYPE* output, uint depth_offset)
+KERNEL (concatenation_gpu_depth_bfyx)(__global UNIT_TYPE* input, __global UNIT_TYPE* output, uint depth_offset)
 {
     // constexpr:
     const uint input_buffer_size_x = INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X + INPUT_PADDING_UPPER_SIZE_X;

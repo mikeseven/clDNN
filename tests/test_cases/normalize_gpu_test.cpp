@@ -42,16 +42,22 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial)
 	engine engine;
 
 	auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 7, 10, 17, 13 } });
+	auto scale = memory::allocate(engine, { data_types::f32, GetParam(),{ 1, 1, 1, 1 } });
 
 	tests::set_random_values<float>(input, -100, 100);
 
+	std::vector<float> scale_input_vec = { 1.f };
+	set_values(scale, scale_input_vec);
+
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
-	topology.add(normalize("normalize", "input"));
+	topology.add(input_layout("scale", scale.get_layout()));
+	topology.add(normalize("normalize", "input", "scale"));
 
 	network network(engine, topology);
 
 	network.set_input_data("input", input);
+	network.set_input_data("scale", scale);
 
 	auto outputs = network.execute();
 	EXPECT_EQ(outputs.size(), size_t(1));
@@ -84,11 +90,11 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial)
 			}
 		}
 
-		EXPECT_NEAR(1, sqrt(norm), 1e-5f);
+		EXPECT_NEAR(scale_input_vec[0], sqrt(norm), 1e-5f);
 	}  
 }
 
-TEST_P(normalize_gpu_test, normalize_test_across_spatial_scale)
+TEST_P(normalize_gpu_test, normalize_test_across_spatial_scale_channels_shared)
 {
 	using namespace cldnn;
 	using namespace tests;
@@ -96,18 +102,22 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial_scale)
 	engine engine;
 
 	auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 12, 5, 7, 2 } });
+	auto scale = memory::allocate(engine, { data_types::f32, GetParam(),{ 1, 1, 1, 1 } });
 
 	tests::set_random_values<float>(input, -100, 100);
 
-	float scale = 5.2f;
+	std::vector<float> scale_input_vec = { 5.2f };
+	set_values(scale, scale_input_vec);
 
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
-	topology.add(normalize("normalize", "input", true, 1e-10f, scale));
+	topology.add(input_layout("scale", scale.get_layout()));
+	topology.add(normalize("normalize", "input", "scale"));
 
 	network network(engine, topology);
 
 	network.set_input_data("input", input);
+	network.set_input_data("scale", scale);
 
 	auto outputs = network.execute();
 	EXPECT_EQ(outputs.size(), size_t(1));
@@ -140,9 +150,70 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial_scale)
 			}
 		}
 
-		EXPECT_NEAR(scale, sqrt(norm), 1e-5f);
+		EXPECT_NEAR(scale_input_vec[0], sqrt(norm), 1e-5f);
 	}
 }
+
+TEST_P(normalize_gpu_test, normalize_test_across_spatial_scale_channels_not_shared)
+{
+	using namespace cldnn;
+	using namespace tests;
+
+	engine engine;
+
+	auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 12, 5, 7, 2 } });
+	auto scale = memory::allocate(engine, { data_types::f32, GetParam(),{ 1, 1, 5, 1 } });
+
+	tests::set_random_values<float>(input, -100, 100);
+
+	std::vector<float> scale_input_vec = { 3.4f, 3.4f, 3.4f, 3.4f, 3.4f };
+	set_values(scale, scale_input_vec);
+
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(input_layout("scale", scale.get_layout()));
+	topology.add(normalize("normalize", "input", "scale"));
+
+	network network(engine, topology);
+
+	network.set_input_data("input", input);
+	network.set_input_data("scale", scale);
+
+	auto outputs = network.execute();
+	EXPECT_EQ(outputs.size(), size_t(1));
+	EXPECT_EQ(outputs.begin()->first, "normalize");
+
+	auto output = outputs.begin()->second.get_memory();
+
+	auto buff = output.pointer<float>();
+
+	auto output_sizes = output.get_layout().size.sizes();
+
+	int batch_size = output_sizes[0];
+	int feature_size = output_sizes[1];
+	int y_size = output_sizes[3];
+	int x_size = output_sizes[2];
+
+	for (int b = 0; b < batch_size; ++b)
+	{
+		float norm = 0;
+		for (int f = 0; f < feature_size; ++f)
+		{
+			for (int y = 0; y < y_size; ++y)
+			{
+				for (int x = 0; x < x_size; ++x)
+				{
+					size_t data_index = generic_test::get_linear_index(output.get_layout(), b, f, y, x);
+					float data = buff[data_index];
+					norm += data * data;
+				}
+			}
+		}
+
+		EXPECT_NEAR(scale_input_vec[0], sqrt(norm), 1e-5f);
+	}
+}
+
 
 TEST_P(normalize_gpu_test, normalize_test_within_spatial)
 {
@@ -152,16 +223,22 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial)
 	engine engine;
 
 	auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 5, 7, 19, 12 } });
+	auto scale = memory::allocate(engine, { data_types::f32, GetParam(),{ 1, 1, 1, 1 } });
 
 	tests::set_random_values<float>(input, -100, 100);
 
+	std::vector<float> scale_input_vec = { 1.f };
+	set_values(scale, scale_input_vec);
+
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
-	topology.add(normalize("normalize", "input", false));
+	topology.add(input_layout("scale", scale.get_layout()));
+	topology.add(normalize("normalize", "input", "scale", false));
 
 	network network(engine, topology);
 
 	network.set_input_data("input", input);
+	network.set_input_data("scale", scale);
 
 	auto outputs = network.execute();
 	EXPECT_EQ(outputs.size(), size_t(1));
@@ -192,13 +269,13 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial)
 					norm += data * data;
 				}
 
-				EXPECT_NEAR(1, sqrt(norm), 1e-5f);
+				EXPECT_NEAR(scale_input_vec[0], sqrt(norm), 1e-5f);
 			}
 		}
 	}
 }
 
-TEST_P(normalize_gpu_test, normalize_test_within_spatial_scale)
+TEST_P(normalize_gpu_test, normalize_test_within_spatial_scale_channels_shared)
 {
 	using namespace cldnn;
 	using namespace tests;
@@ -206,18 +283,22 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial_scale)
 	engine engine;
 
 	auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 9, 4, 18, 23 } });
+	auto scale = memory::allocate(engine, { data_types::f32, GetParam(),{ 1, 1, 1, 1 } });
 
 	tests::set_random_values<float>(input, -100, 100);
 
-	float scale = 3.2f;
+	std::vector<float> scale_input_vec = { 3.2f };
+	set_values(scale, scale_input_vec);
 
 	topology topology;
 	topology.add(input_layout("input", input.get_layout()));
-	topology.add(normalize("normalize", "input", false, 1e-10f, scale));
+	topology.add(input_layout("scale", scale.get_layout()));
+	topology.add(normalize("normalize", "input", "scale", false));
 
 	network network(engine, topology);
 
 	network.set_input_data("input", input);
+	network.set_input_data("scale", scale);
 
 	auto outputs = network.execute();
 	EXPECT_EQ(outputs.size(), size_t(1));
@@ -248,7 +329,67 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial_scale)
 					norm += data * data;
 				}
 
-				EXPECT_NEAR(scale, sqrt(norm), 1e-5f);
+				EXPECT_NEAR(scale_input_vec[0], sqrt(norm), 1e-5f);
+			}
+		}
+	}
+}
+
+TEST_P(normalize_gpu_test, normalize_test_within_spatial_scale_channels_not_shared)
+{
+	using namespace cldnn;
+	using namespace tests;
+
+	engine engine;
+
+	auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 9, 4, 18, 23 } });
+	auto scale = memory::allocate(engine, { data_types::f32, GetParam(),{ 1, 1, 4, 1 } });
+
+	tests::set_random_values<float>(input, -100, 100);
+
+	std::vector<float> scale_input_vec = { 7.2f, 7.2f, 7.2f, 7.2f };
+	set_values(scale, scale_input_vec);
+
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(input_layout("scale", scale.get_layout()));
+	topology.add(normalize("normalize", "input", "scale", false));
+
+	network network(engine, topology);
+
+	network.set_input_data("input", input);
+	network.set_input_data("scale", scale);
+
+	auto outputs = network.execute();
+	EXPECT_EQ(outputs.size(), size_t(1));
+	EXPECT_EQ(outputs.begin()->first, "normalize");
+
+	auto output = outputs.begin()->second.get_memory();
+
+	auto buff = output.pointer<float>();
+
+	auto output_sizes = output.get_layout().size.sizes();
+
+	int batch_size = output_sizes[0];
+	int feature_size = output_sizes[1];
+	int y_size = output_sizes[3];
+	int x_size = output_sizes[2];
+
+	for (int b = 0; b < batch_size; ++b)
+	{
+		for (int y = 0; y < y_size; ++y)
+		{
+			for (int x = 0; x < x_size; ++x)
+			{
+				float norm = 0;
+				for (int f = 0; f < feature_size; ++f)
+				{
+					size_t data_index = generic_test::get_linear_index(output.get_layout(), b, f, y, x);
+					float data = buff[data_index];
+					norm += data * data;
+				}
+
+				EXPECT_NEAR(scale_input_vec[0], sqrt(norm), 1e-5f);
 			}
 		}
 	}
@@ -261,9 +402,10 @@ struct custom_param_name_functor_normalize_test {
 };
 
 INSTANTIATE_TEST_CASE_P(normalize_gpu_test,
-	normalize_gpu_test,
-	::testing::Values(format::bfyx, format::yxfb),
-	custom_param_name_functor_normalize_test());
+						normalize_gpu_test,
+						::testing::Values(format::bfyx, format::yxfb),
+						custom_param_name_functor_normalize_test());
+
 
 class normalize_test : public tests::generic_test
 {
@@ -277,7 +419,12 @@ public:
 
 	static void TearDownTestCase() 
 	{
-		for (auto generic_params : all_generic_params)
+		for (auto generic_params : all_generic_params_scale_shared)
+		{
+			delete generic_params;
+		}
+
+		for (auto generic_params : all_generic_params_scale_per_channel)
 		{
 			delete generic_params;
 		}
@@ -291,39 +438,89 @@ public:
 	static std::vector<cldnn::primitive*> generate_specific_test_params()
 	{
 		// No padding
-		all_layer_params.push_back(new normalize("normalize", "input0", true));
-		all_layer_params.push_back(new normalize("normalize", "input0", false));
-		all_layer_params.push_back(new normalize("normalize", "input0", true, 12.3f));
-		all_layer_params.push_back(new normalize("normalize", "input0", false, 15.9f));
-		all_layer_params.push_back(new normalize("normalize", "input0", true, 1e-10f, 2.2f));
-		all_layer_params.push_back(new normalize("normalize", "input0", false, 1e-10f, -2.4f));
+		all_layer_params.push_back(new normalize("normalize", "input0", "input1", true));
+		all_layer_params.push_back(new normalize("normalize", "input0", "input1", false));
+		all_layer_params.push_back(new normalize("normalize", "input0", "input1", true, 12.3f));
+		all_layer_params.push_back(new normalize("normalize", "input0", "input1", false, 15.9f));
 		
 		// Output padding
-		all_layer_params.push_back(new normalize("normalize", "input0", true, 1e-10f, 1.f, {{ 0, 0, 6, 13 },0}));
-		all_layer_params.push_back(new normalize("normalize", "input0", false, 1e-10f, 2.f, {{ 0, 0, 12, 4 }, 0}));
-		all_layer_params.push_back(new normalize("normalize", "input0", true, 1e-10f, 1.2f, { { 0, 0, 11, 5 },{ 0, 0, 3, 19 } }));
-		all_layer_params.push_back(new normalize("normalize", "input0", false, 1e-10f, -1.f, { { 0, 0, 5, 13 },{ 0, 0, 1, 2 } }));
+		all_layer_params.push_back(new normalize("normalize", "input0", "input1", true, 1e-10f, { { 0, 0, 6, 13 }, 0 }));
+		all_layer_params.push_back(new normalize("normalize", "input0", "input1", false, 1e-10f, { { 0, 0, 12, 4 }, 0 }));
+		all_layer_params.push_back(new normalize("normalize", "input0", "input1", true, 1e-10f, { { 0, 0, 11, 5 }, { 0, 0, 3, 19 } }));
+		all_layer_params.push_back(new normalize("normalize", "input0", "input1", false, 1e-10f, { { 0, 0, 5, 13 }, { 0, 0, 1, 2 } }));
 		
 		// Input padding (output of reorder layer)
-		all_layer_params.push_back(new normalize("normalize", "reorder0", true, 1e-10f, 0.5f, {{ 0, 0, 0, 0 },0 }));
-		all_layer_params.push_back(new normalize("normalize", "reorder0", false, 1e-10f, -0.5f, {{ 0, 0, 0, 0 },0 }));
+		all_layer_params.push_back(new normalize("normalize", "reorder0", "input1", true, 1e-10f, {{ 0, 0, 0, 0 },0 }));
+		all_layer_params.push_back(new normalize("normalize", "reorder0", "input1", false, 1e-10f, {{ 0, 0, 0, 0 },0 }));
 		
 		// Input padding (output of reorder layer) + Output padding
-		all_layer_params.push_back(new normalize("normalize", "reorder0", true, 1e-10f, 1.5f, { { 0, 0, 2, 1 },{ 0, 0, 4, 3 } }));
-		all_layer_params.push_back(new normalize("normalize", "reorder0", false, 1e-10f, 1.8f, { { 0, 0, 3, 4 },{ 0, 0, 1, 2 } }));
+		all_layer_params.push_back(new normalize("normalize", "reorder0", "input1", true, 1e-10f, { { 0, 0, 2, 1 },{ 0, 0, 4, 3 } }));
+		all_layer_params.push_back(new normalize("normalize", "reorder0", "input1", false, 1e-10f, { { 0, 0, 3, 4 },{ 0, 0, 1, 2 } }));
 
 		return all_layer_params;
 	}
 
-	static std::vector<tests::test_params*> generate_generic_test_params()
+	static std::vector<std::tuple<tests::test_params*, cldnn::primitive*>> generate_all_test_params()
 	{
-		return generic_test::generate_generic_test_params(all_generic_params);
+		generic_test::generate_generic_test_params(all_generic_params_scale_shared);
+		generic_test::generate_generic_test_params(all_generic_params_scale_per_channel);
+		generate_specific_test_params();
+
+		// Prepare scale input for normalize layer (size should be 1 since the scale is shared across the channels).
+		for (tests::test_params* test_param : all_generic_params_scale_shared)
+		{
+			test_param->input_layouts.push_back(cldnn::tensor(1, 1, 1, 1));
+		}
+
+		// Prepare scale input for normalize layer (size should be equal to input feature size - one scale per channel).
+		for (tests::test_params* test_param : all_generic_params_scale_per_channel)
+		{
+			cldnn::tensor input_size = test_param->input_layouts[0];
+			test_param->input_layouts.push_back(cldnn::tensor(1, 1, input_size.feature[0], 1));
+		}
+
+		// Create all the combinations for the test.
+		for (cldnn::primitive* layer_param : all_layer_params)
+		{
+			for (tests::test_params* test_param : all_generic_params_scale_shared)
+			{
+				all_test_params.push_back(std::make_tuple(test_param, layer_param));
+			}
+
+			for (tests::test_params* test_param : all_generic_params_scale_per_channel)
+			{
+				all_test_params.push_back(std::make_tuple(test_param, layer_param));
+			}
+		}
+
+		return all_test_params;
 	}
 
 	virtual bool is_format_supported(cldnn::format format)
 	{
 		return ((format == cldnn_format_type::cldnn_format_bfyx) || (format == cldnn_format_type::cldnn_format_yxfb));
 	}
+
+	virtual void prepare_input_for_test(std::vector<cldnn::memory>& inputs)
+	{
+		if (generic_params->data_type == data_types::f32)
+		{
+			prepare_input_for_test_typed<float>(inputs);
+		}
+		else
+		{
+			prepare_input_for_test_typed<FLOAT16>(inputs);
+		}
+	}
+
+	template<typename Type>
+	void prepare_input_for_test_typed(std::vector<cldnn::memory>& inputs)
+	{
+		// Update scale values.
+		auto scale_input = inputs[1];
+		tests::set_random_values<Type>(scale_input, -2, 2);
+	}
+
 
 	template<typename Type>
 	memory generate_reference_typed(const std::vector<cldnn::memory>& inputs)
@@ -332,20 +529,24 @@ public:
 
 		//Output is bfyx
         data_types dt = inputs[0].get_layout().data_type;
-		auto output = memory::allocate( engine, cldnn::layout(dt, cldnn::format::bfyx, inputs[0].get_layout().size.add(normalize->output_padding.lower_size()).add(normalize->output_padding.upper_size())) );
+		auto output = memory::allocate( engine, cldnn::layout(dt, cldnn::format::bfyx, inputs[0].get_layout().size, normalize->output_padding) );
 
 		float epsilon = normalize->epsilon;
-		Type scale = normalize->scale_factor;
 
 		auto input_mem = inputs[0].pointer<Type>();
+		auto scale_mem = inputs[1].pointer<Type>();
 		auto output_mem = output.pointer<Type>();
-		int batch = inputs[0].get_layout().size.sizes()[0];
-		int feature = inputs[0].get_layout().size.sizes()[1];
-		int height = inputs[0].get_layout().size.sizes()[3];
-		int width = inputs[0].get_layout().size.sizes()[2];
+		int batch = inputs[0].get_layout().size.batch[0];
+		int feature = inputs[0].get_layout().size.feature[0];
+		int height = inputs[0].get_layout().size.spatial[1];
+		int width = inputs[0].get_layout().size.spatial[0];
 
-		int output_height = output.get_layout().size.sizes()[3];
-		int output_width = output.get_layout().size.sizes()[2];
+		int scale_feature_size = inputs[1].get_layout().size.spatial[0];
+
+		int output_height = output.get_layout().get_buffer_size().spatial[1];
+		int output_width = output.get_layout().get_buffer_size().spatial[0];
+
+		assert((scale_feature_size == 1) || (scale_feature_size == feature));
 
 		//Initialized output with zeros.
         std::fill(output_mem.begin(), output_mem.end(), static_cast<Type>(0));
@@ -373,6 +574,7 @@ public:
 				//Scale the data
 				for (int c = 0; c < feature; ++c)
 				{
+					int scale_index = (scale_feature_size == 1) ? 0 : c;
 					for (int h = 0; h < height; ++h)
 					{
 						for (int w = 0; w < width; ++w)
@@ -381,9 +583,9 @@ public:
 
 							int output_index = (n * feature + c) * output_height * output_width;
 							tensor lower_padding = normalize->output_padding.lower_size();
-							output_index += (lower_padding.sizes()[2] + h) * output_width + lower_padding.sizes()[3] + w;
+							output_index += (lower_padding.spatial[1] + h) * output_width + lower_padding.spatial[0] + w;
 
-							output_mem[output_index] = (Type)norm * input_mem[input_index] * scale;
+							output_mem[output_index] = (Type)norm * input_mem[input_index] * scale_mem[scale_index];
 						}
 					}
 				}
@@ -410,13 +612,14 @@ public:
 						//Scale the data
 						for (int c = 0; c < feature; ++c)
 						{
+							int scale_index = (scale_feature_size == 1) ? 0 : c;
 							size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
 
 							int output_index = (n * feature + c) * output_height * output_width;
 							tensor lower_padding = normalize->output_padding.lower_size();
-							output_index += (lower_padding.sizes()[2] + h) * output_width + lower_padding.sizes()[3] + w;
+							output_index += (lower_padding.spatial[1] + h) * output_width + lower_padding.spatial[0] + w;
 
-							output_mem[output_index] = (Type)norm * input_mem[input_index] * scale;
+							output_mem[output_index] = (Type)norm * input_mem[input_index] * scale_mem[scale_index];
 						}
 					}
 				}
@@ -440,13 +643,17 @@ public:
 
 private:
 
-	static std::vector<tests::test_params*> all_generic_params;
+	static std::vector<tests::test_params*> all_generic_params_scale_shared;
+	static std::vector<tests::test_params*> all_generic_params_scale_per_channel;
 	static std::vector<cldnn::primitive*> all_layer_params;
+	static std::vector<std::tuple<tests::test_params*, cldnn::primitive*>> all_test_params;
 	
 };
 
+std::vector<tests::test_params*> normalize_test::all_generic_params_scale_shared = {};
+std::vector<tests::test_params*> normalize_test::all_generic_params_scale_per_channel = {};
 std::vector<cldnn::primitive*> normalize_test::all_layer_params = {};
-std::vector<tests::test_params*> normalize_test::all_generic_params = {};
+std::vector<std::tuple<tests::test_params*, cldnn::primitive*>> normalize_test::all_test_params = {};
 
 TEST_P(normalize_test, DISABLED_test_all)
 {
@@ -455,7 +662,5 @@ TEST_P(normalize_test, DISABLED_test_all)
 
 INSTANTIATE_TEST_CASE_P(NORMALIZE, 
 						normalize_test, 
-						::testing::Combine(::testing::ValuesIn(normalize_test::generate_generic_test_params()),
-										   ::testing::ValuesIn(normalize_test::generate_specific_test_params())), 
+						::testing::ValuesIn(normalize_test::generate_all_test_params()),
 						tests::generic_test::custom_param_name_functor());
-

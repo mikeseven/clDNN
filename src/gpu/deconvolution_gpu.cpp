@@ -150,6 +150,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
             gpu::make_jit_constant("UNIT_VAL_ZERO",             _kernel_data.fp16_unit_used ? "0.0h" : "0.0f"),
             gpu::make_jit_constant("RELU",                      static_cast<int>(outer.get_primitive()->with_activation)),
             gpu::make_jit_constant("NEGATIVE_SLOPE",            outer.get_primitive()->activation_negative_slope),
+            gpu::make_jit_constant("BIAS_TERM",                 static_cast<int>(outer.bias_term()))
         };
 
         return mem_consts;
@@ -177,19 +178,38 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
         std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>> tmp_events(events);
 
         // execute kernels
-        for (decltype(split) i = 0; i < split; i++) {
-            assert(kd.gws0 % kd.lws0 == 0);
-            auto event = _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
-                ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
-                    tmp_events,
-                    input_mem,
-                    output_mem,
-                    instance.weights_memory(i), //filters
-                    instance.bias_memory(i), //biases
-                    i);
-            tmp_events.clear();
-            tmp_events.emplace_back(event);
+        if (outer.bias_term())
+        {
+            for (decltype(split) i = 0; i < split; i++) {
+                assert(kd.gws0 % kd.lws0 == 0);
+                auto event = _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, gpu::input_mem, uint32_t>
+                    ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
+                        tmp_events,
+                        input_mem,
+                        output_mem,
+                        instance.weights_memory(i), //filters
+                        instance.bias_memory(i), //biases
+                        i);
+                tmp_events.clear();
+                tmp_events.emplace_back(event);
+            }
         }
+        else
+        {
+            for (decltype(split) i = 0; i < split; i++) {
+                assert(kd.gws0 % kd.lws0 == 0);
+                auto event = _kernel.run<gpu::input_mem, gpu::output_mem, gpu::input_mem, uint32_t>
+                    ({ { kd.gws0, kd.gws1, kd.gws2 },{ kd.lws0, kd.lws1, kd.lws2 } },
+                        tmp_events,
+                        input_mem,
+                        output_mem,
+                        instance.weights_memory(i), //filters
+                        i);
+                tmp_events.clear();
+                tmp_events.emplace_back(event);
+            }
+        }
+
         return tmp_events.at(0);
     }
 
@@ -204,6 +224,8 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
         // FP32 (float)
         case fuse(data_types::f32, format::bfyx):
         case fuse(data_types::f32, format::yxfb):
+        case fuse(data_types::f16, format::bfyx):
+        case fuse(data_types::f16, format::yxfb):
             break;
         default:
             throw std::runtime_error("deconvolution weights format unsupported");
@@ -213,14 +235,14 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution> {
     }
 };
 
-deconvolution_gpu::kernel_data default_oiyx_f32(const deconvolution_node& arg)
+deconvolution_gpu::kernel_data default_oiyx(const deconvolution_node& arg)
 {
     deconvolution_gpu::kernel_data kd = deconvolution_gpu::set_default(arg);
     kd.kernel_name = (arg.input().get_output_layout().format == cldnn::format::bfyx) ? kernel_name_bfyx_oiyx : kernel_name_yxfb_oiyx;
     return kd;
 }
 
-deconvolution_gpu::kernel_data default_yxio_f32(const deconvolution_node& arg)
+deconvolution_gpu::kernel_data default_yxio(const deconvolution_node& arg)
 {
     deconvolution_gpu::kernel_data kd = deconvolution_gpu::set_default(arg);
     kd.kernel_name = (arg.input().get_output_layout().format == cldnn::format::bfyx) ? kernel_name_bfyx_yxio : kernel_name_yxfb_yxio;
@@ -228,10 +250,14 @@ deconvolution_gpu::kernel_data default_yxio_f32(const deconvolution_node& arg)
 }
 
 deconvolution_gpu::ks_type deconvolution_gpu::ks = {
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
-    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx_f32 },
-    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio_f32 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio },
+    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx },
+    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio },
+    { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_oiyx },
+    { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxio },
 };
 
 namespace{
@@ -239,6 +265,8 @@ namespace{
         attach() {
             implementation_map<deconvolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), deconvolution_gpu::create);
             implementation_map<deconvolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), deconvolution_gpu::create);
+            implementation_map<deconvolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), deconvolution_gpu::create);
+            implementation_map<deconvolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), deconvolution_gpu::create);
         }
         ~attach() {}
     };
