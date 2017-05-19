@@ -40,24 +40,50 @@ struct softmax : public primitive_base<softmax, CLDNN_PRIMITIVE_DESC(softmax)>
 {
     CLDNN_DECLATE_PRIMITIVE(softmax)
 
+    enum dimension_t
+    {
+        normalize_bfyx = cldnn_softmax_normalize_bfyx,
+        normalize_fyx = cldnn_softmax_normalize_fyx,
+        normalize_x = cldnn_softmax_normalize_x,
+        normalize_yx = cldnn_softmax_normalize_yx
+    };
+
     /// @brief Constructs softmax primitive.
     /// @param id This primitive id.
     /// @param input Input primitive id.
+    /// @param dimension Defines a scope of normalization (see #dimension).
     softmax(
         const primitive_id& id,
         const primitive_id& input,
+        const dimension_t dimension = normalize_fyx,
         const padding& output_padding = padding()
     )
         :primitive_base(id, {input}, output_padding)
+        , dimension(dimension)
     {}
 
     /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{softmax}
     softmax(const dto* dto)
         :primitive_base(dto)
+        , dimension(static_cast<dimension_t>(dto->dimension))
     {}
 
+    /// @brief Defines a scope of a single softmax normalization as well as number of normalizations.
+    /// @details
+    /// Being given a 4-dimensional input, which consists of b,f,y,x dimensions, softmax normalizes n data sets of m elements each.
+    /// The values of n and m are calculated from b,f,y,x in such way that as a result whole input is processed. Specific behaviour is
+    /// determined by this parameter, as follows:
+    /// - when set to @p softmax::normalize_x only x-dimension is used as a number of elements @p m and the number of data sets @p n is calculated as b*f*y (each image row is normalized independently)
+    /// - when set to @p softmax::normalize_yx @m is defined as x*y and @n as b*f (each 2d image is normalized independently)
+    /// - when set to @P softmax::normalize_fyx @m is defined as f*y*x and @n as b (each 3d image is normalized independently)
+    /// - when set to @p softmax::normalize_bfyx the whole input is normalized as a single data set
+    dimension_t dimension;
+
 private:
-    void update_dto(dto&) const override {}
+    void update_dto(dto& dto) const override
+    {
+        dto.dimension = static_cast<cldnn_softmax_dimension>(dimension);
+    }
 };
 /// @}
 /// @}

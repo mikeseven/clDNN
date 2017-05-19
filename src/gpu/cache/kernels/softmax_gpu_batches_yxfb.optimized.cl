@@ -19,7 +19,7 @@
 
 
 
-UNIT_TYPE FUNC(find_max_value)(__local UNIT_TYPE* partial_max, const int global_id, const int idx, const int batch_offset, const int batch_num, const __global UNIT_TYPE* input)
+UNIT_TYPE FUNC(find_max_value)(__local UNIT_TYPE* partial_max, const int global_id, const int idx, const int batch_offset, const int data_sets_count, const __global UNIT_TYPE* input)
 {
     UNIT_TYPE value = -UNIT_VAL_MAX;
     for(int i = 0; i < ITEMS_NUM; i++)
@@ -30,11 +30,11 @@ UNIT_TYPE FUNC(find_max_value)(__local UNIT_TYPE* partial_max, const int global_
     partial_max[global_id] = value;
 
     barrier(CLK_LOCAL_MEM_FENCE);
-    if(global_id < batch_num)
+    if(global_id < data_sets_count)
     {
-        for(int i = 1; i < LWS / batch_num; i++)
+        for(int i = 1; i < LWS / data_sets_count; i++)
         {
-            partial_max[batch_offset] = max(partial_max[batch_offset], partial_max[i*batch_num + batch_offset]);
+            partial_max[batch_offset] = max(partial_max[batch_offset], partial_max[i*data_sets_count + batch_offset]);
         };
     }
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -43,14 +43,15 @@ UNIT_TYPE FUNC(find_max_value)(__local UNIT_TYPE* partial_max, const int global_
 
 KERNEL (softmax_gpu_batches)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
-    const int batch_num = INPUT_BATCH_NUM;
-    const int global_id = get_global_id(0);
-    const int idx = global_id / batch_num;
+    const uint data_sets_count = DATA_SETS_COUNT;   //how many data sets are in the processing payload     
 
-    const int batch_offset = global_id % batch_num;
+    const int global_id = get_global_id(0);
+    const int idx = global_id / data_sets_count;
+
+    const int batch_offset = global_id % data_sets_count;
 
     __local UNIT_TYPE partial_max[LWS];
-    const UNIT_TYPE max_value = FUNC_CALL(find_max_value)(partial_max, global_id, idx, batch_offset, batch_num, input);
+    const UNIT_TYPE max_value = FUNC_CALL(find_max_value)(partial_max, global_id, idx, batch_offset, data_sets_count, input);
 
     UNIT_TYPE tmp_vals[ITEMS_NUM + 1];
     for(int i = 0; i < ITEMS_NUM; i++)
@@ -68,11 +69,11 @@ KERNEL (softmax_gpu_batches)(const __global UNIT_TYPE* input, __global UNIT_TYPE
     }
 
     barrier(CLK_LOCAL_MEM_FENCE); // we must be sure that all threads calculated max of elements(we can remove it if simd32 and GWS <= 32
-    if(global_id < batch_num)
+    if(global_id < data_sets_count)
     {
-        for(int i = 1; i < LWS/batch_num; i++)
+        for(int i = 1; i < LWS/data_sets_count; i++)
         {
-            partial_acc[batch_offset] += partial_acc[i*batch_num + batch_offset];
+            partial_acc[batch_offset] += partial_acc[i*data_sets_count + batch_offset];
         }
     }
     barrier(CLK_LOCAL_MEM_FENCE);

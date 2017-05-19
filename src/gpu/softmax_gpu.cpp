@@ -25,13 +25,8 @@ using namespace cldnn;
 namespace neural
 {
 // Kernel names.
-static const std::string kernel_name              = "softmax_gpu";
-static const std::string kernel_name_batches      = "softmax_gpu_batches";
-static const std::string kernel_name_batches_bx   = "softmax_gpu_batches_bx";
-static const std::string kernel_name_batches_bfyx = "softmax_gpu_batches_bfyx";
 static const std::string kernel_name_batches_yxfb = "softmax_gpu_batches_yxfb";
-
-
+static const std::string kernel_name_batches_bfyx = "softmax_gpu_batches_bfyx";
 
 struct softmax_gpu : typed_primitive_impl<softmax>
 {
@@ -42,8 +37,12 @@ struct softmax_gpu : typed_primitive_impl<softmax>
         size_t gws0;
         size_t gws1;
         size_t lws0;
+
         std::string kernel_name;
-        size_t items_num, leftovers, elements_in_batch;
+        size_t items_num;
+        size_t leftovers;
+        size_t data_sets_count;
+        size_t data_set_size;
         bool fp16_unit_used;
         bool fp16_supported;
     } _kernel_data;
@@ -61,49 +60,44 @@ struct softmax_gpu : typed_primitive_impl<softmax>
         auto engine_info = outer.get_program().get_engine()->get_context()->get_engine_info();
 
         auto input_layout  = outer.input().get_output_layout();  // input
-        auto const& input_buffer_size = input_layout.get_buffer_size();
+        auto const& input_size = input_layout.size;
 
-        auto const& output_buffer_size = outer.get_output_layout().get_buffer_size();
+        if (outer.is_padded() || outer.has_padded_dependency())
+            throw std::runtime_error("Softmax currently does not support neither input nor output padding");
 
         kernel_data kd;
 
-        kd.fp16_unit_used      = input_layout.data_type == cldnn::data_types::f16;
-        kd.fp16_supported      = engine_info.supports_fp16 != 0;
-        auto batch_num         = output_buffer_size.batch[0];
-        auto feature_num       = input_buffer_size.feature[0];
-        size_t out_buffer_size = output_buffer_size.count();
+        kd.fp16_unit_used = input_layout.data_type == cldnn::data_types::f16;
+        kd.fp16_supported = engine_info.supports_fp16 != 0;
         kd.leftovers = 0;
-        kd.elements_in_batch = 0;
-        
-        if (input_buffer_size.feature[0] != 1 ||
-            input_buffer_size.spatial[1] != 1)
-        {
-            kd.elements_in_batch = input_buffer_size.spatial[0] * input_buffer_size.spatial[1];
-            kd.gws0 = cldnn::align_to(kd.elements_in_batch, 32);
-            kd.gws1 = batch_num;
-            kd.lws0 = 32;
-            kd.items_num = feature_num;
-            kd.kernel_name = (input_layout.format == cldnn::format::bfyx) ? kernel_name_batches_bfyx : kernel_name_batches_yxfb;
-        }
-        else if (batch_num <= 1)
-        {
-            kd.lws0 = std::min(std::max(out_buffer_size, static_cast<size_t>(1)), static_cast<size_t>(32));
-            kd.leftovers = out_buffer_size % kd.lws0;
-            kd.gws0 = out_buffer_size - kd.leftovers;
-            kd.gws1 = 1;
-            kd.items_num = kd.gws0 / kd.lws0;
+        kd.items_num = 0;
 
-            kd.kernel_name = kernel_name;
-        }
-        else if (input_layout.format == format::bfyx)
+        kd.data_sets_count = 0;
+        kd.data_set_size = 1;
+ 
+        switch (outer.get_primitive()->dimension)
         {
+        case softmax::normalize_bfyx:   kd.data_set_size *= input_size.batch[0];
+        case softmax::normalize_fyx:    kd.data_set_size *= input_size.feature[0];
+        case softmax::normalize_yx:     kd.data_set_size *= input_size.spatial[1];
+        case softmax::normalize_x:      kd.data_set_size *= input_size.spatial[0];
+        }
+
+        kd.data_sets_count = input_size.count() / kd.data_set_size;
+
+        if (input_layout.format == format::bfyx)
+        {
+            //start with 1 thread per data set
+            kd.gws0 = 1;
+            kd.gws1 = kd.data_sets_count;
+            kd.items_num = kd.data_set_size;
+
             // We have two units of data per work item in current implementation.
             auto local_mem_per_wi = 2 * (kd.fp16_unit_used ? sizeof(half_t) : sizeof(float));
             // Combining device execution and local memory restrictions to compute maximum possible LWS.
             auto max_lws = std::min(engine_info.max_work_group_size, engine_info.max_local_mem_size / local_mem_per_wi);
 
             kd.lws0 = 1;
-            kd.items_num = out_buffer_size / batch_num;
             // Compute maximum possible LWS that does not exceed device capabilities and optimizes number of global memory reads.
             while ((kd.items_num > 32 || kd.lws0 < kd.items_num) && (2 * kd.lws0 <= max_lws))
             {
@@ -111,23 +105,26 @@ struct softmax_gpu : typed_primitive_impl<softmax>
                 kd.items_num /= 2;
             }
 
-            assert((kd.items_num + 1) * kd.lws0 >= (out_buffer_size / batch_num) && "More than 'lws0' items per batch remains! Lws too small?");
-            
-            kd.gws0 = kd.lws0;
-            kd.gws1 = batch_num;
-            kd.leftovers = (out_buffer_size / batch_num) % kd.lws0;
+            assert((kd.items_num + 1) * kd.lws0 >= kd.data_set_size && "More than 'lws0' items per batch remains! Lws too small?");
 
-            kd.kernel_name = kernel_name_batches_bx;
+            kd.gws0 = kd.lws0;
+            kd.leftovers = kd.data_set_size % kd.lws0;
+
+            kd.kernel_name = kernel_name_batches_bfyx;
         }
-        else
+        else if (input_layout.format == format::yxfb)
         {
+            //start with 1 thread per data set
+            kd.gws0 = kd.data_sets_count;
+            kd.gws1 = 1;
+            kd.items_num = kd.data_set_size;
+
             // We have two units of data per work item in current implementation.
             auto local_mem_per_wi = 2 * (kd.fp16_unit_used ? sizeof(half_t) : sizeof(float));
             // Combining device execution and local memory restrictions to compute maximum possible LWS.
             auto max_lws = std::min(engine_info.max_work_group_size, engine_info.max_local_mem_size / local_mem_per_wi);
 
-            kd.lws0 = batch_num;
-            kd.items_num = out_buffer_size / kd.lws0;
+            kd.lws0 = kd.data_sets_count;
             // Compute maximum possible LWS that does not exceed device capabilities and optimizes number of global memory reads.
             while ((kd.items_num > 32 || kd.lws0 < kd.items_num) && (2 * kd.lws0 <= max_lws))
             {
@@ -137,11 +134,13 @@ struct softmax_gpu : typed_primitive_impl<softmax>
 
             kd.gws0 = kd.lws0;
             kd.gws1 = 1;
-            kd.leftovers = out_buffer_size % kd.lws0;
+            kd.leftovers = (kd.data_set_size * kd.data_sets_count) % kd.lws0;
 
-            kd.kernel_name = kernel_name_batches;
+            kd.kernel_name = kernel_name_batches_yxfb;
         }
-
+        else
+            throw std::runtime_error("Softmax unsupported input format");
+        
         assert(kd.items_num > 0 && kd.lws0 && kd.gws0 > 0);
         return kd;
     }
@@ -163,13 +162,14 @@ struct softmax_gpu : typed_primitive_impl<softmax>
             gpu::make_jit_constant("ITEMS_NUM",      data.items_num),
             gpu::make_jit_constant("LWS",            data.lws0),
             gpu::make_jit_constant("GWS",            data.gws0),
+            gpu::make_jit_constant("DATA_SETS_COUNT",data.data_sets_count),
+            gpu::make_jit_constant("DATA_SET_SIZE",  data.data_set_size),
             gpu::make_jit_constant("LEFTOVERS",      data.leftovers),
             gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(data.fp16_supported)),
             gpu::make_jit_constant("FP16_UNIT_USED", static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",      data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_VAL_MAX",   data.fp16_unit_used ? "HALF_MAX" : "FLT_MAX"),
             gpu::make_jit_constant("UNIT_VAL_ZERO",  data.fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("ELEMENTS_NUM",   data.elements_in_batch)
         };
     }
 
