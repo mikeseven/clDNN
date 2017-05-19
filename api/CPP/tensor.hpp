@@ -230,10 +230,10 @@ struct tensor
 
     typedef int32_t value_type;     ///< Values type stored in tensor.
     //TODO find the way to prevent direct change of following fields.
-    array_ref<value_type> raw;      ///< Raw representation of all dimensions.
-    array_ref<value_type> batch;    ///< Batch dimensions.
-    array_ref<value_type> feature;  ///< Feature maps.
-    array_ref<value_type> spatial;  ///< Spatial dimensions.
+    mutable_array_ref<value_type> raw;      ///< Raw representation of all dimensions.
+    mutable_array_ref<value_type> batch;    ///< Batch dimensions.
+    mutable_array_ref<value_type> feature;  ///< Feature maps.
+    mutable_array_ref<value_type> spatial;  ///< Spatial dimensions.
 
 private:
     value_type _sizes[CLDNN_TENSOR_DIM_MAX];

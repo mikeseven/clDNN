@@ -25,6 +25,9 @@ namespace cldnn
 template <>
 struct typed_program_node<simpler_nms> : public typed_program_node_base<simpler_nms>
 {
+    using parent = typed_program_node_base<simpler_nms>;
+    using parent::parent;
+
     auto& cls_score() const { return get_dependency(0); }
     auto& bbox_pred() const { return get_dependency(1); }
     auto& image_info() const { return get_dependency(2); }

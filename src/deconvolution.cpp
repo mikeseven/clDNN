@@ -22,7 +22,7 @@ namespace cldnn
 {
 primitive_type_id deconvolution_type_id()
 {
-    static primitive_type_base<deconvolution, deconvolution_inst> instance;
+    static primitive_type_base<deconvolution> instance;
     return &instance;
 }
 

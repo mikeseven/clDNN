@@ -30,6 +30,7 @@
 #include "api/CPP/reorder.hpp"
 
 #include "convolution_inst.h"
+#include "concatenation_inst.h"
 
 
 namespace cldnn
@@ -255,6 +256,12 @@ void program_impl::optimize_graph()
     }
 
     prepare_padding();
+
+    //try to fuse buffers (i.e. depth_concat in bfyx format) after padding calculations
+    if (options.get<build_option_type::optimize_data>()->enabled())
+    {
+        fuse_buffers();
+    }
 }
 
 void program_impl::compile_graph()
@@ -538,13 +545,78 @@ void program_impl::prepare_padding()
     }
 }
 
+void program_impl::fuse_buffers()
+{
+    for (auto& node : processing_order)
+    {
+        do_for_types<concatenation>(*node, [this](concatenation_node& node)
+        {
+            auto format = node.get_output_layout().format;
+            if (format != format::bfyx)
+                return;
+
+            //if any of this node's inputs is used by more than one primitive do not fuse buffers
+            // todo: in future, if this case is problem, it can be optimized further to enable buffer fusing
+            //       per single input rather than all/none
+            // + restrict input types to pooling and convolution only due to problems with output padding on b and f
+            for (auto const& input : node.get_dependencies())
+                if (input->get_users().size() > 1 || (!input->is_type<pooling>() && ! input->is_type<convolution>()))
+                    return;
+
+            // buffer fusing should not be performed if one of inputs produces padded output since
+            // it could break desired memory alignment. On the other hand, if this node uses all inputs
+            // exclusively (see check above) they should not have output padding set since concatenation
+            // does not ask for any.
+            assert(!node.has_padded_dependency());
+            if (node.has_padded_dependency())
+                return;
+
+            auto concat_axis = node.get_primitive()->axis;
+            auto padd = node.get_output_layout().data_padding;
+
+            //calculate lower and upper paddding so they sum up to the buffer size
+            // at the beginning lower padd points to the starting position of the output data
+            //
+            //   |--- lower padd ---| ------------------ upper padd -----------------------|
+            //   |-- output padd ---| ----- input1 ------|----- input2 -----|-- out padd --|
+            tensor lower_padd = padd.lower_size();
+            tensor upper_padd = padd.upper_size();
+
+            upper_padd.raw[concat_axis] = node.get_output_layout().get_buffer_size().raw[concat_axis] - lower_padd.raw[concat_axis];
+
+            for (auto const& input : node.get_dependencies())
+            {
+                auto input_lenght = input->get_output_layout().size.raw[concat_axis];
+
+                // shrink upper pad so it points at the end of the input's buffer
+                //
+                //   |--- lower padd ---|                    |---------- upper padd -----------|
+                //   |-- output padd ---| ----- input1 ------|----- input2 -----|-- out padd --|
+                upper_padd.raw[concat_axis] -= input_lenght;
+
+                // set new padding for input
+                input->set_output_padding(padding(lower_padd.sizes(), upper_padd.sizes()));
+
+                // move lower padd further
+                //
+                //   |-------------- lower padd -------------|---------- upper padd -----------|
+                //   |-- output padd ---| ----- input1 ------|----- input2 -----|-- out padd --|
+
+                lower_padd.raw[concat_axis] += input_lenght;
+            }
+            
+            node.can_be_optimized(true);
+        });
+    }
+}
+
 program_node& program_impl::get_or_create(std::shared_ptr<primitive> prim)
 {
     auto itr = nodes_map.lower_bound(prim->id);
     if (itr != nodes_map.end() && itr->first == prim->id)
         return *itr->second;
 
-    auto new_node = std::make_shared<program_node>(prim, *this);
+    auto new_node = prim->type->create_node(*this, prim);
     nodes_map.insert(itr, { prim->id, new_node });
     return *new_node;
 }

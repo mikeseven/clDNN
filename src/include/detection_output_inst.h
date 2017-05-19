@@ -29,7 +29,11 @@ namespace cldnn
 template <>
 class typed_program_node<detection_output> : public typed_program_node_base<detection_output>
 {
+    using parent = typed_program_node_base<detection_output>;
+
 public:
+    using parent::parent;
+
     auto& location() const { return get_dependency(0); }
     auto& confidence() const { return get_dependency(1); }
     auto& prior_box() const { return get_dependency(2); }

@@ -21,7 +21,7 @@ namespace cldnn
 {
 primitive_type_id activation_type_id()
 {
-    static primitive_type_base<activation, activation_inst> instance;
+    static primitive_type_base<activation> instance;
     return &instance;
 }
 

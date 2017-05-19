@@ -22,7 +22,7 @@ namespace cldnn
 {
 primitive_type_id detection_output_type_id()
 {
-    static primitive_type_base<detection_output, detection_output_inst> instance;
+    static primitive_type_base<detection_output> instance;
     return &instance;
 }
 

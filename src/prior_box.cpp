@@ -23,7 +23,7 @@ namespace cldnn
 {
 primitive_type_id prior_box_type_id()
 {
-    static primitive_type_base<prior_box, prior_box_inst> instance;
+    static primitive_type_base<prior_box> instance;
     return &instance;
 }
 

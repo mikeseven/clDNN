@@ -21,7 +21,7 @@ namespace cldnn
 {
 primitive_type_id batch_norm_type_id()
 {
-    static primitive_type_base<batch_norm, batch_norm_inst> instance;
+    static primitive_type_base<batch_norm> instance;
     return &instance;
 }
 

@@ -28,7 +28,7 @@ static void generate_anchors(unsigned int base_size, const std::vector<float>& r
 
 primitive_type_id simpler_nms_type_id()
 {
-    static primitive_type_base<simpler_nms, simpler_nms_inst> instance;
+    static primitive_type_base<simpler_nms> instance;
     return &instance;
 }
 

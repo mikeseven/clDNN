@@ -25,7 +25,7 @@ namespace cldnn
 
 primitive_type_id reorder_type_id()
 {
-    static primitive_type_base<reorder, reorder_inst> instance;
+    static primitive_type_base<reorder> instance;
     return &instance;
 }
 

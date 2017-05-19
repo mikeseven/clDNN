@@ -22,7 +22,7 @@ namespace cldnn
 {
 primitive_type_id convolution_type_id()
 {
-    static primitive_type_base<convolution, convolution_inst> instance;
+    static primitive_type_base<convolution> instance;
     return &instance;
 }
 
