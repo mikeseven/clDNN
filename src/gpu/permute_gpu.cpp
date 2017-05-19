@@ -149,6 +149,18 @@ struct permute_gpu : typed_primitive_impl<permute>
         return os.str();
     }
 
+    static std::string get_offsets_string(size_t dimensions, const tensor &sizes)
+    {
+        std::stringstream os;
+        os << "(uint[]){ ";
+        for (size_t i = 0; i < dimensions; i++)
+        {
+            os << static_cast<uint32_t>(sizes.raw[i]) << ", ";
+        }
+        os << " }";
+        return os.str();
+    }
+
     static gpu::jit_constants get_jit_constants(const permute_node& outer)
     {
         auto engine_info = outer.get_program().get_engine()->get_context()->get_engine_info();
@@ -163,8 +175,10 @@ struct permute_gpu : typed_primitive_impl<permute>
         auto input_use_half = input_layout.data_type == cldnn::data_types::f16;
         auto output_use_half = output_layout.data_type == cldnn::data_types::f16;
         int input_output_type_cvt = input_use_half != output_use_half;
-        auto lower_padding = output_layout.data_padding.lower_size();
-        auto upper_padding = output_layout.data_padding.upper_size();
+        auto output_lower_padding = output_layout.data_padding.lower_size();
+        auto output_upper_padding = output_layout.data_padding.upper_size();
+        auto input_lower_padding = outer.input().get_primitive()->output_padding.lower_size();
+        auto input_upper_padding = outer.input().get_primitive()->output_padding.upper_size();
 
         if (!engine_info.supports_fp16 && (input_use_half || output_use_half))
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
@@ -183,38 +197,13 @@ struct permute_gpu : typed_primitive_impl<permute>
             gpu::make_jit_constant("SRC_TYPE", input_use_half ? "ushort" : std::string("float")),
             gpu::make_jit_constant("DEST_TYPE", output_use_half ? "ushort" : std::string("float")),
             gpu::make_jit_constant("SRC_DEST_TYPE_CVT", input_output_type_cvt),
-            gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16))
+            gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16)),
+            gpu::make_jit_constant("SIZE", get_offsets_string(input_dimensions, input_buffer_size)),
+            gpu::make_jit_constant("OUTPUT_LOWER_PADDING", get_offsets_string(output_dimensions, output_lower_padding)),
+            gpu::make_jit_constant("OUTPUT_UPPER_PADDING", get_offsets_string(output_dimensions, output_upper_padding)),
+            gpu::make_jit_constant("INPUT_LOWER_PADDING", get_offsets_string(input_dimensions, input_lower_padding)),
+            gpu::make_jit_constant("INPUT_UPPER_PADDING", get_offsets_string(input_dimensions, input_upper_padding))
         };
-        {
-            std::stringstream s;
-            s << "(uint[]){ ";
-            for (uint32_t i = 0; i < input_dimensions; i++)
-            {
-                s << static_cast<uint32_t>(input_buffer_size.raw[i]) << ", ";
-            }
-            s << " }";
-            mem_consts.add_constant(gpu::make_jit_constant("SIZE", s.str()));
-        }
-        {
-            std::stringstream s;
-            s << "(uint[]){ ";
-            for (uint32_t i = 0; i < output_dimensions; i++)
-            {
-                s << static_cast<uint32_t>(lower_padding.raw[i]) << ", ";
-            }
-            s << " }";
-            mem_consts.add_constant(gpu::make_jit_constant("LOWER_PADDING", s.str()));
-        }
-        {
-            std::stringstream s;
-            s << "(uint[]){ ";
-            for (uint32_t i = 0; i < output_dimensions; i++)
-            {
-                s << static_cast<uint32_t>(upper_padding.raw[i]) << ", ";
-            }
-            s << " }";
-            mem_consts.add_constant(gpu::make_jit_constant("UPPER_PADDING", s.str()));
-        }
 
         return mem_consts;
     }

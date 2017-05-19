@@ -28,9 +28,6 @@ namespace neural
 const std::string kernelName = "reorder_GPU";
 const std::string kernelName_subtract = "reorder_subtract_GPU";
 const std::string kernelName_subtract_values = "reorder_subtract_values_GPU";
-const std::string kernel_name_1d_convert = "reorder_gpu_1d_convert";
-const std::string kernel_name_1d_convert_subtract = "reorder_gpu_1d_convert_subtract";
-const std::string kernel_name_1d_convert_subtract_values = "reorder_gpu_1d_convert_subtract_values";
 const std::string kernel_name_reorder_padding_bfyx_f32 = "reorder_gpu_padding_bfyx_f32";
 
 template <>
@@ -214,12 +211,24 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         return os.str();
     }
 
+    static std::string get_offsets_string(size_t dimensions, const tensor &sizes)
+    {
+        std::stringstream os;
+        os << "(uint[]){ ";
+        for (size_t i = 0; i < dimensions; i++)
+        {
+            os << static_cast<uint32_t>(sizes.raw[i]) << ", ";
+        }
+        os << " }";
+        return os.str();
+    }
+
     static gpu::jit_constants get_jit_constants(const reorder_node& outer, const kernel_data& data)
     {
         auto engine_info = outer.get_program().get_engine()->get_context()->get_engine_info();
 
         auto input_layout = outer.input().get_output_layout();
-        auto const& input_buffer_size = input_layout.get_buffer_size();
+        auto const& input_buffer_size = input_layout.size;
         auto input_dimensions = input_layout.size.batch.size() + input_layout.size.feature.size() + input_layout.size.spatial.size();
 
         auto output_layout = outer.get_output_layout();
@@ -229,8 +238,10 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         auto input_use_half = input_layout.data_type == cldnn::data_types::f16;
         auto output_use_half = output_layout.data_type == cldnn::data_types::f16;
         int input_output_type_cvt = input_use_half != output_use_half;
-        auto lower_padding = output_layout.data_padding.lower_size();
-        auto upper_padding = output_layout.data_padding.upper_size();
+        auto output_lower_padding = output_layout.data_padding.lower_size();
+        auto output_upper_padding = output_layout.data_padding.upper_size();
+        auto input_lower_padding = outer.input().get_primitive()->output_padding.lower_size();
+        auto input_upper_padding = outer.input().get_primitive()->output_padding.upper_size();
 
         bool needs_fp16 = (input_use_half != output_use_half || //float->half or half->float conversion require fp16 support
             (input_use_half && (data.has_mean || !outer.get_primitive()->subtract_per_feature.empty()))); //half->half with subtraction require fp16 support
@@ -247,46 +258,22 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         if (input_use_half && output_use_half && !needs_fp16) //half->half without subtraction (so plain reorder) can be done on shorts without explicit fp16 support
             half_type_str = "ushort";
 
+        auto calculation_order = get_calculation_order_string(input_layout.data_type, input_layout.format);
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("DIMENSIONS", std::to_string(input_dimensions)),
             gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", data.is_flatten ? get_idx_calculation_flatten(output_layout.data_type, output_layout.format) : get_idx_calculation(output_layout.data_type, output_layout.format)),
-            gpu::make_jit_constant("CALCULATION_ORDER", get_calculation_order_string(input_layout.data_type, input_layout.format)),
+            gpu::make_jit_constant("CALCULATION_ORDER", calculation_order),
             gpu::make_jit_constant("SRC_TYPE", input_use_half ? half_type_str : std::string("float")),
             gpu::make_jit_constant("DEST_TYPE", output_use_half ? half_type_str : std::string("float")),
             gpu::make_jit_constant("SRC_DEST_TYPE_CVT", input_output_type_cvt),
-            gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16))
+            gpu::make_jit_constant("FP16_SUPPORTED", static_cast<int>(engine_info.supports_fp16)),
+            gpu::make_jit_constant("SIZE", get_offsets_string(input_dimensions, input_buffer_size)),
+            gpu::make_jit_constant("OUTPUT_LOWER_PADDING", get_offsets_string(output_dimensions, output_lower_padding)),
+            gpu::make_jit_constant("OUTPUT_UPPER_PADDING", get_offsets_string(output_dimensions, output_upper_padding)),
+            gpu::make_jit_constant("INPUT_LOWER_PADDING", get_offsets_string(input_dimensions, input_lower_padding)),
+            gpu::make_jit_constant("INPUT_UPPER_PADDING", get_offsets_string(input_dimensions, input_upper_padding))
         };
-        {
-            std::stringstream s;
-            s << "(uint[]){ ";
-            for (uint32_t i = 0; i < input_dimensions; i++)
-            {
-                s << static_cast<uint32_t>(input_buffer_size.raw[i]) << ", ";
-            }
-            s << " }";
-            mem_consts.add_constant(gpu::make_jit_constant("SIZE", s.str()));
-        }
-        {
-            std::stringstream s;
-            s << "(uint[]){ ";
-            for (uint32_t i = 0; i < output_dimensions; i++)
-            {
-                s << static_cast<uint32_t>(lower_padding.raw[i]) << ", ";
-            }
-            s << " }";
-            mem_consts.add_constant(gpu::make_jit_constant("LOWER_PADDING", s.str()));
-        }
-        {
-            std::stringstream s;
-            s << "(uint[]){ ";
-            for (uint32_t i = 0; i < output_dimensions; i++)
-            {
-                s << static_cast<uint32_t>(upper_padding.raw[i]) << ", ";
-            }
-            s << " }";
-            mem_consts.add_constant(gpu::make_jit_constant("UPPER_PADDING", s.str()));
-        }
 
         if (data.padding_only)
         {
@@ -341,9 +328,9 @@ struct reorder_gpu : typed_primitive_impl<reorder>
     gpu::kernel_execution_options get_execution_options() const
     {
         auto input_layout = outer.input().get_output_layout();
-        auto const& input_buffer_size = input_layout.get_buffer_size();
+        auto const& input_size = input_layout.size;
 
-        auto& input_size_raw = input_buffer_size.raw;
+        auto& input_size_raw = input_size.raw;
         auto dimensions = input_layout.size.batch.size() + input_layout.size.feature.size() + input_layout.size.spatial.size();
         auto order = get_calculation_order(input_layout.data_type, input_layout.format);
         if (dimensions != order.size()) throw std::runtime_error("reorder number of input dimensions != size of indices order");
@@ -429,22 +416,7 @@ reorder_gpu::kernel_data set_default(const reorder_node& arg)
     return kd;
 }
 
-reorder_gpu::kernel_data set_default_dim1(const reorder_node& arg)
-{
-    reorder_gpu::kernel_data kd = reorder_gpu::set_kernel_data(arg);
-
-    if (kd.has_mean)
-        kd.kernel_name = kernel_name_1d_convert_subtract;
-    else if (!arg.get_primitive()->subtract_per_feature.empty())
-        kd.kernel_name = kernel_name_1d_convert_subtract_values;
-    else
-        kd.kernel_name = kernel_name_1d_convert;
-
-    return kd;
-}
-
 kd_selector_t<reorder_gpu::kernel_data, reorder_node, kd_optional_selector_t, size_t, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> reorder_gpu::ks = {
-    { std::make_tuple(1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default_dim1 },
     { std::make_tuple(0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
 };
 
