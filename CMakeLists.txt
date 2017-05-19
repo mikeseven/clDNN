@@ -78,9 +78,6 @@ set(CLDNN__API_DIR       "${CMAKE_CURRENT_SOURCE_DIR}/api")
 # Path which points to directory with binaries for Intel OpenCL SDK ICD (Installable Client Driver).
 set(CLDNN__IOCL_ICD_DIR  "${CLDNN__COMMON_DIR}/intel_ocl_icd")
 
-# Path which points to directory with FreeImage and FreeImagePlus libraries.
-set(CLDNN__FREEIMAGE_DIR "${CLDNN__COMMON_DIR}/FreeImage")
-
 # Path which points to directory with boost libraries (only selection).
 set(CLDNN__BOOST_DIR     "${CLDNN__COMMON_DIR}/boost")
 
@@ -321,24 +318,6 @@ endif()
 
 # ======================================================================================================
 
-# Detecting all versions of added FreeImage library in the project.
-if(NOT EXISTS "${CLDNN__FREEIMAGE_DIR}")
-  message(FATAL_ERROR "[clDNN] Root for FreeImage/FreeImagePlus library is invalid or does not exist.
-    Please make sure that libraries are added into \"${CLDNN__FREEIMAGE_DIR}\".")
-endif()
-
-cldnn_locate_component_versions(__CLDNN_FreeImageVersions __CLDNN_FreeImagePaths __CLDNN_FreeImageDefaultVersion
-    "FreeImage/FreeImagePlus library" "${CLDNN__FREEIMAGE_DIR}"
-    "include/FreeImage.h"
-    "include/FreeImagePlus.h"
-  )
-
-if(__CLDNN_FreeImageDefaultVersion VERSION_EQUAL "0")
-  message(FATAL_ERROR "[clDNN] FreeImage/FreeImagePlus library required for build cannot be located.")
-endif()
-
-# ======================================================================================================
-
 # Detecting all versions of added boost package in the project.
 if(NOT EXISTS "${CLDNN__BOOST_DIR}")
   message(FATAL_ERROR "[clDNN] Root for boost libraries is invalid or does not exist.
@@ -408,23 +387,10 @@ mark_as_advanced(CLDNN__IOCL_ICD_USE_EXTERNAL)
 
 # ======================================================================================================
 
-# FreeImage/FreeImagePlus library: Version of library used to build clDNN.
-set(CLDNN__FREEIMAGE_VERSION "${__CLDNN_FreeImageDefaultVersion}" CACHE STRING "FreeImage/FreeImagePlus library: Version of library used to build clDNN framework.")
-mark_as_advanced(CLDNN__FREEIMAGE_VERSION)
-set_property(CACHE CLDNN__FREEIMAGE_VERSION PROPERTY STRINGS ${__CLDNN_FreeImageVersions})
-
-# ======================================================================================================
-
 # boost libraries (filesystem subset): Version of libraries used to build clDNN.
 set(CLDNN__BOOST_VERSION "${__CLDNN_BoostDefaultVersion}" CACHE STRING "boost libraries (filesystem subset): Version of libraries used to build clDNN framework.")
 mark_as_advanced(CLDNN__BOOST_VERSION)
 set_property(CACHE CLDNN__BOOST_VERSION PROPERTY STRINGS ${__CLDNN_BoostVersions})
-
-# ======================================================================================================
-
-# Include and build: Examples of usage of clDNN framework.
-set(CLDNN__INCLUDE_EXAMPLES ON CACHE BOOL "Include and build: clDNN framework's usage examples.")
-mark_as_advanced(CLDNN__INCLUDE_EXAMPLES)
 
 # ======================================================================================================
 
@@ -470,7 +436,7 @@ set(CLDNN__MIN_COMPILER_VERSION__MSVC  "19.0")
 set(CLDNN__MIN_COMPILER_VERSION__CLANG "3.5")
 set(CLDNN__MIN_COMPILER_VERSION__ICC   "17.0")
 
-if (CLDNN__INCLUDE_CORE OR CLDNN__INCLUDE_TESTS OR CLDNN__INCLUDE_EXAMPLES)
+if (CLDNN__INCLUDE_CORE OR CLDNN__INCLUDE_TESTS)
   set(CLDNN__MIN_COMPILER_VERSION__GCC "5.2")
 else()
   set(CLDNN__MIN_COMPILER_VERSION__GCC "4.8")
@@ -584,21 +550,6 @@ unset(__CLDNN_IOclIcdPaths)
 unset(__CLDNN_IOclIcdDefaultVersion)
 unset(__CLDNN_IOclIcdVersionIdx)
 
-
-# ======================================================================================================
-
-# Selecting FreeImage/FreeImagePlus library version and path.
-list(FIND __CLDNN_FreeImageVersions "${CLDNN__FREEIMAGE_VERSION}" __CLDNN_FreeImageVersionIdx)
-if(__CLDNN_FreeImageVersionIdx LESS 0)
-  message(FATAL_ERROR "[clDNN] CLDNN__FREEIMAGE_VERSION: Selected version of FreeImage/FreeImagePlus library cannot be found.
-    Please use one of following values: ${__CLDNN_FreeImageVersions}.")
-endif()
-list(GET __CLDNN_FreeImagePaths ${__CLDNN_FreeImageVersionIdx} CLDNN__FREEIMAGE_ROOT)
-set(CLDNN__FREEIMAGE_ROOT "${CLDNN__FREEIMAGE_ROOT}" CACHE INTERNAL "Path to FreeImage/FreeImagePlus library used to build clDNN framework.")
-
-set(CLDNN__FREEIMAGE_INCDIRS "${CLDNN__FREEIMAGE_ROOT}/include" CACHE INTERNAL "Paths to interface headers for FreeImage/FreeImagePlus.")
-set(CLDNN__FREEIMAGE_LIBDIRS "${CLDNN__FREEIMAGE_ROOT}/${__CLDNN_TargetOs}/${__CLDNN_TargetCpuDir}" CACHE INTERNAL "Paths to libraries to link for FreeImage/FreeImagePlus.")
-
 # ======================================================================================================
 
 # Selecting boost libraries version and path.
@@ -666,11 +617,9 @@ if (CLDNN__IOCL_ICD_USE_EXTERNAL)
 else()
   message(STATUS "[clDNN]  - ICD version used to build:   ${CLDNN__IOCL_ICD_VERSION}")
 endif()
-message(STATUS "[clDNN]  - FreeImage v. used to build:    ${CLDNN__FREEIMAGE_VERSION}")
 message(STATUS "[clDNN]  - boost ver. used to build:      ${CLDNN__BOOST_VERSION}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Include/Build cldnn core:      ${CLDNN__INCLUDE_CORE}")
-message(STATUS "[clDNN]  - Include/Build examples:        ${CLDNN__INCLUDE_EXAMPLES}")
 message(STATUS "[clDNN]  - Include/Build tests:           ${CLDNN__INCLUDE_TESTS}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Run tests:                     ${CLDNN__RUN_TESTS}")
@@ -686,11 +635,6 @@ message(STATUS "[clDNN]     + Headers:      ${CLDNN__IOCL_ICD_INCDIRS}")
 message(STATUS "[clDNN]     + Static libs:  ${CLDNN__IOCL_ICD_STLDIRS}")
 message(STATUS "[clDNN]     + Shared libs:  ${CLDNN__IOCL_ICD_SHLDIRS}")
 message(STATUS "[clDNN]     + Libs to link: ${CLDNN__IOCL_ICD_LIBDIRS}")
-message(STATUS "[clDNN]")
-message(STATUS "[clDNN] FreeImage/FreeImagePlus:")
-message(STATUS "[clDNN]  - Root:            ${CLDNN__FREEIMAGE_ROOT}")
-message(STATUS "[clDNN]     + Headers:      ${CLDNN__FREEIMAGE_INCDIRS}")
-message(STATUS "[clDNN]     + Libs to link: ${CLDNN__FREEIMAGE_LIBDIRS}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN] boost libraries:")
 message(STATUS "[clDNN]  - Root:            ${CLDNN__BOOST_ROOT}")
@@ -774,12 +718,11 @@ else()
 endif()
 
 if(NOT __CLDNN_UseCxx14)
-  if(CLDNN__INCLUDE_CORE OR CLDNN__INCLUDE_EXAMPLES OR CLDNN__INCLUDE_TESTS)
+  if(CLDNN__INCLUDE_CORE OR CLDNN__INCLUDE_TESTS)
     message(WARNING "Due to lack of support of c++14 switch cldnn_core/examples/tests projects will not be included in created solution")
   endif()
   
   set(CLDNN__INCLUDE_CORE OFF CACHE BOOL "" FORCE)
-  set(CLDNN__INCLUDE_EXAMPLES OFF CACHE BOOL "" FORCE)
   set(CLDNN__INCLUDE_TESTS OFF CACHE BOOL "" FORCE)
 endif()
 
@@ -1117,23 +1060,17 @@ endif()
 
 include_directories(
     ${CLDNN__IOCL_ICD_INCDIRS}
-    ${CLDNN__FREEIMAGE_INCDIRS}
     "${CLDNN__KHR_CLHPP_DIR}"
-#    "${CLDNN__API_DIR}"
     ${Boost_INCLUDE_DIRS}
     "${CLDNN__CODEGEN_INCDIR}"
   )
 link_directories(
     ${CLDNN__IOCL_ICD_LIBDIRS}
-    ${CLDNN__FREEIMAGE_LIBDIRS}
   )
 
 # =================================== Link targets and dependencies ====================================
 if(CLDNN__INCLUDE_CORE)
   add_subdirectory(src)
-endif()
-if(CLDNN__INCLUDE_EXAMPLES)
-  add_subdirectory(examples)
 endif()
 if(CLDNN__INCLUDE_TESTS)
   add_subdirectory(tests)

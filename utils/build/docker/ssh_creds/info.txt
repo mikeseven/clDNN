@@ -1,1 +1,0 @@
-All files here will be copied to .ssh of user who runs agent.
