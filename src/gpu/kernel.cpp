@@ -40,4 +40,16 @@ void kernel_execution_options::set_local_sizes()
         total_lws *= optimal_lws_values[lws_idx];
     }
 }
+
+std::string get_offsets_string(size_t dimensions, const cldnn::tensor &sizes)
+{
+    std::stringstream os;
+    os << "(uint[]){ ";
+    for (size_t i = 0; i < dimensions; i++)
+    {
+        os << static_cast<uint32_t>(sizes.raw[i]) << ", ";
+    }
+    os << " }";
+    return os.str();
+}
 } }

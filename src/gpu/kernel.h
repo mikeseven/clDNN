@@ -264,6 +264,8 @@ public:
     }
 };
 
+std::string get_offsets_string(size_t dimensions, const cldnn::tensor &sizes);
+
 template<typename T, class Enable = void>
 struct kernel_arg_handler;
 
