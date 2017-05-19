@@ -166,10 +166,6 @@ normalize_gpu::kernel_data get_kernel_across_spatial(const normalize_node& arg, 
 	{
 		throw std::invalid_argument("Unsupported normalize across spatial format - " + cldnn::format::traits(format).order);
 	}
-	auto input_layout = arg.input().get_output_layout();
-
-    kd.gws0 = input_layout.size.batch[0];
-    kd.lws0 = kd.gws0;
  
 	return kd;
 }
