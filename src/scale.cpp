@@ -29,7 +29,7 @@ layout scale_inst::calc_output_layout(scale_node const& node)
 {
     auto result = node.input().get_output_layout();
 
-    auto scale_sizes = node.scale().get_output_layout().size;
+    auto scale_sizes = node.scale_in().get_output_layout().size;
     auto input_sizes = result.size;
 
     auto scale_x_size = scale_sizes.spatial[0];
@@ -52,7 +52,7 @@ std::string scale_inst::to_string(scale_node const& node)
     auto desc                        = node.get_primitive();
     auto bias_count                  = desc->bias == "" ? 0 : node.bias().get_output_layout().count();
     auto input                       = node.input();
-    auto scale_input                 = node.scale();
+    auto scale_input                 = node.scale_in();
 
     primitive_description << "id: " << desc->id << ", type: scale" << 
         "\n\tinput: "         << input.id() << ", count: " << input.get_output_layout().count() << ",  size: " << input.get_output_layout().size <<

@@ -31,7 +31,7 @@ public:
     using parent::parent;
 
     auto& input() const { return get_dependency(0); }
-    auto& scale() const { return get_dependency(1); }
+    auto& scale_in() const { return get_dependency(1); }
     auto& bias() const { return get_dependency(2); }
 };
 
