@@ -165,8 +165,8 @@ struct permute_gpu : typed_primitive_impl<permute>
         int input_output_type_cvt = input_use_half != output_use_half;
         auto output_lower_padding = output_layout.data_padding.lower_size();
         auto output_upper_padding = output_layout.data_padding.upper_size();
-        auto input_lower_padding = outer.input().get_primitive()->output_padding.lower_size();
-        auto input_upper_padding = outer.input().get_primitive()->output_padding.upper_size();
+        auto input_lower_padding = input_layout.data_padding.lower_size();
+        auto input_upper_padding = input_layout.data_padding.upper_size();
 
         if (!engine_info.supports_fp16 && (input_use_half || output_use_half))
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");

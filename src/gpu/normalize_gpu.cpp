@@ -105,10 +105,10 @@ struct normalize_gpu : typed_primitive_impl<normalize>
         if (!engine_info.supports_fp16 && data.fp16_unit_used)
             throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-        auto input_padding = outer.input().get_primitive()->output_padding;
+        auto input_padding = outer.input().get_output_layout().data_padding;
         auto input_size = outer.input().get_output_layout().size;
 
-		auto output_padding = outer.get_primitive()->output_padding;
+		auto output_padding = outer.get_output_layout().data_padding;
 		auto output_size = outer.get_output_layout().size;
 
 		auto scale_feature_size = outer.scale().get_output_layout().size.spatial[0];
@@ -122,7 +122,7 @@ struct normalize_gpu : typed_primitive_impl<normalize>
             gpu::make_jit_constant("FP16_UNIT_USED",                static_cast<int>(data.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",                     data.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("INPUT_PADDING",                 input_padding),
-            gpu::make_jit_constant("OUTPUT_PADDING",                outer.get_primitive()->output_padding),
+            gpu::make_jit_constant("OUTPUT_PADDING",                output_padding),
             gpu::make_jit_constant("INPUT_BUFFER_SIZE_X",           !input_padding ? input_size.spatial[0] : input_size.spatial[0] + input_padding.upper_size().spatial[0] + input_padding.lower_size().spatial[0]),
             gpu::make_jit_constant("INPUT_BUFFER_SIZE_Y",           !input_padding ? input_size.spatial[1] : input_size.spatial[1] + input_padding.upper_size().spatial[1] + input_padding.lower_size().spatial[1]),
 			gpu::make_jit_constant("OUTPUT_BUFFER_SIZE_X",          !output_padding ? output_size.spatial[0] : output_size.spatial[0] + output_padding.upper_size().spatial[0] + output_padding.lower_size().spatial[0]),

@@ -228,8 +228,8 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         int input_output_type_cvt = input_use_half != output_use_half;
         auto output_lower_padding = output_layout.data_padding.lower_size();
         auto output_upper_padding = output_layout.data_padding.upper_size();
-        auto input_lower_padding = outer.input().get_primitive()->output_padding.lower_size();
-        auto input_upper_padding = outer.input().get_primitive()->output_padding.upper_size();
+        auto input_lower_padding = input_layout.data_padding.lower_size();
+        auto input_upper_padding = input_layout.data_padding.upper_size();
 
         bool needs_fp16 = (input_use_half != output_use_half || //float->half or half->float conversion require fp16 support
             (input_use_half && (data.has_mean || !outer.get_primitive()->subtract_per_feature.empty()))); //half->half with subtraction require fp16 support

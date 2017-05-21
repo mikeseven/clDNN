@@ -323,7 +323,7 @@ convolution_gpu::kernel_data default_yxio_f32_b1(const convolution_node& arg)
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.lws0 = 16;
     if (filter_layout.size.feature[0] * batch_size % kd.lws0 != 0 ||
-        arg.get_primitive()->output_padding)
+		output_layout.data_padding)
     {
         kd = default_yxio_f32(arg);
     }
