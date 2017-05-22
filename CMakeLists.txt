@@ -110,7 +110,10 @@ endif()
 # Code generation settings.
 
 # Path which points to root directory where code generated elements are created.
-set(CLDNN__CODEGEN_DIR     "${CMAKE_CURRENT_BINARY_DIR}/codegen/${CLDNN__TARGET_CFG_VAR}")
+set(CLDNN__CODEGEN_BASEDIR "${CMAKE_CURRENT_BINARY_DIR}/codegen")
+# Path which points to root directory where code generated elements are created
+# (specific to build configuration).
+set(CLDNN__CODEGEN_DIR     "${CLDNN__CODEGEN_BASEDIR}/${CLDNN__TARGET_CFG_VAR}")
 
 # Path which points to automatically included directory with code generated elements
 # (to support "copy-if-different" optimization).
@@ -1145,6 +1148,7 @@ link_directories(
 # =================================== Link targets and dependencies ====================================
 if(CLDNN__INCLUDE_CORE)
   add_subdirectory(src)
+  add_subdirectory(api_test_builds)
 endif()
 if(CLDNN__INCLUDE_EXAMPLES)
   add_subdirectory(examples)
