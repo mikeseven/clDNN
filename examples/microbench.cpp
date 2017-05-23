@@ -17,7 +17,7 @@
 #include "common/common_tools.h"
 #include "file.h"
 
-
+#include <cmath>
 #include <string>
 #include <api/CPP/input_layout.hpp>
 #include <api/CPP/convolution.hpp>

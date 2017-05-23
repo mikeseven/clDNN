@@ -364,10 +364,12 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
     }
     else if(primitive->type == cldnn::roi_pooling::type_id())
     {
-        auto roi_pooling = static_cast<cldnn::roi_pooling *>(primitive);
-        str << "Pooled width: " << roi_pooling->pooled_width
-            << " Pooled height: " << roi_pooling->pooled_height
-            << " Spatial scale: " << roi_pooling->spatial_scale;
+        auto p = static_cast<cldnn::roi_pooling *>(primitive);
+        str << "Pooling mode: " << (p->mode == cldnn::pooling_mode::max ? "MAX" : "AVG")
+            << " Pooled width: " << p->pooled_width
+            << " Pooled height: " << p->pooled_height
+            << " Spatial scale: " << p->spatial_scale
+            << " Group size: " << p->group_sz;
     }
     else if(primitive->type == cldnn::scale::type_id())
     {
