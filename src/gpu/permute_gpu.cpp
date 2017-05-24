@@ -84,6 +84,37 @@ struct permute_gpu : typed_primitive_impl<permute>
         return kd;
     }
 
+    static std::vector<uint16_t> get_permute_order(format::type fmt)
+    {
+        switch (fmt)
+        {
+            // For input formats:
+            // 0 - batch (b), 1 - feature (f), 2, 3 - spatial (x -> 2, y -> 3)
+        case format::byxf:
+            return{ 0, 3, 2, 1 };
+
+        case format::yxfb:
+            return{ 3, 2, 1, 0 };
+
+        case format::bfyx:
+            return{ 0, 1, 3, 2 };
+
+        case format::fyxb:
+            return{ 1, 3, 2, 0 };
+
+        default:
+            throw std::invalid_argument("This format is not supported in GPU permute_inst");
+        }
+    }
+
+    static std::vector<uint16_t> apply_permute(const std::vector<uint16_t>& lhs, const std::vector<uint16_t>& rhs) {
+        std::vector<uint16_t> result;
+        for (auto& v : lhs) {
+            result.push_back(rhs[v]);
+        }
+        return result;
+    }
+
     // We need to specify the output idx based on input position
     static std::string get_idx_calculation(data_types dt, format::type fmt, const std::vector<uint16_t>& permute_order)
     {
@@ -92,13 +123,16 @@ struct permute_gpu : typed_primitive_impl<permute>
             // 0 - batch (b), 1 - feature (f), 2, 3 - spatial (x -> 2, y -> 3)
             // for example permute[0] = 3 means that batch will be replaced with spatial y
 
+            auto permute_order_format = get_permute_order(fmt);
+            auto calc_order_perm = apply_permute(permute_order_format, apply_permute(permute_order, permute_order_format));
+
             auto calc_order_fmt = get_calculation_order(dt, fmt);
-            std::vector<uint32_t> new_calc_order(calc_order_fmt);
+            auto new_calc_order(calc_order_fmt);
 
             for (size_t i = 0; i < new_calc_order.size(); i++)
             {
                 auto pos = std::distance(calc_order_fmt.begin(), std::find(calc_order_fmt.begin(), calc_order_fmt.end(), i));
-                new_calc_order[pos] = permute_order[i];
+                new_calc_order[pos] = calc_order_perm[i];
             }
 
             return "return lpad[" + std::to_string(calc_order_fmt[0]) + "] + pos[" + std::to_string(new_calc_order[0]) +
@@ -113,7 +147,7 @@ struct permute_gpu : typed_primitive_impl<permute>
     }
 
     // To read input memory linearly we need to specify the order of reading
-    static std::vector<uint32_t> get_calculation_order(data_types /*dt*/, format::type fmt)
+    static std::vector<uint16_t> get_calculation_order(data_types /*dt*/, format::type fmt)
     {
         switch(fmt)
         {

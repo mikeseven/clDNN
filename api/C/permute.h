@@ -32,7 +32,7 @@ extern "C" {
 
 /// @brief Permutes data in the memory, with respect to provided order.
 /// @details Permute order is set as vector with positions meaning corresponding to tensor.
-/// Vector values represent dimensions to be permuted. For example: <br>
+/// Vector values represent dimensions to be permuted in bfyx format. For example: <br>
 /// input_dimensions = tensor{ 5, 3, 6, 3 } <br>
 /// permute_order = { 2, 3, 1, 0 } <br>
 /// output_dimensions = { 6, 3, 3, 5 } <br>

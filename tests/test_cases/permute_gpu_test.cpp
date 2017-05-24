@@ -111,10 +111,10 @@ TEST(permute_gpu_f32, basic_bfyx_permute_0_1_3_2)
 
 }
 
-TEST(permute_gpu_f32, basic_yxfb_permute_2_3_1_0)
+TEST(permute_gpu_f32, basic_yxfb_permute_3_2_0_1)
 {
     //  Input               : yxfb:2x2x2x2
-    //  Permute order       : { 2,3,1,0 }
+    //  Permute order       : { 3,2,0,1 }
     //  Output padding      : 0x1
     //
     //  Input:
@@ -157,7 +157,7 @@ TEST(permute_gpu_f32, basic_yxfb_permute_2_3_1_0)
 
     topology topology(
         input_layout("input", input.get_layout()),
-        permute("permute", "input", { 2, 3, 1, 0 }, { { 0, 0, 1, 0}, 0 }));
+        permute("permute", "input", { 3, 2, 0, 1 }, { { 0, 0, 1, 0}, 0 }));
 
     network network(engine, topology);
     network.set_input_data("input", input);
