@@ -187,7 +187,7 @@ TEST_F(softmax_gpu_xb_f32_test_fixture, values_batch_wise) {
     compare_out_buffer_with_expected_batch_wise();
 }
 
-TEST(softmax_gpu_bfyx_f32, sum_to_one_per_feature) {
+TEST(softmax_gpu_bfyx_f32, normalize_fyx) {
     //  Input  : 2x3x2x2
     static const int32_t x_size = 2, y_size = 2, feature_num = 3,
         batch_num = 2, buf_size = x_size*y_size * batch_num * feature_num;
@@ -207,66 +207,6 @@ TEST(softmax_gpu_bfyx_f32, sum_to_one_per_feature) {
         /*b1f1*/4.f,  0.5f,  8.f,   8.2f,
         /*b1f2*/0.2f, 0.2f,  -10.f, 5.2f
     });
-
-    network network(engine, topology);
-
-    network.set_input_data("input", input);
-    auto outputs = network.execute();
-
-    EXPECT_EQ(outputs.size(), size_t(1));
-    EXPECT_EQ(outputs.begin()->first, "softmax");
-
-    auto output = outputs.at("softmax").get_memory();
-    auto output_ptr = output.pointer<float>();
-    float out_buffer[buf_size];
-    for (uint32_t i = 0; i < buf_size; i++)
-    {
-        out_buffer[i] = get_value<float>(output_ptr, i);
-    }
-    float sum = 0;
-    float expected_sum = 1.0f;
-    
-    for (uint32_t i = 0; i < batch_num; i++) //this for loops will sum results in a batch per feature, we expect that: sum = 1.0f
-    {
-        for (uint32_t j = 0; j < y_size; j++)
-        {
-            for (uint32_t k = 0; k < x_size; k++)
-            {
-                for (uint32_t l = 0; l < feature_num; l++)
-                {
-                    int index = i * feature_num * x_size * y_size + j * x_size + k + l * x_size * y_size;
-                    sum += out_buffer[index];
-                }
-            }
-        }
-
-        EXPECT_EQ(true, are_equal(sum, expected_sum));
-        sum = 0.0f;
-
-    }
-}
-
-TEST(softmax_gpu_bfyx_f32, check_max_values_corectness) {
-    //  Input  : 2x3x2x2
-    static const int32_t x_size = 2, y_size = 2, feature_num = 3,
-        batch_num = 2, buf_size = x_size*y_size * batch_num * feature_num;
-    engine engine;
-
-    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_num, feature_num, x_size , y_size } });
-    topology topology;
-    topology.add(input_layout("input", input.get_layout()));
-    topology.add(softmax("softmax", "input"));
-
-    vector<float> input_vec = {
-               //y0x0  y0x1   y1x0    y1x1
-        /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
-        /*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
-        /*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
-        /*b1f0*/3.f,  0.5f,  7.f,   12.f,
-        /*b1f1*/4.f,  0.5f,  8.f,   8.2f,
-        /*b1f2*/0.2f, 0.2f,  -10.f, 5.2f
-    };
-    set_values(input, input_vec);
 
     float expected_max_values[2] = {
         0.481618381f, 0.953259517f
@@ -288,9 +228,12 @@ TEST(softmax_gpu_bfyx_f32, check_max_values_corectness) {
         out_buffer[i] = get_value<float>(output_ptr, i);
     }
 
-
+    float sum = 0;
+    float expected_sum = 1.0f;
+    
     float temp_max = 0;
     int max_value_buffer_index = 0;
+    
     for (uint32_t i = 0; i < batch_num; i++) //this for loops will sum results in a batch per feature, we expect that: sum = 1.0f
     {
         for (uint32_t j = 0; j < y_size; j++)
@@ -300,21 +243,24 @@ TEST(softmax_gpu_bfyx_f32, check_max_values_corectness) {
                 for (uint32_t l = 0; l < feature_num; l++)
                 {
                     int index = i * feature_num * x_size * y_size + j * x_size + k + l * x_size * y_size;
+                    sum += out_buffer[index];
                     if (out_buffer[index] >= temp_max)
                     {
                         temp_max = out_buffer[index];
-                    }       
+                    }
                 }
             }
         }
 
+        EXPECT_EQ(true, are_equal(sum, expected_sum));
+        sum = 0.0f;
         EXPECT_EQ(true, are_equal(temp_max, expected_max_values[max_value_buffer_index]));
         temp_max = 0;
         max_value_buffer_index++;
     }
 }
 
-TEST(softmax_gpu_bfyx_f32, double_flatten) {
+TEST(softmax_gpu_bfyx_f32, normalize_yx) {
     //  Input  : 2x3x2x2
     static const int32_t x_size = 2, y_size = 2, feature_num = 3,
         batch_num = 2, buf_size = x_size*y_size * batch_num * feature_num;
@@ -326,7 +272,7 @@ TEST(softmax_gpu_bfyx_f32, double_flatten) {
     topology.add(softmax("softmax", "input", softmax::normalize_yx));
 
     vector<float> input_vec = {
-        //y0x0  y0x1   y1x0    y1x1
+              //y0x0  y0x1   y1x0    y1x1
         /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
         /*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
         /*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
@@ -390,6 +336,189 @@ TEST(softmax_gpu_bfyx_f32, double_flatten) {
 
             EXPECT_EQ(true, are_equal(sum, expected_sum));
             sum = 0.0f;
+        }
+    }
+}
+
+TEST(softmax_gpu_bfyx_f32, normalize_y) {
+    //  Input  : 2x3x2x2
+    static const int32_t x_size = 2, y_size = 2, feature_num = 3,
+        batch_num = 2, buf_size = x_size*y_size * batch_num * feature_num;
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_num, feature_num, x_size , y_size } });
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(softmax("softmax", "input", softmax::normalize_y));
+
+    vector<float> input_vec = {
+              //y0x0  y0x1   y1x0    y1x1
+        /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
+        /*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
+
+        /*b1f0*/3.f,  0.5f,  7.f,   12.f,
+        /*b1f1*/4.f,  0.5f,  8.f,   8.2f,
+        /*b1f2*/0.2f, 0.2f,  -10.f, 5.2f
+    };
+    set_values(input, input_vec);
+
+    float expected_max_values[12] = {
+        0.689974481f,   //b=0, f=0, x=0
+        0.832018385f,   //b=0, f=0, x=1
+
+        0.999962831f,   //b=0, f=1, x=0
+        0.993307149f,   //b=0, f=1, x=1
+
+        0.999962831f,   //b=0, f=2, x=0
+        0.993307149f,   //b=0, f=2, x=1
+
+
+        0.98201379f,    //b=1, f=0, x=0
+        0.99998987f,    //b=1, f=0, x=1
+
+        0.98201379f,    //b=1, f=1, x=0
+        0.999547378f,   //b=1, f=1, x=1
+
+        0.999962831f,   //b=1, f=2, x=0
+        0.993307149f    //b=1, f=2, x=1
+    };
+
+    network network(engine, topology);
+
+    network.set_input_data("input", input);
+    auto outputs = network.execute();
+
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "softmax");
+
+    auto output = outputs.at("softmax").get_memory();
+    auto output_ptr = output.pointer<float>();
+    float out_buffer[buf_size];
+    for (uint32_t i = 0; i < buf_size; i++)
+    {
+        out_buffer[i] = get_value<float>(output_ptr, i);
+    }
+
+    float temp_max = 0;
+    float expected_sum = 1.0f;
+    int max_value_buffer_index = 0;
+    for (uint32_t i = 0; i < batch_num; i++) //this for loops will sum results in a batch per feature, we expect that: sum = 1.0f
+    {
+        for (uint32_t l = 0; l < feature_num; l++)
+        {
+            for (uint32_t k = 0; k < x_size; k++)
+            {
+                float sum = 0.0f;
+                for (uint32_t j = 0; j < y_size; j++)
+                {
+                    int index = i * feature_num * x_size * y_size +
+                        l * x_size * y_size +
+                        j * x_size +
+                        k;
+
+                    if (out_buffer[index] >= temp_max)
+                    {
+                        temp_max = out_buffer[index];
+                    }
+
+                    sum += out_buffer[index];
+                }
+                EXPECT_EQ(true, are_equal(temp_max, expected_max_values[max_value_buffer_index]));
+                temp_max = 0;
+                max_value_buffer_index++;
+
+                EXPECT_EQ(true, are_equal(sum, expected_sum));
+                sum = 0.0f;
+            }
+        }
+    }
+}
+
+TEST(softmax_gpu_bfyx_f32, normalize_f) {
+    //  Input  : 2x3x2x2
+    static const int32_t x_size = 2, y_size = 2, feature_num = 3,
+        batch_num = 2, buf_size = x_size*y_size * batch_num * feature_num;
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_num, feature_num, x_size , y_size } });
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(softmax("softmax", "input", softmax::normalize_f));
+
+    vector<float> input_vec = {
+        //y0x0  y0x1   y1x0    y1x1
+        /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
+        /*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
+
+        /*b1f0*/3.f,  0.5f,  7.f,   12.f,
+        /*b1f1*/4.f,  0.5f,  8.f,   8.2f,
+        /*b1f2*/0.2f, 0.2f,  -10.f, 5.2f
+    };
+    set_values(input, input_vec);
+
+    float expected_max_values[8] = {
+        0.344253346f, //b=0, y=0, x=0
+        0.364854551f, //b=0, y=0, x=1
+
+        0.999963085f, //b=0, y=1, x=0
+        0.493894592f, //b=0, y=1, x=1
+
+        0.719294981f, //b=1, y=0, x=0
+        0.364854551f, //b=1, y=0, x=1
+
+        0.73105857f, //b=1, y=1, x=0
+        0.977054322f //b=1, y=1, x=1
+    };
+
+    network network(engine, topology);
+
+    network.set_input_data("input", input);
+    auto outputs = network.execute();
+
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "softmax");
+
+    auto output = outputs.at("softmax").get_memory();
+    auto output_ptr = output.pointer<float>();
+    float out_buffer[buf_size];
+    for (uint32_t i = 0; i < buf_size; i++)
+    {
+        out_buffer[i] = get_value<float>(output_ptr, i);
+    }
+
+    float temp_max = 0;
+    float expected_sum = 1.0f;
+    int max_value_buffer_index = 0;
+    for (uint32_t i = 0; i < batch_num; i++) //this for loops will sum results in a batch per feature, we expect that: sum = 1.0f
+    {
+        for (uint32_t j = 0; j < y_size; j++)
+        {
+            for (uint32_t k = 0; k < x_size; k++)
+            {
+                float sum = 0.0f;
+                for (uint32_t l = 0; l < feature_num; l++)
+                {
+                    int index = i * feature_num * x_size * y_size +
+                        l * x_size * y_size +
+                        j * x_size +
+                        k;
+
+                    if (out_buffer[index] >= temp_max)
+                    {
+                        temp_max = out_buffer[index];
+                    }
+
+                    sum += out_buffer[index];
+                }
+                EXPECT_EQ(true, are_equal(temp_max, expected_max_values[max_value_buffer_index]));
+                temp_max = 0;
+                max_value_buffer_index++;
+
+                EXPECT_EQ(true, are_equal(sum, expected_sum));
+                sum = 0.0f;
+            }
         }
     }
 }

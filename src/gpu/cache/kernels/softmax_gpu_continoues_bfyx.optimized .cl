@@ -18,7 +18,7 @@
 #endif
 
 __attribute__((reqd_work_group_size(LWS, 1, 1)))
-KERNEL (softmax_gpu_batches_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
+KERNEL (softmax_gpu_continoues_bfyx)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
     const uint data_set_idx = get_global_id(1);     //in processing of which data set this WI participates?
     const uint workers_per_data_set = LWS;          //how many WI participates in processing of one data set

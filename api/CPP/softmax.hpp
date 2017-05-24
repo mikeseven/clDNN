@@ -42,10 +42,13 @@ struct softmax : public primitive_base<softmax, CLDNN_PRIMITIVE_DESC(softmax)>
 
     enum dimension_t
     {
-        normalize_bfyx = cldnn_softmax_normalize_bfyx,
-        normalize_fyx = cldnn_softmax_normalize_fyx,
+        normalize_b = cldnn_softmax_normalize_b,
+        normalize_f = cldnn_softmax_normalize_f,
         normalize_x = cldnn_softmax_normalize_x,
-        normalize_yx = cldnn_softmax_normalize_yx
+        normalize_y = cldnn_softmax_normalize_y,
+        normalize_yx = cldnn_softmax_normalize_yx,
+        normalize_fyx = cldnn_softmax_normalize_fyx,
+        normalize_bfyx = cldnn_softmax_normalize_bfyx
     };
 
     /// @brief Constructs softmax primitive.
@@ -68,15 +71,17 @@ struct softmax : public primitive_base<softmax, CLDNN_PRIMITIVE_DESC(softmax)>
         , dimension(static_cast<dimension_t>(dto->dimension))
     {}
 
-    /// @brief Defines a scope of a single softmax normalization as well as number of normalizations.
+    /// @brief Defines a scope of a single softmax normalization.
     /// @details
-    /// Being given a 4-dimensional input, which consists of b,f,y,x dimensions, softmax normalizes n data sets of m elements each.
-    /// The values of n and m are calculated from b,f,y,x in such way that as a result whole input is processed. Specific behaviour is
-    /// determined by this parameter, as follows:
-    /// - when set to @p softmax::normalize_x only x-dimension is used as a number of elements @p m and the number of data sets @p n is calculated as b*f*y (each image row is normalized independently)
-    /// - when set to @p softmax::normalize_yx @m is defined as x*y and @n as b*f (each 2d image is normalized independently)
-    /// - when set to @P softmax::normalize_fyx @m is defined as f*y*x and @n as b (each 3d image is normalized independently)
-    /// - when set to @p softmax::normalize_bfyx the whole input is normalized as a single data set
+    /// Being given a 4-dimensional input, which consists of b,f,y,x dimensions, softmax normalizes data along one, specified dimension.
+    /// Specific behaviour is determined by this parameter, as follows:
+    /// - when set to @p softmax::normalize_x each input row is normalized independently,
+    /// - when set to @p softmax::normalize_y each input column is normalized independently,
+    /// - when set to @P softmax::normalize_f each in-depth vector of input is normalized independently,
+    /// - when set to @p softmax::normalize_b each pixel from a single 3d image is normalized toghether with corresponding pixels from other images within batch,
+    /// - when set to @p softmax::normallize_yx each 2d image within input is normalized independently,
+    /// - when set to @p softmax::normalize_fyx each 3d image within input is normalized independently,
+    /// - when set to @p softmax::normalize_bfyx whole input is normalized as one data set.
     dimension_t dimension;
 
 private:
