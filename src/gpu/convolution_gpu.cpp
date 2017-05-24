@@ -322,14 +322,14 @@ convolution_gpu::kernel_data default_yxio_f32_b1(const convolution_node& arg)
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.lws0 = 16;
-    if (filter_layout.size.feature[0] * batch_size % kd.lws0 != 0 ||
+    if (filter_buffer_size.batch[0] * batch_size % kd.lws0 != 0 ||
 		output_layout.data_padding)
     {
         kd = default_yxio_f32(arg);
     }
     else
     {
-        int output_feature_count = filter_buffer_size.feature[0];
+        int output_feature_count = filter_buffer_size.batch[0];
         // We cannot return 8 because we are processing 4 spatial coordinates for batch1,
         // and if we use more than 4 ofm_per_work_item we downgrade simd16 to simd8 which would break this algorithm.
         // NOTE: We could return 8 but then we must process only 2 coordinates, which is slower than processing 4 coordinates using blockread4
@@ -357,7 +357,7 @@ convolution_gpu::kernel_data default_yxio_f32_b1(const convolution_node& arg)
         }
         kd.kernel_name = kernel_name_yxfb_yxio_b1_block_multiple_x;
 
-        kd.gws0 = (filter_buffer_size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
+        kd.gws0 = (output_feature_count * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
 
         if (kd.gws0 == 0)
         {
@@ -380,13 +380,13 @@ convolution_gpu::kernel_data default_yxio_f32_b8(const convolution_node& arg)
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.lws0 = batch_size == 8 ? 8 : 16;
-    if (filter_buffer_size.feature[0] * batch_size % kd.lws0 != 0)
+    if (filter_buffer_size.batch[0] * batch_size % kd.lws0 != 0)
     {
         kd = default_yxio_f32(arg);
     }
     else
     {
-        if (((filter_buffer_size.feature[0] * batch_size) / 16) % kd.lws0)
+        if (((filter_buffer_size.batch[0] * batch_size) / 16) % kd.lws0)
         {
             kd.ofm_per_work_item = 8;
         }
@@ -418,7 +418,7 @@ convolution_gpu::kernel_data default_yxio_f32_b32(const convolution_node& arg)
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.lws0 = 16;
-    if (filter_buffer_size.feature[0] * batch_size % kd.lws0 != 0)
+    if (filter_buffer_size.batch[0] * batch_size % kd.lws0 != 0)
     {
         kd = default_yxio_f32(arg);
     }
@@ -448,6 +448,7 @@ convolution_gpu::kernel_data default_yxio_f16(const convolution_node& arg)
 convolution_gpu::kernel_data default_yxio_f16_b16(const convolution_node& arg)
 {
     auto filter_layout = arg.weights(0).get_output_layout();
+	auto const& filter_buffer_size = filter_layout.get_buffer_size();
 
     auto output_layout = arg.get_output_layout();
     auto const& output_buffer_size = output_layout.get_buffer_size();
@@ -457,7 +458,7 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution_node& arg)
     const uint32_t min_ofm_per_wi = 16;
     const uint32_t min_batches_per_wi = 1;
     const uint32_t min_lws = 16;
-    const auto filter_ofm_num = filter_layout.size.batch[0];
+    const auto filter_ofm_num = filter_buffer_size.batch[0];
 
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     // Number of output features is positive and dividable by minimum number of output features processed inside work item.
