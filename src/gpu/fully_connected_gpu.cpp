@@ -510,6 +510,16 @@ fully_connected_gpu::kernel_data default_yxfb_fp16(const fully_connected_node& a
         kd.data_xb_xb_fp16.rg_count = rg_count;
         kd.data_xb_xb_fp16.last_rg_size = response_size % units_per_sg_read;
     }
+    else if ((batch_size % 8 == 0) &&
+        (output_layout.count() / output_layout.size.batch[0]) % 8 == 0)
+    {
+        size_t groups_per_batches = get_local_groups_size(output_layout);
+        kd.gws0 = output_layout.count() / (get_neurons_per_work_item(output_layout) * get_batches_per_work_item(output_layout) * groups_per_batches);
+        kd.gws1 = groups_per_batches;
+        kd.lws0 = 8;
+        kd.lws1 = 1;
+        kd.kernel_name = kernel_name_xb_xb_b8_x8_vload;
+    }
     else
     {
         kd.kernel_name = kernel_name_xb_xb;
