@@ -108,6 +108,20 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
         return kd;
     }
 
+	static bool is_kernel_valid(kernel_data& kd)
+	{
+		if ((kd.gws0 == 0) || (kd.gws1 == 0) || (kd.gws2 == 0) || (kd.lws0 == 0) || (kd.lws1 == 0) || (kd.lws2 == 0))
+		{
+			return false;
+		}
+		if ((kd.gws0 % kd.lws0) || (kd.gws1 % kd.lws1) || (kd.gws2 % kd.lws2))
+		{
+			return false;
+		}
+		return true;
+	}
+
+
     typedef kd_selector_t<kernel_data, convolution_node, data_types, format::type, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, gpu::engine_info_internal::configurations> ks_type;
     static ks_type ks;
 
@@ -359,7 +373,7 @@ convolution_gpu::kernel_data default_yxio_f32_b1(const convolution_node& arg)
 
         kd.gws0 = (output_feature_count * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
 
-        if (kd.gws0 == 0)
+        if (!convolution_gpu::is_kernel_valid(kd))
         {
             kd = default_yxio_f32(arg);
         }
@@ -398,7 +412,7 @@ convolution_gpu::kernel_data default_yxio_f32_b8(const convolution_node& arg)
     
         kd.gws0 = (output_buffer_size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
 
-        if (kd.gws0 == 0)
+        if (!convolution_gpu::is_kernel_valid(kd))
         {
             kd = default_yxio_f32(arg);
         }
@@ -430,7 +444,7 @@ convolution_gpu::kernel_data default_yxio_f32_b32(const convolution_node& arg)
 
         kd.gws0 = (output_buffer_size.feature[0] * batch_size / (kd.ofm_per_work_item * kd.batches_per_work_item)) / split;
 
-        if (kd.gws0 == 0)
+        if (!convolution_gpu::is_kernel_valid(kd))
         {
             kd = default_yxio_f32(arg);
         }
@@ -485,7 +499,7 @@ convolution_gpu::kernel_data default_yxio_f16_b16(const convolution_node& arg)
         kd.lws0 = min_lws;
         kd.kernel_name = kernel_name_yxfb_yxio_b16_fp16;
 
-        if (kd.gws0 == 0)
+        if (!convolution_gpu::is_kernel_valid(kd))
         {
             kd = default_yxio_f16(arg);
         }
