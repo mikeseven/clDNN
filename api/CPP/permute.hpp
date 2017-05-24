@@ -43,7 +43,7 @@ struct permute : public primitive_base<permute, CLDNN_PRIMITIVE_DESC(permute)>
     /// @brief Constructs permute primitive.
     /// @param id This primitive id.
     /// @param input Input primitive id.
-    /// @param permute_order Array of permuted output order.
+    /// @param permute_order Array of permuted output order in bfyx format.
     permute(
         const primitive_id& id,
         const primitive_id& input,
@@ -62,7 +62,7 @@ struct permute : public primitive_base<permute, CLDNN_PRIMITIVE_DESC(permute)>
     {
     }
 
-    /// @brief Array of permuted output order.
+    /// @brief Array of permuted output order in bfyx format.
     std::vector<uint16_t> permute_order;
 
 protected:

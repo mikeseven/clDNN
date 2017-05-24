@@ -39,7 +39,7 @@ extern "C" {
 /// <br>
 /// When permute_order is { 0, 1, 2, 3 } then input_dimensions = output_dimensions
 CLDNN_BEGIN_PRIMITIVE_DESC(permute)
-/// @brief Array of permuted output order.
+/// @brief Array of permuted output order in bfyx format.
 cldnn_uint16_t_arr permute_order;
 CLDNN_END_PRIMITIVE_DESC(permute)
 
