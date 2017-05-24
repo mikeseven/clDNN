@@ -199,18 +199,6 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         }
     }
 
-    static std::string get_calculation_order_string(data_types dt, format::type fmt)
-    {
-        std::ostringstream os;
-        os << "(uint[]){ ";
-        for(auto i : get_calculation_order(dt, fmt))
-        {
-            os << i << ", ";
-        }
-        os << " }";
-        return os.str();
-    }
-
     static gpu::jit_constants get_jit_constants(const reorder_node& outer, const kernel_data& data)
     {
         auto engine_info = outer.get_program().get_engine()->get_context()->get_engine_info();
@@ -246,12 +234,10 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         if (input_use_half && output_use_half && !needs_fp16) //half->half without subtraction (so plain reorder) can be done on shorts without explicit fp16 support
             half_type_str = "ushort";
 
-        auto calculation_order = get_calculation_order_string(input_layout.data_type, input_layout.format);
-
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("DIMENSIONS", std::to_string(input_dimensions)),
             gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", data.is_flatten ? get_idx_calculation_flatten(output_layout.data_type, output_layout.format) : get_idx_calculation(output_layout.data_type, output_layout.format)),
-            gpu::make_jit_constant("CALCULATION_ORDER", calculation_order),
+            gpu::make_jit_constant("CALCULATION_ORDER", get_calculation_order(input_layout.data_type, input_layout.format)),
             gpu::make_jit_constant("SRC_TYPE", input_use_half ? half_type_str : std::string("float")),
             gpu::make_jit_constant("DEST_TYPE", output_use_half ? half_type_str : std::string("float")),
             gpu::make_jit_constant("SRC_DEST_TYPE_CVT", input_output_type_cvt),

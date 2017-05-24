@@ -274,7 +274,7 @@ public:
 
     kernels_cache::jit_definitions get_definitions() const override {
         std::stringstream ss;
-        ss << "(uint32[]){";
+        ss << "(uint[]){";
         for (size_t i = 0; i < _array.size(); ++i)
             ss << _array[i] << (i + 1 < _array.size() ? ", " : "");
         ss << "}";
