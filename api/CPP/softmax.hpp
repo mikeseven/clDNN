@@ -40,6 +40,7 @@ struct softmax : public primitive_base<softmax, CLDNN_PRIMITIVE_DESC(softmax)>
 {
     CLDNN_DECLATE_PRIMITIVE(softmax)
 
+    /// @brief Enum type to specify softmax's normalization scope (see #dimension).
     enum dimension_t
     {
         normalize_b = cldnn_softmax_normalize_b,
@@ -73,15 +74,15 @@ struct softmax : public primitive_base<softmax, CLDNN_PRIMITIVE_DESC(softmax)>
 
     /// @brief Defines a scope of a single softmax normalization.
     /// @details
-    /// Being given a 4-dimensional input, which consists of b,f,y,x dimensions, softmax normalizes data along one, specified dimension.
+    /// Being given a 4-dimensional input, which consists of b,f,y,x dimensions, softmax normalizes data which are divided into multiple independent sets.
     /// Specific behaviour is determined by this parameter, as follows:
-    /// - when set to @p softmax::normalize_x each input row is normalized independently,
-    /// - when set to @p softmax::normalize_y each input column is normalized independently,
-    /// - when set to @P softmax::normalize_f each in-depth vector of input is normalized independently,
-    /// - when set to @p softmax::normalize_b each pixel from a single 3d image is normalized toghether with corresponding pixels from other images within batch,
-    /// - when set to @p softmax::normallize_yx each 2d image within input is normalized independently,
-    /// - when set to @p softmax::normalize_fyx each 3d image within input is normalized independently,
-    /// - when set to @p softmax::normalize_bfyx whole input is normalized as one data set.
+    /// - when set to @link softmax::dimension_t softmax::normalize_x @endlink each input row is normalized independently,
+    /// - when set to @link softmax::dimension_t softmax::normalize_y @endlink each input column is normalized independently,
+    /// - when set to @link softmax::dimension_t softmax::normalize_f @endlink each in-depth vector of input is normalized independently,
+    /// - when set to @link softmax::dimension_t softmax::normalize_b @endlink each pixel from a single 3d image is normalized toghether with corresponding pixels from other images within batch,
+    /// - when set to @link softmax::dimension_t softmax::normallize_yx @endlink each 2d image within input is normalized independently,
+    /// - when set to @link softmax::dimension_t softmax::normalize_fyx @endlink each 3d image within input is normalized independently,
+    /// - when set to @link softmax::dimension_t softmax::normalize_bfyx @endlink whole input is normalized as one data set.
     dimension_t dimension;
 
 private:
