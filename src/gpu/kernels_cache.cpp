@@ -53,6 +53,16 @@ static const char* kernels_header = R"__krnl(
                   intel_sub_group_shuffle( _block, 6 ), \
                   intel_sub_group_shuffle( _block, 7 ) );
 
+#define TRANSPOSE_BLOCK_8_FP16( _block )   \
+        (half8)( intel_sub_group_shuffle( _block, 0 ), \
+                  intel_sub_group_shuffle( _block, 1 ), \
+                  intel_sub_group_shuffle( _block, 2 ), \
+                  intel_sub_group_shuffle( _block, 3 ), \
+                  intel_sub_group_shuffle( _block, 4 ), \
+                  intel_sub_group_shuffle( _block, 5 ), \
+                  intel_sub_group_shuffle( _block, 6 ), \
+                  intel_sub_group_shuffle( _block, 7 ) );
+
 #define TRANSPOSE_BLOCK_8_COL( _block, _col )   \
         (float8)( intel_sub_group_shuffle( _block.s0, _col ), \
                   intel_sub_group_shuffle( _block.s1, _col ), \

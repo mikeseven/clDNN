@@ -303,7 +303,7 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
         if (input_format == cldnn::format::yxfb ||
             input_format == cldnn::format::bfyx)
         {
-            if (!weights_layout.has_fused_format(data_types::f32, format::bs_xs_xsv8_bsv8) &&
+            if (weights_layout.format != format::bs_xs_xsv8_bsv8 &&
                 weights_layout.format != format::bs_x_bsv16)
             {
                 // weights
@@ -404,7 +404,7 @@ fully_connected_gpu::kernel_data default_bfyx_f32(const fully_connected_node& ar
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const fully_connected_node& arg)
+fully_connected_gpu::kernel_data default_yxfb_bs_xs_xsv8_bsv8(const fully_connected_node& arg)
 {
     auto input_layout = arg.input().get_output_layout();
     fully_connected_gpu::kernel_data kd = fully_connected_gpu::set_kernel_data(arg);
@@ -432,7 +432,7 @@ fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const full
         auto input_size = input_layout.size;
         cldnn::topology topology(
             cldnn::input_layout("input", input_layout),
-            cldnn::reorder("reorder", "input", cldnn::layout{ cldnn::data_types::f32, cldnn::format::bs_xs_xsv8_bsv8, input_size }, "")
+            cldnn::reorder("reorder", "input", cldnn::layout{ kd.fp16_unit_used ? cldnn::data_types::f16 : cldnn::data_types::f32, cldnn::format::bs_xs_xsv8_bsv8, input_size }, "")
         );
 
         kd.reorder.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });
@@ -441,22 +441,22 @@ fully_connected_gpu::kernel_data default_yxfb_f32_bs_xs_xsv8_bsv8_f32(const full
     return kd;
 }
 
-fully_connected_gpu::kernel_data default_bfyx_f32_bs_xs_xsv8_bsv8_f32(const fully_connected_node& arg)
+fully_connected_gpu::kernel_data default_bfyx_bs_xs_xsv8_bsv8(const fully_connected_node& arg)
 {
     auto input_layout = arg.input().get_output_layout();
     auto input_size = input_layout.size;
     if (input_size.batch[0] < 8)
     {
         // TODO: implement this case
-        throw std::runtime_error("default_bfyx_f32_bs_xs_xsv8_bsv8_f32 with batch < 8 not implemented!");
+        throw std::runtime_error("default_bfyx_bs_xs_xsv8_bsv8 with batch < 8 not implemented!");
     }
 
+    fully_connected_gpu::kernel_data kd = default_yxfb_bs_xs_xsv8_bsv8(arg);
     cldnn::topology topology(
         cldnn::input_layout("input", input_layout),
-        cldnn::reorder("reorder", "input", format::bs_xs_xsv8_bsv8, data_types::f32)
+        cldnn::reorder("reorder", "input", format::bs_xs_xsv8_bsv8, kd.fp16_unit_used ? data_types::f16 : data_types::f32)
     );
     
-    fully_connected_gpu::kernel_data kd = default_yxfb_f32_bs_xs_xsv8_bsv8_f32(arg);
     kd.reorder.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });
     return kd;
 }
@@ -609,13 +609,15 @@ fully_connected_gpu::ks_type fully_connected_gpu::ks = {
     { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_xb_f32_bx_f32 },
     { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32 },
     { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::fyxb, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32_fyxb_f32_b1 },
-    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::bs_xs_xsv8_bsv8, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f32_bs_xs_xsv8_bsv8_f32 },
-    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::bs_xs_xsv8_bsv8, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_f32_bs_xs_xsv8_bsv8_f32 },
+    { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::bs_xs_xsv8_bsv8, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_xs_xsv8_bsv8 },
+    { std::make_tuple(data_types::f32, format::yxfb, data_types::f32, format::bs_xs_xsv8_bsv8, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_bs_xs_xsv8_bsv8 },
     { std::make_tuple(data_types::f32, format::bfyx, data_types::f32, format::bs_x_bsv16, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_x_bsv16_b1 },
     { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_fp16 },
     { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::yxfb, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f16_yxfb_f16 },
     { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::fyxb, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_f16_fyxb_f16_b1 },
     { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::bs_x_bsv16, 1, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_x_bsv16_b1 },
+    { std::make_tuple(data_types::f16, format::bfyx, data_types::f16, format::bs_xs_xsv8_bsv8, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_bfyx_bs_xs_xsv8_bsv8 },
+    { std::make_tuple(data_types::f16, format::yxfb, data_types::f16, format::bs_xs_xsv8_bsv8, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), default_yxfb_bs_xs_xsv8_bsv8 },
 };
 
 namespace {

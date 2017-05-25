@@ -96,7 +96,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
     }
 
     // We need to specify the output idx based on input position
-    static std::string get_idx_calculation(data_types dt, format::type fmt)
+    static std::string get_idx_calculation(format::type fmt)
     {
         switch (fmt)
         {
@@ -121,16 +121,11 @@ struct reorder_gpu : typed_primitive_impl<reorder>
                         return _id_in_slice + 16 * (pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + _slice_id * size[1])));)__C";
         
         case format::bs_xs_xsv8_bsv8:
-            if (dt == data_types::f32)
-            {
-                return R"__C(uint _b_slice_id = pos[0] / 8; \
+            return R"__C(uint _b_slice_id = pos[0] / 8; \
                         uint _b_id_in_slice = pos[0] % 8; \
                         uint _x_slice_id = pos[2] / 8; \
                         uint _x_id_in_slice = pos[2] % 8; \
                         return _b_id_in_slice + 8 * (_x_id_in_slice + 8 * _x_slice_id + _b_slice_id * size[2]);)__C";
-            }
-            else
-                throw std::invalid_argument("This format is not supported in GPU reorder");
         
         case format::bs_x_bsv16:
             return R"__C(uint _slice_id = pos[0] / 16; \
@@ -143,7 +138,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
     }
 
     // To read input memory linearly we need to specify the order of reading
-    static std::vector<uint32_t> get_calculation_order(data_types /*dt*/, format::type fmt)
+    static std::vector<uint32_t> get_calculation_order(format::type fmt)
     {
         switch(fmt)
         {
@@ -168,7 +163,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
     }
 
     // output idx for flatten
-    static std::string get_idx_calculation_flatten(data_types /*odt*/, format::type ofmt)
+    static std::string get_idx_calculation_flatten(format::type ofmt)
     {
         // Flatten cases
         // 0 - batch (b), 1 - feature (f), 2, 3 - spatial (x -> 2, y -> 3)
@@ -236,8 +231,8 @@ struct reorder_gpu : typed_primitive_impl<reorder>
 
         gpu::jit_constants mem_consts{
             gpu::make_jit_constant("DIMENSIONS", std::to_string(input_dimensions)),
-            gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", data.is_flatten ? get_idx_calculation_flatten(output_layout.data_type, output_layout.format) : get_idx_calculation(output_layout.data_type, output_layout.format)),
-            gpu::make_jit_constant("CALCULATION_ORDER", get_calculation_order(input_layout.data_type, input_layout.format)),
+            gpu::make_jit_constant("OUT_FORMAT_IMPLEMENTATION", data.is_flatten ? get_idx_calculation_flatten(output_layout.format) : get_idx_calculation(output_layout.format)),
+            gpu::make_jit_constant("CALCULATION_ORDER", get_calculation_order(input_layout.format)),
             gpu::make_jit_constant("SRC_TYPE", input_use_half ? half_type_str : std::string("float")),
             gpu::make_jit_constant("DEST_TYPE", output_use_half ? half_type_str : std::string("float")),
             gpu::make_jit_constant("SRC_DEST_TYPE_CVT", input_output_type_cvt),
@@ -265,7 +260,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
             if (!engine_info.supports_fp16 && subtract_use_half)
                 throw std::invalid_argument("GPU device does not support half precision floating-point formats (cl_khr_fp16 extension)");
 
-            mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_FORMAT_IMPLEMENTATION", get_idx_calculation(mean_layout.data_type, mean_layout.format)));
+            mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_FORMAT_IMPLEMENTATION", get_idx_calculation(mean_layout.format)));
             mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_TYPE", subtract_use_half ? std::string("half") : std::string("float")));
             mem_consts.add_constant(gpu::make_jit_constant("SUBTRACT_SRC_TYPE_CVT", subtract_input_type_cvt));
             {
@@ -306,7 +301,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
 
         auto& input_size_raw = input_size.raw;
         auto dimensions = input_layout.size.batch.size() + input_layout.size.feature.size() + input_layout.size.spatial.size();
-        auto order = get_calculation_order(input_layout.data_type, input_layout.format);
+        auto order = get_calculation_order(input_layout.format);
         if (dimensions != order.size()) throw std::runtime_error("reorder number of input dimensions != size of indices order");
 
         size_t gws_2 = input_size_raw[order[dimensions - 1]];

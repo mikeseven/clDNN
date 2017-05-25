@@ -98,20 +98,20 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
 
     uint neuronIdx = sub_group_idx + (global_id / 8) * 8 * NEURONS_PER_WORK_ITEM;
 
-    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC00 = 0.f;
-    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC10 = 0.f;
+    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC00 = UNIT_VAL_ZERO;
+    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC10 = UNIT_VAL_ZERO;
 
 #if BATCHES_PER_WORK_ITEM >= 16
-    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC01 = 0.f;
-    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC11 = 0.f;
+    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC01 = UNIT_VAL_ZERO;
+    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC11 = UNIT_VAL_ZERO;
 #endif
 
 #if BATCHES_PER_WORK_ITEM >= 32
-    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC02 = 0.f;
-    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC12 = 0.f;
+    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC02 = UNIT_VAL_ZERO;
+    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC12 = UNIT_VAL_ZERO;
 
-    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC03 = 0.f;
-    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC13 = 0.f;
+    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC03 = UNIT_VAL_ZERO;
+    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC13 = UNIT_VAL_ZERO;
 #endif
 
     uint weight_offset = neuronIdx;
