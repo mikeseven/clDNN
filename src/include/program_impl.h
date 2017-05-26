@@ -298,7 +298,7 @@ private:
     void reorder_inputs(layout_optimizer& lo);
     void optimize_weights(layout_optimizer& lo);
     void prepare_padding();
-    void fuse_buffers();
+    void prepare_buffer_fusing();
 
     /*
     ** Utilities

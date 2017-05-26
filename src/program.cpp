@@ -21,6 +21,7 @@
 #include "layout_optimizer.h"
 
 #include "primitive_type.h"
+#include "api/CPP/activation.hpp"
 #include "api/CPP/convolution.hpp"
 #include "api/CPP/deconvolution.hpp"
 #include "api/CPP/data.hpp"
@@ -260,7 +261,7 @@ void program_impl::optimize_graph()
     //try to fuse buffers (i.e. depth_concat in bfyx format) after padding calculations
     if (options.get<build_option_type::optimize_data>()->enabled())
     {
-        fuse_buffers();
+        prepare_buffer_fusing();
     }
 }
 
@@ -545,7 +546,7 @@ void program_impl::prepare_padding()
     }
 }
 
-void program_impl::fuse_buffers()
+void program_impl::prepare_buffer_fusing()
 {
     for (auto& node : processing_order)
     {
@@ -558,9 +559,9 @@ void program_impl::fuse_buffers()
             //if any of this node's inputs is used by more than one primitive do not fuse buffers
             // todo: in future, if this case is problem, it can be optimized further to enable buffer fusing
             //       per single input rather than all/none
-            // + restrict input types to pooling and convolution only due to problems with output padding on b and f
+            // + restrict input types to pooling, convolution and activation only due to problems with output padding on b and f
             for (auto const& input : node.get_dependencies())
-                if (input->get_users().size() > 1 || (!input->is_type<pooling>() && ! input->is_type<convolution>()))
+                if (input->get_users().size() > 1 || (!input->is_type<pooling>() && ! input->is_type<convolution>() && !input->is_type<activation>()))
                     return;
 
             // buffer fusing should not be performed if one of inputs produces padded output since

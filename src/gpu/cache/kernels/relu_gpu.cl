@@ -33,8 +33,14 @@ KERNEL (relu_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     // constexpr:
     const uint input_buffer_size_x = INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X + INPUT_PADDING_UPPER_SIZE_X;
     const uint input_buffer_size_y = INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y + INPUT_PADDING_UPPER_SIZE_Y;
+    const uint input_buffer_size_f = INPUT_PADDING_LOWER_FEATURE_NUM + INPUT_FEATURE_NUM + INPUT_PADDING_UPPER_FEATURE_NUM;
+    const uint input_buffer_size_b = INPUT_PADDING_LOWER_BATCH_NUM + INPUT_BATCH_NUM + INPUT_PADDING_UPPER_BATCH_NUM;
+
     const uint output_buffer_size_x = OUTPUT_PADDING_LOWER_SIZE_X + OUTPUT_SIZE_X + OUTPUT_PADDING_UPPER_SIZE_X;
     const uint output_buffer_size_y = OUTPUT_PADDING_LOWER_SIZE_Y + OUTPUT_SIZE_Y + OUTPUT_PADDING_UPPER_SIZE_Y;
+    const uint output_buffer_size_f = OUTPUT_PADDING_LOWER_FEATURE_NUM + OUTPUT_FEATURE_NUM + OUTPUT_PADDING_UPPER_FEATURE_NUM;
+    const uint output_buffer_size_b = OUTPUT_PADDING_LOWER_BATCH_NUM + OUTPUT_BATCH_NUM + OUTPUT_PADDING_UPPER_BATCH_NUM;
+
     const uint batch_num = INPUT_BATCH_NUM;
 
     const uint global_id = get_global_id(0);
@@ -43,8 +49,15 @@ KERNEL (relu_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     const uint x = ((global_id / batch_num) / INPUT_FEATURE_NUM) % INPUT_SIZE_X;
     const uint y = ((global_id / batch_num) / INPUT_FEATURE_NUM) / INPUT_SIZE_X;
 
-    uint input_id = batch_id + batch_num * (feature_id + INPUT_FEATURE_NUM * ((INPUT_PADDING_LOWER_SIZE_Y + y) * input_buffer_size_x + INPUT_PADDING_LOWER_SIZE_X + x));
-    uint output_id = batch_id + batch_num * (feature_id + OUTPUT_FEATURE_NUM * ((OUTPUT_PADDING_LOWER_SIZE_Y + y) * output_buffer_size_x + OUTPUT_PADDING_LOWER_SIZE_X + x));
+    uint input_id = INPUT_PADDING_LOWER_BATCH_NUM + batch_id +
+        input_buffer_size_b * (INPUT_PADDING_LOWER_FEATURE_NUM + feature_id +
+        input_buffer_size_f * (INPUT_PADDING_LOWER_SIZE_X + x + 
+        input_buffer_size_x * (INPUT_PADDING_LOWER_SIZE_Y + y)));
+
+    uint output_id = OUTPUT_PADDING_LOWER_BATCH_NUM + batch_id + 
+        output_buffer_size_b * (OUTPUT_PADDING_LOWER_FEATURE_NUM + feature_id +
+        output_buffer_size_f * (OUTPUT_PADDING_LOWER_SIZE_X + x +
+        output_buffer_size_x * (OUTPUT_PADDING_LOWER_SIZE_Y + y)));
 
     ACTIVATION(output[output_id], input[input_id]);
 }
