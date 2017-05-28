@@ -50,6 +50,7 @@ struct FLOAT16
     friend FLOAT16 operator *(const FLOAT16 &v1, const FLOAT16 &v2);
     friend FLOAT16 operator /(const FLOAT16 &v1, const FLOAT16 &v2);
     friend bool operator >(const FLOAT16 &v1, const FLOAT16 &v2);
+	friend bool operator >=(const FLOAT16 &v1, const FLOAT16 &v2);
     friend bool operator <(const FLOAT16 &v1, const FLOAT16 &v2);
     friend bool operator >(const FLOAT16 &v1, const float &v2);
     friend bool operator <(const FLOAT16 &v1, const float &v2);
@@ -100,6 +101,11 @@ inline FLOAT16 operator /(const FLOAT16 &v1, const FLOAT16 &v2)
 inline bool operator >(const FLOAT16 &v1, const FLOAT16 &v2)
 {
 	return (float)v1 > (float)v2;
+}
+
+inline bool operator >=(const FLOAT16 &v1, const FLOAT16 &v2)
+{
+	return (float)v1 >= (float)v2;
 }
 
 inline bool operator <(const FLOAT16 &v1, const FLOAT16 &v2)

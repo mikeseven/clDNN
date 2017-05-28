@@ -17,18 +17,23 @@
     #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
-#if RELU && FP16_UNIT_USED
-    #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
-    input : -convert_half(NEGATIVE_SLOPE)) : (max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h));
-#elif RELU
-    #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
-    input : -NEGATIVE_SLOPE) : (max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f));
+#if (RELU || PRELU) && FP16_UNIT_USED
+    #define ACTIVATION(output, input, slope) output = isinf(convert_half(slope)) ? ((input >= 0.0h) ? \
+    input : -convert_half(slope)) : (max(input, 0.0h) + convert_half(slope) * min(input, 0.0h));
+#elif (RELU || PRELU)
+    #define ACTIVATION(output, input, slope) output = isinf(slope) ? ((input >= 0.0f) ? \
+    input : -slope) : (max(input, 0.0f) + slope * min(input, 0.0f));
 #else
     #define ACTIVATION(output, input) output = input;
 #endif
 
 
-KERNEL (relu_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
+KERNEL (relu_gpu)(const __global UNIT_TYPE* input, 
+				  __global UNIT_TYPE* output
+#if PRELU
+				  , const __global UNIT_TYPE* slope
+#endif   
+				  )
 {
     // constexpr:
     const uint input_buffer_size_x = INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X + INPUT_PADDING_UPPER_SIZE_X;
@@ -59,7 +64,13 @@ KERNEL (relu_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
         output_buffer_size_f * (OUTPUT_PADDING_LOWER_SIZE_X + x +
         output_buffer_size_x * (OUTPUT_PADDING_LOWER_SIZE_Y + y)));
 
-    ACTIVATION(output[output_id], input[input_id]);
+#if RELU
+	ACTIVATION(output[output_id], input[input_id], NEGATIVE_SLOPE);
+#elif PRELU
+	ACTIVATION(output[output_id], input[input_id], slope[feature_id]);
+#else
+	ACTIVATION(output[output_id], input[input_id]);
+#endif
 }
 
 #undef ACTIVATION

@@ -35,6 +35,7 @@
 #include "api/CPP/reorder.hpp"
 #include "api/CPP/normalize.hpp"
 #include "api/CPP/convolution.hpp"
+#include "api/CPP/activation.hpp"
 
 #define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
@@ -396,6 +397,11 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
 			<< " Dilation x: " << convolution->dilation.spatial[0] << " Dilation y: " << convolution->dilation.spatial[1]
 			<< " Input offset x: " << convolution->input_offset.spatial[0] << " Input offset y: " << convolution->input_offset.spatial[1]
 			<< " Activation: " << convolution->with_activation << " Activation slope: " << convolution->activation_negative_slope;
+	}
+	else if (primitive->type == cldnn::activation::type_id())
+	{
+		auto activation = static_cast<cldnn::activation*>(primitive);
+		str << "Negative slope: " << activation->negative_slope << " Negative slope input id: " << activation->negative_slope_input;
 	}
     else
     {
