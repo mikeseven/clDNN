@@ -36,7 +36,7 @@ layout reorder_inst::calc_output_layout(reorder_node const& node)
     auto of = node.get_primitive()->output_format;
     auto op = node.get_primitive()->output_padding;
 
-    if(of == format::bs_xs_xsv8_bsv8 || of == format::bs_x_bsv16)
+    if(of == format::bs_xs_xsv8_bsv8 || of == format::bs_xs_xsv8_bsv16 || of == format::bs_x_bsv16)
         return layout(odt, of, input_layout.size.transform(of, 1), op);
     else
         return layout(odt, of, input_layout.size, op);

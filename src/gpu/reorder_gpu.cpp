@@ -127,6 +127,13 @@ struct reorder_gpu : typed_primitive_impl<reorder>
                         uint _x_id_in_slice = pos[2] % 8; \
                         return _b_id_in_slice + 8 * (_x_id_in_slice + 8 * _x_slice_id + _b_slice_id * size[2]);)__C";
         
+		case format::bs_xs_xsv8_bsv16:
+            return R"__C(uint _b_slice_id = pos[0] / 16; \
+                        uint _b_id_in_slice = pos[0] % 16; \
+                        uint _x_slice_id = pos[2] / 8; \
+                        uint _x_id_in_slice = pos[2] % 8; \
+                        return _b_id_in_slice + 16 * (_x_id_in_slice + 8 * _x_slice_id + _b_slice_id * size[2]);)__C";
+		
         case format::bs_x_bsv16:
             return R"__C(uint _slice_id = pos[0] / 16; \
                         uint _id_in_slice = pos[0] % 16; \
@@ -175,6 +182,13 @@ struct reorder_gpu : typed_primitive_impl<reorder>
                         uint _x_slice_id = (pos[2] + size[2] * (pos[3] + size[3] * pos[1])) / 8; \
                         uint _x_id_in_slice = (pos[2] + size[2] * (pos[3] + size[3] * pos[1])) % 8; \
                         return _b_id_in_slice + 8 * (_x_id_in_slice + 8 * _x_slice_id + _b_slice_id * (size[2] * size[3] * size[1]));)__C";
+		
+		case format::bs_xs_xsv8_bsv16:
+            return R"__C(uint _b_slice_id = pos[0] / 16; \
+                        uint _b_id_in_slice = pos[0] % 16; \
+                        uint _x_slice_id = (pos[2] + size[2] * (pos[3] + size[3] * pos[1])) / 8; \
+                        uint _x_id_in_slice = (pos[2] + size[2] * (pos[3] + size[3] * pos[1])) % 8; \
+                        return _b_id_in_slice + 16 * (_x_id_in_slice + 8 * _x_slice_id + _b_slice_id * (size[2] * size[3] * size[1]));)__C";
         
         case format::bs_x_bsv16:
             return R"__C(uint _slice_id = pos[0] / 16; \

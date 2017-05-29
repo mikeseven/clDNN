@@ -82,6 +82,8 @@ struct format
                                                   ///< \n \image html os_iyx_osv16.jpg
         bs_xs_xsv8_bsv8 = cldnn_format_bs_xs_xsv8_bsv8, ///< format used only for fully connected weights: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice.
                                                         ///< \n \image html bs_xs_xsv8_bsv8.jpg
+        bs_xs_xsv8_bsv16 = cldnn_format_bs_xs_xsv8_bsv16, ///< format used only for fully connected weights: bs - batch slice, xs - x slice, bsv16 - 16 values of single slice.
+                                                        ///< \n \image html bs_xs_xsv8_bsv16.jpg
         bs_x_bsv16 = cldnn_format_bs_x_bsv16, ///< format used only for fully connected weights fp16 batch=1 : bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx).
                                               ///< \n \image html bs_x_bsv16.jpg
         format_num = cldnn_format_format_num, ///< number of format types
@@ -99,6 +101,7 @@ struct format
             { fyxb,{ 1, 1, 2, "fyxb", "bfxy" } },
             { os_iyx_osv16, { 1, 1, 2, "bfyx", "bfxy" }},
             { bs_xs_xsv8_bsv8, { 1, 1, 1, "bx", "b?x?" }},
+            { bs_xs_xsv8_bsv16,{ 1, 1, 1, "bx", "b?x?" } },
             { bs_x_bsv16, { 1, 1, 1, "bx", "b?x?" }}
         };
         return traits.at(fmt);
@@ -508,7 +511,7 @@ public:
         {
             auto c = val_order[i];
             //skip f and y for the formats that do not have it
-            if (((new_fmt == format::bs_xs_xsv8_bsv8) || (new_fmt == format::bs_x_bsv16)) && ((c == 'f') || (c == 'y')))
+            if (((new_fmt == format::bs_xs_xsv8_bsv8) || (new_fmt == format::bs_xs_xsv8_bsv16) || (new_fmt == format::bs_x_bsv16)) && ((c == 'f') || (c == 'y')))
             {
                 if (new_order[i] == '?')
                     new_sizes[i] = default_size;
@@ -555,6 +558,13 @@ public:
             my_sizes[0] = align_to(my_sizes[0], 8);
             my_sizes[1] = align_to(my_sizes[1], 8);
             adjusted_coords[0] = align_to(adjusted_coords[0], 8);
+            adjusted_coords[1] = align_to(adjusted_coords[1], 8);
+        }
+        else if (fmt == cldnn::format::bs_xs_xsv8_bsv16 && !(is_aligned_to(my_sizes[0], 16) && is_aligned_to(my_sizes[1], 8)))
+        {
+            my_sizes[0] = align_to(my_sizes[0], 16);
+            my_sizes[1] = align_to(my_sizes[1], 8);
+            adjusted_coords[0] = align_to(adjusted_coords[0], 16);
             adjusted_coords[1] = align_to(adjusted_coords[1], 8);
         }
         else if (fmt == cldnn::format::bs_x_bsv16 && !is_aligned_to(my_sizes[0], 16))
