@@ -312,7 +312,8 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
                 // weights
                 if (input_size.feature.size() != weights_layout.size.feature.size()
                     || input_size.batch.size() != weights_layout.size.batch.size()
-                    || input_size.feature[0] != weights_layout.size.feature[0])
+                    || (input_size.feature[0] * input_size.spatial[0] * input_size.spatial[1] !=
+                        weights_layout.size.feature[0] * weights_layout.size.spatial[0] * weights_layout.size.spatial[1]))
                     throw std::invalid_argument("Input and weights sizes do not match");
             }
         }
