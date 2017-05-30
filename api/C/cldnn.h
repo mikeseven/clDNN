@@ -200,7 +200,7 @@ typedef enum /*:int32_t*/
                                 ///< \n \image html os_iyx_osv16.jpg
     cldnn_format_bs_xs_xsv8_bsv8, ///< format used only for fully connected weights: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice.
                                   ///< \n \image html bs_xs_xsv8_bsv8.jpg
-    cldnn_format_bs_xs_xsv8_bsv16, ///< format used only for fully connected weights: bs - batch slice, xs - x slice, bsv16 - 16 values of single slice.
+    cldnn_format_bs_xs_xsv8_bsv16,///< format used only for fully connected weights: bs - batch slice, xs - x slice, bsv16 - 16 values of single slice.
                                   ///< \n \image html bs_xs_xsv8_bsv16.jpg
     cldnn_format_bs_x_bsv16,    ///< format used only for fully connected weights fp16 batch=1 : bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx).
                                 ///< \n \image html bs_x_bsv16.jpg
