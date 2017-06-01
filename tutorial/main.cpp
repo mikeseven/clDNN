@@ -16,14 +16,14 @@
 
 /*! @page tutorial clDNN Tutorial  
 * @section intro Introduction
-*  This section contains chapter of tutorial demonstrating how to work with clDNN. If you are new in clDNN, we recommend to start with
-*  "clDNN documentation" that describes API. We assume that user is familiar with C++ or C, Deep learining terminology i.e. primitive kinds.
+*  This section contains 5 chapters of tutorial demonstrating how to work with clDNN. If you are new in clDNN, we recommend to start with
+*  "clDNN documentation" that describes API. We assume that user is familiar with C++ or C and Deep Learining terminology.
 *  
-* @subpage c1 
-* @subpage c2
-* @subpage c3
-* @subpage c4
-* @subpage c5
+* @subpage c1 <br>
+* @subpage c2 <br>
+* @subpage c3 <br>
+* @subpage c4 <br>
+* @subpage c5 <br>
 *
 */
 #include <api\CPP\engine.hpp>
