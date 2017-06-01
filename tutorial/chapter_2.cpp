@@ -32,17 +32,13 @@
 * @section intro Introduction
 * In this chapter we will explain how to create primitives, show some kinds of primitives and explain how to build topology.
 *
-*
 * @include chapter_2.cpp
-*
 *
 */
 
 using namespace cldnn;
 
-
-
-topology chapter_2(engine engine)
+topology chapter_2(engine& engine)
 {
     try
     {
@@ -54,8 +50,7 @@ topology chapter_2(engine engine)
             "input", // identifier of input ( output of primitive with provided name is input to current )
             0.0);    // slope
         
-        // softmax is also very easy:
-
+        // softmax is also very easy to create:
         softmax softmax(
             "softmax", // primitive identifier
             "relu"); // relu will be input to softmax
@@ -78,7 +73,7 @@ topology chapter_2(engine engine)
                     // Use function to fill data:
         set_values(bias_mem, { 0.0f, 1.0f, 0.5f });
         // create data primitive
-        data fc_bias("fc_bias", weights_mem);
+        data fc_bias("fc_bias", bias_mem);
 
         // now we are ready to create fc primitive
         fully_connected fc(
@@ -93,22 +88,21 @@ topology chapter_2(engine engine)
         input_layout in_layout("input", layout(data_types::f32, format::bfyx, tensor(batch(1),feature(1),spatial(3,1))));
         // Now, we are ready to put those into topology
         // Don't forget to put all data primitives inside
-
         topology topology(
             in_layout,
-            relu,
             softmax,
             fc,
             fc_bias,
             fc_weights
         );
-
+        // if you want to add another primitive to existin topology, you can use add method. 
+        topology.add(relu);
+        // take a look what is inside:
         std::cout << "Topology contains:" << std::endl;
         for (auto it : topology.get_primitive_ids())
         {
             std::cout << it << std::endl;
         }
-
         return topology;
     }
     catch (const std::exception& ex)

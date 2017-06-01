@@ -31,7 +31,6 @@
 * In this chapter we show, how to get access to hidden layers using building options 
 *
 *
-* @section chapter4 Chapter 4
 * @include chapter_4.cpp
 *
 *
@@ -40,7 +39,7 @@
 using namespace cldnn;
 
 
-void chapter_4(engine engine, topology topology)
+void chapter_4(engine& engine, topology& topology)
 {
     try
     {
@@ -66,11 +65,10 @@ void chapter_4(engine engine, topology topology)
         // ready to go:
         auto outputs = network.execute();
 
-        for (auto it : outputs)
+        for (auto& it : outputs)
         {
             // print id and output values
             std::cout << it.first << std::endl;
-
             auto mem_pointer = it.second.get_memory().pointer<float>();
             for (auto i : mem_pointer)
             {

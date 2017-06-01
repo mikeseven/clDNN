@@ -30,17 +30,14 @@
 * @section intro Introduction
 * In this chapter we will explain how to create primitives, show some kinds of primitives and explain how to build topology.
 *
-*
-* @section chapter3 Chapter 3
 * @include chapter_3.cpp
-*
 *
 */
 
 using namespace cldnn;
 
 
-void chapter_3(engine engine, topology topology)
+void chapter_3(engine& engine, topology& topology)
 {
     try
     {

@@ -26,8 +26,6 @@
 * @section intro Introduction
 * In this chapter we will explain how to create engine, define and allocate memory. What is and how to use: tensor, layout, input_layout and data.
 *
-*
-* @section chapter1 Chapter 1
 * @include chapter_1.cpp
 * 
 *
@@ -40,15 +38,15 @@ engine chapter_1()
     try
     {
         std::cout << std::endl << "-- Chapter 1 --" << std::endl;
-        // To create memory we have to create engine first. Engine is responsible for creation and handle allocations on choosen backend.
-        // In current implementation only OCL backend is avaiable.
+        // To create memory we have to create engine first. Engine is responsible for memory and kernel handling (creation, compilation, allocation).
+        // Currently OCL backend implementaion only is avaiable.
         engine engine;
         // we have to choose data type (f32 or f16):
         data_types data_type = data_types::f32;
-        // and format (order of dimensions in memory), bfyx is the most optimal and common:
+        // format (order of dimensions in memory), bfyx is the most optimal and common:
         format::type format = format::byxf;
 
-        // before memory alocation we have to create tensor that describes memory. We can do it in serveral ways:
+        // before memory alocation we have to create tensor that describes memory size. We can do it in serveral ways:
         tensor tensor1(
             4, // batches
             1, // features
@@ -67,10 +65,10 @@ engine chapter_1()
         // which can be used to allocate memory for given engine:
         memory memory1 = memory::allocate(engine, layout1);
 
-        // special type of layout is input layout. It is named layout. Name is a string which identifier of layout
+        // special type of layout is input layout. It is named layout. Name is a string whith identifier of layout
         input_layout in_layout("input", layout1);
 
-        // you can also give name to memory. Than it became a data
+        // you can also give name to memory to create a data
         data data("named_memory", memory1);
 
         return engine;
