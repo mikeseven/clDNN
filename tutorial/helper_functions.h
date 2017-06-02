@@ -13,17 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
+#include <initializer_list>
 
 #include <api\C\cldnn.h>
 #include <api\CPP\cldnn_defs.h>
 #include <api\CPP\memory.hpp>
 
 
+
 using namespace cldnn;
 template<typename T>
 void set_values(const cldnn::memory& mem, std::initializer_list<T> args) {
     auto ptr = mem.pointer<T>();
-
     auto it = ptr.begin();
     for (auto x : args)
         *it++ = x;

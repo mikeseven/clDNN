@@ -455,7 +455,7 @@ mark_as_advanced(CLDNN__INCLUDE_COST_MODEL)
 
 # ======================================================================================================
 
-# Include and build: Tests (unit tests and small acceptance tests) for clDNN framework.
+# Include and build: clDNN tutorial.
 set(CLDNN__INCLUDE_TUTORIAL ON CACHE BOOL "Include and build: clDNN Tutorial.")
 mark_as_advanced(CLDNN__INCLUDE_TUTORIAL)
 

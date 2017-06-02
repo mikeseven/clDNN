@@ -28,7 +28,7 @@
 
 /*! @page c4 Hidden layers.
 * @section intro Introduction
-* In this chapter we show, how to get access to hidden layers using building options 
+* In this chapter we show, how to get access to hidden layers using build options 
 *
 *
 * @include chapter_4.cpp

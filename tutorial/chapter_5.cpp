@@ -29,7 +29,7 @@
 
 /*! @page c5 Performance building option.
 * @section intro Introduction
-* In this chapter we will present network building option that improve performance. Note this option 
+* In this chapter we will present network build option that improve performance. Note this option 
 * can change memory layouts. This chapter also show how to get primitives profiling info.
 * @include chapter_5.cpp
 *

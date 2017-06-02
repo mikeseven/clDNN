@@ -36,7 +36,7 @@ void            chapter_3(cldnn::engine&, cldnn::topology&); // Network and exec
 void            chapter_4(cldnn::engine&, cldnn::topology&); // Hidden layers access
 void            chapter_5(cldnn::engine&, cldnn::topology&); // Other building options
 
-int main(int argc, char* argv[])
+int main()
 {
     cldnn::engine eng = chapter_1();
     cldnn::topology topology = chapter_2(eng);

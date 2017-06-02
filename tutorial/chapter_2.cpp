@@ -69,8 +69,8 @@ topology chapter_2(engine& engine)
         data fc_weights("fc_weights", weights_mem);
         
         // biases are optional but we can use those in this example. Create 'data' in the same way:
-        auto bias_mem = memory::allocate(engine, { data_types::f32,format::bfyx,{ spatial(3,1) } }); // b and f will be set to ones
-                    // Use function to fill data:
+        auto bias_mem = memory::allocate(engine, { data_types::f32,format::bfyx,{ spatial(3) } }); // y, b and f will be set to ones by default
+        // Use function to fill data:
         set_values(bias_mem, { 0.0f, 1.0f, 0.5f });
         // create data primitive
         data fc_bias("fc_bias", bias_mem);
@@ -85,7 +85,7 @@ topology chapter_2(engine& engine)
 
         // Now we have 3 primitives created. Relation is defined by input->output setting. The only thing that we miss to create topology
         // is input declaration. To declare input we need input_layout(chapter 1):
-        input_layout in_layout("input", layout(data_types::f32, format::bfyx, tensor(batch(1),feature(1),spatial(3,1))));
+        input_layout in_layout("input", layout(data_types::f32, format::bfyx, tensor(spatial(3))));
         // Now, we are ready to put those into topology
         // Don't forget to put all data primitives inside
         topology topology(
@@ -95,7 +95,7 @@ topology chapter_2(engine& engine)
             fc_bias,
             fc_weights
         );
-        // if you want to add another primitive to existin topology, you can use add method. 
+        // if you want to add another primitive to existing topology, you can use add method. 
         topology.add(relu);
         // take a look what is inside:
         std::cout << "Topology contains:" << std::endl;

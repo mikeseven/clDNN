@@ -46,7 +46,7 @@ engine chapter_1()
         // format (order of dimensions in memory), bfyx is the most optimal and common:
         format::type format = format::byxf;
 
-        // before memory alocation we have to create tensor that describes memory size. We can do it in serveral ways:
+        // before memory allocation we have to create tensor that describes memory size. We can do it in serveral ways:
         tensor tensor1(
             4, // batches
             1, // features

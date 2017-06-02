@@ -28,7 +28,7 @@
 
 /*! @page c3 Network and execution.
 * @section intro Introduction
-* In this chapter we will explain how to create primitives, show some kinds of primitives and explain how to build topology.
+* In this chapter we will explain how to create and execute network.
 *
 * @include chapter_3.cpp
 *
@@ -44,13 +44,13 @@ void chapter_3(engine& engine, topology& topology)
         std::cout << std::endl << "-- Chapter 3 --" << std::endl;
 
         // Since we have topology and engine, we are ready to create network. Network is compiled graph/topology. During network creation
-        // all kernels are compiled and memory allocations are created.
+        // all kernels are compiled and memory is allocated.
         network network(engine, topology);
         // We are almost ready to go. Need to create and set input for network:
-        memory input_prim = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 3, 1 } });
-        set_values(input_prim, { -3.0f, -2.0f, 2.5f });
+        memory input_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 3, 1 } });
+        set_values(input_mem, { -3.0f, -2.0f, 2.5f });
         // set input
-        network.set_input_data("input", input_prim );
+        network.set_input_data("input", input_mem );
         // ready to go:
         auto outputs = network.execute();
 
@@ -74,11 +74,11 @@ void chapter_3(engine& engine, topology& topology)
             }
             std:: cout << std::endl;
 
-            // As you probably noticed network output result of the last one primitive "fc". By the last one we mean, the one that 
+            // As you probably noticed network output is a result of the last one primitive "fc". By the last one we mean, the one that 
             // is not input to any other primitive
         }
 
-        // what if someone may want to look into intermediate reults (hidden layers). This will be describe in next chapter (4).
+        // what if someone may want to look into intermediate results (hidden layers). This will be describe in next chapter (4).
 
     }
     catch (const std::exception& ex)
