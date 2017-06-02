@@ -60,12 +60,12 @@ void chapter_3(engine& engine, topology& topology)
             std::cout << network.get_primitive_info(it.first) << std::endl;
             // OUTPUT:
             // id: fc, type : fully connected
-            // input : softmax, count : 3, size : 1x1x3x1x1x1x1x1
-            // weights id : fc_weights, count : 9, bias id : fc_bias, count : 9
-            // with activation : false
-            // output padding lower size : 0x0x0x0x0x0x0x0
-            // output padding upper size : 0x0x0x0x0x0x0x0
-            // output : count: 3, size : 1x1x3x1x1x1x1x1
+            //     input : softmax, count : 3, size : [b:1, f : 1, x : 3, y : 1]
+            //     weights id : fc_weights, count : 9, bias id : fc_bias, count : 3
+            //     with activation : false
+            //     output padding lower size : [b:0, f : 0, x : 0, y : 0]
+            //     output padding upper size : [b:0, f : 0, x : 0, y : 0]
+            //     output : count : 3, size : [b:1, f : 1, x : 3, y : 1]
             
             auto mem_pointer = it.second.get_memory().pointer<float>();
             for (auto i : mem_pointer)

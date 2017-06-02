@@ -383,11 +383,26 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const tensor& tensor)
     {
-        for (size_t i = 0; i < tensor.raw.size(); ++i)
+        os << "[b:";
+        for (size_t i = 0; i < tensor.batch.size(); ++i)
         {
-            os << tensor.raw.at(i);
-            i != (tensor.raw.size() - 1) ? os << "x" : os << "";
+            os << tensor.batch[i];
+            i != (tensor.batch.size() - 1) ? os << "," : os << "";
         }
+        os << ", f:";
+        for (size_t i = 0; i < tensor.feature.size(); ++i)
+        {
+            os << tensor.feature[i];
+            i != (tensor.feature.size() - 1) ? os << "," : os << "";
+        }
+
+        std::vector<std::string> spatials = { ", x", ", y", ", z", ", w" };
+        for (size_t i = 0; i < tensor.spatial.size(); ++i)
+        {
+            os  << spatials[i] << ":" << tensor.spatial[i];
+        }
+        os << "]";
+
         return os;
     }
 
