@@ -27,6 +27,7 @@ namespace KernelSelctor {
         k.SetOutputLayout(bfyx);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
+        k.SetDilationSupport();
         k.SetBiasPerFeatureMap();
         k.SetBiasPerOutput();
         k.SetNumDims(4);

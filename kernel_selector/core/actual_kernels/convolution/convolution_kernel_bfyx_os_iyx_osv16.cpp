@@ -42,6 +42,7 @@ namespace KernelSelctor
         size_t output_block_height,
         const uSize& filter_size,
         const uSize& stride,
+        const uSize& dilation,
         size_t sub_group_size = 16,
         size_t read_chunk_size = 8,
         size_t min_read_size = 16)
@@ -51,9 +52,9 @@ namespace KernelSelctor
         assert(filter_size.x > 0 && filter_size.y > 0);
 
         // Number of elements in X dimension needed from input to compute output block without re-reading input.
-        std::size_t input_block_req_width = (output_block_width - 1) * stride.x + filter_size.x;
+        std::size_t input_block_req_width = (output_block_width - 1) * stride.x + (filter_size.x - 1)*dilation.x + 1;
         // Number of elements in Y dimension needed from input to compute output block without re-reading input.
-        std::size_t input_block_req_height = (output_block_height - 1) * stride.y + filter_size.y;
+        std::size_t input_block_req_height = (output_block_height - 1) * stride.y + (filter_size.y - 1)*dilation.y + 1;
 
         // Required number of elements in X dimension rounded to nearest >= read chunk size.
         std::size_t input_block_read_width = std::max(round_up_to(input_block_req_width, read_chunk_size), min_read_size);
@@ -96,7 +97,7 @@ namespace KernelSelctor
             }
             //if less than 16 values is required to compute one single row of output
             //then each WI shall compute one single row to maximize reuse within SIMD subgroup (this gives very nice performance results)
-            else if (arg.outDims.x + cp.filterSize.x - 1 < sub_group_size)
+            else if (arg.outDims.x + (cp.filterSize.x - 1)*cp.dilation.x < sub_group_size)
             {
                 run_info.block_width = arg.outDims.x;
                 run_info.block_height = 1;
@@ -143,6 +144,7 @@ namespace KernelSelctor
             run_info.block_height,
             cp.filterSize,
             cp.stride,
+            cp.dilation,
             sub_group_size,
             run_info.fp16_unit_used ? sub_group_size : sub_group_size / 2,
             sub_group_size);

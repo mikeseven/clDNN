@@ -1,5 +1,4 @@
-/*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2016-2017 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-*/
 
 #include "include/cnn_common.cl"
 
@@ -48,35 +46,36 @@ __kernel void convolution(
     dotProd = biases[bias_index];
 #endif
 
-    int xk_start = max((int)(INPUT_PADDING_X - x * STRIDE_X), 0);
-    int yk_start = max((int)(INPUT_PADDING_Y - y * STRIDE_Y), 0);
-    int xk_end = min((int)(INPUT_WIDTH - x * STRIDE_X + INPUT_PADDING_X), KERNEL_WIDTH);
-    int yk_end = min((int)(INPUT_HEIGHT - y * STRIDE_Y + INPUT_PADDING_Y), KERNEL_HEIGHT);
-
-    int input_x = max((int)(x * STRIDE_X - INPUT_PADDING_X),0);
-    int input_y = max((int)(y * STRIDE_Y - INPUT_PADDING_Y),0);
+    const int input_x = x * STRIDE_X - INPUT_PADDING_X;
+    const int input_y = y * STRIDE_Y - INPUT_PADDING_Y;
 
     const uint in_split_offset = split_idx * INPUT_SLICE_PITCH * INPUT_DEPTH;
-    uint filter_offset = z * filter_size + yk_start * KERNEL_WIDTH + xk_start;
-    uint input_offset = w*INPUT_BATCH_PITCH + input_y * INPUT_ROW_PITCH + input_x + INPUT_OFFSET + in_split_offset;
+    const uint filter_offset = z*filter_size;
+    const uint input_offset = w*INPUT_BATCH_PITCH + INPUT_OFFSET + in_split_offset;
 
-    int xk_steps = xk_end - xk_start;
-    int yk_steps = yk_end - yk_start;
     for (uint k = 0; k < INPUT_DEPTH; ++k)
     {
-        for (uint j = yk_start; j < yk_end ; ++j)
+        for (uint j = 0; j < KERNEL_HEIGHT ; ++j)
         {
-            for (uint i = xk_start; i < xk_end ; ++i)
+            const int input_offset_y = input_y + j * DILATION_Y;
+            const bool zero_y = input_offset_y >= INPUT_HEIGHT || input_offset_y < 0;
+
+            if(!zero_y)
             {
-                dotProd += input[input_offset] * weights[filter_offset];
-                ++input_offset;
-                ++filter_offset;
+                for (uint i = 0; i < KERNEL_WIDTH ; ++i)
+                {
+                    const int input_offset_x = input_x + i * DILATION_X;
+                    const bool zero_x = input_offset_x >= INPUT_WIDTH || input_offset_x < 0;
+
+                    if(!zero_x)
+                    {
+                        uint input_idx = input_offset + (uint)input_offset_x + (uint)input_offset_y*INPUT_ROW_PITCH + k*INPUT_SLICE_PITCH;
+                        uint filter_idx = filter_offset + k*KERNEL_WIDTH*KERNEL_HEIGHT + j*KERNEL_WIDTH + i;
+                        dotProd += input[input_idx]*weights[filter_idx];
+                    }
+                }
             }
-            input_offset +=  INPUT_ROW_PITCH - xk_steps;
-            filter_offset += KERNEL_WIDTH - xk_steps;
         }
-        input_offset += (INPUT_SLICE_PITCH/INPUT_ROW_PITCH - yk_steps) * INPUT_ROW_PITCH;
-        filter_offset += (KERNEL_HEIGHT - yk_steps) * KERNEL_WIDTH;
     }
     
     const uint out_split_offset = split_idx * OUT_SLICE_PITCH * OUT_DEPTH;

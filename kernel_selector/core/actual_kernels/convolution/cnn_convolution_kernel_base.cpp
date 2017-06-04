@@ -40,6 +40,8 @@ namespace KernelSelctor
             << "#define KERNEL_HEIGHT "     << cp.filterSize.y << "\n"
             << "#define STRIDE_X ("         << cp.stride.x << ")\n"
             << "#define STRIDE_Y ("         << cp.stride.y << ")\n"
+            << "#define DILATION_X ("       << cp.dilation.x << ")\n"
+            << "#define DILATION_Y ("       << cp.dilation.y << ")\n"
             << "#define INPUT_PADDING_X ("  << cp.padding.x << ")\n"
             << "#define INPUT_PADDING_Y ("  << cp.padding.y << ")\n"
             << "#define ALIGNED_OFM ("      << CLDNN_ALIGN(params.outDims.z, run_info.subBlockDimN) << ")\n"
