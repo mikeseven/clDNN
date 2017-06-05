@@ -16,17 +16,16 @@
 
 #pragma once
 
-#include "cnn_kernel_base.h"
- 
-namespace KernelSelector 
-{    
-    class NormalizationKernelRef : public CNNKernelBase
+#include "vxa_kernel_base.h"
+
+namespace clDNN
+{
+    class LRNKernelBinary : public BaseKernelBinary
     {
     public:
-        NormalizationKernelRef() : CNNKernelBase("cnn_normalization_ref") {}
-        virtual ~NormalizationKernelRef() {}
+        LRNKernelBinary(const LRNParams& params);
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
-        virtual ParamsKey GetSupportedKey() const override;
+    private:
+        LRNParams m_Params;
     };
 }

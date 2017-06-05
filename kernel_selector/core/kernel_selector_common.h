@@ -239,13 +239,13 @@ namespace KernelSelector {
     {
         switch (l)
         {
-        case KernelSelector::DataLayout::bf:     return "bf";
-        case KernelSelector::DataLayout::fb:     return "fb";
-        case KernelSelector::DataLayout::bfyx:   return "bfyx";
-        case KernelSelector::DataLayout::yxfb:   return "yxfb";
-        case KernelSelector::DataLayout::byxf:   return "byxf";
-        case KernelSelector::DataLayout::fyxb:   return "fyxb";
-        case KernelSelector::DataLayout::brfyx:  return "brfyx";
+        case KernelSelector::DataLayout::bf:     return "BF";
+        case KernelSelector::DataLayout::fb:     return "FB";
+        case KernelSelector::DataLayout::bfyx:   return "BFYX";
+        case KernelSelector::DataLayout::yxfb:   return "YXFB";
+        case KernelSelector::DataLayout::byxf:   return "BYXF";
+        case KernelSelector::DataLayout::fyxb:   return "FYXB";
+        case KernelSelector::DataLayout::brfyx:  return "BRFYX";
         default: return "";
         }
     }
@@ -293,7 +293,7 @@ namespace KernelSelector {
         {
         case KernelType::UNKNOWN: return "UNKNOWN";
         case KernelType::CONVOLUTION: return "CONVOLUTION";
-        case KernelType::NORMALIZATION: return "NORMALIZATION";
+        case KernelType::LRN: return "LRN";
         case KernelType::POOLING: return "POOLING";
         case KernelType::ROI_POOLING: return "ROI_POOLING";
         case KernelType::FULLY_CONNECTED: return "FULLY_CONNECTED";

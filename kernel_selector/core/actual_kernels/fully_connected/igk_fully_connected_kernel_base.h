@@ -27,13 +27,8 @@ namespace KernelSelector
         using IGKKernelBase::IGKKernelBase;
         virtual ~IGKFullyConnectedKernelBase() {}
 
-        struct DispatchData
+        struct DispatchData : public CommonDispatchData
         {
-            //std::vector<cldnn::refcounted_obj_ptr<cldnn::network_impl>> reorder;
-            size_t gws0, gws1;
-            size_t lws0, lws1;
-            //std::string kernel_name;
-            bool fp16_unit_used;
             union
             {
                 struct

@@ -82,7 +82,6 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
     {
         const auto& primitive       = arg.get_primitive();
         const auto& input_layout    = arg.input().get_output_layout();
-        const auto& output_layout   = arg.get_output_layout();
         const auto& weights_layout  = arg.weights(0).get_output_layout();
 
         const auto& input_size      = input_layout.size;
@@ -92,26 +91,13 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
         const auto& stride          = primitive->stride;
         const auto& dilation        = primitive->dilation;
         const auto& input_offset    = primitive->input_offset;
-        
-        const auto& input_padding   = arg.input().get_output_layout().data_padding;
-        const auto& output_padding  = arg.get_output_layout().data_padding;
 
         assert(arg.get_output_layout().size.feature[0] / primitive->split() == weights_layout.size.batch[0]);
 
-        auto& kernel_selector = KernelSelector::ConvolutionKernelSelctor::instance();
-        KernelSelector::ConvolutionParams conv_params;
+        auto conv_params = GetWeightsBiasDefaultParams<KernelSelector::ConvolutionParams>(arg, split);
+        auto conv_optional_params = GetDefaultWeightsBiasOptionalParams<KernelSelector::ConvolutionOptionalParams>(arg.get_program());
 
         cldnn_activation_to_ks(primitive, conv_params);
-
-        conv_params.inputs[0] = tensor_2_data_tensor(input_layout, input_padding, split);
-        conv_params.output    = tensor_2_data_tensor(output_layout, output_padding, split);
-        conv_params.weights   = tensor_2_weight_tensor(weights_layout);
-
-        if (arg.bias_term())
-        {
-            const auto& bias_layout = arg.bias(0).get_output_layout();
-            conv_params.bias.push_back(tensor_2_data_tensor(bias_layout, padding(), 1));
-        }
 
         conv_params.convParams.split = split;
         conv_params.convParams.filterSize = {
@@ -133,10 +119,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
             (uint32_t)std::min(dilation.spatial[1], input_size.spatial[1])
         };
 
-        conv_params.kernelID = arg.id();
-
-        auto conv_optional_params = GetDefaultOptionalParams<KernelSelector::ConvolutionOptionalParams>(arg.get_program());
-
+        auto& kernel_selector = KernelSelector::ConvolutionKernelSelctor::instance();
         auto best_kernels = kernel_selector.GetBestKernels(conv_params, conv_optional_params);
         if (best_kernels.empty())
         {

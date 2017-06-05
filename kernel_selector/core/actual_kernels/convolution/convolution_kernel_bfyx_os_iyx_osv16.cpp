@@ -225,10 +225,7 @@ namespace KernelSelector
         auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), newParams.kernelID);
 
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(run_info.gws0, run_info.gws1, run_info.gws2);
-        kernel.work_groups.local = cl::NDRange(run_info.lws0, run_info.lws1, run_info.lws2);
-        kernel.kernel_string = get_kernel_string(kernel_name, jit, newParams.kernelID, ROUND_ROBIN);
-        kernel.args_desc = get_args_desc(1, true, !params_ptr->bias.empty());
+        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, orgParams.kernelID, true, !orgParams.bias.empty());
         kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
 #if 0

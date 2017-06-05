@@ -27,19 +27,15 @@ namespace KernelSelector
         using IGKKernelBase::IGKKernelBase;
         virtual ~IGKConvolutionKernelBase() {}
 
-        struct DispatchData
+        struct DispatchData : public CommonDispatchData
         {
-            size_t gws0, gws1, gws2;
-            size_t lws0, lws1, lws2;
             size_t ofm_per_work_item; // how many output feature maps a single work item compute
             size_t batches_per_work_item; // how many batches will a single work item compute
             size_t block_width, block_height; // used for kernels processing blocks
             size_t prefetch;
             size_t input_block_array_size; ///< Number of elements in array of UNIT_TYPE that must be specified in kernel to store/cache input block.
             size_t input_block_width;      ///< Number of elements in X dimension stored/cached in input block.
-            bool fp16_unit_used;           ///< Value indicating that FP16 half precision floating point type will be used (instead of single precision).
             size_t leftovers;
-            float effiency;
         };
 
         struct CPUIGKConvolutionReorder : public CPUKernel

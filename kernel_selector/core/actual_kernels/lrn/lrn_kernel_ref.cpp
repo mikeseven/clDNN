@@ -14,11 +14,11 @@
 // limitations under the License.
 */
 
-#include "normalization_kernel_ref.h"
+#include "lrn_kernel_ref.h"
  
 namespace KernelSelector 
 {
-    ParamsKey NormalizationKernelRef::GetSupportedKey() const
+    ParamsKey LRNKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
         k.SetInputDataType(Datatype::F16);
@@ -30,25 +30,26 @@ namespace KernelSelector
         k.SetOffsetSupport();
         k.SetPitchesSupport();
         k.SetBatchingSupport();
-        k.SetNormalizationMode(NormalizationMode::WITHIN_CHANNEL);
-        k.SetNormalizationMode(NormalizationMode::ACROSS_CHANNELS);
+        k.SetLRNMode(LRNMode::WITHIN_CHANNEL);
+        k.SetLRNMode(LRNMode::ACROSS_CHANNEL);
+        k.SetLRNKernelDividerMode(KernelDividerMode::FIXED);
         return k;
     }
 
-    KernelsData NormalizationKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData LRNKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
     {
-        assert(params.GetType() == KernelType::NORMALIZATION);
+        assert(params.GetType() == KernelType::LRN);
 
-        KernelData kd = KernelData::Default<NormalizationParams>(params, 1);
+        KernelData kd = KernelData::Default<LRNParams>(params, 1);
 
-        NormalizationParams& newParams = *static_cast<NormalizationParams*>(kd.params.get());
+        LRNParams& newParams = *static_cast<LRNParams*>(kd.params.get());
 
         std::stringstream jit;
         
-        const uint32_t round_norm_size = (newParams.normParams.localSize / 2) * 2 + 1;
+        const uint32_t round_norm_size = (newParams.lrnParams.localSize / 2) * 2 + 1;
         uint32_t numElement = round_norm_size * round_norm_size;
 
-        if (newParams.normParams.normMode == NormalizationMode::ACROSS_CHANNELS)
+        if (newParams.lrnParams.normMode == LRNMode::ACROSS_CHANNEL)
         {
             jit << "#define ACROSS_MAPS\n";
             numElement = round_norm_size;
@@ -60,14 +61,14 @@ namespace KernelSelector
             << "#define ROUND_NORM_SIZE (" << round_norm_size << ")\n"
             << "#define ROUND_NORM_HALF_SIZE (" << round_norm_size / 2 << ")\n"
             << "#define NUM_ELEMENTS_DIV (" << Float2Str(num_element_div) << ")\n"
-            << "#define ALPHA (" << Float2Str(newParams.normParams.alpha) << ")\n"
-            << "#define BETA (" << Float2Str(newParams.normParams.beta) << ")\n"
+            << "#define ALPHA (" << Float2Str(newParams.lrnParams.alpha) << ")\n"
+            << "#define BETA (" << Float2Str(newParams.lrnParams.beta) << ")\n"
             << "#define NORM_K (1)\n";
 
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "normalization", "", ROUND_ROBIN, "");
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "normalization", newParams.kernelID, ROUND_ROBIN, "");
         kernel.args_desc = GetArgumentDesc(1, false, false);
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;

@@ -16,16 +16,20 @@
 
 #pragma once
 
-#include "vxa_kernel_base.h"
-
-namespace clDNN
-{
-    class NormalizationKernelBinary : public BaseKernelBinary
+#include "igk_lrn_kernel_base.h"
+ 
+namespace KernelSelector 
+{    
+    class LRNKernelAcrossChannelRef : public IGKLRNKernelBase
     {
     public:
-        NormalizationKernelBinary(const NormalizationParams& params);
+        LRNKernelAcrossChannelRef() : IGKLRNKernelBase("lrn_gpu_across_channel_ref") {}
+        virtual ~LRNKernelAcrossChannelRef() {}
+
+        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual ParamsKey GetSupportedKey() const override;
 
     private:
-        NormalizationParams m_Params;
+        CommonDispatchData default_across_channel(const LRNParams& params) const;
     };
 }

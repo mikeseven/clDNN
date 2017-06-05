@@ -75,15 +75,15 @@ namespace clDNN
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // NormalizationParams
+    // LRNParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct NormalizationParams : public BaseParams
+    struct LRNParams : public BaseParams
     {
-        NormalizationParams() : BaseParams(KernelType::NORMALIZATION), normParams() {}
+        LRNParams() : BaseParams(KernelType::LRN), normParams() {}
 
         struct DedicatedParams
         {
-            NormalizationMode normMode = NormalizationMode::ACROSS_CHANNELS;
+            LRNMode           normMode = LRNMode::ACROSS_CHANNEL;
             float             alpha = 0.f;
             float             beta = 0.f;
             uint32_t          localSize = 0;

@@ -27,7 +27,7 @@ namespace clDNN
     using ActivationFunction = KernelSelector::ActivationFunction;
     using PoolType = KernelSelector::PoolType;
     using PoolRemainder = KernelSelector::PoolRemainder;
-    using NormalizationMode = KernelSelector::NormalizationMode;
+    using LRNMode = KernelSelector::LRNMode;
     using EltwiseMode = KernelSelector::EltwiseMode;
     using ReorderMode = KernelSelector::ReorderMode;
     using NonLinearParams = KernelSelector::NonLinearParams;

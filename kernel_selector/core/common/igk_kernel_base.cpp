@@ -230,4 +230,50 @@ static const char* kernels_header = R"__krnl(
 
         return kernel_string;
     }
+
+    void IGKKernelBase::fill_cl_kernel_data(clKernelData& kernel, const CommonDispatchData& run_info, std::string kernel_map_name, std::string jit, std::string entry_point, bool weights, bool bias) const
+    {
+        kernel.work_groups.global = cl::NDRange(run_info.gws0, run_info.gws1, run_info.gws2);
+        kernel.work_groups.local = cl::NDRange(run_info.lws0, run_info.lws1, run_info.lws2);
+        kernel.kernel_string = get_kernel_string(kernel_map_name, jit, entry_point);
+        kernel.args_desc = get_args_desc(1, weights, bias);
+    }
+
+    jit_constants IGKKernelBase::get_common_jit_constants(const BaseParams& params, CommonDispatchData& kd) const
+    {
+        cldnn::tensor input_tensor = ks_tensor_2_tensor(params.inputs[0]);
+        cldnn::tensor output_tensor = ks_tensor_2_tensor(params.output);
+
+        const bool relu =
+            params.activationFunc == ActivationFunction::RELU ||
+            params.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE;
+        const float negative_slope =
+            params.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE ?
+            params.nlParams.m : 0.f;
+
+        jit_constants mem_consts{
+            gpu::make_jit_constant("INPUT",                     input_tensor),
+            gpu::make_jit_constant("OUTPUT",                    output_tensor),
+            gpu::make_jit_constant("INPUT_OFFSET",              params.inputs[0].offset),
+            gpu::make_jit_constant("OUTPUT_OFFSET",             params.output.offset),
+            gpu::make_jit_constant("OUTPUT_LIMIT",              params.output.LengthWithPadding()),
+            gpu::make_jit_constant("FP16_SUPPORTED",            static_cast<int>(kd.fp16_unit_used)),   // TODO: use engine
+            gpu::make_jit_constant("FP16_UNIT_USED",            static_cast<int>(kd.fp16_unit_used)),
+            gpu::make_jit_constant("UNIT_TYPE",                 kd.fp16_unit_used ? "half" : "float"),
+            gpu::make_jit_constant("UNIT_VAL_ZERO",             kd.fp16_unit_used ? "0.0h" : "0.0f"),
+            gpu::make_jit_constant("TO_UNIT_TYPE_V1(v)",        kd.fp16_unit_used ? "convert_half(v)" : "(float)(v)"),
+            gpu::make_jit_constant("RELU",                      static_cast<int>(relu)),
+            gpu::make_jit_constant("NEGATIVE_SLOPE",            negative_slope),
+            gpu::make_jit_constant("INPUT_X_PITCH",             params.inputs[0].x().pitch),
+            gpu::make_jit_constant("INPUT_Y_PITCH",             params.inputs[0].y().pitch),
+            gpu::make_jit_constant("INPUT_FEATURE_PITCH",       params.inputs[0].feature().pitch),
+            gpu::make_jit_constant("INPUT_BATCH_PITCH",         params.inputs[0].batch().pitch),
+            gpu::make_jit_constant("OUT_X_PITCH",               params.output.x().pitch),
+            gpu::make_jit_constant("OUT_Y_PITCH",               params.output.y().pitch),
+            gpu::make_jit_constant("OUT_FEATURE_PITCH",         params.output.feature().pitch),
+            gpu::make_jit_constant("OUT_BATCH_PITCH",           params.output.batch().pitch),
+        };
+
+        return mem_consts;
+    }
 }

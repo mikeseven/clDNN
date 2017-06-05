@@ -54,8 +54,8 @@ namespace KernelSelector
         run_info.lws0 = sub_group_size;
         // Number of work items needed to process all response groups.
         run_info.gws0 = rg_count * sub_group_size;
-        run_info.lws1 = 1;
-        run_info.gws1 = 1;
+        run_info.lws1 = run_info.lws2 = 1;
+        run_info.gws1 = run_info.gws2 = 1;
 
         //run_info.kernel_name = kernel_name_bx_bs_x_bsv16_b1;
 
@@ -111,10 +111,7 @@ namespace KernelSelector
         }
 
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(run_info.gws0, run_info.gws1, 1);
-        kernel.work_groups.local = cl::NDRange(run_info.lws0, run_info.lws1, 1);
-        kernel.kernel_string = get_kernel_string(kernel_name, jit, kernel_name, ROUND_ROBIN);
-        kernel.args_desc = get_args_desc(1, true, !params_ptr->bias.empty());
+        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, orgParams.kernelID, true, !orgParams.bias.empty());
 
         auto cpu_kernel = CPUIGKFullyConnectedReorder(
             CPUIGKFullyConnectedReorder::WeightsReorderLayout::oiyx,

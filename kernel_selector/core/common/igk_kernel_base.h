@@ -26,6 +26,15 @@ namespace KernelSelector {
 
     using jit_definitions = KernelSelector::gpu::jit_definitions;
     using jit_constants = KernelSelector::gpu::jit_constants;
+    using tensor_vt = cldnn::tensor::value_type;
+
+    struct CommonDispatchData
+    {
+        size_t gws0, gws1, gws2;
+        size_t lws0, lws1, lws2;
+        bool fp16_unit_used;           ///< Value indicating that FP16 half precision floating point type will be used (instead of single precision).
+        float effiency;
+    };
 
     class IGKKernelBase : public KernelBase
     {
@@ -38,6 +47,8 @@ namespace KernelSelector {
         std::string create_jit_from_template(const BaseParams& params) const;
         ArgumentDescpirtor get_args_desc(uint32_t num_of_input, bool use_weights, bool use_bias) const;
         KernelString get_kernel_string(std::string kernel_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN) const;
+        void fill_cl_kernel_data(clKernelData& kernel, const CommonDispatchData& run_info, std::string kernel_map_name, std::string jit, std::string entry_point, bool weights = false, bool bias = false) const;
+        jit_constants get_common_jit_constants(const BaseParams& params, CommonDispatchData& kd) const;
     };
 
     inline cldnn::format params_2_cldnn(Tensor::DataLayout l)
@@ -60,9 +71,9 @@ namespace KernelSelector {
     inline cldnn::tensor ks_tensor_2_tensor(const DataTensor& ksTensor)
     {
         return{ 
-            static_cast<cldnn::tensor::value_type>(ksTensor.batch().v), 
-            static_cast<cldnn::tensor::value_type>(ksTensor.feature().v),
-            static_cast<cldnn::tensor::value_type>(ksTensor.x().v),
-            static_cast<cldnn::tensor::value_type>(ksTensor.y().v) };
+            static_cast<tensor_vt>(ksTensor.batch().v),
+            static_cast<tensor_vt>(ksTensor.feature().v),
+            static_cast<tensor_vt>(ksTensor.x().v),
+            static_cast<tensor_vt>(ksTensor.y().v) };
     }
 }

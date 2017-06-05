@@ -74,6 +74,8 @@ namespace KernelSelector
                         {
                             uint32_t across : 1;
                             uint32_t within : 1;
+                            uint32_t fixed_kenrel_divider : 1;
+                            uint32_t dynamic_kenrel_divider : 1;
                         } norm;
                         struct pooling_t
                         {
@@ -81,6 +83,8 @@ namespace KernelSelector
                             uint32_t avg : 1;
                             uint32_t floor : 1;
                             uint32_t ceil : 1;
+                            uint32_t fixed_kenrel_divider : 1;
+                            uint32_t dynamic_kenrel_divider : 1;
                         } pooling;
                         struct conv_t 
                         {
@@ -247,15 +251,45 @@ namespace KernelSelector
             key.restrict.val.biasPerOutput = 1;
         }
 
-        void SetNormalizationMode(NormalizationMode m)
+        void SetLRNMode(LRNMode m)
         {
             switch (m)
             {
-            case NormalizationMode::ACROSS_CHANNELS:
+            case LRNMode::ACROSS_CHANNEL:
                 key.restrict.val.dedicated.norm.across = 1;
                 break;
-            case NormalizationMode::WITHIN_CHANNEL:
+            case LRNMode::WITHIN_CHANNEL:
                 key.restrict.val.dedicated.norm.within = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
+        void SetLRNKernelDividerMode(KernelDividerMode m)
+        {
+            switch (m)
+            {
+            case KernelDividerMode::FIXED:
+                key.restrict.val.dedicated.norm.fixed_kenrel_divider = 1;
+                break;
+            case KernelDividerMode::DYNAMIC:
+                key.restrict.val.dedicated.norm.dynamic_kenrel_divider = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
+        void SetPoolKernelDividerMode(KernelDividerMode m)
+        {
+            switch (m)
+            {
+            case KernelDividerMode::FIXED:
+                key.restrict.val.dedicated.pooling.fixed_kenrel_divider = 1;
+                break;
+            case KernelDividerMode::DYNAMIC:
+                key.restrict.val.dedicated.pooling.dynamic_kenrel_divider = 1;
                 break;
             default:
                 break;
@@ -490,27 +524,30 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // NormalizationParams
+    // LRNParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct NormalizationParams : public BaseParams
+    struct LRNParams : public BaseParams
     {
-        NormalizationParams() : BaseParams(KernelType::NORMALIZATION), normParams() {}
+        LRNParams() : BaseParams(KernelType::LRN), lrnParams() {}
 
         struct DedicatedParams
         {
-            NormalizationMode normMode = NormalizationMode::ACROSS_CHANNELS;
-            float             alpha = 0.f;
-            float             beta = 0.f;
-            uint32_t          localSize = 0;
+            LRNMode             normMode    = LRNMode::ACROSS_CHANNEL;
+            KernelDividerMode   divMode     = KernelDividerMode::DONT_CARE;
+            float               alpha       = 0.f;
+            float               beta        = 0.f;
+            float               k           = 0.f;
+            uint32_t            localSize   = 0;
         };
 
-        DedicatedParams normParams;
+        DedicatedParams lrnParams;
 
         virtual ParamsKey GetParamsKey() const
         {
             ParamsKey k = BaseParams::GetParamsKey();
 
-            k.SetNormalizationMode(normParams.normMode);
+            k.SetLRNMode(lrnParams.normMode);
+            k.SetLRNKernelDividerMode(lrnParams.divMode);
 
             return k;
         }
@@ -525,11 +562,12 @@ namespace KernelSelector
 
         struct DedicatedParams
         {
-            PoolType      poolType = PoolType::MAX;
-            uSize         poolSize;
-            uSize         poolStride;
-            uSize         poolPad;
-            PoolRemainder remainderAction = PoolRemainder::FLOOR;
+            PoolType            poolType        = PoolType::MAX;
+            PoolRemainder       remainderAction = PoolRemainder::FLOOR;
+            KernelDividerMode   divMode         = KernelDividerMode::DONT_CARE;
+            uSize               poolSize;
+            uSize               poolStride;
+            uSize               poolPad;
         };
 
         DedicatedParams poolParams;
@@ -540,6 +578,7 @@ namespace KernelSelector
 
             k.SetPoolType(poolParams.poolType);
             k.SetPoolRemainder(poolParams.remainderAction);
+            k.SetPoolKernelDividerMode(poolParams.divMode);
 
             return k;
         }
@@ -827,11 +866,11 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // NormalizationOptionalParams
+    // LRNOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct NormalizationOptionalParams : OptionalParams
+    struct LRNOptionalParams : OptionalParams
     {
-        NormalizationOptionalParams() : OptionalParams(KernelType::NORMALIZATION) {}
+        LRNOptionalParams() : OptionalParams(KernelType::LRN) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

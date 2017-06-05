@@ -203,12 +203,54 @@ inline void cldnn_activation_to_ks(const PType primitive, KernelSelector::BasePa
     }
 }
 
+template <typename ParamsT, typename ArgT>
+inline ParamsT GetDefaultParams(const ArgT& arg, uint32_t split = 1)
+{
+    ParamsT params;
+    
+    const auto& input_layout    = arg.input().get_output_layout();
+    const auto& input_padding   = arg.input().get_output_layout().data_padding;
+    const auto& output_layout   = arg.get_output_layout();
+    const auto& output_padding  = arg.get_output_layout().data_padding;
+
+    params.inputs[0] = tensor_2_data_tensor(input_layout, input_padding, split);
+    params.output = tensor_2_data_tensor(output_layout, output_padding, split);
+
+    params.kernelID = arg.id();
+
+    return params;
+}
+
+template <typename ParamsT, typename ArgT>
+inline ParamsT GetWeightsBiasDefaultParams(const ArgT& arg, uint32_t split = 1)
+{
+    ParamsT params = GetDefaultParams<ParamsT>(arg, split);
+
+    const auto& weights_layout = arg.weights(0).get_output_layout();
+    params.weights = tensor_2_weight_tensor(weights_layout);
+
+    if (arg.bias_term())
+    {
+        const auto& bias_layout = arg.bias(0).get_output_layout();
+        params.bias.push_back(tensor_2_data_tensor(bias_layout, padding(), 1));
+    }
+
+    return params;
+}
+
 template <typename OptionalParamsT>
 inline OptionalParamsT GetDefaultOptionalParams(const program_impl& program)
 {
     OptionalParamsT params;
+    params.bSupportSubGroupExt = program.get_engine()->get_context()->extension_supported("cl_intel_subgroups_short");
+    return params;
+}
+
+template <typename OptionalParamsT>
+inline OptionalParamsT GetDefaultWeightsBiasOptionalParams(const program_impl& program)
+{
+    OptionalParamsT params = GetDefaultOptionalParams<OptionalParamsT>(program);
     //params.allow_padding = true; - TODO:
     params.allow_weights_reorder = program.get_options().get<build_option_type::optimize_data>()->enabled();
-    params.bSupportSubGroupExt = program.get_engine()->get_context()->extension_supported("cl_intel_subgroups_short");
     return params;
 }

@@ -72,77 +72,50 @@ namespace KernelSelector
         const auto& cp = params.convParams;
 
         cldnn::tensor stride(
-              (cldnn::tensor::value_type)1,
-              (cldnn::tensor::value_type)1,
-              (cldnn::tensor::value_type)std::min((size_t)cp.stride.x, params.inputs[0].x().v),
-              (cldnn::tensor::value_type)std::min((size_t)cp.stride.y, params.inputs[0].y().v));
+              (tensor_vt)1,
+              (tensor_vt)1,
+              (tensor_vt)std::min((size_t)cp.stride.x, params.inputs[0].x().v),
+              (tensor_vt)std::min((size_t)cp.stride.y, params.inputs[0].y().v));
         cldnn::tensor filter_tensor = cldnn::tensor(
-              (cldnn::tensor::value_type)params.output.feature().v,
-              (cldnn::tensor::value_type)params.inputs[0].feature().v,
-              (cldnn::tensor::value_type)(size_t)cp.filterSize.x,
-              (cldnn::tensor::value_type)(size_t)cp.filterSize.y );
-        cldnn::tensor input_tensor = ks_tensor_2_tensor(params.inputs[0]);
-        cldnn::tensor output_tensor = ks_tensor_2_tensor(params.output);
+              (tensor_vt)params.output.feature().v,
+              (tensor_vt)params.inputs[0].feature().v,
+              (tensor_vt)(size_t)cp.filterSize.x,
+              (tensor_vt)(size_t)cp.filterSize.y );
         cldnn::tensor input_padding_tensor = cldnn::tensor(
-              (cldnn::tensor::value_type)0,
-              (cldnn::tensor::value_type)0,
-              (cldnn::tensor::value_type)cp.padding.x,
-              (cldnn::tensor::value_type)cp.padding.y );
+              (tensor_vt)0,
+              (tensor_vt)0,
+              (tensor_vt)cp.padding.x,
+              (tensor_vt)cp.padding.y );
         cldnn::tensor output_padding_tensor = cldnn::tensor(
-              (cldnn::tensor::value_type)0,
-              (cldnn::tensor::value_type)0,
-              (cldnn::tensor::value_type)0,
-              (cldnn::tensor::value_type)0 );
+              (tensor_vt)0,
+              (tensor_vt)0,
+              (tensor_vt)0,
+              (tensor_vt)0 );
         cldnn::tensor dilation = cldnn::tensor(
-            (cldnn::tensor::value_type)1,
-            (cldnn::tensor::value_type)1,
-            (cldnn::tensor::value_type)cp.dilation.x,
-            (cldnn::tensor::value_type)cp.dilation.y);
+              (tensor_vt)1,
+              (tensor_vt)1,
+              (tensor_vt)cp.dilation.x,
+              (tensor_vt)cp.dilation.y);
         auto input_offset_with_padding = params.inputs[0].offset - cp.padding.x - params.inputs[0].y().pitch*cp.padding.y;
 
-        const bool relu =
-            params.activationFunc == ActivationFunction::RELU ||
-            params.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE;
-        const float negative_slope =
-            params.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE ?
-            params.nlParams.m : 0.f;
+        jit_constants mem_consts = get_common_jit_constants(params, kd);
 
-        jit_constants mem_consts{
-            gpu::make_jit_constant("INPUT",                     input_tensor),
-            gpu::make_jit_constant("OUTPUT",                    output_tensor),
+        mem_consts.add_constants({
             gpu::make_jit_constant("STRIDE",                    stride),
-            gpu::make_jit_constant("INPUT_OFFSET",              params.inputs[0].offset),
             gpu::make_jit_constant("INPUT_OFFSET_WITH_PADDING", input_offset_with_padding),
-            gpu::make_jit_constant("OUTPUT_OFFSET",             params.output.offset),
-            gpu::make_jit_constant("OUTPUT_LIMIT",              params.output.LengthWithPadding()),
             gpu::make_jit_constant("INPUT_PADDING",             input_padding_tensor),
             gpu::make_jit_constant("OUTPUT_PADDING",            output_padding_tensor),                 // TODO
             gpu::make_jit_constant("FILTER",                    filter_tensor),
             gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
             gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_BATCH_NUM"),
             gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM",  "FILTER_FEATURE_NUM"),
-            gpu::make_jit_constant("FP16_SUPPORTED",            static_cast<int>(kd.fp16_unit_used)),   // TODO: use engine
-            gpu::make_jit_constant("FP16_UNIT_USED",            static_cast<int>(kd.fp16_unit_used)),
-            gpu::make_jit_constant("UNIT_TYPE",                 kd.fp16_unit_used ? "half" : "float"),
-            gpu::make_jit_constant("UNIT_VAL_ZERO",             kd.fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("TO_UNIT_TYPE_V1(v)",        kd.fp16_unit_used ? "convert_half(v)" : "(float)(v)"),
-            gpu::make_jit_constant("RELU",                      static_cast<int>(relu)),
-            gpu::make_jit_constant("NEGATIVE_SLOPE",            negative_slope),
             gpu::make_jit_constant("BIAS_TERM",                 static_cast<int>(!params.bias.empty())),
             gpu::make_jit_constant("DILATION",                  dilation),
-            gpu::make_jit_constant("INPUT_X_PITCH",             params.inputs[0].x().pitch),
-            gpu::make_jit_constant("INPUT_Y_PITCH",             params.inputs[0].y().pitch),
-            gpu::make_jit_constant("INPUT_FEATURE_PITCH",       params.inputs[0].feature().pitch),
-            gpu::make_jit_constant("INPUT_BATCH_PITCH",         params.inputs[0].batch().pitch),
-            gpu::make_jit_constant("OUT_X_PITCH",               params.output.x().pitch),
-            gpu::make_jit_constant("OUT_Y_PITCH",               params.output.y().pitch),
-            gpu::make_jit_constant("OUT_FEATURE_PITCH",         params.output.feature().pitch),
-            gpu::make_jit_constant("OUT_BATCH_PITCH",           params.output.batch().pitch),
             gpu::make_jit_constant("FILTER_X_PITCH",            params.weights.x().pitch),
             gpu::make_jit_constant("FILTER_Y_PITCH",            params.weights.y().pitch),
             gpu::make_jit_constant("FILTER_IFM_PITCH",          params.weights.ifm().pitch),
             gpu::make_jit_constant("FILTER_OFM_PITCH",          params.weights.ofm().pitch),
-        };
+        });
 
         if (params.inputs[0].layout == DataLayout::yxfb &&
             params.weights.layout == WeightsLayout::yxio)
@@ -150,11 +123,13 @@ namespace KernelSelector
             const auto local_work_group_size = kd.lws0;
             const auto batch_size = params.output.batch().v;
 
-            mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE", local_work_group_size));
-            mem_consts.add_constant(gpu::make_jit_constant("OFM_PER_WORK_ITEM", kd.ofm_per_work_item)); // how many output feature maps for a single batch will a single work item produce
-            mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", kd.batches_per_work_item)); // how many batches will a single work item compute
-            mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS", std::max(batch_size / kd.batches_per_work_item / local_work_group_size, static_cast<size_t>(1)))); // how many local work groups we need to compute single element for each batch
-            mem_consts.add_constant(gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / kd.batches_per_work_item)); // how many work items we need to compute single element for each batch
+            mem_consts.add_constants({
+                gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE", local_work_group_size),
+                gpu::make_jit_constant("OFM_PER_WORK_ITEM", kd.ofm_per_work_item), // how many output feature maps for a single batch will a single work item produce
+                gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", kd.batches_per_work_item), // how many batches will a single work item compute
+                gpu::make_jit_constant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS", std::max(batch_size / kd.batches_per_work_item / local_work_group_size, static_cast<size_t>(1))), // how many local work groups we need to compute single element for each batch
+                gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / kd.batches_per_work_item), // how many work items we need to compute single element for each batch
+            });
         }
 
         return mem_consts;

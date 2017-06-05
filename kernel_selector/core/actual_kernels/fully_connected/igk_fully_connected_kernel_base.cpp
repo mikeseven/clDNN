@@ -170,7 +170,7 @@ namespace KernelSelector
 
         // Determine global work sizes.
         kd.gws0 = params.output.Length();
-        kd.gws1 = 1;
+        kd.gws1 = kd.gws2 = 1;
 
         // Find largest positive local work size that is divider for global work size.
         kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
@@ -178,7 +178,7 @@ namespace KernelSelector
         {
             --kd.lws0;
         }
-        kd.lws1 = 1;
+        kd.lws1 = kd.lws2 = 1;
 
         return kd;
     }

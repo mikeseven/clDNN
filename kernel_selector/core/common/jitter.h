@@ -231,6 +231,14 @@ public:
         _constants.push_back(constant);
     }
 
+    void add_constants(const std::vector<std::shared_ptr<jit_constant>>& constants)
+    {
+        for (const auto& c : constants)
+        {
+            _constants.push_back(c);
+        }
+    }
+
     jit_definitions get_definitions() const {
         jit_definitions definitons;
         definitons.reserve(_constants.size() * 6); //assuming max 6 pairs per jit_constant

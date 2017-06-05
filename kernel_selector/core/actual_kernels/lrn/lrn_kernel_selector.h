@@ -20,17 +20,17 @@
  
 namespace KernelSelector 
 {
-    class NormalizationKernelSelctor : public KernelSelctorBase
+    class LRNKernelSelctor : public KernelSelctorBase
     {
     public:
-        static NormalizationKernelSelctor &instance() {
-            static NormalizationKernelSelctor instance_;
+        static LRNKernelSelctor &instance() {
+            static LRNKernelSelctor instance_;
             return instance_;
         }
 
-        NormalizationKernelSelctor();
+        LRNKernelSelctor();
 
-        virtual ~NormalizationKernelSelctor() {}
+        virtual ~LRNKernelSelctor() {}
 
         virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
     };

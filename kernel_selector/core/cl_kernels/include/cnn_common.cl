@@ -135,7 +135,7 @@ inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, floa
 
 #else
 #define ACTIVATION_FUNCTION(TYPE_T) \
-inline TYPE_T CAT(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
     { return value; }
 
 #endif

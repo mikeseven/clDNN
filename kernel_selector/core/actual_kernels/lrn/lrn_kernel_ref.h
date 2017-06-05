@@ -14,18 +14,19 @@
 // limitations under the License.
 */
 
-#include "normalization_kernel_selector.h"
-#include "normalization_kernel_ref.h"
+#pragma once
+
+#include "cnn_kernel_base.h"
  
 namespace KernelSelector 
-{
-    NormalizationKernelSelctor::NormalizationKernelSelctor()
+{    
+    class LRNKernelRef : public CNNKernelBase
     {
-        Attach<NormalizationKernelRef>();
-    }
+    public:
+        LRNKernelRef() : CNNKernelBase("cnn_lrn_ref") {}
+        virtual ~LRNKernelRef() {}
 
-    KernelsData NormalizationKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
-    {
-        return GetNaiveBestKernel(params, options, KernelType::NORMALIZATION);
-    }
+        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual ParamsKey GetSupportedKey() const override;
+    };
 }
