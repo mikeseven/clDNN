@@ -37,8 +37,8 @@ __kernel void convolution_f16_8x8x16(
     const unsigned global_x = get_global_id(0);
     const unsigned global_y = get_global_id(1);
     const unsigned global_z = get_global_id(2);
-    const unsigned out_fm   = global_z % WIDTH1;
-    const unsigned batch_id = global_z / WIDTH1;
+    const unsigned out_fm   = global_z % ALIGNED_OFM;
+    const unsigned batch_id = global_z / ALIGNED_OFM;
     const unsigned group_x = get_group_id(0);
     const unsigned group_z = get_group_id(2);
     const unsigned max_group_x = get_num_groups(0);
@@ -48,13 +48,13 @@ __kernel void convolution_f16_8x8x16(
 
     uint src0_offset_tile =
        batch_id * INPUT_BATCH_PITCH                         // batch offset
-     + ( global_y * TILE_M * STRIDE_Y ) * INPUT_ROW_PITCH   // y offset
+     + ( global_y * TILE_M * STRIDE_Y ) * INPUT_Y_PITCH   // y offset
      + ( global_x * TILE_K * STRIDE_X );                    // x offset
     uint src0_offset = src0_offset_tile
-     + ( local_z / ( TILE_X / 4 ) ) * INPUT_ROW_PITCH       // y tile offset
+     + ( local_z / ( TILE_X / 4 ) ) * INPUT_Y_PITCH       // y tile offset
      + ( local_z % ( TILE_X / 4 ) ) * 4;                    // x tile offset
 
-    const __global half *src1_read = src1 + ( group_z * TILE_N % WIDTH1 ) * 2;
+    const __global half *src1_read = src1 + ( group_z * TILE_N % ALIGNED_OFM ) * 2;
 
     unsigned patch_depth = 0;
     __attribute__((opencl_unroll_hint(3)))
@@ -73,7 +73,7 @@ __kernel void convolution_f16_8x8x16(
         
         // in case the data is not aligned to sizeof(T)*KERNEL_WIDTH we need to use vload or set the data in a loop
         half4 blockA = vload4(0, src0 + src0_offset );
-        src0_offset += INPUT_SLICE_PITCH;
+        src0_offset += INPUT_FEATURE_PITCH;
 
         half blockB[KERNEL_WIDTH * KERNEL_HEIGHT];
         ushort2* p2BlockB = (ushort2*)blockB;
@@ -84,12 +84,12 @@ __kernel void convolution_f16_8x8x16(
         LOOP(KERNEL_SLICE_DIV2, interleaved_y,
         {
             p2BlockB[interleaved_y] = intel_sub_group_block_read_us2( (const __global ushort*)src1_read );
-            src1_read += WIDTH1 * 2;
+            src1_read += ALIGNED_OFM * 2;
         } )
         if ( kernel_slice_is_odd )
         {
             pBlockB[KERNEL_WIDTH * KERNEL_HEIGHT - 1] = intel_sub_group_block_read_us( (const __global ushort*)src1_read );
-            src1_read += WIDTH1 * 2;
+            src1_read += ALIGNED_OFM * 2;
         }
 
 #define BLOCK_A(n) sub_group_broadcast( blockA[(n)%4], (n)/4 )
@@ -129,8 +129,8 @@ __kernel void convolution_f16_8x8x16(
     // small saves. Right-most column may be smaller if output width not divisible by tile width.
     __global half *out = dst
      + batch_id * OUT_BATCH_PITCH            // batch offset
-     + out_fm * OUT_SLICE_PITCH              // channel offset
-     + ( global_y * TILE_M ) * OUT_ROW_PITCH // y offset
+     + out_fm * OUT_FEATURE_PITCH              // channel offset
+     + ( global_y * TILE_M ) * OUT_Y_PITCH // y offset
      + ( global_x * TILE_K );                // x offset
 
     if ( batch_id < OUT_BATCH && out_fm < OUT_DEPTH )
@@ -148,7 +148,7 @@ __kernel void convolution_f16_8x8x16(
                     half_t vBlockC;
                     half *pvBlockC = (half*)&vBlockC;
                     for (unsigned i = 0; i < TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
-                    *(__global half_t*)(out + y * OUT_ROW_PITCH) = vBlockC;
+                    *(__global half_t*)(out + y * OUT_Y_PITCH) = vBlockC;
                 }
             }
         }
@@ -162,7 +162,7 @@ __kernel void convolution_f16_8x8x16(
                     half_t vBlockC;
                     half *pvBlockC = (half*)&vBlockC;
                     for (unsigned i = 0; i < RIGHT_PARTIAL_TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
-                    *(__global half_t*)(out + y * OUT_ROW_PITCH) = vBlockC;
+                    *(__global half_t*)(out + y * OUT_Y_PITCH) = vBlockC;
                 }
             }
         }

@@ -19,7 +19,7 @@
 
 #include "include/cnn_common.cl"
 
-__kernel void fc(
+KERNEL(fc)(
     __global DATA_TYPE* input, 
     __global DATA_TYPE* output, 
     __global DATA_TYPE* weights, 
@@ -37,7 +37,7 @@ __kernel void fc(
     
     const unsigned int input_size = INPUT_WIDTH * INPUT_HEIGHT * INPUT_DEPTH;
 
-    unsigned int output_idx = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y * OUT_ROW_PITCH + x + OUT_OFFSET;
+    unsigned int output_idx = w*OUT_BATCH_PITCH + z*OUT_FEATURE_PITCH + y * OUT_Y_PITCH + x + OUT_OFFSET;
     unsigned offset = z*OUT_WIDTH * OUT_HEIGHT + y*OUT_WIDTH + x;
     COUNTER_TYPE dotProd = (COUNTER_TYPE)(biases[offset]);
 
@@ -51,7 +51,7 @@ __kernel void fc(
        {
            for(unsigned int width = 0; width < INPUT_WIDTH; ++width )
            {
-               unsigned int input_idx = w*INPUT_BATCH_PITCH + plane*INPUT_SLICE_PITCH + height*INPUT_ROW_PITCH + width + INPUT_OFFSET;
+               unsigned int input_idx = w*INPUT_BATCH_PITCH + plane*INPUT_FEATURE_PITCH + height*INPUT_Y_PITCH + width + INPUT_OFFSET;
 
                dotProd += (COUNTER_TYPE)(processed_input_batch[input_idx] * processed_neuron_weights[weight_idx]);
 
@@ -59,5 +59,5 @@ __kernel void fc(
           }
        }
     }
-    output[output_idx] = activation_function((DATA_TYPE)dotProd, NL_M, NL_N);
+    output[output_idx] = FUNC_CALL(activation_function)((DATA_TYPE)dotProd, NL_M, NL_N);
 }

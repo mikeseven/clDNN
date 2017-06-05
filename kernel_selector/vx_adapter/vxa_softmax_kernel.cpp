@@ -24,12 +24,12 @@ namespace clDNN
         BaseKernelBinary(KernelType::SOFT_MAX),
         m_Params(params)
     {
-        KernelSelctor::SoftMaxParams ksParams;
+        KernelSelector::SoftMaxParams ksParams;
 
         InitBaseParams(params, ksParams);
 
-        KernelSelctor::SoftmaxOptionalParams ksOptParams;
+        KernelSelector::SoftmaxOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelctor::SoftmaxKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::SoftmaxKernelSelctor::instance(), ksParams, ksOptParams);
     }
 }

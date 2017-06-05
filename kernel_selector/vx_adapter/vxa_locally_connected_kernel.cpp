@@ -24,15 +24,15 @@ namespace clDNN
         BaseKernelBinary(KernelType::LOCALLY_CONNECTED),
         m_Params(params)
     {
-        KernelSelctor::LocallyConnectedParams ksParams;
+        KernelSelector::LocallyConnectedParams ksParams;
 
         InitBaseParams(params, ksParams);
         ksParams.lcParams.filterSize = params.lcParams.filterSize;
         ksParams.lcParams.padding = params.lcParams.padding;
         ksParams.lcParams.stride = params.lcParams.stride;
 
-        KernelSelctor::LocallyConnectedOptionalParams ksOptParams;
+        KernelSelector::LocallyConnectedOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelctor::LocallyConnectedKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::LocallyConnectedKernelSelctor::instance(), ksParams, ksOptParams);
     }
 }

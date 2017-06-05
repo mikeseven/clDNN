@@ -24,7 +24,7 @@ namespace clDNN
         BaseKernelBinary(KernelType::NORMALIZATION),
         m_Params(params)
     {
-        KernelSelctor::NormalizationParams ksParams;
+        KernelSelector::NormalizationParams ksParams;
 
         InitBaseParams(params, ksParams);
         ksParams.normParams.alpha = params.normParams.alpha;
@@ -32,8 +32,8 @@ namespace clDNN
         ksParams.normParams.localSize = params.normParams.localSize;
         ksParams.normParams.normMode = params.normParams.normMode;
 
-        KernelSelctor::NormalizationOptionalParams ksOptParams;
+        KernelSelector::NormalizationOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelctor::NormalizationKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::NormalizationKernelSelctor::instance(), ksParams, ksOptParams);
     }
 }

@@ -30,25 +30,44 @@ class gpu_toolkit;
 
 class kernels_cache {
 public:
+    using source_code = std::vector<std::string>;
+
+    struct program_code
+    {
+        source_code source;
+        std::string options;
+    };
+
+    struct kernel_code
+    {
+        source_code source;
+        std::string options;
+        bool batch_compilation;
+        bool intect_header;
+    };
+
     typedef std::string kernel_id;
     typedef std::vector<std::pair<std::string, std::string>> jit_definitions;
     typedef cl::Kernel kernel_type;
+    using sorted_code = std::map<std::string, program_code>;
+    using kernels_map = std::map<std::string, kernel_type>;
+    using kernels_code = std::map<std::string, kernel_code>;
 
 private:
     gpu_toolkit& _context;
     std::mutex _mutex;
-    std::map<std::string, std::string> _kernel_codes;
+    kernels_code _kernels_code;
     std::map<std::string, kernel_type> _kernels;
-	manager::primitive_db _database;
-    bool _modified = true;
+	manager::primitive_db _database;             // TODO: remove once KernelSelctor integration done
 
-    std::vector<std::string> get_program_source() const;
+    sorted_code get_program_source(const kernels_code& kernels_source_code) const;
     friend class gpu_toolkit;
     explicit kernels_cache(gpu_toolkit& context);
-    void build_program();
+    kernels_map build_program(const program_code& pcode) const;
 
 public:
     kernel_id create_kernel_from_template(const std::string& template_name, jit_definitions definitions = jit_definitions(), std::string kernel_name = std::string());
+    kernel_id create_kernel_from_template_ks(const source_code& source, const std::string& options, const std::string& entry_point, bool batch_compilation);
     kernel_type get_kernel(kernel_id id);
 };
 

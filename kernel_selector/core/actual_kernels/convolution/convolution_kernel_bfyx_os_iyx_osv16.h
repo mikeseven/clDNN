@@ -18,7 +18,7 @@
 
 #include "igk_convolution_kernel_base.h"
 
-namespace KernelSelctor {
+namespace KernelSelector {
 
     class ConvolutionKernel_bfyx_os_iyx_osv16 : public IGKConvolutionKernelBase
     {

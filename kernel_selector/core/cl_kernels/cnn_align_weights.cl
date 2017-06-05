@@ -16,37 +16,37 @@
 
 #include "include/cnn_common.cl"
 
-__kernel void align_weights(
+KERNEL(align_weights)(
     __global const DATA_TYPE* src,
     __global DATA_TYPE* dst
 )
 {
 #if defined(WITH_SRC_SIZE)
     const int src_index = get_global_id(0);
-    #if (INPUT_WIDTH == INPUT_ROW_PITCH)
+    #if (INPUT_WIDTH == INPUT_Y_PITCH)
     const int dst_index = src_index;
     #else
-    const int dst_index = (src_index / INPUT_WIDTH) * INPUT_ROW_PITCH + src_index % INPUT_WIDTH;
+    const int dst_index = (src_index / INPUT_WIDTH) * INPUT_Y_PITCH + src_index % INPUT_WIDTH;
     #endif
 
     dst[dst_index] = src[src_index];
 #else
     const int dst_index = get_global_id(0);
-    #if (INPUT_WIDTH == INPUT_ROW_PITCH)
+    #if (INPUT_WIDTH == INPUT_Y_PITCH)
 
     dst[dst_index] = src[dst_index];
 
-    #else // #if (INPUT_WIDTH == INPUT_ROW_PITCH)
+    #else // #if (INPUT_WIDTH == INPUT_Y_PITCH)
 
     DATA_TYPE a;
-    const int x = dst_index % INPUT_ROW_PITCH;
+    const int x = dst_index % INPUT_Y_PITCH;
     if (x >= INPUT_WIDTH)
     {
         a = (DATA_TYPE)(0);
     }
     else
     {
-        a = src[(dst_index / INPUT_ROW_PITCH) * INPUT_WIDTH + x];
+        a = src[(dst_index / INPUT_Y_PITCH) * INPUT_WIDTH + x];
     }
     dst[dst_index] = a;
 

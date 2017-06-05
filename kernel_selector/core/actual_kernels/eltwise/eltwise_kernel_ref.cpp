@@ -16,18 +16,20 @@
 
 #include "eltwise_kernel_ref.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     ParamsKey EltwiseKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
         k.SetOffsetSupport();
         k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.SetBatchingSupport();
         return k;
     }
 
@@ -38,20 +40,19 @@ namespace KernelSelctor {
         KernelData kd = KernelData::Default<EltwiseParams>(params, 1);
 
         EltwiseParams& newParams = *static_cast<EltwiseParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
 
         std::stringstream jit;
         jit << GetBaseJit(newParams)
-            << "#define INPUT_OFFSET1 (" << newParams.eltwiseParams.inDesc1.offset << ")\n"
-            << "#define INPUT_ROW_PITCH1 (" << newParams.eltwiseParams.inDesc1.pitches.x << ")\n"
-            << "#define INPUT_SLICE_PITCH1 (" << newParams.eltwiseParams.inDesc1.pitches.y << ")\n"
-            << "#define INPUT_BATCH_PITCH1 (" << newParams.eltwiseParams.inDesc1.pitches.z << ")\n"
+            << "#define INPUT_OFFSET1 (" << newParams.inputs[1].offset << ")\n"
+            << "#define INPUT_ROW_PITCH1 (" << newParams.inputs[1].y().pitch << ")\n"
+            << "#define INPUT_SLICE_PITCH1 (" << newParams.inputs[1].feature().pitch << ")\n"
+            << "#define INPUT_BATCH_PITCH1 (" << newParams.inputs[1].batch().pitch << ")\n"
             << "#define ELTWISE_MODE_" << toString(newParams.eltwiseParams.mode) << "\n"
             << "#define SCALAR (" << newParams.eltwiseParams.scalar << ")\n";
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
+        kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "eltwise");
         kernel.args_desc = GetArgumentDesc(2, false, false);
 

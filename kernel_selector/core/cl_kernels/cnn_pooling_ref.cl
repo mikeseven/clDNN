@@ -17,7 +17,7 @@
 
 #include "include/cnn_common.cl"
 
-__kernel void pooling(__global DATA_TYPE *src, __global DATA_TYPE *out)
+KERNEL(pooling)(__global DATA_TYPE *src, __global DATA_TYPE *out)
 {
     const unsigned int out_x = get_global_id(0); 
     const unsigned int out_y = get_global_id(1);
@@ -28,9 +28,9 @@ __kernel void pooling(__global DATA_TYPE *src, __global DATA_TYPE *out)
     const unsigned int outPlane = get_global_id(2) % OUT_DEPTH;
     const unsigned int outBatch = get_global_id(2) / OUT_DEPTH;
 #endif
-    unsigned int src_width_step = INPUT_ROW_PITCH * POOL_STRIDE_Y;
+    unsigned int src_width_step = INPUT_Y_PITCH * POOL_STRIDE_Y;
     
-    __global DATA_TYPE* src_ptr = src + outBatch*INPUT_BATCH_PITCH + outPlane*INPUT_SLICE_PITCH + INPUT_OFFSET;
+    __global DATA_TYPE* src_ptr = src + outBatch*INPUT_BATCH_PITCH + outPlane*INPUT_FEATURE_PITCH + INPUT_OFFSET;
 
 
 #ifdef MAX_POOLING
@@ -48,9 +48,9 @@ __kernel void pooling(__global DATA_TYPE *src, __global DATA_TYPE *out)
 
             if(src_x >= 0 && src_x < INPUT_WIDTH && src_y >= 0 && src_y < INPUT_HEIGHT)
             {
-                DATA_TYPE tmpRes = src_ptr[src_y * INPUT_ROW_PITCH + src_x];
+                DATA_TYPE tmpRes = src_ptr[src_y * INPUT_Y_PITCH + src_x];
                 #ifdef MAX_POOLING
-                    res = max(res, tmpRes);
+                    res = fmax(res, tmpRes);
                 #else
                     res += tmpRes;
                 #endif 
@@ -62,6 +62,6 @@ __kernel void pooling(__global DATA_TYPE *src, __global DATA_TYPE *out)
         res = res / (DATA_TYPE)(POOL_SIZE_X * POOL_SIZE_Y);
     #endif
     
-    unsigned int out_index = out_x + out_y * OUT_ROW_PITCH + outPlane*OUT_SLICE_PITCH + outBatch*OUT_BATCH_PITCH + OUT_OFFSET;
-    out[out_index] = activation_function(res, NL_M, NL_N);
+    unsigned int out_index = out_x + out_y * OUT_Y_PITCH + outPlane*OUT_FEATURE_PITCH + outBatch*OUT_BATCH_PITCH + OUT_OFFSET;
+    out[out_index] = FUNC_CALL(activation_function)(res, NL_M, NL_N);
 }

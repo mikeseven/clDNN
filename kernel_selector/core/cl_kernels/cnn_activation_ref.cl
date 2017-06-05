@@ -16,7 +16,7 @@
 
 #include "include/cnn_common.cl"
 
-__kernel void activation(__global DATA_TYPE* input, __global DATA_TYPE* output)
+KERNEL(activation)(__global DATA_TYPE* input, __global DATA_TYPE* output)
 {
     const unsigned x = get_global_id(0);
     const unsigned y = get_global_id(1);
@@ -28,8 +28,8 @@ __kernel void activation(__global DATA_TYPE* input, __global DATA_TYPE* output)
     const unsigned w = get_global_id(2) / OUT_DEPTH;
 #endif
 
-    const unsigned src_index = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;
-    const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
+    const unsigned src_index = w*INPUT_BATCH_PITCH + z*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x + INPUT_OFFSET;
+    const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x + OUT_OFFSET;
 
-    output[dst_index] = activation_function(input[src_index], NL_M, NL_N);
+    output[dst_index] = FUNC_CALL(activation_function)(input[src_index], NL_M, NL_N);
 }

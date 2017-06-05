@@ -17,7 +17,7 @@
 #include "locally_connected_kernel_selector.h"
 #include "locally_connected_kernel_ref.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     LocallyConnectedKernelSelctor::LocallyConnectedKernelSelctor()
     {

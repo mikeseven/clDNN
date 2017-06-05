@@ -19,7 +19,7 @@
 #include "cnn_kernel_base.h"
 #include "kernel_selector_params.h"
 
-namespace KernelSelctor {
+namespace KernelSelector {
 
     class CNNFullyConnectedKernelBase : public CNNKernelBase
     {

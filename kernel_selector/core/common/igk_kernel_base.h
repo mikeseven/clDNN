@@ -20,11 +20,12 @@
 #include "jitter.h"
 #include <sstream>
 #include <assert.h>
+#include "api/CPP/tensor.hpp"
 
-namespace KernelSelctor {
+namespace KernelSelector {
 
-    using jit_definitions = neural::gpu::jit_definitions;
-    using jit_constants = neural::gpu::jit_constants;
+    using jit_definitions = KernelSelector::gpu::jit_definitions;
+    using jit_constants = KernelSelector::gpu::jit_constants;
 
     class IGKKernelBase : public KernelBase
     {
@@ -35,7 +36,33 @@ namespace KernelSelctor {
     protected:
         std::string create_jit_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_name) const;
         std::string create_jit_from_template(const BaseParams& params) const;
-        ArgumentDescpirtor get_args_desc(uint num_of_input, bool use_weights, bool use_bias) const;
+        ArgumentDescpirtor get_args_desc(uint32_t num_of_input, bool use_weights, bool use_bias) const;
         KernelString get_kernel_string(std::string kernel_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN) const;
     };
+
+    inline cldnn::format params_2_cldnn(Tensor::DataLayout l)
+    {
+        switch (l)
+        {
+        case Tensor::DataLayout::bf: return cldnn::format::bfyx;
+        case Tensor::DataLayout::fb: return cldnn::format::yxfb;
+        case Tensor::DataLayout::bfyx: return cldnn::format::bfyx;
+        case Tensor::DataLayout::yxfb: return cldnn::format::yxfb;
+        case Tensor::DataLayout::byxf: return cldnn::format::byxf;
+        case Tensor::DataLayout::fyxb: return cldnn::format::fyxb;
+        case Tensor::DataLayout::brfyx: return cldnn::format::bfyx;
+        default:
+            assert(0);
+            return cldnn::format::bfyx;
+        }
+    }
+
+    inline cldnn::tensor ks_tensor_2_tensor(const DataTensor& ksTensor)
+    {
+        return{ 
+            static_cast<cldnn::tensor::value_type>(ksTensor.batch().v), 
+            static_cast<cldnn::tensor::value_type>(ksTensor.feature().v),
+            static_cast<cldnn::tensor::value_type>(ksTensor.x().v),
+            static_cast<cldnn::tensor::value_type>(ksTensor.y().v) };
+    }
 }

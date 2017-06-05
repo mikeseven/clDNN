@@ -18,7 +18,7 @@
 
 #include "include/cnn_common.cl"
 
-__kernel void locally_connected(
+KERNEL(locally_connected)(
     __global DATA_TYPE* input, 
     __global DATA_TYPE* output, 
     __global DATA_TYPE* weights, 
@@ -56,7 +56,7 @@ __kernel void locally_connected(
                     + x * INPUT_DEPTH * conv_size
                     + k * conv_size + j * KERNEL_WIDTH + i;
 
-                const int input_idx = w*INPUT_BATCH_PITCH + k*INPUT_SLICE_PITCH + src_y*INPUT_ROW_PITCH + src_x + INPUT_OFFSET;
+                const int input_idx = w*INPUT_BATCH_PITCH + k*INPUT_FEATURE_PITCH + src_y*INPUT_Y_PITCH + src_x + INPUT_OFFSET;
                 
                 const DATA_TYPE w = weights[conv_idx];
                 const DATA_TYPE v = input[input_idx];
@@ -65,6 +65,6 @@ __kernel void locally_connected(
         } 
     }
     
-    const unsigned int output_idx = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
-    output[output_idx] = activation_function(dotProd, NL_M, NL_N);
+    const unsigned int output_idx = w*OUT_BATCH_PITCH + z*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x + OUT_OFFSET;
+    output[output_idx] = FUNC_CALL(activation_function)(dotProd, NL_M, NL_N);
 }

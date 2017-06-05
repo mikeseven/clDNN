@@ -17,12 +17,14 @@
 #include <stdio.h>
 #include <iostream>
 #include <sstream>
+#include "ks_ocl_toolkit.h"
 #include "kernel_base.h"
 #include "kernel_selector.h"
 #include "kernel_selector_params.h"
 #include "actual_kernels/convolution/convolution_kernel_selector.h"
 
-using namespace KernelSelctor;
+using namespace KernelSelector;
+using gpu_toolkit = KernelSelector::gpu::gpu_toolkit;
 
 #define  RUN_MODE 1
 
@@ -49,23 +51,23 @@ void InitConvParams();
 
 class CLRunner
 {
-    kernel_cache m_binaryManager;
+    program_cache m_binaryManager;
     std::shared_ptr<gpu_toolkit> gpu_context;
 
 public:
 
     CLRunner()
     {
-        neural::gpu::configuration cfg;
-        cfg.enable_profiling = true;
-        gpu_context = std::make_shared<gpu_toolkit>(cfg);
+//         KernelSelctor::gpu::configuration cfg;
+//         cfg.enable_profiling = true;
+//         gpu_context = std::make_shared<gpu_toolkit>(cfg);
     }
 
     float run(const KernelData& kernelData)
     {
         cl_int status = CL_SUCCESS;
         const clKernelData& clData = kernelData.kernels[0];
-        binary_data binary = clData.GetBinary(gpu_context.get(), m_binaryManager);
+        binary_data binary = clData.GetBinary({ gpu_context->context(), gpu_context->device() }, m_binaryManager);
         cl::Program::Binaries binaries;
         binaries.push_back(binary);
         auto devices = std::vector<cl::Device>(1, gpu_context->device());
@@ -81,24 +83,24 @@ public:
         std::size_t weightsSize =
             kernelData.weights_reorder_params.engine != WeightsReorderParams::Engine::NONE ?
             kernelData.weights_reorder_params.new_buffer_size :
-            newParams.convParams.filterSize.x * newParams.convParams.filterSize.y * newParams.inDims.z * newParams.outDims.z;
-        cl::Buffer input(clContext, CL_MEM_READ_WRITE, newParams.inDesc.Size(), nullptr, &status);
-        cl::Buffer output(clContext, CL_MEM_READ_WRITE, newParams.outDesc.Size(), nullptr, &status);
+            newParams.convParams.filterSize.x * newParams.convParams.filterSize.y * newParams.inputs[0].feature().v * newParams.output.feature().v;
+        cl::Buffer input(clContext, CL_MEM_READ_WRITE, newParams.inputs[0].PhysicalSize(), nullptr, &status);
+        cl::Buffer output(clContext, CL_MEM_READ_WRITE, newParams.output.PhysicalSize(), nullptr, &status);
         cl::Buffer weights(clContext, CL_MEM_READ_WRITE, weightsSize, nullptr, &status);
-        cl::Buffer bias(clContext, CL_MEM_READ_WRITE, newParams.outDims.z, nullptr, &status);
+        cl::Buffer bias(clContext, CL_MEM_READ_WRITE, newParams.output.feature().v, nullptr, &status);
 
-        if (!clData.args_desc.SetArguments(clKernel, { &input }, &output, &weights, &bias, nullptr))
+        if (!clData.args_desc.SetArguments(clKernel, { &input }, &output, &weights, &bias, nullptr, 0))
         {
             printf("Error: setting args\n");
             return 0.f;
         }
 
-        const uint warm_up = 3;
-        const uint iteration = 100;
+        const uint32_t warm_up = 3;
+        const uint32_t iteration = 100;
         std::vector<cl::Event> events;
         events.resize(iteration);
 
-        for (uint i = 0; i < warm_up; i++)
+        for (uint32_t i = 0; i < warm_up; i++)
         {
             status = gpu_context->queue().enqueueNDRangeKernel(
                 clKernel,
@@ -147,10 +149,10 @@ class ConvolutionCostModel : public ConvolutionKernelSelctor
 {
     CLRunner cl_runner;
 
-    std::vector<uint> GetKernels()
+    std::vector<uint32_t> GetKernels()
     {
-        std::vector<uint> optional;
-        std::vector<uint> force;
+        std::vector<uint32_t> optional;
+        std::vector<uint32_t> force;
 
         for (std::size_t i = 0; i < implementations.size(); i++)
         {
@@ -161,7 +163,7 @@ class ConvolutionCostModel : public ConvolutionKernelSelctor
                 if (it->second == true)
                 {
                     //std::cout << "Force: " << it->first << std::endl;
-                    force.push_back((uint)i);
+                    force.push_back((uint32_t)i);
                 }
                 else
                 {
@@ -170,7 +172,7 @@ class ConvolutionCostModel : public ConvolutionKernelSelctor
             }
             else
             {
-                optional.push_back((uint)i);
+                optional.push_back((uint32_t)i);
             }
         }
 
@@ -188,8 +190,8 @@ public:
 #if 0
         ConvolutionParams params;
         params.inputType = Datatype::F16;
-        params.inputLayout = DataLayout::bfyx;
-        params.outputLayout = DataLayout::bfyx;
+        params.input.layout = DataLayout::bfyx;
+        params.output.layout = DataLayout::bfyx;
         params.activationFunc = ActivationFunction::NONE;
 #if 1
         params.inDims = { 227, 227, 3, 1 };
@@ -211,7 +213,7 @@ public:
 #endif
         InitConvParams();
 
-        for (uint i : GetKernels())
+        for (uint32_t i : GetKernels())
         {
             const auto& impl = implementations[i];
             const auto& kernel = *impl.get();
@@ -272,11 +274,11 @@ int main( int argc, char* argv[ ] )
 
 void InitConvParams()
 {
-
+#if 0
     ConvolutionParams params0;
     params0.inputType = Datatype::F16;
-    params0.inputLayout = DataLayout::bfyx;
-    params0.outputLayout = DataLayout::bfyx;
+    params0.input.layout = DataLayout::bfyx;
+    params0.output.layout = DataLayout::bfyx;
     params0.activationFunc = ActivationFunction::RELU;
     params0.nlParams = { 0, 0 };
     params0.inDims = { 227, 227, 3, 1 };
@@ -289,8 +291,8 @@ void InitConvParams()
 
     ConvolutionParams params1;
     params1.inputType = Datatype::F16;
-    params1.inputLayout = DataLayout::bfyx;
-    params1.outputLayout = DataLayout::bfyx;
+    params1.input.layout = DataLayout::bfyx;
+    params1.output.layout = DataLayout::bfyx;
     params1.activationFunc = ActivationFunction::RELU;
     params1.nlParams = { 0, 0 };
     params1.inDims = { 27, 27, 48, 1 };
@@ -303,8 +305,8 @@ void InitConvParams()
 
     ConvolutionParams params2;
     params2.inputType = Datatype::F16;
-    params2.inputLayout = DataLayout::bfyx;
-    params2.outputLayout = DataLayout::bfyx;
+    params2.input.layout = DataLayout::bfyx;
+    params2.output.layout = DataLayout::bfyx;
     params2.activationFunc = ActivationFunction::RELU;
     params2.nlParams = { 0, 0 };
     params2.inDims = { 27, 27, 48, 1 };
@@ -317,8 +319,8 @@ void InitConvParams()
 
     ConvolutionParams params3;
     params3.inputType = Datatype::F16;
-    params3.inputLayout = DataLayout::bfyx;
-    params3.outputLayout = DataLayout::bfyx;
+    params3.input.layout = DataLayout::bfyx;
+    params3.output.layout = DataLayout::bfyx;
     params3.activationFunc = ActivationFunction::RELU;
     params3.nlParams = { 0, 0 };
     params3.inDims = { 13, 13, 256, 1 };
@@ -331,8 +333,8 @@ void InitConvParams()
 
     ConvolutionParams params4;
     params4.inputType = Datatype::F16;
-    params4.inputLayout = DataLayout::bfyx;
-    params4.outputLayout = DataLayout::bfyx;
+    params4.input.layout = DataLayout::bfyx;
+    params4.output.layout = DataLayout::bfyx;
     params4.activationFunc = ActivationFunction::RELU;
     params4.nlParams = { 0, 0 };
     params4.inDims = { 13, 13, 256, 1 };
@@ -345,8 +347,8 @@ void InitConvParams()
 
     ConvolutionParams params5;
     params5.inputType = Datatype::F16;
-    params5.inputLayout = DataLayout::bfyx;
-    params5.outputLayout = DataLayout::bfyx;
+    params5.input.layout = DataLayout::bfyx;
+    params5.output.layout = DataLayout::bfyx;
     params5.activationFunc = ActivationFunction::RELU;
     params5.nlParams = { 0, 0 };
     params5.inDims = { 13, 13, 192, 1 };
@@ -359,8 +361,8 @@ void InitConvParams()
 
     ConvolutionParams params6;
     params6.inputType = Datatype::F16;
-    params6.inputLayout = DataLayout::bfyx;
-    params6.outputLayout = DataLayout::bfyx;
+    params6.input.layout = DataLayout::bfyx;
+    params6.output.layout = DataLayout::bfyx;
     params6.activationFunc = ActivationFunction::RELU;
     params6.nlParams = { 0, 0 };
     params6.inDims = { 13, 13, 192, 1 };
@@ -373,8 +375,8 @@ void InitConvParams()
 
     ConvolutionParams params7;
     params7.inputType = Datatype::F16;
-    params7.inputLayout = DataLayout::bfyx;
-    params7.outputLayout = DataLayout::bfyx;
+    params7.input.layout = DataLayout::bfyx;
+    params7.output.layout = DataLayout::bfyx;
     params7.activationFunc = ActivationFunction::RELU;
     params7.nlParams = { 0, 0 };
     params7.inDims = { 13, 13, 192, 1 };
@@ -387,8 +389,8 @@ void InitConvParams()
 
     ConvolutionParams params8;
     params8.inputType = Datatype::F16;
-    params8.inputLayout = DataLayout::bfyx;
-    params8.outputLayout = DataLayout::bfyx;
+    params8.input.layout = DataLayout::bfyx;
+    params8.output.layout = DataLayout::bfyx;
     params8.activationFunc = ActivationFunction::RELU;
     params8.nlParams = { 0, 0 };
     params8.inDims = { 13, 13, 192, 1 };
@@ -401,8 +403,8 @@ void InitConvParams()
 
     ConvolutionParams params9;
     params9.inputType = Datatype::F32;
-    params9.inputLayout = DataLayout::bfyx;
-    params9.outputLayout = DataLayout::bfyx;
+    params9.input.layout = DataLayout::bfyx;
+    params9.output.layout = DataLayout::bfyx;
     params9.activationFunc = ActivationFunction::RELU;
     params9.nlParams = { 0, 0 };
     params9.inDims = { 227, 227, 3, 1 };
@@ -415,8 +417,8 @@ void InitConvParams()
 
     ConvolutionParams params10;
     params10.inputType = Datatype::F32;
-    params10.inputLayout = DataLayout::bfyx;
-    params10.outputLayout = DataLayout::bfyx;
+    params10.input.layout = DataLayout::bfyx;
+    params10.output.layout = DataLayout::bfyx;
     params10.activationFunc = ActivationFunction::RELU;
     params10.nlParams = { 0, 0 };
     params10.inDims = { 27, 27, 48, 1 };
@@ -429,8 +431,8 @@ void InitConvParams()
 
     ConvolutionParams params11;
     params11.inputType = Datatype::F32;
-    params11.inputLayout = DataLayout::bfyx;
-    params11.outputLayout = DataLayout::bfyx;
+    params11.input.layout = DataLayout::bfyx;
+    params11.output.layout = DataLayout::bfyx;
     params11.activationFunc = ActivationFunction::RELU;
     params11.nlParams = { 0, 0 };
     params11.inDims = { 27, 27, 48, 1 };
@@ -443,8 +445,8 @@ void InitConvParams()
 
     ConvolutionParams params12;
     params12.inputType = Datatype::F32;
-    params12.inputLayout = DataLayout::bfyx;
-    params12.outputLayout = DataLayout::bfyx;
+    params12.input.layout = DataLayout::bfyx;
+    params12.output.layout = DataLayout::bfyx;
     params12.activationFunc = ActivationFunction::RELU;
     params12.nlParams = { 0, 0 };
     params12.inDims = { 13, 13, 256, 1 };
@@ -457,8 +459,8 @@ void InitConvParams()
 
     ConvolutionParams params13;
     params13.inputType = Datatype::F32;
-    params13.inputLayout = DataLayout::bfyx;
-    params13.outputLayout = DataLayout::bfyx;
+    params13.input.layout = DataLayout::bfyx;
+    params13.output.layout = DataLayout::bfyx;
     params13.activationFunc = ActivationFunction::RELU;
     params13.nlParams = { 0, 0 };
     params13.inDims = { 13, 13, 256, 1 };
@@ -471,8 +473,8 @@ void InitConvParams()
 
     ConvolutionParams params14;
     params14.inputType = Datatype::F32;
-    params14.inputLayout = DataLayout::bfyx;
-    params14.outputLayout = DataLayout::bfyx;
+    params14.input.layout = DataLayout::bfyx;
+    params14.output.layout = DataLayout::bfyx;
     params14.activationFunc = ActivationFunction::RELU;
     params14.nlParams = { 0, 0 };
     params14.inDims = { 13, 13, 192, 1 };
@@ -485,8 +487,8 @@ void InitConvParams()
 
     ConvolutionParams params15;
     params15.inputType = Datatype::F32;
-    params15.inputLayout = DataLayout::bfyx;
-    params15.outputLayout = DataLayout::bfyx;
+    params15.input.layout = DataLayout::bfyx;
+    params15.output.layout = DataLayout::bfyx;
     params15.activationFunc = ActivationFunction::RELU;
     params15.nlParams = { 0, 0 };
     params15.inDims = { 13, 13, 192, 1 };
@@ -499,8 +501,8 @@ void InitConvParams()
 
     ConvolutionParams params16;
     params16.inputType = Datatype::F32;
-    params16.inputLayout = DataLayout::bfyx;
-    params16.outputLayout = DataLayout::bfyx;
+    params16.input.layout = DataLayout::bfyx;
+    params16.output.layout = DataLayout::bfyx;
     params16.activationFunc = ActivationFunction::RELU;
     params16.nlParams = { 0, 0 };
     params16.inDims = { 13, 13, 192, 1 };
@@ -513,8 +515,8 @@ void InitConvParams()
 
     ConvolutionParams params17;
     params17.inputType = Datatype::F32;
-    params17.inputLayout = DataLayout::bfyx;
-    params17.outputLayout = DataLayout::bfyx;
+    params17.input.layout = DataLayout::bfyx;
+    params17.output.layout = DataLayout::bfyx;
     params17.activationFunc = ActivationFunction::RELU;
     params17.nlParams = { 0, 0 };
     params17.inDims = { 13, 13, 192, 1 };
@@ -527,8 +529,8 @@ void InitConvParams()
 
     ConvolutionParams params18;
     params18.inputType = Datatype::F16;
-    params18.inputLayout = DataLayout::bfyx;
-    params18.outputLayout = DataLayout::bfyx;
+    params18.input.layout = DataLayout::bfyx;
+    params18.output.layout = DataLayout::bfyx;
     params18.activationFunc = ActivationFunction::RELU;
     params18.nlParams = { 0, 0 };
     params18.inDims = { 224, 224, 3, 1 };
@@ -541,8 +543,8 @@ void InitConvParams()
 
     ConvolutionParams params19;
     params19.inputType = Datatype::F16;
-    params19.inputLayout = DataLayout::bfyx;
-    params19.outputLayout = DataLayout::bfyx;
+    params19.input.layout = DataLayout::bfyx;
+    params19.output.layout = DataLayout::bfyx;
     params19.activationFunc = ActivationFunction::RELU;
     params19.nlParams = { 0, 0 };
     params19.inDims = { 224, 224, 3, 1 };
@@ -555,8 +557,8 @@ void InitConvParams()
 
     ConvolutionParams params20;
     params20.inputType = Datatype::F16;
-    params20.inputLayout = DataLayout::bfyx;
-    params20.outputLayout = DataLayout::bfyx;
+    params20.input.layout = DataLayout::bfyx;
+    params20.output.layout = DataLayout::bfyx;
     params20.activationFunc = ActivationFunction::RELU;
     params20.nlParams = { 0, 0 };
     params20.inDims = { 224, 224, 64, 1 };
@@ -569,8 +571,8 @@ void InitConvParams()
 
     ConvolutionParams params21;
     params21.inputType = Datatype::F16;
-    params21.inputLayout = DataLayout::bfyx;
-    params21.outputLayout = DataLayout::bfyx;
+    params21.input.layout = DataLayout::bfyx;
+    params21.output.layout = DataLayout::bfyx;
     params21.activationFunc = ActivationFunction::RELU;
     params21.nlParams = { 0, 0 };
     params21.inDims = { 224, 224, 64, 1 };
@@ -583,8 +585,8 @@ void InitConvParams()
 
     ConvolutionParams params22;
     params22.inputType = Datatype::F16;
-    params22.inputLayout = DataLayout::bfyx;
-    params22.outputLayout = DataLayout::bfyx;
+    params22.input.layout = DataLayout::bfyx;
+    params22.output.layout = DataLayout::bfyx;
     params22.activationFunc = ActivationFunction::RELU;
     params22.nlParams = { 0, 0 };
     params22.inDims = { 112, 112, 64, 1 };
@@ -597,8 +599,8 @@ void InitConvParams()
 
     ConvolutionParams params23;
     params23.inputType = Datatype::F16;
-    params23.inputLayout = DataLayout::bfyx;
-    params23.outputLayout = DataLayout::bfyx;
+    params23.input.layout = DataLayout::bfyx;
+    params23.output.layout = DataLayout::bfyx;
     params23.activationFunc = ActivationFunction::RELU;
     params23.nlParams = { 0, 0 };
     params23.inDims = { 112, 112, 64, 1 };
@@ -611,8 +613,8 @@ void InitConvParams()
 
     ConvolutionParams params24;
     params24.inputType = Datatype::F16;
-    params24.inputLayout = DataLayout::bfyx;
-    params24.outputLayout = DataLayout::bfyx;
+    params24.input.layout = DataLayout::bfyx;
+    params24.output.layout = DataLayout::bfyx;
     params24.activationFunc = ActivationFunction::RELU;
     params24.nlParams = { 0, 0 };
     params24.inDims = { 112, 112, 128, 1 };
@@ -625,8 +627,8 @@ void InitConvParams()
 
     ConvolutionParams params25;
     params25.inputType = Datatype::F16;
-    params25.inputLayout = DataLayout::bfyx;
-    params25.outputLayout = DataLayout::bfyx;
+    params25.input.layout = DataLayout::bfyx;
+    params25.output.layout = DataLayout::bfyx;
     params25.activationFunc = ActivationFunction::RELU;
     params25.nlParams = { 0, 0 };
     params25.inDims = { 112, 112, 128, 1 };
@@ -639,8 +641,8 @@ void InitConvParams()
 
     ConvolutionParams params26;
     params26.inputType = Datatype::F16;
-    params26.inputLayout = DataLayout::bfyx;
-    params26.outputLayout = DataLayout::bfyx;
+    params26.input.layout = DataLayout::bfyx;
+    params26.output.layout = DataLayout::bfyx;
     params26.activationFunc = ActivationFunction::RELU;
     params26.nlParams = { 0, 0 };
     params26.inDims = { 56, 56, 128, 1 };
@@ -653,8 +655,8 @@ void InitConvParams()
 
     ConvolutionParams params27;
     params27.inputType = Datatype::F16;
-    params27.inputLayout = DataLayout::bfyx;
-    params27.outputLayout = DataLayout::bfyx;
+    params27.input.layout = DataLayout::bfyx;
+    params27.output.layout = DataLayout::bfyx;
     params27.activationFunc = ActivationFunction::RELU;
     params27.nlParams = { 0, 0 };
     params27.inDims = { 56, 56, 128, 1 };
@@ -667,8 +669,8 @@ void InitConvParams()
 
     ConvolutionParams params28;
     params28.inputType = Datatype::F16;
-    params28.inputLayout = DataLayout::bfyx;
-    params28.outputLayout = DataLayout::bfyx;
+    params28.input.layout = DataLayout::bfyx;
+    params28.output.layout = DataLayout::bfyx;
     params28.activationFunc = ActivationFunction::RELU;
     params28.nlParams = { 0, 0 };
     params28.inDims = { 56, 56, 256, 1 };
@@ -681,8 +683,8 @@ void InitConvParams()
 
     ConvolutionParams params29;
     params29.inputType = Datatype::F16;
-    params29.inputLayout = DataLayout::bfyx;
-    params29.outputLayout = DataLayout::bfyx;
+    params29.input.layout = DataLayout::bfyx;
+    params29.output.layout = DataLayout::bfyx;
     params29.activationFunc = ActivationFunction::RELU;
     params29.nlParams = { 0, 0 };
     params29.inDims = { 56, 56, 256, 1 };
@@ -695,8 +697,8 @@ void InitConvParams()
 
     ConvolutionParams params30;
     params30.inputType = Datatype::F16;
-    params30.inputLayout = DataLayout::bfyx;
-    params30.outputLayout = DataLayout::bfyx;
+    params30.input.layout = DataLayout::bfyx;
+    params30.output.layout = DataLayout::bfyx;
     params30.activationFunc = ActivationFunction::RELU;
     params30.nlParams = { 0, 0 };
     params30.inDims = { 28, 28, 256, 1 };
@@ -709,8 +711,8 @@ void InitConvParams()
 
     ConvolutionParams params31;
     params31.inputType = Datatype::F16;
-    params31.inputLayout = DataLayout::bfyx;
-    params31.outputLayout = DataLayout::bfyx;
+    params31.input.layout = DataLayout::bfyx;
+    params31.output.layout = DataLayout::bfyx;
     params31.activationFunc = ActivationFunction::RELU;
     params31.nlParams = { 0, 0 };
     params31.inDims = { 28, 28, 256, 1 };
@@ -723,8 +725,8 @@ void InitConvParams()
 
     ConvolutionParams params32;
     params32.inputType = Datatype::F16;
-    params32.inputLayout = DataLayout::bfyx;
-    params32.outputLayout = DataLayout::bfyx;
+    params32.input.layout = DataLayout::bfyx;
+    params32.output.layout = DataLayout::bfyx;
     params32.activationFunc = ActivationFunction::RELU;
     params32.nlParams = { 0, 0 };
     params32.inDims = { 28, 28, 512, 1 };
@@ -737,8 +739,8 @@ void InitConvParams()
 
     ConvolutionParams params33;
     params33.inputType = Datatype::F16;
-    params33.inputLayout = DataLayout::bfyx;
-    params33.outputLayout = DataLayout::bfyx;
+    params33.input.layout = DataLayout::bfyx;
+    params33.output.layout = DataLayout::bfyx;
     params33.activationFunc = ActivationFunction::RELU;
     params33.nlParams = { 0, 0 };
     params33.inDims = { 28, 28, 512, 1 };
@@ -751,8 +753,8 @@ void InitConvParams()
 
     ConvolutionParams params34;
     params34.inputType = Datatype::F16;
-    params34.inputLayout = DataLayout::bfyx;
-    params34.outputLayout = DataLayout::bfyx;
+    params34.input.layout = DataLayout::bfyx;
+    params34.output.layout = DataLayout::bfyx;
     params34.activationFunc = ActivationFunction::RELU;
     params34.nlParams = { 0, 0 };
     params34.inDims = { 14, 14, 512, 1 };
@@ -765,8 +767,8 @@ void InitConvParams()
 
     ConvolutionParams params35;
     params35.inputType = Datatype::F16;
-    params35.inputLayout = DataLayout::bfyx;
-    params35.outputLayout = DataLayout::bfyx;
+    params35.input.layout = DataLayout::bfyx;
+    params35.output.layout = DataLayout::bfyx;
     params35.activationFunc = ActivationFunction::RELU;
     params35.nlParams = { 0, 0 };
     params35.inDims = { 14, 14, 512, 1 };
@@ -779,8 +781,8 @@ void InitConvParams()
 
     ConvolutionParams params36;
     params36.inputType = Datatype::F16;
-    params36.inputLayout = DataLayout::bfyx;
-    params36.outputLayout = DataLayout::bfyx;
+    params36.input.layout = DataLayout::bfyx;
+    params36.output.layout = DataLayout::bfyx;
     params36.activationFunc = ActivationFunction::RELU;
     params36.nlParams = { 0, 0 };
     params36.inDims = { 224, 224, 3, 1 };
@@ -793,8 +795,8 @@ void InitConvParams()
 
     ConvolutionParams params37;
     params37.inputType = Datatype::F16;
-    params37.inputLayout = DataLayout::bfyx;
-    params37.outputLayout = DataLayout::bfyx;
+    params37.input.layout = DataLayout::bfyx;
+    params37.output.layout = DataLayout::bfyx;
     params37.activationFunc = ActivationFunction::RELU;
     params37.nlParams = { 0, 0 };
     params37.inDims = { 224, 224, 3, 1 };
@@ -807,8 +809,8 @@ void InitConvParams()
 
     ConvolutionParams params38;
     params38.inputType = Datatype::F16;
-    params38.inputLayout = DataLayout::bfyx;
-    params38.outputLayout = DataLayout::bfyx;
+    params38.input.layout = DataLayout::bfyx;
+    params38.output.layout = DataLayout::bfyx;
     params38.activationFunc = ActivationFunction::RELU;
     params38.nlParams = { 0, 0 };
     params38.inDims = { 56, 56, 64, 1 };
@@ -821,8 +823,8 @@ void InitConvParams()
 
     ConvolutionParams params39;
     params39.inputType = Datatype::F16;
-    params39.inputLayout = DataLayout::bfyx;
-    params39.outputLayout = DataLayout::bfyx;
+    params39.input.layout = DataLayout::bfyx;
+    params39.output.layout = DataLayout::bfyx;
     params39.activationFunc = ActivationFunction::RELU;
     params39.nlParams = { 0, 0 };
     params39.inDims = { 56, 56, 64, 1 };
@@ -835,8 +837,8 @@ void InitConvParams()
 
     ConvolutionParams params40;
     params40.inputType = Datatype::F16;
-    params40.inputLayout = DataLayout::bfyx;
-    params40.outputLayout = DataLayout::bfyx;
+    params40.input.layout = DataLayout::bfyx;
+    params40.output.layout = DataLayout::bfyx;
     params40.activationFunc = ActivationFunction::RELU;
     params40.nlParams = { 0, 0 };
     params40.inDims = { 56, 56, 64, 1 };
@@ -849,8 +851,8 @@ void InitConvParams()
 
     ConvolutionParams params41;
     params41.inputType = Datatype::F16;
-    params41.inputLayout = DataLayout::bfyx;
-    params41.outputLayout = DataLayout::bfyx;
+    params41.input.layout = DataLayout::bfyx;
+    params41.output.layout = DataLayout::bfyx;
     params41.activationFunc = ActivationFunction::RELU;
     params41.nlParams = { 0, 0 };
     params41.inDims = { 28, 28, 192, 1 };
@@ -863,8 +865,8 @@ void InitConvParams()
 
     ConvolutionParams params42;
     params42.inputType = Datatype::F16;
-    params42.inputLayout = DataLayout::bfyx;
-    params42.outputLayout = DataLayout::bfyx;
+    params42.input.layout = DataLayout::bfyx;
+    params42.output.layout = DataLayout::bfyx;
     params42.activationFunc = ActivationFunction::RELU;
     params42.nlParams = { 0, 0 };
     params42.inDims = { 28, 28, 192, 1 };
@@ -877,8 +879,8 @@ void InitConvParams()
 
     ConvolutionParams params43;
     params43.inputType = Datatype::F16;
-    params43.inputLayout = DataLayout::bfyx;
-    params43.outputLayout = DataLayout::bfyx;
+    params43.input.layout = DataLayout::bfyx;
+    params43.output.layout = DataLayout::bfyx;
     params43.activationFunc = ActivationFunction::RELU;
     params43.nlParams = { 0, 0 };
     params43.inDims = { 28, 28, 192, 1 };
@@ -891,8 +893,8 @@ void InitConvParams()
 
     ConvolutionParams params44;
     params44.inputType = Datatype::F16;
-    params44.inputLayout = DataLayout::bfyx;
-    params44.outputLayout = DataLayout::bfyx;
+    params44.input.layout = DataLayout::bfyx;
+    params44.output.layout = DataLayout::bfyx;
     params44.activationFunc = ActivationFunction::RELU;
     params44.nlParams = { 0, 0 };
     params44.inDims = { 28, 28, 96, 1 };
@@ -905,8 +907,8 @@ void InitConvParams()
 
     ConvolutionParams params45;
     params45.inputType = Datatype::F16;
-    params45.inputLayout = DataLayout::bfyx;
-    params45.outputLayout = DataLayout::bfyx;
+    params45.input.layout = DataLayout::bfyx;
+    params45.output.layout = DataLayout::bfyx;
     params45.activationFunc = ActivationFunction::RELU;
     params45.nlParams = { 0, 0 };
     params45.inDims = { 28, 28, 96, 1 };
@@ -919,8 +921,8 @@ void InitConvParams()
 
     ConvolutionParams params46;
     params46.inputType = Datatype::F16;
-    params46.inputLayout = DataLayout::bfyx;
-    params46.outputLayout = DataLayout::bfyx;
+    params46.input.layout = DataLayout::bfyx;
+    params46.output.layout = DataLayout::bfyx;
     params46.activationFunc = ActivationFunction::RELU;
     params46.nlParams = { 0, 0 };
     params46.inDims = { 28, 28, 16, 1 };
@@ -933,8 +935,8 @@ void InitConvParams()
 
     ConvolutionParams params47;
     params47.inputType = Datatype::F16;
-    params47.inputLayout = DataLayout::bfyx;
-    params47.outputLayout = DataLayout::bfyx;
+    params47.input.layout = DataLayout::bfyx;
+    params47.output.layout = DataLayout::bfyx;
     params47.activationFunc = ActivationFunction::RELU;
     params47.nlParams = { 0, 0 };
     params47.inDims = { 28, 28, 16, 1 };
@@ -947,8 +949,8 @@ void InitConvParams()
 
     ConvolutionParams params48;
     params48.inputType = Datatype::F16;
-    params48.inputLayout = DataLayout::bfyx;
-    params48.outputLayout = DataLayout::bfyx;
+    params48.input.layout = DataLayout::bfyx;
+    params48.output.layout = DataLayout::bfyx;
     params48.activationFunc = ActivationFunction::RELU;
     params48.nlParams = { 0, 0 };
     params48.inDims = { 28, 28, 192, 1 };
@@ -961,8 +963,8 @@ void InitConvParams()
 
     ConvolutionParams params49;
     params49.inputType = Datatype::F16;
-    params49.inputLayout = DataLayout::bfyx;
-    params49.outputLayout = DataLayout::bfyx;
+    params49.input.layout = DataLayout::bfyx;
+    params49.output.layout = DataLayout::bfyx;
     params49.activationFunc = ActivationFunction::RELU;
     params49.nlParams = { 0, 0 };
     params49.inDims = { 28, 28, 256, 1 };
@@ -975,8 +977,8 @@ void InitConvParams()
 
     ConvolutionParams params50;
     params50.inputType = Datatype::F16;
-    params50.inputLayout = DataLayout::bfyx;
-    params50.outputLayout = DataLayout::bfyx;
+    params50.input.layout = DataLayout::bfyx;
+    params50.output.layout = DataLayout::bfyx;
     params50.activationFunc = ActivationFunction::RELU;
     params50.nlParams = { 0, 0 };
     params50.inDims = { 28, 28, 256, 1 };
@@ -989,8 +991,8 @@ void InitConvParams()
 
     ConvolutionParams params51;
     params51.inputType = Datatype::F16;
-    params51.inputLayout = DataLayout::bfyx;
-    params51.outputLayout = DataLayout::bfyx;
+    params51.input.layout = DataLayout::bfyx;
+    params51.output.layout = DataLayout::bfyx;
     params51.activationFunc = ActivationFunction::RELU;
     params51.nlParams = { 0, 0 };
     params51.inDims = { 28, 28, 32, 1 };
@@ -1003,8 +1005,8 @@ void InitConvParams()
 
     ConvolutionParams params52;
     params52.inputType = Datatype::F16;
-    params52.inputLayout = DataLayout::bfyx;
-    params52.outputLayout = DataLayout::bfyx;
+    params52.input.layout = DataLayout::bfyx;
+    params52.output.layout = DataLayout::bfyx;
     params52.activationFunc = ActivationFunction::RELU;
     params52.nlParams = { 0, 0 };
     params52.inDims = { 28, 28, 32, 1 };
@@ -1017,8 +1019,8 @@ void InitConvParams()
 
     ConvolutionParams params53;
     params53.inputType = Datatype::F16;
-    params53.inputLayout = DataLayout::bfyx;
-    params53.outputLayout = DataLayout::bfyx;
+    params53.input.layout = DataLayout::bfyx;
+    params53.output.layout = DataLayout::bfyx;
     params53.activationFunc = ActivationFunction::RELU;
     params53.nlParams = { 0, 0 };
     params53.inDims = { 28, 28, 256, 1 };
@@ -1031,8 +1033,8 @@ void InitConvParams()
 
     ConvolutionParams params54;
     params54.inputType = Datatype::F16;
-    params54.inputLayout = DataLayout::bfyx;
-    params54.outputLayout = DataLayout::bfyx;
+    params54.input.layout = DataLayout::bfyx;
+    params54.output.layout = DataLayout::bfyx;
     params54.activationFunc = ActivationFunction::RELU;
     params54.nlParams = { 0, 0 };
     params54.inDims = { 28, 28, 128, 1 };
@@ -1045,8 +1047,8 @@ void InitConvParams()
 
     ConvolutionParams params55;
     params55.inputType = Datatype::F16;
-    params55.inputLayout = DataLayout::bfyx;
-    params55.outputLayout = DataLayout::bfyx;
+    params55.input.layout = DataLayout::bfyx;
+    params55.output.layout = DataLayout::bfyx;
     params55.activationFunc = ActivationFunction::RELU;
     params55.nlParams = { 0, 0 };
     params55.inDims = { 28, 28, 128, 1 };
@@ -1059,8 +1061,8 @@ void InitConvParams()
 
     ConvolutionParams params56;
     params56.inputType = Datatype::F16;
-    params56.inputLayout = DataLayout::bfyx;
-    params56.outputLayout = DataLayout::bfyx;
+    params56.input.layout = DataLayout::bfyx;
+    params56.output.layout = DataLayout::bfyx;
     params56.activationFunc = ActivationFunction::RELU;
     params56.nlParams = { 0, 0 };
     params56.inDims = { 14, 14, 480, 1 };
@@ -1073,8 +1075,8 @@ void InitConvParams()
 
     ConvolutionParams params57;
     params57.inputType = Datatype::F16;
-    params57.inputLayout = DataLayout::bfyx;
-    params57.outputLayout = DataLayout::bfyx;
+    params57.input.layout = DataLayout::bfyx;
+    params57.output.layout = DataLayout::bfyx;
     params57.activationFunc = ActivationFunction::RELU;
     params57.nlParams = { 0, 0 };
     params57.inDims = { 14, 14, 480, 1 };
@@ -1087,8 +1089,8 @@ void InitConvParams()
 
     ConvolutionParams params58;
     params58.inputType = Datatype::F16;
-    params58.inputLayout = DataLayout::bfyx;
-    params58.outputLayout = DataLayout::bfyx;
+    params58.input.layout = DataLayout::bfyx;
+    params58.output.layout = DataLayout::bfyx;
     params58.activationFunc = ActivationFunction::RELU;
     params58.nlParams = { 0, 0 };
     params58.inDims = { 14, 14, 480, 1 };
@@ -1101,8 +1103,8 @@ void InitConvParams()
 
     ConvolutionParams params59;
     params59.inputType = Datatype::F16;
-    params59.inputLayout = DataLayout::bfyx;
-    params59.outputLayout = DataLayout::bfyx;
+    params59.input.layout = DataLayout::bfyx;
+    params59.output.layout = DataLayout::bfyx;
     params59.activationFunc = ActivationFunction::RELU;
     params59.nlParams = { 0, 0 };
     params59.inDims = { 14, 14, 96, 1 };
@@ -1115,8 +1117,8 @@ void InitConvParams()
 
     ConvolutionParams params60;
     params60.inputType = Datatype::F16;
-    params60.inputLayout = DataLayout::bfyx;
-    params60.outputLayout = DataLayout::bfyx;
+    params60.input.layout = DataLayout::bfyx;
+    params60.output.layout = DataLayout::bfyx;
     params60.activationFunc = ActivationFunction::RELU;
     params60.nlParams = { 0, 0 };
     params60.inDims = { 14, 14, 96, 1 };
@@ -1129,8 +1131,8 @@ void InitConvParams()
 
     ConvolutionParams params61;
     params61.inputType = Datatype::F16;
-    params61.inputLayout = DataLayout::bfyx;
-    params61.outputLayout = DataLayout::bfyx;
+    params61.input.layout = DataLayout::bfyx;
+    params61.output.layout = DataLayout::bfyx;
     params61.activationFunc = ActivationFunction::RELU;
     params61.nlParams = { 0, 0 };
     params61.inDims = { 14, 14, 16, 1 };
@@ -1143,8 +1145,8 @@ void InitConvParams()
 
     ConvolutionParams params62;
     params62.inputType = Datatype::F16;
-    params62.inputLayout = DataLayout::bfyx;
-    params62.outputLayout = DataLayout::bfyx;
+    params62.input.layout = DataLayout::bfyx;
+    params62.output.layout = DataLayout::bfyx;
     params62.activationFunc = ActivationFunction::RELU;
     params62.nlParams = { 0, 0 };
     params62.inDims = { 14, 14, 16, 1 };
@@ -1157,8 +1159,8 @@ void InitConvParams()
 
     ConvolutionParams params63;
     params63.inputType = Datatype::F16;
-    params63.inputLayout = DataLayout::bfyx;
-    params63.outputLayout = DataLayout::bfyx;
+    params63.input.layout = DataLayout::bfyx;
+    params63.output.layout = DataLayout::bfyx;
     params63.activationFunc = ActivationFunction::RELU;
     params63.nlParams = { 0, 0 };
     params63.inDims = { 14, 14, 480, 1 };
@@ -1171,8 +1173,8 @@ void InitConvParams()
 
     ConvolutionParams params64;
     params64.inputType = Datatype::F16;
-    params64.inputLayout = DataLayout::bfyx;
-    params64.outputLayout = DataLayout::bfyx;
+    params64.input.layout = DataLayout::bfyx;
+    params64.output.layout = DataLayout::bfyx;
     params64.activationFunc = ActivationFunction::RELU;
     params64.nlParams = { 0, 0 };
     params64.inDims = { 14, 14, 512, 1 };
@@ -1185,8 +1187,8 @@ void InitConvParams()
 
     ConvolutionParams params65;
     params65.inputType = Datatype::F16;
-    params65.inputLayout = DataLayout::bfyx;
-    params65.outputLayout = DataLayout::bfyx;
+    params65.input.layout = DataLayout::bfyx;
+    params65.output.layout = DataLayout::bfyx;
     params65.activationFunc = ActivationFunction::RELU;
     params65.nlParams = { 0, 0 };
     params65.inDims = { 14, 14, 512, 1 };
@@ -1199,8 +1201,8 @@ void InitConvParams()
 
     ConvolutionParams params66;
     params66.inputType = Datatype::F16;
-    params66.inputLayout = DataLayout::bfyx;
-    params66.outputLayout = DataLayout::bfyx;
+    params66.input.layout = DataLayout::bfyx;
+    params66.output.layout = DataLayout::bfyx;
     params66.activationFunc = ActivationFunction::RELU;
     params66.nlParams = { 0, 0 };
     params66.inDims = { 14, 14, 24, 1 };
@@ -1213,8 +1215,8 @@ void InitConvParams()
 
     ConvolutionParams params67;
     params67.inputType = Datatype::F16;
-    params67.inputLayout = DataLayout::bfyx;
-    params67.outputLayout = DataLayout::bfyx;
+    params67.input.layout = DataLayout::bfyx;
+    params67.output.layout = DataLayout::bfyx;
     params67.activationFunc = ActivationFunction::RELU;
     params67.nlParams = { 0, 0 };
     params67.inDims = { 14, 14, 24, 1 };
@@ -1227,8 +1229,8 @@ void InitConvParams()
 
     ConvolutionParams params68;
     params68.inputType = Datatype::F16;
-    params68.inputLayout = DataLayout::bfyx;
-    params68.outputLayout = DataLayout::bfyx;
+    params68.input.layout = DataLayout::bfyx;
+    params68.output.layout = DataLayout::bfyx;
     params68.activationFunc = ActivationFunction::RELU;
     params68.nlParams = { 0, 0 };
     params68.inDims = { 14, 14, 512, 1 };
@@ -1241,8 +1243,8 @@ void InitConvParams()
 
     ConvolutionParams params69;
     params69.inputType = Datatype::F16;
-    params69.inputLayout = DataLayout::bfyx;
-    params69.outputLayout = DataLayout::bfyx;
+    params69.input.layout = DataLayout::bfyx;
+    params69.output.layout = DataLayout::bfyx;
     params69.activationFunc = ActivationFunction::RELU;
     params69.nlParams = { 0, 0 };
     params69.inDims = { 14, 14, 112, 1 };
@@ -1255,8 +1257,8 @@ void InitConvParams()
 
     ConvolutionParams params70;
     params70.inputType = Datatype::F16;
-    params70.inputLayout = DataLayout::bfyx;
-    params70.outputLayout = DataLayout::bfyx;
+    params70.input.layout = DataLayout::bfyx;
+    params70.output.layout = DataLayout::bfyx;
     params70.activationFunc = ActivationFunction::RELU;
     params70.nlParams = { 0, 0 };
     params70.inDims = { 14, 14, 112, 1 };
@@ -1269,8 +1271,8 @@ void InitConvParams()
 
     ConvolutionParams params71;
     params71.inputType = Datatype::F16;
-    params71.inputLayout = DataLayout::bfyx;
-    params71.outputLayout = DataLayout::bfyx;
+    params71.input.layout = DataLayout::bfyx;
+    params71.output.layout = DataLayout::bfyx;
     params71.activationFunc = ActivationFunction::RELU;
     params71.nlParams = { 0, 0 };
     params71.inDims = { 14, 14, 512, 1 };
@@ -1283,8 +1285,8 @@ void InitConvParams()
 
     ConvolutionParams params72;
     params72.inputType = Datatype::F16;
-    params72.inputLayout = DataLayout::bfyx;
-    params72.outputLayout = DataLayout::bfyx;
+    params72.input.layout = DataLayout::bfyx;
+    params72.output.layout = DataLayout::bfyx;
     params72.activationFunc = ActivationFunction::RELU;
     params72.nlParams = { 0, 0 };
     params72.inDims = { 14, 14, 512, 1 };
@@ -1297,8 +1299,8 @@ void InitConvParams()
 
     ConvolutionParams params73;
     params73.inputType = Datatype::F16;
-    params73.inputLayout = DataLayout::bfyx;
-    params73.outputLayout = DataLayout::bfyx;
+    params73.input.layout = DataLayout::bfyx;
+    params73.output.layout = DataLayout::bfyx;
     params73.activationFunc = ActivationFunction::RELU;
     params73.nlParams = { 0, 0 };
     params73.inDims = { 14, 14, 128, 1 };
@@ -1311,8 +1313,8 @@ void InitConvParams()
 
     ConvolutionParams params74;
     params74.inputType = Datatype::F16;
-    params74.inputLayout = DataLayout::bfyx;
-    params74.outputLayout = DataLayout::bfyx;
+    params74.input.layout = DataLayout::bfyx;
+    params74.output.layout = DataLayout::bfyx;
     params74.activationFunc = ActivationFunction::RELU;
     params74.nlParams = { 0, 0 };
     params74.inDims = { 14, 14, 128, 1 };
@@ -1325,8 +1327,8 @@ void InitConvParams()
 
     ConvolutionParams params75;
     params75.inputType = Datatype::F16;
-    params75.inputLayout = DataLayout::bfyx;
-    params75.outputLayout = DataLayout::bfyx;
+    params75.input.layout = DataLayout::bfyx;
+    params75.output.layout = DataLayout::bfyx;
     params75.activationFunc = ActivationFunction::RELU;
     params75.nlParams = { 0, 0 };
     params75.inDims = { 14, 14, 512, 1 };
@@ -1339,8 +1341,8 @@ void InitConvParams()
 
     ConvolutionParams params76;
     params76.inputType = Datatype::F16;
-    params76.inputLayout = DataLayout::bfyx;
-    params76.outputLayout = DataLayout::bfyx;
+    params76.input.layout = DataLayout::bfyx;
+    params76.output.layout = DataLayout::bfyx;
     params76.activationFunc = ActivationFunction::RELU;
     params76.nlParams = { 0, 0 };
     params76.inDims = { 14, 14, 32, 1 };
@@ -1353,8 +1355,8 @@ void InitConvParams()
 
     ConvolutionParams params77;
     params77.inputType = Datatype::F16;
-    params77.inputLayout = DataLayout::bfyx;
-    params77.outputLayout = DataLayout::bfyx;
+    params77.input.layout = DataLayout::bfyx;
+    params77.output.layout = DataLayout::bfyx;
     params77.activationFunc = ActivationFunction::RELU;
     params77.nlParams = { 0, 0 };
     params77.inDims = { 14, 14, 32, 1 };
@@ -1367,8 +1369,8 @@ void InitConvParams()
 
     ConvolutionParams params78;
     params78.inputType = Datatype::F16;
-    params78.inputLayout = DataLayout::bfyx;
-    params78.outputLayout = DataLayout::bfyx;
+    params78.input.layout = DataLayout::bfyx;
+    params78.output.layout = DataLayout::bfyx;
     params78.activationFunc = ActivationFunction::RELU;
     params78.nlParams = { 0, 0 };
     params78.inDims = { 14, 14, 512, 1 };
@@ -1381,8 +1383,8 @@ void InitConvParams()
 
     ConvolutionParams params79;
     params79.inputType = Datatype::F16;
-    params79.inputLayout = DataLayout::bfyx;
-    params79.outputLayout = DataLayout::bfyx;
+    params79.input.layout = DataLayout::bfyx;
+    params79.output.layout = DataLayout::bfyx;
     params79.activationFunc = ActivationFunction::RELU;
     params79.nlParams = { 0, 0 };
     params79.inDims = { 14, 14, 144, 1 };
@@ -1395,8 +1397,8 @@ void InitConvParams()
 
     ConvolutionParams params80;
     params80.inputType = Datatype::F16;
-    params80.inputLayout = DataLayout::bfyx;
-    params80.outputLayout = DataLayout::bfyx;
+    params80.input.layout = DataLayout::bfyx;
+    params80.output.layout = DataLayout::bfyx;
     params80.activationFunc = ActivationFunction::RELU;
     params80.nlParams = { 0, 0 };
     params80.inDims = { 14, 14, 144, 1 };
@@ -1409,8 +1411,8 @@ void InitConvParams()
 
     ConvolutionParams params81;
     params81.inputType = Datatype::F16;
-    params81.inputLayout = DataLayout::bfyx;
-    params81.outputLayout = DataLayout::bfyx;
+    params81.input.layout = DataLayout::bfyx;
+    params81.output.layout = DataLayout::bfyx;
     params81.activationFunc = ActivationFunction::RELU;
     params81.nlParams = { 0, 0 };
     params81.inDims = { 14, 14, 528, 1 };
@@ -1423,8 +1425,8 @@ void InitConvParams()
 
     ConvolutionParams params82;
     params82.inputType = Datatype::F16;
-    params82.inputLayout = DataLayout::bfyx;
-    params82.outputLayout = DataLayout::bfyx;
+    params82.input.layout = DataLayout::bfyx;
+    params82.output.layout = DataLayout::bfyx;
     params82.activationFunc = ActivationFunction::RELU;
     params82.nlParams = { 0, 0 };
     params82.inDims = { 14, 14, 528, 1 };
@@ -1437,8 +1439,8 @@ void InitConvParams()
 
     ConvolutionParams params83;
     params83.inputType = Datatype::F16;
-    params83.inputLayout = DataLayout::bfyx;
-    params83.outputLayout = DataLayout::bfyx;
+    params83.input.layout = DataLayout::bfyx;
+    params83.output.layout = DataLayout::bfyx;
     params83.activationFunc = ActivationFunction::RELU;
     params83.nlParams = { 0, 0 };
     params83.inDims = { 14, 14, 32, 1 };
@@ -1451,8 +1453,8 @@ void InitConvParams()
 
     ConvolutionParams params84;
     params84.inputType = Datatype::F16;
-    params84.inputLayout = DataLayout::bfyx;
-    params84.outputLayout = DataLayout::bfyx;
+    params84.input.layout = DataLayout::bfyx;
+    params84.output.layout = DataLayout::bfyx;
     params84.activationFunc = ActivationFunction::RELU;
     params84.nlParams = { 0, 0 };
     params84.inDims = { 14, 14, 32, 1 };
@@ -1465,8 +1467,8 @@ void InitConvParams()
 
     ConvolutionParams params85;
     params85.inputType = Datatype::F16;
-    params85.inputLayout = DataLayout::bfyx;
-    params85.outputLayout = DataLayout::bfyx;
+    params85.input.layout = DataLayout::bfyx;
+    params85.output.layout = DataLayout::bfyx;
     params85.activationFunc = ActivationFunction::RELU;
     params85.nlParams = { 0, 0 };
     params85.inDims = { 14, 14, 528, 1 };
@@ -1479,8 +1481,8 @@ void InitConvParams()
 
     ConvolutionParams params86;
     params86.inputType = Datatype::F16;
-    params86.inputLayout = DataLayout::bfyx;
-    params86.outputLayout = DataLayout::bfyx;
+    params86.input.layout = DataLayout::bfyx;
+    params86.output.layout = DataLayout::bfyx;
     params86.activationFunc = ActivationFunction::RELU;
     params86.nlParams = { 0, 0 };
     params86.inDims = { 14, 14, 160, 1 };
@@ -1493,8 +1495,8 @@ void InitConvParams()
 
     ConvolutionParams params87;
     params87.inputType = Datatype::F16;
-    params87.inputLayout = DataLayout::bfyx;
-    params87.outputLayout = DataLayout::bfyx;
+    params87.input.layout = DataLayout::bfyx;
+    params87.output.layout = DataLayout::bfyx;
     params87.activationFunc = ActivationFunction::RELU;
     params87.nlParams = { 0, 0 };
     params87.inDims = { 14, 14, 160, 1 };
@@ -1507,8 +1509,8 @@ void InitConvParams()
 
     ConvolutionParams params88;
     params88.inputType = Datatype::F16;
-    params88.inputLayout = DataLayout::bfyx;
-    params88.outputLayout = DataLayout::bfyx;
+    params88.input.layout = DataLayout::bfyx;
+    params88.output.layout = DataLayout::bfyx;
     params88.activationFunc = ActivationFunction::RELU;
     params88.nlParams = { 0, 0 };
     params88.inDims = { 14, 14, 528, 1 };
@@ -1521,8 +1523,8 @@ void InitConvParams()
 
     ConvolutionParams params89;
     params89.inputType = Datatype::F16;
-    params89.inputLayout = DataLayout::bfyx;
-    params89.outputLayout = DataLayout::bfyx;
+    params89.input.layout = DataLayout::bfyx;
+    params89.output.layout = DataLayout::bfyx;
     params89.activationFunc = ActivationFunction::RELU;
     params89.nlParams = { 0, 0 };
     params89.inDims = { 7, 7, 832, 1 };
@@ -1535,8 +1537,8 @@ void InitConvParams()
 
     ConvolutionParams params90;
     params90.inputType = Datatype::F16;
-    params90.inputLayout = DataLayout::bfyx;
-    params90.outputLayout = DataLayout::bfyx;
+    params90.input.layout = DataLayout::bfyx;
+    params90.output.layout = DataLayout::bfyx;
     params90.activationFunc = ActivationFunction::RELU;
     params90.nlParams = { 0, 0 };
     params90.inDims = { 7, 7, 832, 1 };
@@ -1549,8 +1551,8 @@ void InitConvParams()
 
     ConvolutionParams params91;
     params91.inputType = Datatype::F16;
-    params91.inputLayout = DataLayout::bfyx;
-    params91.outputLayout = DataLayout::bfyx;
+    params91.input.layout = DataLayout::bfyx;
+    params91.output.layout = DataLayout::bfyx;
     params91.activationFunc = ActivationFunction::RELU;
     params91.nlParams = { 0, 0 };
     params91.inDims = { 7, 7, 832, 1 };
@@ -1563,8 +1565,8 @@ void InitConvParams()
 
     ConvolutionParams params92;
     params92.inputType = Datatype::F16;
-    params92.inputLayout = DataLayout::bfyx;
-    params92.outputLayout = DataLayout::bfyx;
+    params92.input.layout = DataLayout::bfyx;
+    params92.output.layout = DataLayout::bfyx;
     params92.activationFunc = ActivationFunction::RELU;
     params92.nlParams = { 0, 0 };
     params92.inDims = { 7, 7, 160, 1 };
@@ -1577,8 +1579,8 @@ void InitConvParams()
 
     ConvolutionParams params93;
     params93.inputType = Datatype::F16;
-    params93.inputLayout = DataLayout::bfyx;
-    params93.outputLayout = DataLayout::bfyx;
+    params93.input.layout = DataLayout::bfyx;
+    params93.output.layout = DataLayout::bfyx;
     params93.activationFunc = ActivationFunction::RELU;
     params93.nlParams = { 0, 0 };
     params93.inDims = { 7, 7, 160, 1 };
@@ -1591,8 +1593,8 @@ void InitConvParams()
 
     ConvolutionParams params94;
     params94.inputType = Datatype::F16;
-    params94.inputLayout = DataLayout::bfyx;
-    params94.outputLayout = DataLayout::bfyx;
+    params94.input.layout = DataLayout::bfyx;
+    params94.output.layout = DataLayout::bfyx;
     params94.activationFunc = ActivationFunction::RELU;
     params94.nlParams = { 0, 0 };
     params94.inDims = { 7, 7, 32, 1 };
@@ -1605,8 +1607,8 @@ void InitConvParams()
 
     ConvolutionParams params95;
     params95.inputType = Datatype::F16;
-    params95.inputLayout = DataLayout::bfyx;
-    params95.outputLayout = DataLayout::bfyx;
+    params95.input.layout = DataLayout::bfyx;
+    params95.output.layout = DataLayout::bfyx;
     params95.activationFunc = ActivationFunction::RELU;
     params95.nlParams = { 0, 0 };
     params95.inDims = { 7, 7, 32, 1 };
@@ -1619,8 +1621,8 @@ void InitConvParams()
 
     ConvolutionParams params96;
     params96.inputType = Datatype::F16;
-    params96.inputLayout = DataLayout::bfyx;
-    params96.outputLayout = DataLayout::bfyx;
+    params96.input.layout = DataLayout::bfyx;
+    params96.output.layout = DataLayout::bfyx;
     params96.activationFunc = ActivationFunction::RELU;
     params96.nlParams = { 0, 0 };
     params96.inDims = { 7, 7, 832, 1 };
@@ -1633,8 +1635,8 @@ void InitConvParams()
 
     ConvolutionParams params97;
     params97.inputType = Datatype::F16;
-    params97.inputLayout = DataLayout::bfyx;
-    params97.outputLayout = DataLayout::bfyx;
+    params97.input.layout = DataLayout::bfyx;
+    params97.output.layout = DataLayout::bfyx;
     params97.activationFunc = ActivationFunction::RELU;
     params97.nlParams = { 0, 0 };
     params97.inDims = { 7, 7, 832, 1 };
@@ -1647,8 +1649,8 @@ void InitConvParams()
 
     ConvolutionParams params98;
     params98.inputType = Datatype::F16;
-    params98.inputLayout = DataLayout::bfyx;
-    params98.outputLayout = DataLayout::bfyx;
+    params98.input.layout = DataLayout::bfyx;
+    params98.output.layout = DataLayout::bfyx;
     params98.activationFunc = ActivationFunction::RELU;
     params98.nlParams = { 0, 0 };
     params98.inDims = { 7, 7, 48, 1 };
@@ -1661,8 +1663,8 @@ void InitConvParams()
 
     ConvolutionParams params99;
     params99.inputType = Datatype::F16;
-    params99.inputLayout = DataLayout::bfyx;
-    params99.outputLayout = DataLayout::bfyx;
+    params99.input.layout = DataLayout::bfyx;
+    params99.output.layout = DataLayout::bfyx;
     params99.activationFunc = ActivationFunction::RELU;
     params99.nlParams = { 0, 0 };
     params99.inDims = { 7, 7, 48, 1 };
@@ -1675,8 +1677,8 @@ void InitConvParams()
 
     ConvolutionParams params100;
     params100.inputType = Datatype::F16;
-    params100.inputLayout = DataLayout::bfyx;
-    params100.outputLayout = DataLayout::bfyx;
+    params100.input.layout = DataLayout::bfyx;
+    params100.output.layout = DataLayout::bfyx;
     params100.activationFunc = ActivationFunction::RELU;
     params100.nlParams = { 0, 0 };
     params100.inDims = { 7, 7, 832, 1 };
@@ -1689,8 +1691,8 @@ void InitConvParams()
 
     ConvolutionParams params101;
     params101.inputType = Datatype::F16;
-    params101.inputLayout = DataLayout::bfyx;
-    params101.outputLayout = DataLayout::bfyx;
+    params101.input.layout = DataLayout::bfyx;
+    params101.output.layout = DataLayout::bfyx;
     params101.activationFunc = ActivationFunction::RELU;
     params101.nlParams = { 0, 0 };
     params101.inDims = { 7, 7, 192, 1 };
@@ -1703,8 +1705,8 @@ void InitConvParams()
 
     ConvolutionParams params102;
     params102.inputType = Datatype::F16;
-    params102.inputLayout = DataLayout::bfyx;
-    params102.outputLayout = DataLayout::bfyx;
+    params102.input.layout = DataLayout::bfyx;
+    params102.output.layout = DataLayout::bfyx;
     params102.activationFunc = ActivationFunction::RELU;
     params102.nlParams = { 0, 0 };
     params102.inDims = { 7, 7, 192, 1 };
@@ -1717,8 +1719,8 @@ void InitConvParams()
 
     ConvolutionParams params103;
     params103.inputType = Datatype::F16;
-    params103.inputLayout = DataLayout::bfyx;
-    params103.outputLayout = DataLayout::bfyx;
+    params103.input.layout = DataLayout::bfyx;
+    params103.output.layout = DataLayout::bfyx;
     params103.activationFunc = ActivationFunction::RELU;
     params103.nlParams = { 0, 0 };
     params103.inDims = { 7, 7, 832, 1 };
@@ -1731,8 +1733,8 @@ void InitConvParams()
 
     ConvolutionParams params104;
     params104.inputType = Datatype::F16;
-    params104.inputLayout = DataLayout::bfyx;
-    params104.outputLayout = DataLayout::bfyx;
+    params104.input.layout = DataLayout::bfyx;
+    params104.output.layout = DataLayout::bfyx;
     params104.activationFunc = ActivationFunction::RELU;
     params104.nlParams = { 0, 0 };
     params104.inDims = { 27, 27, 48, 1 };
@@ -1745,8 +1747,8 @@ void InitConvParams()
 
     ConvolutionParams params105;
     params105.inputType = Datatype::F16;
-    params105.inputLayout = DataLayout::bfyx;
-    params105.outputLayout = DataLayout::bfyx;
+    params105.input.layout = DataLayout::bfyx;
+    params105.output.layout = DataLayout::bfyx;
     params105.activationFunc = ActivationFunction::RELU;
     params105.nlParams = { 0, 0 };
     params105.inDims = { 13, 13, 256, 1 };
@@ -1759,8 +1761,8 @@ void InitConvParams()
 
     ConvolutionParams params106;
     params106.inputType = Datatype::F16;
-    params106.inputLayout = DataLayout::bfyx;
-    params106.outputLayout = DataLayout::bfyx;
+    params106.input.layout = DataLayout::bfyx;
+    params106.output.layout = DataLayout::bfyx;
     params106.activationFunc = ActivationFunction::RELU;
     params106.nlParams = { 0, 0 };
     params106.inDims = { 13, 13, 192, 1 };
@@ -1773,8 +1775,8 @@ void InitConvParams()
 
     ConvolutionParams params107;
     params107.inputType = Datatype::F16;
-    params107.inputLayout = DataLayout::bfyx;
-    params107.outputLayout = DataLayout::bfyx;
+    params107.input.layout = DataLayout::bfyx;
+    params107.output.layout = DataLayout::bfyx;
     params107.activationFunc = ActivationFunction::RELU;
     params107.nlParams = { 0, 0 };
     params107.inDims = { 13, 13, 192, 1 };
@@ -1787,8 +1789,8 @@ void InitConvParams()
 
     ConvolutionParams params108;
     params108.inputType = Datatype::F16;
-    params108.inputLayout = DataLayout::bfyx;
-    params108.outputLayout = DataLayout::bfyx;
+    params108.input.layout = DataLayout::bfyx;
+    params108.output.layout = DataLayout::bfyx;
     params108.activationFunc = ActivationFunction::RELU;
     params108.nlParams = { 0, 0 };
     params108.inDims = { 7, 7, 160, 1 };
@@ -1801,8 +1803,8 @@ void InitConvParams()
 
     ConvolutionParams params109;
     params109.inputType = Datatype::F16;
-    params109.inputLayout = DataLayout::bfyx;
-    params109.outputLayout = DataLayout::bfyx;
+    params109.input.layout = DataLayout::bfyx;
+    params109.output.layout = DataLayout::bfyx;
     params109.activationFunc = ActivationFunction::RELU;
     params109.nlParams = { 0, 0 };
     params109.inDims = { 7, 7, 32, 1 };
@@ -1815,8 +1817,8 @@ void InitConvParams()
 
     ConvolutionParams params110;
     params110.inputType = Datatype::F16;
-    params110.inputLayout = DataLayout::bfyx;
-    params110.outputLayout = DataLayout::bfyx;
+    params110.input.layout = DataLayout::bfyx;
+    params110.output.layout = DataLayout::bfyx;
     params110.activationFunc = ActivationFunction::RELU;
     params110.nlParams = { 0, 0 };
     params110.inDims = { 7, 7, 48, 1 };
@@ -1829,8 +1831,8 @@ void InitConvParams()
 
     ConvolutionParams params111;
     params111.inputType = Datatype::F16;
-    params111.inputLayout = DataLayout::bfyx;
-    params111.outputLayout = DataLayout::bfyx;
+    params111.input.layout = DataLayout::bfyx;
+    params111.output.layout = DataLayout::bfyx;
     params111.activationFunc = ActivationFunction::RELU;
     params111.nlParams = { 0, 0 };
     params111.inDims = { 7, 7, 192, 1 };
@@ -1843,8 +1845,8 @@ void InitConvParams()
 
     ConvolutionParams params112;
     params112.inputType = Datatype::F16;
-    params112.inputLayout = DataLayout::bfyx;
-    params112.outputLayout = DataLayout::bfyx;
+    params112.input.layout = DataLayout::bfyx;
+    params112.output.layout = DataLayout::bfyx;
     params112.activationFunc = ActivationFunction::RELU;
     params112.nlParams = { 0, 0 };
     params112.inDims = { 1000, 600, 3, 1 };
@@ -1857,8 +1859,8 @@ void InitConvParams()
 
     ConvolutionParams params113;
     params113.inputType = Datatype::F16;
-    params113.inputLayout = DataLayout::bfyx;
-    params113.outputLayout = DataLayout::bfyx;
+    params113.input.layout = DataLayout::bfyx;
+    params113.output.layout = DataLayout::bfyx;
     params113.activationFunc = ActivationFunction::RELU;
     params113.nlParams = { 0, 0 };
     params113.inDims = { 1000, 600, 3, 1 };
@@ -1871,8 +1873,8 @@ void InitConvParams()
 
     ConvolutionParams params114;
     params114.inputType = Datatype::F16;
-    params114.inputLayout = DataLayout::bfyx;
-    params114.outputLayout = DataLayout::bfyx;
+    params114.input.layout = DataLayout::bfyx;
+    params114.output.layout = DataLayout::bfyx;
     params114.activationFunc = ActivationFunction::RELU;
     params114.nlParams = { 0, 0 };
     params114.inDims = { 251, 151, 96, 1 };
@@ -1885,8 +1887,8 @@ void InitConvParams()
 
     ConvolutionParams params115;
     params115.inputType = Datatype::F16;
-    params115.inputLayout = DataLayout::bfyx;
-    params115.outputLayout = DataLayout::bfyx;
+    params115.input.layout = DataLayout::bfyx;
+    params115.output.layout = DataLayout::bfyx;
     params115.activationFunc = ActivationFunction::RELU;
     params115.nlParams = { 0, 0 };
     params115.inDims = { 251, 151, 96, 1 };
@@ -1899,8 +1901,8 @@ void InitConvParams()
 
     ConvolutionParams params116;
     params116.inputType = Datatype::F16;
-    params116.inputLayout = DataLayout::bfyx;
-    params116.outputLayout = DataLayout::bfyx;
+    params116.input.layout = DataLayout::bfyx;
+    params116.output.layout = DataLayout::bfyx;
     params116.activationFunc = ActivationFunction::RELU;
     params116.nlParams = { 0, 0 };
     params116.inDims = { 64, 39, 256, 1 };
@@ -1913,8 +1915,8 @@ void InitConvParams()
 
     ConvolutionParams params117;
     params117.inputType = Datatype::F16;
-    params117.inputLayout = DataLayout::bfyx;
-    params117.outputLayout = DataLayout::bfyx;
+    params117.input.layout = DataLayout::bfyx;
+    params117.output.layout = DataLayout::bfyx;
     params117.activationFunc = ActivationFunction::RELU;
     params117.nlParams = { 0, 0 };
     params117.inDims = { 64, 39, 256, 1 };
@@ -1927,8 +1929,8 @@ void InitConvParams()
 
     ConvolutionParams params118;
     params118.inputType = Datatype::F16;
-    params118.inputLayout = DataLayout::bfyx;
-    params118.outputLayout = DataLayout::bfyx;
+    params118.input.layout = DataLayout::bfyx;
+    params118.output.layout = DataLayout::bfyx;
     params118.activationFunc = ActivationFunction::RELU;
     params118.nlParams = { 0, 0 };
     params118.inDims = { 64, 39, 384, 1 };
@@ -1941,8 +1943,8 @@ void InitConvParams()
 
     ConvolutionParams params119;
     params119.inputType = Datatype::F16;
-    params119.inputLayout = DataLayout::bfyx;
-    params119.outputLayout = DataLayout::bfyx;
+    params119.input.layout = DataLayout::bfyx;
+    params119.output.layout = DataLayout::bfyx;
     params119.activationFunc = ActivationFunction::RELU;
     params119.nlParams = { 0, 0 };
     params119.inDims = { 64, 39, 384, 1 };
@@ -1955,8 +1957,8 @@ void InitConvParams()
 
     ConvolutionParams params120;
     params120.inputType = Datatype::F16;
-    params120.inputLayout = DataLayout::bfyx;
-    params120.outputLayout = DataLayout::bfyx;
+    params120.input.layout = DataLayout::bfyx;
+    params120.output.layout = DataLayout::bfyx;
     params120.activationFunc = ActivationFunction::RELU;
     params120.nlParams = { 0, 0 };
     params120.inDims = { 64, 39, 384, 1 };
@@ -1969,8 +1971,8 @@ void InitConvParams()
 
     ConvolutionParams params121;
     params121.inputType = Datatype::F16;
-    params121.inputLayout = DataLayout::bfyx;
-    params121.outputLayout = DataLayout::bfyx;
+    params121.input.layout = DataLayout::bfyx;
+    params121.output.layout = DataLayout::bfyx;
     params121.activationFunc = ActivationFunction::RELU;
     params121.nlParams = { 0, 0 };
     params121.inDims = { 64, 39, 384, 1 };
@@ -1983,8 +1985,8 @@ void InitConvParams()
 
     ConvolutionParams params122;
     params122.inputType = Datatype::F16;
-    params122.inputLayout = DataLayout::bfyx;
-    params122.outputLayout = DataLayout::bfyx;
+    params122.input.layout = DataLayout::bfyx;
+    params122.output.layout = DataLayout::bfyx;
     params122.activationFunc = ActivationFunction::RELU;
     params122.nlParams = { 0, 0 };
     params122.inDims = { 64, 39, 1024, 1 };
@@ -1997,8 +1999,8 @@ void InitConvParams()
 
     ConvolutionParams params123;
     params123.inputType = Datatype::F16;
-    params123.inputLayout = DataLayout::bfyx;
-    params123.outputLayout = DataLayout::bfyx;
+    params123.input.layout = DataLayout::bfyx;
+    params123.output.layout = DataLayout::bfyx;
     params123.activationFunc = ActivationFunction::RELU;
     params123.nlParams = { 0, 0 };
     params123.inDims = { 64, 39, 1024, 1 };
@@ -2011,8 +2013,8 @@ void InitConvParams()
 
     ConvolutionParams params124;
     params124.inputType = Datatype::F16;
-    params124.inputLayout = DataLayout::bfyx;
-    params124.outputLayout = DataLayout::bfyx;
+    params124.input.layout = DataLayout::bfyx;
+    params124.output.layout = DataLayout::bfyx;
     params124.activationFunc = ActivationFunction::RELU;
     params124.nlParams = { 0, 0 };
     params124.inDims = { 64, 39, 256, 1 };
@@ -2025,8 +2027,8 @@ void InitConvParams()
 
     ConvolutionParams params125;
     params125.inputType = Datatype::F16;
-    params125.inputLayout = DataLayout::bfyx;
-    params125.outputLayout = DataLayout::bfyx;
+    params125.input.layout = DataLayout::bfyx;
+    params125.output.layout = DataLayout::bfyx;
     params125.activationFunc = ActivationFunction::RELU;
     params125.nlParams = { 0, 0 };
     params125.inDims = { 64, 39, 256, 1 };
@@ -2039,8 +2041,8 @@ void InitConvParams()
 
     ConvolutionParams params126;
     params126.inputType = Datatype::F16;
-    params126.inputLayout = DataLayout::bfyx;
-    params126.outputLayout = DataLayout::bfyx;
+    params126.input.layout = DataLayout::bfyx;
+    params126.output.layout = DataLayout::bfyx;
     params126.activationFunc = ActivationFunction::NONE;
     params126.nlParams = { 1, 0 };
     params126.inDims = { 64, 39, 256, 1 };
@@ -2053,8 +2055,8 @@ void InitConvParams()
 
     ConvolutionParams params127;
     params127.inputType = Datatype::F16;
-    params127.inputLayout = DataLayout::bfyx;
-    params127.outputLayout = DataLayout::bfyx;
+    params127.input.layout = DataLayout::bfyx;
+    params127.output.layout = DataLayout::bfyx;
     params127.activationFunc = ActivationFunction::NONE;
     params127.nlParams = { 1, 0 };
     params127.inDims = { 64, 39, 256, 1 };
@@ -2195,4 +2197,5 @@ void InitConvParams()
         params126,
         params127,
     };
+#endif
 }

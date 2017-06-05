@@ -21,8 +21,9 @@
 #include "api/CPP/profiling.hpp"
 #include <iostream>
 #include <sstream>
+#include <cmath>
 
-namespace neural { namespace gpu {
+namespace KernelSelector { namespace gpu {
 
 typedef std::vector<std::pair<std::string, std::string>> jit_definitions;
 
@@ -43,7 +44,10 @@ template<>
 inline std::string to_code_string<float>(float val) {
     // 64 chars should be enought to store: "-0x0.123456p-123f /*-0.123456e-123*/"
     char buffer[64] = "";
-    std::snprintf(buffer, sizeof(buffer), "%.6af /*%.4g*/", double(val), double(val));
+    if (std::isinf(val))
+        std::snprintf(buffer, sizeof(buffer), "%sINFINITY", std::signbit(val) ? "-" : "");
+    else
+        std::snprintf(buffer, sizeof(buffer), "%.6af /*%.4g*/", double(val), double(val));
     return buffer;
 }
 
@@ -51,7 +55,10 @@ template<>
 inline std::string to_code_string<double>(double val) {
     // 64 chars should be enought to store: "-0x0.1234567890123p-1234 /*-0.1234567890123e-1074*/"
     char buffer[64] = "";
-    std::snprintf(buffer, sizeof(buffer), "%.13a /*%.4g*/", val, val);
+    if (std::isinf(val))
+        std::snprintf(buffer, sizeof(buffer), "%sINFINITY", std::signbit(val) ? "-" : "");
+    else
+        std::snprintf(buffer, sizeof(buffer), "%.13a /*%.4g*/", val, val);
     return buffer;
 }
 
@@ -130,6 +137,29 @@ inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, 
     return std::static_pointer_cast<jit_constant>(std::make_shared<vector_jit_constant>(name, value));
 }
 
+class padding_jit_constant : public jit_constant {
+    vector_jit_constant _lower_size_jit;
+    vector_jit_constant _upper_size_jit;
+
+public:
+    padding_jit_constant(const std::string& name, const cldnn::padding& pad)
+        : jit_constant(name),
+          _lower_size_jit(name + "_LOWER", pad.lower_size()),
+          _upper_size_jit(name + "_UPPER", pad.upper_size()) {}
+
+    jit_definitions get_definitions() const override {
+        auto&& lower_jits = _lower_size_jit.get_definitions();
+        auto&& upper_jits = _upper_size_jit.get_definitions();
+        lower_jits.insert(lower_jits.cend(), upper_jits.cbegin(), upper_jits.cend());
+
+        return lower_jits;
+    }
+};
+
+inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const cldnn::padding& value) {
+    return std::make_shared<padding_jit_constant>(name, value);
+}
+
 class memory_jit_constant : public vector_jit_constant {
     const cldnn::memory _mem;
 
@@ -153,6 +183,8 @@ public:
 inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const cldnn::memory& value) {
     return std::static_pointer_cast<jit_constant>(std::make_shared<memory_jit_constant>(name, value));
 }
+
+
 
 class memories_jit_constant : public vector_jit_constant {
     const std::vector<cldnn::memory> _mem;

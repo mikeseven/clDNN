@@ -21,7 +21,7 @@
 
 /// \brief Class providing interface to retrieve a list of primitive implementations per primitive id
 ///
-namespace neural { namespace gpu { namespace cache {
+namespace KernelSelector { namespace gpu { namespace cache {
 
 struct primitive_db
 {

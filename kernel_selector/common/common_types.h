@@ -18,7 +18,7 @@
 
 #include <stdint.h>
 
-namespace KernelSelctor
+namespace KernelSelector
 {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // KernelType
@@ -51,6 +51,17 @@ namespace KernelSelctor
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // WeightsType
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    enum class WeightsType
+    {
+        UNSUPPORTED,
+        F16,
+        F32,
+        INT8,
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Convert Input types
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     enum class ConvertTypes
@@ -73,6 +84,7 @@ namespace KernelSelctor
         LOGISTIC,
         HYPERBOLIC_TAN,
         RELU,
+        RELU_NEGATIVE_SLOPE,
         BRELU,
         SOFTRELU,
         ABS,
@@ -162,81 +174,47 @@ namespace KernelSelctor
         Size(T x, T y) : x(x), y(y) {}
     };
 
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // Dims
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    template <typename T>
-    struct Dims 
-    {
-        T x = 0;
-        T y = 0;
-        T z = 0;
-        T w = 0;
-
-        Dims() = default;
-        Dims(const Dims& dim) = default;
-        Dims& operator=(const Dims&) = default;
-
-        Dims(T x) : x(x) {}
-        Dims(T x, T y) : x(x), y(y) {}
-        Dims(T x, T y, T z) : x(x), y(y), z(z) {}
-        Dims(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
-
-        inline T Length() const { return x*y*z*w; }
-
-        inline Dims& operator+=(const Dims& v)
-        {
-            x += v.x;
-            y += v.y;
-            z += v.z;
-            w += v.w;
-            return *this;
-        }
-
-        inline Dims& operator-=(const Dims& v)
-        {
-            x -= v.x;
-            y -= v.y;
-            z -= v.z;
-            w -= v.w;
-            return *this;
-        }
-
-        inline friend Dims operator+(Dims v1, const Dims& v2)
-        {
-            v1 += v2;
-            return v1;
-        }
-
-        inline friend Dims operator-(Dims v1, const Dims& v2)
-        {
-            v1 -= v2;
-            return v1;
-        }
-    };
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // typedefs
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    typedef unsigned int uint;
-    typedef Size<uint> uSize;
-    typedef Dims<uint> uDims;
-    typedef Dims<std::size_t> stDims;
+    typedef Size<uint32_t> uSize;
+    typedef Size<size_t>   stSize;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // TensorDesc
+    // BytesPerElement
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct TensorDesc
+    inline uint32_t BytesPerElement(Datatype dt)
     {
-        std::size_t offset = 0;
-        uDims pitches;
-        bool zeroPadded = false;
+        switch (dt)
+        {
+        case Datatype::F16:
+            return 2;
+            break;
+        case Datatype::F32:
+            return 4;
+            break;
+        default:
+            return 0;
+            break;
+        }
+    }
 
-        TensorDesc() = default;
-        TensorDesc(std::size_t of, const uDims& p, bool zp) : offset(of), pitches(p), zeroPadded(zp) {}
-        TensorDesc(const TensorDesc&) = default;
-        TensorDesc& operator=(const TensorDesc&) = default;
-        std::size_t Size() { return offset + pitches.w; }
-    };
+    inline uint32_t BytesPerElement(WeightsType wt)
+    {
+        switch (wt)
+        {
+        case WeightsType::INT8:
+            return 1;
+            break;
+        case WeightsType::F16:
+            return 2;
+            break;
+        case WeightsType::F32:
+            return 4;
+            break;
+        default:
+            return 0;
+            break;
+        }
+    }
 }

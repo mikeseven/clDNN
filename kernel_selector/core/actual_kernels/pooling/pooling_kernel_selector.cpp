@@ -17,7 +17,7 @@
 #include "pooling_kernel_selector.h"
 #include "pooling_kernel_ref.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     PoolingKernelSelctor::PoolingKernelSelctor()
     {

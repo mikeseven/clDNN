@@ -17,7 +17,7 @@
 #include "convert_kernel_selector.h"
 #include "convert_kernel_ref.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     ConvertKernelSelctor::ConvertKernelSelctor()
     {

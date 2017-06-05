@@ -16,18 +16,20 @@
 
 #include "normalization_kernel_ref.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     ParamsKey NormalizationKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetOutputLayout(bfyx);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
+        k.SetInputLayout(DataLayout::bfyx);
+        k.SetOutputLayout(DataLayout::bfyx);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.SetBatchingSupport();
         k.SetNormalizationMode(NormalizationMode::WITHIN_CHANNEL);
         k.SetNormalizationMode(NormalizationMode::ACROSS_CHANNELS);
         return k;
@@ -40,12 +42,11 @@ namespace KernelSelctor
         KernelData kd = KernelData::Default<NormalizationParams>(params, 1);
 
         NormalizationParams& newParams = *static_cast<NormalizationParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
 
         std::stringstream jit;
         
-        const uint round_norm_size = (newParams.normParams.localSize / 2) * 2 + 1;
-        uint numElement = round_norm_size * round_norm_size;
+        const uint32_t round_norm_size = (newParams.normParams.localSize / 2) * 2 + 1;
+        uint32_t numElement = round_norm_size * round_norm_size;
 
         if (newParams.normParams.normMode == NormalizationMode::ACROSS_CHANNELS)
         {
@@ -63,10 +64,10 @@ namespace KernelSelctor
             << "#define BETA (" << Float2Str(newParams.normParams.beta) << ")\n"
             << "#define NORM_K (1)\n";
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "normalization");
+        kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "normalization", "", ROUND_ROBIN, "");
         kernel.args_desc = GetArgumentDesc(1, false, false);
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;

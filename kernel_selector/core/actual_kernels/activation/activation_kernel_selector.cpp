@@ -18,7 +18,7 @@
 #include "activation_kernel_opt.h"
 #include "activation_kernel_ref.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     ActivationKernelSelctor::ActivationKernelSelctor()
     {

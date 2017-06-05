@@ -27,6 +27,10 @@
 #include "api/CPP/deconvolution.hpp"
 #include "api/CPP/fully_connected.hpp"
 
+#include "ks_reorder.hpp"
+
+#include "kernel_selector_common.h"
+#include "kernel_selector_helper.h"
 #include <boost/optional.hpp>
 
 #include <vector>
@@ -97,6 +101,7 @@ private:
     };
 
     std::map<cache_key, std::shared_ptr<reorder>> _cached_reorders;
+    std::map<cache_key, std::shared_ptr<ks_reorder>> _cached_ks_reorders;
 
     layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, boost::optional<layout> const& output_layout);
     layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, boost::optional<layout> const& output_layout);
@@ -106,6 +111,9 @@ private:
     //for pair.first == nullptr, pair.second == true
     std::pair<std::shared_ptr<cldnn::reorder>, bool>
     create_reorder_if_needed(const layout& current_layout, const cldnn::primitive_id& memid, layout const& expected_layout);
+
+    std::pair<std::shared_ptr<cldnn::ks_reorder>, bool>
+    create_ks_sreorder_if_needed(const cldnn::primitive_id& memid, layout const& expected_layout, const KernelSelector::WeightsReorderParams* reorder_params);
 
 public:
     explicit layout_optimizer(engine_impl::ptr eng, bool enabled = true);
@@ -155,6 +163,19 @@ public:
         return meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>();
     }
 
+    template <typename T>
+    void add_reoder_to_topology(T& reorder, const std::shared_ptr<data> src_data)
+    {
+        if (reorder.first)
+        {
+            _topology.add(src_data);
+            if (!reorder.second) //returned reorder is a new primitive (i.e. not cached), add it to topology and as an output
+            {
+                _topology.add(reorder.first);
+            }
+        }
+    }
+
     template <class T>
     auto add_weights_for_optimization(const std::shared_ptr<data> data_prim,
                                       data_type type,
@@ -162,14 +183,46 @@ public:
                                       boost::optional<layout> user_layout = boost::optional<layout>())
     {
         auto reorder = get_reorder(data_prim->mem.get_layout(), data_prim->id, type, user, user_layout);
-        if (reorder.first)
-        {
-            _topology.add(data_prim);
-            if (!reorder.second) //returned reorder is a new primitive (i.e. not cached), add it to topology and as an output
-                _topology.add(reorder.first);
-        }
-
+        add_reoder_to_topology(reorder, data_prim);
         return reorder;
+    }
+
+    void add_ks_weights_for_optimization(
+        const KernelSelector::WeightsReorderParams& reorder_params,
+        const std::shared_ptr<data> data_prim,
+        data_type type)
+    {
+        if (reorder_params.engine != KernelSelector::WeightsReorderParams::Engine::NONE &&
+            type == data_type::weights)
+        {
+            const auto& old_layout = data_prim->mem.get_layout();
+
+            auto input_id = data_prim->id;
+            if (reorder_params.engine == KernelSelector::WeightsReorderParams::Engine::CPU &&
+                reorder_params.cpu_kernel != nullptr)
+            {
+                const auto intermediate_format = weight_layput_2_tensor_format(reorder_params.cpu_kernel->GetInputLayout());
+                if (intermediate_format != old_layout.format)
+                {
+                    const layout intermediate_layout = { old_layout.data_type, intermediate_format, old_layout.size.transform(intermediate_format, 1) };
+
+                    auto reorder = create_reorder_if_needed(old_layout, input_id, intermediate_layout);
+                    if (reorder.first)
+                    {
+                        add_reoder_to_topology(reorder, data_prim);
+                        input_id = reorder.first->id;
+                    }
+                }
+            }
+
+            const auto bpp = data_type_traits::size_of(old_layout.data_type);
+            layout expected_layout = {
+                old_layout.data_type, format::bfyx, // simple linear format (flatten to x channel)
+                {1,1,1,(tensor::value_type)(reorder_params.new_buffer_size / bpp)}
+            };
+            auto reorder = create_ks_sreorder_if_needed(input_id, expected_layout, &reorder_params);
+            add_reoder_to_topology(reorder, data_prim);
+        }
     }
 
     void set_optimization_attribute(optimization_attributes_type attribute, int32_t val)

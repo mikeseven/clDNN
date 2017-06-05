@@ -30,13 +30,13 @@
 #endif // ENABLE_ENV_PRINT
 
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
 #ifdef ENABLE_ENV
     std::string strip(const std::string str)
     {
-        std::size_t start = str.find_first_not_of(' ');
-        std::size_t end = str.find_last_not_of(' ');
+        size_t start = str.find_first_not_of(' ');
+        size_t end = str.find_last_not_of(' ');
         if (start == std::string::npos ||
             end == std::string::npos)
         {

@@ -18,21 +18,20 @@
 #include "kernel_selector_common.h"
 #include <sstream>
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     std::string BaseParams::to_string() const
     {
         std::stringstream s;
-        s << toString(inputType) << "_";
-        s << toString(inputLayout) << "_";
-        s << toString(outputLayout) << "_";
+        s << toString(inputs[0].dtype) << "_";
+        s << toString(inputs[0].layout) << "_";
+        s << toString(output.layout) << "_";
         s << toString(activationFunc) << "_";
         s << nlParams.m << "_" << nlParams.n << "_";
-        s << inDims.x << "_" << inDims.y << "_" << inDims.z << "_" << inDims.w << "_";
-        s << inDesc.offset << "_" << inDesc.pitches.x << "_" << inDesc.pitches.y << "_" << inDesc.pitches.z << "_" << inDesc.pitches.w << "_";
-        s << outDims.x << "_" << outDims.y << "_" << outDims.z << "_" << outDims.w << "_";
-        s << outDesc.offset << "_" << outDesc.pitches.x << "_" << outDesc.pitches.y << "_" << outDesc.pitches.z << "_" << outDesc.pitches.w;
-
+        s << inputs[0].x().v << "_" << inputs[0].y().v << "_" << inputs[0].feature().v << "_" << inputs[0].batch().v << "_";
+        s << inputs[0].offset << "_" << inputs[0].x().pitch << "_" << inputs[0].y().pitch << "_" << inputs[0].feature().pitch << "_" << inputs[0].batch().pitch << "_";
+        s << output.x().v << "_" << output.y().v << "_" << output.feature().v << "_" << output.batch().v << "_";
+        s << output.offset << "_" << output.x().pitch << "_" << output.y().pitch << "_" << output.feature().pitch << "_" << output.batch().pitch;
         return s.str();
     }
 

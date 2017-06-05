@@ -17,13 +17,15 @@
 #include "fully_connected_kernel_selector.h"
 #include "fully_connected_kernel_ref.h"
 #include "fully_connected_kernel_gemm.h"
+#include "fully_connected_gpu_bx_bs_x_bsv16_b1.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     FullyConnectedKernelSelctor::FullyConnectedKernelSelctor()
     {
         Attach<FullyConnectedKernelRef>();
         Attach<FullyConnectedKernelGEMM>();
+        Attach<FullyConnected_bx_bs_x_bsv16_b1>();
     }
 
     KernelsData FullyConnectedKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const

@@ -18,7 +18,7 @@
 
 #include "kernel_selector.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     class ConvolutionKernelSelctor : public KernelSelctorBase
     {

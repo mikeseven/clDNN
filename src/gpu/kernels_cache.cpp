@@ -21,10 +21,15 @@
 #include <cassert>
 #include <sstream>
 #include <fstream>
+#include <set>
+
+#ifdef NDEBUG
+#define OUT_PORGRAM_TO_FILE
+#endif
 
 namespace neural { namespace gpu {
 
-const char program_dump_file_name[] = "clDNN_program.cl";
+const char program_dump_file_name[] = "clDNN_program";
 
 static const char* kernels_header = R"__krnl(
 #define CAT(x, y) x##y
@@ -153,12 +158,146 @@ static const char* kernels_header = R"__krnl(
 
 )__krnl";
 
-std::vector<std::string> kernels_cache::get_program_source() const {
-    std::vector<std::string> source{ kernels_header };
-    for (auto& code : _kernel_codes) {
-        source.push_back(code.second);
+namespace 
+{
+    std::string get_undef_jit(kernels_cache::source_code org_source_code)
+    {
+        const std::string white_space_with_new_lines = " \t\r\n";
+        const std::string white_space = " \t";
+
+        size_t current_pos = 0;
+
+        const std::string define = "define";
+
+        std::set<std::string> to_undef;
+        for (const auto& source : org_source_code)
+        {
+            do
+            {
+                size_t index_to_hash = source.find_first_not_of(white_space_with_new_lines, current_pos);
+                if (index_to_hash != std::string::npos &&
+                    source[index_to_hash] == '#')
+                {
+                    size_t index_define = source.find_first_not_of(white_space, index_to_hash + 1);
+
+                    if (index_define != std::string::npos &&
+                        !source.compare(index_define, define.size(), define))
+                    {
+                        size_t index_to_name = source.find_first_not_of(white_space, index_define + define.size());
+                        if (index_to_name != std::string::npos)
+                        {
+                            size_t index_to_end_name = source.find_first_of(white_space_with_new_lines + "(", index_to_name);
+                            if (index_to_end_name == std::string::npos)
+                            {
+                                index_to_end_name = source.size();
+                            }
+                            std::string name = source.substr(index_to_name, index_to_end_name - index_to_name);
+                            to_undef.insert(name);
+                        }
+                        else
+                        {
+                            //printf("ERROR - %s\n", source.substr(current_pos, 10).c_str());
+                        }
+                    }
+                }
+                current_pos = source.find_first_of('\n', current_pos + 1);
+            } while (current_pos != std::string::npos);
+        }
+
+        std::string undefs;
+        for (const auto& name : to_undef)
+        {
+            undefs += "#ifdef " + name + "\n";
+            undefs += "#undef " + name + "\n";
+            undefs += "#endif\n";
+        }
+
+        return std::move(undefs);
     }
-    return source;
+
+    std::string reoder_options(const std::string& org_options)
+    {
+        std::stringstream ss(org_options);
+        std::set<std::string> sorted_options;
+        while (ss.good())
+        {
+            std::string word;
+            ss >> word;
+            sorted_options.insert(word);
+        }
+
+        std::string options;
+
+        for (const auto& o : sorted_options)
+        {
+            options += o + " ";
+        }
+        
+        return options;
+    }
+
+    inline bool does_options_support_batch_compilation(const std::string& options)
+    {
+        return
+            options.find("-D") == std::string::npos &&
+            options.find("-I") == std::string::npos;
+    }
+}
+
+kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code& kernels_source_code) const 
+{
+    sorted_code scode;
+    for (auto& code : kernels_source_code)
+    {
+        const source_code&  org_source_code     = code.second.source;
+        std::string         options             = code.second.options;
+        bool                batch_compilation   = code.second.batch_compilation;
+        bool                inject_header       = code.second.intect_header;
+
+        batch_compilation |= does_options_support_batch_compilation(options);
+
+        if (batch_compilation)
+        {
+            options = reoder_options(options);
+        }
+
+        std::string key = options;
+
+        if (batch_compilation == false)
+        {
+            key += " __PROGRAM__" + std::to_string(scode.size());
+        }
+        
+        if (inject_header)
+        {
+            key += " __PROGRAM_INJECT_HEADER__";
+        }
+
+        auto& current_bucket = scode[key];
+
+        if (current_bucket.source.empty())
+        {
+            if (inject_header)
+            {
+                current_bucket.source.push_back(kernels_header);
+            }
+
+            current_bucket.options = options;
+        }
+
+        source_code new_source_code = org_source_code;
+
+        if (batch_compilation)
+        {
+            new_source_code.push_back(get_undef_jit(org_source_code));
+        }
+
+        for (auto& s : new_source_code)
+        {
+            current_bucket.source.push_back(std::move(s));
+        }
+    }
+    return std::move(scode);
 }
 
 namespace {
@@ -216,15 +355,16 @@ namespace {
 
 kernels_cache::kernels_cache(gpu_toolkit& context): _context(context) {}
 
-kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_name) {
-    // TODO: FIXIT: more than one kernel can be created for same template_name and definitions
-
+kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_name) 
+{
     std::string primitive_name = kernel_name;
     std::replace(kernel_name.begin(), kernel_name.end(), '.', '_');
-    auto kernel_num = definitions.empty() ? "" : std::to_string(_kernel_codes.size());
+    auto kernel_num = definitions.empty() ? "" : std::to_string(_kernels_code.size());
 
     if (kernel_name.empty() || !_context.get_configuration().meaningful_kernels_names)
+    {
         kernel_name = template_name;
+    }
 
     kernel_name += (kernel_num.empty() ? "" : "_") + kernel_num;
     
@@ -236,7 +376,9 @@ kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::s
         .value_macro("KERNEL(name)", "__kernel void " + kernel_name)
         .decoration_macro("FUNC", "", kernel_num)
         .decoration_macro("FUNC_CALL", "", kernel_num);
-    for (auto& definition : definitions) {
+    
+    for (auto& definition : definitions) 
+    {
         code.value_macro(definition.first, definition.second);
     }
     code.set_code(_database.get(template_name).at(0));
@@ -244,52 +386,62 @@ kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::s
     auto kernel_code = code.str();
 
     std::lock_guard<std::mutex> lock(_mutex);
-    _kernel_codes[kernel_name] = kernel_code;
-    _modified = true;
+    _kernels_code[kernel_name] = { {kernel_code}, "-cl-mad-enable", true, true };
     return kernel_name;
 }
 
-void kernels_cache::build_program() {
+kernels_cache::kernel_id kernels_cache::create_kernel_from_template_ks(const source_code& source, const std::string& options, const std::string& entry_point, bool batch_compilation)
+{
+    std::lock_guard<std::mutex> lock(_mutex);
+    _kernels_code[entry_point] = { source, options, batch_compilation, false };
+    return entry_point;
+}
+
+kernels_cache::kernels_map kernels_cache::build_program(const program_code& program_source) const
+{
+#ifdef OUT_PORGRAM_TO_FILE
+    static uint32_t current_file_index = 0;
+    const std::string current_program_dump_file_name = program_dump_file_name + std::to_string(current_file_index) + ".cl";
+    current_file_index++;
+#endif
     try {
-        std::lock_guard<std::mutex> lock(_mutex);
-        if (_modified) {
-            auto program_source = get_program_source();
-#ifndef NDEBUG
-            {
-                std::ofstream os(program_dump_file_name);
-                for (auto& s : program_source)
-                    os << s;
-            }
-#endif
-            cl::Program program(_context.context(), program_source);
-            program.build({ _context.device() }, "-cl-mad-enable");
-#ifndef NDEBUG
-            {
-                std::ofstream os(program_dump_file_name, std::ios_base::app);
-                os << "\n/* Build Log:\n";
-                for (auto& p : program.getBuildInfo<CL_PROGRAM_BUILD_LOG>()) {
-                    os << p.second << "\n";
-                }
-                os << "*/\n";
-            }
-#endif
-            cl::vector<cl::Kernel> kernels;
-            program.createKernels(&kernels);
-            _kernels.clear();
-            for(auto& k : kernels)
-            {
-                auto kernel_name = k.getInfo<CL_KERNEL_FUNCTION_NAME>();
-                _kernels.emplace(kernel_name, k);
-            }
+#ifdef OUT_PORGRAM_TO_FILE
+        {
+            std::ofstream os(current_program_dump_file_name);
+            for (auto& s : program_source.source)
+                os << s;
         }
-        _modified = false;
+#endif
+        cl::Program program(_context.context(), program_source.source);
+        program.build({ _context.device() }, program_source.options.c_str());
+#ifdef OUT_PORGRAM_TO_FILE
+        {
+            std::ofstream os(current_program_dump_file_name, std::ios_base::app);
+            os << "\n/* Build Log:\n";
+            for (auto& p : program.getBuildInfo<CL_PROGRAM_BUILD_LOG>()) {
+                os << p.second << "\n";
+            }
+            os << "*/\n";
+        }
+#endif
+        cl::vector<cl::Kernel> kernels;
+        program.createKernels(&kernels);
+        kernels_map kmap;
+
+        for (auto& k : kernels)
+        {
+            auto kernel_name = k.getInfo<CL_KERNEL_FUNCTION_NAME>();
+            kmap.emplace(kernel_name, k);
+        }
+
+        return std::move(kmap);
     }
     catch (const cl::BuildError& err) {
         std::string build_log{"Build program error "};
         build_log += err.what();
-#ifndef NDEBUG
+#ifdef OUT_PORGRAM_TO_FILE
         {
-            std::ofstream os(program_dump_file_name, std::ios_base::app);
+            std::ofstream os(current_program_dump_file_name, std::ios_base::app);
             os << "\n/* Build Log:\n";
             for (auto& p : err.getBuildLog()) {
                 os << p.second << "\n";
@@ -302,8 +454,19 @@ void kernels_cache::build_program() {
     }
 }
 
-kernels_cache::kernel_type kernels_cache::get_kernel(kernel_id id) {
-    build_program();
+kernels_cache::kernel_type kernels_cache::get_kernel(kernel_id id) 
+{
+    std::lock_guard<std::mutex> lock(_mutex);
+    if (_kernels_code.empty() == false) {
+
+        auto sorted_program_code = get_program_source(_kernels_code);
+        _kernels_code.clear();
+        for (auto& program : sorted_program_code)
+        {
+            auto kernels = build_program(program.second);
+            _kernels.insert(kernels.begin(), kernels.end());
+        }
+    }
     return _kernels.at(id);
 }
 

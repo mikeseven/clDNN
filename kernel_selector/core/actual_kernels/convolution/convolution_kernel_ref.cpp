@@ -15,43 +15,68 @@
 */
 
 #include "convolution_kernel_ref.h"
- 
-namespace KernelSelctor {
+#include "kernel_selector_utils.h"
+
+namespace KernelSelector {
     
     ParamsKey ConvolutionKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetOutputLayout(bfyx);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
+        k.SetInputWeightsType(WeightsType::F16);
+        k.SetInputWeightsType(WeightsType::F32);
+        k.SetInputLayout(DataLayout::bfyx);
+        k.SetOutputLayout(DataLayout::bfyx);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
+        k.SetDilationSupport();
         k.SetBiasPerFeatureMap();
         k.SetBiasPerOutput();
-        k.SetNumDims(4);
+        k.SetBatchingSupport();
+        k.SetSplitSupport();
         return k;
     }
 
-    KernelsData ConvolutionKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData ConvolutionKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        assert(params.GetType() == KernelType::CONVOLUTION);
+        assert(params.GetType() == KernelType::CONVOLUTION && options.GetType() == KernelType::CONVOLUTION);
+
+        const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
+        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
+
+        const bool bSupportedWeightsLayout = orgParams.weights.layout == WeightsLayout::oiyx;
+        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allow_weights_reorder;
+
+        if (!bWeightsOK)
+        {
+            return{};
+        }
 
         KernelData kd = KernelData::Default<ConvolutionParams>(params, 1);
 
         ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
 
         SubGroupInfo run_info;
         std::stringstream jit;
         jit << GetBaseJit(newParams)
             << GetConvolutionJit(newParams, run_info);
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "convolution");
-        kernel.args_desc = GetArgumentDesc(1, true, true);
+        kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "convolution", newParams.kernelID);
+        kernel.args_desc = GetArgumentDesc(1, true, !newParams.bias.empty());
+        kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
+
+        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::oiyx, kd.weights_reorder_params);
+
+        if (!succeed)
+        {
+            return{};
+        }
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 

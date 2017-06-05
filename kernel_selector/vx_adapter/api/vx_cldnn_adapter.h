@@ -39,10 +39,10 @@ namespace clDNN
 
         // Weights reordering
         virtual bool                        ShouldReorderWeights() const = 0;
-        virtual std::size_t                 GetNewWeightBufferSizeInBytes() const = 0;
+        virtual size_t                      GetNewWeightBufferSizeInBytes() const = 0;
         virtual bool                        ReorderWeightsWithKernel() const = 0;
         virtual const CLKernelData&         GetWeightsReorderKernelData() const = 0;
-        virtual void                        ReorderWeights(void* org, std::size_t orgSize, void* newBuf, std::size_t newBufSize) const = 0;
+        virtual void                        ReorderWeights(void* org, size_t orgSize, void* newBuf, size_t newBufSize) const = 0;
 
         virtual ~KernelBinary() {}
     };

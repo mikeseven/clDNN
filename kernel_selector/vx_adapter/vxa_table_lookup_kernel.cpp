@@ -24,14 +24,14 @@ namespace clDNN
         BaseKernelBinary(KernelType::TABLE_LOOKUP),
         m_Params(params)
     {
-        KernelSelctor::TableLookupParams ksParams;
+        KernelSelector::TableLookupParams ksParams;
 
         InitBaseParams(params, ksParams);
         ksParams.lookupParams.tableFormat = params.lookupParams.tableFormat;
         ksParams.lookupParams.tableSize = params.lookupParams.tableSize;
 
-        KernelSelctor::TableLookupOptionalParams ksOptParams;
+        KernelSelector::TableLookupOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelctor::TableLookupKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::TableLookupKernelSelctor::instance(), ksParams, ksOptParams);
     }
 }

@@ -13,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-
+#define _SCL_SECURE_NO_WARNINGS
 #include "cnn_convolution_kernel_base.h"
 
 #include <algorithm>
 
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     std::string CNNConvolutionKernelBase::GetConvolutionJit(const ConvolutionParams& params, SubGroupInfo& run_info, bool bPad) const
     {
@@ -27,55 +27,67 @@ namespace KernelSelctor
 
         if (bPad)
         {
-            const std::size_t paddedSize =
+            const size_t paddedSize =
                 params.convParams.padding.x +
-                params.convParams.padding.y*params.inDesc.pitches.x;
+                params.convParams.padding.y*params.inputs[0].y().pitch;
 
-            assert(params.inDesc.offset >= paddedSize);
-            const std::size_t inputOffsetForPaddedPart = params.inDesc.offset - paddedSize;
+            assert(params.inputs[0].offset >= paddedSize);
+            const size_t inputOffsetForPaddedPart = params.inputs[0].offset - paddedSize;
 
             jit << "#define INPUT_OFFEST_FOR_PADDED_PART " << inputOffsetForPaddedPart << "\n";
         }
-        jit << "#define KERNEL_WIDTH " << cp.filterSize.x << "\n"
-            << "#define KERNEL_HEIGHT " << cp.filterSize.y << "\n"
-            << "#define STRIDE_X (" << cp.stride.x << ")\n"
-            << "#define STRIDE_Y (" << cp.stride.y << ")\n"
-            << "#define INPUT_PADDING_X (" << cp.padding.x << ")\n"
-            << "#define INPUT_PADDING_Y (" << cp.padding.y << ")\n"
-            << "#define WIDTH1 (" << CLDNN_ALIGN(params.outDims.z, run_info.subBlockDimN) << ")\n"
-            << "#define DY " << run_info.globalWorkSizeDY << "\n"
-            << "#define DX " << run_info.globalWorkSizeDX << "\n"
+        jit << "#define KERNEL_WIDTH "      << cp.filterSize.x << "\n"
+            << "#define KERNEL_HEIGHT "     << cp.filterSize.y << "\n"
+            << "#define STRIDE_X ("         << cp.stride.x << ")\n"
+            << "#define STRIDE_Y ("         << cp.stride.y << ")\n"
+            << "#define DILATION_X ("       << cp.dilation.x << ")\n"
+            << "#define DILATION_Y ("       << cp.dilation.y << ")\n"
+            << "#define INPUT_PADDING_X ("  << cp.padding.x << ")\n"
+            << "#define INPUT_PADDING_Y ("  << cp.padding.y << ")\n"
+            << "#define ALIGNED_OFM ("      << cldnn::round_up_to(params.output.feature().v, run_info.subBlockDimN) << ")\n"
+            << "#define DY "                << run_info.globalWorkSizeDY << "\n"
+            << "#define DX "                << run_info.globalWorkSizeDX << "\n"
             << "#define KERNEL_WIDTH_DIV2 " << cp.filterSize.x / 2 << "\n"
             << "#define KERNEL_SLICE_DIV2 " << (cp.filterSize.x * cp.filterSize.y) / 2 << "\n";
-
-        jit << "#define OUTPUT_BIASED" << "\n";
         
-        if (cp.biasPerOutputResult)
+        if (!params.bias.empty())
         {
-            jit << "#define BIAS_PER_OUTPUT \n";
+            jit << "#define OUTPUT_BIASED" << "\n";
+
+            if (params.bias[0].SameDims(params.output))
+            {
+                jit << "#define BIAS_PER_OUTPUT \n";
+            }
+            else
+            {
+                jit << "#define BIAS_PER_OFM \n";
+            }
         }
 
         return jit.str();
     }
 
-    std::size_t CPUCNNConvolutionReorder::GetNewWeightBufferSizeInBytes() const
+    size_t CPUCNNConvolutionReorder::GetNewWeightBufferSizeInBytes() const
     {
         const auto& convSize = params->convParams.filterSize;
-        const auto& in = params->inDims;
-        const auto& out = params->outDims;
 
-        stDims orgSize(convSize.x * convSize.y * in.z, out.z);
-        stDims newSize(
-            CLDNN_ALIGN(orgSize.x, (std::size_t)convSize.x),
-            CLDNN_ALIGN(orgSize.y, (std::size_t)run_info.subBlockDimN));
+        stSize orgSize(convSize.x * convSize.y * params->inputs[0].feature().v, params->output.feature().v);
+        stSize newSize(
+            cldnn::round_up_to(orgSize.y, (size_t)run_info.subBlockDimN),
+            orgSize.x);
 
-        std::size_t interleavedRows = convSize.x / 2 * 2;
-        std::size_t nonInterleavedRows = convSize.x % 2;
+        size_t interleavedRows = convSize.x / 2 * 2;
+        size_t nonInterleavedRows = convSize.x % 2;
 
-        std::size_t weightsSizeInBytes = CLDNN_ALIGN(
-            newSize.x * newSize.y *
-            (interleavedRows + nonInterleavedRows * 2) / (interleavedRows + nonInterleavedRows) *
-            BytesPerElement(params->inputType),
+        if (mode == WeightsReorderMode::CONVOLUTION_DIRECT)
+        {
+            interleavedRows = (convSize.x * convSize.y) / 2 * 2;
+            nonInterleavedRows = (convSize.x * convSize.y) % 2;
+        }
+
+        size_t weightsSizeInBytes = cldnn::round_up_to(
+            (newSize.x * newSize.y * (interleavedRows + nonInterleavedRows * 2)) / (interleavedRows + nonInterleavedRows) *
+            BytesPerElement(params->inputs[0].dtype),
             64);
 
         return weightsSizeInBytes;
@@ -83,36 +95,36 @@ namespace KernelSelctor
 
     template<typename T>
     void InterleaveMatrix(T * mem_dst, T *mem,
-        std::size_t filterHeight, std::size_t filterWidth,
-        std::size_t alignedTransposedFilterHeight, std::size_t alignedTransposedFilterWidth,
-        uint interleavedRows, uint nonInterleavedRows,
-        uint blockWidth, uint rowAlignment)
+        size_t filterHeight, size_t filterWidth,
+        size_t alignedTransposedFilterHeight, size_t alignedTransposedFilterWidth,
+        uint32_t interleavedRows, uint32_t nonInterleavedRows,
+        uint32_t blockWidth, uint32_t rowAlignment)
     {
-        const std::size_t r = alignedTransposedFilterHeight;
+        const size_t r = alignedTransposedFilterHeight;
         T* pSrc = mem;
         T* pDst = mem_dst;
 
-        const uint xStride = blockWidth;
-        const std::size_t yDstStride = alignedTransposedFilterWidth * 2;
+        const uint32_t xStride = blockWidth;
+        const size_t yDstStride = alignedTransposedFilterWidth * 2;
 
 
         T* tmpSrc = new T[alignedTransposedFilterWidth * 2];
         memset(tmpSrc, 0, sizeof(T) * alignedTransposedFilterWidth * 2);
 
-        for (uint y = 0; y < r;)
+        for (uint32_t y = 0; y < r;)
         {
-            for (uint rows = 0; rows < interleavedRows; rows += 2)
+            for (uint32_t rows = 0; rows < interleavedRows; rows += 2)
             {
                 if (y >= r) break;
 
-                for (uint i = 0; i < filterHeight; ++i)
+                for (uint32_t i = 0; i < filterHeight; ++i)
                 {
                     tmpSrc[i] = pSrc[i * filterWidth + y];
                     tmpSrc[i + alignedTransposedFilterWidth] = pSrc[i * filterWidth + y + 1];
                 }
 
                 {
-                    std::size_t x = 0;
+                    size_t x = 0;
                     for (; x < alignedTransposedFilterWidth / xStride; x++)
                     {
                         std::copy_n(&tmpSrc[x * xStride],
@@ -122,42 +134,29 @@ namespace KernelSelctor
                                     xStride,
                                     &pDst[x * xStride * 2 + xStride]);
                     }
-
-                    if (alignedTransposedFilterWidth % xStride)
-                    {
-                        std::copy_n(&tmpSrc[x * xStride],
-                                    alignedTransposedFilterWidth - x * xStride,
-                                    &pDst[x * xStride * 2]);
-                    }
                 }
 
                 pDst += yDstStride;
                 y += 2;
             }
 
-            for (uint rows = 0; rows < nonInterleavedRows; rows++)
+            for (uint32_t rows = 0; rows < nonInterleavedRows; rows++)
             {
                 if (y >= r) break;
 
-                const uint stride = rowAlignment;
-                std::size_t remaining = alignedTransposedFilterWidth;
+                const uint32_t stride = rowAlignment;
+                size_t remaining = alignedTransposedFilterWidth;
 
-                for (uint i = 0; i < filterHeight; ++i)
+                for (uint32_t i = 0; i < filterHeight; ++i)
                 {
                     tmpSrc[i] = pSrc[i * filterWidth + y];
                 }
 
-                for (uint x = 0; x < alignedTransposedFilterWidth; x += stride)
+                for (uint32_t x = 0; x < alignedTransposedFilterWidth; x += stride)
                 {
-                    if (remaining >= stride)
-                    {
-                        std::copy_n(&tmpSrc[x], stride, &pDst[x * 2]);
-                        remaining -= stride;
-                    }
-                    else
-                    {
-                        std::copy_n(&tmpSrc[x], remaining, &pDst[x * 2]);
-                    }
+                    size_t elements_to_copy = std::min((size_t)stride, remaining);
+                    std::copy_n(&tmpSrc[x], elements_to_copy, &pDst[x * 2]);
+                    remaining -= elements_to_copy;
                 }
                 pDst += yDstStride;
                 y++;
@@ -167,21 +166,19 @@ namespace KernelSelctor
         delete[] tmpSrc;
     }
 
-    void CPUCNNConvolutionReorder::Execute(void* input, std::size_t input_size, void* output, std::size_t output_size) const
+    void CPUCNNConvolutionReorder::Execute(void* input, size_t input_size, void* output, size_t output_size) const
     {
         const auto& convSize = params->convParams.filterSize;
-        const auto& in = params->inDims;
-        const auto& out = params->outDims;
 
-        stDims orgSize(convSize.x * convSize.y * in.z, out.z);
-        stDims newSize(
-            CLDNN_ALIGN(orgSize.y, (std::size_t)run_info.subBlockDimN),
-            CLDNN_ALIGN(orgSize.x, (std::size_t)convSize.x));
+        stSize orgSize(convSize.x * convSize.y * params->inputs[0].feature().v, params->output.feature().v);
+        stSize newSize(
+            cldnn::round_up_to(orgSize.y, (size_t)run_info.subBlockDimN), 
+            orgSize.x);
 
-        uint interleavedRows = convSize.x / 2 * 2;
-        uint nonInterleavedRows = convSize.x % 2;
-        uint blockWidth = run_info.localWorkSizeY;
-        uint rowAlignment = 32;
+        uint32_t interleavedRows = convSize.x / 2 * 2;
+        uint32_t nonInterleavedRows = convSize.x % 2;
+        uint32_t blockWidth = run_info.localWorkSizeY;
+        uint32_t rowAlignment = 32;
 
         if (mode == WeightsReorderMode::CONVOLUTION_DIRECT)
         {
@@ -191,18 +188,18 @@ namespace KernelSelctor
             rowAlignment = 16;
         }
 
-        std::size_t weightsSizeInBytes = CLDNN_ALIGN(
+        size_t weightsSizeInBytes = cldnn::round_up_to(
             newSize.x * newSize.y *
             (interleavedRows + nonInterleavedRows * 2) / (interleavedRows + nonInterleavedRows) *
-            BytesPerElement(params->inputType),
+            BytesPerElement(params->inputs[0].dtype),
             64);
 
-        std::size_t orgSizeInBytes = orgSize.x * orgSize.y * BytesPerElement(params->inputType);
+        size_t orgSizeInBytes = orgSize.x * orgSize.y * BytesPerElement(params->inputs[0].dtype);
 
         if (weightsSizeInBytes <= output_size && orgSizeInBytes <= input_size)
         {
             memset(output, 0, output_size);
-            switch (params->inputType)
+            switch (params->inputs[0].dtype)
             {
             case Datatype::F16:
                 InterleaveMatrix((uint16_t*)output, (uint16_t*)input,

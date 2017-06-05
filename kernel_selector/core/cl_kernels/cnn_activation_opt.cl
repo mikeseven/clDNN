@@ -18,21 +18,21 @@
 
 #if (NUM_ROWS_WI == 1) && (NUM_COLS_WI == 4)
 
-__kernel void activation(__global DATA_TYPE* input, __global DATA_TYPE* output)
+KERNEL(activation)(__global DATA_TYPE* input, __global DATA_TYPE* output)
 {
     const unsigned int x = get_global_id(0) * NUM_COLS_WI;
     const unsigned int y = get_global_id(1);
     const unsigned int z = get_global_id(2) / OUT_BATCH;
     const unsigned int w = get_global_id(2) / OUT_DEPTH;
 
-    unsigned int input_offset = x  + y * INPUT_ROW_PITCH + INPUT_OFFSET; 
-    unsigned int out_offset = x  + y * OUT_ROW_PITCH + OUT_OFFSET; 
+    unsigned int input_offset = x  + y * INPUT_Y_PITCH + INPUT_OFFSET; 
+    unsigned int out_offset = x  + y * OUT_Y_PITCH + OUT_OFFSET; 
 
     CAT(DATA_TYPE, 4) v = ((__global CAT(DATA_TYPE,4)*) (input + input_offset))[0];
     int m = NL_M;
     int n = NL_N;
 
-    v = CAT(CAT(activation_function_,DATA_TYPE),4)(v, NL_M, NL_N);
+    v = FUNC_CALL(CAT(CAT(activation_function_,DATA_TYPE),4))(v, NL_M, NL_N);
 
 #if (INPUT_WIDTH_MOD_COLS_WI == 0)
     *((__global CAT(DATA_TYPE,4)*)(output + out_offset)) = v;

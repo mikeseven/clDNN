@@ -16,19 +16,21 @@
 
 #include "fully_connected_kernel_gemm.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     ParamsKey FullyConnectedKernelGEMM::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetInputLayout(bx);
-        k.SetOutputLayout(bx);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
+        k.SetInputLayout(DataLayout::bfyx);
+        k.SetInputLayout(DataLayout::bf);
+        k.SetOutputLayout(DataLayout::bf);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.SetBatchingSupport();
         return k;
     }
 
@@ -42,7 +44,7 @@ namespace KernelSelctor {
 
         std::string entry_point;
         std::stringstream jit;
-        if (newParams.inputType == Datatype::F16)
+        if (newParams.inputs[0].dtype == Datatype::F16)
         {
             jit << "#define __fc_f16" << "\n";
             entry_point = "fc_f16";
@@ -53,15 +55,10 @@ namespace KernelSelctor {
             entry_point = "fc_f32";
         }
 
-        const uint localWorkSizeX = 64;
-        const uint globalWorkSizeX = localWorkSizeX;
-        const uint vecSize = 4;
-        std::size_t matrixLineSize = newParams.inDesc.pitches.z;
-
-        if (newParams.inputLayout == bx)
-        {
-            matrixLineSize = newParams.inDesc.pitches.x;
-        }
+        const uint32_t localWorkSizeX = 64;
+        const uint32_t globalWorkSizeX = localWorkSizeX;
+        const uint32_t vecSize = 4;
+        size_t matrixLineSize = newParams.inputs[0].batch().pitch;
 
         jit << GetBaseJit(newParams)
             << GetFullyConnectedJit(newParams)
@@ -69,13 +66,14 @@ namespace KernelSelctor {
             << "#define LAST_INPUT_SIZE_DIV_4 (" << matrixLineSize % vecSize << ")\n";
         
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(globalWorkSizeX, newParams.outDims.x, newParams.outDims.y);
+        kernel.work_groups.global = cl::NDRange(globalWorkSizeX, newParams.output.feature().v, newParams.output.batch().v);
         kernel.work_groups.local = cl::NDRange(localWorkSizeX, 1, 1);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), entry_point);
-        kernel.args_desc = GetArgumentDesc(1, true, true);
+        kernel.args_desc = GetArgumentDesc(1, true, !newParams.bias.empty());
 
-        // if input width != row_pitch -> weights need to be padded also
-        if (newParams.inDims.x != newParams.inDesc.pitches.x)
+        // in case of padding make sure that the weights contains padding as well.
+        // TODO: it's overkilling, we can ignore padding in batch.
+        if (newParams.inputs[0].PaddingExists())
         {
             kd.weights_reorder_params.engine = WeightsReorderParams::Engine::GPU;
 
@@ -84,12 +82,9 @@ namespace KernelSelctor {
             cl_kernel.kernel_string = GetKernelString(weights_reorder_kernel_name, GetBaseJit(newParams), "align_weights");
             cl_kernel.args_desc = GetArgumentDesc(1, false, false);
 
-            assert(newParams.inputLayout == bx || newParams.inputLayout == bfyx);
-            assert(newParams.outputLayout == bx);
-
-            const uint bpp = BytesPerElement(newParams.inputType);
-            const size_t aligned_input_size = (newParams.inputLayout == bx) ? newParams.inDesc.pitches.x : newParams.inDesc.pitches.z;
-            const size_t output_size_in_batch = newParams.outDims.x;
+            const uint32_t bpp = BytesPerElement(newParams.inputs[0].dtype);
+            const size_t aligned_input_size = newParams.inputs[0].batch().pitch;
+            const size_t output_size_in_batch = newParams.output.feature().v;
             const size_t new_buffer_size = output_size_in_batch * aligned_input_size;
             const size_t new_buffer_size_in_bytes = new_buffer_size * bpp;
 

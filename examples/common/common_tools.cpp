@@ -541,7 +541,7 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
         // We do not log results for microbench.
         if (ep.topology_name != "microbench")
         {
-            instrumentation::logger::log_memory_to_file(output, "final_result");
+            //instrumentation::logger::log_memory_to_file(output, "final_result");
         }
     }
 
@@ -581,7 +581,7 @@ void run_topology(const execution_params &ep)
         }
     }
 
-    html output_file(ep.topology_name, ep.topology_name + " run");
+    //html output_file(ep.topology_name, ep.topology_name + " run");
 
     cldnn::topology primitives;
 
@@ -663,10 +663,34 @@ void run_topology(const execution_params &ep)
 
             auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
            
-            if (ep.run_until_primitive_name.empty())
-                output_file.batch(output, join_path(get_executable_info()->dir(), neurons_list_filename), images_in_batch, ep.print_type);
-            else
-                std::cout << "Finished at user custom primtive: " << ep.run_until_primitive_name << std::endl;
+            if (ep.print_type == PrintType::Verbose)
+            {
+                const std::string categories_file = join_path(get_executable_info()->dir(), neurons_list_filename);
+                auto batch = read_output(output);
+                auto categories = load_category_names(categories_file);
+
+                for (size_t img_idx = 0; img_idx < batch.size(); img_idx++)
+                {
+                    if (img_idx >= images_in_batch.size())
+                        break;
+
+                    auto& img_name = images_in_batch[img_idx];
+                    auto idx = img_name.find_last_of("/\\");
+
+                    bool not_found = idx == std::string::npos;
+
+                    auto img_file = img_name.substr(not_found ? 0 : idx + 1);
+                    const auto& category = categories[batch[img_idx][0].second];
+
+                    std::cout << "    " << img_file << " ";
+                    std::cout << std::setprecision(2) << std::fixed << batch[img_idx][0].first * 100 << "%" << " ";
+                    std::cout << category << std::endl;
+                }
+            }
+//             if (ep.run_until_primitive_name.empty())
+//                 output_file.batch(output, join_path(get_executable_info()->dir(), neurons_list_filename), images_in_batch, ep.print_type);
+//             else
+//                 std::cout << "Finished at user custom primtive: " << ep.run_until_primitive_name << std::endl;
 
             if (time_in_sec != 0.0)
             {

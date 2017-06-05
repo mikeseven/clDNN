@@ -19,26 +19,26 @@
 #include "cnn_kernel_base.h"
 #include "kernel_selector_params.h"
 
-namespace KernelSelctor {
+namespace KernelSelector {
 
     struct SubGroupInfo
     {
-        uint subBlockDimM = 1;
-        uint subBlockDimK = 1;
-        uint subBlockDimN = 1;
-        uint localWorkSizeX = 0;
-        uint localWorkSizeY = 0;
-        uint localWorkSizeZ = 0;
-        uint globalWorkSizeDX = 1;
-        uint globalWorkSizeDY = 1;
-        uint globalWorkSizeDZ = 1;
+        uint32_t subBlockDimM = 1;
+        uint32_t subBlockDimK = 1;
+        uint32_t subBlockDimN = 1;
+        uint32_t localWorkSizeX = 0;
+        uint32_t localWorkSizeY = 0;
+        uint32_t localWorkSizeZ = 0;
+        uint32_t globalWorkSizeDX = 1;
+        uint32_t globalWorkSizeDY = 1;
+        uint32_t globalWorkSizeDZ = 1;
 
         SubGroupInfo() = default;
 
         SubGroupInfo(
-            uint sBlockDimM, uint sBlockDimK, uint sBlockDimN,
-            uint lWorkSzX, uint lWorkSzY, uint lWorkSzZ,
-            uint gWorkDX, uint gWorkDY, uint gWorkDZ) :
+            uint32_t sBlockDimM, uint32_t sBlockDimK, uint32_t sBlockDimN,
+            uint32_t lWorkSzX, uint32_t lWorkSzY, uint32_t lWorkSzZ,
+            uint32_t gWorkDX, uint32_t gWorkDY, uint32_t gWorkDZ) :
             subBlockDimM(sBlockDimM),
             subBlockDimK(sBlockDimK),
             subBlockDimN(sBlockDimN),
@@ -65,8 +65,8 @@ namespace KernelSelctor {
         CPUCNNConvolutionReorder(WeightsReorderMode _mode, std::shared_ptr<ConvolutionParams> _params, const SubGroupInfo& info) :
             mode(_mode), params(_params), run_info(info) {}
 
-        virtual void Execute(void* input, std::size_t input_size, void* output, std::size_t output_size) const;
-        std::size_t GetNewWeightBufferSizeInBytes() const;
+        virtual void Execute(void* input, size_t input_size, void* output, size_t output_size) const;
+        size_t GetNewWeightBufferSizeInBytes() const;
     };
 
     class CNNConvolutionKernelBase : public CNNKernelBase

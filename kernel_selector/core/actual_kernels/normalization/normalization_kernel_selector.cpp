@@ -17,7 +17,7 @@
 #include "normalization_kernel_selector.h"
 #include "normalization_kernel_ref.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     NormalizationKernelSelctor::NormalizationKernelSelctor()
     {

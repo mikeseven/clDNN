@@ -16,18 +16,19 @@
 
 #include "kernel_selector_common.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     bool ArgumentDescpirtor::SetArguments(
         cl::Kernel& kernel,
-        std::vector<cl::Buffer*> inputs,
-        cl::Buffer* output,
-        cl::Buffer* weights,
-        cl::Buffer* bias,
-        cl::Buffer* lookup_table) const
+        std::vector<const cl::Buffer*> inputs,
+        const cl::Buffer* output,
+        const cl::Buffer* weights,
+        const cl::Buffer* bias,
+        const cl::Buffer* lookup_table,
+        uint32_t split) const
     {
         size_t inputIndex = 0;
-        for (uint i = 0; i < static_cast<uint>(data.size()); i++)
+        for (uint32_t i = 0; i < static_cast<uint32_t>(data.size()); i++)
         {
             cl_int status = CL_INVALID_ARG_VALUE;
 
@@ -63,6 +64,9 @@ namespace KernelSelctor {
                 {
                     status = kernel.setArg(i, *lookup_table);
                 }
+                break;
+            case ArgumentDescpirtor::Types::SPLIT:
+                status = kernel.setArg(i, split);
                 break;
             case ArgumentDescpirtor::Types::UINT8:
                 status = kernel.setArg(i, data[i].v.u8);
@@ -108,9 +112,9 @@ namespace KernelSelctor {
         return true;
     }
 
-    binary_data clKernelData::GetBinary(gpu_toolkit* cl_context, kernel_cache& compiler) const
+    binary_data clKernelData::GetBinary(context_device cl_context, program_cache& compiler) const
     {
-        return compiler.get(cl_context, kernel_string.jit, kernel_string.str, kernel_string.options);
+        return compiler.get(cl_context, kernel_string.jit + kernel_string.str, kernel_string.options);
     }
 
     std::string GetStringEnv(const char* varName)
@@ -118,7 +122,7 @@ namespace KernelSelctor {
         std::string str;
 #ifdef WIN32
         char* env = nullptr;
-        std::size_t len = 0;
+        size_t len = 0;
         errno_t err = _dupenv_s(&env, &len, varName);
         if (err == 0)
         {

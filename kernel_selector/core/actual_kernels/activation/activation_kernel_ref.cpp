@@ -16,18 +16,20 @@
 
 #include "activation_kernel_ref.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     ParamsKey ActivationKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
         k.SetOffsetSupport();
         k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.SetBatchingSupport();
         return k;
     }
 
@@ -38,11 +40,10 @@ namespace KernelSelctor {
         KernelData kd = KernelData::Default<ActivationParams>(params, 1);
 
         ActivationParams& newParams = *static_cast<ActivationParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
+        kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
         kernel.kernel_string = GetKernelString(kernel_name, GetBaseJit(newParams), "activation");
         kernel.args_desc = GetArgumentDesc(1, false, false);
 

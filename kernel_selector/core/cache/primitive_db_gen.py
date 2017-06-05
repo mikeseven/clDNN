@@ -59,7 +59,7 @@ class OpenCL2CHeaders(object):
         #res = '{{"{}",\nR"__krnl(\n{}\n)__krnl"}},\n\n'.format(name[:name.find('.')] ,self.append_file_content(filename, filename))
         res = '{{"{}",\nR"__krnl(\n'.format(name[:name.find('.')])
         content = self.append_file_content(filename, filename)
-        max_lines = 300
+        max_lines = 200
 
         for i, line in enumerate(content.split('\n')):
             if i % max_lines == 0:

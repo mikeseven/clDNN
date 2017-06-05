@@ -86,7 +86,7 @@ namespace clDNN
             NormalizationMode normMode = NormalizationMode::ACROSS_CHANNELS;
             float             alpha = 0.f;
             float             beta = 0.f;
-            uint              localSize = 0;
+            uint32_t          localSize = 0;
         };
 
         DedicatedParams normParams;
@@ -192,7 +192,7 @@ namespace clDNN
         struct DedicatedParams
         {
             Datatype tableFormat = Datatype::F16;
-            std::size_t tableSize = 0;
+            size_t tableSize = 0;
         };
 
         DedicatedParams lookupParams;

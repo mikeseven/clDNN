@@ -18,7 +18,7 @@
 
 #include "cnn_convolution_kernel_base.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
     
     class ConvolutionKernelDirect_10_10_12 : public CNNConvolutionKernelBase
     {

@@ -16,18 +16,20 @@
 
 #include "locally_connected_kernel_ref.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     ParamsKey LocallyConnectedKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetOutputLayout(bfyx);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
+        k.SetInputLayout(DataLayout::bfyx);
+        k.SetOutputLayout(DataLayout::bfyx);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.SetBatchingSupport();
         return k;
     }
 
@@ -38,7 +40,6 @@ namespace KernelSelctor {
         KernelData kd = KernelData::Default<LocallyConnectedParams>(params, 1);
 
         LocallyConnectedParams& newParams = *static_cast<LocallyConnectedParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
 
         std::stringstream jit;
         jit << GetBaseJit(newParams)
@@ -49,9 +50,9 @@ namespace KernelSelctor {
             << "#define INPUT_PADDING_X (" << newParams.lcParams.padding.x << ")\n"
             << "#define INPUT_PADDING_Y (" << newParams.lcParams.padding.y << ")\n";
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
+        kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "locally_connected");
         kernel.args_desc = GetArgumentDesc(1, true, true);
 

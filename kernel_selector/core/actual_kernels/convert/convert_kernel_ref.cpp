@@ -16,18 +16,20 @@
 
 #include "convert_kernel_ref.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     ParamsKey ConvertKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
         k.SetOffsetSupport();
         k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.SetBatchingSupport();
         return k;
     }
 
@@ -38,15 +40,14 @@ namespace KernelSelctor {
         KernelData kd = KernelData::Default<ConvertParams>(params, 1);
 
         ConvertParams& newParams = *static_cast<ConvertParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
 
         std::stringstream jit;
         jit << GetBaseJit(newParams)
             << "#define CONVERT_TYPE_" << toString(newParams.convertParams.covertType) << "\n";
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
+        kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "convert");
         kernel.args_desc = GetArgumentDesc(1, false, false);
 

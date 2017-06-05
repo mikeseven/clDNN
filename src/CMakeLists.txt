@@ -93,6 +93,12 @@ set(__CLDNN_Sources__cg_cache
     "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
   )
 
+set(__CLDNN_Directory__ks_main           "${CLDNN__KERNEL_SELECTOR_DIR}")
+set(__CLDNN_Directory__ks_core           "${CLDNN__KERNEL_SELECTOR_DIR}/core")
+set(__CLDNN_Directory__ks_common         "${CLDNN__KERNEL_SELECTOR_DIR}/common")
+set(__CLDNN_Directory__ks_core_common    "${__CLDNN_Directory__ks_core}/common")
+set(__CLDNN_Directory__ks_actual_kernels "${__CLDNN_Directory__ks_core}/actual_kernels")  
+set(__CLDNN_Directory__ks_cache          "${__CLDNN_Directory__ks_core}/cache")
 
 set(__CLDNN_AllSources
     ${__CLDNN_Headers__api}
@@ -126,6 +132,10 @@ include_directories(
     "${CLDNN__MAIN_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}"
     "${__CLDNN_Directory__include}"
+    "${__CLDNN_Directory__ks_core}"
+    "${__CLDNN_Directory__ks_core}/common"
+    "${__CLDNN_Directory__ks_actual_kernels}"
+    "${__CLDNN_Directory__ks_common}"
   )
 
 # =================================== Link targets and dependencies ====================================
@@ -142,6 +152,7 @@ target_link_libraries("${CLDNN_BUILD__PROJ}"
     OpenCL
     Boost::filesystem
     Boost::system
+    cldnn_kernel_selector
   )
 
 if(WIN32)

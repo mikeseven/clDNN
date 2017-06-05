@@ -18,7 +18,7 @@
 
 #include "include/cnn_common.cl"
 
-inline void internal_normalize(__global const DATA_TYPE* input, int input_index, __global DATA_TYPE* output, int output_index, COUNTER_TYPE sum)
+inline void FUNC(internal_normalize)(__global const DATA_TYPE* input, int input_index, __global DATA_TYPE* output, int output_index, COUNTER_TYPE sum)
 {
     // TODO BDW Compiler Bug - we are using (float) because of compiler bug that convert it into (int) instead of (half)
     DATA_TYPE base = (DATA_TYPE)NORM_K + (DATA_TYPE)((COUNTER_TYPE)ALPHA*sum * (float)NUM_ELEMENTS_DIV);
@@ -26,10 +26,10 @@ inline void internal_normalize(__global const DATA_TYPE* input, int input_index,
     
     DATA_TYPE f_in = input[input_index];
     DATA_TYPE normres =  f_in*normalization_factor;
-    output[output_index] = activation_function(normres, NL_M ,NL_N);
+    output[output_index] = FUNC_CALL(activation_function)(normres, NL_M ,NL_N);
 }
 
-__kernel void normalization(__global const DATA_TYPE* input, __global DATA_TYPE* output)
+KERNEL(normalization)(__global const DATA_TYPE* input, __global DATA_TYPE* output)
 {
     const unsigned int x                = get_global_id(0);
     const unsigned int y                = get_global_id(1);
@@ -40,14 +40,14 @@ __kernel void normalization(__global const DATA_TYPE* input, __global DATA_TYPE*
     const unsigned int z                = get_global_id(2) % OUT_DEPTH;
     const unsigned int w                = get_global_id(2) / OUT_DEPTH;
 #endif
-    const unsigned int input_index      = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;
-    const unsigned int output_index     = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
+    const unsigned int input_index      = w*INPUT_BATCH_PITCH + z*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x + INPUT_OFFSET;
+    const unsigned int output_index     = w*OUT_BATCH_PITCH + z*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x + OUT_OFFSET;
 
     COUNTER_TYPE sum = 0.0f;
 
 #ifdef ACROSS_MAPS
 
-    unsigned int j_offset = input_index - ROUND_NORM_HALF_SIZE*INPUT_SLICE_PITCH;
+    unsigned int j_offset = input_index - ROUND_NORM_HALF_SIZE*INPUT_FEATURE_PITCH;
 
     for(int j = 0 ; j < ROUND_NORM_SIZE ; j++)
     {
@@ -55,16 +55,16 @@ __kernel void normalization(__global const DATA_TYPE* input, __global DATA_TYPE*
         bool zero = (z_idx < 0 || z_idx >= INPUT_DEPTH);
         DATA_TYPE val = zero ? 0.0f : input[j_offset];
         sum += val*val;
-        j_offset += INPUT_SLICE_PITCH;
+        j_offset += INPUT_FEATURE_PITCH;
     }
     
-    internal_normalize(input, input_index, output, output_index, sum);
+    FUNC_CALL(internal_normalize)(input, input_index, output, output_index, sum);
     
 #else
 
     const int x_start = ((int)x - ROUND_NORM_HALF_SIZE);
     const int y_start = ((int)y - ROUND_NORM_HALF_SIZE);
-    unsigned int input_offset = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y_start*INPUT_ROW_PITCH + x_start + INPUT_OFFSET;
+    unsigned int input_offset = w*INPUT_BATCH_PITCH + z*INPUT_FEATURE_PITCH + y_start*INPUT_Y_PITCH + x_start + INPUT_OFFSET;
 
     for (unsigned int j = 0; j < ROUND_NORM_SIZE ; ++j) 
     {
@@ -83,9 +83,9 @@ __kernel void normalization(__global const DATA_TYPE* input, __global DATA_TYPE*
             sum += val*val;
             ++input_offset;
         }
-        input_offset += INPUT_ROW_PITCH - ROUND_NORM_SIZE;
+        input_offset += INPUT_Y_PITCH - ROUND_NORM_SIZE;
     }
 
-    internal_normalize(input, input_index, output, output_index, sum);
+    FUNC_CALL(internal_normalize)(input, input_index, output, output_index, sum);
 #endif
 }

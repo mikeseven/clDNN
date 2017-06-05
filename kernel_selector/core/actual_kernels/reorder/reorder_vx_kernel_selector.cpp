@@ -17,7 +17,7 @@
 #include "reorder_vx_kernel_selector.h"
 #include "reorder_vx_kernel_ref.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     ReorderVxKernelSelctor::ReorderVxKernelSelctor()
     {

@@ -191,8 +191,9 @@ program_impl::program_impl(engine_impl::ptr engine, topology_impl const& topolog
     : engine(engine), options(options)
 {
     init_graph(topology);
-    optimize_graph();
+    pre_optimize_graph();
     compile_graph();
+    post_optimize_graph();
 }
 
 std::list<std::shared_ptr<program_node>> program_impl::get_nodes() const
@@ -245,7 +246,7 @@ void program_impl::init_graph(topology_impl const& topology)
     calc_processing_order();
 }
 
-void program_impl::optimize_graph()
+void program_impl::pre_optimize_graph()
 {
     trim_to_outputs();
 
@@ -263,6 +264,13 @@ void program_impl::optimize_graph()
     {
         prepare_buffer_fusing();
     }
+}
+
+void program_impl::post_optimize_graph()
+{
+    layout_optimizer lo(engine);
+    optimize_ks_weights(lo);
+    //prepare_padding(); - TODO: padding should be prepare according to the kernels needs
 }
 
 void program_impl::compile_graph()
@@ -431,8 +439,11 @@ void program_impl::optimize_weights(layout_optimizer& lo)
     {
         if (weights.type() == data::type_id())
         {
-            lo.add_weights_for_optimization(weights.as<data>().typed_desc(), weights_type,
-                node.get_primitive(), output_layout);
+            lo.add_weights_for_optimization(
+                weights.as<data>().typed_desc(),
+                weights_type,
+                node.get_primitive(),
+                output_layout);
             outputs_to_recalc.push_back(&weights);
         }
         else if (weights.type() == input_layout::type_id())
@@ -457,7 +468,7 @@ void program_impl::optimize_weights(layout_optimizer& lo)
     //argument should match few requirements:
     // - it should be of a form 'typed_program_node<T>&'
     // - both 'T.weights' and 'T.bias' should be either of type 'primitive_id' or 'std::vector<primitive_id>'
-    const auto prep_opt = [this, &add_weights](auto& node) -> void
+    const auto prep_opt = [this, &add_weights, &outputs_to_recalc](auto& node) -> void
     {
         auto output_layout = node.get_output_layout();
 
@@ -475,12 +486,18 @@ void program_impl::optimize_weights(layout_optimizer& lo)
     for (auto& p : nodes_map)
     {
         auto& prim = *p.second;
-
-        do_for_types<convolution, fully_connected, deconvolution>(prim,
-            prep_opt,   //case for convolution
-            prep_opt,   //case for fully_connected
-            prep_opt    //case for deconvolution
-            );
+        if (prim.type() == convolution::type_id())
+        {
+            prep_opt(prim.as<convolution>());
+        }
+        else if (prim.type() == deconvolution::type_id())
+        {
+            prep_opt(prim.as<deconvolution>());
+        }
+        else if (prim.type() == fully_connected::type_id())
+        {
+            prep_opt(prim.as<fully_connected>());
+        }
     }
 
     //all optimizing primitives has been added and inputs for all primitives has been updated.
@@ -489,6 +506,64 @@ void program_impl::optimize_weights(layout_optimizer& lo)
 
     for (auto dnode : outputs_to_recalc)
         dnode->recalc_output_layout();
+}
+
+void program_impl::optimize_ks_weights(layout_optimizer& lo)
+{
+    //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
+    //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
+    //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
+    const auto add_weights = [this, &lo](program_node const& weights, layout_optimizer::data_type weights_type, auto& node)
+    {
+        if (weights.type() == data::type_id())
+        {
+            auto* impl = node.get_selected_impl().get();
+            lo.add_ks_weights_for_optimization(
+                impl->_ks_kernel_data.weights_reorder_params,
+                weights.as<data>().typed_desc(),
+                weights_type);
+        }
+        else
+            throw std::logic_error("Optimization of weights which are neither of type cldnn::data nor cldnn::input_layout!");
+    };
+
+    //generic lambda function which prepares given primitive for weights optimization
+    //it deduces the type of weights from the type of the argument and calls 'add_weights' for all
+    //weights and biases used by given primitive.
+    //argument should match few requirements:
+    // - it should be of a form 'typed_program_node<T>&'
+    // - both 'T.weights' and 'T.bias' should be either of type 'primitive_id' or 'std::vector<primitive_id>'
+    const auto prep_opt = [this, &add_weights](auto& node) -> void
+    {
+        auto weights_offset = node.get_primitive()->input.size();
+        auto bias_offset = weights_offset + wrap_if_single(node.get_primitive()->weights).size();
+        for (auto i = weights_offset; i < node.get_dependencies().size(); i++)
+        {
+            auto data_type = i < bias_offset ? layout_optimizer::data_type::weights : layout_optimizer::data_type::bias;
+            add_weights(node.get_dependency(i), data_type, node);
+        }
+    };
+
+    for (auto& p : nodes_map)
+    {
+        auto& prim = *p.second;
+        auto* selected_impl = prim.get_selected_impl().get();
+        if (selected_impl->_use_ks)
+        {
+            if (prim.type() == convolution::type_id())
+            {
+                prep_opt(prim.as<convolution>());
+            }
+            else if (prim.type() == fully_connected::type_id())
+            {
+                prep_opt(prim.as<fully_connected>());
+            }
+        }
+    }
+
+    //all optimizing primitives has been added and inputs for all primitives has been updated.
+    //run reorders now
+    lo.optimize();
 }
 
 void program_impl::prepare_padding()

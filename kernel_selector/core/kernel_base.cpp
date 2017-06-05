@@ -16,7 +16,7 @@
 
 #include "kernel_base.h"
 
-namespace KernelSelctor
+namespace KernelSelector
 {
     const primitive_db KernelBase::db;
 }

@@ -24,15 +24,21 @@ namespace clDNN
         BaseKernelBinary(KernelType::ELTWISE),
         m_Params(params)
     {
-        KernelSelctor::EltwiseParams ksParams;
+        KernelSelector::EltwiseParams ksParams;
 
         InitBaseParams(params, ksParams);
-        ksParams.eltwiseParams.inDesc1 = params.eltwiseParams.inDesc1;
+        ksParams.inputs.resize(2);
+        UpdateTensor(
+            params.inputType,
+            params.inputLayout,
+            params.inDims,
+            params.eltwiseParams.inDesc1, 
+            ksParams.inputs[1]);
         ksParams.eltwiseParams.mode = params.eltwiseParams.mode;
         ksParams.eltwiseParams.scalar = params.eltwiseParams.scalar;
 
-        KernelSelctor::EltwiseOptionalParams ksOptParams;
+        KernelSelector::EltwiseOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelctor::EltwiseKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::EltwiseKernelSelctor::instance(), ksParams, ksOptParams);
     }
 }

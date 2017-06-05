@@ -18,36 +18,34 @@
 #include "api/CPP/tensor.hpp"
 #include "api/CPP/cldnn_defs.h"
 
-namespace KernelSelctor 
+namespace KernelSelector 
 {
-    void CPUIGKConvolutionReorder::Execute(void* input, std::size_t, void* output, std::size_t) const
+    void IGKConvolutionKernelBase::CPUIGKConvolutionReorder::Execute(void* input, size_t, void* output, size_t) const
     {
-        assert(input_layout == WeightsReorderLayout::oiyx);
-        assert(output_layout == WeightsReorderLayout::os_iyx_osv16);
         constexpr uint32_t sub_group_size = 16;
 
         short* input_ptr = (short*)input;
         short* output_ptr = (short*)output;
 
-        uint size[5] = {
-            params->outDims.w,
-            params->outDims.z,
-            params->inDims.z,
+        size_t size[5] = {
+            params->output.batch().v,
+            params->output.feature().v,
+            params->inputs[0].feature().v,
             params->convParams.filterSize.x,
             params->convParams.filterSize.y,
         };
-        for (uint32_t ofm = 0; ofm < params->outDims.z; ofm++)
+        for (uint32_t ofm = 0; ofm < params->output.feature().v; ofm++)
         {
-            for (uint32_t ifm = 0; ifm < params->inDims.z; ifm++)
+            for (uint32_t ifm = 0; ifm < params->inputs[0].feature().v; ifm++)
             {
                 for (uint32_t y = 0; y < params->convParams.filterSize.y; y++)
                 {
                     for (uint32_t x = 0; x < params->convParams.filterSize.x; x++)
                     {
-                        std::size_t input_idx = x + size[3] * (y + size[4] * (ifm + size[2] * ofm));
-                        const uint slice_id = ofm / sub_group_size;
-                        const uint id_in_slice = ofm % sub_group_size;
-                        std::size_t output_idx = id_in_slice + 16 * (x + size[3] * (y + size[4] * (ifm + slice_id * size[2])));
+                        size_t input_idx = x + size[3] * (y + size[4] * (ifm + size[2] * ofm));
+                        const uint32_t slice_id = ofm / sub_group_size;
+                        const uint32_t id_in_slice = ofm % sub_group_size;
+                        size_t output_idx = id_in_slice + 16 * (x + size[3] * (y + size[4] * (ifm + slice_id * size[2])));
                         //assert(input_idx*bpp < input_size && output_idx*bpp < output_size);
                         output_ptr[output_idx] = input_ptr[input_idx];
                     }
@@ -56,75 +54,35 @@ namespace KernelSelctor
         }
     }
 
-    std::size_t CPUIGKConvolutionReorder::GetNewWeightBufferSizeInBytes() const
+    size_t IGKConvolutionKernelBase::CPUIGKConvolutionReorder::GetNewWeightBufferSizeInBytes() const
     {
         constexpr uint32_t sub_group_size = 16;
         return
             params->convParams.filterSize.x *
             params->convParams.filterSize.y *
-            params->inDims.z *
-            cldnn::round_up_to(params->outDims.z, sub_group_size) *
-            BytesPerElement(params->inputType);
+            params->inputs[0].feature().v *
+            cldnn::round_up_to(params->output.feature().v, sub_group_size) *
+            BytesPerElement(params->inputs[0].dtype);
     }
 
-    cldnn::tensor desc_2_tensor(const TensorDesc& desc)
+    jit_constants IGKConvolutionKernelBase::get_jit_constants(const ConvolutionParams& params, IGKConvolutionKernelBase::DispatchData kd) const
     {
-        auto stride_x = desc.pitches.x;
-        auto stride_y = desc.pitches.y / desc.pitches.x;
-        auto stride_z = desc.pitches.z / desc.pitches.y;
-        auto stride_w = desc.pitches.w / desc.pitches.z;
-
-        return{
-                (cldnn::tensor::value_type)stride_w,
-                (cldnn::tensor::value_type)stride_z,
-                (cldnn::tensor::value_type)stride_x,
-                (cldnn::tensor::value_type)stride_y
-            };
-    }
-
-    cldnn::tensor dim_2_tensor(const uDims& dim)
-    {
-        return{
-            (cldnn::tensor::value_type)dim.w,
-            (cldnn::tensor::value_type)dim.z,
-            (cldnn::tensor::value_type)dim.x,
-            (cldnn::tensor::value_type)dim.y
-        };
-    }
-
-    cldnn::format params_2_cldnn(DataLayout l)
-    {
-        switch (l)
-        {
-        case KernelSelctor::yxfb: return cldnn::format::yxfb;
-        case KernelSelctor::byxf: return cldnn::format::byxf;
-        case KernelSelctor::bfyx: return cldnn::format::bfyx;
-        case KernelSelctor::fyxb: return cldnn::format::fyxb;
-        case KernelSelctor::bs_xs_xsv8_bsv8: return cldnn::format::bs_xs_xsv8_bsv8;
-        default:
-            assert(0);
-            return cldnn::format::bfyx;
-        }
-    }
-
-    jit_constants IGKConvolutionKernelBase::get_jit_constants(const ConvolutionParams& params, DispatchData kd) const
-    {
-        const auto split = 1; // TODO: do we need to support split (from performance aspect)?
+        const auto split = params.convParams.split;
 
         const auto& cp = params.convParams;
 
         cldnn::tensor stride(
               (cldnn::tensor::value_type)1,
               (cldnn::tensor::value_type)1,
-              (cldnn::tensor::value_type)std::min(cp.stride.x, params.inDims.x),
-              (cldnn::tensor::value_type)std::min(cp.stride.y, params.inDims.y));
-        cldnn::tensor filter_tensor = cldnn::tensor( // TODO: support more layouts
-              (cldnn::tensor::value_type)params.outDims.z,
-              (cldnn::tensor::value_type)params.inDims.z,
-              (cldnn::tensor::value_type)cp.filterSize.x,
-              (cldnn::tensor::value_type)cp.filterSize.y );
-        cldnn::tensor input_tensor = dim_2_tensor(params.inDims);
-        cldnn::tensor output_tensor = dim_2_tensor(params.outDims);
+              (cldnn::tensor::value_type)std::min((size_t)cp.stride.x, params.inputs[0].x().v),
+              (cldnn::tensor::value_type)std::min((size_t)cp.stride.y, params.inputs[0].y().v));
+        cldnn::tensor filter_tensor = cldnn::tensor(
+              (cldnn::tensor::value_type)params.output.feature().v,
+              (cldnn::tensor::value_type)params.inputs[0].feature().v,
+              (cldnn::tensor::value_type)(size_t)cp.filterSize.x,
+              (cldnn::tensor::value_type)(size_t)cp.filterSize.y );
+        cldnn::tensor input_tensor = ks_tensor_2_tensor(params.inputs[0]);
+        cldnn::tensor output_tensor = ks_tensor_2_tensor(params.output);
         cldnn::tensor input_padding_tensor = cldnn::tensor(
               (cldnn::tensor::value_type)0,
               (cldnn::tensor::value_type)0,
@@ -135,89 +93,152 @@ namespace KernelSelctor
               (cldnn::tensor::value_type)0,
               (cldnn::tensor::value_type)0,
               (cldnn::tensor::value_type)0 );
-        auto input_offset_with_padding = params.inDesc.offset - cp.padding.x - params.inDesc.pitches.x*cp.padding.y;
+        cldnn::tensor dilation = cldnn::tensor(
+            (cldnn::tensor::value_type)1,
+            (cldnn::tensor::value_type)1,
+            (cldnn::tensor::value_type)cp.dilation.x,
+            (cldnn::tensor::value_type)cp.dilation.y);
+        auto input_offset_with_padding = params.inputs[0].offset - cp.padding.x - params.inputs[0].y().pitch*cp.padding.y;
+
+        const bool relu =
+            params.activationFunc == ActivationFunction::RELU ||
+            params.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE;
+        const float negative_slope =
+            params.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE ?
+            params.nlParams.m : 0.f;
 
         jit_constants mem_consts{
-            neural::gpu::make_jit_constant("INPUT",                     input_tensor),
-            neural::gpu::make_jit_constant("OUTPUT",                    output_tensor),
-            neural::gpu::make_jit_constant("STRIDE",                    stride),
-            neural::gpu::make_jit_constant("INPUT_OFFSET",              params.inDesc.offset), // should contains data for split also
-            neural::gpu::make_jit_constant("INPUT_OFFSET_WITH_PADDING", input_offset_with_padding),
-            neural::gpu::make_jit_constant("OUTPUT_OFFSET",             params.outDesc.offset),
-            neural::gpu::make_jit_constant("OUTPUT_LIMIT",              params.outDesc.pitches.w),
-            neural::gpu::make_jit_constant("INPUT_PADDING",             input_padding_tensor),
-            neural::gpu::make_jit_constant("OUTPUT_PADDING",            output_padding_tensor),
-            neural::gpu::make_jit_constant("FILTER",                    filter_tensor),
-            neural::gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
-            neural::gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"),
-            neural::gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM",  "FILTER_FEATURE_NUM_1"),
-            neural::gpu::make_jit_constant("FP16_SUPPORTED",            static_cast<int>(kd.fp16_unit_used)), // TODO: why do we need it? FP16_UNIT_USED is enough.
-            neural::gpu::make_jit_constant("FP16_UNIT_USED",            static_cast<int>(kd.fp16_unit_used)),
-            neural::gpu::make_jit_constant("UNIT_TYPE",                 kd.fp16_unit_used ? "half" : "float"),
-            neural::gpu::make_jit_constant("UNIT_VAL_ZERO",             kd.fp16_unit_used ? "0.0h" : "0.0f"),
-            neural::gpu::make_jit_constant("RELU",                      static_cast<int>(params.activationFunc == ActivationFunction::RELU)),
-            neural::gpu::make_jit_constant("NEGATIVE_SLOPE",            0.f), // TODO - add it to params
-            neural::gpu::make_jit_constant("INPUT_ROW_PITCH",           params.inDesc.pitches.x),
-            neural::gpu::make_jit_constant("INPUT_SLICE_PITCH",         params.inDesc.pitches.y),
-            neural::gpu::make_jit_constant("INPUT_BATCH_PITCH",         params.inDesc.pitches.z),
-            neural::gpu::make_jit_constant("OUT_ROW_PITCH",             params.outDesc.pitches.x),
-            neural::gpu::make_jit_constant("OUT_SLICE_PITCH",           params.outDesc.pitches.y),
-            neural::gpu::make_jit_constant("OUT_BATCH_PITCH",           params.outDesc.pitches.z),
+            gpu::make_jit_constant("INPUT",                     input_tensor),
+            gpu::make_jit_constant("OUTPUT",                    output_tensor),
+            gpu::make_jit_constant("STRIDE",                    stride),
+            gpu::make_jit_constant("INPUT_OFFSET",              params.inputs[0].offset),
+            gpu::make_jit_constant("INPUT_OFFSET_WITH_PADDING", input_offset_with_padding),
+            gpu::make_jit_constant("OUTPUT_OFFSET",             params.output.offset),
+            gpu::make_jit_constant("OUTPUT_LIMIT",              params.output.LengthWithPadding()),
+            gpu::make_jit_constant("INPUT_PADDING",             input_padding_tensor),
+            gpu::make_jit_constant("OUTPUT_PADDING",            output_padding_tensor),                 // TODO
+            gpu::make_jit_constant("FILTER",                    filter_tensor),
+            gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
+            gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_BATCH_NUM"),
+            gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM",  "FILTER_FEATURE_NUM"),
+            gpu::make_jit_constant("FP16_SUPPORTED",            static_cast<int>(kd.fp16_unit_used)),   // TODO: use engine
+            gpu::make_jit_constant("FP16_UNIT_USED",            static_cast<int>(kd.fp16_unit_used)),
+            gpu::make_jit_constant("UNIT_TYPE",                 kd.fp16_unit_used ? "half" : "float"),
+            gpu::make_jit_constant("UNIT_VAL_ZERO",             kd.fp16_unit_used ? "0.0h" : "0.0f"),
+            gpu::make_jit_constant("TO_UNIT_TYPE_V1(v)",        kd.fp16_unit_used ? "convert_half(v)" : "(float)(v)"),
+            gpu::make_jit_constant("RELU",                      static_cast<int>(relu)),
+            gpu::make_jit_constant("NEGATIVE_SLOPE",            negative_slope),
+            gpu::make_jit_constant("BIAS_TERM",                 static_cast<int>(!params.bias.empty())),
+            gpu::make_jit_constant("DILATION",                  dilation),
+            gpu::make_jit_constant("INPUT_X_PITCH",             params.inputs[0].x().pitch),
+            gpu::make_jit_constant("INPUT_Y_PITCH",             params.inputs[0].y().pitch),
+            gpu::make_jit_constant("INPUT_FEATURE_PITCH",       params.inputs[0].feature().pitch),
+            gpu::make_jit_constant("INPUT_BATCH_PITCH",         params.inputs[0].batch().pitch),
+            gpu::make_jit_constant("OUT_X_PITCH",               params.output.x().pitch),
+            gpu::make_jit_constant("OUT_Y_PITCH",               params.output.y().pitch),
+            gpu::make_jit_constant("OUT_FEATURE_PITCH",         params.output.feature().pitch),
+            gpu::make_jit_constant("OUT_BATCH_PITCH",           params.output.batch().pitch),
+            gpu::make_jit_constant("FILTER_X_PITCH",            params.weights.x().pitch),
+            gpu::make_jit_constant("FILTER_Y_PITCH",            params.weights.y().pitch),
+            gpu::make_jit_constant("FILTER_IFM_PITCH",          params.weights.ifm().pitch),
+            gpu::make_jit_constant("FILTER_OFM_PITCH",          params.weights.ofm().pitch),
         };
 
-#if 0 // TODO when we will add batch kernels we need to support it
-        if (filter_mem.argument().format == memory::format::yxio_f32 ||
-            filter_mem.argument().format == memory::format::yxoi_f32 ||
-            filter_mem.argument().format == memory::format::yxio_f16)
+        if (params.inputs[0].layout == DataLayout::yxfb &&
+            params.weights.layout == WeightsLayout::yxio)
         {
             const auto local_work_group_size = kd.lws0;
+            const auto batch_size = params.output.batch().v;
 
-            mem_consts.add_constant(neural::gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE", local_work_group_size));
-            mem_consts.add_constant(neural::gpu::make_jit_constant("OFM_PER_WORK_ITEM", kd.ofm_per_work_item)); // how many output feature maps for a single batch will a single work item produce
-            mem_consts.add_constant(neural::gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", kd.batches_per_work_item)); // how many batches will a single work item compute
-            mem_consts.add_constant(neural::gpu::make_jit_constant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS", std::max(batch_size / kd.batches_per_work_item / local_work_group_size, static_cast<size_t>(1)))); // how many local work groups we need to compute single element for each batch
-            mem_consts.add_constant(neural::gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / kd.batches_per_work_item)); // how many work items we need to compute single element for each batch
-
-            if (params.inDims.z > 4)
-            {
-                mem_consts.add_constant(neural::gpu::make_jit_constant("USE_BLOCK_READ_2", ""));
-            }
-        }
-#endif
-
-        if (params.inputLayout == bfyx)
-        {
-            mem_consts.add_constant(neural::gpu::make_jit_constant("SUB_GROUP_SIZE", kd.lws2));
-            mem_consts.add_constant(neural::gpu::make_jit_constant("OUT_BLOCK_WIDTH", kd.block_width));
-            mem_consts.add_constant(neural::gpu::make_jit_constant("OUT_BLOCK_HEIGHT", kd.block_height));
-            mem_consts.add_constant(neural::gpu::make_jit_constant("IN_BLOCK_ARRAY_SIZE", kd.input_block_array_size));
-            mem_consts.add_constant(neural::gpu::make_jit_constant("IN_BLOCK_WIDTH", kd.input_block_width));
-            mem_consts.add_constant(neural::gpu::make_jit_constant("PREFETCH", kd.prefetch));
-            if (kd.leftovers)
-                mem_consts.add_constant(neural::gpu::make_jit_constant("LEFTOVERS", kd.leftovers));
+            mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE", local_work_group_size));
+            mem_consts.add_constant(gpu::make_jit_constant("OFM_PER_WORK_ITEM", kd.ofm_per_work_item)); // how many output feature maps for a single batch will a single work item produce
+            mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", kd.batches_per_work_item)); // how many batches will a single work item compute
+            mem_consts.add_constant(gpu::make_jit_constant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS", std::max(batch_size / kd.batches_per_work_item / local_work_group_size, static_cast<size_t>(1)))); // how many local work groups we need to compute single element for each batch
+            mem_consts.add_constant(gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / kd.batches_per_work_item)); // how many work items we need to compute single element for each batch
         }
 
         return mem_consts;
     }
 
-    DispatchData IGKConvolutionKernelBase::set_default(const ConvolutionParams& params) const
+    bool IGKConvolutionKernelBase::check_work_groups(const IGKConvolutionKernelBase::DispatchData& kd) const
     {
-        auto split = 1;  // TODO: do we need to support split (from performance aspect)?
-        auto batch_size = params.outDims.w;
-        auto input_fetures = params.outDims.z;
+        if (kd.gws0 == 0 ||
+            kd.gws1 == 0 ||
+            kd.gws2 == 0 ||
+            kd.lws0 == 0 ||
+            kd.lws1 == 0 ||
+            kd.lws2 == 0)
+        {
+            return false;
+        }
+
+        if ((kd.gws0 % kd.lws0) != 0 ||
+            (kd.gws1 % kd.lws1) != 0 ||
+            (kd.gws2 % kd.lws2) != 0)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    namespace
+    {
+        bool check_tensor_for_split(const DataTensor& t, uint32_t split)
+        {
+            if (t.PaddingExists())
+            {
+                auto new_tensor = t;
+                auto feature = t.feature();
+                auto feature_index = Tensor::channelndex(t.layout, Tensor::DataChannelName::NAME_FEATURE);
+                if (feature_index >= 0 && feature_index+1 < (int)Tensor::channelsCount(t.layout))
+                {
+                    if (feature.v*split <= t.dims[feature_index+1].pitch)
+                    {
+                        new_tensor.dims[feature_index].v = feature.v*split;
+
+                        if (new_tensor.PaddingExists() == false)
+                        {
+                            return true;
+                        }
+                    }
+                }
+
+                return false;
+            }
+
+            return true;
+        }
+    }
+
+    bool IGKConvolutionKernelBase::check_pitch_for_split_only(const ConvolutionParams& params) const
+    {
+        // TODO: it's better to add pitch+offset support than handle this case
+        return
+            check_tensor_for_split(params.output, params.convParams.split) &&
+            check_tensor_for_split(params.inputs[0], params.convParams.split);
+    }
+
+    IGKConvolutionKernelBase::DispatchData IGKConvolutionKernelBase::set_default(const ConvolutionParams& params) const
+    {
+        auto batch_size = params.output.batch().v;
+        auto output_features = params.output.feature().v;
 
         DispatchData kd;
 
-        kd.fp16_unit_used = params.inputType == Datatype::F16;
-        std::size_t gws0 = (input_fetures * batch_size) / split;
-        std::size_t lws0 = std::min(gws0, static_cast<size_t>(32));
+        kd.fp16_unit_used = params.inputs[0].dtype == Datatype::F16;
+        size_t gws0 = output_features * batch_size;
+        size_t lws0 = std::min(gws0, static_cast<size_t>(32));
         while (gws0 % lws0)
         {
             lws0--;
         }
-        kd.gws1 = params.outDims.x;
-        kd.gws2 = params.outDims.y;
-        kd.lws1 = kd.lws2 = 1;
+        kd.gws0 = gws0;
+        kd.gws1 = params.output.x().v;
+        kd.gws2 = params.output.y().v;
+        kd.lws0 = lws0;
+        kd.lws1 = 1;
+        kd.lws2 = 1;
         kd.ofm_per_work_item = 1;
         kd.batches_per_work_item = 1;
         kd.block_width = 1;

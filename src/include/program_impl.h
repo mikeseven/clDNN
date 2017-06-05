@@ -244,6 +244,7 @@ public:
     program_impl(engine_impl::ptr engine, topology_impl const& topology, build_options const& options);
 
     auto get_engine() const { return engine; }
+    auto get_options() const { return options; }
 
     std::list<std::shared_ptr<program_node>> get_nodes() const;
 
@@ -286,7 +287,8 @@ private:
     ** High-level functions, in order of usage
     */
     void init_graph(topology_impl const& topology);
-    void optimize_graph();
+    void pre_optimize_graph();
+    void post_optimize_graph();
     void compile_graph();
 
     void set_outputs();
@@ -297,6 +299,7 @@ private:
     void trim_to_outputs();
     void reorder_inputs(layout_optimizer& lo);
     void optimize_weights(layout_optimizer& lo);
+    void optimize_ks_weights(layout_optimizer& lo);
     void prepare_padding();
     void prepare_buffer_fusing();
 

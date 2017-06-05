@@ -22,7 +22,7 @@
 #define WORK_GROUP_X 64
 #define VEC_SIZE 4
 __attribute__ ((reqd_work_group_size(WORK_GROUP_X, 1, 1)))
-__kernel void fc_f16(
+KERNEL(fc_f16)(
     __global const half  *src_vector,
     __global half        *dst_vector,
     __global const half  *matrix,
@@ -32,7 +32,7 @@ __kernel void fc_f16(
     const unsigned x = get_local_id(0);
     const unsigned y = get_global_id(1);
 #if OUT_BATCH == 1
-    const unsigned oidx = (y / OUT_WIDTH) * OUT_ROW_PITCH + y % OUT_WIDTH + OUT_OFFSET;
+    const unsigned oidx = (y / OUT_WIDTH) * OUT_Y_PITCH + y % OUT_WIDTH + OUT_OFFSET;
     const unsigned batch_id = 0;
 #else
     const unsigned batch_id = get_global_id(2);
@@ -42,7 +42,7 @@ __kernel void fc_f16(
     const unsigned out_y = out_yx / (OUT_WIDTH);
     const unsigned out_x = out_yx % (OUT_WIDTH);
     
-    const unsigned oidx = batch_id*OUT_BATCH_PITCH + out_z*OUT_SLICE_PITCH + out_y*OUT_ROW_PITCH + out_x + OUT_OFFSET;
+    const unsigned oidx = batch_id*OUT_BATCH_PITCH + out_z*OUT_FEATURE_PITCH + out_y*OUT_Y_PITCH + out_x + OUT_OFFSET;
 #endif
     
     // TODO: we need to support multi dims. currently it doesn't
@@ -120,9 +120,9 @@ __kernel void fc_f16(
 
     #if defined(OUTPUT_BIASED)
     const half bias = biases[y];
-    if (x == 0) dst_vector[oidx] = activation_function(slm[0] + bias, NL_M, NL_N);
+    if (x == 0) dst_vector[oidx] = FUNC_CALL(activation_function)(slm[0] + bias, NL_M, NL_N);
     #else
-    if (x == 0) dst_vector[oidx] = activation_function(slm[0], NL_M, NL_N);
+    if (x == 0) dst_vector[oidx] = FUNC_CALL(activation_function)(slm[0], NL_M, NL_N);
     #endif
 }
 #endif 
@@ -133,7 +133,7 @@ __kernel void fc_f16(
 #define WORK_GROUP_X 64
 #define VEC_SIZE 4
 __attribute__ ((reqd_work_group_size(WORK_GROUP_X, 1, 1)))
-__kernel void fc_f32(
+KERNEL(fc_f32)(
     __global const float  *src_vector,
     __global float        *dst_vector,
     __global const float  *matrix,
@@ -143,7 +143,7 @@ __kernel void fc_f32(
     const unsigned x = get_local_id(0);
     const unsigned y = get_global_id(1);
 #if OUT_BATCH == 1
-    const unsigned oidx = (y / OUT_WIDTH) * OUT_ROW_PITCH + y % OUT_WIDTH + OUT_OFFSET;
+    const unsigned oidx = (y / OUT_WIDTH) * OUT_Y_PITCH + y % OUT_WIDTH + OUT_OFFSET;
     const unsigned batch_id = 0;
 #else
     const unsigned batch_id = get_global_id(2);
@@ -153,7 +153,7 @@ __kernel void fc_f32(
     const unsigned out_y = out_yx / (OUT_WIDTH);
     const unsigned out_x = out_yx % (OUT_WIDTH);
     
-    const unsigned oidx = batch_id*OUT_BATCH_PITCH + out_z*OUT_SLICE_PITCH + out_y*OUT_ROW_PITCH + out_x + OUT_OFFSET;
+    const unsigned oidx = batch_id*OUT_BATCH_PITCH + out_z*OUT_FEATURE_PITCH + out_y*OUT_Y_PITCH + out_x + OUT_OFFSET;
 #endif
     // TODO: we need to support multi dims. currently it doesn't
     // TODO: check cases we have padding in y/z dimensions
@@ -234,7 +234,7 @@ __kernel void fc_f32(
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 
-    if (x == 0) dst_vector[oidx] = activation_function(slm[0] + bias, NL_M, NL_N);
+    if (x == 0) dst_vector[oidx] = FUNC_CALL(activation_function)(slm[0] + bias, NL_M, NL_N);
 }
 #endif 
 

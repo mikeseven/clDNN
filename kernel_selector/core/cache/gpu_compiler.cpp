@@ -14,24 +14,20 @@
 // limitations under the License.
 */
 #include "gpu_compiler.h"
-#include "ocl_toolkit.h"
+#include "ks_ocl_toolkit.h"
 #include <iostream>
 #include <sstream>
 #include <assert.h>
 
-namespace neural { namespace gpu { namespace cache {
+namespace KernelSelector { namespace gpu { namespace cache {
 
-binary_data gpu_compiler::compile(context* context, kernel kernel) // throws cl::BuildError
+binary_data gpu_compiler::compile(context& context, const code& program_str, const compile_options& options) // throws cl::BuildError
 {
-    const jit& jits = std::get<0>(kernel);
-    const code& code_src = std::get<1>(kernel);
-    const compile_options& options = std::get<2>(kernel);
-    auto& clContext = context->context();
-    auto& clDevice = context->device();
-    code source = jits + code_src;
+    auto& clContext = context.context;
+    auto& clDevice = context.device;
 
     cl_int status = CL_SUCCESS;
-    cl::Program program = cl::Program(clContext, source, false, &status);
+    cl::Program program = cl::Program(clContext, program_str, false, &status);
 
     if (status == CL_SUCCESS)
     {
@@ -53,7 +49,7 @@ binary_data gpu_compiler::compile(context* context, kernel kernel) // throws cl:
                 std::string buildLog = program.getBuildInfo<CL_PROGRAM_BUILD_LOG>(clDevice, &getLogStatus);
                 std::cout << buildLog + "\n";
 
-                std::istringstream stream(source);
+                std::istringstream stream(program_str);
                 std::string line;
                 unsigned int lineNumber = 1;
                 while (std::getline(stream, line))

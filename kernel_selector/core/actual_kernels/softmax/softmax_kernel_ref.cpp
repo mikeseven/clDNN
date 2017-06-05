@@ -16,20 +16,22 @@
 
 #include "softmax_kernel_ref.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     ParamsKey SoftmaxKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetInputLayout(bx);
-        k.SetOutputLayout(bfyx);
-        k.SetOutputLayout(bx);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
+        k.SetInputLayout(DataLayout::bfyx);
+        k.SetInputLayout(DataLayout::bf);
+        k.SetOutputLayout(DataLayout::bfyx);
+        k.SetOutputLayout(DataLayout::bf);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.SetBatchingSupport();
         return k;
     }
 
@@ -40,20 +42,10 @@ namespace KernelSelctor
         KernelData kd = KernelData::Default<SoftMaxParams>(params, 1);
 
         SoftMaxParams& newParams = *static_cast<SoftMaxParams*>(kd.params.get());
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
 
-        if (newParams.inputLayout == bx)
-        {
-            const auto numBatch = out.y;
-            kernel.work_groups.global = cl::NDRange(1, 1, numBatch);
-        }
-        else
-        {
-            const auto numBatch = out.w;
-            kernel.work_groups.global = cl::NDRange(out.x, out.y, numBatch);
-        }
-        
+        kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.batch().v);
         kernel.kernel_string = GetKernelString(kernel_name, GetBaseJit(newParams), "softmax");
         kernel.args_desc = GetArgumentDesc(1, false, false);
 

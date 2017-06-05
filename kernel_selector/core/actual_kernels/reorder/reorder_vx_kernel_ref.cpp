@@ -16,18 +16,20 @@
 
 #include "reorder_vx_kernel_ref.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     ParamsKey ReorderVxKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
         k.SetOffsetSupport();
         k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.SetBatchingSupport();
         return k;
     }
 
@@ -38,15 +40,14 @@ namespace KernelSelctor
         KernelData kd = KernelData::Default<ReorderVxParams>(params, 1);
 
         ReorderVxParams& newParams = *static_cast<ReorderVxParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
 
         std::stringstream jit;
         jit << GetBaseJit(newParams);
         jit << "#define REORDER_MODE_" << toString(newParams.reorderParams.mode);
 
-        const auto& in = newParams.inDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(in.x, in.y, in.z*in.w);
+        kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "reorder");
         kernel.args_desc = GetArgumentDesc(1, false, false);
 

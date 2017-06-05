@@ -16,18 +16,20 @@
 
 #include "pooling_kernel_ref.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     ParamsKey PoolingKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetOutputLayout(bfyx);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
+        k.SetInputLayout(DataLayout::bfyx);
+        k.SetOutputLayout(DataLayout::bfyx);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.SetBatchingSupport();
         k.SetPoolType(PoolType::MAX);
         k.SetPoolType(PoolType::AVG);
         k.SetPoolRemainder(PoolRemainder::FLOOR);
@@ -42,7 +44,6 @@ namespace KernelSelctor
         KernelData kd = KernelData::Default<PoolingParams>(params, 1);
 
         PoolingParams& newParams = *static_cast<PoolingParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
 
         std::stringstream jit;
         jit << GetBaseJit(newParams)
@@ -58,9 +59,9 @@ namespace KernelSelctor
             jit << "#define MAX_POOLING\n";
         }
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
+        kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "pooling");
         kernel.args_desc = GetArgumentDesc(1, false, false);
 

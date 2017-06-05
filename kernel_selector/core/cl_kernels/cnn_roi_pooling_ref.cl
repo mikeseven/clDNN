@@ -16,11 +16,9 @@
 
 
 
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
+#include "include/cnn_common.cl"
 
-__kernel void roi_pooling_gpu
+KERNEL(roi_pooling_gpu)
 (
     const __global UNIT_TYPE * src_data,
     const __global UNIT_TYPE * src_rois,
@@ -70,7 +68,7 @@ __kernel void roi_pooling_gpu
 
     for (int yy = y_begin; yy < y_after; ++yy)
     for (int xx = x_begin; xx < x_after; ++xx)
-        res = max(res, data[xx + PITCH_SRC_H * yy]);
+        res = fmax(res, data[xx + PITCH_SRC_H * yy]);
 
-    dst_data[x + PITCH_DST_H * y + PITCH_DST_C * c + PITCH_DST_R * r + PITCH_DST_B * b] = res;
+    dst_data[x + PITCH_DST_H * y + PITCH_DST_C * c + PITCH_DST_R * r + PITCH_DST_B * b] = FUNC_CALL(activation_function)(res, NL_M, NL_N);
 }

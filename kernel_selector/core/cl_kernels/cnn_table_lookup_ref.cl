@@ -18,7 +18,7 @@
 
 #include "include/cnn_common.cl"
 
-__kernel void table_lookup(
+KERNEL(table_lookup)(
     __global DATA_TYPE* input,
     __global DATA_TYPE* output,
     __global LUT_TYPE* lut)
@@ -33,11 +33,11 @@ __kernel void table_lookup(
     const unsigned w = get_global_id(2) / OUT_DEPTH;
 #endif
     
-    const unsigned src_index = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;
-    const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
+    const unsigned src_index = w*INPUT_BATCH_PITCH + z*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x + INPUT_OFFSET;
+    const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x + OUT_OFFSET;
     
     unsigned lut_idx = (unsigned)input[src_index];
     
     DATA_TYPE val = (lut_idx < TABLE_SIZE) ? (DATA_TYPE)lut[lut_idx] : 0;
-    output[dst_index] = val;
+    output[dst_index] = FUNC_CALL(activation_function)(val, NL_M, NL_N);
 }

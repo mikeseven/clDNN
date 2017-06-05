@@ -5,6 +5,9 @@
 #include <fstream>
 #include "common/common_tools.h"
 
+std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldnn::memory& input_mem);
+std::vector<std::string> load_category_names(const std::string & file_name);
+
 struct html
 {
     html(const std::string& file_name, const std::string& title);

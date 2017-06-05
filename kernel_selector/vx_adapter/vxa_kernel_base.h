@@ -34,7 +34,7 @@ namespace clDNN
         std::vector<Args> data;
     };
 
-    using context_holder = neural::gpu::context_holder;
+    using context_holder = KernelSelector::gpu::context_holder;
     class BaseKernelBinary : public KernelBinary, public context_holder
     {
     public:
@@ -47,17 +47,19 @@ namespace clDNN
         virtual TensorDesc          GetNewInputTensorDesc() const override;
 
         virtual bool                ShouldReorderWeights() const override;
-        virtual std::size_t         GetNewWeightBufferSizeInBytes() const override;
+        virtual size_t              GetNewWeightBufferSizeInBytes() const override;
         virtual bool                ReorderWeightsWithKernel() const override;
         virtual const CLKernelData& GetWeightsReorderKernelData() const override;
-        virtual void                ReorderWeights(void*, std::size_t, void*, std::size_t) const override;
+        virtual void                ReorderWeights(void*, size_t, void*, size_t) const override;
 
 protected:
-        WorkGroups GetWorkGroups(const KernelSelctor::WorkGroupSizes&) const;
-        void InitBaseParams(const BaseParams& vxParams, KernelSelctor::BaseParams& clDNNParams);
-        void HandleBestKernels(const KernelSelctor::KernelSelctorBase& ks, const KernelSelctor::Params& params, const KernelSelctor::OptionalParams& options);
-        void UpdateBinary(const KernelSelctor::clKernelData& cldnn_data, CLKernelData& data, binary_data& binary, std::shared_ptr<ArgumentsInfoBase>& args);
-        std::shared_ptr<ArgumentsInfoBase> SetupArguments(const KernelSelctor::ArgumentDescpirtor& cldnn_args);
+        WorkGroups GetWorkGroups(const KernelSelector::WorkGroupSizes&) const;
+        void InitBaseParams(const BaseParams& vxParams, KernelSelector::BaseParams& clDNNParams);
+        void HandleBestKernels(const KernelSelector::KernelSelctorBase& ks, const KernelSelector::Params& params, const KernelSelector::OptionalParams& options);
+        void UpdateBinary(const KernelSelector::clKernelData& cldnn_data, CLKernelData& data, binary_data& binary, std::shared_ptr<ArgumentsInfoBase>& args);
+        std::shared_ptr<ArgumentsInfoBase> SetupArguments(const KernelSelector::ArgumentDescpirtor& cldnn_args);
+
+        void UpdateTensor(Datatype dt, DataLayout layout, const uDims& srcDims, const TensorDesc& srcDesc, KernelSelector::DataTensor& dst) const;
 
         const KernelType m_kType = KernelType::UNKNOWN;
         binary_data m_Binary;
@@ -66,6 +68,6 @@ protected:
         std::shared_ptr<ArgumentsInfoBase> m_WeightsReorderArgInfo;
         CLKernelData m_KernelData;
         CLKernelData m_WeightsKernelData;
-        KernelSelctor::KernelData m_cldnnKernelData;
+        KernelSelector::KernelData m_cldnnKernelData;
     };
 }

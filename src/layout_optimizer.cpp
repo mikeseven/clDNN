@@ -21,6 +21,7 @@
 
 #include "api/CPP/data.hpp"
 #include "api/CPP/reorder.hpp"
+#include "ks_reorder.hpp"
 #include <boost/filesystem.hpp>
 #include <sstream>
 
@@ -54,17 +55,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         break;
 
     case data_type::weights: //convolution weights
-        if (batch < 32 || expected_data_type != data_types::f16 || !_optimization_attributes.splitted_convolution)
-        {
-            expected_tensor = current_layout.size;
-            expected_format = cldnn::format::os_iyx_osv16;
-        }
-        else
-        {
-            expected_tensor = current_layout.size;
-            expected_format = cldnn::format::yxfb;
-        }
-
+        // uses original weights - weights will be reorder after this phase
         break;
 
     case data_type::input: //convolution input
@@ -206,16 +197,46 @@ layout_optimizer::create_reorder_if_needed(const layout& current_layout, const c
     return std::make_pair(nullptr, true);
 }
 
+std::pair<std::shared_ptr<cldnn::ks_reorder>, bool>
+layout_optimizer::create_ks_sreorder_if_needed(const cldnn::primitive_id& memid, layout const& expected_layout, const KernelSelector::WeightsReorderParams* reorder_params)
+{
+    if (reorder_params)
+    {
+        cache_key ckey{ memid, expected_layout };
+        auto itr = _cached_ks_reorders.find(ckey);
+        if (itr != _cached_ks_reorders.end())
+            return std::make_pair(itr->second, true);
+
+        auto count = _cached_ks_reorders.size();
+        std::stringstream ss;
+        ss << "ks_reorder_" << count << "_" << memid;
+
+        auto reorder = std::make_shared<cldnn::ks_reorder>(ss.str(), memid, expected_layout, reorder_params);
+        _cached_ks_reorders[ckey] = reorder;
+        return std::make_pair(reorder, false);
+    }
+
+    return std::make_pair(nullptr, true);
+}
+
 void layout_optimizer::optimize() const
 {
-    if (!_enabled)
+    if (!_enabled || _topology.get_primitives().empty())
+    {
         return;
+    }
 
     network_impl net(_engine, _topology);
     net.execute(std::vector<refcounted_obj_ptr<event_impl>>());
     for (auto const& output : net.get_outputs())
     {
+        // in order to handle list of reorders
         auto input_id = output->dependencies().at(0)->id();
+        while (net.get_program()->get_node(input_id).get_dependencies().empty() == false)
+        {
+            input_id = net.get_program()->get_node(input_id).get_dependencies().at(0)->id();
+        }
+        
         auto& data_node = net.get_program()->get_node(input_id).as<data>();
         const_cast<data&>(*data_node.get_primitive()).mem = output->output_memory();
     }

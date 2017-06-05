@@ -23,6 +23,7 @@
 #include "kernels_cache.h"
 #include "event_impl.h"
 
+#include "kernel_selector.h"
 #include <cmath>
 #include <iostream>
 #include <sstream>
@@ -409,6 +410,8 @@ public:
         : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(template_id, definitions, kernel_name)) {}
     explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::string& template_id, const jit_constants& constants, const std::string& kernel_name = std::string())
         : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(template_id, constants.get_definitions(), kernel_name)) {}
+    explicit kernel(std::shared_ptr<gpu_toolkit> context, const KernelSelector::KernelString& kernel_string)
+        : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template_ks({ kernel_string.jit,kernel_string.str }, kernel_string.options, kernel_string.entry_point, kernel_string.batch_compilation)) {}
 
     kernel(const kernel& other) : context_holder(other.context()), _kernel_id(other._kernel_id) {}
 
@@ -436,6 +439,43 @@ public:
         auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
         setArgs<0>(clkernel, std::forward<Args>(args)...);
         context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
+
+        return{ new cldnn::event_impl(end_event), false };
+    }
+
+    cldnn::refcounted_obj_ptr<cldnn::event_impl> run_ks(
+        const KernelSelector::clKernelData& kernel_data,
+        const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& dependencies,
+        const std::vector<const cldnn::memory*> inputs,
+        const cldnn::memory* output,
+        const cldnn::memory* weights = nullptr,
+        const cldnn::memory* bias = nullptr,
+        const uint32_t split_num = 0) const
+    {
+        cl::Event end_event;
+        std::vector<cl::Event> events;
+        events.reserve(dependencies.size());
+        for (auto& dependency : dependencies)
+        {
+            events.emplace_back(dependency->get());
+        }
+
+        auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
+
+        const cl::Buffer* input_b   = inputs[0] ? &kernel_arg_handler<gpu::input_mem>::get(*inputs[0]) : nullptr;
+        const cl::Buffer* output_b  = output    ? &kernel_arg_handler<gpu::output_mem>::get(*output)   : nullptr;
+        const cl::Buffer* weights_b = weights   ? &kernel_arg_handler<gpu::input_mem>::get(*weights)   : nullptr;
+        const cl::Buffer* bias_b    = bias      ? &kernel_arg_handler<gpu::input_mem>::get(*bias)      : nullptr;
+
+        kernel_data.args_desc.SetArguments(clkernel, { input_b }, output_b, weights_b, bias_b, nullptr, split_num);
+
+        context()->queue().enqueueNDRangeKernel(
+            clkernel, 
+            cl::NullRange, 
+            kernel_data.work_groups.global,
+            kernel_data.work_groups.local,
+            &events, 
+            &end_event);
 
         return{ new cldnn::event_impl(end_event), false };
     }

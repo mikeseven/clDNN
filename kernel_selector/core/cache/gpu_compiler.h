@@ -17,13 +17,13 @@
 
 #include "cache_types.h"
 
-namespace neural { namespace gpu { namespace cache {
+namespace KernelSelector { namespace gpu { namespace cache {
 
 /// \brief Class wrapping compile feature of kernel device compiler
 /// 
 struct gpu_compiler
 {
-    static binary_data compile(context* context, kernel kernel);
+    static binary_data compile(context& context, const code& program_str, const compile_options& options);
 };
 
 } } }

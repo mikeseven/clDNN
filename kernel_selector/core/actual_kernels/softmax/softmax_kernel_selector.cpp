@@ -18,7 +18,7 @@
 #include "softmax_kernel_ref.h"
 #include "softmax_kernel_opt_1_dim.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     SoftmaxKernelSelctor::SoftmaxKernelSelctor()
     {

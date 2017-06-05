@@ -75,6 +75,9 @@ set(CLDNN__COMMON_DIR    "${CMAKE_CURRENT_SOURCE_DIR}/common")
 # Path which points to directory with interface for framework.
 set(CLDNN__API_DIR       "${CMAKE_CURRENT_SOURCE_DIR}/api")
 
+# Path which points to directory with interface for framework.
+set(CLDNN__KERNEL_SELECTOR_DIR       "${CMAKE_CURRENT_SOURCE_DIR}/kernel_selector")
+
 # Path which points to directory with binaries for Intel OpenCL SDK ICD (Installable Client Driver).
 set(CLDNN__IOCL_ICD_DIR  "${CLDNN__COMMON_DIR}/intel_ocl_icd")
 

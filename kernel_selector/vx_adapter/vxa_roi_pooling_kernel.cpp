@@ -24,15 +24,23 @@ namespace clDNN
         BaseKernelBinary(KernelType::ROI_POOLING),
         m_Params(params)
     {
-        KernelSelctor::ROIPoolingParams ksParams;
+        KernelSelector::ROIPoolingParams ksParams;
 
         InitBaseParams(params, ksParams);
+        ksParams.output.layout = KernelSelector::DataLayout::brfyx;
+        if (ksParams.inputs[0].batch().v != 1)
+        {
+            ksParams.output.dims.resize(5);
+            ksParams.output.dims[4].v = ksParams.inputs[0].batch().v;
+            ksParams.output.dims[4].pitch = params.outDesc.pitches.w;
+        }
+
         ksParams.rois = params.rois;
         ksParams.pitch_rois_r = params.pitch_rois_r;
         ksParams.pitch_rois_b = params.pitch_rois_b;
 
-        KernelSelctor::ROIPoolingOptionalParams ksOptParams;
+        KernelSelector::ROIPoolingOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelctor::ROIPoolingKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::ROIPoolingKernelSelctor::instance(), ksParams, ksOptParams);
     }
 } // clDNN namespace

@@ -32,7 +32,7 @@ namespace clDNN
         std::string str;
 #ifdef WIN32
         char* env = nullptr;
-        std::size_t len = 0;
+        size_t len = 0;
         errno_t err = _dupenv_s(&env, &len, varName);
         if (err == 0)
         {

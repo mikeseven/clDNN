@@ -16,18 +16,20 @@
 
 #include "roi_pooling_kernel_ref.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     ParamsKey ROIPoolingKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetOutputLayout(bfyx);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
+        k.SetInputLayout(DataLayout::bfyx);
+        k.SetOutputLayout(DataLayout::brfyx);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.SetBatchingSupport();
         return k;
     }
 
@@ -38,31 +40,30 @@ namespace KernelSelctor {
         KernelData kd = KernelData::Default<ROIPoolingParams>(params, 1);
 
         ROIPoolingParams& newParams = *static_cast<ROIPoolingParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
 
         std::stringstream jit;
         jit << GetBaseJit(newParams)
             << "#define FP16_SUPPORTED 1\n"
-            << "#define UNIT_TYPE " << (newParams.inputType == Datatype::F16 ? "half" : "float") << "\n"
-            << "#define SRC_W (" << newParams.inDims.x << ")\n"
-            << "#define SRC_H (" << newParams.inDims.y << ")\n"
-            << "#define DST_W (" << newParams.outDims.x << ")\n"
-            << "#define DST_H (" << newParams.outDims.y << ")\n"
-            << "#define CHAN_NUM (" << newParams.inDims.z << ")\n"
+            << "#define UNIT_TYPE " << (newParams.inputs[0].dtype == Datatype::F16 ? "half" : "float") << "\n"
+            << "#define SRC_W (" << newParams.inputs[0].x().v << ")\n"
+            << "#define SRC_H (" << newParams.inputs[0].y().v << ")\n"
+            << "#define DST_W (" << newParams.output.x().v << ")\n"
+            << "#define DST_H (" << newParams.output.y().v << ")\n"
+            << "#define CHAN_NUM (" << newParams.inputs[0].feature().v << ")\n"
             << "#define ROIS_NUM (" << newParams.rois << ")\n"
-            << "#define BATCH_NUM (" << newParams.inDims.w << ")\n"
-            << "#define PITCH_SRC_H (" << newParams.inDesc.pitches.x << ")\n"
-            << "#define PITCH_SRC_C (" << newParams.inDesc.pitches.y << ")\n"
-            << "#define PITCH_SRC_B (" << newParams.inDesc.pitches.z << ")\n"
+            << "#define BATCH_NUM (" << newParams.inputs[0].batch().v << ")\n"
+            << "#define PITCH_SRC_H (" << newParams.inputs[0].y().pitch << ")\n"
+            << "#define PITCH_SRC_C (" << newParams.inputs[0].feature().pitch << ")\n"
+            << "#define PITCH_SRC_B (" << newParams.inputs[0].batch().pitch << ")\n"
             << "#define PITCH_ROI_R (" << newParams.pitch_rois_r << ")\n"
             << "#define PITCH_ROI_B (" << newParams.pitch_rois_b << ")\n"
-            << "#define PITCH_DST_H (" << newParams.outDesc.pitches.x << ")\n"
-            << "#define PITCH_DST_C (" << newParams.outDesc.pitches.y << ")\n"
-            << "#define PITCH_DST_R (" << newParams.outDesc.pitches.z << ")\n"
-            << "#define PITCH_DST_B (" << newParams.outDesc.pitches.w << ")\n";
+            << "#define PITCH_DST_H (" << newParams.output.y().pitch << ")\n"
+            << "#define PITCH_DST_C (" << newParams.output.feature().pitch << ")\n"
+            << "#define PITCH_DST_R (" << newParams.output.roi().pitch << ")\n"
+            << "#define PITCH_DST_B (" << newParams.output.batch().pitch << ")\n";
 
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(newParams.outDims.Length() * newParams.inDims.w, 1, 1);
+        kernel.work_groups.global = cl::NDRange(newParams.output.Length(), 1, 1);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "roi_pooling_gpu");
         kernel.args_desc = GetArgumentDesc(2, false, false);
 

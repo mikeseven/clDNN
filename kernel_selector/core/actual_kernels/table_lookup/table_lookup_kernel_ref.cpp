@@ -16,18 +16,20 @@
 
 #include "table_lookup_kernel_ref.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     ParamsKey TableLookupKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
         k.SetOffsetSupport();
         k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.SetBatchingSupport();
         return k;
     }
 
@@ -38,7 +40,6 @@ namespace KernelSelctor {
         KernelData kd = KernelData::Default<TableLookupParams>(params, 1);
 
         TableLookupParams& newParams = *static_cast<TableLookupParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
 
         std::stringstream jit;
         jit << GetBaseJit(newParams)
@@ -55,9 +56,9 @@ namespace KernelSelctor {
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
+        kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "table_lookup");
         kernel.args_desc = GetArgumentDesc(1, false, false);
         kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::LOOKUP_TABLE, 0 });

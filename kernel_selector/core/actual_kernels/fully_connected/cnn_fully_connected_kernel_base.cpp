@@ -16,7 +16,7 @@
 
 #include "cnn_fully_connected_kernel_base.h"
 
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     std::string CNNFullyConnectedKernelBase::GetFullyConnectedJit(const FullyConnectedParams& ) const
     {

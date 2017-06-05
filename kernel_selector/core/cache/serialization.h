@@ -17,7 +17,7 @@
 
 #include "cache_types.h"
 
-namespace neural { namespace gpu { namespace cache {
+namespace KernelSelector { namespace gpu { namespace cache {
 
 /// \brief Utility class providing serialize and deserialize mechanisms for cache state
 ///

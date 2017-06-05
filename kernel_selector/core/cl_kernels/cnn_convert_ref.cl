@@ -34,7 +34,7 @@
 #define CONVERT_TYPE float
 #endif
 
-__kernel void convert(
+KERNEL(convert)(
     __global CONVERT_TYPE* input,
     __global DATA_TYPE* output)
 {
@@ -48,8 +48,8 @@ __kernel void convert(
     const unsigned w = get_global_id(2) / OUT_DEPTH;
 #endif
 
-    const unsigned src_index = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;
-    const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
+    const unsigned src_index = w*INPUT_BATCH_PITCH + z*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x + INPUT_OFFSET;
+    const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x + OUT_OFFSET;
 
-    output[dst_index] = (DATA_TYPE)input[src_index];
+    output[dst_index] = FUNC_CALL(activation_function)((DATA_TYPE)input[src_index], NL_M, NL_N);
 }

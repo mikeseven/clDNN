@@ -16,19 +16,21 @@
 
 #include "fully_connected_kernel_ref.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     ParamsKey FullyConnectedKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetInputLayout(bx);
-        k.SetOutputLayout(bx);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
+        k.SetInputLayout(DataLayout::bfyx);
+        k.SetInputLayout(DataLayout::bf);
+        k.SetOutputLayout(DataLayout::bf);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.SetBatchingSupport();
         return k;
     }
 
@@ -44,11 +46,11 @@ namespace KernelSelctor
         jit << GetBaseJit(newParams)
             << GetFullyConnectedJit(newParams);
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y);
+        kernel.work_groups.global = cl::NDRange(out.feature().v, out.batch().v);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "fc");
-        kernel.args_desc = GetArgumentDesc(1, true, true);
+        kernel.args_desc = GetArgumentDesc(1, true, !newParams.bias.empty());
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 

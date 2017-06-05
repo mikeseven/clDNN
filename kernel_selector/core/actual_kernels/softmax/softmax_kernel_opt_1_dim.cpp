@@ -16,17 +16,18 @@
 
 #include "softmax_kernel_opt_1_dim.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     ParamsKey SoftmaxKernelOpt1Dim::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bx);
-        k.SetOutputLayout(bx);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
+        k.SetInputLayout(DataLayout::bf);
+        k.SetOutputLayout(DataLayout::bf);
         k.SetOffsetSupport();
-        k.SetNumDims(1);
         return k;
     }
 
@@ -37,14 +38,13 @@ namespace KernelSelctor
         KernelData kd = KernelData::Default<SoftMaxParams>(params, 1);
 
         SoftMaxParams& newParams = *static_cast<SoftMaxParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bx;
 
-        const uint maxLocalWorkGroup    = 32;
-        const uint dst_size             = newParams.outDims.Length();
-        const uint localWorkGroup       = std::min(std::max(dst_size, 1U), maxLocalWorkGroup);
-        const uint leftovers            = dst_size % localWorkGroup;
-        const uint globalWorkGroup      = dst_size - leftovers;
-        const uint itemsNum             = globalWorkGroup / localWorkGroup;
+        const size_t maxLocalWorkGroup    = 32;
+        const size_t dst_size             = newParams.output.Length();
+        const size_t localWorkGroup       = std::min(std::max(dst_size, (size_t)1U), maxLocalWorkGroup);
+        const size_t leftovers            = dst_size % localWorkGroup;
+        const size_t globalWorkGroup      = dst_size - leftovers;
+        const size_t itemsNum             = globalWorkGroup / localWorkGroup;
 
         std::stringstream jit;
         jit << GetBaseJit(newParams);
@@ -54,7 +54,7 @@ namespace KernelSelctor
             << "#define LEFTOVERS (" << leftovers << ")\n"
             ;
 
-        if (newParams.inputType == Datatype::F16)
+        if (newParams.inputs[0].dtype == Datatype::F16)
         {
             jit << "#define FP16_SUPPORTED (1)\n"
                 << "#define FP16_UNIT_USED (1)\n";

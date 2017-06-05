@@ -20,7 +20,7 @@
 #pragma warning disable: 177
 #endif
 
-namespace KernelSelctor 
+namespace KernelSelector 
 {
 static const char* kernels_header = R"__krnl(
 #define CAT(x, y) x##y
@@ -162,25 +162,25 @@ static const char* kernels_header = R"__krnl(
         };
     }
 
-    std::string IGKKernelBase::create_jit_from_template(const std::string& template_name, jit_definitions definitions, std::string _kernel_name) const
+    std::string IGKKernelBase::create_jit_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_id) const
     {
-        std::replace(_kernel_name.begin(), _kernel_name.end(), '.', '_');
+        std::replace(kernel_id.begin(), kernel_id.end(), '.', '_');
 
-        if (_kernel_name.empty() /*|| !_context.get_configuration().meaningful_kernels_names*/)
+        if (kernel_id.empty() /*|| !_context.get_configuration().meaningful_kernels_names*/)
         {
-            _kernel_name = template_name;
+            kernel_id = template_name;
         }
-        
-        std::string kernel_num; // TODO: do we still need it? we don't use one string per network any more
 
         class code_builder code;
         code.add_line("\n//====================================================")
             .add_line("// Kernel template: " + template_name + " ")
-            .add_line("// Kernel name: " + _kernel_name)
-            .value_macro("KERNEL(name)", "__kernel void " + _kernel_name)
-            .decoration_macro("FUNC", "", kernel_num)
-            .decoration_macro("FUNC_CALL", "", kernel_num);
-        for (auto& definition : definitions) {
+            .add_line("// Kernel name: " + kernel_id)
+            .value_macro("KERNEL(name)", "__kernel void " + kernel_id)
+            .decoration_macro("FUNC", "", kernel_id)
+            .decoration_macro("FUNC_CALL", "", kernel_id);
+        
+        for (auto& definition : definitions) 
+        {
             code.value_macro(definition.first, definition.second);
         }
 
@@ -189,11 +189,11 @@ static const char* kernels_header = R"__krnl(
         return jit;
     }
 
-    ArgumentDescpirtor IGKKernelBase::get_args_desc(uint num_of_input, bool use_weights, bool use_bias) const
+    ArgumentDescpirtor IGKKernelBase::get_args_desc(uint32_t num_of_input, bool use_weights, bool use_bias) const
     {
         ArgumentDescpirtor desc;
 
-        for (uint i = 0; i < num_of_input; i++)
+        for (uint32_t i = 0; i < num_of_input; i++)
         {
             desc.data.push_back({ ArgumentDescpirtor::Types::INPUT, 0 });
         }
@@ -223,9 +223,9 @@ static const char* kernels_header = R"__krnl(
         {
             kernel_string.str = codes[0];
             kernel_string.jit = jit;
-            //kernel_string.options = "-cl-mad-enable -cl-no-subgroup-ifp  -cl-unsafe-math-optimizations";
-            kernel_string.options = exe_mode + " -cl-mad-enable -cl-unsafe-math-optimizations";
+            kernel_string.options = exe_mode + " -cl-mad-enable";
             kernel_string.entry_point = entry_point;
+            kernel_string.batch_compilation = true;
         }
 
         return kernel_string;

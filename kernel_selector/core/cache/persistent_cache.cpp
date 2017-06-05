@@ -18,7 +18,7 @@
 #include <sstream>
 #include <system_error>
 
-namespace neural { namespace gpu { namespace cache {
+namespace KernelSelector { namespace gpu { namespace cache {
 
 persistent_cache::persistent_cache(const char* cache_file_name) : file(cache_file_name) { }
 
