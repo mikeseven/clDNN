@@ -65,7 +65,7 @@ engine chapter_1()
         // which can be used to allocate memory for given engine:
         memory memory1 = memory::allocate(engine, layout1);
 
-        // Special type of layout is input layout. It is named layout. Name is a string whith identifier of layout.
+        // Special type of layout is input layout. It is named layout. Name is a string with identifier of layout.
         input_layout in_layout("input", layout1);
 
         // You can also give name to memory to create a data.
