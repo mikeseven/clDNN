@@ -13,12 +13,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-#include <api/CPP/cldnn_defs.h>
-#include <api/CPP/engine.hpp>
-#include <api/CPP/memory.hpp>
-#include <api/CPP/tensor.hpp>
-#include <api/CPP/input_layout.hpp>
-#include <api/CPP/data.hpp>
+#include <../api/CPP/cldnn_defs.h>
+#include <../api/CPP/engine.hpp>
+#include <../api/CPP/memory.hpp>
+#include <../api/CPP/tensor.hpp>
+#include <../api/CPP/input_layout.hpp>
+#include <../api/CPP/data.hpp>
 #include <iostream>
 /*! @page c1 Engine, layout, tensor, memory, data and input
 * @section intro Introduction
