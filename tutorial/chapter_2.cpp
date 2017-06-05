@@ -50,12 +50,12 @@ topology chapter_2(engine& engine)
             "input", // identifier of input ( output of primitive with provided name is input to current )
             0.0);    // slope
         
-        // softmax is also very easy to create:
+        // Softmax is also very easy to create:
         softmax softmax(
             "softmax", // primitive identifier
             "relu"); // relu will be input to softmax
         
-        // fully connected is little bit more complicated. 
+        // Fully connected is little bit more complex. 
         // Need to create weights and biases, that are primitives with 'data' type (chapter 1).
         // We will have fc layer with 3 inputs and 3 outputs. Weights have to be 3x3:
         auto weights_mem = memory::allocate(engine, { data_types::f32,format::bfyx,{
@@ -65,17 +65,17 @@ topology chapter_2(engine& engine)
             1 } }); // y ignored
         // Use function to fill data:
         set_values(weights_mem, { 1.5f, 1.0f, 0.5f, -1.0f, 0.0f, 0.5f, 0.5f, -0.5f, -2.0f });
-        // create data primitive
+        // Create data primitive.
         data fc_weights("fc_weights", weights_mem);
         
-        // biases are optional but we can use those in this example. Create 'data' in the same way:
+        // Biases are optional but we can use those in this example. Create 'data' in the same way:
         auto bias_mem = memory::allocate(engine, { data_types::f32,format::bfyx,{ spatial(3) } }); // y, b and f will be set to ones by default
         // Use function to fill data:
         set_values(bias_mem, { 0.0f, 1.0f, 0.5f });
-        // create data primitive
+        // Create data primitive.
         data fc_bias("fc_bias", bias_mem);
 
-        // now we are ready to create fc primitive
+        // Now we are ready to create fc primitive.
         fully_connected fc(
             "fc",        // primitive identifier
             "softmax",   // softmax will be input to softmax
@@ -86,8 +86,8 @@ topology chapter_2(engine& engine)
         // Now we have 3 primitives created. Relation is defined by input->output setting. The only thing that we miss to create topology
         // is input declaration. To declare input we need input_layout(chapter 1):
         input_layout in_layout("input", layout(data_types::f32, format::bfyx, tensor(spatial(3))));
-        // Now, we are ready to put those into topology
-        // Don't forget to put all data primitives inside
+        // Now, we are ready to put those into topology.
+        // Don't forget to put all data primitives inside.
         topology topology(
             in_layout,
             softmax,
@@ -95,9 +95,9 @@ topology chapter_2(engine& engine)
             fc_bias,
             fc_weights
         );
-        // if you want to add another primitive to existing topology, you can use add method. 
+        // If you want to add another primitive to existing topology, you can use add method. 
         topology.add(relu);
-        // take a look what is inside:
+        // Take a look what is inside:
         std::cout << "Topology contains:" << std::endl;
         for (auto it : topology.get_primitive_ids())
         {

@@ -49,14 +49,14 @@ void chapter_3(engine& engine, topology& topology)
         // We are almost ready to go. Need to create and set input for network:
         memory input_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 3, 1 } });
         set_values(input_mem, { -3.0f, -2.0f, 2.5f });
-        // set input
+        // Set input
         network.set_input_data("input", input_mem );
-        // ready to go:
+        // Ready to go:
         auto outputs = network.execute();
 
         for (auto it : outputs)
         {
-            // print primtive info for all outputs
+            // Print primtive info for all outputs.
             std::cout << network.get_primitive_info(it.first) << std::endl;
             // OUTPUT:
             // id: fc, type : fully connected
@@ -75,10 +75,10 @@ void chapter_3(engine& engine, topology& topology)
             std:: cout << std::endl;
 
             // As you probably noticed network output is a result of the last one primitive "fc". By the last one we mean, the one that 
-            // is not input to any other primitive
+            // is not input to any other primitive.
         }
 
-        // what if someone may want to look into intermediate results (hidden layers). This will be describe in next chapter (4).
+        // What if someone may want to look into intermediate results (hidden layers). This will be described in next chapter (4).
 
     }
     catch (const std::exception& ex)

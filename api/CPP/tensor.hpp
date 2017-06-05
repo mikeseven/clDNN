@@ -62,7 +62,7 @@ struct format_traits
 };
 
 /// @brief Represents memory formats (orders).
-/// @n In CNN most of data is describe as 4 dimensional blocks. In Intel(R) clDNN library we describe memory with 4 letters
+/// @n In CNN most of data is described as 4 dimensional blocks. In Intel(R) clDNN library we describe memory with 4 letters
 /// - b - number of blocks in batch. For weights formats: output features - conv, neurons - inner product
 /// - f - number of feature maps, features or channels. For weights formats: input features - conv, inputs, inner product
 /// - x - spatial, width

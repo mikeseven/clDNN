@@ -41,12 +41,12 @@ engine chapter_1()
         // To create memory we have to create engine first. Engine is responsible for memory and kernel handling (creation, compilation, allocation).
         // Currently OCL backend implementaion only is avaiable.
         engine engine;
-        // we have to choose data type (f32 or f16):
+        // We have to choose data type (f32 or f16):
         data_types data_type = data_types::f32;
-        // format (order of dimensions in memory), bfyx is the most optimal and common:
+        // Format (order of dimensions in memory), bfyx is the most optimal and common:
         format::type format = format::byxf;
 
-        // before memory allocation we have to create tensor that describes memory size. We can do it in serveral ways:
+        // Before memory allocation we have to create tensor that describes memory size. We can do it in serveral ways:
         tensor tensor1(
             4, // batches
             1, // features
@@ -60,15 +60,15 @@ engine chapter_1()
             (((tensor1 == tensor2) && (tensor2 == tensor3)) ? "yes" : "no") << std::endl;
         std::cout << "print tensor:" << tensor1 << std::endl;
 
-        // now we are ready to create layout:
+        // Now we are ready to create layout:
         layout layout1(data_type, format, tensor1);
         // which can be used to allocate memory for given engine:
         memory memory1 = memory::allocate(engine, layout1);
 
-        // special type of layout is input layout. It is named layout. Name is a string whith identifier of layout
+        // Special type of layout is input layout. It is named layout. Name is a string whith identifier of layout.
         input_layout in_layout("input", layout1);
 
-        // you can also give name to memory to create a data
+        // You can also give name to memory to create a data.
         data data("named_memory", memory1);
 
         return engine;

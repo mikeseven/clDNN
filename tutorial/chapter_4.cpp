@@ -45,29 +45,29 @@ void chapter_4(engine& engine, topology& topology)
     {
         std::cout << std::endl << "-- Chapter 4 --" << std::endl;
 
-        // to get access to intermediate results of our network. To get special features we need to set custom building options:
+        // To get access to intermediate results of our network. To get special features we need to set custom building options:
         build_options build_opt;
-        // prepare vector of primitives that we want to have as an output:
+        // Prepare vector of primitives that we want to have as an output:
         std::vector<cldnn::primitive_id> outputs_list(0);
-        // put every primitive from topology into this container:
+        // Put every primitive from topology into this container:
         for (auto prim_id : topology.get_primitive_ids())
             outputs_list.push_back(prim_id);
         // Note: output from get_primitive_ids() can be used directly as a parameter in building option.
-        // Set option
+        // Set option.
         build_opt.set_option(build_option::outputs(outputs_list));
-        // add build options to network build
+        // Add build options to network build.
         network network(engine, topology, build_opt);
         // We are almost ready to go. Need to create and set input for network:
         memory input_prim = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 3, 1 } });
         set_values(input_prim, { -3.0f, -2.0f, 2.5f });
-        // set input
+        // Set input.
         network.set_input_data("input", input_prim);
-        // ready to go:
+        // Ready to go:
         auto outputs = network.execute();
 
         for (auto& it : outputs)
         {
-            // print id and output values
+            // Print id and output values.
             std::cout << it.first << std::endl;
             auto mem_pointer = it.second.get_memory().pointer<float>();
             for (auto i : mem_pointer)

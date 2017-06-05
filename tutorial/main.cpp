@@ -17,7 +17,7 @@
 /*! @page tutorial clDNN Tutorial  
 * @section intro Introduction
 *  This section contains 5 chapters of tutorial demonstrating how to work with clDNN. If you are new in clDNN, we recommend to start with
-*  "clDNN documentation" that describes API. We assume that user is familiar with C++ or C and Deep Learining terminology.
+*  <a href="https://01org.github.io/clDNN/index.html">"clDNN documentation"</a> that describes API. We assume that user is familiar with C++ or C and Deep Learining terminology.
 *  
 * @subpage c1 <br>
 * @subpage c2 <br>
@@ -41,7 +41,7 @@ int main()
     cldnn::engine eng = chapter_1();
     cldnn::topology topology = chapter_2(eng);
     chapter_3(eng, topology);
-    chapter_4(eng, topology);
-    chapter_5(eng, topology);
+    //chapter_4(eng, topology);
+    //chapter_5(eng, topology);
     return 0;
 }

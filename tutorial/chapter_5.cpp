@@ -29,8 +29,8 @@
 
 /*! @page c5 Performance building option.
 * @section intro Introduction
-* In this chapter we will present network build option that improve performance. Note this option 
-* can change memory layouts. This chapter also show how to get primitives profiling info.
+* In this chapter we will present network build option that improves performance. Note this option 
+* can change memory layouts. This chapter also shows how to get primitives profiling info.
 * @include chapter_5.cpp
 *
 *
@@ -46,22 +46,22 @@ void chapter_5(engine& engine, topology& topology)
         std::cout << std::endl << "-- Chapter 5 --" << std::endl;
 
         build_options build_opt;
-        // optimize_data flag can change weights and outputs layouts. Let take a look at 
-        // final result and fc weights
+        // Optimize_data flag can change weights and outputs layouts. Let take a look at 
+        // final result and fc weights.
         build_opt.set_option(build_option::outputs(topology.get_primitive_ids()));
-        // set option to optimize data
+        // Set option to optimize data.
         build_opt.set_option(build_option::optimize_data(true));
         network network(engine, topology, build_opt);
         memory input_prim = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 3, 1 } });
         set_values(input_prim, { -3.0f, -2.0f, 2.5f });
-        // set input
+        // Set input.
         network.set_input_data("input", input_prim);
-        // ready to go:
+        // Ready to go.
         auto outputs = network.execute();
 
         for (auto& it : outputs)
         {
-            // print id and output values
+            // Print id and output values.
             std::cout <<"optimized "<< it.first << std::endl;
             auto mem_pointer = it.second.get_memory().pointer<float>();
             for (auto i : mem_pointer)
@@ -78,7 +78,7 @@ void chapter_5(engine& engine, topology& topology)
             profiling_table.push_back({ p.first, p.second.get_event().get_profiling_info() });
         }
 
-        // we have table of profiling metrics
+        // We have table of profiling metrics.
         for (auto& p : profiling_table)
         {
             std::cout << p.name << ":"<<std::endl;
