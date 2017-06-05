@@ -1,3 +1,18 @@
+// Copyright (c) 2016-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
 // Extensions and additional capabilities.
 #if FP16_SUPPORTED
     #pragma OPENCL EXTENSION cl_khr_fp16 : enable
@@ -96,7 +111,8 @@
 
 // Activation function used in ReLU.
 #if RELU
-    #define ACTIVATION(output, input) output = fma(CVT_UNIT(NEGATIVE_SLOPE), min(input, UNIT_VAL_ZERO), max(input, UNIT_VAL_ZERO))
+    #define ACTIVATION(output, input) output = isinf(CVT_UNIT(NEGATIVE_SLOPE)) ? ((input >= UNIT_VAL_ZERO) ? \
+    input : -CVT_UNIT(NEGATIVE_SLOPE)) : (fma(CVT_UNIT(NEGATIVE_SLOPE), min(input, UNIT_VAL_ZERO), max(input, UNIT_VAL_ZERO)));
 #else
     #define ACTIVATION(output, input) output = input
 #endif
@@ -175,8 +191,12 @@ __attribute__((reqd_work_group_size(SUB_GROUP_SIZE, 1, 1)))
 KERNEL (fully_connected_gpu_bx_bs_x_bsv16_b1)(
     const __global UNIT_TYPE* input,
     __global UNIT_TYPE* output,
-    const __global UNIT_TYPE* weight,
-    const __global UNIT_TYPE* bias)
+    const __global UNIT_TYPE* weight
+#if BIAS_TERM
+    , __global UNIT_TYPE* bias)
+#else
+    )
+#endif
 {
     // constexpr:
     const uint input_byte_size  = INPUT_ELEMENTS_COUNT * UNIT_BYTE_SIZE;
@@ -198,12 +218,12 @@ KERNEL (fully_connected_gpu_bx_bs_x_bsv16_b1)(
     // Filter base offset in bytes (bs_x_bsv16 format of weights).
     const uint filter_base    = sg_id * input_byte_size * RESPONSES_PER_SG_EXEC;
 
-    // [SCATTERED] Bias base identifier/element offset to use (x/f format of biases).
-    const uint bias_base_id   = sg_id * RESPONSES_PER_SG_EXEC + sg_elem_id;
-
     // [SCATTERED] Output base identifier/element offset to use (bx format of output).
-    const uint output_base_id = bias_base_id;
-
+    const uint output_base_id = sg_id * RESPONSES_PER_SG_EXEC + sg_elem_id;
+#if BIAS_TERM
+    // [SCATTERED] Bias base identifier/element offset to use (x/f format of biases).
+    const uint bias_base_id = output_base_id;
+#endif // 
     // Filter/input byte offsets in sub-group used duering read/write operations.
     const uint sg_elem_offset = sg_elem_id * CHUNK_BYTE_SIZE;
 
@@ -479,13 +499,16 @@ KERNEL (fully_connected_gpu_bx_bs_x_bsv16_b1)(
     for (uint expanded_acc_idx = 0; expanded_acc_idx < expanded_acc_size; ++expanded_acc_idx)
     {
         const uint output_id = output_base_id + expanded_acc_idx * SUB_GROUP_SIZE;
+#if BIAS_TERM
         const uint bias_id = bias_base_id + expanded_acc_idx * SUB_GROUP_SIZE;
-
+#endif
         UNIT_TYPE expanded_acc = SG_UNIT_SELECT(reduced_acc, expanded_acc_idx * SUB_GROUP_SIZE + sg_elem_id);
 
         if (output_id < output_size)
         {
+#if BIAS_TERM
             expanded_acc += bias[bias_id];
+#endif
             ACTIVATION(output[output_id], expanded_acc);
         }
     }

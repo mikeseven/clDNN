@@ -16,16 +16,137 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include <gtest/gtest.h>
-#include <api/memory.hpp>
-#include <api/primitives/input_layout.hpp>
-#include "api/primitives/eltwise.hpp"
-#include <api/topology.hpp>
-#include <api/network.hpp>
-#include <api/engine.hpp>
+#include "api/CPP/memory.hpp"
+#include <api/CPP/input_layout.hpp>
+#include "api/CPP/eltwise.hpp"
+#include <api/CPP/topology.hpp>
+#include <api/CPP/network.hpp>
+#include <api/CPP/engine.hpp>
 #include "test_utils/test_utils.h"
+
+namespace cldnn
+{
+	template<> struct type_to_data_type<FLOAT16> { static const data_types value = data_types::f16; };
+}
 
 using namespace cldnn;
 using namespace tests;
+
+template <typename T>
+T eltwise_execute(cldnn::eltwise_mode mode, T x, T y) {
+	switch (mode) {
+	case eltwise_mode::sum:
+		return x + y;
+	case eltwise_mode::sub:
+		return x - y;
+	case eltwise_mode::max:
+		return std::max(x, y);
+	case eltwise_mode::prod:
+		return x * y;
+	default:
+		return (T)0;
+	}
+}
+
+template <typename T>
+VVVVF<T> eltwise_reference(VVVVF<T> &input1, VVVVF<T> &input2,
+	cldnn::eltwise_mode mode, bool relu = false, T slope = 0.0f,
+	int input_padding_y = 0, int input_padding_x = 0,
+	int output_padding_y = 0, int output_padding_x = 0) {
+
+	size_t padding_y = input_padding_y + output_padding_y;
+	size_t padding_x = input_padding_x + output_padding_x;
+	size_t output_b = input1.size();
+	size_t output_f = input1[0].size();
+	size_t output_y = input1[0][0].size() + 2 * padding_y;
+	size_t output_x = input1[0][0][0].size() + 2 * padding_x;
+	VVVVF<T> output(output_b, VVVF<T>(output_f, VVF<T>(output_y, VF<T>(output_x))));
+
+	T res;
+	for (size_t b = 0; b < output_b; ++b) {
+		for (size_t f = 0; f < output_f; ++f) {
+			for (size_t y = 0; y < input1[0][0].size(); ++y) {
+				for (size_t x = 0; x < input1[0][0][0].size(); ++x) {
+					res = eltwise_execute<T>(mode, input1[b][f][y][x], input2[b][f][y][x]);
+					if (relu && res < (T)0)
+						res *= slope;
+					output[b][f][y + padding_y][x + padding_x] = res;
+				}
+			}
+		}
+	}
+	return output;
+}
+
+template <typename T>
+void generic_eltwise_test(cldnn::format test_input_fmt, int input_b, int input_f, int input_y, int input_x, cldnn::eltwise_mode mode,
+	bool relu, T slope,	int input_padding_y, int input_padding_x, int output_padding_y, int output_padding_x) {
+
+	int min_random = -2, max_random = 2;
+	VVVVF<T> input1_rnd = generate_random_4d<T>(input_b, input_f, input_y, input_x, min_random, max_random);
+	VVVVF<T> input2_rnd = generate_random_4d<T>(input_b, input_f, input_y, input_x, min_random, max_random);
+	VF<T> input1_rnd_vec = flatten_4d<T>(test_input_fmt, input1_rnd);
+	VF<T> input2_rnd_vec = flatten_4d<T>(test_input_fmt, input2_rnd);
+
+	engine engine;
+	tensor input_tensor( input_b, input_f, input_x, input_y );
+	auto input1 = memory::allocate(engine, { type_to_data_type<T>::value, test_input_fmt, input_tensor });
+	auto input2 = memory::allocate(engine, { type_to_data_type<T>::value, test_input_fmt, input_tensor });
+	set_values(input1, input1_rnd_vec);
+	set_values(input2, input2_rnd_vec);
+
+	topology topology;
+	topology.add(input_layout("input1", input1.get_layout()));
+	topology.add(input_layout("input2", input2.get_layout()));
+    topology.add(reorder("reorder1", "input1", input1.get_layout().with_padding({{ 0, 0, input_padding_x, input_padding_y }, 0 })));
+	topology.add(eltwise("eltwise", "reorder1", "input2", mode, relu, slope, { { 0, 0, output_padding_x, output_padding_y }, 0 }));
+
+	network network(engine, topology);
+	network.set_input_data("input1", input1);
+	network.set_input_data("input2", input2);
+	auto outputs = network.execute();
+	EXPECT_EQ(outputs.size(), size_t(1));
+	EXPECT_EQ(outputs.begin()->first, "eltwise");
+
+	auto output_memory = outputs.at("eltwise").get_memory();
+	auto output_layout = output_memory.get_layout();
+	auto output_ptr = output_memory.pointer<T>();
+
+	VVVVF<T> output_cpu = eltwise_reference<T>(input1_rnd, input2_rnd, mode, relu, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
+	EXPECT_EQ(output_layout.format.value, test_input_fmt.value);
+	tensor output_tensor = output_layout.size;
+    int y_size = output_tensor.spatial[1];
+    int x_size = output_tensor.spatial[0];
+    int f_size = output_tensor.feature[0];
+    int b_size = output_tensor.batch[0];
+	EXPECT_EQ(y_size, (int)output_cpu[0][0].size());
+	EXPECT_EQ(x_size, (int)output_cpu[0][0][0].size());
+	EXPECT_EQ(f_size, (int)output_cpu[0].size());
+	EXPECT_EQ(b_size, (int)output_cpu.size());
+
+	bool test_is_correct = true;
+	VF<T> output_cpu_vec = flatten_4d<T>(test_input_fmt, output_cpu);
+	for (size_t i = 0; i < output_cpu_vec.size(); ++i) {
+		if (!floating_point_equal(output_cpu_vec[i], output_ptr[i])) {
+			test_is_correct = false;
+			break;
+		}
+	}
+	EXPECT_EQ(test_is_correct, true) << std::endl
+		<< "failing test parameters:" << std::endl
+		<< "input_b = " << input_b << std::endl
+		<< "input_f = " << input_f << std::endl
+		<< "input_y = " << input_y << std::endl
+		<< "input_x = " << input_x << std::endl
+		<< "eltwise_mode = " << (int)mode << std::endl
+		<< "relu = " << relu << std::endl
+		<< "slope = " << (float)slope << std::endl
+		<< "input_padding_y = " << input_padding_y << std::endl
+		<< "input_padding_x = " << input_padding_x << std::endl
+		<< "output_padding_y = " << output_padding_y << std::endl
+		<< "output_padding_x = " << output_padding_x << std::endl
+		<< "type = " << (sizeof(T) == 2 ? "float16" : "float32") << std::endl;
+}
 
 TEST(eltwise_gpu_f32, add_basic_in4x4x2x2) {
     //  Input2   : 2x2x2
@@ -53,8 +174,8 @@ TEST(eltwise_gpu_f32, add_basic_in4x4x2x2) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 2 , 2} } });
-    auto input2 = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 2 , 2} } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 2, 2 } });
+    auto input2 = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 2, 2 } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
@@ -123,8 +244,8 @@ TEST(eltwise_gpu_f32, max_basic_in4x4x4x4) {
     //
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 2 , 2 } } });
-    auto input2 = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 2 , 2 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 2, 2 } });
+    auto input2 = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 2, 2 } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
@@ -194,8 +315,8 @@ TEST(eltwise_gpu_f32, sub_basic_in4x4x4x4) {
     //
 
     engine engine;
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 2 , 2 } } });
-    auto input2 = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 2 , 2 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 2, 2 } });
+    auto input2 = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 2, 2 } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
@@ -266,8 +387,8 @@ TEST(eltwise_gpu_f32, prod_basic_in4x4x4x4) {
 
 
     engine engine;
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 2 , 2 } } });
-    auto input2 = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 2 , 2 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 2, 2 } });
+    auto input2 = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 2, 2, 2 } });
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("input2", input2.get_layout()));
@@ -311,3 +432,42 @@ TEST(eltwise_gpu_f32, prod_basic_in4x4x4x4) {
     }
 }
 
+TEST(DISABLED_eltwise_gpu, generic_random) {
+	VF<cldnn::format> test_inputs_fmts = { cldnn::format::bfyx, cldnn::format::yxfb };
+	VF<cldnn::eltwise_mode> modes = { cldnn::eltwise_mode::sum, cldnn::eltwise_mode::sub, cldnn::eltwise_mode::max, cldnn::eltwise_mode::prod };
+	VF<bool> relu = { true, false };
+	VF<float> slopes = { 0.0f, -0.0f, -17.19f, 1028.8f, std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity() };
+	std::vector<std::pair<int, int>> input_sizes = { { 100, 100 },{ 227, 227 },{ 400, 600 },{ 531, 777 },{ 4096, 1980 } };
+
+	engine engine;
+	bool f16_supported = !!engine.get_info().supports_fp16;
+	if (!f16_supported) {
+		std::cout << "[ SKIPPED  ] float16 combinations are skipped (cl_khr_fp16 is not supported)." << std::endl;
+	}
+
+	for (cldnn::format test_input_fmt : test_inputs_fmts) {
+		for (int input_b = 1; input_b <= 16; input_b *= 2) {
+			for (int input_f = 1; input_f <= 1; ++input_f) {
+				for (std::pair<int, int> &input_yx : input_sizes) {
+					for (cldnn::eltwise_mode mode : modes) {
+						for (bool relu_activated : relu) {
+							for (float slope : slopes) {
+								for (int input_padding_y = 0; input_padding_y <= 0; ++input_padding_y) {
+									for (int input_padding_x = 0; input_padding_x <= 0; ++input_padding_x) {
+										for (int output_padding_y = 0; output_padding_y <= 1; ++output_padding_y) {
+											for (int output_padding_x = 0; output_padding_x <= 1; ++output_padding_x) {
+												generic_eltwise_test<float>(test_input_fmt, input_b, input_f, input_yx.first, input_yx.second, mode, relu_activated, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
+												if (!f16_supported) continue;
+												generic_eltwise_test<FLOAT16>(test_input_fmt, input_b, input_f, input_yx.first, input_yx.second, mode, relu_activated, (FLOAT16)slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
+											}
+										}
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}

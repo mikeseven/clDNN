@@ -14,53 +14,71 @@
 // limitations under the License.
 */
 
-#include "pooling_arg.h"
+#include "pooling_inst.h"
 #include "primitive_type_base.h"
-#include "network_impl.h"
 
 
 namespace cldnn
 {
 primitive_type_id pooling_type_id()
 {
-    static primitive_type_base<pooling, pooling_arg> instance;
+    static primitive_type_base<pooling> instance;
     return &instance;
 }
 
-layout pooling_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const pooling> desc)
+layout pooling_inst::calc_output_layout(parent::typed_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-    auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
-    assert(input_layout.size.spatial.size() == 2);
-    auto input_offsets = desc->input_offset().transform(input_layout.size.format, 0).sizes();
-    auto strides = desc->stride.transform(input_layout.size.format, 1).sizes();
-    auto window_sizes = desc->size.transform(input_layout.size.format, 1).sizes();
+    auto desc = node.get_primitive();
+
+    auto input_layout = node.input().get_output_layout();
+    auto input_spatial_size = node.input().get_output_layout().size.spatial.size();
+
+    if (input_spatial_size != 2)
+        throw std::runtime_error("Only two dimensional spatials are supported by pooling");
+
+    auto input_offsets = desc->input_offset.sizes();
+    auto strides = desc->stride.sizes();
+    auto window_sizes = desc->size.sizes();
     //TODO !!!implement correct output size calculation!!!
     auto output_sizes = input_layout.size.sizes();
-    auto format_order = input_layout.size.format.order();
-    assert(output_sizes.size() == format_order.size());
-    for (decltype(output_sizes.size()) i = 0; i < output_sizes.size(); i++)
+    auto spatial_offset = CLDNN_TENSOR_BATCH_DIM_MAX + CLDNN_TENSOR_FEATURE_DIM_MAX;
+
+    for (decltype(input_spatial_size) i = spatial_offset; i < input_spatial_size + spatial_offset; i++)
     {
-        if (format_traits::is_spatial_char(format_order[i]))
-        {
             // TODO: Consider moving general parameter verification to arguments constructor.
             if (strides[i] <= 0)
-                throw std::invalid_argument("Stride must be positive (>= 1)");
+                throw std::runtime_error("Stride must be positive (>= 1)");
             if (2 * input_offsets[i] >= output_sizes[i])
-                throw std::invalid_argument("Input offset is greater than input data range. There is no input data to process");
+                throw std::runtime_error("Input offset is greater than input data range. There is no input data to process");
 
             output_sizes[i] = static_cast<cldnn::tensor::value_type>(
                 2 * input_offsets[i] < output_sizes[i]
-                    // ? std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0) / strides[i] + 1
-                    ? ceil_div(std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0), strides[i]) + 1
-                    : 0);
-        }
+                // ? std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0) / strides[i] + 1
+                ? ceil_div(std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0), strides[i]) + 1
+                : 0);
     }
 
-    return{ input_layout.data_type, {input_layout.size.format, output_sizes} };
+    return{ input_layout.data_type, input_layout.format, output_sizes };
 }
 
-pooling_arg::pooling_arg(network_impl& network, std::shared_ptr<const pooling> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
-{}
+std::string pooling_inst::to_string(pooling_node const& node)
+{
+    std::stringstream   primitive_description;
+    auto desc           = node.get_primitive();
+    auto input          = node.input();
+    auto strd           = desc->stride;
+    auto kernel_size    = desc->size;
+    auto mode           = desc->mode == pooling_mode::average ? "avarage" : "max";   
+
+    primitive_description << "id: " << desc->id << ", type: pooling" << ", mode: " << mode <<
+        "\n\tinput: "         << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
+        "\n\tstride: "        << strd.spatial[0] << "x" << strd.spatial[1] << 
+        "\n\tkernel size: "   << kernel_size.spatial[0] << "x" << kernel_size.spatial[1] << 
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
+        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+    
+    return primitive_description.str();
+}
+
 }

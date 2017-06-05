@@ -16,21 +16,35 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include <gtest/gtest.h>
-#include <api/memory.hpp>
-#include <api/primitives/input_layout.hpp>
-#include "api/primitives/prior_box.hpp"
-#include <api/topology.hpp>
-#include <api/network.hpp>
-#include <api/engine.hpp>
+#include "api/CPP/memory.hpp"
+#include <api/CPP/input_layout.hpp>
+#include "api/CPP/prior_box.hpp"
+#include <api/CPP/topology.hpp>
+#include <api/CPP/network.hpp>
+#include <api/CPP/engine.hpp>
 #include "test_utils/test_utils.h"
 
 using namespace cldnn;
 using namespace tests;
 
-TEST(prior_box, test_setup_basic) {
+namespace cldnn
+{
+	template<> struct type_to_data_type<FLOAT16> { static const data_types value = data_types::f16; };
+}
+
+template <typename T>
+class prior_box_test : public ::testing::Test
+{
+};
+
+typedef ::testing::Types<float, FLOAT16> prior_box_test_types;
+TYPED_TEST_CASE(prior_box_test, prior_box_test_types);
+
+TYPED_TEST(prior_box_test, test_setup_basic) 
+{
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -38,7 +52,7 @@ TEST(prior_box, test_setup_basic) {
 	std::vector<float> min_sizes = { 4 };
 	std::vector<float> max_sizes = { 9 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -53,10 +67,11 @@ TEST(prior_box, test_setup_basic) {
 	EXPECT_EQ(outputs.begin()->second.get_memory().get_layout().size.spatial[0], 1);
 }
 
-TEST(prior_box, test_setup_multi_size) {
+TYPED_TEST(prior_box_test, test_setup_multi_size) 
+{
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -64,7 +79,7 @@ TEST(prior_box, test_setup_multi_size) {
 	std::vector<float> min_sizes = { 4, 14 };
 	std::vector<float> max_sizes = { 9, 19 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -81,17 +96,18 @@ TEST(prior_box, test_setup_multi_size) {
 	EXPECT_EQ(outputs.begin()->second.get_memory().get_layout().size.spatial[0], 1);
 }
 
-TEST(prior_box, test_setup_no_max_size) {
+TYPED_TEST(prior_box_test, test_setup_no_max_size) 
+{
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
 
 	std::vector<float> min_sizes = { 4 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -108,17 +124,18 @@ TEST(prior_box, test_setup_no_max_size) {
 	EXPECT_EQ(outputs.begin()->second.get_memory().get_layout().size.spatial[0], 1);
 }
 
-TEST(prior_box, test_setup_multi_size_no_max_size) {
+TYPED_TEST(prior_box_test, test_setup_multi_size_no_max_size) 
+{
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
 
 	std::vector<float> min_sizes = { 4, 14 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -135,10 +152,11 @@ TEST(prior_box, test_setup_multi_size_no_max_size) {
 	EXPECT_EQ(outputs.begin()->second.get_memory().get_layout().size.spatial[0], 1);
 }
 
-TEST(prior_box, test_setup_aspect_ratio_one_no_flip) {
+TYPED_TEST(prior_box_test, test_setup_aspect_ratio_one_no_flip) 
+{
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -149,7 +167,7 @@ TEST(prior_box, test_setup_aspect_ratio_one_no_flip) {
 
 	bool flip = false;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -164,10 +182,11 @@ TEST(prior_box, test_setup_aspect_ratio_one_no_flip) {
 	EXPECT_EQ(outputs.begin()->second.get_memory().get_layout().size.spatial[0], 1);
 }
 
-TEST(prior_box, test_setup_aspect_ratio_no_flip) {
+TYPED_TEST(prior_box_test, test_setup_aspect_ratio_no_flip) 
+{
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -178,7 +197,7 @@ TEST(prior_box, test_setup_aspect_ratio_no_flip) {
 
 	bool flip = false;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -193,10 +212,11 @@ TEST(prior_box, test_setup_aspect_ratio_no_flip) {
 	EXPECT_EQ(outputs.begin()->second.get_memory().get_layout().size.spatial[0], 1);
 }
 
-TEST(prior_box, test_setup_aspect_ratio_flip) {
+TYPED_TEST(prior_box_test, test_setup_aspect_ratio_flip) 
+{
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -205,7 +225,7 @@ TEST(prior_box, test_setup_aspect_ratio_flip) {
 	std::vector<float> max_sizes = { 9 };
 	std::vector<float> aspect_ratios = { 2 , 3 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -220,10 +240,11 @@ TEST(prior_box, test_setup_aspect_ratio_flip) {
 	EXPECT_EQ(outputs.begin()->second.get_memory().get_layout().size.spatial[0], 1);
 }
 
-TEST(prior_box, test_setup_aspect_ratio_flip_multi_size) {
+TYPED_TEST(prior_box_test, test_setup_aspect_ratio_flip_multi_size) 
+{
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -234,7 +255,7 @@ TEST(prior_box, test_setup_aspect_ratio_flip_multi_size) {
 
 	bool flip = true;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -249,10 +270,11 @@ TEST(prior_box, test_setup_aspect_ratio_flip_multi_size) {
 	EXPECT_EQ(outputs.begin()->second.get_memory().get_layout().size.spatial[0], 1);
 }
 
-TEST(prior_box, test_forward_basic) {
+TYPED_TEST(prior_box_test, test_forward_basic) 
+{
     engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32, { format::bfyx, { 10, 10, 10, 10} } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx, { 10, 10, 10, 10} });
 	
     topology topology;
     topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -260,7 +282,7 @@ TEST(prior_box, test_forward_basic) {
 	std::vector<float> min_sizes = { 4 };
 	std::vector<float> max_sizes = { 9 };
 
-    topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes));
+    topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes));
     network network(engine, topology);
     network.set_input_data("input_prim", input_prim);
 
@@ -271,45 +293,46 @@ TEST(prior_box, test_forward_basic) {
 	
     auto output_prim = outputs.begin()->second.get_memory();
 	
-    auto output_ptr = output_prim.pointer<float>();
+    auto output_ptr = output_prim.pointer<TypeParam>();
 	
 	int dim = output_prim.get_layout().size.spatial[0] * output_prim.get_layout().size.spatial[1];
 
-	const float eps = (float)1e-6;
 	// pick a few generated priors and compare against the expected number.
 	// first prior
-	EXPECT_NEAR(output_ptr[0], 0.03, eps);
-	EXPECT_NEAR(output_ptr[1], 0.03, eps);
-	EXPECT_NEAR(output_ptr[2], 0.07, eps);
-	EXPECT_NEAR(output_ptr[3], 0.07, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[0], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[1], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[2], (TypeParam)0.07f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[3], (TypeParam)0.07f));
 	// second prior
-	EXPECT_NEAR(output_ptr[4], 0.02, eps);
-	EXPECT_NEAR(output_ptr[5], 0.02, eps);
-	EXPECT_NEAR(output_ptr[6], 0.08, eps);
-	EXPECT_NEAR(output_ptr[7], 0.08, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4], (TypeParam)0.02f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[5], (TypeParam)0.02f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[6], (TypeParam)0.08f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[7], (TypeParam)0.08f));
 	// prior in the 5-th row and 5-th col
-	EXPECT_NEAR(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4], 0.43, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 1], 0.43, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 2], 0.47, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 3], 0.47, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 1], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 2], (TypeParam)0.47f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 3], (TypeParam)0.47f));
 
 	//check variance
-	for (int d = 0; d < dim; ++d) {
-		EXPECT_NEAR(output_ptr[dim + d], 0.1, eps);
+	for (int d = 0; d < dim; ++d) 
+	{
+		EXPECT_TRUE(floating_point_equal(output_ptr[dim + d], (TypeParam)0.1f));
 	}
 }
 
-TEST(prior_box, test_forward_no_max_size) {
+TYPED_TEST(prior_box_test, test_forward_no_max_size) 
+{
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
 
 	std::vector<float> min_sizes = { 4 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -320,34 +343,35 @@ TEST(prior_box, test_forward_no_max_size) {
 
 	auto output_prim = outputs.begin()->second.get_memory();
 
-	auto output_ptr = output_prim.pointer<float>();
+	auto output_ptr = output_prim.pointer<TypeParam>();
 
 	int dim = output_prim.get_layout().size.spatial[0] * output_prim.get_layout().size.spatial[1];
 
-	const float eps = (float)1e-6;
 	// pick a few generated priors and compare against the expected number.
 	// first prior
-	EXPECT_NEAR(output_ptr[0], 0.03, eps);
-	EXPECT_NEAR(output_ptr[1], 0.03, eps);
-	EXPECT_NEAR(output_ptr[2], 0.07, eps);
-	EXPECT_NEAR(output_ptr[3], 0.07, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[0], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[1], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[2], (TypeParam)0.07f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[3], (TypeParam)0.07f));
 
 	// prior in the 5-th row and 5-th col
-	EXPECT_NEAR(output_ptr[4 * 10 * 1 * 4 + 4 * 1 * 4], 0.43, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 1 * 4 + 4 * 1 * 4 + 1], 0.43, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 1 * 4 + 4 * 1 * 4 + 2], 0.47, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 1 * 4 + 4 * 1 * 4 + 3], 0.47, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 1 * 4 + 4 * 1 * 4], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 1 * 4 + 4 * 1 * 4 + 1], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 1 * 4 + 4 * 1 * 4 + 2], (TypeParam)0.47f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 1 * 4 + 4 * 1 * 4 + 3], (TypeParam)0.47f));
 
 	//check variance
-	for (int d = 0; d < dim; ++d) {
-		EXPECT_NEAR(output_ptr[dim + d], 0.1, eps);
+	for (int d = 0; d < dim; ++d) 
+	{
+		EXPECT_TRUE(floating_point_equal(output_ptr[dim + d], (TypeParam)0.1f));
 	}
 }
 
-TEST(prior_box, test_forward_variance_one) {
+TYPED_TEST(prior_box_test, test_forward_variance_one) 
+{
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -359,7 +383,7 @@ TEST(prior_box, test_forward_variance_one) {
 	bool clip = false;
 	std::vector<float> variance = { 1 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -370,41 +394,42 @@ TEST(prior_box, test_forward_variance_one) {
 
 	auto output_prim = outputs.begin()->second.get_memory();
 
-	auto output_ptr = output_prim.pointer<float>();
+	auto output_ptr = output_prim.pointer<TypeParam>();
 
 	int dim = output_prim.get_layout().size.spatial[0] * output_prim.get_layout().size.spatial[1];
 
-	const float eps = (float)1e-6;
 	// pick a few generated priors and compare against the expected number.
 	// first prior
-	EXPECT_NEAR(output_ptr[0], 0.03, eps);
-	EXPECT_NEAR(output_ptr[1], 0.03, eps);
-	EXPECT_NEAR(output_ptr[2], 0.07, eps);
-	EXPECT_NEAR(output_ptr[3], 0.07, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[0], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[1], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[2], (TypeParam)0.07f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[3], (TypeParam)0.07f));
 
 	// second prior
-	EXPECT_NEAR(output_ptr[4], 0.02, eps);
-	EXPECT_NEAR(output_ptr[5], 0.02, eps);
-	EXPECT_NEAR(output_ptr[6], 0.08, eps);
-	EXPECT_NEAR(output_ptr[7], 0.08, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4], (TypeParam)0.02f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[5], (TypeParam)0.02f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[6], (TypeParam)0.08f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[7], (TypeParam)0.08f));
 
 	// prior in the 5-th row and 5-th col
-	EXPECT_NEAR(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4], 0.43, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 1], 0.43, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 2], 0.47, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 3], 0.47, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 1], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 2], (TypeParam)0.47f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 3], (TypeParam)0.47f));
 
 
 	//check variance
-	for (int d = 0; d < dim; ++d) {
-		EXPECT_NEAR(output_ptr[dim + d], 1, eps);
+	for (int d = 0; d < dim; ++d) 
+	{
+		EXPECT_TRUE(floating_point_equal(output_ptr[dim + d], (TypeParam)1.f));
 	}
 }
 
-TEST(prior_box, test_forward_variance_multi) {
+TYPED_TEST(prior_box_test, test_forward_variance_multi) 
+{
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -416,7 +441,7 @@ TEST(prior_box, test_forward_variance_multi) {
 	bool clip = false;
 	std::vector<float> variance = { 0.1f, 0.2f, 0.3f, 0.4f };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -427,40 +452,41 @@ TEST(prior_box, test_forward_variance_multi) {
 
 	auto output_prim = outputs.begin()->second.get_memory();
 
-	auto output_ptr = output_prim.pointer<float>();
+	auto output_ptr = output_prim.pointer<TypeParam>();
 
 	int dim = output_prim.get_layout().size.spatial[0] * output_prim.get_layout().size.spatial[1];
 
-	const float eps = (float)1e-6;
 	// pick a few generated priors and compare against the expected number.
 	// first prior
-	EXPECT_NEAR(output_ptr[0], 0.03, eps);
-	EXPECT_NEAR(output_ptr[1], 0.03, eps);
-	EXPECT_NEAR(output_ptr[2], 0.07, eps);
-	EXPECT_NEAR(output_ptr[3], 0.07, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[0], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[1], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[2], (TypeParam)0.07f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[3], (TypeParam)0.07f));
 
 	// second prior
-	EXPECT_NEAR(output_ptr[4], 0.02, eps);
-	EXPECT_NEAR(output_ptr[5], 0.02, eps);
-	EXPECT_NEAR(output_ptr[6], 0.08, eps);
-	EXPECT_NEAR(output_ptr[7], 0.08, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4], (TypeParam)0.02f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[5], (TypeParam)0.02f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[6], (TypeParam)0.08f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[7], (TypeParam)0.08f));
 
 	// prior in the 5-th row and 5-th col
-	EXPECT_NEAR(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4], 0.43, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 1], 0.43, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 2], 0.47, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 3], 0.47, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 1], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 2], (TypeParam)0.47f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 2 * 4 + 4 * 2 * 4 + 3], (TypeParam)0.47f));
 
 	//check variance
-	for (int d = 0; d < dim; ++d) {
-		EXPECT_NEAR(output_ptr[dim + d], 0.1 * (d % 4 + 1), eps);
+	for (int d = 0; d < dim; ++d) 
+	{
+		EXPECT_TRUE(floating_point_equal(output_ptr[dim + d], (TypeParam)(0.1f * (d % 4 + 1))));
 	}
 }
 
-TEST(prior_box, test_forward_aspect_ratio_no_flip) {
+TYPED_TEST(prior_box_test, test_forward_aspect_ratio_no_flip) 
+{
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -470,7 +496,7 @@ TEST(prior_box, test_forward_aspect_ratio_no_flip) {
 	std::vector<float> aspect_ratios = { 2 };
 	bool flip = false;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -481,48 +507,49 @@ TEST(prior_box, test_forward_aspect_ratio_no_flip) {
 
 	auto output_prim = outputs.begin()->second.get_memory();
 
-	auto output_ptr = output_prim.pointer<float>();
+	auto output_ptr = output_prim.pointer<TypeParam>();
 
 	int dim = output_prim.get_layout().size.spatial[0] * output_prim.get_layout().size.spatial[1];
 
-	const float eps = (float)1e-6;
 	// pick a few generated priors and compare against the expected number.
 	// first prior
-	EXPECT_NEAR(output_ptr[0], 0.03, eps);
-	EXPECT_NEAR(output_ptr[1], 0.03, eps);
-	EXPECT_NEAR(output_ptr[2], 0.07, eps);
-	EXPECT_NEAR(output_ptr[3], 0.07, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[0], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[1], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[2], (TypeParam)0.07f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[3], (TypeParam)0.07f));
 	// second prior
-	EXPECT_NEAR(output_ptr[4], 0.02, eps);
-	EXPECT_NEAR(output_ptr[5], 0.02, eps);
-	EXPECT_NEAR(output_ptr[6], 0.08, eps);
-	EXPECT_NEAR(output_ptr[7], 0.08, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4], (TypeParam)0.02f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[5], (TypeParam)0.02f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[6], (TypeParam)0.08f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[7], (TypeParam)0.08f));
 	// third prior
-	EXPECT_NEAR(output_ptr[8], 0.05 - 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[9], 0.05 - 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[10], 0.05 + 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[11], 0.05 + 0.01*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[8], (TypeParam)(0.05f - 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[9], (TypeParam)(0.05f - 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[10], (TypeParam)(0.05f + 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[11], (TypeParam)(0.05f + 0.01f*(float)sqrt(2.f))));
 	// prior in the 5-th row and 5-th col
-	EXPECT_NEAR(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4], 0.43, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4 + 1], 0.43, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4 + 2], 0.47, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4 + 3], 0.47, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4 + 1], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4 + 2], (TypeParam)0.47f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4 + 3], (TypeParam)0.47f));
 	// prior with ratio 1:2 in the 5-th row and 5-th col
-	EXPECT_NEAR(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4 + 8], 0.45 - 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4 + 9], 0.45 - 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4 + 10], 0.45 + 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4 + 11], 0.45 + 0.01*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4 + 8], (TypeParam)(0.45f - 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4 + 9], (TypeParam)(0.45f - 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4 + 10], (TypeParam)(0.45f + 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 3 * 4 + 4 * 3 * 4 + 11], (TypeParam)(0.45f + 0.01f*(float)sqrt(2.f))));
 
 	//check variance
-	for (int d = 0; d < dim; ++d) {
-		EXPECT_NEAR(output_ptr[dim + d], 0.1, eps);
+	for (int d = 0; d < dim; ++d) 
+	{
+		EXPECT_TRUE(floating_point_equal(output_ptr[dim + d], (TypeParam)0.1f));
 	}
 }
 
-TEST(prior_box, test_forward_aspect_ratio) {
+TYPED_TEST(prior_box_test, test_forward_aspect_ratio) 
+{
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -531,7 +558,7 @@ TEST(prior_box, test_forward_aspect_ratio) {
 	std::vector<float> max_sizes = { 9 };
 	std::vector<float> aspect_ratios = { 2 };
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -542,58 +569,58 @@ TEST(prior_box, test_forward_aspect_ratio) {
 
 	auto output_prim = outputs.begin()->second.get_memory();
 
-	auto output_ptr = output_prim.pointer<float>();
+	auto output_ptr = output_prim.pointer<TypeParam>();
 
 	int dim = output_prim.get_layout().size.spatial[0] * output_prim.get_layout().size.spatial[1];
 
-	const float eps = (float)1e-6;
 	// pick a few generated priors and compare against the expected number.
 	// first prior
-	EXPECT_NEAR(output_ptr[0], 0.03, eps);
-	EXPECT_NEAR(output_ptr[1], 0.03, eps);
-	EXPECT_NEAR(output_ptr[2], 0.07, eps);
-	EXPECT_NEAR(output_ptr[3], 0.07, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[0], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[1], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[2], (TypeParam)0.07f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[3], (TypeParam)0.07f));
 	// second prior
-	EXPECT_NEAR(output_ptr[4], 0.02, eps);
-	EXPECT_NEAR(output_ptr[5], 0.02, eps);
-	EXPECT_NEAR(output_ptr[6], 0.08, eps);
-	EXPECT_NEAR(output_ptr[7], 0.08, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4], (TypeParam)0.02f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[5], (TypeParam)0.02f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[6], (TypeParam)0.08f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[7], (TypeParam)0.08f));
 	// third prior
-	EXPECT_NEAR(output_ptr[8], 0.05 - 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[9], 0.05 - 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[10], 0.05 + 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[11], 0.05 + 0.01*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[8], (TypeParam)(0.05f - 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[9], (TypeParam)(0.05f - 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[10], (TypeParam)(0.05f + 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[11], (TypeParam)(0.05f + 0.01f*(float)sqrt(2.f))));
 	// forth prior
-	EXPECT_NEAR(output_ptr[12], 0.05 - 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[13], 0.05 - 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[14], 0.05 + 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[15], 0.05 + 0.02*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[12], (TypeParam)(0.05f - 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[13], (TypeParam)(0.05f - 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[14], (TypeParam)(0.05f + 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[15], (TypeParam)(0.05f + 0.02f*(float)sqrt(2.f))));
 	// prior in the 5-th row and 5-th col
-	EXPECT_NEAR(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4], 0.43, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 1], 0.43, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 2], 0.47, eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 3], 0.47, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 1], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 2], (TypeParam)0.47f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 3], (TypeParam)0.47f));
 	// prior with ratio 1:2 in the 5-th row and 5-th col
-	EXPECT_NEAR(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 8], 0.45 - 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 9], 0.45 - 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 10], 0.45 + 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 11], 0.45 + 0.01*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 8], (TypeParam)(0.45f - 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 9], (TypeParam)(0.45f - 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 10], (TypeParam)(0.45f + 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 11], (TypeParam)(0.45f + 0.01f*(float)sqrt(2.f))));
 	// prior with ratio 2:1 in the 5-th row and 5-th col
-	EXPECT_NEAR(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 12], 0.45 - 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 13], 0.45 - 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 14], 0.45 + 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 15], 0.45 + 0.02*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 12], (TypeParam)(0.45f - 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 13], (TypeParam)(0.45f - 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 14], (TypeParam)(0.45f + 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[4 * 10 * 4 * 4 + 4 * 4 * 4 + 15], (TypeParam)(0.45f + 0.02f*(float)sqrt(2.f))));
 
 	//check variance
-	for (int d = 0; d < dim; ++d) {
-		EXPECT_NEAR(output_ptr[dim + d], 0.1, eps);
+	for (int d = 0; d < dim; ++d) 
+	{
+		EXPECT_TRUE(floating_point_equal(output_ptr[dim + d], (TypeParam)0.1f));
 	}
 }
 
-TEST(prior_box, test_forward_aspect_ratio_multi_size) {
+TYPED_TEST(prior_box_test, test_forward_aspect_ratio_multi_size) {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 10, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -604,7 +631,7 @@ TEST(prior_box, test_forward_aspect_ratio_multi_size) {
 	bool flip = true;
 	bool clip = true;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip, clip));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -615,78 +642,78 @@ TEST(prior_box, test_forward_aspect_ratio_multi_size) {
 
 	auto output_prim = outputs.begin()->second.get_memory();
 
-	auto output_ptr = output_prim.pointer<float>();
+	auto output_ptr = output_prim.pointer<TypeParam>();
 
 	int dim = output_prim.get_layout().size.spatial[0] * output_prim.get_layout().size.spatial[1];
 
-	const float eps = (float)1e-6;
 	// pick a few generated priors and compare against the expected number.
 	// first prior
-	EXPECT_NEAR(output_ptr[0], 0.03, eps);
-	EXPECT_NEAR(output_ptr[1], 0.03, eps);
-	EXPECT_NEAR(output_ptr[2], 0.07, eps);
-	EXPECT_NEAR(output_ptr[3], 0.07, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[0], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[1], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[2], (TypeParam)0.07f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[3], (TypeParam)0.07f));
 	// second prior
-	EXPECT_NEAR(output_ptr[4], 0.02, eps);
-	EXPECT_NEAR(output_ptr[5], 0.02, eps);
-	EXPECT_NEAR(output_ptr[6], 0.08, eps);
-	EXPECT_NEAR(output_ptr[7], 0.08, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4], (TypeParam)0.02f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[5], (TypeParam)0.02f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[6], (TypeParam)0.08f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[7], (TypeParam)0.08f));
 	// third prior
-	EXPECT_NEAR(output_ptr[8], 0.05 - 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[9], 0.05 - 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[10], 0.05 + 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[11], 0.05 + 0.01*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[8], (TypeParam)(0.05f - 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[9], (TypeParam)(0.05f - 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[10], (TypeParam)(0.05f + 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[11], (TypeParam)(0.05f + 0.01f*(float)sqrt(2.f))));
 	// forth prior
-	EXPECT_NEAR(output_ptr[12], 0.05 - 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[13], 0.05 - 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[14], 0.05 + 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[15], 0.05 + 0.02*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[12], (TypeParam)(0.05f - 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[13], (TypeParam)(0.05f - 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[14], (TypeParam)(0.05f + 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[15], (TypeParam)(0.05f + 0.02f*(float)sqrt(2.f))));
 	// fifth prior
-	EXPECT_NEAR(output_ptr[16], 0.01, eps);
-	EXPECT_NEAR(output_ptr[17], 0.01, eps);
-	EXPECT_NEAR(output_ptr[18], 0.09, eps);
-	EXPECT_NEAR(output_ptr[19], 0.09, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[16], (TypeParam)0.01f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[17], (TypeParam)0.01f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[18], (TypeParam)0.09f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[19], (TypeParam)0.09f));
 	// sixth prior
-	EXPECT_NEAR(output_ptr[20], 0.00, eps);
-	EXPECT_NEAR(output_ptr[21], 0.00, eps);
-	EXPECT_NEAR(output_ptr[22], 0.11, eps);
-	EXPECT_NEAR(output_ptr[23], 0.11, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[20], (TypeParam)0.00f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[21], (TypeParam)0.00f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[22], (TypeParam)0.11f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[23], (TypeParam)0.11f));
 	// seventh prior
-	EXPECT_NEAR(output_ptr[24], 0.00, eps);
-	EXPECT_NEAR(output_ptr[25], 0.05 - 0.04 / sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[26], 0.05 + 0.04*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[27], 0.05 + 0.04 / sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[24], (TypeParam)0.00f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[25], (TypeParam)(0.05f - 0.04f / (float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[26], (TypeParam)(0.05f + 0.04f * (float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[27], (TypeParam)(0.05f + 0.04f / (float)sqrt(2.f))));
 	// forth prior
-	EXPECT_NEAR(output_ptr[28], 0.05 - 0.04 / sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[29], 0.00, eps);
-	EXPECT_NEAR(output_ptr[30], 0.05 + 0.04 / sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[31], 0.05 + 0.04*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[28], (TypeParam)(0.05f - 0.04f / (float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[29], (TypeParam)0.00f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[30], (TypeParam)(0.05f + 0.04f / (float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[31], (TypeParam)(0.05f + 0.04f * (float)sqrt(2.f))));
 	// prior in the 5-th row and 5-th col
-	EXPECT_NEAR(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4], 0.43, eps);
-	EXPECT_NEAR(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 1], 0.43, eps);
-	EXPECT_NEAR(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 2], 0.47, eps);
-	EXPECT_NEAR(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 3], 0.47, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 1], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 2], (TypeParam)0.47f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 3], (TypeParam)0.47f));
 	// prior with ratio 1:2 in the 5-th row and 5-th col
-	EXPECT_NEAR(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 8], 0.45 - 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 9], 0.45 - 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 10], 0.45 + 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 11], 0.45 + 0.01*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 8], (TypeParam)(0.45f - 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 9], (TypeParam)(0.45f - 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 10], (TypeParam)(0.45f + 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 11], (TypeParam)(0.45f + 0.01f*(float)sqrt(2.f))));
 	// prior with ratio 2:1 in the 5-th row and 5-th col
-	EXPECT_NEAR(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 12], 0.45 - 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 13], 0.45 - 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 14], 0.45 + 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 15], 0.45 + 0.02*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 12], (TypeParam)(0.45f - 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 13], (TypeParam)(0.45f - 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 14], (TypeParam)(0.45f + 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[8 * 10 * 4 * 4 + 8 * 4 * 4 + 15], (TypeParam)(0.45f + 0.02f*(float)sqrt(2.f))));
 
 	//check variance
-	for (int d = 0; d < dim; ++d) {
-		EXPECT_NEAR(output_ptr[dim + d], 0.1, eps);
+	for (int d = 0; d < dim; ++d) 
+	{
+		EXPECT_TRUE(floating_point_equal(output_ptr[dim + d], (TypeParam)0.1f));
 	}
 }
 
-TEST(prior_box, test_forward_fix_step) {
+TYPED_TEST(prior_box_test, test_forward_fix_step) {
 	engine engine;
 
-	auto input_prim = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 10, 10, 20, 10 } } });
+	auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 20 } });
 
 	topology topology;
 	topology.add(input_layout("input_prim", input_prim.get_layout()));
@@ -700,7 +727,7 @@ TEST(prior_box, test_forward_fix_step) {
 	float step_width = 10.f;
 	float step_height = 10.f;
 
-	topology.add(prior_box("prior_box", "input_prim", { format::yx,{ 100,100 } }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance, step_width, step_height));
+	topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, max_sizes, aspect_ratios, flip, clip, variance, step_width, step_height));
 	network network(engine, topology);
 	network.set_input_data("input_prim", input_prim);
 
@@ -711,50 +738,50 @@ TEST(prior_box, test_forward_fix_step) {
 
 	auto output_prim = outputs.begin()->second.get_memory();
 
-	auto output_ptr = output_prim.pointer<float>();
+	auto output_ptr = output_prim.pointer<TypeParam>();
 
 	int dim = output_prim.get_layout().size.spatial[0] * output_prim.get_layout().size.spatial[1];
 
-	const float eps = (float)1e-6;
 	// pick a few generated priors and compare against the expected number.
 	// first prior
-	EXPECT_NEAR(output_ptr[0], 0.03, eps);
-	EXPECT_NEAR(output_ptr[1], 0.03, eps);
-	EXPECT_NEAR(output_ptr[2], 0.07, eps);
-	EXPECT_NEAR(output_ptr[3], 0.07, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[0], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[1], (TypeParam)0.03f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[2], (TypeParam)0.07f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[3], (TypeParam)0.07f));
 	// second prior
-	EXPECT_NEAR(output_ptr[4], 0.02, eps);
-	EXPECT_NEAR(output_ptr[5], 0.02, eps);
-	EXPECT_NEAR(output_ptr[6], 0.08, eps);
-	EXPECT_NEAR(output_ptr[7], 0.08, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[4], (TypeParam)0.02f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[5], (TypeParam)0.02f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[6], (TypeParam)0.08f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[7], (TypeParam)0.08f));
 	// third prior
-	EXPECT_NEAR(output_ptr[8], 0.05 - 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[9], 0.05 - 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[10], 0.05 + 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[11], 0.05 + 0.01*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[8], (TypeParam)(0.05f - 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[9], (TypeParam)(0.05f - 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[10], (TypeParam)(0.05f + 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[11], (TypeParam)(0.05f + 0.01f*(float)sqrt(2.f))));
 	// forth prior
-	EXPECT_NEAR(output_ptr[12], 0.05 - 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[13], 0.05 - 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[14], 0.05 + 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[15], 0.05 + 0.02*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[12], (TypeParam)(0.05f - 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[13], (TypeParam)(0.05f - 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[14], (TypeParam)(0.05f + 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[15], (TypeParam)(0.05f + 0.02f*(float)sqrt(2.f))));
 	// prior in the 15-th row and 5-th col
-	EXPECT_NEAR(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4], 0.43, eps);
-	EXPECT_NEAR(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 1], 1.43, eps);
-	EXPECT_NEAR(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 2], 0.47, eps);
-	EXPECT_NEAR(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 3], 1.47, eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4], (TypeParam)0.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 1], (TypeParam)1.43f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 2], (TypeParam)0.47f));
+	EXPECT_TRUE(floating_point_equal(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 3], (TypeParam)1.47f));
 	// prior with ratio 1:2 in the 15-th row and 5-th col
-	EXPECT_NEAR(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 8], 0.45 - 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 9], 1.45 - 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 10], 0.45 + 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 11], 1.45 + 0.01*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 8], (TypeParam)(0.45f - 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 9], (TypeParam)(1.45f - 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 10], (TypeParam)(0.45f + 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 11], (TypeParam)(1.45f + 0.01f*(float)sqrt(2.f))));
 	// prior with ratio 2:1 in the 15-th row and 5-th col
-	EXPECT_NEAR(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 12], 0.45 - 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 13], 1.45 - 0.02*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 14], 0.45 + 0.01*sqrt(2.), eps);
-	EXPECT_NEAR(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 15], 1.45 + 0.02*sqrt(2.), eps);
+	EXPECT_TRUE(floating_point_equal(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 12], (TypeParam)(0.45f - 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 13], (TypeParam)(1.45f - 0.02f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 14], (TypeParam)(0.45f + 0.01f*(float)sqrt(2.f))));
+	EXPECT_TRUE(floating_point_equal(output_ptr[14 * 10 * 4 * 4 + 4 * 4 * 4 + 15], (TypeParam)(1.45f + 0.02f*(float)sqrt(2.f))));
 
 	//check variance
-	for (int d = 0; d < dim; ++d) {
-		EXPECT_NEAR(output_ptr[dim + d], 0.1, eps);
+	for (int d = 0; d < dim; ++d) 
+	{
+		EXPECT_TRUE(floating_point_equal(output_ptr[dim + d], (TypeParam)0.1f));
 	}
 }

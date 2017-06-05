@@ -14,27 +14,50 @@
 // limitations under the License.
 */
 
-#include "normalization_arg.h"
+#include "lrn_inst.h"
 #include "primitive_type_base.h"
-#include "network_impl.h"
 
 namespace cldnn
 {
-primitive_type_id normalization_type_id()
+primitive_type_id lrn_type_id()
 {
-    static primitive_type_base<normalization, normalization_arg> instance;
+    static primitive_type_base<lrn> instance;
     return &instance;
 }
 
-layout normalization_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const normalization> desc)
+layout lrn_inst::calc_output_layout(lrn_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-    auto result = input_desc->type()->calc_output_layout(topology_map, input_desc);
-    return result;
+    return node.input().get_output_layout();
 }
 
-normalization_arg::normalization_arg(network_impl& network, std::shared_ptr<const normalization> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
-{}
+std::string lrn_inst::to_string(lrn_node const& node)
+{
+    std::stringstream           primitive_description;
+    auto desc                   = node.get_primitive();
+    auto input                  = node.input();
+    auto norm_size              = desc->size;
+    auto k                      = desc->k;
+    auto alpha                  = desc->alpha;
+    auto beta                   = desc->beta;
+    auto norm_region            = desc->norm_region == cldnn_lrn_norm_region::cldnn_lrn_norm_region_across_channel ? "across channel" : "within channel";
 
+    primitive_description << "id: " << desc->id << ", type: lrn" << 
+        "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
+        "\n\tk: "     << k << ", alpha: " << alpha << ", beta: " << beta <<
+        "\n\tsize of normalization: " << norm_size << ", normalization region: " << norm_region <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
+        "\n\toutput: size: " << node.get_output_layout().size << '\n';
+   
+    return primitive_description.str();
+}
+
+lrn_inst::typed_primitive_inst(network_impl& network, lrn_node const& desc)
+    :parent(network, desc)
+{
+    if (argument.size == 0)
+    {
+        throw std::runtime_error("LRN size must be greater than 0!");
+    }
+}
 }

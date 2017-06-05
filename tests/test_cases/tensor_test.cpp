@@ -15,34 +15,11 @@
 */
 
 #include <gtest/gtest.h>
-#include <api/tensor.hpp>
+#include <api/CPP/tensor.hpp>
 
-TEST(tensor_api, order_x)
+TEST(tensor_api, order_new_notation)
 {
-    cldnn::tensor test{ cldnn::format::x, 0, { 1 } };
-
-    //sizes
-    EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(1));
-    EXPECT_EQ(test.spatial.size(), size_t(1));
-
-    //passed values
-    EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(1));
-    
-    //defaults
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(0));
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(0));
-
-    //reverse
-    auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(1));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
-}
-
-TEST(tensor_api, order_yx)
-{
-    cldnn::tensor test{ cldnn::format::yx, 0, { 1, 2 } };
+    cldnn::tensor test{ cldnn::feature(3), cldnn::batch(4), cldnn::spatial(2, 1) };
 
     //sizes
     EXPECT_EQ(test.batch.size(), size_t(1));
@@ -52,21 +29,20 @@ TEST(tensor_api, order_yx)
     //passed values
     EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(2));
     EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(1));
-
-    //defaults
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(0));
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(0));
+    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(3));
+    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(4));
 
     //reverse
     auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(2));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
+    EXPECT_EQ(sizes[0], cldnn::tensor::value_type(4));
+    EXPECT_EQ(sizes[1], cldnn::tensor::value_type(3));
+    EXPECT_EQ(sizes[2], cldnn::tensor::value_type(2));
+    EXPECT_EQ(sizes[3], cldnn::tensor::value_type(1));
 }
 
-TEST(tensor_api, order_xy)
+TEST(tensor_api, order_new_notation_feature_default)
 {
-    cldnn::tensor test{ cldnn::format::xy, 0, { 1, 2 } };
+    cldnn::tensor test{ cldnn::feature(3), cldnn::spatial(2) };
 
     //sizes
     EXPECT_EQ(test.batch.size(), size_t(1));
@@ -74,69 +50,22 @@ TEST(tensor_api, order_xy)
     EXPECT_EQ(test.spatial.size(), size_t(2));
 
     //passed values
-    EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(1));
-    EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(2));
-
-    //defaults
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(0));
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(0));
-
-    //reverse
-    auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(2));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
-}
-
-TEST(tensor_api, order_xb)
-{
-    cldnn::tensor test{ cldnn::format::xb, 0, { 1, 2 } };
-
-    //sizes
-    EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(1));
-    EXPECT_EQ(test.spatial.size(), size_t(1));
-
-    //passed values
-    EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(1));
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(2));
-
-    //defaults
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(0));
-
-    //reverse
-    auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(2));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
-}
-
-TEST(tensor_api, order_bx)
-{
-    cldnn::tensor test{ cldnn::format::bx, 0, { 1, 2 } };
-
-    //sizes
-    EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(1));
-    EXPECT_EQ(test.spatial.size(), size_t(1));
-
-    //passed values
     EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(2));
+    EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(1));
+    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(3));
     EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(1));
 
-    //defaults
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(0));
-
     //reverse
     auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(2));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
+    EXPECT_EQ(sizes[0], cldnn::tensor::value_type(1));
+    EXPECT_EQ(sizes[1], cldnn::tensor::value_type(3));
+    EXPECT_EQ(sizes[2], cldnn::tensor::value_type(2));
+    EXPECT_EQ(sizes[3], cldnn::tensor::value_type(1));
 }
 
-TEST(tensor_api, order_yxfn)
+TEST(tensor_api, order)
 {
-    cldnn::tensor test{ cldnn::format::yxfn, 0, { 1, 2, 3, 4 } };
+    cldnn::tensor test{ 1, 2, 3, 4 };
 
     //sizes
     EXPECT_EQ(test.batch.size(), size_t(1));
@@ -144,273 +73,15 @@ TEST(tensor_api, order_yxfn)
     EXPECT_EQ(test.spatial.size(), size_t(2));
 
     //passed values
-    EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(2));
-    EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(1));
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(3));
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(4));
-
-    //reverse
-    auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(4));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
-}
-
-TEST(tensor_api, order_yxfb)
-{
-    cldnn::tensor test{ cldnn::format::yxfb, 0, { 1, 2, 3, 4 } };
-
-    //sizes
-    EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(1));
-    EXPECT_EQ(test.spatial.size(), size_t(2));
-
-    //passed values
-    EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(2));
-    EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(1));
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(3));
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(4));
-
-    //reverse
-    auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(4));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
-}
-
-TEST(tensor_api, order_byxf)
-{
-    cldnn::tensor test{ cldnn::format::byxf, 0, { 1, 2, 3, 4 } };
-
-    //sizes
-    EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(1));
-    EXPECT_EQ(test.spatial.size(), size_t(2));
-
-    //passed values
+    EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(4));
     EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(3));
-    EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(2));
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(4));
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(1));
-
-    //reverse
-    auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(4));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
-}
-
-TEST(tensor_api, order_bfyx)
-{
-    cldnn::tensor test{ cldnn::format::bfyx, 0, { 1, 2, 3, 4 } };
-
-    //sizes
-    EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(1));
-    EXPECT_EQ(test.spatial.size(), size_t(2));
-
-    //passed values
-    EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(4));
-    EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(3));
     EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(2));
     EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(1));
 
     //reverse
     auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(4));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
-}
-
-TEST(tensor_api, order_fyxb)
-{
-    cldnn::tensor test{ cldnn::format::fyxb, 0, { 1, 2, 3, 4 } };
-
-    //sizes
-    EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(1));
-    EXPECT_EQ(test.spatial.size(), size_t(2));
-
-    //passed values
-    EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(3));
-    EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(2));
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(1));
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(4));
-
-    //reverse
-    auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(4));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
-}
-
-TEST(tensor_api, order_oiyx)
-{
-    cldnn::tensor test{ cldnn::format::oiyx, 0, { 1, 2, 3, 4 } };
-
-    //sizes
-    EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(2));
-    EXPECT_EQ(test.spatial.size(), size_t(2));
-
-    //passed values
-    EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(4));
-    EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(3));
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(1));
-    EXPECT_EQ(test.feature[1], cldnn::tensor::value_type(2));
-
-    //defaults
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(0));
-
-    //reverse
-    auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(4));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
-}
-
-TEST(tensor_api, order_yxoi)
-{
-    cldnn::tensor test{ cldnn::format::yxoi, 0, { 1, 2, 3, 4 } };
-
-    //sizes
-    EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(2));
-    EXPECT_EQ(test.spatial.size(), size_t(2));
-
-    //passed values
-    EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(2));
-    EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(1));
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(3));
-    EXPECT_EQ(test.feature[1], cldnn::tensor::value_type(4));
-
-    //defaults
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(0));
-
-    //reverse
-    auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(4));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
-}
-
-TEST(tensor_api, order_oyxi)
-{
-    cldnn::tensor test{ cldnn::format::oyxi, 0, { 1, 2, 3, 4 } };
-
-    //sizes
-    EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(2));
-    EXPECT_EQ(test.spatial.size(), size_t(2));
-
-    //passed values
-    EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(3));
-    EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(2));
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(1));
-    EXPECT_EQ(test.feature[1], cldnn::tensor::value_type(4));
-
-    //defaults
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(0));
-
-    //reverse
-    auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(4));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
-}
-
-TEST(tensor_api, order_yxio)
-{
-    cldnn::tensor test{ cldnn::format::yxio, 0, { 1, 2, 3, 4 } };
-
-    //sizes
-    EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(2));
-    EXPECT_EQ(test.spatial.size(), size_t(2));
-
-    //passed values
-    EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(2));
-    EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(1));
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(4));
-    EXPECT_EQ(test.feature[1], cldnn::tensor::value_type(3));
-
-    //defaults
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(0));
-
-    //reverse
-    auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(4));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
-}
-
-TEST(tensor_api, order_os_iyx_osv16)
-{
-    cldnn::tensor test{ cldnn::format::os_iyx_osv16, 0, { 1, 2, 3, 4 } };
-
-    //sizes
-    EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(2));
-    EXPECT_EQ(test.spatial.size(), size_t(2));
-
-    //passed values
-    EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(4));
-    EXPECT_EQ(test.spatial[1], cldnn::tensor::value_type(3));
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(1));
-    EXPECT_EQ(test.feature[1], cldnn::tensor::value_type(2));
-
-    //defaults
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(0));
-
-    //reverse
-    auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(4));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
-}
-
-TEST(tensor_api, order_bs_xs_xsv8_bsv8)
-{
-    cldnn::tensor test{ cldnn::format::bs_xs_xsv8_bsv8, 0, { 1, 2 } };
-
-    //sizes
-    EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(1));
-    EXPECT_EQ(test.spatial.size(), size_t(1));
-
-    //passed values
-    EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(2));
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(1));
-
-    //defaults
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(0));
-
-    //reverse
-    auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(2));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
-}
-
-TEST(tensor_api, order_bs_x_bsv16)
-{
-    cldnn::tensor test{ cldnn::format::bs_x_bsv16, 0,{ 1, 2 } };
-
-    //sizes
-    EXPECT_EQ(test.batch.size(), size_t(1));
-    EXPECT_EQ(test.feature.size(), size_t(1));
-    EXPECT_EQ(test.spatial.size(), size_t(1));
-
-    //passed values
-    EXPECT_EQ(test.spatial[0], cldnn::tensor::value_type(2));
-    EXPECT_EQ(test.batch[0], cldnn::tensor::value_type(1));
-
-    //defaults
-    EXPECT_EQ(test.feature[0], cldnn::tensor::value_type(0));
-
-    //reverse
-    auto sizes = test.sizes();
-    EXPECT_EQ(sizes.size(), size_t(2));
-    for (size_t i = 0; i < sizes.size(); ++i)
-        EXPECT_EQ(sizes[i], cldnn::tensor::value_type(i + 1));
+    EXPECT_EQ(sizes[0], cldnn::tensor::value_type(1));
+    EXPECT_EQ(sizes[1], cldnn::tensor::value_type(2));
+    EXPECT_EQ(sizes[2], cldnn::tensor::value_type(3));
+    EXPECT_EQ(sizes[3], cldnn::tensor::value_type(4));
 }

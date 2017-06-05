@@ -18,13 +18,13 @@
 #include <fstream>
 
 #include <gtest/gtest.h>
-#include <api/memory.hpp>
-#include <api/primitives/input_layout.hpp>
-#include <api/primitives/simpler_nms.hpp>
-#include <include/simpler_nms_arg.h>
-#include <api/topology.hpp>
-#include <api/network.hpp>
-#include <api/engine.hpp>
+#include "api/CPP/memory.hpp"
+#include <api/CPP/input_layout.hpp>
+#include <api/CPP/simpler_nms.hpp>
+#include <include/simpler_nms_inst.h>
+#include <api/CPP/topology.hpp>
+#include <api/CPP/network.hpp>
+#include <api/CPP/engine.hpp>
 #include "test_utils/test_utils.h"
 #include "test_utils/float16.h"
 
@@ -98,9 +98,9 @@ class TestRunnerSimplerNMS
 
 template <typename Dtype>
 TestRunnerSimplerNMS<Dtype>::TestRunnerSimplerNMS() :
-                            _cls_scores_layout(cldnn::type_to_data_type<Dtype>::value, { format::bfyx, { 1, 18, 14, 23 } } ),
-                            _bbox_pred_layout(cldnn::type_to_data_type<Dtype>::value, { format::bfyx, { 1, 36, 14, 23 } } ),
-                            _image_info_layout(data_types::f32, { format::x, { 3 } } ),
+                            _cls_scores_layout(cldnn::type_to_data_type<Dtype>::value, format::bfyx, { 1, 18, 23, 14 } ),
+                            _bbox_pred_layout(cldnn::type_to_data_type<Dtype>::value, format::bfyx, { 1, 36, 23, 14 } ),
+                            _image_info_layout(cldnn::type_to_data_type<Dtype>::value, format::bfyx, { 1, 1, 3, 1 } ),
                             _test_layer(layer_name, 
                                         cls_scores_name, 
                                         bbox_pred_name,
@@ -112,7 +112,6 @@ TestRunnerSimplerNMS<Dtype>::TestRunnerSimplerNMS() :
                                         pre_nms_topn,
                                         post_nms_topn,
                                         scales,
-                                        padding(),
                                         padding())
 {    
     _topology.add(input_layout(cls_scores_name, _cls_scores_layout));
@@ -137,9 +136,9 @@ memory TestRunnerSimplerNMS<Dtype>::Run(std::vector<Dtype>& cls_scores_vals,
     memory cls_scores = memory::attach(_cls_scores_layout, cls_scores_vals.data(), cls_scores_vals.size());
     memory bbox_pred  = memory::attach(_bbox_pred_layout, bbox_pred_vals.data(), bbox_pred_vals.size());
 
-    float image_info_vals[] = { (float)image_w - 0.0000001f, // check fp robustness of the layer
-                                (float)image_h + 0.0000001f, // check fp robustness of the layer 
-                                (float)image_z };
+    Dtype image_info_vals[] = { (Dtype)((float)image_w - 0.0000001f), // check fp robustness of the layer
+                                (Dtype)((float)image_h + 0.0000001f), // check fp robustness of the layer 
+                                (Dtype)((float)image_z) };
     memory image_info = memory::attach(_image_info_layout, &image_info_vals[0], 3);
    
     _network->set_input_data(cls_scores_name, cls_scores);
@@ -169,7 +168,7 @@ TEST(simpler_nms, basic) {
     const memory& output = t.Run(cls_scores, bbox_pred);
     EXPECT_EQ((unsigned int)output.get_layout().count(), simpler_nms_ref_size);
 
-    float* f = output.pointer<float>().data();
+    auto f = output.pointer<float>();
 
     for (unsigned int i = 0 ; i < simpler_nms_ref_size ; i++) {
         EXPECT_NEAR(f[i], simpler_nms_ref[i], epsilon);
@@ -195,11 +194,10 @@ TEST(simpler_nms, fp16) {
     const memory& output = t.Run(cls_scores, bbox_pred);
     EXPECT_EQ((unsigned int)output.get_layout().count(), simpler_nms_ref_size);
 
-    half_t* d = output.pointer<half_t>().data();
+    auto d = output.pointer<FLOAT16>();
 
     for (unsigned int i = 0 ; i < simpler_nms_ref_size ; i++) {
-        FLOAT16 f((int16_t)d[i]);
         FLOAT16 ref(simpler_nms_ref[i]);        
-        EXPECT_NEAR((float)f, (float)ref, epsilon_fp16);
+        EXPECT_NEAR((float)d[i], (float)ref, epsilon_fp16);
     }
 }

@@ -16,14 +16,44 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/cldnn.h"
-#include "api/cldnn_defs.h"
+
+#include "api/C/cldnn.h"
+#include "api/CPP/cldnn_defs.h"
+
 #include <functional>
 #include <stdexcept>
 
 #define API_CAST(api_type, impl_type) \
 inline api_type api_cast(impl_type* value) { return reinterpret_cast<api_type>(value); } \
 inline impl_type* api_cast(api_type value) { return reinterpret_cast<impl_type*>(value); }
+
+namespace cldnn {
+    struct last_err {
+        /// @breif Sets the message of last error
+        void set_last_error_message(const std::string& msg)
+        {
+            _msg = msg;
+        }
+
+        void set_last_exception(const std::exception& ex)
+        {
+            _msg = ex.what();
+        }
+        /// @breif Gets the message of last error
+        const std::string& get_last_error_message()
+        {
+            return _msg;
+        }
+        static last_err& instance();
+    private:
+        std::string _msg;
+        last_err() :_msg("Operation succeed") {}
+    };
+
+    // float <--> half convertors
+    float half_to_float(uint16_t value);
+    uint16_t float_to_half(float value);
+}
 
 
 template<typename T>
@@ -40,6 +70,19 @@ T exception_handler(cldnn_status default_error, cldnn_status* status, const T& d
     {
         if (status)
             *status = err.status();
+        cldnn::last_err::instance().set_last_exception(err);
+
+#ifndef NDEBUG
+        static_cast<void>(default_result);
+        throw;
+#endif
+    }
+    catch (const std::exception& err)
+    {
+        if (status)
+            *status = default_error;
+        cldnn::last_err::instance().set_last_exception(err);
+
 #ifndef NDEBUG
         static_cast<void>(default_result);
         throw;
@@ -49,6 +92,8 @@ T exception_handler(cldnn_status default_error, cldnn_status* status, const T& d
     {
         if (status)
             *status = default_error;
+        cldnn::last_err::instance().set_last_error_message("error unknown");
+
 #ifndef NDEBUG
         static_cast<void>(default_result);
         throw;
@@ -73,6 +118,17 @@ inline void exception_handler(cldnn_status default_error, cldnn_status* status, 
     {
         if (status)
           *status = err.status();
+        cldnn::last_err::instance().set_last_exception(err);
+#ifndef NDEBUG
+        throw;
+#endif
+    }
+    catch (const std::exception& err)
+    {
+        if (status)
+            *status = default_error;
+        cldnn::last_err::instance().set_last_exception(err);
+
 #ifndef NDEBUG
         throw;
 #endif
@@ -81,6 +137,7 @@ inline void exception_handler(cldnn_status default_error, cldnn_status* status, 
     {
         if (status)
             *status = default_error;
+        cldnn::last_err::instance().set_last_error_message("error unknown");
 #ifndef NDEBUG
         throw;
 #endif

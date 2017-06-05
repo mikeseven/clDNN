@@ -1,3 +1,18 @@
+// Copyright (c) 2016-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
 // Extensions and additional capabilities.
 #if FP16_SUPPORTED
     #pragma OPENCL EXTENSION cl_khr_fp16 : enable
@@ -49,9 +64,11 @@ if (_kernel_data.leftovers)
 
 // Activation function used in ReLU.
 #if RELU && FP16_UNIT_USED
-    #define ACTIVATION(output, input) output = max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h);
+    #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
+    input : -convert_half(NEGATIVE_SLOPE)) : (max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h));
 #elif RELU
-    #define ACTIVATION(output, input) output = max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f);
+    #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
+    input : -NEGATIVE_SLOPE) : (max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f));
 #else
     #define ACTIVATION(output, input) output = input;
 #endif
@@ -73,21 +90,25 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
     const __global UNIT_TYPE* input,
     __global UNIT_TYPE* output,
     const __global UNIT_TYPE* weights,
+#if BIAS_TERM
     const __global UNIT_TYPE* bias,
+#endif   
     uint split_idx)
 {
     // constexpr:
     const uint input_buffer_size_x = INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X + INPUT_PADDING_UPPER_SIZE_X;
     const uint input_buffer_size_y = INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y + INPUT_PADDING_UPPER_SIZE_Y;
+    const uint input_buffer_size_f = INPUT_PADDING_LOWER_FEATURE_NUM + INPUT_FEATURE_NUM + INPUT_PADDING_UPPER_FEATURE_NUM;
+
     const uint output_buffer_size_x = OUTPUT_PADDING_LOWER_SIZE_X + OUTPUT_SIZE_X + OUTPUT_PADDING_UPPER_SIZE_X;
     const uint output_buffer_size_y = OUTPUT_PADDING_LOWER_SIZE_Y + OUTPUT_SIZE_Y + OUTPUT_PADDING_UPPER_SIZE_Y;
+    const uint output_buffer_size_f = OUTPUT_PADDING_LOWER_FEATURE_NUM + OUTPUT_FEATURE_NUM + OUTPUT_PADDING_UPPER_FEATURE_NUM;
 
-
-    const uint oc  = get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column 
-    const uint or  = get_global_id(1) * OUT_BLOCK_HEIGHT; // or = Output Row
-    const uint fm  = get_global_id(2);                    // fm = Feature Map = od = Output Depth 
+    const uint oc  = (uint)get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column
+    const uint or  = (uint)get_global_id(1) * OUT_BLOCK_HEIGHT; // or = Output Row
+    const uint fm  = get_global_id(2);                    // fm = Feature Map = od = Output Depth
     const uint lid = get_sub_group_local_id();
-    
+
     uint batch_idx = fm / FEATURES_THREADS_PER_BATCH;
     uint feature_idx = fm % FEATURES_THREADS_PER_BATCH;
     uint fmg = feature_idx / SUB_GROUP_SIZE;
@@ -97,12 +118,13 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
     UNIT_TYPE w[PREFETCH];
     uint in_addr;
     uint weight_addr = fmg * FILTER_INPUT_FEATURE_NUM * FILTER_SIZE_X * FILTER_SIZE_Y * SUB_GROUP_SIZE + lid;
-    
-    for(int i = 0; i < (OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT); i++) { 
+
+    for(int i = 0; i < (OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT); i++) {
         out[i] = UNIT_VAL_ZERO;
     }
 
-    in_addr = (batch_idx * INPUT_FEATURE_NUM + split_idx * FILTER_INPUT_FEATURE_NUM) * input_buffer_size_x * input_buffer_size_y;
+    in_addr = (INPUT_PADDING_LOWER_BATCH_NUM + batch_idx) * input_buffer_size_x * input_buffer_size_y * input_buffer_size_f;
+    in_addr += (INPUT_PADDING_LOWER_FEATURE_NUM + split_idx * FILTER_INPUT_FEATURE_NUM) * input_buffer_size_x * input_buffer_size_y;
     in_addr += (INPUT_PADDING_LOWER_SIZE_Y + INPUT_OFFSET_SIZE_Y + or * STRIDE_SIZE_Y) * input_buffer_size_x + (INPUT_PADDING_LOWER_SIZE_X + INPUT_OFFSET_SIZE_X + oc * STRIDE_SIZE_X) + lid;
 
     for(int kd = 0; kd < FILTER_INPUT_FEATURE_NUM; kd++)  // _ID = 3, RGB
@@ -169,16 +191,16 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
             uint kc = 0; // kc = Kernel Column
             LOOP(FILTER_SIZE_X, kc,
             {
-                //w = weights[weight_addr];	
+                //w = weights[weight_addr];
                 for(uint br=0; br<OUT_BLOCK_HEIGHT; br++) {
                     for(uint bc=0; bc<OUT_BLOCK_WIDTH; bc++) {
 
 #if IN_BLOCK_WIDTH != SUB_GROUP_SIZE
-                        //if we fix the programming model, then we could use a nice simple 2d array: val = in[br * STRIDE_SIZE_Y + kr][bc * STRIDE_SIZE_X + kc]; 
-                        UNIT_TYPE val = intel_sub_group_shuffle( in[(((br * STRIDE_SIZE_Y + kr) * IN_BLOCK_WIDTH) + (bc * STRIDE_SIZE_X + kc)) / SUB_GROUP_SIZE],
-                                                                    (((br * STRIDE_SIZE_Y + kr) * IN_BLOCK_WIDTH) + (bc * STRIDE_SIZE_X + kc)) % SUB_GROUP_SIZE);
+                        //if we fix the programming model, then we could use a nice simple 2d array: val = in[br * STRIDE_SIZE_Y + kr][bc * STRIDE_SIZE_X + kc];
+                        UNIT_TYPE val = intel_sub_group_shuffle( in[(((br * STRIDE_SIZE_Y + kr * DILATION_SIZE_Y) * IN_BLOCK_WIDTH) + (bc * STRIDE_SIZE_X + kc * DILATION_SIZE_X)) / SUB_GROUP_SIZE],
+                                                                    (((br * STRIDE_SIZE_Y + kr * DILATION_SIZE_Y) * IN_BLOCK_WIDTH) + (bc * STRIDE_SIZE_X + kc * DILATION_SIZE_X)) % SUB_GROUP_SIZE);
 #else
-                        UNIT_TYPE val = intel_sub_group_shuffle( in[br * STRIDE_SIZE_X + kr], bc * STRIDE_SIZE_X + kc);	
+                        UNIT_TYPE val = intel_sub_group_shuffle( in[br * STRIDE_SIZE_Y + kr * DILATION_SIZE_Y], bc * STRIDE_SIZE_X + kc * DILATION_SIZE_X);
 #endif
 
                         out[br * OUT_BLOCK_WIDTH + bc] = mad(w[wi % PREFETCH], val, out[br * OUT_BLOCK_WIDTH + bc]);
@@ -193,14 +215,18 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
         weight_addr -= PREFETCH * SUB_GROUP_SIZE;
     }
 
-    uint out_addr = (batch_idx * OUTPUT_FEATURE_NUM + split_idx * FILTER_OUTPUT_FEATURE_NUM + feature_idx) * output_buffer_size_x * output_buffer_size_y; // out_addr indices into start of 16 feature maps.
+    uint out_addr = (OUTPUT_PADDING_LOWER_BATCH_NUM + batch_idx) * output_buffer_size_x * output_buffer_size_y * output_buffer_size_f;
+    out_addr += (OUTPUT_PADDING_LOWER_FEATURE_NUM + split_idx * FILTER_OUTPUT_FEATURE_NUM + feature_idx) * output_buffer_size_x * output_buffer_size_y; // out_addr indices into start of 16 feature maps.
     out_addr += (OUTPUT_PADDING_LOWER_SIZE_Y + or) * output_buffer_size_x + OUTPUT_PADDING_LOWER_SIZE_X + oc;  // offset for the 4x3 block that this workitem is working on;
 
+#if BIAS_TERM
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
             out[r * OUT_BLOCK_WIDTH + c] += bias[feature_idx];
         }
     }
+#endif
+
 
     for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
         for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {

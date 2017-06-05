@@ -1,8 +1,24 @@
+// Copyright (c) 2016-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
 #if FP16_SUPPORTED
     #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
     #if RELU
-        #define ACTIVATION(output, input) output = max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h);
+        #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
+        input : -convert_half(NEGATIVE_SLOPE)) : (max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h));
     #else
         #define ACTIVATION(output, input) output = input;
     #endif
@@ -13,7 +29,9 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
     const __global half* input,
     __global half* output,
     const __global half* filter,
+#if BIAS_TERM
     const __global half* bias,
+#endif
     uint split_idx)
 {
     // get_global_size(0) -> Number of work items needed to compute all features and all batches for single output spatial position
@@ -30,7 +48,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
 
 
     const uint linear_id_xy = get_global_id(1) + get_global_size(1) * get_global_id(2);
-    uint global_id = ((get_global_id(0) / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM)) * WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS; 
+    uint global_id = (((uint)get_global_id(0) / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM)) * WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS;
 
     const uint sub_group_id = get_local_id(0);
 
@@ -40,7 +58,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
     const uint chunk_size = 1;
 #endif
 
-    const uint out_batch_id = chunk_size * sub_group_id + LOCAL_WORK_GROUP_SIZE * BATCHES_PER_WORK_ITEM * (get_group_id(0) % LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS);
+    const uint out_batch_id = chunk_size * sub_group_id + LOCAL_WORK_GROUP_SIZE * BATCHES_PER_WORK_ITEM * ((uint)get_group_id(0) % LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS);
     const uint out_x = get_global_id(1);
     const uint out_y = get_global_id(2);
 
@@ -50,8 +68,8 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
 
     bool finish = false;
 
-    finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_OFFSET_SIZE_X;
-    finish = (out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_OFFSET_SIZE_Y) ? true : finish;
+    finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_PADDING_LOWER_SIZE_X;
+    finish = (out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_PADDING_LOWER_SIZE_Y) ? true : finish;
 
 
     // Each component of vector element contains computation for separate output feature.
@@ -67,15 +85,15 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
 
         for (uint i = 0; i < FILTER_SIZE_Y; i++)
         {
-            int input_offset_y = y + i;
+            int input_offset_y = y + i * DILATION_SIZE_Y;
             bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
 
             if(!zero_y)
             {
                 for (uint j = 0; j < FILTER_SIZE_X; j++)
                 {
-                    int input_offset_x = x + j;
-                    
+                    int input_offset_x = x + j * DILATION_SIZE_X;
+
                     bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
 
                     if(!zero)
@@ -119,17 +137,17 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
                             filter_idx += FILTER_OUTPUT_FEATURE_NUM;
                         }
                     }
-                } 
+                }
             }
         }
     }
-
+#if BIAS_TERM
     uint bias_val_pair = *(const __global uint*)(bias + (ofm_offset + 2 * sub_group_id));
     for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
     {
         ADD_BIAS_16_FP16(_data[s], bias_val_pair);
     }
-
+#endif
     for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
     {
         ACTIVATION(_data[s], _data[s]);

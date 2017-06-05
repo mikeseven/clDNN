@@ -20,10 +20,10 @@
 #include "power_intrumentation.h"
 #include "instrumentation.h"
 
-#include "api/topology.hpp"
-#include "api/network.hpp"
-#include "api/profiling.hpp"
-#include "api/memory.hpp"
+#include "api/CPP/topology.hpp"
+#include "api/CPP/network.hpp"
+#include "api/CPP/profiling.hpp"
+#include "api/CPP/memory.hpp"
 
 #include <memory>
 #include <string>
@@ -130,22 +130,12 @@ struct execution_params {
     bool profiling;
     bool optimize_weights;
     bool use_half;
-
-    //note: this parameter is required because since bfyx is enabled in alexnet
-    //and vgg for all batch sizes but only for b1 in other topologies we cannot
-    //tell whether bfyx format should be used only from batch size. this is an issue
-    //for weights optimizer which doesn't have any informations about used topology.
-    //it can be removed if:
-    // - bfyx is enabled for all topologies and batch sizes
-    // - weights optimizer is integrated in network builder and is provided with more specific informations
-    //until then it should probably be left here as a temporary solution
-    bool use_bfyx;
-
-    std::string run_single_layer;
+    std::string run_until_primitive_name;
 
     // for dumping
     bool        dump_hidden_layers; // dump all
     std::string dump_layer_name;    // dump only this specific layer
+    bool        dump_weights;       // true when dumping weights: <primitive_name>.nnd
     bool        dump_single_batch;
     uint32_t    dump_batch_id;
     bool        dump_single_feature;

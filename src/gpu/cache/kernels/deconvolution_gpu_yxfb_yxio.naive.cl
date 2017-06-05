@@ -1,14 +1,39 @@
-#if RELU
-    #define ACTIVATION(output, input) output = max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f);
+// Copyright (c) 2016-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
+#if FP16_UNIT_USED
+    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
+
+#if RELU && FP16_UNIT_USED
+    #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
+    input : -convert_half(NEGATIVE_SLOPE)) : (max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h));
+#elif RELU
+    #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
+    input : -NEGATIVE_SLOPE) : (max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f));
 #else
     #define ACTIVATION(output, input) output = input;
 #endif
 
-KERNEL(convolution_gpu_yxfb_yxio)(
-    const __global float* input,
-    __global float* output,
-    const __global float* filter,
-    const __global float* bias,
+KERNEL(deconvolution_gpu_yxfb_yxio)(
+    const __global UNIT_TYPE* input,
+    __global UNIT_TYPE* output,
+    const __global UNIT_TYPE* filter,
+#if BIAS_TERM
+    const __global UNIT_TYPE* bias,
+#endif
     uint split_idx)
 {
     const int batch_num = INPUT_BATCH_NUM;
@@ -19,15 +44,19 @@ KERNEL(convolution_gpu_yxfb_yxio)(
 
     const int ofm_offset = (global_id / batch_num) % FILTER_OUTPUT_FEATURE_NUM;
 
-    float result = bias[ofm_offset];
+#if BIAS_TERM
+    UNIT_TYPE result = bias[ofm_offset];
+#else
+    UNIT_TYPE result = UNIT_VAL_ZERO;
+#endif
 
     bool finish = false;
     const uint out_x = get_global_id(1);
     const uint out_y = get_global_id(2);
 
-    finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_OFFSET_SIZE_X;
-    finish = (out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_OFFSET_SIZE_Y) ? true : finish;
-	
+    finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_PADDING_LOWER_SIZE_X;
+    finish = (out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_PADDING_LOWER_SIZE_Y) ? true : finish;
+
     if(!finish)
     {
         const int batch_offset = global_id % batch_num;
@@ -56,16 +85,20 @@ KERNEL(convolution_gpu_yxfb_yxio)(
 
                         for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
                         {
+#if FP16_UNIT_USED
+                            result = fma(input[input_idx], filter[filter_idx], result);
+#else
                             result = mad(input[input_idx], filter[filter_idx], result);
+#endif
                             filter_idx += FILTER_OUTPUT_FEATURE_NUM;
                             input_idx += batch_num;
                         }
                     }
-                } 
+                }
             }
         }
     }
-	ACTIVATION(output[global_id], result);
+    ACTIVATION(output[global_id], result);
 }
 
 #undef ACTIVATION

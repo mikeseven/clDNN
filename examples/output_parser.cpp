@@ -1,5 +1,5 @@
 #include "output_parser.h"
-#include "api/network.hpp"
+#include "api/CPP/network.hpp"
 
 #include <algorithm>
 #include <memory>
@@ -10,8 +10,8 @@
 #include <stdexcept>
 #include <system_error>
 #include <chrono>
-#include <api/primitives/data.hpp>
-#include <api/primitives/reorder.hpp>
+#include <api/CPP/data.hpp>
+#include <api/CPP/reorder.hpp>
 
 // returns a vector with size equal to number of images in batch and each subvector contains sorted pairs of 
 // values specifying match percentage and category number
@@ -22,13 +22,12 @@ std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldnn::memo
     bool needs_data_type_conversion = mem_layout.data_type != cldnn::data_types::f32;
 
     bool needs_format_conversion = true;
-    switch (mem_layout.size.format)
+    switch (mem_layout.format)
     {
-    case cldnn::format::x:
-    case cldnn::format::bx:
+    case cldnn::format::bfyx:
         needs_format_conversion = true;
         break;
-    case cldnn::format::xb:
+    case cldnn::format::yxfb:
         needs_format_conversion = false;
         break;
     default:
@@ -42,22 +41,22 @@ std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldnn::memo
         cldnn::topology topology;
         cldnn::data input_data("input_mem", input_mem);
         topology.add(input_data);
-        cldnn::primitive_id curr_id = input_data.id();
+        cldnn::primitive_id curr_id = input_data.id;
 
         if(needs_data_type_conversion)
         {
             mem_layout.data_type = cldnn::data_types::f32;
             cldnn::reorder data_type_reorder("data_type_reorder", curr_id, mem_layout);
             topology.add(data_type_reorder);
-            curr_id = data_type_reorder.id();
+            curr_id = data_type_reorder.id;
         }
 
-        if(needs_format_conversion)
+        if (needs_format_conversion)
         {
-            mem_layout.size = mem_layout.size.transform(cldnn::format::xb, 1);
+            mem_layout.format = cldnn::format::yxfb;
             cldnn::reorder format_reorder("format_reorder", curr_id, mem_layout);
             topology.add(format_reorder);
-            curr_id = format_reorder.id();
+            curr_id = format_reorder.id;
         }
 
         mem = cldnn::network(cldnn::engine(), topology, {cldnn::build_option::outputs({curr_id})}).execute().begin()->second.get_memory();
@@ -205,7 +204,9 @@ void html::batch(const cldnn::memory& mem_primitive, const std::string& categori
                 std::cout << std::setprecision(2) << std::fixed << batch[img_idx][0].first * 100 << "%"<<" ";
                 std::cout << category << std::endl;                           
             }
-			break;
+            break;
+            default:
+                throw std::invalid_argument("Unsupported print type.");
 			}
         }
 		// table cell end

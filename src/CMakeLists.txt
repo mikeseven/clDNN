@@ -34,11 +34,18 @@ file(GLOB __CLDNN_Headers__api
     "${CLDNN__API_DIR}/*.hpp"
   )
 
-set(__CLDNN_Directory__api__primitives "${CLDNN__API_DIR}/primitives")
-set(__CLDNN_Label__api__primitives     "${__CLDNN_Label__api}\\primitives")
-file(GLOB __CLDNN_Headers__api__primitives
-    "${__CLDNN_Directory__api__primitives}/*.h"
-    "${__CLDNN_Directory__api__primitives}/*.hpp"
+set(__CLDNN_Directory__api__cpp "${CLDNN__API_DIR}/CPP")
+set(__CLDNN_Label__api__cpp     "${__CLDNN_Label__api}\\CPP")
+file(GLOB __CLDNN_Headers__api__cpp
+    "${__CLDNN_Directory__api__cpp}/*.h"
+    "${__CLDNN_Directory__api__cpp}/*.hpp"
+  )
+
+set(__CLDNN_Directory__api__c "${CLDNN__API_DIR}/C")
+set(__CLDNN_Label__api__c     "${__CLDNN_Label__api}\\C")
+file(GLOB __CLDNN_Headers__api__c
+    "${__CLDNN_Directory__api__c}/*.h"
+    "${__CLDNN_Directory__api__c}/*.hpp"
   )
 
 set(__CLDNN_Label__main                "")
@@ -90,7 +97,8 @@ set(__CLDNN_Sources__cg_cache
 set(__CLDNN_AllSources
     ${__CLDNN_Headers__api}
     ${__CLDNN_Headers__include}
-    ${__CLDNN_Headers__api__primitives}
+    ${__CLDNN_Headers__api__cpp}
+    ${__CLDNN_Headers__api__c}
     ${__CLDNN_Sources__main}
     ${__CLDNN_Sources__gpu}
     ${__CLDNN_Sources__cache}
@@ -103,7 +111,8 @@ set_property(SOURCE ${__CLDNN_Sources__cg_cache} PROPERTY GENERATED TRUE)
 # =============================================== Filters ==============================================
 
 source_group("${__CLDNN_Label__api}"        FILES ${__CLDNN_Headers__api})
-source_group("${__CLDNN_Label__api__primitives}" FILES ${__CLDNN_Headers__api__primitives})
+source_group("${__CLDNN_Label__api__cpp}"   FILES ${__CLDNN_Headers__api__cpp})
+source_group("${__CLDNN_Label__api__c}"     FILES ${__CLDNN_Headers__api__c})
 source_group("${__CLDNN_Label__include}"    FILES ${__CLDNN_Headers__include})
 source_group("${__CLDNN_Label__main}"       FILES ${__CLDNN_Sources__main})
 source_group("${__CLDNN_Label__gpu}"        FILES ${__CLDNN_Sources__gpu})
@@ -145,7 +154,7 @@ endif()
 
 add_custom_command(OUTPUT "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${__CLDNN_CGDirectory__cg_cache}"
-    COMMAND "${__CLDNN_Directory__cache}/primitive_db_gen.py" "${__CLDNN_CGDirectory__cg_cache}" "${__CLDNN_Directory__ch_kernels}"
+    COMMAND "${PYTHON_EXECUTABLE}" "${__CLDNN_Directory__cache}/primitive_db_gen.py" "${__CLDNN_CGDirectory__cg_cache}" "${__CLDNN_Directory__ch_kernels}"
     DEPENDS ${__CLDNN_Sources__ch_kernels} "${__CLDNN_Directory__cache}/primitive_db_gen.py"
     COMMENT "Generating ${__CLDNN_File__cg_cache__prim_db} ..."
   )
@@ -153,6 +162,21 @@ add_custom_command(OUTPUT "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cac
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}" "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
     DEPENDS "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}" ${__CLDNN_Sources__ch_kernels} "${__CLDNN_Directory__cache}/primitive_db_gen.py"
     COMMENT "Updating file if the file changed (${__CLDNN_File__cg_cache__prim_db}) ..."
+  )
+
+# ========================================== Installation ==============================================
+
+# API headers.
+install(DIRECTORY "${CLDNN__API_DIR}/"
+    DESTINATION "include/clDNN"
+    FILE_PERMISSIONS OWNER_WRITE OWNER_READ GROUP_READ WORLD_READ
+  )
+# Binaries.
+install(TARGETS "${CLDNN_BUILD__PROJ}"
+    ARCHIVE DESTINATION "lib"
+    LIBRARY DESTINATION "lib"
+    RUNTIME DESTINATION "bin"
+    INCLUDES DESTINATION "include/clDNN"
   )
 
 # ======================================================================================================

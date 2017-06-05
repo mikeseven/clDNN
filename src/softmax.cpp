@@ -14,54 +14,66 @@
 // limitations under the License.
 */
 
-#include "softmax_arg.h"
+#include "softmax_inst.h"
 #include "primitive_type_base.h"
-#include "network_impl.h"
 
 namespace cldnn
 {
 primitive_type_id softmax_type_id()
 {
-    static primitive_type_base<softmax, softmax_arg> instance;
+    static primitive_type_base<softmax> instance;
     return &instance;
 }
 
-layout softmax_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const softmax> desc)
+layout softmax_inst::calc_output_layout(softmax_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-    auto input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);
+    auto input_layout = node.input().get_output_layout();
 
     cldnn::layout layoutTemp = input_layout;
-    if (input_layout.size.raw.size() == 4 && input_layout.size.spatial[0] == 1 && input_layout.size.spatial[1] == 1) //squeezenet spatials are 1x1
+    if (input_layout.size.spatial[0] == 1 && input_layout.size.spatial[1] == 1) //squeezenet spatials are 1x1
     {
-        if (input_layout.size.format == format::bfyx)
-            layoutTemp = cldnn::layout(input_layout.data_type, tensor(format::bx, { input_layout.size.batch[0], input_layout.size.feature[0] }));
-        else 
-            layoutTemp = cldnn::layout(input_layout.data_type, tensor(format::xb, { input_layout.size.feature[0], input_layout.size.batch[0] }));
+        if (input_layout.format == format::bfyx)
+            layoutTemp = cldnn::layout(input_layout.data_type, format::bfyx, tensor(input_layout.size.batch[0], 1, input_layout.size.feature[0], 1));
+        else
+            layoutTemp = cldnn::layout(input_layout.data_type, format::yxfb, tensor(input_layout.size.batch[0], 1, input_layout.size.feature[0], 1));
     }
     return layoutTemp;
 }
 
-softmax_arg::softmax_arg(network_impl& network, std::shared_ptr<const softmax> desc)
-    : primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+std::string softmax_inst::to_string(softmax_node const& node)
+{
+    std::stringstream   primitive_description;
+    auto desc           = node.get_primitive();
+    auto input          = node.input();
+
+    primitive_description << "id: " << desc->id << ", type: softmax" << 
+        "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
+        "\n\toutput: count: "  << node.get_output_layout().count() <<",  size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
+
+softmax_inst::typed_primitive_inst(network_impl& network, softmax_node const& node)
+    : parent(network, node)
 {
     //    auto& input_offset  = arg.input_offset;
     //    auto& output_offset = arg.output_offset;
     //    auto& output_size   = arg.output_size;
     //
-    //    auto& input_arg  = arg.input[0].primitive().as<const memory&>().argument;
-    //    auto& output_arg = arg.output[0].as<const memory&>().argument;
+    //    auto& input_inst  = arg.input[0].primitive().as<const memory&>().argument;
+    //    auto& output_inst = arg.output[0].as<const memory&>().argument;
     //    for (auto &x : input_offset.raw) if (x < 0) throw std::runtime_error("Softmax negative input offset.");
     //
-    //    for(size_t i = 0; i < input_arg.size.raw.size(); ++i) {
-    //        if( input_arg.size.raw[i] < output_size.raw[i] +  input_offset.raw[i]) throw std::runtime_error("Softmax input/output size does not match.");
-    //        if(output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("Softmax sizes too small.");
+    //    for(size_t i = 0; i < input_inst.size.raw.size(); ++i) {
+    //        if( input_inst.size.raw[i] < output_size.raw[i] +  input_offset.raw[i]) throw std::runtime_error("Softmax input/output size does not match.");
+    //        if(output_inst.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("Softmax sizes too small.");
     //    }
 
-    //auto& input_arg = network.get_topology()->get_primitives().at(desc->input()[0]);
-    //if (input_arg->output_layout->size.format == cldnn::format::bfyx)
-    //    if (input_arg->output_layout->size.spatial[0] != 1 || input_arg->output_layout->size.spatial[1] != 1)
+    //auto& input_inst = network.get_topology()->get_primitives().at(desc->input()[0]);
+    //if (input_inst->output_layout->size.format == cldnn::format::bfyx)
+    //    if (input_inst->output_layout->size.spatial[0] != 1 || input_inst->output_layout->size.spatial[1] != 1)
     //        throw std::runtime_error("Softmax input has more than one dimension per batch");
 }
-
 }

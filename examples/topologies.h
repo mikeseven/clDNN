@@ -15,7 +15,7 @@
 */
 #pragma once
 
-#include "api/topology.hpp"
+#include "api/CPP/topology.hpp"
 
 
 /**
@@ -23,14 +23,14 @@
  * \param input_layout - will be set to the layout of the "input" primitive
  * \return topology for Alexnet network where final primitive has id "output"
  */
-cldnn::topology build_alexnet(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx);
+cldnn::topology build_alexnet(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size);
 
-cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx);
+cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size);
 
-cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx);
+cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size);
 
-cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx);
+cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size);
 
-cldnn::topology build_microbench(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx);
+cldnn::topology build_microbench(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size);
 
-cldnn::topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx);
+cldnn::topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size);

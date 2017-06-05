@@ -14,13 +14,9 @@
 // limitations under the License.
 */
 #pragma once
-#include "primitive_arg.h"
-#include "reorder_arg.h"
+
 #include <map>
 #include <functional>
-#include "input_layout_arg.h"
-#include "data_arg.h"
-#include "prior_box_arg.h"
 
 template<typename T, typename U>
 class singleton_map : public std::map<T, U> {
@@ -37,54 +33,86 @@ class singleton_map : public std::map<T, U> {
 
 namespace cldnn {
 
+struct permute;
+struct reorder;
+struct reshape;
+struct data;
+struct input_layout;
+struct prior_box;
+
+struct primitive_impl;
+
+template <class PType>
+struct typed_program_node;
+
 template<typename primitive_kind>
 struct implementation_key 
 {
-    typedef std::tuple<engine_types, neural_memory::format::type> type;
-    type operator()(engine_types engine_type, primitive_kind& primitive)
-	{
-        return std::make_tuple(engine_type, primitive.input_memory(0).argument().format);
+    typedef std::tuple<engine_types, data_types, format::type> type;
+    type operator()(engine_types engine_type, const typed_program_node<primitive_kind>& primitive)
+    {
+        return std::make_tuple(engine_type, primitive.get_dependency(0).get_output_layout().data_type, primitive.get_dependency(0).get_output_layout().format);
     }
 };
 
 template<>
-struct implementation_key<reorder_arg>
-{
-	typedef cldnn::engine_types type;
-	type operator()(engine_types engine_type, reorder_arg&)
-	{
-		return engine_type;
-	}
-};
-
-template<>
-struct implementation_key<data_arg>
+struct implementation_key<permute>
 {
     typedef cldnn::engine_types type;
-    type operator()(engine_types engine_type, data_arg&)
+    type operator()(engine_types engine_type, const typed_program_node<permute>&)
     {
         return engine_type;
     }
 };
 
 template<>
-struct implementation_key<input_layout_arg>
+struct implementation_key<reorder>
 {
     typedef cldnn::engine_types type;
-    type operator()(engine_types engine_type, input_layout_arg&)
+    type operator()(engine_types engine_type, const typed_program_node<reorder>&)
     {
         return engine_type;
     }
 };
 
 template<>
-struct implementation_key<prior_box_arg>
+struct implementation_key<reshape>
 {
-	typedef cldnn::engine_types type;
-	type operator()(engine_types engine_type, prior_box_arg&)
-	{
-		return engine_type;
-	}
+    typedef cldnn::engine_types type;
+    type operator()(engine_types engine_type, const typed_program_node<reshape>&)
+    {
+        return engine_type;
+    }
+};
+
+template<>
+struct implementation_key<data>
+{
+    typedef cldnn::engine_types type;
+    type operator()(engine_types engine_type, const typed_program_node<data>&)
+    {
+        return engine_type;
+    }
+};
+
+template<>
+struct implementation_key<input_layout>
+{
+    typedef cldnn::engine_types type;
+    type operator()(engine_types engine_type, const typed_program_node<input_layout>&)
+    {
+        return engine_type;
+    }
+};
+
+template<>
+struct implementation_key<prior_box>
+{
+    typedef cldnn::engine_types type;
+    type operator()(engine_types engine_type, const typed_program_node<prior_box>&)
+    {
+        return engine_type;
+    }
 };
 
 template<typename primitive_kind>
@@ -92,14 +120,15 @@ class implementation_map {
 public:
     using key_builder = implementation_key<primitive_kind>;
     using key_type = typename key_builder::type;
-    using factory_type = std::function<primitive_impl*(primitive_kind &)>;
+    using factory_type = std::function<primitive_impl*(const typed_program_node<primitive_kind>&)>;
     using map_type = singleton_map<key_type, factory_type>;
 
-    static factory_type get(engine_types engine_type, primitive_kind& primitive) {
+    static factory_type get(engine_types engine_type, const typed_program_node<primitive_kind>& primitive) {
         // lookup in database; throw if not found 
         auto key = key_builder()(engine_type, primitive);
         auto it = map_type::instance().find(key);
-        if (it == std::end(map_type::instance())) throw std::runtime_error("not yet implemented");
+        if (it == std::end(map_type::instance())) 
+            throw std::runtime_error("not yet implemented");
 
         // create implementation & attach it to result 
         return it->second;

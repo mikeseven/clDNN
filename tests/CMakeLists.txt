@@ -24,7 +24,6 @@ set(CLDNN_BUILD__PROJ_OUTPUT_NAME "${CLDNN_BUILD__PROJ}${CLDNN__OUT_CPU_SUFFIX}"
 intel_config_flag_apply_settings(CompilerOptions CMAKE_CXX_FLAGS ALL_PATTERN ""
     SET
       WarnLevel3
-      NoFastMath
   )
 if (NOT MSVC)
   intel_config_flag_apply_settings(CompilerOptions CMAKE_CXX_FLAGS ALL_PATTERN ""
@@ -73,6 +72,14 @@ file(GLOB __CLDNN_Sources__gtest
     "${__CLDNN_Directory__gtest}/*.cc"
   )
 
+set(__CLDNN_Directory__examples      "${CMAKE_CURRENT_SOURCE_DIR}/examples")
+set(__CLDNN_Label__examples          "examples")
+file(GLOB __CLDNN_Sources__examples
+    "${__CLDNN_Directory__examples}/*.h"
+    "${__CLDNN_Directory__examples}/*.hpp"
+    "${__CLDNN_Directory__examples}/*.cpp"
+  )
+  
 if (MSVC)
   file(GLOB __CLDNN_Sources__natvis
     "${CMAKE_CURRENT_SOURCE_DIR}/float16.natvis"
@@ -85,6 +92,7 @@ set(__CLDNN_AllSources
     ${__CLDNN_Sources__test_utils}
     ${__CLDNN_Sources__module_tests}
     ${__CLDNN_Sources__gtest}
+    ${__CLDNN_Sources__examples}
     ${__CLDNN_Sources__natvis}
   )
 
@@ -95,6 +103,7 @@ source_group("${__CLDNN_Label__test_cases}"   FILES ${__CLDNN_Sources__test_case
 source_group("${__CLDNN_Label__test_utils}"   FILES ${__CLDNN_Sources__test_utils})
 source_group("${__CLDNN_Label__module_tests}" FILES ${__CLDNN_Sources__module_tests})
 source_group("${__CLDNN_Label__gtest}"        FILES ${__CLDNN_Sources__gtest})
+source_group("${__CLDNN_Label__examples}"     FILES ${__CLDNN_Sources__examples})
 
 # ===================================== Include/Link directories =======================================
 

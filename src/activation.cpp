@@ -14,42 +14,64 @@
 // limitations under the License.
 */
 
-#include "activation_arg.h"
+#include "activation_inst.h"
 #include "primitive_type_base.h"
-#include <memory>
 
 namespace cldnn
 {
 primitive_type_id activation_type_id()
 {
-    static primitive_type_base<activation, activation_arg> instance;
+    static primitive_type_base<activation> instance;
     return &instance;
 }
 
-layout activation_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const activation> desc)
+layout activation_inst::calc_output_layout(activation_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input()[0])->primitive_desc;
-    auto result = input_desc->type()->calc_output_layout(topology_map, input_desc);
-    return result;
+    return node.input().get_output_layout();
 }
 
-activation_arg::activation_arg(network_impl& network, std::shared_ptr<const activation> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
+std::string activation_inst::to_string(activation_node const& node)
 {
-    auto input_offset = desc->input_offset().transform(input_memory(0).get_layout().size.format, 0);
-    auto output_offset = desc->output_offset().transform(output_memory().get_layout().size.format, 0);
-    auto& output_size = output_memory().get_layout().size;
-    
-    auto input_arg  = input_memory(0).argument();
-    auto output_arg = output_memory().argument();
-    
-    if (input_arg.size.raw.size() != output_arg.size.raw.size())    throw std::runtime_error("ReLU input/output number of dimension does not match.");
-    for (auto x : input_offset.raw)  if (x < 0)                     throw std::runtime_error("ReLU negative input offset.");
-    
-    for (size_t i = 0; i < input_arg.size.raw.size(); ++i) {
-        if (input_arg.size.raw[i]  < output_size.raw[i] + input_offset.raw[i]) throw std::runtime_error("ReLU input/output size does not match.");
-        if (output_arg.size.raw[i] < output_size.raw[i] + output_offset.raw[i]) throw std::runtime_error("ReLU sizes to small.");
-    }
+    std::stringstream            primitive_description;
+    auto desc                   = node.get_primitive();
+    auto input                  = node.input();
+
+    primitive_description << "id: " << desc->id << ", type: activation" <<
+        "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: "  << input.get_output_layout().size <<
+        "\n\tslope: " << desc->negative_slope <<
+		"\n\tslope input: " << desc->negative_slope_input <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
+        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
 }
 
+activation_inst::typed_primitive_inst(network_impl& network, activation_node const& node)
+    :parent(network, node)
+{
+    auto input_arg  = input_memory().get_layout();
+    auto output_arg = output_memory().get_layout();
+    
+    if (input_arg.size.raw.size() != output_arg.size.raw.size())
+        throw std::runtime_error("ReLU input/output number of dimension does not match.");
+
+	if (is_parameterized())
+	{
+		/// Slope input x dimension should be equal to input feature size (one slope per channel).
+		auto slope_input_size = slope_memory().get_layout().size;
+		auto input_feature_size = input_memory().get_layout().size.feature[0];
+
+		if (slope_input_size.spatial[0] != input_feature_size)
+		{
+			throw std::invalid_argument("Dimensions mismatch between input and slope input in Activation layer (slope x size should be equal to input feature size)!");
+		}
+
+		// All other dimensions should be 1
+		if ((int32_t)slope_input_size.count() != slope_input_size.spatial[0])
+		{
+			throw std::invalid_argument("Dimensions mismatch of slope input in Activation layer!");
+		}
+	}
+}
 }

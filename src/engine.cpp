@@ -16,8 +16,9 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "engine_impl.h"
-#include "network_builder.h"
 #include "event_impl.h"
+#include "program_impl.h"
+#include "network_impl.h"
 #include "gpu/ocl_toolkit.h"
 #include "gpu/memory_gpu.h"
 
@@ -59,14 +60,51 @@ memory_impl* engine_impl::allocate_buffer(layout layout)
     }
 }
 
+memory_impl* engine_impl::reinterpret_buffer(memory_impl* memory, layout new_layout)
+{
+    if (memory->get_engine() != this)
+        throw error("trying to reinterpret buffer allocated by a different engine", CLDNN_ERROR);
+
+    if (memory->get_layout() == new_layout)
+        return memory;
+
+    return new neural::gpu::gpu_buffer(this, new_layout, reinterpret_cast<neural::gpu::gpu_buffer*>(memory)->get_buffer());
+}
+
+bool engine_impl::is_the_same_buffer(memory_impl* mem1, memory_impl* mem2)
+{
+    if (mem1->get_engine() != this || mem2->get_engine() != this)
+        return false;
+    if (mem1 == mem2)
+        return true;
+
+    return (reinterpret_cast<neural::gpu::gpu_buffer*>(mem1)->get_buffer() == reinterpret_cast<neural::gpu::gpu_buffer*>(mem2)->get_buffer());
+}
+
 event_impl* engine_impl::create_user_event()
 {
     return new user_event_gpu(cl::UserEvent(get_context()->context()));
 }
 
-network_impl* engine_impl::build_network(topology_impl* topology, const build_options& options)
+program_impl* engine_impl::build_program(const topology_impl& topology, const build_options& options)
 {
-    network_builder builder(this, options);
-    return builder.build_network(topology);
+    return new program_impl(this, topology, options);
 }
+
+network_impl* engine_impl::build_network(const topology_impl& topology, const build_options& options)
+{
+    auto program = build_program(topology, options);
+    return new network_impl(program);
+}
+
+network_impl* engine_impl::allocate_network(const program_impl* program)
+{
+    return new network_impl(program);
+}
+
+neural::gpu::engine_info_internal engine_impl::get_engine_info() const
+{
+    return _context->get_engine_info();
+}
+
 }

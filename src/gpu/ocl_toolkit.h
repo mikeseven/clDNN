@@ -24,7 +24,7 @@
 #include <cl2_wrapper.h>
 #include <memory>
 #include <chrono>
-#include "api/profiling.hpp"
+#include "api/CPP/profiling.hpp"
 #include "kernels_cache.h"
 #include "engine_info.h"
 
@@ -81,8 +81,6 @@ class gpu_toolkit {
     cl::CommandQueue _command_queue;
     engine_info_internal _engine_info;
     kernels_cache _kernels_cache;
-//    cl::Program _program;
-    std::vector<instrumentation::profiling_info> _profiling_info;
 
     friend class context_holder;
 public:
@@ -92,10 +90,9 @@ public:
     const cl::Device& device() const { return _device; }
     const cl::Context& context() const { return _context; }
     const cl::CommandQueue& queue() const { return _command_queue; }
-//    cl::Program& program() { return _program; }
+
     kernels_cache& get_kernels_cache() { return _kernels_cache; }
-    void report_profiling(const instrumentation::profiling_info& info) { _profiling_info.push_back(info); }
-    const std::vector<instrumentation::profiling_info>& get_profiling_info() const { return _profiling_info; }
+
     engine_info_internal get_engine_info() const { return _engine_info; }
 
     gpu_toolkit(const gpu_toolkit& other) = delete;

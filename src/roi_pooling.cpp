@@ -14,38 +14,46 @@
 // limitations under the License.
 */
 
-#include "neural_impl.h"
-#include "network_impl.h"
+#include "roi_pooling_inst.h"
 #include "primitive_type_base.h"
-
 
 namespace cldnn
 {
-
-
 primitive_type_id roi_pooling_type_id()
 {
-    static primitive_type_base<roi_pooling, roi_pooling_arg> instance;
+    static primitive_type_base<roi_pooling> instance;
     return &instance;
 }
 
-
-layout roi_pooling_arg::calc_output_layout(const topology_map& topology_map, std::shared_ptr<const roi_pooling> desc)
+layout roi_pooling_inst::calc_output_layout(roi_pooling_node const& node)
 {
-    auto input_desc = topology_map.at(desc->input()[data_index])->primitive_desc;
-    layout input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);    
-    int fm = input_layout.size.feature[0];
+    auto desc = node.get_primitive();
+    layout data_layout = node.input().get_output_layout();
+    int fm = data_layout.size.feature[0];
 
-    input_desc = topology_map.at(desc->input()[rois_index])->primitive_desc;
-    input_layout = input_desc->type()->calc_output_layout(topology_map, input_desc);    
-    int num_rois = input_layout.size.batch[0];
+    layout rois_layout = node.rois().get_output_layout();
+    int num_rois = rois_layout.size.batch[0];
 
-    return layout( input_layout.data_type, { format::bfyx, { num_rois, fm, desc->pooled_height, desc->pooled_width }});
+    return layout(rois_layout.data_type, format::bfyx, { num_rois, fm, desc->pooled_width, desc->pooled_height });
 }
 
+std::string roi_pooling_inst::to_string(roi_pooling_node const& node)
+{
+    std::stringstream               primitive_description;
+    auto desc                       = node.get_primitive();
+    auto input                      = node.input();
+    auto input_rois                 = node.rois();
 
-roi_pooling_arg::roi_pooling_arg(network_impl& network, std::shared_ptr<const roi_pooling> desc)
-    :primitive_arg_base(network, desc, calc_output_layout(network.get_topology()->get_primitives(), desc))
-{}
+    primitive_description << "id: " << desc->id << ", type: roi_pooling" << 
+        "\n\tinput: "         << input.id() << ", count: " << input.get_output_layout().count() << ",  size: " << input.get_output_layout().size <<
+        "\n\tinput_rois: "    << input_rois.id() << ", count: " << input_rois.get_output_layout().count() << ",  size: " << input_rois.get_output_layout().size <<
+        "\n\tpooled_width: "  << desc->pooled_width << "pooled_height: " << desc->pooled_height <<
+        "\n\tspatial_scale: " << desc->spatial_scale <<
+        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
+        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
+        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+
+    return primitive_description.str();
+}
 
 }

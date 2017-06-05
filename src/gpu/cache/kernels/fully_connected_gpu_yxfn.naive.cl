@@ -1,11 +1,28 @@
+// Copyright (c) 2016-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
 #if FP16_SUPPORTED
     #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
 #if RELU && FP16_UNIT_USED
-    #define ACTIVATION(output, input) output = max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h);
+    #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
+    input : -convert_half(NEGATIVE_SLOPE)) : (max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h));
 #elif RELU
-    #define ACTIVATION(output, input) output = max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f);
+    #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
+    input : -NEGATIVE_SLOPE) : (max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f));
 #else
     #define ACTIVATION(output, input) output = input;
 #endif
@@ -25,15 +42,21 @@
 KERNEL (fully_connected_gpu_yxfn)(
     const __global UNIT_TYPE* input,
     __global UNIT_TYPE* output,
-    const __global UNIT_TYPE* weight,
-    const __global UNIT_TYPE* bias)
+    const __global UNIT_TYPE* weight
+#if BIAS_TERM
+    , __global UNIT_TYPE* bias)
+#else
+    )
+#endif
 {
     const uint x = get_global_id(0);
     const uint batch_id = x % INPUT_BATCH_NUM;
     const uint neuronIdx = x / INPUT_BATCH_NUM;
-
+#if BIAS_TERM
     UNIT_TYPE result = bias[neuronIdx];
-
+#else 
+UNIT_TYPE result = UNIT_VAL_ZERO;
+#endif
     uint weight_offset = neuronIdx * INPUT_FEATURE_NUM * INPUT_SIZE_Y * INPUT_SIZE_X;
     for (uint k = 0; k < INPUT_FEATURE_NUM; k++)
     {

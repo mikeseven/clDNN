@@ -16,12 +16,12 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include <gtest/gtest.h>
-#include <api/memory.hpp>
-#include <api/primitives/input_layout.hpp>
-#include "api/primitives/crop.hpp"
-#include <api/topology.hpp>
-#include <api/network.hpp>
-#include <api/engine.hpp>
+#include "api/CPP/memory.hpp"
+#include <api/CPP/input_layout.hpp>
+#include "api/CPP/crop.hpp"
+#include <api/CPP/topology.hpp>
+#include <api/CPP/network.hpp>
+#include <api/CPP/engine.hpp>
 #include "test_utils/test_utils.h"
 
 using namespace cldnn;
@@ -57,24 +57,18 @@ TEST(crop_gpu, basic_in2x3x2x2_crop_all) {
     auto crop_x_size = x_size - 2;
     auto crop_y_size = y_size - 2;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    auto reference_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ crop_y_size, crop_x_size, crop_feature_num, crop_batch_num } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb,{ batch_num, feature_num, x_size, y_size } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
-    topology.add(input_layout("reference_input", reference_input.get_layout()));
-    topology.add(crop("crop", "input", "reference_input", { format::yxfb,{ 0, 0, 0, 0 } }));
+    topology.add(crop("crop", "input", { crop_batch_num, crop_feature_num, crop_x_size, crop_y_size }, { 0, 0, 0, 0 }));
 
     std::vector<float> input_vec = generate_random_input<float>(batch_num, feature_num, y_size, x_size, -10, 10);
     set_values(input, input_vec);
 
-    std::vector<float> reference_input_vec(crop_y_size * crop_x_size * crop_feature_num * crop_batch_num, 0);
-    set_values(reference_input, reference_input_vec);
-
     network network(engine, topology);
 
     network.set_input_data("input", input);
-    network.set_input_data("reference_input", reference_input);
 
     auto outputs = network.execute();
 
@@ -111,24 +105,18 @@ TEST(crop_gpu, basic_in2x3x2x2_crop_all_bfyx) {
     auto crop_x_size = x_size - 2;
     auto crop_y_size = y_size - 1;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ batch_num, feature_num, y_size, x_size } } });
-    auto reference_input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ crop_batch_num, crop_feature_num, crop_y_size, crop_x_size } } });
+    auto input = memory::allocate(engine, { data_types::f32,format::bfyx,{ batch_num, feature_num, x_size, y_size } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
-    topology.add(input_layout("reference_input", reference_input.get_layout()));
-    topology.add(crop("crop", "input", "reference_input", { format::bfyx, {0, 0, 0, 0} } ));
+    topology.add(crop("crop", "input", { crop_batch_num, crop_feature_num, crop_x_size, crop_y_size }, {0, 0, 0, 0} ));
 
     std::vector<float> input_vec = generate_random_input<float>(batch_num, feature_num, y_size, x_size, -10, 10);
     set_values(input, input_vec);
 
-    std::vector<float> reference_input_vec(crop_y_size * crop_x_size * crop_feature_num * crop_batch_num, 0);
-    set_values(reference_input, reference_input_vec);
-
     network network(engine, topology);
 
     network.set_input_data("input", input);
-    network.set_input_data("reference_input", reference_input);
 
     auto outputs = network.execute();
 
@@ -178,13 +166,11 @@ TEST(crop_gpu, basic_in2x3x2x2_crop_offsets) {
     auto x_offset = 1;
     auto y_offset = 1;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ y_size, x_size, feature_num, batch_num } } });
-    auto reference_input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ crop_y_size, crop_x_size, crop_feature_num, crop_batch_num } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { tensor(spatial(x_size, y_size), feature(feature_num), batch(batch_num)) } });
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
-    topology.add(input_layout("reference_input", reference_input.get_layout()));
-    topology.add(crop("crop", "input", "reference_input", { format::yxfb,{ y_offset, x_offset, feature_offset, batch_offset } }));
+    topology.add(crop("crop", "input", tensor(batch(crop_batch_num), spatial(crop_x_size, crop_y_size), feature(crop_feature_num)), { tensor(feature(0)) }));
 
     std::vector<float> input_vec = { 1.f, 0.f, 5.f, 1.5f,
         2.f, 0.f, 6.f, 5.2f,
@@ -195,13 +181,9 @@ TEST(crop_gpu, basic_in2x3x2x2_crop_offsets) {
     set_values(input, input_vec);
     set_values(input, input_vec);
 
-    std::vector<float> reference_input_vec(crop_y_size * crop_x_size * crop_feature_num * crop_batch_num);
-    set_values(reference_input, reference_input_vec);
-
     network network(engine, topology);
 
     network.set_input_data("input", input);
-    network.set_input_data("reference_input", reference_input);
 
     auto outputs = network.execute();
 

@@ -16,46 +16,63 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "api/network.hpp"
+
+#include "api/CPP/network.hpp"
+
 #include "api_impl.h"
 #include "engine_impl.h"
-#include "topology_impl.h"
+#include "event_impl.h"
+#include "program_impl.h"
 #include "refcounted_obj.h"
-#include "primitive_arg.h"
+
 #include <map>
 #include <vector>
 #include <unordered_map>
 
 namespace cldnn
 {
+
+class primitive_inst;
+
 struct network_impl : public refcounted_obj<network_impl>
 {
 public:
-    typedef std::map<primitive_id, std::shared_ptr<const primitive>> topology_map;
+    network_impl(program_impl::cptr program);
+    network_impl(engine_impl::ptr engine, const topology_impl& topo, const build_options& options = build_options());
 
-    network_impl(refcounted_obj_ptr<engine_impl> engine, refcounted_obj_ptr<topology_impl> topology, const std::vector<primitive_id>& outputs);
-
-    const refcounted_obj_ptr<engine_impl>& get_engine() const { return _engine; }
-    const refcounted_obj_ptr<topology_impl>& get_topology() const { return _topology; }
+    const program_impl::cptr& get_program() const { return _program; }
+    engine_impl::ptr get_engine() const { return _program->get_engine(); }
 
     void reset_execution(bool wait = true);
     void set_input_data(const primitive_id& id, memory_impl* data);
-    const std::vector<primitive_id>& get_output_ids() const { return _output_ids; }
-    void execute(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events);
+
+    auto const& get_outputs() { return _outputs; }
+
+    const std::vector<std::shared_ptr<const primitive_inst>>& get_outputs() const
+    {
+        return reinterpret_cast<const std::vector<std::shared_ptr<const primitive_inst>>&>(_outputs);
+    }
+
+    std::vector<primitive_id> get_output_ids() const;
+    void execute(const std::vector<event_impl::ptr>& events);
 
     // Implementation specific calls
-    std::shared_ptr<const primitive_arg> get_primitive(const primitive_id& id);
-    const refcounted_obj_ptr<event_impl>& get_primitive_event(const primitive_id& id) const { return _events.at(id); }
-    std::vector<std::shared_ptr<const primitive_arg>> get_primitives(const std::vector<primitive_id>& ids);
-    refcounted_obj_ptr<event_impl> execute_primitive(const std::shared_ptr<const primitive_arg>& primitive, const std::vector<refcounted_obj_ptr<event_impl>>& events);
+    std::shared_ptr<primitive_inst> get_primitive(const primitive_id& id);
+    std::string get_primitive_info(const primitive_id& id) const;
+    const event_impl::ptr& get_primitive_event(const primitive_id& id) const { return _events.at(id); }
+    std::vector<std::shared_ptr<primitive_inst>> get_primitives(const std::vector<primitive_id>& ids);
+    event_impl::ptr execute_primitive(const std::shared_ptr<primitive_inst>& primitive, const std::vector<event_impl::ptr>& events);
 
 private:
-    const refcounted_obj_ptr<engine_impl> _engine;
-    const refcounted_obj_ptr<topology_impl> _topology;
-    std::vector<primitive_id> _output_ids;
-    std::map<primitive_id, std::shared_ptr<const primitive_arg>> _primitives;
-    std::map<primitive_id, bool> _input_names;
-    std::unordered_map<primitive_id, refcounted_obj_ptr<event_impl>> _events;
+    const program_impl::cptr _program;
+
+    std::map<primitive_id, std::shared_ptr<primitive_inst>> _primitives;
+    std::vector<std::shared_ptr<primitive_inst>> _inputs;
+    std::vector<std::shared_ptr<primitive_inst>> _outputs;
+
+    std::unordered_map<primitive_id, event_impl::ptr> _events;
+
+    void allocate_primitive_instance(program_node const& node);
 };
 }
 

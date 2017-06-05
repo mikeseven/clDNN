@@ -15,7 +15,7 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "data_arg.h"
+#include "data_inst.h"
 #include "primitive_type_base.h"
 #include "memory_impl.h"
 
@@ -23,7 +23,7 @@ namespace cldnn
 {
 primitive_type_id data_type_id()
 {
-    static primitive_type_base<data, data_arg> instance;
+    static primitive_type_base<data> instance;
     return &instance;
 }
 
@@ -46,8 +46,20 @@ namespace {
     }
 }
 
-data_arg::data_arg(network_impl& network, std::shared_ptr<const data> desc)
-    : primitive_arg_base(network, desc, attach_or_copy_data(network, desc->mem))
+std::string data_inst::to_string(data_node const& node)
+{
+    std::stringstream           primitive_description;
+    auto desc                   = node.get_primitive();
+    auto count                  = node.get_output_layout().count();
+
+    primitive_description << "id: " << desc->id << ", type: data" <<
+        "\n\tcount: "     << count <<", size: " << node.get_output_layout().size <<'\n';
+
+    return primitive_description.str();
+}
+
+data_inst::typed_primitive_inst(network_impl& network, data_node const& node)
+    : parent(network, node, attach_or_copy_data(network, node.get_primitive()->mem))
 {
 }
 

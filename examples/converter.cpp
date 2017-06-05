@@ -14,18 +14,18 @@
 // limitations under the License.
 */
 
-#include "api/memory.hpp"
-#include "api/network.hpp"
+#include "api/CPP/memory.hpp"
+#include "api/CPP/network.hpp"
 #include "file.h"
 #include "common/common_tools.h"
-#include <api/primitives/data.hpp>
-#include <api/primitives/reorder.hpp>
+#include <api/CPP/data.hpp>
+#include <api/CPP/reorder.hpp>
 
 // memory->memory convolution
-void convert_weights(cldnn::neural_memory::format::type format, std::string convertion_path)
+void convert_weights(cldnn::data_types dt, cldnn::format::type format, std::string convertion_path)
 {
     using namespace cldnn;
-    if (format >= neural_memory::format::format_num) throw std::runtime_error("format is out of range");
+    if (format >= format::format_num) throw std::runtime_error("format is out of range");
     std::vector<std::string> weights = get_directory_weights("weights");
     cldnn::engine engine;
     for (const auto& w : weights)
@@ -34,8 +34,9 @@ void convert_weights(cldnn::neural_memory::format::type format, std::string conv
         {
             auto mem = file::read({ engine, w.c_str() });
             layout output_layout{
-                neural_memory::to_data_type(format),
-                mem.get_layout().size.transform(neural_memory::to_tensor_format(format), 1)
+                dt,
+                mem.get_layout().format,
+                mem.get_layout().size
             };
 
             topology topology(data("input", mem), reorder("reorder", "input", output_layout));

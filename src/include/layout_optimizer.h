@@ -16,13 +16,16 @@
 
 #pragma once
 
-
-#include "network_impl.h"
 #include "memory_impl.h"
+#include "engine_impl.h"
+#include "topology_impl.h"
 #include "meta_utils.h"
 
-#include "convolution_arg.h"
-#include "fully_connected_arg.h"
+#include "api/CPP/data.hpp"
+#include "api/CPP/reorder.hpp"
+#include "api/CPP/convolution.hpp"
+#include "api/CPP/deconvolution.hpp"
+#include "api/CPP/fully_connected.hpp"
 
 #include <boost/optional.hpp>
 
@@ -30,6 +33,8 @@
 
 namespace cldnn
 {
+
+class primitive_inst;
 
 //this class is used for both static and dynamic reordering of data withing network.
 //static reordering is done for cldnn::data (i.e. immutable) primitives via internal network 
@@ -53,12 +58,20 @@ public:
         bias,
         input
     };
+    enum class optimization_attributes_type
+    {
+        splitted_convolution
+    };
+    struct optimization_attributes
+    {
+        int32_t splitted_convolution = 0;
+    };
 
 private:
     bool _enabled;
-    refcounted_obj_ptr<topology_impl> _topology;
-    refcounted_obj_ptr<engine_impl> _engine;
-    std::vector<primitive_id> _outputs;
+    topology_impl _topology;
+    engine_impl::ptr _engine;
+    optimization_attributes _optimization_attributes;
 
     struct cache_key
     {
@@ -87,6 +100,7 @@ private:
 
     layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, boost::optional<layout> const& output_layout);
     layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, boost::optional<layout> const& output_layout);
+    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const deconvolution> prim, boost::optional<layout> const& output_layout);
 
     //pair.first is reorder (may be nullptr if reorder is not needed), pair.second tells if returned reorder was cached (no need to add it to 'ouputs' etc.)
     //for pair.first == nullptr, pair.second == true
@@ -94,7 +108,7 @@ private:
     create_reorder_if_needed(const layout& current_layout, const cldnn::primitive_id& memid, layout const& expected_layout);
 
 public:
-    explicit layout_optimizer(refcounted_obj_ptr<engine_impl> eng, bool enabled = true);
+    explicit layout_optimizer(engine_impl::ptr eng, bool enabled = true);
 
     //this method creates reorder for data, which is currently in 'data_layout' format, to best format in context of 'user' primitive.
     //data is used by 'user' in a way described by 'type' (i.e. weights/bias/input).
@@ -114,7 +128,7 @@ public:
                      std::shared_ptr<const T> user,
                      boost::optional<layout> user_layout = boost::optional<layout>())
         -> std::enable_if_t<
-            meta::is_any_of_v<T, convolution, fully_connected>,
+            meta::is_any_of_v<T, convolution, fully_connected, deconvolution>,
             meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>
         >
     {
@@ -133,7 +147,7 @@ public:
                      std::shared_ptr<const T> user,
                      boost::optional<layout> user_layout = boost::optional<layout>())
         -> std::enable_if_t<
-            !meta::is_any_of_v<T, convolution, fully_connected>,
+            !meta::is_any_of_v<T, convolution, fully_connected, deconvolution>,
             meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>
         >
     {
@@ -147,21 +161,29 @@ public:
                                       std::shared_ptr<const T> user,
                                       boost::optional<layout> user_layout = boost::optional<layout>())
     {
-        auto reorder = get_reorder(data_prim->mem.get_layout(), data_prim->id(), type, user, user_layout);
+        auto reorder = get_reorder(data_prim->mem.get_layout(), data_prim->id, type, user, user_layout);
         if (reorder.first)
         {
-            _topology->add(data_prim);
+            _topology.add(data_prim);
             if (!reorder.second) //returned reorder is a new primitive (i.e. not cached), add it to topology and as an output
-            {
-                _topology->add(reorder.first);
-                _outputs.push_back(reorder.first->id());
-            }
+                _topology.add(reorder.first);
         }
 
         return reorder;
     }
 
-    auto optimize() const -> meta::deduce_ret_type_t<decltype(&network_impl::get_primitives)>;
+    void set_optimization_attribute(optimization_attributes_type attribute, int32_t val)
+    {
+        switch (attribute)
+        {
+        case optimization_attributes_type::splitted_convolution:
+            _optimization_attributes.splitted_convolution = val;
+            break;
+        default: throw std::out_of_range("unsupported layout optimization attribute");
+        }
+    }
+
+    void optimize() const;
     auto get_engine() { return _engine; }
 };
 }

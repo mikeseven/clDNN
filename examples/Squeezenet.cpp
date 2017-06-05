@@ -17,30 +17,26 @@
 #include "common/common_tools.h"
 #include "file.h"
 #include <string>
-#include <api/primitives/input_layout.hpp>
-#include <api/primitives/reorder.hpp>
-#include <api/primitives/convolution.hpp>
-#include <api/primitives/pooling.hpp>
-#include <api/primitives/depth_concatenate.hpp>
-#include <api/primitives/softmax.hpp>
+#include <api/CPP/input_layout.hpp>
+#include <api/CPP/reorder.hpp>
+#include <api/CPP/convolution.hpp>
+#include <api/CPP/pooling.hpp>
+#include <api/CPP/concatenation.hpp>
+#include <api/CPP/softmax.hpp>
 
 using namespace cldnn;
 
-topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx)
+topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)
 {
     // [227x227x3xB] convolution->relu->pooling->lrn [1000xB]
-    input_layout.size = { format::byxf,{ batch_size, 227, 227, 3 } };
+    input_layout.size = { batch_size, 3, 227, 227 };
     auto input = cldnn::input_layout("input", input_layout);
 
-    auto mem_format = use_bfyx ? format::bfyx : format::yxfb;
-
-    // create conversion to yxfb format and subtract mean values
-    tensor reorder_size = input_layout.size.transform(mem_format, 1);
     //auto reorder_mean = { (float)104.0069879317889, (float)116.66876761696767, (float)122.6789143406786 };
     auto reordered_input = reorder(
         "reorder",
         input,
-        { input_layout.data_type, reorder_size },
+        { input_layout.data_type, input_layout.format, input_layout.size },
         std::vector<float>{ (float)104.0069879317889, (float)116.66876761696767, (float)122.6789143406786 });
 
     auto conv1_weights = file::create({ engine, join_path(weights_dir, "conv1_weights.nnd")});
@@ -50,16 +46,17 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         reordered_input,
         { conv1_weights },
         { conv1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 2,2 } },
+        { 1,1,2,2 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto pool1 = pooling(
         "pool1",
         conv1,
         pooling_mode::max,
-        { format::yx,{ 2,2 } }, // strd
-        { format::yx,{ 3,3 } }); // kernel
+        { 1,1,3,3 }, // kernel
+        { 1,1,2,2 }); // strd
 
 
     auto fire2_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire2_squeeze1x1_weights.nnd")});
@@ -69,8 +66,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         pool1,
         { fire2_squeeze1x1_weights },
         { fire2_squeeze1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire2_expand1x1_weights = file::create({ engine, join_path(weights_dir, "fire2_expand1x1_weights.nnd")});
@@ -80,8 +78,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire2_squeeze1x1,
         { fire2_expand1x1_weights },
         { fire2_expand1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire2_expand3x3_weights = file::create({ engine, join_path(weights_dir, "fire2_expand3x3_weights.nnd")});
@@ -91,17 +90,19 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire2_squeeze1x1,
         { fire2_expand3x3_weights },
         { fire2_expand3x3_bias },
-        { format::yx,{ -1,-1 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0, 0, -1,-1 },
+		{ 1,1,1,1 },
         true);
 
 
-    auto fire2_concat = depth_concatenate(   
+    auto fire2_concat = concatenation(   
         "fire2_concat",
         {
             fire2_expand1x1,
             fire2_expand3x3
-        }
+        },
+        concatenation::along_f
     );
 
 
@@ -112,8 +113,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire2_concat,
         { fire3_squeeze1x1_weights },
         { fire3_squeeze1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire3_expand1x1_weights = file::create({ engine, join_path(weights_dir, "fire3_expand1x1_weights.nnd")});
@@ -123,8 +125,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire3_squeeze1x1,
         { fire3_expand1x1_weights },
         { fire3_expand1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire3_expand3x3_weights = file::create({ engine, join_path(weights_dir, "fire3_expand3x3_weights.nnd")});
@@ -134,24 +137,26 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire3_squeeze1x1,
         { fire3_expand3x3_weights },
         { fire3_expand3x3_bias },
-        { format::yx,{ -1,-1 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0, 0, -1,-1 },
+		{ 1,1,1,1 },
         true);
 
-    auto fire3_concat = depth_concatenate(
+    auto fire3_concat = concatenation(
         "fire3_concat",
         {
             fire3_expand1x1,
             fire3_expand3x3
-        }
+        },
+        concatenation::along_f
     );
 
     auto pool3 = pooling(
         "pool3",
         fire3_concat,
         pooling_mode::max,
-        { format::yx,{ 2,2 } }, // strd
-        { format::yx,{ 3,3 } }); // kernel
+        { 1,1,3,3 }, // kernel
+        { 1,1,2,2 }); // strd
 
     auto fire4_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire4_squeeze1x1_weights.nnd")});
     auto fire4_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire4_squeeze1x1_bias.nnd")});
@@ -160,8 +165,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         pool3,
         { fire4_squeeze1x1_weights },
         { fire4_squeeze1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire4_expand1x1_weights = file::create({ engine, join_path(weights_dir, "fire4_expand1x1_weights.nnd")});
@@ -171,8 +177,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire4_squeeze1x1,
         { fire4_expand1x1_weights },
         { fire4_expand1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire4_expand3x3_weights = file::create({ engine, join_path(weights_dir, "fire4_expand3x3_weights.nnd")});
@@ -182,16 +189,18 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire4_squeeze1x1,
         { fire4_expand3x3_weights },
         { fire4_expand3x3_bias },
-        { format::yx,{ -1,-1 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0, 0, -1,-1 },
+		{ 1,1,1,1 },
         true);
 
-    auto fire4_concat = depth_concatenate(
+    auto fire4_concat = concatenation(
         "fire4_concat",
         {
             fire4_expand1x1,
             fire4_expand3x3
-        }
+        },
+        concatenation::along_f
     );
 
     auto fire5_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire5_squeeze1x1_weights.nnd")});
@@ -201,8 +210,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire4_concat,
         { fire5_squeeze1x1_weights },
         { fire5_squeeze1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire5_expand1x1_weights = file::create({ engine, join_path(weights_dir, "fire5_expand1x1_weights.nnd")});
@@ -212,8 +222,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire5_squeeze1x1,
         { fire5_expand1x1_weights },
         { fire5_expand1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire5_expand3x3_weights = file::create({ engine, join_path(weights_dir, "fire5_expand3x3_weights.nnd")});
@@ -223,24 +234,26 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire5_squeeze1x1,
         { fire5_expand3x3_weights },
         { fire5_expand3x3_bias },
-        { format::yx,{ -1,-1 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0, 0, -1,-1 },
+		{ 1,1,1,1 },
         true);
 
-    auto fire5_concat = depth_concatenate(
+    auto fire5_concat = concatenation(
         "fire5_concat",
         {
             fire5_expand1x1,
             fire5_expand3x3
-        }
+        },
+        concatenation::along_f
     );
 
     auto pool5 = pooling(
         "pool5",
         fire5_concat,
         pooling_mode::max,
-        { format::yx,{ 2,2 } }, // strd
-        { format::yx,{ 3,3 } }); // kernel
+        { 1,1,3,3 }, // kernel
+        { 1,1,2,2 }); // strd
 
     auto fire6_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire6_squeeze1x1_weights.nnd")});
     auto fire6_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire6_squeeze1x1_bias.nnd")});
@@ -249,8 +262,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         pool5,
         { fire6_squeeze1x1_weights },
         { fire6_squeeze1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire6_expand1x1_weights = file::create({ engine, join_path(weights_dir, "fire6_expand1x1_weights.nnd")});
@@ -260,8 +274,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire6_squeeze1x1,
         { fire6_expand1x1_weights },
         { fire6_expand1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire6_expand3x3_weights = file::create({ engine, join_path(weights_dir, "fire6_expand3x3_weights.nnd")});
@@ -271,16 +286,18 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire6_squeeze1x1,
         { fire6_expand3x3_weights },
         { fire6_expand3x3_bias },
-        { format::yx,{ -1,-1 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0, 0, -1,-1 },
+		{ 1,1,1,1 },
         true);
 
-    auto fire6_concat = depth_concatenate( 
+    auto fire6_concat = concatenation( 
         "fire6_concat",
         {
             fire6_expand1x1,
             fire6_expand3x3
-        }
+        },
+        concatenation::along_f
     );
 
     auto fire7_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire7_squeeze1x1_weights.nnd")});
@@ -290,8 +307,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire6_concat,
         { fire7_squeeze1x1_weights },
         { fire7_squeeze1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire7_expand1x1_weights = file::create({ engine, join_path(weights_dir, "fire7_expand1x1_weights.nnd")});
@@ -301,8 +319,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire7_squeeze1x1,
         { fire7_expand1x1_weights },
         { fire7_expand1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire7_expand3x3_weights = file::create({ engine, join_path(weights_dir, "fire7_expand3x3_weights.nnd")});
@@ -312,16 +331,18 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire7_squeeze1x1,
         { fire7_expand3x3_weights },
         { fire7_expand3x3_bias },
-        { format::yx,{ -1,-1 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0, 0, -1,-1 },
+		{ 1,1,1,1 },
         true);
 
-    auto fire7_concat = depth_concatenate(
+    auto fire7_concat = concatenation(
         "fire7_concat",
         {
             fire7_expand1x1,
             fire7_expand3x3
-        }
+        },
+        concatenation::along_f
     );
 
     auto fire8_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire8_squeeze1x1_weights.nnd")});
@@ -331,8 +352,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire7_concat,
         { fire8_squeeze1x1_weights },
         { fire8_squeeze1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire8_expand1x1_weights = file::create({ engine, join_path(weights_dir, "fire8_expand1x1_weights.nnd")});
@@ -342,8 +364,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire8_squeeze1x1,
         { fire8_expand1x1_weights },
         { fire8_expand1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire8_expand3x3_weights = file::create({ engine, join_path(weights_dir, "fire8_expand3x3_weights.nnd")});
@@ -353,17 +376,18 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire8_squeeze1x1,
         { fire8_expand3x3_weights },
         { fire8_expand3x3_bias },
-        { format::yx,{ -1,-1 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0, 0, -1,-1 },
+		{ 1,1,1,1 },
         true);
 
-    auto fire8_concat = depth_concatenate(
-    
+    auto fire8_concat = concatenation(
         "fire8_concat",
         {
             fire8_expand1x1,
             fire8_expand3x3
-        }
+        },
+        concatenation::along_f
     );
 
     auto fire9_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire9_squeeze1x1_weights.nnd")});
@@ -373,8 +397,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire8_concat,
         { fire9_squeeze1x1_weights },
         { fire9_squeeze1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire9_expand1x1_weights = file::create({ engine, join_path(weights_dir, "fire9_expand1x1_weights.nnd")});
@@ -384,8 +409,9 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire9_squeeze1x1,
         { fire9_expand1x1_weights },
         { fire9_expand1x1_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto fire9_expand3x3_weights = file::create({ engine, join_path(weights_dir, "fire9_expand3x3_weights.nnd")});
@@ -395,17 +421,18 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire9_squeeze1x1,
         { fire9_expand3x3_weights },
         { fire9_expand3x3_bias },
-        { format::yx,{ -1,-1 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0, 0, -1,-1 },
+		{ 1,1,1,1 },
         true);
 
-    auto fire9_concat = depth_concatenate(
-    
+    auto fire9_concat = concatenation(
         "fire9_concat",
         {
             fire9_expand1x1,
             fire9_expand3x3
-        }
+        },
+        concatenation::along_f
     );
 
     auto conv10_weights = file::create({ engine, join_path(weights_dir, "conv10_weights.nnd")});
@@ -415,16 +442,17 @@ topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& e
         fire9_concat,
         { conv10_weights },
         { conv10_bias },
-        { format::yx,{ 0,0 } },
-        { format::yx,{ 1,1 } },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto pool10 = pooling(
         "pool10",
         conv10,
         pooling_mode::average,
-        { format::yx,{ 1,1 } }, // strd
-        { format::yx,{ 14,14 } }); // kernel
+        { 1,1,14,14 }, // kernel
+        { 1,1,1,1 }); // strd
 
     auto softmax = cldnn::softmax(
         "output",

@@ -15,14 +15,17 @@
 */
 
 #include "instrumentation.h"
+#include "neural_memory.h"
 
 #include <fstream>
 #include <iomanip>
 #include <string>
 #include <vector>
-
+#include <iostream>
 #include <boost/filesystem.hpp>
 
+using cldnn::backward_comp::neural_memory;
+using cldnn::backward_comp::argument;
 
 namespace instrumentation {
     // initalize dumping directory for whole run
@@ -91,7 +94,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_byxf(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = mem.argument();
+        auto mem_arg = argument(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -121,7 +124,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_bfyx(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = mem.argument();
+        auto mem_arg = argument(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -151,7 +154,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_yxfb(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = mem.argument();
+        auto mem_arg = argument(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -181,7 +184,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_xb(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = mem.argument();
+        auto mem_arg = argument(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -201,7 +204,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_bx(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = mem.argument();
+        auto mem_arg = argument(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -218,11 +221,137 @@ namespace instrumentation {
         }
     }
 
+    template<typename elemType>
+    void dump_yxio(const cldnn::memory& mem, std::stringstream & stream)
+    {
+        auto mem_arg = argument(mem);
+        auto mem_ptr = mem.pointer<elemType>();
+
+        auto i_size = mem_arg.size.batch[0];
+        auto o_size = mem_arg.size.feature[0];
+        auto x_size = mem_arg.size.spatial[0];
+        auto y_size = mem_arg.size.spatial[1];
+        unsigned int input_it = 0;
+        for (cldnn::tensor::value_type o = 0; o < o_size; o++)
+        {
+            for (cldnn::tensor::value_type i = 0; i < i_size; i++)
+            {
+                for (cldnn::tensor::value_type x = 0; x < x_size; x++)
+                {
+                    for (cldnn::tensor::value_type y = 0; y < y_size; y++)
+                    {
+                        stream<< convert_element(mem_ptr[input_it]) << " ";
+                        input_it++;
+                    }
+                    stream<< std::endl;
+                }
+            }
+        }
+    }
+
+    template<typename elemType>
+    void dump_oiyx(const cldnn::memory& mem, std::stringstream & stream)
+    {
+        auto mem_arg = argument(mem);
+        auto mem_ptr = mem.pointer<elemType>();
+
+        auto i_size = mem_arg.size.batch[0];
+        auto o_size = mem_arg.size.feature[0];
+        auto x_size = mem_arg.size.spatial[0];
+        auto y_size = mem_arg.size.spatial[1];
+        unsigned int input_it = 0;
+        for (cldnn::tensor::value_type x = 0; x < x_size; x++)
+        {
+            for (cldnn::tensor::value_type y = 0; y < y_size; y++)
+            {
+                for (cldnn::tensor::value_type i = 0; i < i_size; i++)
+                {
+                    for (cldnn::tensor::value_type o = 0; o < o_size; o++)
+                    {
+                        stream << convert_element(mem_ptr[input_it]) << " ";
+                        input_it++;
+                    }
+                    stream << std::endl;
+                }
+            }
+        }
+    }
+
+    template<typename elemType>
+    void dump_os_iyx_osv16(const cldnn::memory& mem, std::stringstream & stream)
+    {
+        auto mem_arg = argument(mem);
+        auto mem_ptr = mem.pointer<elemType>();
+
+        auto i_size = mem_arg.size.batch[0];
+        auto o_size = mem_arg.size.feature[0];
+        auto x_size = mem_arg.size.spatial[0];
+        auto y_size = mem_arg.size.spatial[1];
+        auto weights_size = i_size * o_size * x_size * y_size; //count() also counts feature[1]
+        int slice_value = 16;
+        cldnn::tensor::value_type it = 0;
+        while (it < weights_size)
+        {
+            stream << convert_element(mem_ptr[it]) << " ";
+            it++;
+            if (it % slice_value == 0) //separate every bsv with a new line
+                stream << std::endl;
+        };
+    }
+
+    template<typename elemType>
+    void dump_bs_xs_xsv8_bsv8(const cldnn::memory& mem, std::stringstream & stream)
+    {
+        auto mem_arg = argument(mem);
+        auto mem_ptr = mem.pointer<elemType>();
+
+        auto i_size = mem_arg.size.batch[0]; //batch = input feature map
+        auto x_size = mem_arg.size.spatial[0]; // spatial_x = output feature map
+        auto weights_size = mem_arg.size.count();
+        int xsv = 8, bsv = 8; 
+        unsigned int input_it = 0, input_i_it= 0 , input_o_it = 0;
+        for (cldnn::tensor::value_type it = 0; it < weights_size; it++)
+        {
+                stream << convert_element(mem_ptr[input_it]) << " ";
+                input_i_it++;
+                if (input_i_it % bsv == 0) //separete every input slice with a new line
+                {
+                    stream << std::endl;
+                    input_o_it++;
+                    input_i_it = 0;
+                }
+                input_it = input_o_it*bsv + input_i_it;
+
+                if (input_it % (xsv*bsv) == 0) // seperate every block (8x8) with a new line
+                    stream << std::endl;
+        }
+    }
+
+    template<typename elemType>
+    void dump_bs_x_bsv16(const cldnn::memory& mem, std::stringstream & stream)
+    {
+        auto mem_arg = argument(mem);
+        auto mem_ptr = mem.pointer<elemType>();
+
+        auto i_size = mem_arg.size.batch[0]; //batch = input feature map
+        auto x_size = mem_arg.size.spatial[0]; // spatial_x = output feature map
+        auto weights_size = mem_arg.size.count();
+        int bsv = 16;
+        cldnn::tensor::value_type it = 0;
+        while (it < weights_size)
+        {
+            stream << convert_element(mem_ptr[it]) << " ";
+            it++;
+            if (it % bsv == 0) //separate every bsv with a new line
+                stream << std::endl;
+        }
+    }
+
     void logger::log_memory_to_file(const cldnn::memory& mem, std::string prefix, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id)
     {
         const auto& mem_prim = mem;
-        auto mem_arg = mem_prim.argument();
-
+        auto mem_arg = argument(mem_prim);
+        
         boost::filesystem::create_directories(dump_dir);
         auto batch = mem_arg.size.batch[0];
         auto feature = mem_arg.size.feature[0];
@@ -236,54 +365,54 @@ namespace instrumentation {
         switch (mem_arg.format)
         {
         // FP32 (float)
-        case cldnn::neural_memory::format::byxf_f32:
+        case neural_memory::format::byxf_f32:
             {
                 dump_byxf<float>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::bfyx_f32:
+        case neural_memory::format::bfyx_f32:
             {
                 dump_bfyx<float>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::yxfb_f32:
+        case neural_memory::format::yxfb_f32:
             {
                 dump_yxfb<float>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::xb_f32:
+        case neural_memory::format::fc_xb_f32:
             {
                 dump_xb<float>(mem_prim, single_batch, batch_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::bx_f32:
+        case neural_memory::format::fc_bx_f32:
             {
                 dump_bx<float>(mem_prim, single_batch, batch_id, streams);
             }
             break;
 
         // FP16 (half)
-        case cldnn::neural_memory::format::byxf_f16:
+        case neural_memory::format::byxf_f16:
             {
                 dump_byxf<half_t>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::bfyx_f16:
+        case neural_memory::format::bfyx_f16:
             {
                 dump_bfyx<half_t>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::yxfb_f16:
+        case neural_memory::format::yxfb_f16:
             {
                 dump_yxfb<half_t>(mem_prim, single_batch, batch_id, single_feature, feature_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::xb_f16:
+        case neural_memory::format::fc_xb_f16:
             {
                 dump_xb<half_t>(mem_prim, single_batch, batch_id, streams);
             }
             break;
-        case cldnn::neural_memory::format::bx_f16:
+        case neural_memory::format::fc_bx_f16:
             {
                 dump_bx<half_t>(mem_prim, single_batch, batch_id, streams);
             }
@@ -304,5 +433,74 @@ namespace instrumentation {
                     file_stream.close();
                 }
             }
+    }
+
+    void logger::log_weights_to_file(const cldnn::memory& mem, std::string prefix)
+    {
+        const auto& mem_prim = mem;
+        auto mem_arg = argument(mem_prim);
+
+        boost::filesystem::create_directories(dump_dir);
+        std::stringstream stream;
+
+        switch (mem_arg.format)
+        {
+        //FP 32
+        case neural_memory::format::weights_yxfb_f32:
+            {
+                dump_yxio<float>(mem_prim, stream);
+            }
+            break;
+        case neural_memory::format::weights_bfyx_f32:
+            {
+                dump_oiyx<float>(mem_prim,stream);
+            }
+            break;
+        case neural_memory::format::os_iyx_osv16_f32:
+            {
+                dump_os_iyx_osv16<float>(mem_prim, stream);
+            }
+            break;
+        case neural_memory::format::bs_xs_xsv8_bsv8_f32:
+            {
+             dump_bs_xs_xsv8_bsv8<float>(mem_prim, stream);
+            }
+        break;
+        case neural_memory::format::bs_x_bsv16_f32:
+            {
+                dump_bs_x_bsv16<float>(mem_prim, stream);
+            }
+        break;
+        //FP 16
+        case neural_memory::format::weights_yxfb_f16:
+            {
+                dump_yxio<half_t>(mem_prim, stream);
+            }
+            break;
+            case neural_memory::format::weights_bfyx_f16:
+            {
+                dump_oiyx<half_t>(mem_prim, stream);
+            }
+        break;
+        case neural_memory::format::os_iyx_osv16_f16:
+            {
+                dump_os_iyx_osv16<half_t>(mem_prim, stream);
+            }
+            break;
+        case neural_memory::format::bs_xs_xsv8_bsv8_f16:
+            {
+                dump_bs_xs_xsv8_bsv8<half_t>(mem_prim, stream);
+            }
+            break;
+        case neural_memory::format::bs_x_bsv16_f16:
+            {
+                dump_bs_x_bsv16<half_t>(mem_prim, stream);
+            }
+            break;
+        }
+        std::string filename((dump_dir + "/" + prefix + ".txt"));
+        std::ofstream file_stream = std::ofstream(filename, std::ios::out);
+        file_stream << stream.str();
+        file_stream.close();
     }
 }

@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-
 #include "instrumentation.h"
 #include "common_tools.h"
 #include "FreeImage_wraps.h"
@@ -27,8 +26,8 @@
 
 #include <regex>
 #include <string>
-#include <api/primitives/data.hpp>
-#include <api/network.hpp>
+#include <api/CPP/data.hpp>
+#include <api/CPP/network.hpp>
 
 using namespace boost::filesystem;
 
@@ -266,10 +265,9 @@ void load_images_from_file_list(
     auto dst_ptr = memory.pointer<MemElemTy>();
     auto it = dst_ptr.begin();
 
-    auto batches = std::min(memory_layout.size.batch[0], static_cast<cldnn::tensor::value_type>(images_list.size()));
     auto dim = memory_layout.size.spatial;
 
-    if(memory_layout.size.format != cldnn::format::byxf) throw std::runtime_error("Only bfyx format is supported as input to images from files");
+    if(memory_layout.format != cldnn::format::byxf) throw std::runtime_error("Only bfyx format is supported as input to images from files");
 
     if(!cldnn::data_type_match<MemElemTy>(memory_layout.data_type))
         throw std::runtime_error("Memory format expects different type of elements than specified");
@@ -366,22 +364,57 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     cldnn::build_options options;
 
     //TODO set proper network build options
-    if (ep.optimize_weights)    options.set_option(cldnn::build_option::optimize_data);
-    if (ep.profiling)           options.set_option(cldnn::build_option::profiling);
-    if (ep.dump_hidden_layers || ep.profiling)  options.set_option(cldnn::build_option::debug);
+    options.set_option(cldnn::build_option::optimize_data(true));
+    options.set_option(cldnn::build_option::profiling(ep.profiling));
+    options.set_option(cldnn::build_option::debug(ep.dump_hidden_layers || ep.profiling));
 
-    std::vector<cldnn::primitive_id> outputs{ "output" };
-    if (!ep.dump_layer_name.empty())  outputs.push_back(ep.dump_layer_name);
-    if (!ep.run_single_layer.empty()) outputs.push_back(ep.run_single_layer);
+
+    std::vector<cldnn::primitive_id> outputs(0);
+    outputs.push_back("output");
+
+    if (!ep.run_until_primitive_name.empty())
+    {
+        outputs.push_back(ep.run_until_primitive_name); //set the user custom primitive as output (works only while not in debug moge, because in debug mode every primitive is an output)
+            if(ep.dump_hidden_layers)
+                throw std::runtime_error("ERROR: Can't dump hidden layers when custom output is set.");
+    }
+
+    if (!ep.dump_layer_name.empty())
+        outputs.push_back(ep.dump_layer_name);
+
     options.set_option(cldnn::build_option::outputs(outputs));
+
     try 
     {
-        cldnn::network network(engine, topology, options);
+        cldnn::program program(engine, topology, options);
         auto compile_time = timer_compilation.uptime();
 
         if (ep.print_type == Verbose)
         {
             std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
+            std::cout << "Network allocation started" << std::endl;
+        }
+
+        cldnn::network network(program);
+
+        auto allocation_time = timer_compilation.uptime() - compile_time;
+        
+        if (ep.print_type == Verbose)
+        {
+            std::cout << "Network allocation finished in " << instrumentation::to_string(allocation_time) << std::endl;
+        }
+
+        if (ep.print_type == ExtendedTesting)
+        {
+            std::cout << "All primitives information: " << std::endl;
+            std::vector<std::string> primitives_id = topology.get_primitive_ids();
+            std::string primitive_info = "";
+            for (auto& prim : primitives_id) //loop through primitives_id vector, so we print information about all primitives 
+            {
+                primitive_info = network.get_primitive_info(prim);
+                std::cout << primitive_info << std::endl;
+            }
+
         }
 
         return network;
@@ -439,7 +472,8 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     if (log_energy)
     {
         try {
-            energyLib.StartLog(L"power_log.csv");
+            wchar_t fileName[] = L"power_log.csv";
+            energyLib.StartLog(fileName);
         }
         catch (...)
         {
@@ -448,7 +482,6 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     }
 
     decltype(network.execute()) outputs;
-
     cldnn::instrumentation::timer<> timer_execution;
 
     for (decltype(ep.loop) i = 0; i < ep.loop; i++)
@@ -457,12 +490,13 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
         if (log_energy)
             energyLib.ReadSample();
     }
-
     //GPU primitives scheduled in unblocked manner
     auto scheduling_time(timer_execution.uptime());
 
     //OCL buffers mapping blocks until all primitives are completed
-    output = outputs.at("output").get_memory();
+    std::string output_primitve_id = ep.run_until_primitive_name.empty() ? "output" :  ep.run_until_primitive_name;
+    output = outputs.at(output_primitve_id).get_memory();
+    
     auto execution_time(timer_execution.uptime());
 
     if (log_energy)
@@ -492,7 +526,10 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
         auto it = outputs.find(ep.dump_layer_name);
         if(it != std::end(outputs))
         {
-            instrumentation::logger::log_memory_to_file(it->second.get_memory(), it->first, ep.dump_single_batch, ep.dump_batch_id, ep.dump_single_feature, ep.dump_feature_id);
+            if (!ep.dump_weights)
+                instrumentation::logger::log_memory_to_file(it->second.get_memory(), it->first, ep.dump_single_batch, ep.dump_batch_id, ep.dump_single_feature, ep.dump_feature_id);
+            else
+                instrumentation::logger::log_weights_to_file(it->second.get_memory(), it->first);
         }
         else
         {
@@ -501,7 +538,7 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     }
     else
     {
-        // We do not log results for microbench
+        // We do not log results for microbench.
         if (ep.topology_name != "microbench")
         {
             instrumentation::logger::log_memory_to_file(output, "final_result");
@@ -552,20 +589,24 @@ void run_topology(const execution_params &ep)
     {
         std::cout << "Building " << ep.topology_name << " started" << std::endl;
     }
+    else if (ep.print_type == ExtendedTesting)
+    {
+        std::cout << "Extended testing of " << ep.topology_name << std::endl;
+    }
     cldnn::instrumentation::timer<> timer_build;
-    cldnn::layout input_layout = { ep.use_half ? cldnn::data_types::f16 : cldnn::data_types::f32, {} };
+    cldnn::layout input_layout = { ep.use_half ? cldnn::data_types::f16 : cldnn::data_types::f32, cldnn::format::byxf, {} };
     if (ep.topology_name == "alexnet")
-        primitives = build_alexnet(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
+        primitives = build_alexnet(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "vgg16" || ep.topology_name == "vgg16_face")
-        primitives = build_vgg16(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
+        primitives = build_vgg16(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "googlenet")
-        primitives = build_googlenetv1(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
+        primitives = build_googlenetv1(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "gender")
-        primitives = build_gender(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
+        primitives = build_gender(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "microbench")
-        primitives = build_microbench(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
+        primitives = build_microbench(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if(ep.topology_name == "squeezenet")
-        primitives = build_squeezenet(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_bfyx);
+        primitives = build_squeezenet(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
 
@@ -578,10 +619,9 @@ void run_topology(const execution_params &ep)
 
     auto network = build_network(engine, primitives, ep);
     auto input = cldnn::memory::allocate(engine, input_layout);
-
     //TODO check if we can define the 'empty' memory
     float zero = 0;
-    cldnn::layout zero_layout( cldnn::data_types::f32, {cldnn::format::x, {1}} );
+    cldnn::layout zero_layout( cldnn::data_types::f32, cldnn::format::bfyx, {1,1,1,1} );
     auto output = cldnn::memory::attach(zero_layout, &zero, 1);
 
     if (ep.topology_name != "microbench")
@@ -622,8 +662,11 @@ void run_topology(const execution_params &ep)
             auto time = execute_topology(network, ep, energyLib, output);
 
             auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-
-            output_file.batch(output, join_path(get_executable_info()->dir(), neurons_list_filename), images_in_batch, ep.print_type);
+           
+            if (ep.run_until_primitive_name.empty())
+                output_file.batch(output, join_path(get_executable_info()->dir(), neurons_list_filename), images_in_batch, ep.print_type);
+            else
+                std::cout << "Finished at user custom primtive: " << ep.run_until_primitive_name << std::endl;
 
             if (time_in_sec != 0.0)
             {

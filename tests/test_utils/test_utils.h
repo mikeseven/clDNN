@@ -18,14 +18,26 @@
 
 #pragma once
 
-#include "api/memory.hpp"
-#include "api/tensor.hpp"
+#include "api/CPP/memory.hpp"
+#include "api/CPP/tensor.hpp"
+#include "api/CPP/program.hpp"
 #include <iostream>
 #include <limits>
 #include <random>
 #include <gtest/gtest.h>
-#include <api/primitive.hpp>
+#include <api/CPP/primitive.hpp>
 #include "float16.h"
+#include "api/CPP/concatenation.hpp"
+#include "api/CPP/lrn.hpp"
+#include "api/CPP/roi_pooling.hpp"
+#include "api/CPP/scale.hpp"
+#include "api/CPP/softmax.hpp"
+#include "api/CPP/reorder.hpp"
+#include "api/CPP/normalize.hpp"
+#include "api/CPP/convolution.hpp"
+#include "api/CPP/activation.hpp"
+
+#define ARRAY_SIZE(a) (sizeof(a) / sizeof(a[0]))
 
 namespace tests {
 
@@ -46,7 +58,7 @@ using VVVF = std::vector<VVF<T>>;		// 3d feature map
 template<typename T>
 using VVVVF = std::vector<VVVF<T>>;	// batch of 3d feature maps
 template<typename T>
-using VVVVVF = std::vector<VVVVF<T>>;	// split of oiyx filters
+using VVVVVF = std::vector<VVVVF<T>>;	// split of bfyx filters
 
 template<typename T>
 inline VF<T> flatten_4d(cldnn::format input_format, VVVVF<T> &data) {
@@ -65,14 +77,6 @@ inline VF<T> flatten_4d(cldnn::format input_format, VVVVF<T> &data) {
 						for (size_t bi = 0; bi < a; ++bi)
 							vec[idx++] = data[bi][fi][yi][xi];
 			break;
-
-		case cldnn::format::oiyx:
-    		for (size_t oi = 0; oi < a; ++oi)
-    			for (size_t ii = 0; ii < b; ++ii)
-    				for (size_t yi = 0; yi < c; ++yi)
-    					for (size_t xi = 0; xi < d; ++xi)
-    						vec[idx++] = data[oi][ii][yi][xi];
-            break;
 		
 		case cldnn::format::bfyx:
 			for (size_t bi = 0; bi < a; ++bi)
@@ -80,14 +84,6 @@ inline VF<T> flatten_4d(cldnn::format input_format, VVVVF<T> &data) {
 					for (size_t yi = 0; yi < c; ++yi)
 						for (size_t xi = 0; xi < d; ++xi)
 							vec[idx++] = data[bi][fi][yi][xi];
-			break;
-		
-		case cldnn::format::yxio:
-			for (size_t yi = 0; yi < c; ++yi)
-				for (size_t xi = 0; xi < d; ++xi)
-					for (size_t ii = 0; ii < b; ++ii)
-						for (size_t oi = 0; oi < a; ++oi)															
-							vec[idx++] = data[oi][ii][yi][xi];
 			break;
 
 		default:
@@ -97,9 +93,9 @@ inline VF<T> flatten_4d(cldnn::format input_format, VVVVF<T> &data) {
 }
 
 template<typename T>
-std::vector<T> generate_random_1d(size_t a, int min, int max) {
+std::vector<T> generate_random_1d(size_t a, int min, int max, int k = 8) {
 	static std::default_random_engine generator(random_seed);
-	int k = 8; // 1/k is the resolution of the floating point numbers
+	// 1/k is the resolution of the floating point numbers
 	std::uniform_int_distribution<int> distribution(k * min, k * max);
 	std::vector<T> v(a);
 	for (size_t i = 0; i < a; ++i) {
@@ -110,36 +106,36 @@ std::vector<T> generate_random_1d(size_t a, int min, int max) {
 }
 
 template<typename T>
-std::vector<std::vector<T>> generate_random_2d(size_t a, size_t b, int min, int max) {
+std::vector<std::vector<T>> generate_random_2d(size_t a, size_t b, int min, int max, int k = 8) {
 	std::vector<std::vector<T>> v(a);
 	for (size_t i = 0; i < a; ++i)
-		v[i] = generate_random_1d<T>(b, min, max);
+		v[i] = generate_random_1d<T>(b, min, max, k);
 	return v;
 }
 
 template<typename T>
-std::vector<std::vector<std::vector<T>>> generate_random_3d(size_t a, size_t b, size_t c, int min, int max) {
+std::vector<std::vector<std::vector<T>>> generate_random_3d(size_t a, size_t b, size_t c, int min, int max, int k = 8) {
 	std::vector<std::vector<std::vector<T>>> v(a);
 	for (size_t i = 0; i < a; ++i)
-		v[i] = generate_random_2d<T>(b, c, min, max);
+		v[i] = generate_random_2d<T>(b, c, min, max, k);
 	return v;
 }
 
-// parameters order is assumed to be bfyx or oiyx
+// parameters order is assumed to be bfyx or bfyx
 template<typename T>
-std::vector<std::vector<std::vector<std::vector<T>>>> generate_random_4d(size_t a, size_t b, size_t c, size_t d, int min, int max) {
+std::vector<std::vector<std::vector<std::vector<T>>>> generate_random_4d(size_t a, size_t b, size_t c, size_t d, int min, int max, int k = 8) {
 	std::vector<std::vector<std::vector<std::vector<T>>>> v(a);
 	for (size_t i = 0; i < a; ++i)
-		v[i] = generate_random_3d<T>(b, c, d, min, max);
+		v[i] = generate_random_3d<T>(b, c, d, min, max, k);
 	return v;
 }
 
-// parameters order is assumed to be soiyx for filters when split > 1 
+// parameters order is assumed to be sbfyx for filters when split > 1 
 template<typename T>
-std::vector<std::vector<std::vector<std::vector<std::vector<T>>>>> generate_random_5d(size_t a, size_t b, size_t c, size_t d, size_t e, int min, int max) {
+std::vector<std::vector<std::vector<std::vector<std::vector<T>>>>> generate_random_5d(size_t a, size_t b, size_t c, size_t d, size_t e, int min, int max, int k = 8) {
 	std::vector<std::vector<std::vector<std::vector<std::vector<T>>>>> v(a);
 	for (size_t i = 0; i < a; ++i)
-		v[i] = generate_random_4d<T>(b, c, d, e, min, max);
+		v[i] = generate_random_4d<T>(b, c, d, e, min, max, k);
 	return v;
 }
 
@@ -227,7 +223,7 @@ inline bool are_equal(
         return true;
 }
 
-inline bool floating_point_equal(FLOAT16 x, FLOAT16 y, int16_t max_ulps_diff = 4) {
+inline bool floating_point_equal(FLOAT16 x, FLOAT16 y, int max_ulps_diff = 4) {
 	int16_t sign_bit_mask = 1;
 	sign_bit_mask <<= 15;
 	int16_t a = x.v, b = y.v;
@@ -237,11 +233,11 @@ inline bool floating_point_equal(FLOAT16 x, FLOAT16 y, int16_t max_ulps_diff = 4
 		return a == 0 && b == 0;
 	}
 	else {
-		return std::abs(a - b) < max_ulps_diff;
+		return std::abs(a - b) <= max_ulps_diff;
 	}
 }
 
-inline bool floating_point_equal(float x, float y, int32_t max_ulps_diff = 4) {
+inline bool floating_point_equal(float x, float y, int max_ulps_diff = 4) {
 	int32_t sign_bit_mask = 1;
 	sign_bit_mask <<= 31;
 	int32_t a = reinterpret_cast<int32_t&>(x), b = reinterpret_cast<int32_t&>(y);
@@ -251,61 +247,167 @@ inline bool floating_point_equal(float x, float y, int32_t max_ulps_diff = 4) {
 		return a == 0 && b == 0;
 	}
 	else {
-		return std::abs(a - b) < max_ulps_diff;
+		return std::abs(a - b) <= max_ulps_diff;
 	}
 }
 
 
-class test_params
+class test_params 
 {
 public:
+    
+    test_params() :
+        fmt(cldnn::format::bfyx)
+    {        
+    }
 
-	test_params(cldnn::data_types data_type, cldnn_format_type input_format, int32_t batch_size, int32_t feature_size, cldnn::tensor input_size) :
-		data_type(data_type),
-		input(cldnn::tensor( cldnn::format::bfyx,{ batch_size, feature_size, input_size.spatial[1],  input_size.spatial[0] } ).transform(cldnn::format(input_format), 1))
-	{ }
+    test_params(cldnn::data_types dt, cldnn::format input_format, int32_t batch_size, int32_t feature_size, cldnn::tensor input_size, cldnn::build_options const& options = cldnn::build_options()) :
+        data_type(dt),
+        fmt(input_format), 
+		network_build_options(options)
+	{
+		cldnn::tensor t = cldnn::tensor(batch_size, feature_size, input_size.spatial[0],  input_size.spatial[1] );
+		input_layouts.push_back( cldnn::layout(dt, fmt, t) );
+	}
 
-	cldnn::data_types data_type;
-	cldnn::tensor input;
+    cldnn::data_types data_type;
+    cldnn::format fmt;
+    std::vector<cldnn::layout> input_layouts;            
 
-	//TODO:
-	//input + output padding
+    void * opaque_custom_param = nullptr;
+    
+	cldnn::build_options network_build_options;
+
+    std::string print();
+	static std::string print_tensor(cldnn::tensor tensor);
 };
 
 class generic_test : public ::testing::TestWithParam<std::tuple<test_params*, cldnn::primitive*>>
 {
 	
 public:
+    generic_test();
 
-	generic_test();
+    void run_single_test();
 
-	void run_single_test();
+    template<typename Type>
+    void compare_buffers(const cldnn::memory& out, const cldnn::memory& ref);
 
-	template<typename Type>
-	void compare_buffers(const cldnn::memory& out, const cldnn::memory& ref, float error);
+    static size_t get_linear_index(const cldnn::layout & layout, int b, int f, int y, int x);
+    size_t get_linear_index_with_broadcast(const cldnn::layout & in_layout, int b, int f, int y, int x, const cldnn::layout & out_layout);
 
-	uint32_t get_linear_index(cldnn::layout layout, int b, int f, int y, int x);
+    static std::vector<test_params*> generate_generic_test_params(std::vector<test_params*>& all_generic_params);
 
-	static std::vector<test_params*> generate_generic_test_params(std::vector<test_params*> all_generic_params);
+    virtual bool is_format_supported(cldnn::format format) = 0;
 
-	virtual cldnn::memory generate_reference(const cldnn::memory& input) = 0;
+	virtual cldnn::tensor get_expected_output_tensor();
 
-	virtual bool is_format_supported(cldnn::format format) = 0;
-
-	struct custom_param_name_functor {
-		std::string operator()(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info) {
-			return std::to_string(info.index);
-		}
-	};
+    struct custom_param_name_functor {
+            std::string operator()(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info) {
+                    return std::to_string(info.index);
+            }
+    };
 
 protected:
+    cldnn::engine engine;
+    test_params* generic_params;
+    cldnn::primitive* layer_params;
+	int max_ulps_diff_allowed; //Max number of ulps allowed between 2 values when comparing the output buffer and the reference buffer.
+    virtual cldnn::memory generate_reference(const std::vector<cldnn::memory>& inputs) = 0;
+    // Allows the test to override the random input data that the framework generates
 
-	cldnn::engine engine;
-	test_params* generic_params;
-	cldnn::primitive* layer_parmas;
+    virtual void prepare_input_for_test(std::vector<cldnn::memory>& inputs) 
+    {
+        inputs = inputs;
+    }
+   
+    static std::vector<cldnn::data_types> test_data_types;
+    static std::vector<cldnn::format> test_input_formats;
+	static std::vector<cldnn::format> test_weight_formats;
+    static std::vector<int32_t> test_batch_sizes;
+    static std::vector<int32_t> test_feature_sizes;
+    static std::vector<cldnn::tensor> test_input_sizes;
 };
 
+// When a test assertion such as EXPECT_EQ fails, Google-Test prints the argument values to help with debugging.
+// It does this using a user - extensible value printer.
+// This function will be used to print the test params in case of an error.
+inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*>& t, ::std::ostream* os)
+{
+	std::stringstream str;
 
+	auto test_param = std::get<0>(t);
+	auto primitive = std::get<1>(t);
 
+	str << std::endl << "Test params: " << test_param->print();
 
+    str << "Layer params:\n"
+        << "Output padding lower size: " << test_param->print_tensor(primitive->output_padding.lower_size())
+        << " upper size: " << test_param->print_tensor(primitive->output_padding.upper_size()) << '\n';
+
+    //TODO: do layers not have param dumping? we could consider adding it
+
+    if (primitive->type == cldnn::concatenation::type_id())
+    {
+        auto dc = static_cast<cldnn::concatenation*>(primitive);
+        (void)dc;
+    }
+    else if(primitive->type == cldnn::lrn::type_id())
+    {
+        auto lrn = static_cast<cldnn::lrn *>(primitive);
+        std::string norm_region = (lrn->norm_region == cldnn_lrn_norm_region_across_channel) ? "across channel" : "within channel";
+        str << "Norm region: " << norm_region
+            << " Size: " << lrn->size
+            << " Alpha: " << lrn->alpha
+            << " Beta: " << lrn->beta
+            << " K: " << lrn->k;
+    }
+    else if(primitive->type == cldnn::roi_pooling::type_id())
+    {
+        auto roi_pooling = static_cast<cldnn::roi_pooling *>(primitive);
+        str << "Pooled width: " << roi_pooling->pooled_width
+            << " Pooled height: " << roi_pooling->pooled_height
+            << " Spatial scale: " << roi_pooling->spatial_scale;
+    }
+    else if(primitive->type == cldnn::scale::type_id())
+    {
+        auto s = static_cast<cldnn::scale *>(primitive);
+        (void)s;
+    }
+    else if(primitive->type == cldnn::softmax::type_id())
+    {
+        auto sm = static_cast<cldnn::softmax *>(primitive);
+        (void)sm;
+    }
+	else if (primitive->type == cldnn::reorder::type_id())
+	{
+		auto reorder = static_cast<cldnn::reorder*>(primitive);
+		str << "Output data type: " << cldnn::data_type_traits::name(reorder->output_data_type) << " Mean: " << reorder->mean << "Subtract per feature: " << "TODO" /*std::vector<float> subtract_per_feature*/;
+	}
+	else if (primitive->type == cldnn::normalize::type_id())
+	{
+		auto normalize = static_cast<cldnn::normalize*>(primitive);
+		std::string norm_region = normalize->across_spatial ? "across_spatial" : "within_spatial";
+		str << "Norm region: " << norm_region << " Epsilon: " << normalize->epsilon << " Scale input id: " << normalize->scale_input;
+	}
+	else if (primitive->type == cldnn::convolution::type_id()) 
+	{
+		auto convolution = static_cast<cldnn::convolution*>(primitive);
+		str << "Stride x: " << convolution->stride.spatial[0] << " Stride y: " << convolution->stride.spatial[1]
+			<< " Dilation x: " << convolution->dilation.spatial[0] << " Dilation y: " << convolution->dilation.spatial[1]
+			<< " Input offset x: " << convolution->input_offset.spatial[0] << " Input offset y: " << convolution->input_offset.spatial[1]
+			<< " Activation: " << convolution->with_activation << " Activation slope: " << convolution->activation_negative_slope;
+	}
+	else if (primitive->type == cldnn::activation::type_id())
+	{
+		auto activation = static_cast<cldnn::activation*>(primitive);
+		str << "Negative slope: " << activation->negative_slope << " Negative slope input id: " << activation->negative_slope_input;
+	}
+    else
+    {
+		throw std::runtime_error("Not implemented yet for this primitive.");
+	}
+		
+	*os << str.str();
+}
 }

@@ -110,7 +110,10 @@ endif()
 # Code generation settings.
 
 # Path which points to root directory where code generated elements are created.
-set(CLDNN__CODEGEN_DIR     "${CMAKE_CURRENT_BINARY_DIR}/codegen/${CLDNN__TARGET_CFG_VAR}")
+set(CLDNN__CODEGEN_BASEDIR "${CMAKE_CURRENT_BINARY_DIR}/codegen")
+# Path which points to root directory where code generated elements are created
+# (specific to build configuration).
+set(CLDNN__CODEGEN_DIR     "${CLDNN__CODEGEN_BASEDIR}/${CLDNN__TARGET_CFG_VAR}")
 
 # Path which points to automatically included directory with code generated elements
 # (to support "copy-if-different" optimization).
@@ -453,7 +456,7 @@ mark_as_advanced(CLDNN__INCLUDE_COST_MODEL)
 # ======================================================================================================
 
 # Run (requires CLDNN__INCLUDE_TESTS to be true): Tests (unit tests and small acceptance tests) for clDNN framework.
-set(CLDNN__RUN_TESTS ON CACHE BOOL "Run: clDNN framework's tests.")
+set(CLDNN__RUN_TESTS OFF CACHE BOOL "Run: clDNN framework's tests.")
 mark_as_advanced(CLDNN__RUN_TESTS)
 
 # ======================================================================================================
@@ -461,8 +464,6 @@ mark_as_advanced(CLDNN__RUN_TESTS)
 # Compile / Link: Use static C++ Runtime library.
 set(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME OFF CACHE BOOL "Compile / Link: Use static version of C++ Runtime library instead of shared one.")
 mark_as_advanced(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME)
-# We no longer need test run after each build since we have CI env.
-set(CLDNN__RUN_TESTS OFF)
 
 # ======================================================================================================
 
@@ -826,7 +827,7 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
         ExtensionsEnabled
         TreatWarnAsErrorEnabled
         WarnLevel4
-        FastMath
+        NoFastMath
         StackProtector
     )
   intel_config_flag_apply_settings(
@@ -1119,6 +1120,7 @@ if (MSVC)
 #    )
 elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
   set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
+    _GLIBCXX_USE_CXX11_ABI=0
     $<$<CONFIG:Release>:_FORTIFY_SOURCE=2>
   )
 endif()
@@ -1147,6 +1149,7 @@ link_directories(
 # =================================== Link targets and dependencies ====================================
 if(CLDNN__INCLUDE_CORE)
   add_subdirectory(src)
+  add_subdirectory(api_test_builds)
 endif()
 if(CLDNN__INCLUDE_EXAMPLES)
   add_subdirectory(examples)
@@ -1160,6 +1163,7 @@ endif()
 if(CLDNN__INCLUDE_COST_MODEL)
   add_subdirectory(cost_model)
 endif()
+add_subdirectory(docs)
 
 # ======================================================================================================
 # ======================================================================================================

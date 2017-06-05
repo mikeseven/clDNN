@@ -15,7 +15,8 @@
 */
 
 #include "common/common_tools.h"
-#include "api/memory.hpp"
+#include "neural_memory.h"
+#include "api/CPP/memory.hpp"
 
 #include <boost/filesystem.hpp>
 #include <boost/lexical_cast.hpp>
@@ -81,7 +82,7 @@ namespace
     };
 }
 
-// ADL-enabled parser / validators for some command-line options.
+//// ADL-enabled parser / validators for some command-line options.
 namespace cldnn
 {
     /// int type (to properly order overloads).
@@ -108,6 +109,8 @@ namespace cldnn
             throw bpo::invalid_option_value(value);
     }
 
+namespace backward_comp
+{
     /// ADL-accessible validation/parsing route for cldnn::neural_memory::format::type enum.
     ///
     /// This function is specific to examples main command-line parser. Please do not move it to any
@@ -120,7 +123,7 @@ namespace cldnn
     /// @param values           Input strings representing tokens with values for specific outVar variable.
     ///
     /// @exception boost::program_options::validation_error Parsing/validation failed on value of an option.
-    void validate(boost::any& outVar, const std::vector<std::string>& values, cldnn::neural_memory::format::type*, int)
+    void validate(boost::any& outVar, const std::vector<std::string>& values, cldnn::backward_comp::neural_memory::format::type*, int)
     {
         namespace bpo = boost::program_options;
 
@@ -131,7 +134,7 @@ namespace cldnn
             std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
 
         // Underlying type of cldnn::neural_memory::format::type.
-        using format_ut = std::underlying_type_t<cldnn::neural_memory::format::type>;
+        using format_ut = std::underlying_type_t<backward_comp::neural_memory::format::type>;
         // Type used for conversion/lexical_cast for cldnn::neural_memory::format::type (to avoid problems with char types
         // in lexical_cast).
         using format_pt = std::common_type_t<format_ut, unsigned>;
@@ -139,7 +142,7 @@ namespace cldnn
         {
             try
             {
-                outVar = boost::any(static_cast<cldnn::neural_memory::format::type>(
+                outVar = boost::any(static_cast<backward_comp::neural_memory::format::type>(
                     boost::numeric_cast<format_ut>(boost::lexical_cast<format_pt>(value))));
             }
             catch (...)
@@ -150,6 +153,7 @@ namespace cldnn
         else
             throw bpo::invalid_option_value(value);
     }
+} //namespace backward_comp
 } // namespace cldnn
 
   /// Prepares command-line options for current application.
@@ -174,14 +178,14 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
             "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, microbench.")
-        ("run_single_layer", bpo::value<std::string>()->value_name("<layer_name>"),
-            "Runs only a specified layer from topology")
+        ("run_until_primitive", bpo::value<std::string>()->value_name("<primitive_name>"),
+            "Runs topology until specified primitive.")
         ("engine", bpo::value<cldnn::engine_types>()->value_name("<eng-type>")->default_value(cldnn::engine_types::ocl, "gpu"),
             "Type of an engine used for classification.\nIt can be one of:\n  \treference, gpu.")
         ("dump_hidden_layers", bpo::bool_switch(),
             "Dump results from hidden layers of network to files.")
         ("dump_layer", bpo::value<std::string>()->value_name("<layer_name>"),
-            "Dump results of specified network layer to files.")
+            "Dump results of specified network layer (or weights of the layer <name>_weights.nnd) to files.")
         ("dump_batch", bpo::value<std::uint32_t>()->value_name("<batch-id>"),
             "Dump results only for this specified batch.")
         ("dump_feature", bpo::value<std::uint32_t>()->value_name("<feature-id>"),
@@ -193,8 +197,6 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("use_half", bpo::bool_switch(),
             "Uses half precision floating point numbers (FP16, halfs) instead of single precision ones (float) in "
             "computations of selected model.")
-        ("use_bfyx", bpo::bool_switch(),
-            "Force use bfyx format for batch > 1 (only weights optimizer and alexnet are currently affected by this parameter).")
         ("meaningful_names", bpo::bool_switch(),
             "Use kernels' names derived from primitives' ids for easier identification while profiling.\n"
             "Note: this may disable caching and significantly increase compilation time as well as binary size!")
@@ -203,7 +205,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("print_type", bpo::value<std::uint32_t>()->value_name("<print_type>")->default_value(0),
             "0 = Verbose (default)\n"
             "1 = only print performance results\n"
-            "2 = only print wrong/correct classification - used for broad correctness testing.")
+            "2 = print topology primtives descritpion, print wrong/correct classification - used for broad correctness testing.")
         ("optimize_weights", bpo::bool_switch(),
             "Performs weights convertion to most desirable format for each network layer while building network.")
         ("perf_per_watt", bpo::bool_switch(),
@@ -214,7 +216,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
     // Conversions options.
     bpo::options_description weights_conv_cmdline_options("Weights conversion options");
     weights_conv_cmdline_options.add_options()
-        ("convert", bpo::value<cldnn::neural_memory::format::type>()->value_name("<format-type>"),
+        ("convert", bpo::value<cldnn::backward_comp::neural_memory::format::type>()->value_name("<format-type>"),
             "Convert weights of a neural network to given format (<format-type> represents numeric value of "
             "cldnn::neural_memory::format enum).")
         ("convert_filter", bpo::value<std::string>()->value_name("<filter>"),
@@ -281,7 +283,7 @@ int main(int argc, char* argv[])
     extern void alexnet(const execution_params &ep);
     extern void vgg16(const execution_params &ep);
     extern void googlenet_v1(const execution_params &ep);
-    extern void convert_weights(cldnn::neural_memory::format::type, std::string);
+    extern void convert_weights(cldnn::data_types dt, cldnn::format::type format, std::string);
 
 
     set_executable_info(argc, argv); // Must be set before using get_executable_info().
@@ -329,7 +331,11 @@ int main(int argc, char* argv[])
             auto convert_filter = parsed_args.count("convert_filter")
                 ? parsed_args["convert_filter"].as<std::string>()
                 : "";
-            convert_weights(parsed_args["convert"].as<cldnn::neural_memory::format::type>(), convert_filter);
+            auto format = parsed_args["convert"].as<cldnn::backward_comp::neural_memory::format::type>();
+            convert_weights(
+                cldnn::backward_comp::neural_memory::to_data_type(format),
+                cldnn::backward_comp::neural_memory::to_tensor_format(format),
+                convert_filter);
             return 0;
         }
 
@@ -349,30 +355,34 @@ int main(int argc, char* argv[])
             // Determine weights directory (either based on executable directory - if not specified, or
             // relative to current working directory or absolute - if specified).
             auto weights_dir = std::string(); 
-            if (parsed_args.count("weights"))
-                weights_dir = bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string();
-            else
-            {
-                weights_dir = join_path(exec_info->dir(), parsed_args["model"].as<std::string>());
-                if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
-                    weights_dir = join_path(exec_info->dir(), "weights");
-            }
-
-            // Validate weights directory.
-            if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
+            
+            if (!microbench) // don't need weights for microbench.
             {
                 if (parsed_args.count("weights"))
-                {
-                    std::cerr << "ERROR: specified network weights path (\"" << weights_dir
-                        << "\") does not exist or does not point to directory (--weights option invald)!!!" << std::endl;
-                }
+                    weights_dir = bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string();
                 else
                 {
-                    std::cerr << "ERROR: could not find default network weights path for selected topology. Neither '"
-                        << parsed_args["model"].as<std::string>() << "' nor 'weights' folder exist!!!" << std::endl;
+                    weights_dir = join_path(exec_info->dir(), parsed_args["model"].as<std::string>());
+                    if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
+                        weights_dir = join_path(exec_info->dir(), "weights");
                 }
 
-                return 1;
+                // Validate weights directory.
+                if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
+                {
+                    if (parsed_args.count("weights"))
+                    {
+                        std::cerr << "ERROR: specified network weights path (\"" << weights_dir
+                            << "\") does not exist or does not point to directory (--weights option invald)!!!" << std::endl;
+                    }
+                    else
+                    {
+                        std::cerr << "ERROR: could not find default network weights path for selected topology. Neither '"
+                            << parsed_args["model"].as<std::string>() << "' nor 'weights' folder exist!!!" << std::endl;
+                    }
+
+                    return 1;
+                }
             }
 
             ep.input_dir = input_dir;
@@ -388,12 +398,17 @@ int main(int argc, char* argv[])
         if (parsed_args.count("dump_layer"))
         {
             dump_layer = parsed_args["dump_layer"].as<std::string>();
+            if (dump_layer.find("_weights.nnd") != std::string::npos)
+                ep.dump_weights = true;
+            else
+                ep.dump_weights = false;
         }
 
-        std::string run_single_layer = "";
-        if (parsed_args.count("run_single_layer"))
+
+        std::string run_until_primitive = "";
+        if (parsed_args.count("run_until_primitive"))
         {
-            run_single_layer = parsed_args["run_single_layer"].as<std::string>();
+            run_until_primitive = parsed_args["run_until_primitive"].as<std::string>();
         }
         ep.topology_name = parsed_args["model"].as<std::string>();
         ep.batch = parsed_args["batch"].as<std::uint32_t>();
@@ -401,17 +416,7 @@ int main(int argc, char* argv[])
         ep.profiling = parsed_args["profiling"].as<bool>();
         ep.optimize_weights = parsed_args["optimize_weights"].as<bool>();
         ep.use_half = parsed_args["use_half"].as<bool>();
-        ep.use_bfyx = parsed_args["use_bfyx"].as<bool>();
-
-        if (!ep.use_half)
-            ep.use_bfyx = true;
-        else
-        {
-            if (ep.batch == 1)
-                ep.use_bfyx = true;
-        }
-
-        ep.run_single_layer = run_single_layer;
+        ep.run_until_primitive_name = run_until_primitive;
         ep.dump_hidden_layers = parsed_args["dump_hidden_layers"].as<bool>();
         ep.dump_layer_name = dump_layer;
         ep.dump_single_batch = parsed_args.count("dump_batch") != 0;

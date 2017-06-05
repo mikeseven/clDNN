@@ -16,12 +16,16 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
+#include "api/CPP/profiling.hpp"
+#include "api/CPP/primitive.hpp"
+
 #include "memory_gpu.h"
 #include "kernels_cache.h"
-#include "api/profiling.hpp"
+#include "event_impl.h"
+
+#include <cmath>
 #include <iostream>
 #include <sstream>
-#include "event_impl.h"
 
 namespace neural { namespace gpu {
 
@@ -62,7 +66,10 @@ template<>
 inline std::string to_code_string<float>(float val) {
     // 64 chars should be enought to store: "-0x0.123456p-123f /*-0.123456e-123*/"
     char buffer[64] = "";
-    std::snprintf(buffer, sizeof(buffer), "%.6af /*%.4g*/", double(val), double(val));
+    if (std::isinf(val))
+        std::snprintf(buffer, sizeof(buffer), "%sINFINITY", std::signbit(val) ? "-" : "");
+    else
+        std::snprintf(buffer, sizeof(buffer), "%.6af /*%.4g*/", double(val), double(val));
     return buffer;
 }
 
@@ -70,9 +77,36 @@ template<>
 inline std::string to_code_string<double>(double val) {
     // 64 chars should be enought to store: "-0x0.1234567890123p-1234 /*-0.1234567890123e-1074*/"
     char buffer[64] = "";
-    std::snprintf(buffer, sizeof(buffer), "%.13a /*%.4g*/", val, val);
+    if (std::isinf(val))
+        std::snprintf(buffer, sizeof(buffer), "%sINFINITY", std::signbit(val) ? "-" : "");
+    else
+        std::snprintf(buffer, sizeof(buffer), "%.13a /*%.4g*/", val, val);
     return buffer;
 }
+
+//returns reverse(t.sizes(fmt))
+//first value of the returned array is size within the most-changing dimension (e.g. for bfyx returns { t(x), t(y), t(f), t(b) }
+std::vector<uint32_t> get_tensor_array(cldnn::format fmt, const cldnn::tensor& t);
+
+//returns reduce_left(get_tensor_array(layout), operator *)
+//each value in the returned vector tells how many elements one needs to skip to increment position along specified dimension
+//first value is related to incrementation along the most-chanining dimension within buffer and is always equal to 1
+//e.g.: for bfyx returns { 1, t(x), t(x)*t(y), t(x)*t(y)*t(f) }
+std::vector<uint32_t> get_accumulated_tensor_array(cldnn::format fmt, const cldnn::tensor& t);
+
+//returns get_tensor_array(layout.format, layout.size)
+std::vector<uint32_t> get_sizes_array(cldnn::layout const& layout);
+
+//returns get_tensor_array(layout.format, layout.get_buffer_size())
+std::vector<uint32_t> get_buffer_sizes_array(cldnn::layout const& layout);
+
+//returns get_accumulated_tensor_array(layout.format, layout.size)
+std::vector<uint32_t> get_accumulated_sizes_array(cldnn::layout const& layout);
+
+//returns get_accumulated_tensor_array(layout.format, layout.get_buffer_size())
+std::vector<uint32_t> get_accumulated_buffer_sizes_array(cldnn::layout const& layout);
+
+std::string get_offsets_string(size_t dimensions, const cldnn::tensor &sizes);
 
 // TODO refactor jit_constant, make_jit_constant, etc...
 class jit_constant {
@@ -196,8 +230,6 @@ inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name,
     return std::static_pointer_cast<jit_constant>(std::make_shared<memory_jit_constant>(name, value));
 }
 
-
-
 class memories_jit_constant : public vector_jit_constant {
     const std::vector<cldnn::memory> _mem;
 
@@ -231,6 +263,31 @@ public:
 
 inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const std::vector<cldnn::memory> value) {
     return std::static_pointer_cast<jit_constant>(std::make_shared<memories_jit_constant>(name, value));
+}
+
+class array_jit_constant : public jit_constant
+{
+    const std::vector<uint32_t> _array;
+
+public:
+    array_jit_constant(const std::string& name, const std::vector<uint32_t> array)
+        : jit_constant(name), _array(std::move(array)) {}
+
+    kernels_cache::jit_definitions get_definitions() const override {
+        std::stringstream ss;
+        ss << "(uint[]){";
+        for (size_t i = 0; i < _array.size(); ++i)
+            ss << _array[i] << (i + 1 < _array.size() ? ", " : "");
+        ss << "}";
+
+        return kernels_cache::jit_definitions{
+            { _name, ss.str() }
+        };
+    }
+};
+
+inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const std::vector<uint32_t> array) {
+    return std::static_pointer_cast<jit_constant>(std::make_shared<array_jit_constant>(name, std::move(array)));
 }
 
 class jit_constants {
@@ -376,28 +433,11 @@ public:
             events.emplace_back(dependency->get());
         }
 
-        if (context()->get_configuration().enable_profiling) {
-            instrumentation::timer<> pre_enqueue_timer;
-            auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
-            setArgs<0>(clkernel, std::forward<Args>(args)...);
-            auto pre_enqueue_time = pre_enqueue_timer.uptime();
-            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
-            end_event.wait();
-            context()->report_profiling({ _kernel_id,
-                {
-                    {"pre-enqueue", std::make_shared<instrumentation::profiling_period_basic>(pre_enqueue_time)},
-                    {"submission",  std::make_shared<profiling_period_event>(end_event, CL_PROFILING_COMMAND_QUEUED, CL_PROFILING_COMMAND_SUBMIT)},
-                    {"starting",    std::make_shared<profiling_period_event>(end_event, CL_PROFILING_COMMAND_SUBMIT, CL_PROFILING_COMMAND_START)},
-                    {"executing",   std::make_shared<profiling_period_event>(end_event, CL_PROFILING_COMMAND_START,  CL_PROFILING_COMMAND_END)}
-                } });
-        }
-        else {
-            auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
-            setArgs<0>(clkernel, std::forward<Args>(args)...);
-            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
-        }
+        auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
+        setArgs<0>(clkernel, std::forward<Args>(args)...);
+        context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
 
-		return { new cldnn::event_impl(end_event), false };
+        return{ new cldnn::event_impl(end_event), false };
     }
 };
 

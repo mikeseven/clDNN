@@ -15,46 +15,43 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "api/topology.hpp"
-#include "api/primitives/input_layout.hpp"
 #include "network_impl.h"
+
+#include "api/CPP/input_layout.hpp"
+
 #include "engine_impl.h"
 #include "event_impl.h"
-#include "network_builder.h"
-#include "primitive_type.h"
-#include "input_layout_arg.h"
-#include <algorithm>
+#include "program_impl.h"
+
+#include "primitive_inst.h"
+#include "input_layout_inst.h"
+
 #include "gpu/kernel.h"
+
+#include <algorithm>
 
 namespace cldnn
 {
 const char warmup_kernel_name[] = "warm_up_gpu";
 
-network_impl::network_impl(refcounted_obj_ptr<engine_impl> engine, refcounted_obj_ptr<topology_impl> topology, const std::vector<primitive_id>& outputs)
-    : _engine(engine)
-    , _topology(topology)
-    , _output_ids(outputs)
+network_impl::network_impl(program_impl::cptr program)
+    : _program(program)
 {
-    for (auto& output : _output_ids)
-    {
-        auto p = get_primitive(output);
-        assert(p);
-    }
+    for (auto const& node : _program->get_nodes())
+        allocate_primitive_instance(*node);
 
-    for (auto& p : _primitives)
-    {
-        if (p.second->type() == input_layout::type_id())
-        {
-            _input_names.insert({ p.second->id(), false });
-        }
-    }
 
     //pre-compile program and warm-up
-    auto context = _engine->get_context();
+    auto context = _program->get_engine()->get_context();
     neural::gpu::kernel warmup_kernel(context, warmup_kernel_name);
     cl::Buffer out(context->context(), CL_MEM_WRITE_ONLY, 1);
     warmup_kernel.run<cl_int, cl_int, cl_int, cl::Buffer>({ 1024, 8 }, {}, 0, 111, 7, out);
     context->queue().finish();
+}
+
+network_impl::network_impl(engine_impl::ptr engine, const topology_impl& topo, const build_options& options)
+    : network_impl(program_impl::cptr(engine->build_program(topo, options), false))
+{
 }
 
 void network_impl::reset_execution(bool wait)
@@ -82,60 +79,69 @@ void network_impl::reset_execution(bool wait)
 
 void network_impl::set_input_data(const primitive_id& id, memory_impl* data)
 {
-    auto& primitive = _primitives.at(id);
-    if (primitive->type() != input_layout::type_id()) throw std::invalid_argument("primitive " + id + " is not an input");
+    std::shared_ptr<primitive_inst> primitive_inst;
+    try {
+        primitive_inst = _primitives.at(id);
+    }
+    catch (...)
+    {
+        throw std::runtime_error("topology doesn't contain prmitive:" + id);
+    }
+    if (primitive_inst->type() != input_layout::type_id())
+        throw std::invalid_argument("primitive " + id + " is not an input");
 
-    auto input_c = std::static_pointer_cast<const input_layout_arg>(primitive);
-    auto input = std::const_pointer_cast<input_layout_arg>(input_c);
+    auto input = std::static_pointer_cast<input_layout_inst>(primitive_inst);
 
     //Wait for previous execution completion
     reset_execution(true);
     input->set_data(data);
-    _input_names[input->id()] = true;
+}
+
+std::string network_impl::get_primitive_info(const primitive_id& id) const
+{    
+    const auto& node = _program->get_node(id);
+    return node.type()->to_string(node);
 }
 
 void network_impl::execute(const std::vector<refcounted_obj_ptr<event_impl>>& events)
 {
-    auto all_inputs_are_set = std::all_of(
-                                    std::begin(_input_names),
-                                    std::end(_input_names),
-                                    [](decltype(*std::begin(_input_names)) p)
-                                    {
-                                        return p.second;
-                                    });
-    if (!all_inputs_are_set) throw std::runtime_error("not all inputs are set");
-
     //Wait for previous execution completion
     reset_execution(false);
 
-    for(auto& output_id : _output_ids)
+    for(auto& output : _outputs)
     {
-        auto primitive = get_primitive(output_id);
-        auto output_event = execute_primitive(primitive, events);
-    }
-}
-
-std::shared_ptr<const primitive_arg> network_impl::get_primitive(const primitive_id& id)
-{
-    auto it = _primitives.find(id);
-    if (it != _primitives.end())
-    {
-        return it->second;
+        auto output_event = execute_primitive(output, events);
     }
 
-    auto& desc = _topology->at(id)->primitive_desc;
-    auto primitive = desc->type()->create_arg(*this, desc);
-    return _primitives.insert({ id, primitive }).first->second;
+    for (auto& prim : _primitives)
+        prim.second->reset_output_change();
 }
 
-std::vector<std::shared_ptr<const primitive_arg>> network_impl::get_primitives(const std::vector<primitive_id>& ids)
+std::vector<primitive_id> network_impl::get_output_ids() const
 {
-    std::vector<std::shared_ptr<const primitive_arg>> result(ids.size());
+    std::vector<primitive_id> ret;
+    ret.reserve(_outputs.size());
+    for (auto const& output : _outputs)
+        ret.push_back(output->id());
+    return ret;
+}
+
+std::shared_ptr<primitive_inst> network_impl::get_primitive(const primitive_id& id)
+{
+    if (!_primitives.count(id))
+        allocate_primitive_instance(_program->get_node(id));
+
+    return _primitives.at(id);
+}
+
+std::vector<std::shared_ptr<primitive_inst>> network_impl::get_primitives(const std::vector<primitive_id>& ids)
+{
+    std::vector<std::shared_ptr<primitive_inst>> result(ids.size());
     std::transform(std::begin(ids), std::end(ids), std::begin(result), [&](const primitive_id& id) { return get_primitive(id); });
     return result;
 }
 
-refcounted_obj_ptr<event_impl> network_impl::execute_primitive(const std::shared_ptr<const primitive_arg>& primitive, const std::vector<refcounted_obj_ptr<event_impl>>& events)
+refcounted_obj_ptr<event_impl> network_impl::execute_primitive(const std::shared_ptr<primitive_inst>& primitive, const std::vector<refcounted_obj_ptr<event_impl>>& events)
 {
     auto id = primitive->id();
     auto it = _events.find(id);
@@ -144,6 +150,19 @@ refcounted_obj_ptr<event_impl> network_impl::execute_primitive(const std::shared
         return it->second;
     }
     return _events.insert({ id, primitive->execute(events) }).first->second;
+}
+
+void network_impl::allocate_primitive_instance(program_node const& node)
+{
+    if (_primitives.count(node.id()))
+        return;
+
+    auto inst = node.type()->create_instance(*this, node);
+    _primitives[node.id()] = inst;
+    if (node.is_input())
+        _inputs.push_back(inst);
+    if (node.is_output())
+        _outputs.push_back(inst);
 }
 
 }

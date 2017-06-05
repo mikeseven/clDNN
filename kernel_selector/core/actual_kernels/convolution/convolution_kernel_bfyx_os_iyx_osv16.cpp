@@ -15,7 +15,7 @@
 */
 
 #include "convolution_kernel_bfyx_os_iyx_osv16.h"
-#include "api/cldnn_defs.h"
+#include "api/CPP/cldnn_defs.h"
 
 namespace KernelSelctor 
 {
@@ -54,9 +54,9 @@ namespace KernelSelctor
         std::size_t input_block_req_height = (output_block_height - 1) * stride.y + filter_size.y;
 
         // Required number of elements in X dimension rounded to nearest >= read chunk size.
-        std::size_t input_block_read_width = std::max(round_up_to(input_block_req_width, read_chunk_size), min_read_size);
+        std::size_t input_block_read_width = std::max(cldnn::round_up_to(input_block_req_width, read_chunk_size), min_read_size);
         // Number of sub-group-sized vectors of unit type needed to store input block.
-        std::size_t input_block_array_size = ceil_div(input_block_req_height * input_block_read_width, sub_group_size);
+        std::size_t input_block_array_size = cldnn::ceil_div(input_block_req_height * input_block_read_width, sub_group_size);
 
         return std::make_pair(input_block_array_size, input_block_read_width);
     }
@@ -71,7 +71,7 @@ namespace KernelSelctor
         constexpr uint32_t sub_group_size = 16;
 
         const auto of_maps = arg.outDims.z;
-        const uint32_t of_threads_per_batch = round_up_to(of_maps, sub_group_size);
+        const uint32_t of_threads_per_batch = cldnn::round_up_to(of_maps, sub_group_size);
         run_info.leftovers = of_threads_per_batch - of_maps;
 
         const auto cp = arg.convParams;
@@ -144,8 +144,8 @@ namespace KernelSelctor
         run_info.input_block_array_size = input_block_dims.first;
         run_info.input_block_width = input_block_dims.second;
 
-        run_info.gws0 = ceil_div(arg.outDims.x, run_info.block_width);
-        run_info.gws1 = ceil_div(arg.outDims.y, run_info.block_height);
+        run_info.gws0 = cldnn::ceil_div(arg.outDims.x, run_info.block_width);
+        run_info.gws1 = cldnn::ceil_div(arg.outDims.y, run_info.block_height);
         run_info.gws2 = of_threads_per_batch * arg.outDims.w;
 
         run_info.lws0 = 1;

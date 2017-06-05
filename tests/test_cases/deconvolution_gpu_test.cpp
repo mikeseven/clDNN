@@ -17,14 +17,15 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <gtest/gtest.h>
-#include <api/memory.hpp>
-#include <api/primitives/input_layout.hpp>
-#include "api/primitives/deconvolution.hpp"
-#include <api/primitives/data.hpp>
-#include <api/topology.hpp>
-#include <api/network.hpp>
-#include <api/engine.hpp>
+#include "api/CPP/memory.hpp"
+#include <api/CPP/input_layout.hpp>
+#include "api/CPP/deconvolution.hpp"
+#include <api/CPP/data.hpp>
+#include <api/CPP/topology.hpp>
+#include <api/CPP/network.hpp>
+#include <api/CPP/engine.hpp>
 #include "test_utils/test_utils.h"
+#include "test_utils/float16.h"
 
 
 using namespace cldnn;
@@ -53,9 +54,9 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_nopad) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 1 } } });
-    auto weights = memory::allocate(engine, { data_types::f32,{ format::yxio,{ 2, 2, 1, 1 } } });
-    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 2, 2 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 2, 2 } });
+    auto biases = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f });
     set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f });
@@ -65,7 +66,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_nopad) {
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
-        deconvolution("deconv", "input", { "weights" }, { "biases" }, { format::yx,{ 0,0 } }, { format::yx,{ 1,1 } })
+        deconvolution("deconv", "input", { "weights" }, { "biases" }, { 1,1,1,1 })
     );
 
     network network(engine, topology);
@@ -91,8 +92,67 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_nopad) {
     }
 }
 
-TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_nopad_oiyx) {
+
+TEST(deconvolution_f32_fw_gpu, no_bias_basic_wsiz2x2_in2x2x1x1_nopad) {
     //  Filter : 2x2
+    //  Input  : 2x2
+    //  Output : 3x3
+    //
+    //  Input:
+    //  8  0.5
+    //  6  9
+    //
+    //  Filter
+    //  -2   0.5
+    //   3.5 1.5
+    //
+    //  no bias
+    //  
+    //
+    //  Output:
+    //  -14    5     2.25 
+    //   18    0.75  7.25   
+    //   23    42.5  15.5   
+
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, 1, 2, 2 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, 1, 2, 2 } });
+
+    set_values(input, { 8.f, 0.5f, 6.f, 9.f });
+    set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f });
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        deconvolution("deconv", "input", { "weights" })
+    );
+
+    network network(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "deconv");
+
+    auto output_prim = outputs.begin()->second.get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+
+    std::vector<float> expected_output_vec = {
+        -16.f, 3.f, 0.25f,
+        16.f, -1.25f, 5.25f,
+        21.f, 40.5f, 13.5f
+    };
+
+    for (unsigned int i = 0; i < expected_output_vec.size(); i++)
+    {
+        EXPECT_FLOAT_EQ(expected_output_vec[i], output_ptr[i]);
+    }
+}
+
+
+TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_nopad_bfyx) {    //  Filter : 2x2
     //  Input  : 2x2
     //  Output : 3x3
     //
@@ -114,9 +174,9 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_nopad_oiyx) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 1 } } });
-    auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
-    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 2, 2 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 2, 2 } });
+    auto biases = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f });
     set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f });
@@ -126,7 +186,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_nopad_oiyx) {
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
-        deconvolution("deconv", "input", { "weights" }, { "biases" }, { format::yx,{ 0,0 } }, { format::yx,{ 1,1 } })
+        deconvolution("deconv", "input", { "weights" }, { "biases" }, { 1,1,1,1 })
     );
 
     network network(engine, topology);
@@ -174,9 +234,9 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_pad1) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 1 } } });
-    auto weights = memory::allocate(engine, { data_types::f32,{ format::yxio,{ 2, 2, 1, 1 } } });
-    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 2, 2 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 2, 2 } });
+    auto biases = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f });
     set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f });
@@ -186,7 +246,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_pad1) {
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
-        deconvolution("deconv", "input", { "weights" }, { "biases" }, { format::yx,{ 1,1 } }, { format::yx,{ 1,1 } })
+        deconvolution("deconv", "input", { "weights" }, { "biases" }, { 1, 1, 1, 1 }, { 0, 0, -1, -1 })
     );
 
     network network(engine, topology);
@@ -225,9 +285,9 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_stride2_nopad) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 1 } } });
-    auto weights = memory::allocate(engine, { data_types::f32,{ format::yxio,{ 2, 2, 1, 1 } } });
-    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 2, 2 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 2, 2 } });
+    auto biases = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f });
     set_values(weights, { -2.0f, 0.5f, 3.5f, 1.5f });
@@ -237,7 +297,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_stride2_nopad) {
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
-        deconvolution("deconv", "input", { "weights" }, { "biases" }, { format::yx,{ 0,0 } }, { format::yx,{ 2,2 } })
+        deconvolution("deconv", "input", { "weights" }, { "biases" }, { 1,1,2,2 })
     );
 
     network network(engine, topology);
@@ -290,9 +350,9 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_stride4_pad2) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 1 } } });
-    auto weights = memory::allocate(engine, { data_types::f32,{ format::yxio,{ 3, 3, 1, 1 } } });
-    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 2, 2 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 3, 3 } });
+    auto biases = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f });
     set_values(weights, { -2.0f, 0.5f, 1.f, 3.5f, 1.5f, 2.f, 3.f, 4.f, 5.f });
@@ -302,7 +362,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x1_stride4_pad2) {
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
-        deconvolution("deconv", "input", { "weights" }, { "biases" }, { format::yx,{ 2,2 } }, { format::yx,{ 4,4 } })
+        deconvolution("deconv", "input", { "weights" }, { "biases" }, { 1, 1, 4, 4 }, { 0, 0, -2, -2 })
     );
 
     network network(engine, topology);
@@ -352,9 +412,9 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_stride2_pad1) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 2 } } });
-    auto weights = memory::allocate(engine, { data_types::f32,{ format::yxio,{ 2, 2, 1, 1 } } });
-    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 1, 2, 2 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 2, 2 } });
+    auto biases = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 1, 1 } });
 
     set_values(input, { 8.f, 1.f, 0.5f, 3.f, 6.f, 2.f, 9.f, 4.f });
     set_values(weights, { -2.f, 2.f, 7.f, -0.5f });
@@ -364,7 +424,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_stride2_pad1) {
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
-        deconvolution("deconv", "input", { "weights" }, { "biases" }, { format::yx,{ 1,1 } }, { format::yx,{ 2,2 } })
+        deconvolution("deconv", "input", { "weights" }, { "biases" }, { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
     );
 
     network network(engine, topology);
@@ -417,9 +477,9 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2x2_in2x2x1x1_stride2_pad1) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::yxfb,{ 2, 2, 1, 1 } } });
-    auto weights = memory::allocate(engine, { data_types::f32,{ format::yxio,{ 2, 2, 1, 2 } } });
-    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 2 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 2, 2 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::yxfb, { 2, 1, 2, 2 } });
+    auto biases = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 2, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f });
     set_values(weights, { -2.f, -2.f, 2.f, 2.f, 7.f, 7.f, -0.5f, -0.5f });
@@ -429,7 +489,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2x2_in2x2x1x1_stride2_pad1) {
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
-        deconvolution("deconv", "input", { "weights" }, { "biases" }, { format::yx,{ 1,1 } }, { format::yx,{ 2,2 } })
+        deconvolution("deconv", "input", { "weights" }, { "biases" }, { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
     );
 
     network network(engine, topology);
@@ -478,9 +538,9 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_pad1) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 2, 2 } } });
-    auto weights = memory::allocate(engine, { data_types::f32,{ format::oiyx,{ 1, 1, 2, 2 } } });
-    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 1, 2, 2 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 2, 2 } });
+    auto biases = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f, 1.f, 3.f, 2.f, 4.f });
     set_values(weights, { -2.f, 2.f, 7.f, -0.5f });
@@ -490,7 +550,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_pad1) {
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
-        deconvolution("deconv", "input", { "weights" }, { "biases" }, { format::yx,{ 1,1 } }, { format::yx,{ 2,2 } })
+        deconvolution("deconv", "input", { "weights" }, { "biases" }, { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
     );
 
     network network(engine, topology);
@@ -515,7 +575,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_pad1) {
     }
 }
 
-TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_yxio_stride2_pad1) {
+TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_yxfb_stride2_pad1) {
     //  Filter : 2x2
     //  Input  : 2x2x1x2
     //  Output : 2x2x1x2
@@ -539,9 +599,9 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_yxio_stride2_pad1) {
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32,{ format::bfyx,{ 2, 1, 2, 2 } } });
-    auto weights = memory::allocate(engine, { data_types::f32,{ format::yxio,{ 2, 2, 1, 1 } } });
-    auto biases = memory::allocate(engine, { data_types::f32,{ format::x,{ 1 } } });
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 1, 2, 2 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 2, 2 } });
+    auto biases = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 1, 1 } });
 
     set_values(input, { 8.f, 0.5f, 6.f, 9.f, 1.f, 3.f, 2.f, 4.f });
     set_values(weights, { -2.f, 2.f, 7.f, -0.5f });
@@ -551,7 +611,7 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_yxio_stride2_pad1) {
         input_layout("input", input.get_layout()),
         data("weights", weights),
         data("biases", biases),
-        deconvolution("deconv", "input", { "weights" }, { "biases" }, { format::yx,{ 1,1 } }, { format::yx,{ 2,2 } })
+        deconvolution("deconv", "input", { "weights" }, { "biases" }, { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
     );
 
     network network(engine, topology);
@@ -573,5 +633,70 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_yxio_stride2_pad1) {
     for (unsigned int i = 0; i < expected_output_vec.size(); i++)
     {
         EXPECT_FLOAT_EQ(expected_output_vec[i], output_ptr[i]);
+    }
+}
+
+TEST(deconvolution_f16_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_yxfb_stride2_pad1) {
+    //  Filter : 2x2
+    //  Input  : 2x2x1x2
+    //  Output : 2x2x1x2
+    //  Stride : 2x2
+    //  Pad    : 1x1
+    //
+    //  Input:
+    //  8  0.5    1   3
+    //  6  9      2   4
+    //
+    //  Filter
+    //  -2   2
+    //   7  -0.5
+    //
+    //  Bias
+    //  1
+    //
+    //  Output:
+    //  -3    4.5    0.5   22
+    //   13  -17     5    -7
+
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f16, format::bfyx,{ 2, 1, 2, 2 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 2 } });
+    auto biases = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 1, 1 } });
+
+    cldnn::build_options options;
+    options.set_option(cldnn::build_option::optimize_data(true));
+
+    set_values(input, { FLOAT16(8.f), FLOAT16(0.5f), FLOAT16(6.f), FLOAT16(9.f),
+        FLOAT16(1.f), FLOAT16(3.f), FLOAT16(2.f), FLOAT16(4.f) });
+    set_values(weights, { -2.f, 2.f, 7.f, -0.5f});
+    set_values(biases, { 1.0f });
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        deconvolution("deconv", "input", { "weights" }, { "biases" }, { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
+    );
+
+    network network(engine, topology, options);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "deconv");
+
+    auto output_prim = outputs.begin()->second.get_memory();
+
+    auto output_ptr = output_prim.pointer<uint16_t>();
+
+    std::vector<float> expected_output_vec = {
+        -3.f, 4.5f, 13.f, -17.f,
+        .5f, 22.f, 5.f, -7.f
+    };
+
+    for (unsigned int i = 0; i < expected_output_vec.size(); i++)
+    {
+        EXPECT_FLOAT_EQ(expected_output_vec[i], float16_to_float32(output_ptr[i]));
     }
 }

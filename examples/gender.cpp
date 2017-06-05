@@ -18,30 +18,27 @@
 #include "file.h"
 
 #include <string>
-#include <api/primitives/input_layout.hpp>
-#include <api/primitives/reorder.hpp>
-#include <api/primitives/convolution.hpp>
-#include <api/primitives/pooling.hpp>
-#include <api/primitives/fully_connected.hpp>
-#include <api/primitives/softmax.hpp>
+#include <api/CPP/input_layout.hpp>
+#include <api/CPP/reorder.hpp>
+#include <api/CPP/convolution.hpp>
+#include <api/CPP/pooling.hpp>
+#include <api/CPP/fully_connected.hpp>
+#include <api/CPP/softmax.hpp>
 
 using namespace cldnn;
 
 // Building age_gender network with loading weights & biases from file
 // !!! commented layers will be used in the future !!!
-cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, bool use_bfyx)
+cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)
 {
-    input_layout.size = { format::byxf,{ batch_size, 86, 86, 3 } };
+    input_layout.size = { batch_size, 3, 86, 86 };
     auto input = cldnn::input_layout("input", input_layout);
 
-    auto mem_format = use_bfyx ? format::bfyx : format::yxfb;
-
-    // create conversion to yxfb format and subtract mean values
-    tensor reorder_size = input_layout.size.transform(mem_format, 1);
+    // subtract mean values
     auto reordered_input = reorder(
         "reorder",
         input,
-        layout( input_layout.data_type, reorder_size ),
+        layout( input_layout.data_type, input_layout.format, input_layout.size),
         std::vector<float>{ (float)104.0069879317889, (float)116.66876761696767, (float)122.6789143406786 });
 
     auto conv1_weights = file::create({ engine, join_path(weights_dir, "conv1_weights.nnd")});
@@ -51,16 +48,17 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         reordered_input,
         { conv1_weights },
         { conv1_bias },
-        { format::yx, {0,0} },
-        { format::yx, {1,1} },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto pool1 = pooling(
         "pool1",
         conv1,
         pooling_mode::max,
-        { format::yx, {1,1} },  // strd
-        { format::yx, {3,3} }); // kernel
+        { 1,1,3,3 },  // kernel
+        { 1,1,1,1 }); // strd
 
     auto conv2_weights = file::create({ engine, join_path(weights_dir, "conv2_weights.nnd")});
     auto conv2_bias = file::create({ engine, join_path(weights_dir, "conv2_bias.nnd")});
@@ -69,16 +67,17 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         pool1,
         { conv2_weights },
         { conv2_bias },
-        { format::yx, {0,0} },
-        { format::yx, {1,1} },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto pool2 = pooling(
         "pool2",
         conv2,
         pooling_mode::max,
-        { format::yx, {2,2} },  // strd
-        { format::yx, {3,3} }); // kernel
+        { 1,1,3,3 },  // kernel
+        { 1,1,2,2 }); // strd
 
     auto conv3_weights = file::create({ engine, join_path(weights_dir, "conv3_weights.nnd")});
     auto conv3_bias = file::create({ engine, join_path(weights_dir, "conv3_bias.nnd")});
@@ -87,16 +86,17 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
         pool2,
         { conv3_weights },
         { conv3_bias },
-        { format::yx, {0,0} },
-        { format::yx, {1,1} },
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+		{ 1,1,1,1 },
         true);
 
     auto pool3 = pooling(
         "pool3",
         conv3,
         pooling_mode::max,
-        { format::yx, {2,2} },  // strd
-        { format::yx, {3,3} }); // kernel
+        { 1,1,3,3 },  // kernel
+        { 1,1,2,2 }); // strd
 
     auto fc1_g_weights = file::create({ engine, join_path(weights_dir, "fc1_g_weights.nnd")});
     auto fc1_g_bias = file::create({ engine, join_path(weights_dir, "fc1_g_bias.nnd")});

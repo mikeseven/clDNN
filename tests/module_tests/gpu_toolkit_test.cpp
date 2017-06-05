@@ -18,7 +18,7 @@
 
 
 #include <gtest/gtest.h>
-#include "api/engine.hpp"
+#include "api/CPP/engine.hpp"
 
 using namespace cldnn;
 

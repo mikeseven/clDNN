@@ -1,16 +1,34 @@
+// Copyright (c) 2016-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+
 #if RELU
-    #define ACTIVATION(output, input) output = max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f);
+    #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
+    input : -NEGATIVE_SLOPE) : (max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f));
 #else
     #define ACTIVATION(output, input) output = input;
 #endif
 
 __attribute__((reqd_work_group_size(LOCAL_WORK_GROUP_SIZE, 1, 1)))
 KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
-	const __global float* input,
-	__global float* output,
-	const __global float* filter,
-	const __global float* bias,
-	uint split_idx)
+    const __global float* input,
+    __global float* output,
+    const __global float* filter,
+#if BIAS_TERM
+    const __global float* bias,
+#endif
+    uint split_idx)
 {
 #if USE_VECTOR == 8
         #define VECTOR_FLOAT float8
@@ -34,11 +52,11 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
 #endif
 
         const uint batch_num = INPUT_BATCH_NUM;
-        const uint linear_id_xy = get_group_id(1) * X_PER_WORK_ITEM + OUTPUT_SIZE_X * get_group_id(2);
-        uint global_id = ((get_group_id(0) * LOCAL_WORK_GROUP_SIZE) / batch_num) * batch_num + ( linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM) * batch_num; 
+        const uint linear_id_xy = (uint)get_group_id(1) * X_PER_WORK_ITEM + OUTPUT_SIZE_X * (uint)get_group_id(2);
+        uint global_id = (((uint)get_group_id(0) * LOCAL_WORK_GROUP_SIZE) / batch_num) * batch_num + ( linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM) * batch_num;
 
-        const uint out_batch_id = get_local_id(0) % INPUT_BATCH_NUM;
-        const uint out_x = get_group_id(1) * X_PER_WORK_ITEM;
+        const uint out_batch_id = (uint)get_local_id(0) % INPUT_BATCH_NUM;
+        const uint out_x = (uint)get_group_id(1) * X_PER_WORK_ITEM;
         const uint out_y = get_group_id(2);
 
         uint out_id[X_PER_WORK_ITEM];
@@ -49,10 +67,10 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
 
         const uint ofm_offset = (global_id * (OFM_PER_WORK_ITEM / batch_num)) % FILTER_OUTPUT_FEATURE_NUM;
 
-        bool finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_OFFSET_SIZE_X 
-                   || out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_OFFSET_SIZE_Y;
+        bool finish = out_x >= OUTPUT_LIMIT_SIZE_X || out_x < OUTPUT_PADDING_LOWER_SIZE_X
+                   || out_y >= OUTPUT_LIMIT_SIZE_Y || out_y < OUTPUT_PADDING_LOWER_SIZE_Y;
 
-        const uint sub_group_id = get_local_id(0) % INPUT_BATCH_NUM;
+        const uint sub_group_id = (uint)get_local_id(0) % INPUT_BATCH_NUM;
 
         VECTOR_FLOAT _data[X_PER_WORK_ITEM];
         for(uint i = 0; i < X_PER_WORK_ITEM; i++)
@@ -67,15 +85,15 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
 
             for (uint i = 0; i < FILTER_SIZE_Y; i++)
             {
-                int input_offset_y = y + i;
+                int input_offset_y = y + i * DILATION_SIZE_Y;
                 bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
 
                 if(!zero_y)
                 {
                     for (uint j = 0; j < FILTER_SIZE_X; j++)
                     {
-                        int input_offset_x = x + j;
-                    
+                        int input_offset_x = x + j * DILATION_SIZE_X;
+
                         bool zero_x[X_PER_WORK_ITEM];
                         for(int z = 0; z < X_PER_WORK_ITEM; z++)
                         {
@@ -114,7 +132,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
                             {
                                 _tmp[a] = mad(_input[a].s0, _filter, _tmp[a]);
                             }
-                            
+
                             _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
                             for(uint a = 0; a < X_PER_WORK_ITEM; a++)
                             {
@@ -179,14 +197,15 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
                                 _data[a] += _tmp[a];
                         }
                     }
-                } 
+                }
             }
         }
-
+#if BIAS_TERM
         for(uint a = 0; a < X_PER_WORK_ITEM; a++)
         {
             _data[a] += BLOCK_READ(bias + ofm_offset);
         }
+#endif
         for(uint a = 0; a < X_PER_WORK_ITEM; a++)
         {
             ACTIVATION(_data[a], _data[a]);
@@ -195,7 +214,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
         BLOCK_WRITE(output + out_id[0], _data[0]);
         for(uint a = 1; a < X_PER_WORK_ITEM; a++)
         {
-            if(!(out_x + a >= OUTPUT_LIMIT_SIZE_X || out_x + a < OUTPUT_OFFSET_SIZE_X))
+            if(!(out_x + a >= OUTPUT_LIMIT_SIZE_X || out_x + a < OUTPUT_PADDING_LOWER_SIZE_X))
                 BLOCK_WRITE(output + out_id[a], _data[a]);
         }
 

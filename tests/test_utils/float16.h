@@ -31,6 +31,13 @@ struct FLOAT16
 		} format;
 	};
 
+	static FLOAT16 min_val()
+	{
+		FLOAT16 f16;
+		f16.v = 0xFC00;
+		return f16;
+	}
+
     operator double() const { double d = (double)float16_to_float32(v); return d; }
     operator float() const { float f = float16_to_float32(v); return f; }
     operator int16_t() const { return *(int16_t*)(&v); }
@@ -43,6 +50,7 @@ struct FLOAT16
     friend FLOAT16 operator *(const FLOAT16 &v1, const FLOAT16 &v2);
     friend FLOAT16 operator /(const FLOAT16 &v1, const FLOAT16 &v2);
     friend bool operator >(const FLOAT16 &v1, const FLOAT16 &v2);
+	friend bool operator >=(const FLOAT16 &v1, const FLOAT16 &v2);
     friend bool operator <(const FLOAT16 &v1, const FLOAT16 &v2);
     friend bool operator >(const FLOAT16 &v1, const float &v2);
     friend bool operator <(const FLOAT16 &v1, const float &v2);
@@ -93,6 +101,11 @@ inline FLOAT16 operator /(const FLOAT16 &v1, const FLOAT16 &v2)
 inline bool operator >(const FLOAT16 &v1, const FLOAT16 &v2)
 {
 	return (float)v1 > (float)v2;
+}
+
+inline bool operator >=(const FLOAT16 &v1, const FLOAT16 &v2)
+{
+	return (float)v1 >= (float)v2;
 }
 
 inline bool operator <(const FLOAT16 &v1, const FLOAT16 &v2)

@@ -13,23 +13,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
+#pragma once
 
 #include <type_traits>
+#include "api/CPP/meta_utils.hpp"
 
 namespace cldnn
 {
+
+struct primitive;
+
 namespace meta
 {
-
-//helper struct to tell wheter type T is any of given types U...
-//termination case when U... is empty -> return std::false_type
-template <class T, class... U>
-struct is_any_of : public std::false_type {};
-
-//helper struct to tell whether type is any of given types (U, Rest...)
-//recurrence case when at least one type U is present -> returns std::true_type if std::same<T, U>::value is true, otherwise call is_any_of<T, Rest...> recurrently
-template <class T, class U, class... Rest>
-struct is_any_of<T, U, Rest...> : public std::conditional_t<std::is_same<T, U>::value, std::true_type, is_any_of<T, Rest...>> {};
 
 template <class T, class... U>
 constexpr bool is_any_of_v = is_any_of<T, U...>::value;
@@ -49,13 +44,19 @@ template <class T>
 using deduce_ret_type_t = typename deduce_ret_type<T>::type;
 
 template <class T>
-struct always_false
-{
-    static constexpr bool value = false;
-};
+struct always_false : public std::false_type {};
 
 template <class T>
 constexpr bool always_false_v = always_false<T>::value;
+
+template <class T>
+struct is_primitive : public std::integral_constant<bool,
+                                                    std::is_base_of<primitive, T>::value &&
+                                                    !std::is_same<primitive, std::remove_cv_t<T>>::value &&
+                                                    std::is_same<T, std::remove_cv_t<T>>::value> {};
+
+template <class T>
+constexpr bool is_primitive_v = is_primitive<T>::value;
 
 }
 }
