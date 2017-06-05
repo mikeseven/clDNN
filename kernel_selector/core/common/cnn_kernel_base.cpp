@@ -47,6 +47,7 @@ namespace KernelSelector {
             << "#define INPUT_HEIGHT (" << params.inputs[0].y().v << ")\n"
             << "#define INPUT_DEPTH (" << params.inputs[0].feature().v << ")\n"
             << "#define INPUT_BATCH (" << params.inputs[0].batch().v << ")\n"
+            << "#define INPUT_X_PITCH (" << params.inputs[0].x().pitch << ")\n"
             << "#define INPUT_Y_PITCH (" << params.inputs[0].y().pitch << ")\n"
             << "#define INPUT_FEATURE_PITCH (" << params.inputs[0].feature().pitch << ")\n"
             << "#define INPUT_BATCH_PITCH (" << params.inputs[0].batch().pitch << ")\n";
@@ -55,6 +56,7 @@ namespace KernelSelector {
             << "#define OUT_HEIGHT (" << params.output.y().v << ")\n"
             << "#define OUT_DEPTH (" << params.output.feature().v << ")\n"
             << "#define OUT_BATCH (" << params.output.batch().v << ")\n"
+            << "#define OUT_X_PITCH (" << params.output.x().pitch << ")\n"
             << "#define OUT_Y_PITCH (" << params.output.y().pitch << ")\n"
             << "#define OUT_FEATURE_PITCH (" << params.output.feature().pitch << ")\n"
             << "#define OUT_BATCH_PITCH (" << params.output.batch().pitch << ")\n";

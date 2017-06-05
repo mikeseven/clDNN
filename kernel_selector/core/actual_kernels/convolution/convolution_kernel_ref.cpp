@@ -35,6 +35,7 @@ namespace KernelSelector {
         k.SetDilationSupport();
         k.SetBiasPerFeatureMap();
         k.SetBiasPerOutput();
+        k.SetNonBiasSupport();
         k.SetBatchingSupport();
         k.SetSplitSupport();
         return k;

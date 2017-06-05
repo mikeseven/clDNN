@@ -113,7 +113,7 @@ private:
     create_reorder_if_needed(const layout& current_layout, const cldnn::primitive_id& memid, layout const& expected_layout);
 
     std::pair<std::shared_ptr<cldnn::ks_reorder>, bool>
-    create_ks_sreorder_if_needed(const cldnn::primitive_id& memid, layout const& expected_layout, const KernelSelector::WeightsReorderParams* reorder_params);
+    create_ks_reorder_if_needed(const cldnn::primitive_id& memid, layout const& expected_layout, const KernelSelector::WeightsReorderParams* reorder_params);
 
 public:
     explicit layout_optimizer(engine_impl::ptr eng, bool enabled = true);
@@ -163,6 +163,50 @@ public:
         return meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>();
     }
 
+    auto get_ks_reorder(
+        const KernelSelector::WeightsReorderParams& reorder_params,
+        primitive_id input_id,
+        const layout& old_layout,
+        data_type type)
+    {
+        std::vector<std::pair<std::shared_ptr<primitive>, bool>> ret;
+
+        if (reorder_params.engine != KernelSelector::WeightsReorderParams::Engine::NONE &&
+            type == data_type::weights &&
+            _enabled)
+        {
+            if (reorder_params.engine == KernelSelector::WeightsReorderParams::Engine::CPU &&
+                reorder_params.cpu_kernel != nullptr)
+            {
+                const auto intermediate_format = weight_layput_2_tensor_format(reorder_params.cpu_kernel->GetInputLayout());
+                if (intermediate_format != old_layout.format)
+                {
+                    const layout intermediate_layout = { old_layout.data_type, intermediate_format, old_layout.size.transform(intermediate_format, 1) };
+
+                    auto reorder = create_reorder_if_needed(old_layout, input_id, intermediate_layout);
+                    if (reorder.first)
+                    {
+                        ret.push_back(reorder);
+                        input_id = reorder.first->id;
+                    }
+                }
+            }
+
+            const auto bpp = data_type_traits::size_of(old_layout.data_type);
+            layout expected_layout = {
+                old_layout.data_type, format::bfyx, // simple linear format (flatten to x channel)
+                { 1,1,1,(tensor::value_type)(reorder_params.new_buffer_size / bpp) }
+            };
+            auto reorder = create_ks_reorder_if_needed(input_id, expected_layout, &reorder_params);
+            if (reorder.first)
+            {
+                ret.push_back(reorder);
+            }
+        }
+
+        return std::move(ret);
+    }
+
     template <typename T>
     void add_reoder_to_topology(T& reorder, const std::shared_ptr<data> src_data)
     {
@@ -192,35 +236,9 @@ public:
         const std::shared_ptr<data> data_prim,
         data_type type)
     {
-        if (reorder_params.engine != KernelSelector::WeightsReorderParams::Engine::NONE &&
-            type == data_type::weights)
+        auto reorders = get_ks_reorder(reorder_params, data_prim->id, data_prim->mem.get_layout(), type);
+        for (auto& reorder : reorders)
         {
-            const auto& old_layout = data_prim->mem.get_layout();
-
-            auto input_id = data_prim->id;
-            if (reorder_params.engine == KernelSelector::WeightsReorderParams::Engine::CPU &&
-                reorder_params.cpu_kernel != nullptr)
-            {
-                const auto intermediate_format = weight_layput_2_tensor_format(reorder_params.cpu_kernel->GetInputLayout());
-                if (intermediate_format != old_layout.format)
-                {
-                    const layout intermediate_layout = { old_layout.data_type, intermediate_format, old_layout.size.transform(intermediate_format, 1) };
-
-                    auto reorder = create_reorder_if_needed(old_layout, input_id, intermediate_layout);
-                    if (reorder.first)
-                    {
-                        add_reoder_to_topology(reorder, data_prim);
-                        input_id = reorder.first->id;
-                    }
-                }
-            }
-
-            const auto bpp = data_type_traits::size_of(old_layout.data_type);
-            layout expected_layout = {
-                old_layout.data_type, format::bfyx, // simple linear format (flatten to x channel)
-                {1,1,1,(tensor::value_type)(reorder_params.new_buffer_size / bpp)}
-            };
-            auto reorder = create_ks_sreorder_if_needed(input_id, expected_layout, &reorder_params);
             add_reoder_to_topology(reorder, data_prim);
         }
     }

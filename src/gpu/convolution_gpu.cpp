@@ -45,14 +45,14 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
     {
         auto split = outer.get_primitive()->split();
 
-        const auto& input_mem = instance.input_memory();
-        const auto& output_mem = instance.output_memory();
-        const auto& filter_mem_0 = instance.weights_memory(0);
+        const auto* input_mem = &instance.input_memory();
+        const auto* output_mem = &instance.output_memory();
+        const auto* filter_mem_0 = &instance.weights_memory(0);
 
         // Check whether all memory elements use the same unit type (FP16 or FP32).
-        if (input_mem.get_layout().data_type != output_mem.get_layout().data_type)
+        if (input_mem->get_layout().data_type != output_mem->get_layout().data_type)
             throw std::invalid_argument("Memory format of input is incompatible with memory format of output.");
-        if (input_mem.get_layout().data_type != filter_mem_0.get_layout().data_type)
+        if (input_mem->get_layout().data_type != filter_mem_0->get_layout().data_type)
             throw std::invalid_argument("Memory format of input is incompatible with memory format of filter.");
 
         std::vector<event_impl::ptr> tmp_events(events);
@@ -60,16 +60,16 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
         // execute kernels
         for (decltype(split) i = 0; i < split; i++)
         {
-            const auto& filter_mem = instance.weights_memory(i);
-            const auto& bias_mem = instance.bias_memory(i);
+            const auto* filter_mem = &instance.weights_memory(i);
+            const auto* bias_mem = instance.bias_term() ? &instance.bias_memory(i) : nullptr;
 
             auto event = _kernel.run_ks(
                 _ks_kernel_data.kernels[0],
                 tmp_events,
-                { &input_mem },
-                &output_mem,
-                &filter_mem,
-                &bias_mem,
+                { input_mem },
+                output_mem,
+                filter_mem,
+                bias_mem,
                 i);
             tmp_events.clear();
             tmp_events.emplace_back(event);
@@ -84,7 +84,6 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
         const auto& input_layout    = arg.input().get_output_layout();
         const auto& output_layout   = arg.get_output_layout();
         const auto& weights_layout  = arg.weights(0).get_output_layout();
-        const auto& bias_layout     = arg.bias(0).get_output_layout();
 
         const auto& input_size      = input_layout.size;
         const auto& weights_size    = weights_layout.size;
@@ -110,6 +109,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
 
         if (arg.bias_term())
         {
+            const auto& bias_layout = arg.bias(0).get_output_layout();
             conv_params.bias.push_back(tensor_2_data_tensor(bias_layout, padding(), 1));
         }
 

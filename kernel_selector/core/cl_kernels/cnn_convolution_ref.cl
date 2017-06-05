@@ -37,7 +37,7 @@ KERNEL(convolution)(
     
 #if   defined BIAS_PER_OUTPUT
     const uint bias_index = z*OUT_WIDTH*OUT_HEIGHT + y*OUT_WIDTH + x;
-#elif defined BIAS_PER_FEATURE
+#elif defined BIAS_PER_OFM
     const uint bias_index = z;
 #endif
 
@@ -50,8 +50,8 @@ KERNEL(convolution)(
     const int input_y = y * STRIDE_Y - INPUT_PADDING_Y;
 
     const uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * INPUT_DEPTH;
-    const uint input_offset = w*INPUT_BATCH_PITCH + in_split_offset;
-    const uint filter_offset = w*INPUT_DEPTH*KERNEL_WIDTH*KERNEL_HEIGHT;
+    const uint filter_offset = z*filter_size;
+    const uint input_offset = w*INPUT_BATCH_PITCH + INPUT_OFFSET + in_split_offset;
 
     for (uint k = 0; k < INPUT_DEPTH; ++k)
     {
@@ -69,7 +69,7 @@ KERNEL(convolution)(
 
                     if(!zero_x)
                     {
-                        uint input_idx = input_offset + (uint)input_offset_x*INPUT_X_PITCH + (uint)input_offset_y*INPUT_Y_PITCH;
+                        uint input_idx = input_offset + (uint)input_offset_x*INPUT_X_PITCH + (uint)input_offset_y*INPUT_Y_PITCH + k*INPUT_FEATURE_PITCH;
                         uint filter_idx = filter_offset + k*KERNEL_WIDTH*KERNEL_HEIGHT + j*KERNEL_WIDTH + i;
                         dotProd += input[input_idx]*weights[filter_idx];
                     }

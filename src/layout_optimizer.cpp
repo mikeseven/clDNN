@@ -198,7 +198,7 @@ layout_optimizer::create_reorder_if_needed(const layout& current_layout, const c
 }
 
 std::pair<std::shared_ptr<cldnn::ks_reorder>, bool>
-layout_optimizer::create_ks_sreorder_if_needed(const cldnn::primitive_id& memid, layout const& expected_layout, const KernelSelector::WeightsReorderParams* reorder_params)
+layout_optimizer::create_ks_reorder_if_needed(const cldnn::primitive_id& memid, layout const& expected_layout, const KernelSelector::WeightsReorderParams* reorder_params)
 {
     if (reorder_params)
     {

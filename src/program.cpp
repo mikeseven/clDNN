@@ -513,18 +513,32 @@ void program_impl::optimize_ks_weights(layout_optimizer& lo)
     //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
     //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
     //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
-    const auto add_weights = [this, &lo](program_node const& weights, layout_optimizer::data_type weights_type, auto& node)
+    const auto add_weights = [this, &lo](program_node const& weights, layout_optimizer::data_type weights_type, auto& node, size_t dep_idx)
     {
-        if (weights.type() == data::type_id())
+        auto wtype = weights.type();
+        auto* impl = node.get_selected_impl().get();
+        auto output_layout = node.get_output_layout();
+
+        if (wtype == data::type_id())
         {
-            auto* impl = node.get_selected_impl().get();
             lo.add_ks_weights_for_optimization(
                 impl->_ks_kernel_data.weights_reorder_params,
                 weights.as<data>().typed_desc(),
                 weights_type);
         }
-        else
-            throw std::logic_error("Optimization of weights which are neither of type cldnn::data nor cldnn::input_layout!");
+        else if (wtype == input_layout::type_id())
+        {
+            auto reorders = lo.get_ks_reorder(
+                impl->_ks_kernel_data.weights_reorder_params,
+                weights.as<input_layout>().typed_desc()->id,
+                output_layout,
+                weights_type);
+
+            for (auto& reorder : reorders)
+            {
+                this->add_intermediate(reorder.first, node, dep_idx);
+            }
+        }
     };
 
     //generic lambda function which prepares given primitive for weights optimization
@@ -540,7 +554,7 @@ void program_impl::optimize_ks_weights(layout_optimizer& lo)
         for (auto i = weights_offset; i < node.get_dependencies().size(); i++)
         {
             auto data_type = i < bias_offset ? layout_optimizer::data_type::weights : layout_optimizer::data_type::bias;
-            add_weights(node.get_dependency(i), data_type, node);
+            add_weights(node.get_dependency(i), data_type, node, i);
         }
     };
 

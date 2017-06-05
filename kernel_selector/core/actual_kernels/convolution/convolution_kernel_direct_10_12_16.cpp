@@ -33,6 +33,7 @@ namespace KernelSelector {
         k.SetSubGroupSupport();
         k.SetBiasPerFeatureMap();
         k.SetBiasPerOutput();
+        k.SetNonBiasSupport();
         k.SetBatchingSupport();
         k.SetSplitSupport();
         return k;

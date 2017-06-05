@@ -23,7 +23,7 @@
 #include <fstream>
 #include <set>
 
-#ifdef NDEBUG
+#ifndef NDEBUG
 #define OUT_PORGRAM_TO_FILE
 #endif
 
@@ -359,12 +359,15 @@ kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::s
 {
     std::string primitive_name = kernel_name;
     std::replace(kernel_name.begin(), kernel_name.end(), '.', '_');
-    auto kernel_num = definitions.empty() ? "" : std::to_string(_kernels_code.size());
 
     if (kernel_name.empty() || !_context.get_configuration().meaningful_kernels_names)
     {
         kernel_name = template_name;
     }
+
+    auto kernel_num = 
+        (definitions.empty() && kernel_name == template_name) ? 
+        "" : std::to_string(_kernels.size() + _kernels_code.size());
 
     kernel_name += (kernel_num.empty() ? "" : "_") + kernel_num;
     
