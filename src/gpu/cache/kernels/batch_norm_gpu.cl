@@ -62,5 +62,5 @@ KERNEL (batch_norm_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* out
 
     UNIT_TYPE variance_val = acc / (INPUT_BATCH_NUM * INPUT_SIZE_X * INPUT_SIZE_Y);
 
-    output[output_linear_id] = (input[input_linear_id] - mean_val) / (sqrt(variance_val) + EPSILON);
+    output[output_linear_id] = (input[input_linear_id] - mean_val) / sqrt(variance_val + EPSILON);
 }

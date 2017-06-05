@@ -37,5 +37,5 @@ KERNEL (batch_norm_use_global_stats_gpu)(const __global UNIT_TYPE* input, __glob
     const uint output_linear_id = (uint)get_global_id(0) + OUTPUT_BATCH_NUM * ((uint)get_global_id(1) + OUTPUT_FEATURE_NUM * (x + OUTPUT_PADDING_LOWER_SIZE_X + (uint)output_buffer_size_x * (OUTPUT_PADDING_LOWER_SIZE_Y + y)));
 #endif
 
-    output[output_linear_id] = (input[input_linear_id] - mean[feature_id]) / (sqrt(variance[feature_id]) + EPSILON);
+    output[output_linear_id] = (input[input_linear_id] - mean[feature_id]) / sqrt(variance[feature_id] + EPSILON);
 }
