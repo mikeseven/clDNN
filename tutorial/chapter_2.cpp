@@ -14,16 +14,16 @@
 // limitations under the License.
 */
 
-#include <api\C\cldnn.h>
-#include <api\CPP\cldnn_defs.h>
-#include <api\CPP\engine.hpp>
-#include <api\CPP\input_layout.hpp>
-#include <api\CPP\activation.hpp>
-#include <api\CPP\softmax.hpp>
-#include <api\CPP\memory.hpp>
-#include <api\CPP\fully_connected.hpp>
-#include <api\CPP\data.hpp>
-#include <api\CPP\topology.hpp>
+#include <api/C/cldnn.h>
+#include <api/CPP/cldnn_defs.h>
+#include <api/CPP/engine.hpp>
+#include <api/CPP/input_layout.hpp>
+#include <api/CPP/activation.hpp>
+#include <api/CPP/softmax.hpp>
+#include <api/CPP/memory.hpp>
+#include <api/CPP/fully_connected.hpp>
+#include <api/CPP/data.hpp>
+#include <api/CPP/topology.hpp>
 #include <iostream>
 
 #include "helper_functions.h"
