@@ -13,8 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-
-#include <api/C/cldnn.h>
 #include <api/CPP/cldnn_defs.h>
 #include <api/CPP/engine.hpp>
 #include <api/CPP/memory.hpp>
