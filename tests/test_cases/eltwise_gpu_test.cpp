@@ -22,6 +22,7 @@
 #include <api/CPP/topology.hpp>
 #include <api/CPP/network.hpp>
 #include <api/CPP/engine.hpp>
+#include <api/CPP/reorder.hpp>
 #include "test_utils/test_utils.h"
 
 namespace cldnn
@@ -114,7 +115,7 @@ void generic_eltwise_test(cldnn::format test_input_fmt, int input_b, int input_f
 
 	VVVVF<T> output_cpu = eltwise_reference<T>(input1_rnd, input2_rnd, mode, relu, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
 	EXPECT_EQ(output_layout.format.value, test_input_fmt.value);
-	tensor output_tensor = output_layout.size;
+	tensor output_tensor = output_layout.get_buffer_size();
     int y_size = output_tensor.spatial[1];
     int x_size = output_tensor.spatial[0];
     int f_size = output_tensor.feature[0];
@@ -432,6 +433,80 @@ TEST(eltwise_gpu_f32, prod_basic_in4x4x4x4) {
     }
 }
 
+TEST(eltwise_gpu_f32, max_basic_in4x4x4x4_input_padding) {
+    //  Input2   : 2x2x2
+    //  Input  : 2x2x2x2
+    //  Output : 2x2x2x2
+    //  Input Padding: 2x1 (with reorder)
+
+    //  Input:
+    //  f0: b0:  1    2  b1:   0    0       
+    //  f0: b0:  3    4  b1:   0.5 -0.5     
+    //  f1: b0:  5    6  b1:   1.5  5.2     
+    //  f1: b0:  7    8  b1:   12   8       
+    //
+    //  Input2
+    //  f0: b0: 0.5  5   b1: 2.5  7 
+    //  f0: b0: 15   6   b1: 17   8
+    //  f1: b0: 0.5  2   b1: 2.5  4
+    //  f1: b0: 8   -0.5 b1: 10   -2.5
+    //
+    //  Output:
+    //  f0: b0:    1   5    b1:  2.5   7       
+    //  f0: b0:   15   6    b1:  17    8    
+    //  f1: b0:    5   6    b1:  2.5   5.2     
+    //  f1: b0:    8   8    b1:  12    8     
+    //
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 2, 2, 2, 2 } });
+    auto input2 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 2, 2, 2, 2 } });
+
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(input_layout("input2", input2.get_layout()));
+    topology.add(reorder("reorder", "input", input.get_layout().with_padding({ { 0, 0, 2, 1 }, 0 })));
+    topology.add(reorder("reorder2", "input2", input.get_layout().with_padding({ { 0, 0, 2, 1 }, 0 })));
+    topology.add(eltwise("eltwise", "reorder", "reorder2", eltwise_mode::max));
+
+    set_values(input, {
+        1.f,   0.f,  5.f,  1.5f,
+        2.f,   0.f,  6.f,  5.2f,
+        3.f,   0.5f, 7.f, 12.f,
+        4.f,  -0.5f, 8.f,  8.f
+    });
+
+    set_values(input2, {
+        0.5f,  2.5f,  0.5f,  2.5f,
+        5.f,   7.f,   2.f,   4.f,
+        15.f,  17.f,   8.f,  10.f,
+        6.f,   8.f, -0.5f, -2.5f });
+
+    network network(engine, topology);
+
+    network.set_input_data("input", input);
+    network.set_input_data("input2", input2);
+    auto outputs = network.execute();
+
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "eltwise");
+
+    auto output = outputs.at("eltwise").get_memory();
+
+    float answers[16] = {
+        1.f,   2.5f,  5.f,   2.5f,
+        5.f,   7.f,   6.f,   5.2f,
+        15.f,  17.f,   8.f,  12.f,
+        6.f,   8.f,   8.f,   8.f };
+
+    auto output_ptr = output.pointer<float>();
+
+    for (int i = 0; i < 16; i++)
+    {
+        EXPECT_TRUE(are_equal(answers[i], output_ptr[i]));
+    }
+}
+
 TEST(DISABLED_eltwise_gpu, generic_random) {
 	VF<cldnn::format> test_inputs_fmts = { cldnn::format::bfyx, cldnn::format::yxfb };
 	VF<cldnn::eltwise_mode> modes = { cldnn::eltwise_mode::sum, cldnn::eltwise_mode::sub, cldnn::eltwise_mode::max, cldnn::eltwise_mode::prod };
@@ -454,8 +529,8 @@ TEST(DISABLED_eltwise_gpu, generic_random) {
 							for (float slope : slopes) {
 								for (int input_padding_y = 0; input_padding_y <= 0; ++input_padding_y) {
 									for (int input_padding_x = 0; input_padding_x <= 0; ++input_padding_x) {
-										for (int output_padding_y = 0; output_padding_y <= 1; ++output_padding_y) {
-											for (int output_padding_x = 0; output_padding_x <= 1; ++output_padding_x) {
+										for (int output_padding_y = 0; output_padding_y <= 0; ++output_padding_y) {
+											for (int output_padding_x = 0; output_padding_x <= 0; ++output_padding_x) {
 												generic_eltwise_test<float>(test_input_fmt, input_b, input_f, input_yx.first, input_yx.second, mode, relu_activated, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
 												if (!f16_supported) continue;
 												generic_eltwise_test<FLOAT16>(test_input_fmt, input_b, input_f, input_yx.first, input_yx.second, mode, relu_activated, (FLOAT16)slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
