@@ -117,7 +117,7 @@ struct softmax_gpu : typed_primitive_impl<softmax>
 
             kd.gws0 = sizes[kd.norm_index];
             kd.gws1 = input_size.count() / (kd.gws0 * kd.data_set_size);
-            kd.lws0 = kd.gws0;
+            kd.lws0 = 1;
 
             kd.items_num = kd.data_set_size;
             kd.kernel_name = kernel_name_generic;
