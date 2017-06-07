@@ -701,7 +701,7 @@ TEST(deconvolution_f16_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_yxfb_stride2_pad1) {
     }
 }
 
-TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_pad1_split2) {
+TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in1x2x2x2_bfyx_stride2_pad1_split2) {
     //  Filter : 2x2x2x2
     //  Input  : 2x2x1x2
     //  Output : 2x2x1x2
@@ -775,9 +775,9 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_pad1_split2)
     }
 }
 
-TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_pad1_split2_ofm3) {
+TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in1x6x1x1_bfyx_stride2_pad1_split2_ofm3) {
     //  Filter : 1x1
-    //  Stride : 2x2
+    //  Stride : 1x1
     //  Input  : 1x1x4
     //  Output : 1x1x6
     //
@@ -796,9 +796,9 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_pad1_split2_
     //   1   5   3
     //
     //  Filter2:
-    //   4  -4   ofm=0
-    //   2   0.5 ofm=1
-    //  -0.5 3   ofm=2
+    //   4  -4   ofm=3
+    //   2   0.5 ofm=4
+    //  -0.5 3   ofm=5
     //
     //  Bias2:
     //  -1   2.5 2
@@ -851,10 +851,8 @@ TEST(deconvolution_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_pad1_split2_
     std::vector<float> expected_output_vec = {
         -1.5f, 8.0f, 7.75f, 11.0f, 6.0f, -2.0f
     };
-    std::vector<float> output;
     for (unsigned int i = 0; i < expected_output_vec.size(); i++)
     {
-        output.push_back(output_ptr[i]);
         EXPECT_FLOAT_EQ(expected_output_vec[i], output_ptr[i]);
     }
 }
