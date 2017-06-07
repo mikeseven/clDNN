@@ -368,9 +368,19 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     options.set_option(cldnn::build_option::profiling(ep.profiling));
     options.set_option(cldnn::build_option::debug(ep.dump_hidden_layers || ep.profiling));
 
-
     std::vector<cldnn::primitive_id> outputs(0);
-    outputs.push_back("output");
+    if (ep.topology_name == "microbench")
+    {
+        for (auto prim_id : topology.get_primitive_ids())
+        {
+            if(prim_id.find("_weights") == std::string::npos && 
+               prim_id.find("_bias") == std::string::npos &&
+               prim_id.find("_input") == std::string::npos)
+            outputs.push_back(prim_id);
+        }
+    }
+    else
+        outputs.push_back("output");
 
     if (!ep.run_until_primitive_name.empty())
     {
@@ -494,8 +504,11 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     auto scheduling_time(timer_execution.uptime());
 
     //OCL buffers mapping blocks until all primitives are completed
-    std::string output_primitve_id = ep.run_until_primitive_name.empty() ? "output" :  ep.run_until_primitive_name;
-    output = outputs.at(output_primitve_id).get_memory();
+    if (ep.topology_name != "microbench")
+    {
+        std::string output_primitve_id = ep.run_until_primitive_name.empty() ? "output" : ep.run_until_primitive_name;
+        output = outputs.at(output_primitve_id).get_memory();
+    }
     
     auto execution_time(timer_execution.uptime());
 

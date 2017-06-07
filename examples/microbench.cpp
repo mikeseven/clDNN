@@ -302,9 +302,5 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         use_half
     );
 
-    //not used but needs to be in the topology
-    auto output = data("output", memory::allocate(engine, { input_layout.data_type, format::bfyx, tensor( 1, 1, 1, 1 ) }));
-    topology.add(output);
-
     return topology;
 }
