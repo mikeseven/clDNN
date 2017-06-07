@@ -34,5 +34,10 @@ namespace KernelSelector
     protected:
         static const primitive_db db;
         const std::string kernel_name;
+
+        static size_t UniqeID() { return counter++; } // TODO: use interlocked
+        
+    private:
+        static size_t counter;
     };
 }

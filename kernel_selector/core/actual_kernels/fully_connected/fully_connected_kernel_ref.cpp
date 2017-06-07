@@ -41,15 +41,16 @@ namespace KernelSelector
         KernelData kd = KernelData::Default<FullyConnectedParams>(params, 1);
 
         FullyConnectedParams& newParams = *static_cast<FullyConnectedParams*>(kd.params.get());
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         std::stringstream jit;
-        jit << GetBaseJit(newParams)
+        jit << GetBaseJit(newParams, kernel_id)
             << GetFullyConnectedJit(newParams);
 
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(out.feature().v, out.batch().v);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "fc");
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
         kernel.args_desc = GetArgumentDesc(1, true, !newParams.bias.empty());
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;

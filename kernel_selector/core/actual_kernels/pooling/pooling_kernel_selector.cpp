@@ -16,12 +16,14 @@
 
 #include "pooling_kernel_selector.h"
 #include "pooling_kernel_ref.h"
+#include "pooling_kernel_gpu_ref.h"
  
 namespace KernelSelector {
 
     PoolingKernelSelctor::PoolingKernelSelctor()
     {
         Attach<PoolingKernelRef>();
+        Attach<PoolingKernelGPURef>();
     }
 
     KernelsData PoolingKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const

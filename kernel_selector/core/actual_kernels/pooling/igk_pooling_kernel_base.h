@@ -14,10 +14,28 @@
 // limitations under the License.
 */
 
-#include "kernel_base.h"
+#pragma once
 
-namespace KernelSelector
+#include "igk_kernel_base.h"
+#include "kernel_selector_params.h"
+
+namespace KernelSelector 
 {
-    const primitive_db KernelBase::db;
-    size_t KernelBase::counter = 0;
+    class IGKPoolingKernelBase : public IGKKernelBase
+    {
+    public:
+        using IGKKernelBase::IGKKernelBase;
+        virtual ~IGKPoolingKernelBase() {}
+
+        struct DispatchData : public CommonDispatchData
+        {
+            bool needs_boundary;
+        };
+
+        DispatchData _kernel_data;
+
+    protected:
+        jit_constants get_jit_constants(const PoolingParams& params, DispatchData kd) const;
+        DispatchData set_default(const PoolingParams& params) const;
+    };
 }

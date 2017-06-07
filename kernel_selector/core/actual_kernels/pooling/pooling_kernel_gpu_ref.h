@@ -14,10 +14,19 @@
 // limitations under the License.
 */
 
-#include "kernel_base.h"
+#pragma once
 
-namespace KernelSelector
-{
-    const primitive_db KernelBase::db;
-    size_t KernelBase::counter = 0;
+#include "igk_pooling_kernel_base.h"
+ 
+namespace KernelSelector 
+{    
+    class PoolingKernelGPURef : public IGKPoolingKernelBase
+    {
+    public:
+        PoolingKernelGPURef() : IGKPoolingKernelBase("pooling_gpu_ref") {}
+        virtual ~PoolingKernelGPURef() {}
+
+        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual ParamsKey GetSupportedKey() const override;
+    };
 }

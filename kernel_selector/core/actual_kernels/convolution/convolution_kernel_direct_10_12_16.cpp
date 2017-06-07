@@ -99,9 +99,10 @@ namespace KernelSelector {
         {
             run_info = SubGroupInfo(1, 1, TILE_N, 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 3, 1);
         }
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         jit << "#define RIGHT_PARTIAL_TILE_K " << orgParams.output.x().v % run_info.globalWorkSizeDX << "\n"
-            << GetBaseJit(newParams)
+            << GetBaseJit(newParams, kernel_id)
             << GetConvolutionJit(newParams, run_info, true);
 
         auto& kernel = kd.kernels[0];
@@ -115,7 +116,7 @@ namespace KernelSelector {
             run_info.localWorkSizeY,
             run_info.localWorkSizeZ);
 
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "convolution_f16_10x12x16", newParams.kernelID, AGE_BASED);
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id, AGE_BASED);
         kernel.args_desc = GetArgumentDesc(1, true, !newParams.bias.empty());
         kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 #if 0

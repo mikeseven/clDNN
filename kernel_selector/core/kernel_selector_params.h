@@ -372,11 +372,11 @@ namespace KernelSelector
         virtual ParamsKey GetParamsKey() const = 0;
 
     protected:
-        Params(KernelType kt, const std::string& id) : kType(kt), kernelID(id) {}
+        Params(KernelType kt, const std::string& id) : kType(kt), layerID(id) {}
         KernelType kType;
 
     public:
-        std::string kernelID;
+        std::string layerID;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

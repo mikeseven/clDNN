@@ -229,8 +229,8 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad)
 	//  [ padd, padd, padd, padd]
 	//
 	//  Expected output:
-	//  [ 1.5,   0]
-	//  [   0, 0.5]
+	//  [ 1.5,-0.5]
+	//  [-1.0, 0.5]
 
     engine engine;
 
@@ -251,10 +251,10 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i2x2x1x1_zeropad)
     auto output_prim = outputs.begin()->second.get_memory();
 
     auto output_ptr = output_prim.pointer<float>();
-	EXPECT_EQ(1.5f, output_ptr[0]);
-	EXPECT_EQ(0.0f, output_ptr[1]);
-	EXPECT_EQ(0.0f, output_ptr[2]);
-	EXPECT_EQ(0.5f, output_ptr[3]);
+	EXPECT_EQ( 1.5f, output_ptr[0]);
+	EXPECT_EQ(-0.5f, output_ptr[1]);
+	EXPECT_EQ(-1.0f, output_ptr[2]);
+	EXPECT_EQ( 0.5f, output_ptr[3]);
 }
 
 TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad) {
@@ -274,7 +274,7 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad)
     //  [ padd, padd, padd, padd, padd]
     //
     //  Expected output:
-    //  [ 1.5,   0]
+    //  [ 1.5,  -0.5]
     //  [   1,  -0.5]
 
     engine engine;
@@ -303,7 +303,7 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_f32_wsiz2x2_wstr2x2_i3x3x1x1_zeropad)
 
     auto output_ptr = output_prim.pointer<float>();
     EXPECT_EQ(1.5f, get_value<float>(output_ptr, 0));
-    EXPECT_EQ(0.0f, get_value<float>(output_ptr, 1));
+    EXPECT_EQ(-0.5f, get_value<float>(output_ptr, 1));
     //TODO !!!implement correct output size calculation!!!
     EXPECT_EQ(1.0f, get_value<float>(output_ptr, 3));
     EXPECT_EQ(-0.5f, get_value<float>(output_ptr, 4));
@@ -521,7 +521,7 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_out
     //
     //  Expected output:
     //  [0, 0, 0, 0, 0]
-    //  [0, 1.5, 0, 0, 0]
+    //  [0, 1.5, -0.5, 0, 0]
     //  [0, 1, -0.5, 0, 0]
     //  [0, 0, 0, 0, 0]
 
@@ -551,7 +551,7 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_out
 
         std::vector<float> expected = {
             0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-            0.0f, 1.5f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.5f,-0.5f, 0.0f, 0.0f,
             0.0f, 1.f, -0.5f, 0.0f, 0.0f,
             0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
         };
@@ -651,7 +651,7 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_inp
     //
     //  Expected output:
     //  [0, 0, 0, 0, 0]
-    //  [0, 1.5, 0, 0, 0]
+    //  [0, 1.5, -0.5, 0, 0]
     //  [0, 1, -0.5, 0, 0]
     //  [0, 0, 0, 0, 0]
     //  [0, 0, 0, 0, 0]
@@ -683,7 +683,7 @@ TEST(pooling_forward_gpu, offsets_max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_inp
 
         std::vector<float> expected = {
             0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-            0.0f, 1.5f, 0.0f, 0.0f, 0.0f,
+            0.0f, 1.5f,-0.5f, 0.0f, 0.0f,
             0.0f, 1.f, -0.5f, 0.0f, 0.0f,
             0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
             0.0f, 0.0f, 0.0f, 0.0f, 0.0f,

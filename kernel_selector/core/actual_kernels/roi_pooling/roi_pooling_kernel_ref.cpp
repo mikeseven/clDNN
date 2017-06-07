@@ -40,9 +40,10 @@ namespace KernelSelector {
         KernelData kd = KernelData::Default<ROIPoolingParams>(params, 1);
 
         ROIPoolingParams& newParams = *static_cast<ROIPoolingParams*>(kd.params.get());
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         std::stringstream jit;
-        jit << GetBaseJit(newParams)
+        jit << GetBaseJit(newParams, kernel_id)
             << "#define FP16_SUPPORTED 1\n"
             << "#define UNIT_TYPE " << (newParams.inputs[0].dtype == Datatype::F16 ? "half" : "float") << "\n"
             << "#define SRC_W (" << newParams.inputs[0].x().v << ")\n"
@@ -64,7 +65,7 @@ namespace KernelSelector {
 
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(newParams.output.Length(), 1, 1);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "roi_pooling_gpu");
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
         kernel.args_desc = GetArgumentDesc(2, false, false);
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;

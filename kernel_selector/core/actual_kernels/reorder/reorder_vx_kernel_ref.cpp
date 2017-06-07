@@ -40,15 +40,16 @@ namespace KernelSelector
         KernelData kd = KernelData::Default<ReorderVxParams>(params, 1);
 
         ReorderVxParams& newParams = *static_cast<ReorderVxParams*>(kd.params.get());
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         std::stringstream jit;
-        jit << GetBaseJit(newParams);
+        jit << GetBaseJit(newParams, kernel_id);
         jit << "#define REORDER_MODE_" << toString(newParams.reorderParams.mode);
 
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "reorder");
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
         kernel.args_desc = GetArgumentDesc(1, false, false);
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;

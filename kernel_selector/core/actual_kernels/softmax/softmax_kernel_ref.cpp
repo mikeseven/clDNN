@@ -44,9 +44,10 @@ namespace KernelSelector
         SoftMaxParams& newParams = *static_cast<SoftMaxParams*>(kd.params.get());
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.batch().v);
-        kernel.kernel_string = GetKernelString(kernel_name, GetBaseJit(newParams), "softmax");
+        kernel.kernel_string = GetKernelString(kernel_name, GetBaseJit(newParams, kernel_id), kernel_id);
         kernel.args_desc = GetArgumentDesc(1, false, false);
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;

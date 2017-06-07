@@ -14,11 +14,11 @@
 // limitations under the License.
 */
 
-#include "pooling_kernel_ref.h"
+#include "pooling_kernel_gpu_ref.h"
  
 namespace KernelSelector 
 {
-    ParamsKey PoolingKernelRef::GetSupportedKey() const
+    ParamsKey PoolingKernelGPURef::GetSupportedKey() const
     {
         ParamsKey k;
         k.SetInputDataType(Datatype::F16);
@@ -26,7 +26,9 @@ namespace KernelSelector
         k.SetOutputDataType(Datatype::F16);
         k.SetOutputDataType(Datatype::F32);
         k.SetInputLayout(DataLayout::bfyx);
+        k.SetInputLayout(DataLayout::yxfb);
         k.SetOutputLayout(DataLayout::bfyx);
+        k.SetOutputLayout(DataLayout::yxfb);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
         k.SetBatchingSupport();
@@ -39,35 +41,40 @@ namespace KernelSelector
         return k;
     }
 
-    KernelsData PoolingKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData PoolingKernelGPURef::GetKernelsData(const Params& params, const OptionalParams&) const
     {
         assert(params.GetType() == KernelType::POOLING);
 
+        const PoolingParams& orgParams = static_cast<const PoolingParams&>(params);
+
+        const bool bSupportedActivation = orgParams.activationFunc == ActivationFunction::NONE;
+
+        if (!bSupportedActivation)
+        {
+            return{};
+        }
+        
+        DispatchData run_info;
+
+        try
+        {
+            run_info = set_default(orgParams);
+        }
+        catch (const std::runtime_error&)
+        {
+            return{};
+        }
+
         KernelData kd = KernelData::Default<PoolingParams>(params, 1);
 
-        PoolingParams& newParams = *static_cast<PoolingParams*>(kd.params.get());
-        const auto& pp = newParams.poolParams;
-        
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
-        std::stringstream jit;
-        jit << GetBaseJit(newParams, kernel_id)
-            << "#define POOL_SIZE_X (" << pp.poolSize.x << ")\n"
-            << "#define POOL_SIZE_Y (" << pp.poolSize.y << ")\n"
-            << "#define POOL_PAD_X (" << pp.poolPad.x << ")\n"
-            << "#define POOL_PAD_Y (" << pp.poolPad.y << ")\n"
-            << "#define POOL_STRIDE_X (" << pp.poolStride.x << ")\n"
-            << "#define POOL_STRIDE_Y (" << pp.poolStride.y << ")\n";
+        auto cldnn_jit = get_jit_constants(orgParams, run_info);
+        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
+        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
 
-        jit << "#define " << toString(pp.poolType) << "_POOLING\n";
-        jit << "#define " << toString(pp.divMode) << "_KERNEL_DIVIDER\n";
-
-        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
-        kernel.args_desc = GetArgumentDesc(1, false, false);
+        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, entry_point);
 
-        kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        kd.estimated_time = FORCE_PRIORITY_9;
 
         return{ kd };
     }

@@ -60,7 +60,7 @@ namespace KernelSelector
             (out.batch().v % 8) == 0 &&
             ((out.batch().v * out.feature().v) % 64) == 0;
 
-        if (!bSupportedActivation || !bSupportedPitch || ! bSupportedBatch)
+        if (!bSupportedActivation || !bSupportedPitch || !bSupportedBatch)
         {
             return{};
         }
@@ -81,11 +81,11 @@ namespace KernelSelector
         auto cldnn_jit = get_jit_constants(orgParams, run_info);
         
         cldnn_jit.add_constant(gpu::make_jit_constant("SUB_GROUP_SIZE", 8));
-
-        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), orgParams.kernelID);
+        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
+        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
 
         auto& kernel = kd.kernels[0];
-        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, orgParams.kernelID);
+        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, entry_point);
 
         kd.estimated_time = FORCE_PRIORITY_9;
 

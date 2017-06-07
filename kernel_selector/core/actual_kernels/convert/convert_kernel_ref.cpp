@@ -40,15 +40,16 @@ namespace KernelSelector {
         KernelData kd = KernelData::Default<ConvertParams>(params, 1);
 
         ConvertParams& newParams = *static_cast<ConvertParams*>(kd.params.get());
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         std::stringstream jit;
-        jit << GetBaseJit(newParams)
+        jit << GetBaseJit(newParams, kernel_id)
             << "#define CONVERT_TYPE_" << toString(newParams.convertParams.covertType) << "\n";
 
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "convert");
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
         kernel.args_desc = GetArgumentDesc(1, false, false);
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;

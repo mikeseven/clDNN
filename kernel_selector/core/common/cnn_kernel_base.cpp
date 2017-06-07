@@ -18,11 +18,11 @@
 
 namespace KernelSelector {
 
-    std::string CNNKernelBase::GetBaseJit(const BaseParams& params) const
+    std::string CNNKernelBase::GetBaseJit(const BaseParams& params, const std::string& kernel_id) const
     {
         std::stringstream jit;
 
-        if (params.kernelID.empty())
+        if (kernel_id.empty())
         {
             jit << "#define KERNEL(name) __kernel void name\n"
                 << "#define FUNC(name) name\n"
@@ -30,9 +30,9 @@ namespace KernelSelector {
         }
         else
         {
-            jit << "#define KERNEL(name) __kernel void name##_" << params.kernelID << "\n"
-                << "#define FUNC(name) name##_" << params.kernelID << "\n"
-                << "#define FUNC_CALL(name) name##_" << params.kernelID << "\n";
+            jit << "#define KERNEL(name) __kernel void " << kernel_id << "\n"
+                << "#define FUNC(name) name##_" << kernel_id << "\n"
+                << "#define FUNC_CALL(name) name##_" << kernel_id << "\n";
         }
         
 
@@ -88,7 +88,7 @@ namespace KernelSelector {
         return desc;
     }
 
-    KernelString CNNKernelBase::GetKernelString(std::string name, std::string jit, std::string entry_point, std::string kernel_id, std::string exe_mode, std::string default_build_flags) const
+    KernelString CNNKernelBase::GetKernelString(std::string name, std::string jit, std::string entry_point, std::string exe_mode, std::string default_build_flags) const
     {
         KernelString kernel_string;
 
@@ -99,8 +99,8 @@ namespace KernelSelector {
             kernel_string.str = codes[0];
             kernel_string.jit = jit;
             kernel_string.options = exe_mode + " " + default_build_flags;
-            kernel_string.entry_point = kernel_id.empty() ? entry_point : entry_point + "_" + kernel_id;
-            kernel_string.batch_compilation = (kernel_id.empty() == false);
+            kernel_string.entry_point = entry_point;
+            kernel_string.batch_compilation = true;
         }
 
         return kernel_string;

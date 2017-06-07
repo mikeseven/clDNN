@@ -59,16 +59,17 @@ namespace KernelSelector {
         KernelData kd = KernelData::Default<ConvolutionParams>(params, 1);
 
         ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         SubGroupInfo run_info;
         std::stringstream jit;
-        jit << GetBaseJit(newParams)
+        jit << GetBaseJit(newParams, kernel_id)
             << GetConvolutionJit(newParams, run_info);
 
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "convolution", newParams.kernelID);
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
         kernel.args_desc = GetArgumentDesc(1, true, !newParams.bias.empty());
         kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 

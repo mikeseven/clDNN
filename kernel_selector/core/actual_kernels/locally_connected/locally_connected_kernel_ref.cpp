@@ -41,8 +41,10 @@ namespace KernelSelector {
 
         LocallyConnectedParams& newParams = *static_cast<LocallyConnectedParams*>(kd.params.get());
 
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+
         std::stringstream jit;
-        jit << GetBaseJit(newParams)
+        jit << GetBaseJit(newParams, kernel_id)
             << "#define KERNEL_WIDTH " << newParams.lcParams.filterSize.x << "\n"
             << "#define KERNEL_HEIGHT (" << newParams.lcParams.filterSize.y << ")\n"
             << "#define STRIDE_X (" << newParams.lcParams.stride.x << ")\n"
@@ -53,7 +55,7 @@ namespace KernelSelector {
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "locally_connected");
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
         kernel.args_desc = GetArgumentDesc(1, true, true);
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;

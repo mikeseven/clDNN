@@ -222,10 +222,11 @@ namespace KernelSelector
         {
             cldnn_jit.add_constant(gpu::make_jit_constant("LEFTOVERS", run_info.leftovers));
         }
-        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), newParams.kernelID);
+        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
+        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
 
         auto& kernel = kd.kernels[0];
-        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, orgParams.kernelID, true, !orgParams.bias.empty());
+        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, entry_point, true, !orgParams.bias.empty());
         kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
 #if 0

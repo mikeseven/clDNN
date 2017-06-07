@@ -56,8 +56,9 @@ namespace KernelSelector
         }
 
         const float num_element_div = 1.f / numElement;
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
-        jit << GetBaseJit(newParams)
+        jit << GetBaseJit(newParams, kernel_id)
             << "#define ROUND_NORM_SIZE (" << round_norm_size << ")\n"
             << "#define ROUND_NORM_HALF_SIZE (" << round_norm_size / 2 << ")\n"
             << "#define NUM_ELEMENTS_DIV (" << Float2Str(num_element_div) << ")\n"
@@ -68,7 +69,7 @@ namespace KernelSelector
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "normalization", newParams.kernelID, ROUND_ROBIN, "");
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id, ROUND_ROBIN, "");
         kernel.args_desc = GetArgumentDesc(1, false, false);
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;

@@ -29,9 +29,9 @@ namespace KernelSelector {
         virtual ~CNNKernelBase() {}
 
     protected:
-        std::string GetBaseJit(const BaseParams& params) const;
+        std::string GetBaseJit(const BaseParams& params, const std::string& kernel_id) const;
         ArgumentDescpirtor GetArgumentDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const;
-        KernelString GetKernelString(std::string kernel_name, std::string jit, std::string entry_point, std::string kernel_id = "", std::string exe_mode = ROUND_ROBIN, std::string default_build_flags = "-cl-unsafe-math-optimizations") const;
+        KernelString GetKernelString(std::string kernel_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN, std::string default_build_flags = "-cl-unsafe-math-optimizations") const;
         static std::string Float2Str(const float f)
         {
             return std::to_string(f) + "f";

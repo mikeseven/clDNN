@@ -121,12 +121,13 @@ namespace KernelSelector
         KernelData kd = KernelData::Default<ConvolutionParams>(params, 1);
 
         auto cldnn_jit = get_jit_constants(orgParams, run_info);
-        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), orgParams.kernelID);
+        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
+        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
 
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global   = cl::NDRange(run_info.gws0, run_info.gws1, run_info.gws2);
         kernel.work_groups.local    = cl::NDRange(run_info.lws0, run_info.lws1, run_info.lws2);
-        kernel.kernel_string        = get_kernel_string(kernel_name, jit, orgParams.kernelID);
+        kernel.kernel_string        = get_kernel_string(kernel_name, jit, entry_point);
         kernel.args_desc            = get_args_desc(1, true, !orgParams.bias.empty());
         kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 

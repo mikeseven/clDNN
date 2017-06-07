@@ -45,8 +45,10 @@ namespace KernelSelector {
         static const int NUM_COLS_WI = 4;
         const size_t nonWidthDim = newParams.inputs[0].Length() / newParams.inputs[0].x().v;
 
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+
         std::stringstream jit;
-        jit << GetBaseJit(newParams);
+        jit << GetBaseJit(newParams, kernel_id);
 
         jit << "#define NUM_ROWS_WI (" << NUM_ROWS_WI << ")\n"
             << "#define NUM_COLS_WI (" << NUM_COLS_WI << ")\n"
@@ -60,7 +62,7 @@ namespace KernelSelector {
             (newParams.inputs[0].x().v + NUM_COLS_WI - 1) / NUM_COLS_WI,
             (nonWidthDim + NUM_ROWS_WI - 1) / NUM_ROWS_WI,
             newParams.output.batch().v);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "activation");
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
         kernel.args_desc = GetArgumentDesc(1, false, false);
 
         kd.estimated_time = FORCE_PRIORITY_6;

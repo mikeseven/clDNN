@@ -40,9 +40,10 @@ namespace KernelSelector {
         KernelData kd = KernelData::Default<EltwiseParams>(params, 1);
 
         EltwiseParams& newParams = *static_cast<EltwiseParams*>(kd.params.get());
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         std::stringstream jit;
-        jit << GetBaseJit(newParams)
+        jit << GetBaseJit(newParams, kernel_id)
             << "#define INPUT_OFFSET1 (" << newParams.inputs[1].offset << ")\n"
             << "#define INPUT_ROW_PITCH1 (" << newParams.inputs[1].y().pitch << ")\n"
             << "#define INPUT_SLICE_PITCH1 (" << newParams.inputs[1].feature().pitch << ")\n"
@@ -53,7 +54,7 @@ namespace KernelSelector {
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "eltwise");
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
         kernel.args_desc = GetArgumentDesc(2, false, false);
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;

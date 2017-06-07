@@ -333,9 +333,28 @@ namespace KernelSelector {
         case ReorderMode::xzyw: return "XZYW";
         case ReorderMode::zyxw: return "ZYXW";
         case ReorderMode::yxzw: return "YXZW";
-        default:
-            return "XYZW";
-            break;
+        default: return "XYZW";
+        }
+    }
+
+    inline std::string toString(PoolType mode)
+    {
+        switch (mode)
+        {
+        case PoolType::MAX: return "MAX";
+        case PoolType::AVG: return "AVG";
+        default: return "";
+        }
+    }
+
+    inline std::string toString(KernelDividerMode mode)
+    {
+        switch (mode)
+        {
+        case KernelDividerMode::DONT_CARE:  return "DONT_CARE";
+        case KernelDividerMode::FIXED:      return "FIXED";
+        case KernelDividerMode::DYNAMIC:    return "DYNAMIC";
+        default: return "";
         }
     }
 

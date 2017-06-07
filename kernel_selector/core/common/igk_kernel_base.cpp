@@ -162,8 +162,10 @@ static const char* kernels_header = R"__krnl(
         };
     }
 
-    std::string IGKKernelBase::create_jit_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_id) const
+    std::string IGKKernelBase::get_entry_point(const std::string& template_name, const std::string& layer_id) const
     {
+        std::string kernel_id = layer_id;
+
         std::replace(kernel_id.begin(), kernel_id.end(), '.', '_');
 
         if (kernel_id.empty() /*|| !_context.get_configuration().meaningful_kernels_names*/)
@@ -171,6 +173,13 @@ static const char* kernels_header = R"__krnl(
             kernel_id = template_name;
         }
 
+        kernel_id += std::to_string(UniqeID());
+
+        return kernel_id;
+    }
+
+    std::string IGKKernelBase::create_jit_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_id) const
+    {
         class code_builder code;
         code.add_line("\n//====================================================")
             .add_line("// Kernel template: " + template_name + " ")
@@ -261,6 +270,8 @@ static const char* kernels_header = R"__krnl(
             gpu::make_jit_constant("FP16_UNIT_USED",            static_cast<int>(kd.fp16_unit_used)),
             gpu::make_jit_constant("UNIT_TYPE",                 kd.fp16_unit_used ? "half" : "float"),
             gpu::make_jit_constant("UNIT_VAL_ZERO",             kd.fp16_unit_used ? "0.0h" : "0.0f"),
+            gpu::make_jit_constant("UNIT_VAL_MAX",              kd.fp16_unit_used ? "HALF_MAX" : "FLT_MAX"),
+            gpu::make_jit_constant("UNIT_VAL_MIN",              "-(UNIT_VAL_MAX)"),
             gpu::make_jit_constant("TO_UNIT_TYPE_V1(v)",        kd.fp16_unit_used ? "convert_half(v)" : "(float)(v)"),
             gpu::make_jit_constant("RELU",                      static_cast<int>(relu)),
             gpu::make_jit_constant("NEGATIVE_SLOPE",            negative_slope),

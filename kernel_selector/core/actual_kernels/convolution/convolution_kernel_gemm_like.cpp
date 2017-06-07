@@ -108,7 +108,6 @@ namespace KernelSelector
         if (newParams.inputs[0].dtype == Datatype::F16)
         {
             jit << "#define __convolution_f16" << "\n";
-            entry_point = "convolution_f16";
             run_info = SubGroupInfo(1, cp.filterSize.x, 32, 1, 16, 1, 32, 1, 1);
             wLayout = WeightsLayout::iyxo_om16x2_ax_g32;
             kd.estimated_time = FORCE_PRIORITY_6;
@@ -116,13 +115,14 @@ namespace KernelSelector
         else
         {
             jit << "#define __convolution_f32" << "\n";
-            entry_point = "convolution_f32";
             run_info = SubGroupInfo(2, cp.filterSize.x, 32, 1, 8, 1, 32, 2, 1);
             wLayout = WeightsLayout::iyxo_om8x2_ax_g32;
             kd.estimated_time = FORCE_PRIORITY_8;
         }
 
-        jit << GetBaseJit(newParams)
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+
+        jit << GetBaseJit(newParams, kernel_id)
             << GetConvolutionJit(newParams, run_info, true);
 
         size_t sgemm_m = cldnn::round_up_to(newParams.output.x().v * newParams.output.y().v, (size_t)run_info.subBlockDimM);
@@ -139,7 +139,7 @@ namespace KernelSelector
             run_info.localWorkSizeY,
             run_info.localWorkSizeZ);
 
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), entry_point, newParams.kernelID, AGE_BASED);
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id, AGE_BASED);
         kernel.args_desc = GetArgumentDesc(1, true, !newParams.bias.empty());
         kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 #if 0

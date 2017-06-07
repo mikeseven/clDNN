@@ -45,9 +45,10 @@ namespace KernelSelector
         const size_t leftovers            = dst_size % localWorkGroup;
         const size_t globalWorkGroup      = dst_size - leftovers;
         const size_t itemsNum             = globalWorkGroup / localWorkGroup;
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         std::stringstream jit;
-        jit << GetBaseJit(newParams);
+        jit << GetBaseJit(newParams, kernel_id);
         jit << "#define ITEMS_NUM (" << itemsNum << ")\n"
             << "#define LWS (" << localWorkGroup << ")\n"
             << "#define GWS (" << globalWorkGroup << ")\n"
@@ -68,7 +69,7 @@ namespace KernelSelector
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(globalWorkGroup, 1, 1);
         kernel.work_groups.local = cl::NDRange(localWorkGroup, 1, 1);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "softmax");
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
         kernel.args_desc = GetArgumentDesc(1, false, false);
 
         kd.estimated_time = FORCE_PRIORITY_1;

@@ -216,7 +216,7 @@ inline ParamsT GetDefaultParams(const ArgT& arg, uint32_t split = 1)
     params.inputs[0] = tensor_2_data_tensor(input_layout, input_padding, split);
     params.output = tensor_2_data_tensor(output_layout, output_padding, split);
 
-    params.kernelID = arg.id();
+    params.layerID = arg.id();
 
     return params;
 }

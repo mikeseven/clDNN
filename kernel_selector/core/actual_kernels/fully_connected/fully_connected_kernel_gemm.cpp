@@ -47,20 +47,19 @@ namespace KernelSelector {
         if (newParams.inputs[0].dtype == Datatype::F16)
         {
             jit << "#define __fc_f16" << "\n";
-            entry_point = "fc_f16";
         }
         else
         {
             jit << "#define __fc_f32" << "\n";
-            entry_point = "fc_f32";
         }
 
         const uint32_t localWorkSizeX = 64;
         const uint32_t globalWorkSizeX = localWorkSizeX;
         const uint32_t vecSize = 4;
         size_t matrixLineSize = newParams.inputs[0].batch().pitch;
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
-        jit << GetBaseJit(newParams)
+        jit << GetBaseJit(newParams, kernel_id)
             << GetFullyConnectedJit(newParams)
             << "#define LAST_INPUT_SIZE_REMAINDER (" << matrixLineSize % (globalWorkSizeX * vecSize) << ")\n"
             << "#define LAST_INPUT_SIZE_DIV_4 (" << matrixLineSize % vecSize << ")\n";
@@ -68,7 +67,7 @@ namespace KernelSelector {
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(globalWorkSizeX, newParams.output.feature().v, newParams.output.batch().v);
         kernel.work_groups.local = cl::NDRange(localWorkSizeX, 1, 1);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), entry_point);
+        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
         kernel.args_desc = GetArgumentDesc(1, true, !newParams.bias.empty());
 
         // in case of padding make sure that the weights contains padding as well.
@@ -76,10 +75,11 @@ namespace KernelSelector {
         if (newParams.inputs[0].PaddingExists())
         {
             kd.weights_reorder_params.engine = WeightsReorderParams::Engine::GPU;
+            const std::string kernel_id1 = params.layerID + std::to_string(UniqeID());
 
             std::stringstream compOptions;
             auto& cl_kernel = kd.weights_reorder_params.cl_kernel;
-            cl_kernel.kernel_string = GetKernelString(weights_reorder_kernel_name, GetBaseJit(newParams), "align_weights");
+            cl_kernel.kernel_string = GetKernelString(weights_reorder_kernel_name, GetBaseJit(newParams, kernel_id1), "align_weights");
             cl_kernel.args_desc = GetArgumentDesc(1, false, false);
 
             const uint32_t bpp = BytesPerElement(newParams.inputs[0].dtype);

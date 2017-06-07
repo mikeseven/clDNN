@@ -80,7 +80,7 @@ namespace KernelSelector
             auto& reorderKS = ReorderWeightsKernelSelctor::instance();
             ReorderWeightsParams r_params;
 
-            r_params.kernelID = params.kernelID + "_reorder_";
+            r_params.layerID = params.layerID + "_reorder_";
             r_params.reorderParams.input = params.weights;
             r_params.reorderParams.output = params.weights.transform(layout);
 

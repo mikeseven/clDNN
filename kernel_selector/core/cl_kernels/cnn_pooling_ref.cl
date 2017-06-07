@@ -38,6 +38,7 @@ KERNEL(pooling)(__global DATA_TYPE *src, __global DATA_TYPE *out)
 #else
     DATA_TYPE res = 0;
 #endif
+    uint num_elementes = 0;
 
     for(unsigned int y = 0; y < POOL_SIZE_Y; ++y)
     {
@@ -54,12 +55,20 @@ KERNEL(pooling)(__global DATA_TYPE *src, __global DATA_TYPE *out)
                 #else
                     res += tmpRes;
                 #endif 
+                
+                num_elementes++;
             }
         }
     }
 
-    #ifndef MAX_POOLING
-        res = res / (DATA_TYPE)(POOL_SIZE_X * POOL_SIZE_Y);
+    #ifdef MAX_POOLING
+        res = num_elementes != 0 ? res : 0;
+    #else
+        #ifdef DYNAMIC_KERNEL_DIVIDER
+            res = res / (DATA_TYPE)max(num_elementes, 1);
+        #else
+            res = res / (DATA_TYPE)(POOL_SIZE_X * POOL_SIZE_Y);
+        #endif
     #endif
     
     unsigned int out_index = out_x + out_y * OUT_Y_PITCH + outPlane*OUT_FEATURE_PITCH + outBatch*OUT_BATCH_PITCH + OUT_OFFSET;

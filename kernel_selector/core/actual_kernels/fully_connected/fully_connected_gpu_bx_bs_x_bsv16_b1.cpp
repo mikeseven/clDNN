@@ -99,11 +99,13 @@ namespace KernelSelector
         DispatchData run_info;
         std::string jit;
         
+        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
+
         try
         {
             run_info = default_bfyx_bs_x_bsv16_b1(newParams);
             auto cldnn_jit = get_jit_constants(newParams, run_info);
-            jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), kernel_name);
+            jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
         }
         catch (const std::runtime_error& )
         {
@@ -111,7 +113,7 @@ namespace KernelSelector
         }
 
         auto& kernel = kd.kernels[0];
-        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, orgParams.kernelID, true, !orgParams.bias.empty());
+        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, entry_point, true, !orgParams.bias.empty());
 
         auto cpu_kernel = CPUIGKFullyConnectedReorder(
             CPUIGKFullyConnectedReorder::WeightsReorderLayout::oiyx,
