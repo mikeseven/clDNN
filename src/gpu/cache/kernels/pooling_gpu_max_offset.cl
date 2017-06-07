@@ -36,6 +36,10 @@ KERNEL(pooling_gpu_max_offset)(const __global UNIT_TYPE* input, __global UNIT_TY
     const int offset_x = INPUT_PADDING_LOWER_SIZE_X + x * STRIDE_SIZE_X + INPUT_OFFSET_SIZE_X;
     const int offset_y = INPUT_PADDING_LOWER_SIZE_Y + y * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
 
+	if ((offset_x >= INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X) ||
+	   (offset_y >= INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y))
+		return;
+
     UNIT_TYPE result = UNIT_INIT_VAL_MAX;
 
     const int batch_and_feature_offset = get_global_id(0);
