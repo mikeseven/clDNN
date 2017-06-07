@@ -529,8 +529,8 @@ TEST(DISABLED_eltwise_gpu, generic_random) {
 							for (float slope : slopes) {
 								for (int input_padding_y = 0; input_padding_y <= 0; ++input_padding_y) {
 									for (int input_padding_x = 0; input_padding_x <= 0; ++input_padding_x) {
-										for (int output_padding_y = 0; output_padding_y <= 0; ++output_padding_y) {
-											for (int output_padding_x = 0; output_padding_x <= 0; ++output_padding_x) {
+										for (int output_padding_y = 0; output_padding_y <= 1; ++output_padding_y) {
+											for (int output_padding_x = 0; output_padding_x <= 1; ++output_padding_x) {
 												generic_eltwise_test<float>(test_input_fmt, input_b, input_f, input_yx.first, input_yx.second, mode, relu_activated, slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
 												if (!f16_supported) continue;
 												generic_eltwise_test<FLOAT16>(test_input_fmt, input_b, input_f, input_yx.first, input_yx.second, mode, relu_activated, (FLOAT16)slope, input_padding_y, input_padding_x, output_padding_y, output_padding_x);
