@@ -62,7 +62,7 @@ struct eltwise_gpu : typed_primitive_impl<eltwise>
 
         if (!outer.has_padded_dependency() && !outer.is_padded() && (output_layout.count() % 8 == 0))
         {
-            kd.gws0 = align_to(output_layout.count() / 8, 8);
+            kd.gws0 = output_layout.count() / 8;
             kd.kernel_name = kernel_name_vload8;
         }
         else if (output_layout.format == cldnn::format::bfyx)
