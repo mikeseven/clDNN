@@ -333,7 +333,10 @@ void program_impl::trim_to_outputs()
     });
 
     for (auto const& opt : optimized_out)
+    {
+        inputs.remove(nodes_map[opt].get());
         nodes_map.erase(opt);
+    }
 }
 
 void program_impl::reorder_inputs(layout_optimizer& lo)
