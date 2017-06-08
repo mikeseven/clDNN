@@ -321,12 +321,16 @@ void program_impl::trim_to_outputs()
         {
             processing_order.erase(node.processing_itr);
             optimized_out.push_back(node.id());
+
+            if (node.is_input())
+            {
+                inputs.remove(&node);
+            }
         }
     });
 
     for (auto const& opt : optimized_out)
     {
-        inputs.remove(nodes_map[opt].get());
         nodes_map.erase(opt);
     }
 }
