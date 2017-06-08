@@ -15,7 +15,7 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "ks_reorder_inst.h"
+#include "generic_layer_inst.h"
 #include "primitive_type_base.h"
 
 #include <algorithm>
@@ -23,18 +23,18 @@
 namespace cldnn
 {
 
-primitive_type_id ks_reorder_type_id()
+primitive_type_id generic_layer_type_id()
 {
-    static primitive_type_base<ks_reorder> instance;
+    static primitive_type_base<generic_layer> instance;
     return &instance;
 }
 
-ks_reorder_inst::typed_primitive_inst(network_impl& network, ks_reorder_node const& node)
+generic_layer_inst::typed_primitive_inst(network_impl& network, generic_layer_node const& node)
     : parent(network, node)
 {
 }
 
-std::string ks_reorder_inst::to_string(ks_reorder_node const& node)
+std::string generic_layer_inst::to_string(generic_layer_node const& node)
 {
     std::stringstream primitive_description;
     auto desc = node.get_primitive();

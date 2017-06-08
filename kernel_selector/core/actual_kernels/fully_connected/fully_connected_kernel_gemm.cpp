@@ -78,9 +78,10 @@ namespace KernelSelector {
             const std::string kernel_id1 = params.layerID + std::to_string(UniqeID());
 
             std::stringstream compOptions;
-            auto& cl_kernel = kd.weights_reorder_params.cl_kernel;
-            cl_kernel.kernel_string = GetKernelString(weights_reorder_kernel_name, GetBaseJit(newParams, kernel_id1), "align_weights");
-            cl_kernel.args_desc = GetArgumentDesc(1, false, false);
+            kd.weights_reorder_params.cl_kernel = std::shared_ptr<clKernelData>(new clKernelData());
+            auto cl_kernel = kd.weights_reorder_params.cl_kernel.get();
+            cl_kernel->kernel_string = GetKernelString(weights_reorder_kernel_name, GetBaseJit(newParams, kernel_id1), "align_weights");
+            cl_kernel->args_desc = GetArgumentDesc(1, false, false);
 
             const uint32_t bpp = BytesPerElement(newParams.inputs[0].dtype);
             const size_t aligned_input_size = newParams.inputs[0].batch().pitch;
@@ -88,7 +89,7 @@ namespace KernelSelector {
             const size_t new_buffer_size = output_size_in_batch * aligned_input_size;
             const size_t new_buffer_size_in_bytes = new_buffer_size * bpp;
 
-            cl_kernel.work_groups.global = cl::NDRange(new_buffer_size, 1, 1);
+            cl_kernel->work_groups.global = cl::NDRange(new_buffer_size, 1, 1);
             kd.weights_reorder_params.new_buffer_size = new_buffer_size_in_bytes;
         }
 

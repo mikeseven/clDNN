@@ -531,7 +531,7 @@ void program_impl::optimize_ks_weights(layout_optimizer& lo)
         }
         else if (wtype == input_layout::type_id())
         {
-            auto reorders = lo.get_ks_reorder(
+            auto reorders = lo.get_generic_layer(
                 impl->_ks_kernel_data.weights_reorder_params,
                 weights.as<input_layout>().typed_desc()->id,
                 output_layout,

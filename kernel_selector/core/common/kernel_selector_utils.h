@@ -93,7 +93,7 @@ namespace KernelSelector
             }
 
             weights_reorder_params.engine = WeightsReorderParams::Engine::GPU;
-            weights_reorder_params.cl_kernel = kernels_data[0].kernels[0];
+            weights_reorder_params.cl_kernel = std::make_shared<clKernelData>(kernels_data[0].kernels[0]);
             weights_reorder_params.new_buffer_size = r_params.reorderParams.output.PhysicalSize();
         }
 

@@ -16,43 +16,43 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "ks_reorder.hpp"
+#include "generic_layer.hpp"
 #include "primitive_inst.h"
 
 namespace cldnn
 {
 
 template <>
-struct typed_program_node<ks_reorder> : public typed_program_node_base<ks_reorder>
+struct typed_program_node<generic_layer> : public typed_program_node_base<generic_layer>
 {
-    using parent = typed_program_node_base<ks_reorder>;
+    using parent = typed_program_node_base<generic_layer>;
 public:
     using parent::parent;
 
     auto& input() const { return get_dependency(0); }
 };
 
-using ks_reorder_node = typed_program_node<ks_reorder>;
+using generic_layer_node = typed_program_node<generic_layer>;
 
 template <>
-class typed_primitive_inst<ks_reorder> : public typed_primitive_inst_base<ks_reorder>
+class typed_primitive_inst<generic_layer> : public typed_primitive_inst_base<generic_layer>
 {
-    using parent = typed_primitive_inst_base<ks_reorder>;
+    using parent = typed_primitive_inst_base<generic_layer>;
 
 public:
-    static layout calc_output_layout(ks_reorder_node const& node)
+    static layout calc_output_layout(generic_layer_node const& node)
     {
         return node.get_primitive()->output_layout;
     }
 
-    static std::string to_string(ks_reorder_node const& node);
+    static std::string to_string(generic_layer_node const& node);
 
 public:
-    typed_primitive_inst(network_impl& network, ks_reorder_node const& node);
+    typed_primitive_inst(network_impl& network, generic_layer_node const& node);
 
     const memory& input_memory() const { return dep_memory(0); }
 };
 
-using ks_reorder_inst = typed_primitive_inst<ks_reorder>;
+using generic_layer_inst = typed_primitive_inst<generic_layer>;
 
 }

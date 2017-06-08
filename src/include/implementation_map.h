@@ -35,6 +35,7 @@ namespace cldnn {
 
 struct permute;
 struct reorder;
+struct generic_layer;
 struct reshape;
 struct data;
 struct input_layout;
@@ -70,6 +71,16 @@ struct implementation_key<reorder>
 {
     typedef cldnn::engine_types type;
     type operator()(engine_types engine_type, const typed_program_node<reorder>&)
+    {
+        return engine_type;
+    }
+};
+
+template<>
+struct implementation_key<generic_layer>
+{
+    typedef cldnn::engine_types type;
+    type operator()(engine_types engine_type, const typed_program_node<generic_layer>&)
     {
         return engine_type;
     }

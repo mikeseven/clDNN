@@ -16,13 +16,14 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "ks_reorder.h"
+#include "generic_layer.h"
 #include "api/CPP/primitive.hpp"
 #include "api/CPP/memory.hpp"
 #include "kernel_selector_common.h"
 
 namespace cldnn
 {
+
 /// @addtogroup cpp_api C++ API
 /// @{
 /// @addtogroup cpp_topology Network Topology
@@ -34,39 +35,39 @@ namespace cldnn
 /// @details Corresponding values are bitwise equal before/after reorder.
 /// Also merged with subtraction layer, which can subtract values while doing reordering.
 /// NOTE THAT THIS WILL SUBTRACT THE SAME VALUES FROM EACH BATCH.
-struct ks_reorder : public primitive_base<ks_reorder, CLDNN_PRIMITIVE_DESC(ks_reorder)>
+struct generic_layer : public primitive_base<generic_layer, CLDNN_PRIMITIVE_DESC(generic_layer)>
 {
-    CLDNN_DECLATE_PRIMITIVE(ks_reorder)
+    CLDNN_DECLATE_PRIMITIVE(generic_layer)
 
-        /// @brief Constructs ks_reorder primitive which takes mean subtract values from another primitive.
+        /// @brief Constructs generic_layer primitive which takes mean subtract values from another primitive.
         /// @param id This primitive id.
         /// @param input Input primitive id.
         /// @param output_layout Requested memory layout.
         /// @param mean Primitive id to get mean subtract values.
-        ks_reorder(
+        generic_layer(
             const primitive_id& id,
             const primitive_id& input,
             const layout& output_layout,
-            const KernelSelector::WeightsReorderParams* reorder_params,
+            const KernelSelector::GenericKernelParams& generic_params,
             const padding& output_padding = padding()
         )
         : primitive_base(id, { input }, output_padding)
         , output_layout(output_layout)
-        , reorder_params(reorder_params)
+        , generic_params(generic_params)
     {
     }
 
-    /// @brief Constructs a copy from basic C API @CLDNN_PRIMITIVE_DESC{ks_reorder}
-    ks_reorder(const dto* dto)
+    /// @brief Constructs a copy from basic C API @CLDNN_PRIMITIVE_DESC{generic_layer}
+    generic_layer(const dto* dto)
         : primitive_base(dto)
         , output_layout(dto->output_layout)
-        , reorder_params(dto->reorder_params)
+        , generic_params(*static_cast<const KernelSelector::GenericKernelParams* const>(dto->generic_params))
     {
     }
 
     /// @brief Requested memory layout.
     layout output_layout;
-    const KernelSelector::WeightsReorderParams* reorder_params;
+    const KernelSelector::GenericKernelParams generic_params;
 
 protected:
     std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override
@@ -77,7 +78,7 @@ protected:
     void update_dto(dto& dto) const override
     {
         dto.output_layout = output_layout;
-        dto.reorder_params = reorder_params;
+        dto.generic_params = &generic_params;
     }
 };
 /// @}

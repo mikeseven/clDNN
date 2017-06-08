@@ -27,7 +27,7 @@
 #include "api/CPP/deconvolution.hpp"
 #include "api/CPP/fully_connected.hpp"
 
-#include "ks_reorder.hpp"
+#include "generic_layer.hpp"
 
 #include "kernel_selector_common.h"
 #include "kernel_selector_helper.h"
@@ -101,7 +101,7 @@ private:
     };
 
     std::map<cache_key, std::shared_ptr<reorder>> _cached_reorders;
-    std::map<cache_key, std::shared_ptr<ks_reorder>> _cached_ks_reorders;
+    std::map<cache_key, std::shared_ptr<generic_layer>> _cached_generic_layers;
 
     layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, boost::optional<layout> const& output_layout);
     layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, boost::optional<layout> const& output_layout);
@@ -112,8 +112,8 @@ private:
     std::pair<std::shared_ptr<cldnn::reorder>, bool>
     create_reorder_if_needed(const layout& current_layout, const cldnn::primitive_id& memid, layout const& expected_layout);
 
-    std::pair<std::shared_ptr<cldnn::ks_reorder>, bool>
-    create_ks_reorder_if_needed(const cldnn::primitive_id& memid, layout const& expected_layout, const KernelSelector::WeightsReorderParams* reorder_params);
+    std::pair<std::shared_ptr<cldnn::generic_layer>, bool>
+    create_ks_reorder_if_needed(const cldnn::primitive_id& memid, layout const& expected_layout, const KernelSelector::WeightsReorderParams& reorder_params);
 
 public:
     explicit layout_optimizer(engine_impl::ptr eng, bool enabled = true);
@@ -163,7 +163,7 @@ public:
         return meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>();
     }
 
-    auto get_ks_reorder(
+    auto get_generic_layer(
         const KernelSelector::WeightsReorderParams& reorder_params,
         primitive_id input_id,
         const layout& old_layout,
@@ -197,7 +197,7 @@ public:
                 old_layout.data_type, format::bfyx, // simple linear format (flatten to x channel)
                 { 1,1,1,(tensor::value_type)(reorder_params.new_buffer_size / bpp) }
             };
-            auto reorder = create_ks_reorder_if_needed(input_id, expected_layout, &reorder_params);
+            auto reorder = create_ks_reorder_if_needed(input_id, expected_layout, reorder_params);
             if (reorder.first)
             {
                 ret.push_back(reorder);
@@ -236,7 +236,7 @@ public:
         const std::shared_ptr<data> data_prim,
         data_type type)
     {
-        auto reorders = get_ks_reorder(reorder_params, data_prim->id, data_prim->mem.get_layout(), type);
+        auto reorders = get_generic_layer(reorder_params, data_prim->id, data_prim->mem.get_layout(), type);
         for (auto& reorder : reorders)
         {
             add_reoder_to_topology(reorder, data_prim);

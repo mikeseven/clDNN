@@ -21,7 +21,7 @@
 
 #include "api/CPP/data.hpp"
 #include "api/CPP/reorder.hpp"
-#include "ks_reorder.hpp"
+#include "generic_layer.hpp"
 #include <boost/filesystem.hpp>
 #include <sstream>
 
@@ -197,26 +197,21 @@ layout_optimizer::create_reorder_if_needed(const layout& current_layout, const c
     return std::make_pair(nullptr, true);
 }
 
-std::pair<std::shared_ptr<cldnn::ks_reorder>, bool>
-layout_optimizer::create_ks_reorder_if_needed(const cldnn::primitive_id& memid, layout const& expected_layout, const KernelSelector::WeightsReorderParams* reorder_params)
+std::pair<std::shared_ptr<cldnn::generic_layer>, bool>
+layout_optimizer::create_ks_reorder_if_needed(const cldnn::primitive_id& memid, layout const& expected_layout, const KernelSelector::WeightsReorderParams& reorder_params)
 {
-    if (reorder_params)
-    {
-        cache_key ckey{ memid, expected_layout };
-        auto itr = _cached_ks_reorders.find(ckey);
-        if (itr != _cached_ks_reorders.end())
-            return std::make_pair(itr->second, true);
+    cache_key ckey{ memid, expected_layout };
+    auto itr = _cached_generic_layers.find(ckey);
+    if (itr != _cached_generic_layers.end())
+        return std::make_pair(itr->second, true);
 
-        auto count = _cached_ks_reorders.size();
-        std::stringstream ss;
-        ss << "ks_reorder_" << count << "_" << memid;
+    auto count = _cached_generic_layers.size();
+    std::stringstream ss;
+    ss << "generic_layer_" << count << "_" << memid;
 
-        auto reorder = std::make_shared<cldnn::ks_reorder>(ss.str(), memid, expected_layout, reorder_params);
-        _cached_ks_reorders[ckey] = reorder;
-        return std::make_pair(reorder, false);
-    }
-
-    return std::make_pair(nullptr, true);
+    auto reorder = std::make_shared<cldnn::generic_layer>(ss.str(), memid, expected_layout, reorder_params);
+    _cached_generic_layers[ckey] = reorder;
+    return std::make_pair(reorder, false);
 }
 
 void layout_optimizer::optimize() const

@@ -251,7 +251,7 @@ namespace clDNN
             if (m_cldnnKernelData.weights_reorder_params.engine == KernelSelector::WeightsReorderParams::Engine::GPU)
             {
                 UpdateBinary(
-                    m_cldnnKernelData.weights_reorder_params.cl_kernel, 
+                    *m_cldnnKernelData.weights_reorder_params.cl_kernel.get(),
                     m_WeightsKernelData, 
                     m_WeightsReorderBinary, 
                     m_WeightsReorderArgInfo);
