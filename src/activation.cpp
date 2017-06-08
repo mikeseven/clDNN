@@ -56,7 +56,7 @@ activation_inst::typed_primitive_inst(network_impl& network, activation_node con
     if (input_arg.size.raw.size() != output_arg.size.raw.size())
         throw std::runtime_error("ReLU input/output number of dimension does not match.");
 
-	if (is_parameterized())
+    if (is_parameterized())
 	{
 		/// Slope input x dimension should be equal to input feature size (one slope per channel).
 		auto slope_input_size = slope_memory().get_layout().size;

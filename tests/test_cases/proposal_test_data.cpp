@@ -2522,7 +2522,7 @@ float bbox_pred_data[] = {
 
 size_t bbox_pred_data_size = sizeof(bbox_pred_data) / sizeof(bbox_pred_data[0]);
 
-float simpler_nms_ref[] = {
+float proposal_ref[] = {
 	0.0f, 22.352310f, 0.000000f, 349.000000f, 209.000000f, // 0
 	0.0f, 130.680084f, 0.000000f, 349.000000f, 209.000000f, // 1
 	0.0f, 0.000000f, 0.000000f, 252.452972f, 209.000000f, // 2
@@ -2550,4 +2550,4 @@ float simpler_nms_ref[] = {
 	0.0f, 183.979691f, 0.000000f, 341.391418f, 129.322388f, // 24
 };
 
-size_t simpler_nms_ref_size = sizeof(simpler_nms_ref) / sizeof(simpler_nms_ref[0]);
+size_t proposal_ref_size = sizeof(proposal_ref) / sizeof(proposal_ref[0]);
