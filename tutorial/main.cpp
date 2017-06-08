@@ -41,7 +41,7 @@ int main()
     cldnn::engine eng = chapter_1();
     cldnn::topology topology = chapter_2(eng);
     chapter_3(eng, topology);
-    //chapter_4(eng, topology);
-    //chapter_5(eng, topology);
+    chapter_4(eng, topology);
+    chapter_5(eng, topology);
     return 0;
 }
