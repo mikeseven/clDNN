@@ -62,8 +62,5 @@ KERNEL(pooling_gpu_max_offset)(const __global UNIT_TYPE* input, __global UNIT_TY
         }
     }
 
-    if (offset_y < 0 || offset_y + WINDOW_SIZE_Y - 1 >= input_buffer_size_y || offset_x < 0 || offset_x + WINDOW_SIZE_X - 1 >= input_buffer_size_x)
-        output[linear_id_xyz] = max(result, (UNIT_TYPE)0);
-    else
-        output[linear_id_xyz] = result;
+    output[linear_id_xyz] = result;
 }
