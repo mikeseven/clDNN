@@ -119,19 +119,13 @@ namespace KernelSelector {
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id, AGE_BASED);
         kernel.args_desc = GetArgumentDesc(1, true, !newParams.bias.empty());
         kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
-#if 0
-        auto cpu_kernel = CPUCNNConvolutionReorder(CPUCNNConvolutionReorder::WeightsReorderMode::CONVOLUTION_DIRECT, params_ptr, run_info);
-        kd.weights_reorder_params.engine = WeightsReorderParams::Engine::CPU;
-        kd.weights_reorder_params.cpu_kernel = std::make_shared<CPUCNNConvolutionReorder>(cpu_kernel);
-        kd.weights_reorder_params.new_buffer_size = cpu_kernel.GetNewWeightBufferSizeInBytes();
-#else
-        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::iyxo_om16x2_axy, kd.weights_reorder_params);
+
+        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::i_yxs_os_yxsv2_osv16, kd.weights_reorder_params);
 
         if (!succeed)
         {
             return{};
         }
-#endif
 
         kd.estimated_time = FORCE_PRIORITY_4;
 

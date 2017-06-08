@@ -15,6 +15,7 @@
 */
 
 #include "fully_connected_kernel_ref.h"
+#include "kernel_selector_utils.h"
  
 namespace KernelSelector 
 {
@@ -25,6 +26,8 @@ namespace KernelSelector
         k.SetInputDataType(Datatype::F32);
         k.SetOutputDataType(Datatype::F16);
         k.SetOutputDataType(Datatype::F32);
+        k.SetInputWeightsType(WeightsType::F16);
+        k.SetInputWeightsType(WeightsType::F32);
         k.SetInputLayout(DataLayout::bfyx);
         k.SetInputLayout(DataLayout::bf);
         k.SetOutputLayout(DataLayout::bf);
@@ -52,6 +55,13 @@ namespace KernelSelector
         kernel.work_groups.global = cl::NDRange(out.feature().v, out.batch().v);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
         kernel.args_desc = GetArgumentDesc(1, true, !newParams.bias.empty());
+
+        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::oiyx, kd.weights_reorder_params);
+
+        if (!succeed)
+        {
+            return{};
+        }
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 

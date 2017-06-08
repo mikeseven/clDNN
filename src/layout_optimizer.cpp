@@ -87,12 +87,10 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
     auto expected_format = current_layout.format;
-    auto batch = current_layout.size.batch[0];
 
     if (output_layout)
     {
         expected_data_type = output_layout.get().data_type;
-        batch = output_layout.get().size.batch[0];
     }
     else if (type != data_type::input)
         throw std::runtime_error("'output_layout' is required parameter for weights/bias optimization");
@@ -105,36 +103,8 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         break;
 
     case data_type::weights: //fc weights
-    {
-        if (batch > 1 && !(expected_data_type == data_types::f16 && batch >= 16) && batch % 8 == 0)
-        {
-            expected_tensor = cldnn::tensor(
-                current_layout.size.batch[0], 1, current_layout.size.feature[0] * current_layout.size.spatial[0] * current_layout.size.spatial[1], 1
-            );
-            expected_format = cldnn::format::bs_xs_xsv8_bsv8;
-        }
-        else if (expected_data_type == data_types::f16 && batch == 16)
-        {
-            expected_tensor = cldnn::tensor(
-                current_layout.size.batch[0], 1, current_layout.size.feature[0] * current_layout.size.spatial[0] * current_layout.size.spatial[1], 1
-            );
-            expected_format = cldnn::format::bs_xs_xsv8_bsv16;
-        }
-        else if (batch == 1)
-        {
-            expected_tensor = cldnn::tensor(
-                current_layout.size.batch[0], 1, current_layout.size.feature[0] * current_layout.size.spatial[0] * current_layout.size.spatial[1], 1
-            );
-            expected_format = cldnn::format::bs_x_bsv16;
-        }
-        else
-        {
-            expected_tensor = current_layout.size;
-            expected_format = cldnn::format::yxfb;
-        }
-
+        // uses original weights - weights will be reorder after this phase
         break;
-    }
 
     default:
         throw std::runtime_error("Unsupported data type in layout_optimizer::get_expected_layout for fully-connected primitive");

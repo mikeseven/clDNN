@@ -17,7 +17,16 @@
 #include "fully_connected_kernel_selector.h"
 #include "fully_connected_kernel_ref.h"
 #include "fully_connected_kernel_gemm.h"
-#include "fully_connected_gpu_bx_bs_x_bsv16_b1.h"
+#include "fully_connected_kernel_bs_f_bsv16_b1.h"
+#include "fully_connected_kernel_bs_f_bsv16_af8.h"
+#include "fully_connected_kernel_bs_f_bsv8_af8.h"
+#include "fully_connected_kernel_yxfb_ref.h"
+#include "fully_connected_kernel_fb_oi_ref.h"
+#include "fully_connected_kernel_fb_io_ref.h"
+#include "fully_connected_kernel_bf_io_ref.h"
+#include "fully_connected_kernel_fb_oi_b8_ref.h"
+#include "fully_connected_kernel_fb_io_b8_f8.h"
+#include "fully_connected_kernel_fb_io_block.h"
  
 namespace KernelSelector {
 
@@ -25,7 +34,16 @@ namespace KernelSelector {
     {
         Attach<FullyConnectedKernelRef>();
         Attach<FullyConnectedKernelGEMM>();
-        Attach<FullyConnected_bx_bs_x_bsv16_b1>();
+        Attach<FullyConnected_bs_f_bsv16_b1>();
+        Attach<FullyConnected_bs_f_bsv16_af8>();
+        Attach<FullyConnected_bs_f_bsv8_af8>();
+        Attach<FullyConnected_yxfb_ref>();
+        Attach<FullyConnected_fb_oi_ref>();
+        Attach<FullyConnected_fb_io_ref>();
+        Attach<FullyConnected_bf_io_ref>();
+        Attach<FullyConnected_fb_oi_b8_ref>();
+        Attach<FullyConnected_fb_io_block>();
+        Attach<FullyConnected_fb_io_b8_f8>();
     }
 
     KernelsData FullyConnectedKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const

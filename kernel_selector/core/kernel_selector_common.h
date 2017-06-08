@@ -246,13 +246,15 @@ namespace KernelSelector {
     {
         switch (l)
         {
-        case KernelSelector::DataLayout::bf:     return "BF";
-        case KernelSelector::DataLayout::fb:     return "FB";
-        case KernelSelector::DataLayout::bfyx:   return "BFYX";
-        case KernelSelector::DataLayout::yxfb:   return "YXFB";
-        case KernelSelector::DataLayout::byxf:   return "BYXF";
-        case KernelSelector::DataLayout::fyxb:   return "FYXB";
-        case KernelSelector::DataLayout::brfyx:  return "BRFYX";
+        case KernelSelector::DataLayout::bf:                return "BF";
+        case KernelSelector::DataLayout::fb:                return "FB";
+        case KernelSelector::DataLayout::bfyx:              return "BFYX";
+        case KernelSelector::DataLayout::yxfb:              return "YXFB";
+        case KernelSelector::DataLayout::byxf:              return "BYXF";
+        case KernelSelector::DataLayout::fyxb:              return "FYXB";
+        case KernelSelector::DataLayout::bs_f_bsv8__af8:    return "BS_F_BSV8__AF8";
+        case KernelSelector::DataLayout::bs_f_bsv16__af8:   return "BS_F_BSV16__AF8";
+        case KernelSelector::DataLayout::brfyx:             return "BRFYX";
         default: return "";
         }
     }
@@ -271,8 +273,8 @@ namespace KernelSelector {
     {
         switch (wType)
         {
-        case WeightsType::F16: return "F16";
-        case WeightsType::F32: return "F32";
+        case WeightsType::F16:  return "F16";
+        case WeightsType::F32:  return "F32";
         case WeightsType::INT8: return "INT8";
         default: return "";
         }
@@ -298,19 +300,19 @@ namespace KernelSelector {
     {
         switch (kt)
         {
-        case KernelType::UNKNOWN: return "UNKNOWN";
-        case KernelType::CONVOLUTION: return "CONVOLUTION";
-        case KernelType::LRN: return "LRN";
-        case KernelType::POOLING: return "POOLING";
-        case KernelType::ROI_POOLING: return "ROI_POOLING";
-        case KernelType::FULLY_CONNECTED: return "FULLY_CONNECTED";
+        case KernelType::UNKNOWN:           return "UNKNOWN";
+        case KernelType::CONVOLUTION:       return "CONVOLUTION";
+        case KernelType::LRN:               return "LRN";
+        case KernelType::POOLING:           return "POOLING";
+        case KernelType::ROI_POOLING:       return "ROI_POOLING";
+        case KernelType::FULLY_CONNECTED:   return "FULLY_CONNECTED";
         case KernelType::LOCALLY_CONNECTED: return "LOCALLY_CONNECTED";
-        case KernelType::ACTIVATION: return "ACTIVATION";
-        case KernelType::SOFT_MAX: return "SOFT_MAX";
-        case KernelType::ELTWISE: return "ELTWISE";
-        case KernelType::TABLE_LOOKUP: return "TABLE_LOOKUP";
-        case KernelType::REORDER: return "REORDER";
-        case KernelType::CONVERT: return "CONVERT";
+        case KernelType::ACTIVATION:        return "ACTIVATION";
+        case KernelType::SOFT_MAX:          return "SOFT_MAX";
+        case KernelType::ELTWISE:           return "ELTWISE";
+        case KernelType::TABLE_LOOKUP:      return "TABLE_LOOKUP";
+        case KernelType::REORDER:           return "REORDER";
+        case KernelType::CONVERT:           return "CONVERT";
         default:
             return "";
         }
@@ -369,18 +371,19 @@ namespace KernelSelector {
     {
         switch (layout)
         {
-        case WeightsLayout::oi:                 return "OI";
-        case WeightsLayout::io:                 return "IO";
-        case WeightsLayout::oiyx:               return "OIYX";
-        case WeightsLayout::oyxi:               return "OYXI";
-        case WeightsLayout::iyxo:               return "IYXO";
-        case WeightsLayout::yxio:               return "YXIO";
-        case WeightsLayout::os_iyx_osv16:       return "OS_IYX_OSV16";
-        case WeightsLayout::os_is_isv8_osv8:    return "OS_IS_ISV8_OSV8";
-        case WeightsLayout::os_i_osv16:         return "OS_I_OSV16";
-        case WeightsLayout::iyxo_om16x2_axy:    return "IYXO_OM16X2_AXY";
-        case WeightsLayout::iyxo_om16x2_ax_g32: return "IYXO_OM16X2_AX_G32";
-        case WeightsLayout::iyxo_om8x2_ax_g32:  return "IYXO_OM8X2_AX_G32";
+        case WeightsLayout::oi:                         return "OI";
+        case WeightsLayout::io:                         return "IO";
+        case WeightsLayout::oiyx:                       return "OIYX";
+        case WeightsLayout::oyxi:                       return "OYXI";
+        case WeightsLayout::iyxo:                       return "IYXO";
+        case WeightsLayout::yxio:                       return "YXIO";
+        case WeightsLayout::os_iyx_osv16:               return "OS_IYX_OSV16";
+        case WeightsLayout::os_i_osv16:                 return "OS_I_OSV16";
+        case WeightsLayout::os_i_osv8__ai8:             return "OS_I_OSV8__AI8";
+        case WeightsLayout::os_i_osv16__ai8:            return "OS_I_OSV16__AI8";
+        case WeightsLayout::i_yxs_os_yxsv2_osv16:       return "I_YXS_OS_YXSV2_OSV16";
+        case WeightsLayout::iy_xs_os_xsv2_osv16__ao32:  return "IY_XS_OS_XSV2_OSV16__AO32";
+        case WeightsLayout::iy_xs_os_xsv2_osv8__ao32:   return "IY_XS_OS_XSV2_OSV8__AO32";
         default:
             return "";
             break;

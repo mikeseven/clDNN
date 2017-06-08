@@ -48,7 +48,7 @@ namespace KernelSelector {
         ArgumentDescpirtor get_args_desc(uint32_t num_of_input, bool use_weights, bool use_bias) const;
         KernelString get_kernel_string(std::string kernel_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN) const;
         void fill_cl_kernel_data(clKernelData& kernel, const CommonDispatchData& run_info, std::string kernel_map_name, std::string jit, std::string entry_point, bool weights = false, bool bias = false) const;
-        jit_constants get_common_jit_constants(const BaseParams& params, CommonDispatchData& kd) const;
+        jit_constants get_common_jit_constants(const BaseParams& params, const CommonDispatchData& kd) const;
     };
 
     inline cldnn::format params_2_cldnn(Tensor::DataLayout l)
@@ -75,5 +75,18 @@ namespace KernelSelector {
             static_cast<tensor_vt>(ksTensor.feature().v),
             static_cast<tensor_vt>(ksTensor.x().v),
             static_cast<tensor_vt>(ksTensor.y().v) };
+    }
+
+    inline bool check_activation_support(ActivationFunction func)
+    {
+        switch (func)
+        {
+        case KernelSelector::ActivationFunction::NONE:
+        case KernelSelector::ActivationFunction::RELU:
+        case KernelSelector::ActivationFunction::RELU_NEGATIVE_SLOPE:
+            return true;
+        default:
+            return false;
+        }
     }
 }

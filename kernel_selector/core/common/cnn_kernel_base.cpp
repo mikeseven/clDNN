@@ -34,7 +34,6 @@ namespace KernelSelector {
                 << "#define FUNC(name) name##_" << kernel_id << "\n"
                 << "#define FUNC_CALL(name) name##_" << kernel_id << "\n";
         }
-        
 
         jit << "#define ACTIVATION_FUNCTION_" << toString(params.activationFunc) << "\n"
             << "#define TYPE_" << toString(params.inputs[0].dtype) << "\n"

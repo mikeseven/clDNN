@@ -31,33 +31,18 @@ namespace KernelSelector
         }
     }
 
-    inline bool simple_layout(WeightsLayout l)
-    {
-        switch (l)
-        {
-        case WeightsLayout::os_iyx_osv16:
-        case WeightsLayout::os_i_osv16:
-        case WeightsLayout::os_is_isv8_osv8:
-        case WeightsLayout::iyxo_om16x2_axy:
-        case WeightsLayout::iyxo_om16x2_ax_g32:
-        case WeightsLayout::iyxo_om8x2_ax_g32:
-            return false;
-        default:
-            return true;
-        }
-    }
-
     inline uint32_t sub_group_size(WeightsLayout l)
     {
         switch (l)
         {
         case WeightsLayout::os_iyx_osv16:
         case WeightsLayout::os_i_osv16:
-        case WeightsLayout::iyxo_om16x2_axy:
-        case WeightsLayout::iyxo_om16x2_ax_g32:
+        case WeightsLayout::os_i_osv16__ai8:
+        case WeightsLayout::i_yxs_os_yxsv2_osv16:
+        case WeightsLayout::iy_xs_os_xsv2_osv16__ao32:
             return 16;
-        case WeightsLayout::iyxo_om8x2_ax_g32:
-        case WeightsLayout::os_is_isv8_osv8:
+        case WeightsLayout::os_i_osv8__ai8:
+        case WeightsLayout::iy_xs_os_xsv2_osv8__ao32:
             return 8;
         default:
             return 1;
@@ -89,8 +74,8 @@ namespace KernelSelector
             gpu::make_jit_constant("OUT_Y_PITCH",               output.y().pitch),
             gpu::make_jit_constant("OUT_IFM_PITCH",             output.ifm().pitch),
             gpu::make_jit_constant("OUT_OFM_PITCH",             output.ofm().pitch),
-            gpu::make_jit_constant("SIMPLE_INPUT",              simple_layout(input.layout)),
-            gpu::make_jit_constant("SIMPLE_OUTPUT",             simple_layout(output.layout)),
+            gpu::make_jit_constant("SIMPLE_INPUT",              input.SimpleLayout()),
+            gpu::make_jit_constant("SIMPLE_OUTPUT",             output.SimpleLayout()),
             gpu::make_jit_constant("SUB_GROUP_SIZE",            sub_group_size(output.layout)),
         };
 

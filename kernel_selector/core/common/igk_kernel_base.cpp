@@ -49,8 +49,28 @@ static const char* kernels_header = R"__krnl(
                   intel_sub_group_shuffle( _block, 6 ), \
                   intel_sub_group_shuffle( _block, 7 ) );
 
+#define TRANSPOSE_BLOCK_8_FP16( _block )   \
+        (half8)( intel_sub_group_shuffle( _block, 0 ), \
+                  intel_sub_group_shuffle( _block, 1 ), \
+                  intel_sub_group_shuffle( _block, 2 ), \
+                  intel_sub_group_shuffle( _block, 3 ), \
+                  intel_sub_group_shuffle( _block, 4 ), \
+                  intel_sub_group_shuffle( _block, 5 ), \
+                  intel_sub_group_shuffle( _block, 6 ), \
+                  intel_sub_group_shuffle( _block, 7 ) );
+
 #define TRANSPOSE_BLOCK_8_COL( _block, _col )   \
         (float8)( intel_sub_group_shuffle( _block.s0, _col ), \
+                  intel_sub_group_shuffle( _block.s1, _col ), \
+                  intel_sub_group_shuffle( _block.s2, _col ), \
+                  intel_sub_group_shuffle( _block.s3, _col ), \
+                  intel_sub_group_shuffle( _block.s4, _col ), \
+                  intel_sub_group_shuffle( _block.s5, _col ), \
+                  intel_sub_group_shuffle( _block.s6, _col ), \
+                  intel_sub_group_shuffle( _block.s7, _col ) );
+
+#define TRANSPOSE_BLOCK_8_COL_FP16( _block, _col )   \
+        (half8)( intel_sub_group_shuffle( _block.s0, _col ), \
                   intel_sub_group_shuffle( _block.s1, _col ), \
                   intel_sub_group_shuffle( _block.s2, _col ), \
                   intel_sub_group_shuffle( _block.s3, _col ), \
@@ -68,6 +88,23 @@ static const char* kernels_header = R"__krnl(
                  as_half2(intel_sub_group_shuffle(_block, 5)),  \
                  as_half2(intel_sub_group_shuffle(_block, 6)),  \
                  as_half2(intel_sub_group_shuffle(_block, 7)));
+#define TRANSPOSE_BLOCK_16_FP16_HALF_TYPE(_block)  \
+        (half16)(intel_sub_group_shuffle(_block, 0),  \
+                 intel_sub_group_shuffle(_block, 1),  \
+                 intel_sub_group_shuffle(_block, 2),  \
+                 intel_sub_group_shuffle(_block, 3),  \
+                 intel_sub_group_shuffle(_block, 4),  \
+                 intel_sub_group_shuffle(_block, 5),  \
+                 intel_sub_group_shuffle(_block, 6),  \
+                 intel_sub_group_shuffle(_block, 7),  \
+                 intel_sub_group_shuffle(_block, 8),  \
+                 intel_sub_group_shuffle(_block, 9),  \
+                 intel_sub_group_shuffle(_block, 10),  \
+                 intel_sub_group_shuffle(_block, 11),  \
+                 intel_sub_group_shuffle(_block, 12),  \
+                 intel_sub_group_shuffle(_block, 13),  \
+                 intel_sub_group_shuffle(_block, 14),  \
+                 intel_sub_group_shuffle(_block, 15));
 
 #define DOT_PRODUCT_8( _result, _rowA, colB )    \
 {   \
@@ -248,7 +285,7 @@ static const char* kernels_header = R"__krnl(
         kernel.args_desc = get_args_desc(1, weights, bias);
     }
 
-    jit_constants IGKKernelBase::get_common_jit_constants(const BaseParams& params, CommonDispatchData& kd) const
+    jit_constants IGKKernelBase::get_common_jit_constants(const BaseParams& params, const CommonDispatchData& kd) const
     {
         cldnn::tensor input_tensor = ks_tensor_2_tensor(params.inputs[0]);
         cldnn::tensor output_tensor = ks_tensor_2_tensor(params.output);

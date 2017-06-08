@@ -32,6 +32,7 @@ namespace KernelSelector
         k.SetBatchingSupport();
         k.SetLRNMode(LRNMode::ACROSS_CHANNEL);
         k.SetLRNKernelDividerMode(KernelDividerMode::FIXED);
+        k.SetSubGroupSupport();
         return k;
     }
 

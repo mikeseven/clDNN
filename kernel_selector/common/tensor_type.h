@@ -38,7 +38,8 @@ namespace KernelSelector
             yxfb,               // 3D+batch
             byxf,               // 3D+batch
             fyxb,               // 3D+batch
-
+            bs_f_bsv8__af8,     // for optimized FC
+            bs_f_bsv16__af8,    // for optimized FC
             // TODO: most of the kernel doesn't support ROI. we need to handle it correctly.
             brfyx,              // 4D+batch
         };
@@ -55,11 +56,12 @@ namespace KernelSelector
             iyxo,
             yxio,
             os_iyx_osv16,
-            os_is_isv8_osv8,
             os_i_osv16,
-            iyxo_om16x2_axy,
-            iyxo_om16x2_ax_g32,
-            iyxo_om8x2_ax_g32,
+            os_i_osv8__ai8,         // TODO can we drop the alignment form layout name?
+            os_i_osv16__ai8,
+            i_yxs_os_yxsv2_osv16,
+            iy_xs_os_xsv2_osv16__ao32,
+            iy_xs_os_xsv2_osv8__ao32,
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -99,29 +101,32 @@ namespace KernelSelector
 
             std::map<DataLayout, ChannelLocation> dataChannelMap
             {
-                { DataLayout::bf,   { -1,-1, 0,-1, 1 }},
-                { DataLayout::fb,   { -1,-1, 1,-1, 0 }},
-                { DataLayout::bfyx, {  0, 1, 2,-1, 3 }},
-                { DataLayout::yxfb, {  2, 3, 1,-1, 0 }},
-                { DataLayout::byxf, {  1, 2, 0,-1, 3 }},
-                { DataLayout::fyxb, {  1, 2, 3,-1, 0 }},
-                { DataLayout::brfyx,{  0, 1, 2, 3, 4 }},
+                { DataLayout::bf,               { -1,-1, 0,-1, 1 } },
+                { DataLayout::fb,               { -1,-1, 1,-1, 0 } },
+                { DataLayout::bfyx,             {  0, 1, 2,-1, 3 } },
+                { DataLayout::yxfb,             {  2, 3, 1,-1, 0 } },
+                { DataLayout::byxf,             {  1, 2, 0,-1, 3 } },
+                { DataLayout::fyxb,             {  1, 2, 3,-1, 0 } },
+                { DataLayout::bs_f_bsv8__af8,   { -1,-1, 0,-1, 1 } },
+                { DataLayout::bs_f_bsv16__af8,  { -1,-1, 0,-1, 1 } },
+                { DataLayout::brfyx,            {  0, 1, 2, 3, 4 } },
             };
 
             std::map<WeightsLayout, ChannelLocation> weightsChannelMap
             {
-                { WeightsLayout::oi,                    { -1,-1, 0, 1 } },
-                { WeightsLayout::io,                    { -1,-1, 1, 0 } },
-                { WeightsLayout::oiyx,                  {  0, 1, 2, 3 } },
-                { WeightsLayout::oyxi,                  {  1, 2, 0, 3 } },
-                { WeightsLayout::iyxo,                  {  1, 2, 3, 0 } },
-                { WeightsLayout::yxio,                  {  2, 3, 1, 0 } },
-                { WeightsLayout::os_iyx_osv16,          {  0, 1, 2, 3 } },
-                { WeightsLayout::os_is_isv8_osv8,       { -1,-1, 0, 1 } },
-                { WeightsLayout::os_i_osv16,            { -1,-1, 0, 1 } },
-                { WeightsLayout::iyxo_om16x2_axy,       {  1, 2, 3, 0 } },
-                { WeightsLayout::iyxo_om16x2_ax_g32,    {  1, 2, 3, 0 } },
-                { WeightsLayout::iyxo_om8x2_ax_g32,     {  1, 2, 3, 0 } },
+                { WeightsLayout::oi,                            { -1,-1, 0, 1 } },
+                { WeightsLayout::io,                            { -1,-1, 1, 0 } },
+                { WeightsLayout::oiyx,                          {  0, 1, 2, 3 } },
+                { WeightsLayout::oyxi,                          {  1, 2, 0, 3 } },
+                { WeightsLayout::iyxo,                          {  1, 2, 3, 0 } },
+                { WeightsLayout::yxio,                          {  2, 3, 1, 0 } },
+                { WeightsLayout::os_iyx_osv16,                  {  0, 1, 2, 3 } },
+                { WeightsLayout::os_i_osv8__ai8,                { -1,-1, 0, 1 } },
+                { WeightsLayout::os_i_osv16__ai8,               { -1,-1, 0, 1 } },
+                { WeightsLayout::os_i_osv16,                    { -1,-1, 0, 1 } },
+                { WeightsLayout::i_yxs_os_yxsv2_osv16,          {  1, 2, 3, 0 } },
+                { WeightsLayout::iy_xs_os_xsv2_osv16__ao32,     {  1, 2, 3, 0 } },
+                { WeightsLayout::iy_xs_os_xsv2_osv8__ao32,      {  1, 2, 3, 0 } },
             };
 
             template <typename MapT, typename Layout, typename ChannelName>
@@ -196,6 +201,38 @@ namespace KernelSelector
             uint32_t channelsCount(WeightsLayout l)
             {
                 return channelsCount(weightsChannelMap, l);
+            }
+
+            inline bool SimpleLayout(WeightsLayout l)
+            {
+                switch (l)
+                {
+                case WeightsLayout::oi:
+                case WeightsLayout::io:
+                case WeightsLayout::oiyx:
+                case WeightsLayout::oyxi:
+                case WeightsLayout::iyxo:
+                case WeightsLayout::yxio:
+                    return true;
+                default:
+                    return false;
+                }
+            }
+
+            inline bool SimpleLayout(DataLayout l)
+            {
+                switch (l)
+                {
+                case DataLayout::bf:
+                case DataLayout::fb:
+                case DataLayout::bfyx:
+                case DataLayout::yxfb:
+                case DataLayout::byxf:
+                case DataLayout::fyxb:
+                    return true;
+                default:
+                    return false;
+                }
             }
         }
 
@@ -302,6 +339,8 @@ namespace KernelSelector
                 return same;
             }
 
+            bool SimpleLayout() const { return Tensor::SimpleLayout(layout); }
+
             bool SameDims(const DataTensor& t) const
             {
                 bool same =
@@ -372,6 +411,63 @@ namespace KernelSelector
 
                 return{ dtype, l, PADDED_VAL::UNDEFINED, 0, vec };
             }
+
+            DataTensor flatten_fyx_2_f() const
+            {
+                DataLayout l;
+
+                switch (layout)
+                {
+                case KernelSelector::Tensor::bf:
+                case KernelSelector::Tensor::fb:
+                    return *this;
+                case KernelSelector::Tensor::bfyx:
+                    if (feature().pitch != x().v*y().v)
+                    {
+                        throw std::runtime_error("Unsupported - cannot flatten with padding");
+                    }
+                    l = DataLayout::bf;
+                    break;
+                case KernelSelector::Tensor::byxf:
+                    if (y().pitch != x().v*feature().v)
+                    {
+                        throw std::runtime_error("Unsupported - cannot flatten with padding");
+                    }
+                    l = DataLayout::bf;
+                    break;
+                case KernelSelector::Tensor::yxfb:
+                    if (y().pitch != x().v*feature().v*feature().pitch)
+                    {
+                        throw std::runtime_error("Unsupported - cannot flatten with padding");
+                    }
+                    l = DataLayout::fb;
+                    break;
+                case KernelSelector::Tensor::fyxb:
+                    if (feature().pitch != y().v*x().v*x().pitch)
+                    {
+                        throw std::runtime_error("Unsupported - cannot flatten with padding");
+                    }
+                    l = DataLayout::fb;
+                    break;
+                default:
+                    throw std::runtime_error("Unsupported - unsupported layout");
+                    break;
+                }
+
+                DataTensor res = transform(l);
+
+                if (l == DataLayout::bf)
+                {
+                    res.dims[channelndex(l, DataChannelName::NAME_BATCH)].pitch = batch().pitch;
+                }
+                else
+                {
+                    res.dims[channelndex(l, DataChannelName::NAME_FEATURE)].pitch = 
+                        dims[channelndex(l, DataChannelName::NAME_BATCH) + 1].pitch;
+                }
+                
+                return res;
+            }
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -404,21 +500,26 @@ namespace KernelSelector
                     assert(newDims.size() == 4);
                     newDims[3] = cldnn::round_up_to(newDims[3], 16);
                     break;
+                case os_i_osv8__ai8:
+                    assert(newDims.size() == 2);
+                    newDims[0] = cldnn::round_up_to(newDims[0], 8);
+                    newDims[1] = cldnn::round_up_to(newDims[1], 8);
+                    break;
+                case os_i_osv16__ai8:
+                    assert(newDims.size() == 2);
+                    newDims[0] = cldnn::round_up_to(newDims[0], 8);
+                    newDims[1] = cldnn::round_up_to(newDims[1], 16);
+                    break;
                 case os_i_osv16:
                     assert(newDims.size() == 2);
                     newDims[1] = cldnn::round_up_to(newDims[1], 16);
                     break;
-                case os_is_isv8_osv8:
-                    assert(newDims.size() == 2);
-                    newDims[1] = cldnn::round_up_to(newDims[1], 8);
-                    newDims[0] = cldnn::round_up_to(newDims[0], 8);
-                    break;
-                case iyxo_om16x2_axy:
+                case i_yxs_os_yxsv2_osv16:
                     assert(newDims.size() == 4);
                     newDims[0] = cldnn::round_up_to(newDims[0], 16);
                     break;
-                case iyxo_om16x2_ax_g32:
-                case iyxo_om8x2_ax_g32:
+                case iy_xs_os_xsv2_osv16__ao32:
+                case iy_xs_os_xsv2_osv8__ao32:
                     assert(newDims.size() == 4);
                     newDims[0] = cldnn::round_up_to(newDims[0], 32);
                     break;
@@ -435,11 +536,12 @@ namespace KernelSelector
                     pitch *= newDims[i];
                 }
 
-                if (layout == iyxo_om16x2_axy)
+                if (layout == i_yxs_os_yxsv2_osv16)
                 {
                     ret[3].pitch = cldnn::round_up_to(newDims[1] * newDims[2], 2) * newDims[0];
                 }
-                else if (layout == iyxo_om16x2_ax_g32 || layout == iyxo_om8x2_ax_g32)
+                else if (layout == iy_xs_os_xsv2_osv16__ao32 || 
+                         layout == iy_xs_os_xsv2_osv8__ao32)
                 {
                     ret[2].pitch = cldnn::round_up_to(newDims[1], 2) * newDims[0];
                     ret[3].pitch = newDims[2] * ret[2].pitch;
@@ -477,6 +579,8 @@ namespace KernelSelector
             {
                 return (Length() != LengthWithPadding());
             }
+
+            bool SimpleLayout() const { return Tensor::SimpleLayout(layout); }
 
             WeightsTensor transform(WeightsLayout l) const
             {

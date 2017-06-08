@@ -51,24 +51,6 @@ namespace KernelSelector {
         {}
     };
 
-    struct CPUCNNConvolutionReorder : public CPUKernel
-    {
-        enum class WeightsReorderMode
-        {
-            CONVOLUTION_GEMM,
-            CONVOLUTION_DIRECT,
-        };
-
-        WeightsReorderMode mode = WeightsReorderMode::CONVOLUTION_GEMM;
-        std::shared_ptr<ConvolutionParams> params;
-        SubGroupInfo run_info;
-        CPUCNNConvolutionReorder(WeightsReorderMode _mode, std::shared_ptr<ConvolutionParams> _params, const SubGroupInfo& info) :
-            mode(_mode), params(_params), run_info(info) {}
-
-        virtual void Execute(void* input, size_t input_size, void* output, size_t output_size) const;
-        size_t GetNewWeightBufferSizeInBytes() const;
-    };
-
     class CNNConvolutionKernelBase : public CNNKernelBase
     {
     public:

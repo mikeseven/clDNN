@@ -29,6 +29,7 @@ namespace KernelSelector
 
         struct DispatchData : public CommonDispatchData
         {
+            bool vload_kernel_type;
             union
             {
                 struct
@@ -56,71 +57,35 @@ namespace KernelSelector
                 } data_bx_bs_x_bsv16;
             };
         };
-        struct CPUIGKFullyConnectedReorder : public CPUKernel
-        {
-            enum class WeightsReorderLayout
-            {
-                oiyx,
-                yxoi,
-                oyxi,
-                yxio,
-                os_iyx_osv16,
-                os_i_osv16,
-            };
-
-            WeightsReorderLayout input_layout = WeightsReorderLayout::oiyx;
-            WeightsReorderLayout output_layout = WeightsReorderLayout::oiyx;
-            std::shared_ptr<FullyConnectedParams> params;
-            DispatchData kd;
-
-            CPUIGKFullyConnectedReorder(WeightsReorderLayout in_layout, WeightsReorderLayout out_layout, std::shared_ptr<FullyConnectedParams> _params, DispatchData kd) :
-                input_layout(in_layout),
-                output_layout(out_layout),
-                params(_params),
-                kd(kd) {}
-
-            virtual void Execute(void* input, size_t input_size, void* output, size_t output_size) const;
-            size_t GetNewWeightBufferSizeInBytes() const;
-        };
     
     protected:
-        jit_constants get_jit_constants(const FullyConnectedParams& params, DispatchData kd) const;
+        virtual jit_constants get_jit_constants(const FullyConnectedParams& params, const DispatchData& kd) const;
         DispatchData set_kernel_data(const FullyConnectedParams& params) const;
-        const std::string weights_reorder_kernel_name = "cnn_align_weights";
+        virtual DispatchData set_default(const FullyConnectedParams& params) const { return set_kernel_data(params); }
+        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& optParams, DataLayout dl, WeightsLayout wl, float estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE) const;
 
-        static std::string Float2Str(const float f)
+        // how many batches will a single work item compute
+        static size_t get_batches_per_work_item(const FullyConnectedParams& params)
         {
-            return std::to_string(f) + "f";
+            auto batch_size = params.output.batch().v;
+            return std::min(batch_size, static_cast<size_t>(32U));
         }
 
-        std::string GetWeightsBaseJit(const BaseParams& params) const
+        static size_t get_local_groups_size(const FullyConnectedParams& params)
         {
-            std::stringstream jit;
+            auto batch_size = params.output.batch().v;
+            return std::max(static_cast<size_t>(1U), batch_size / get_batches_per_work_item(params));
+        }
 
-            jit << "#define ACTIVATION_FUNCTION_" << toString(params.activationFunc) << "\n"
-                << "#define TYPE_" << toString(params.inputs[0].dtype) << "\n"
-                << "#define NL_M (" << Float2Str(params.nlParams.m) << ")\n"
-                << "#define NL_N (" << Float2Str(params.nlParams.n) << ")\n"
-                << "#define INPUT_OFFSET (" << params.inputs[0].offset << ")\n"
-                << "#define OUT_OFFSET (" << params.output.offset << ")\n";
-
-            jit << "#define INPUT_WIDTH (" << params.inputs[0].x().v << ")\n"
-                << "#define INPUT_HEIGHT (" << params.inputs[0].y().v << ")\n"
-                << "#define INPUT_DEPTH (" << params.inputs[0].feature().v << ")\n"
-                << "#define INPUT_BATCH (" << params.inputs[0].batch().v << ")\n"
-                << "#define INPUT_Y_PITCH (" << params.inputs[0].y().pitch << ")\n"
-                << "#define INPUT_FEATURE_PITCH (" << params.inputs[0].feature().pitch << ")\n"
-                << "#define INPUT_BATCH_PITCH (" << params.inputs[0].batch().pitch << ")\n";
-
-            jit << "#define OUT_WIDTH (" << params.output.x().v << ")\n"
-                << "#define OUT_HEIGHT (" << params.output.y().v << ")\n"
-                << "#define OUT_DEPTH (" << params.output.feature().v << ")\n"
-                << "#define OUT_BATCH (" << params.output.batch().v << ")\n"
-                << "#define OUT_Y_PITCH (" << params.output.y().pitch << ")\n"
-                << "#define OUT_FEATURE_PITCH (" << params.output.feature().pitch << ")\n"
-                << "#define OUT_BATCH_PITCH (" << params.output.batch().pitch << ")\n";
-
-            return jit.str();
+        // how many neurons for a single batch will a single work item produce 
+        static size_t get_neurons_per_work_item(const FullyConnectedParams& params)
+        {
+            auto batch_size = params.output.batch().v;
+            auto out_elements_count_per_batch = params.output.Length() / batch_size;
+            if (out_elements_count_per_batch % 16 == 0)
+                return 2;
+            else
+                return 1;
         }
     };
 }

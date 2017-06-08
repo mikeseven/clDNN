@@ -37,17 +37,6 @@ namespace KernelSelector
             size_t input_block_width;      ///< Number of elements in X dimension stored/cached in input block.
             size_t leftovers;
         };
-
-        struct CPUIGKConvolutionReorder : public CPUKernel
-        {
-            std::shared_ptr<ConvolutionParams> params;
-            DispatchData kd;
-
-            CPUIGKConvolutionReorder(std::shared_ptr<ConvolutionParams> _params, DispatchData kd) : params(_params), kd(kd) {}
-
-            virtual void Execute(void* input, size_t input_size, void* output, size_t output_size) const;
-            size_t GetNewWeightBufferSizeInBytes() const;
-        };
     
     protected:
         jit_constants get_jit_constants(const ConvolutionParams& params, DispatchData kd) const;

@@ -20,51 +20,6 @@
 
 namespace KernelSelector 
 {
-    void IGKConvolutionKernelBase::CPUIGKConvolutionReorder::Execute(void* input, size_t, void* output, size_t) const
-    {
-        constexpr uint32_t sub_group_size = 16;
-
-        short* input_ptr = (short*)input;
-        short* output_ptr = (short*)output;
-
-        size_t size[5] = {
-            params->output.batch().v,
-            params->output.feature().v,
-            params->inputs[0].feature().v,
-            params->convParams.filterSize.x,
-            params->convParams.filterSize.y,
-        };
-        for (uint32_t ofm = 0; ofm < params->output.feature().v; ofm++)
-        {
-            for (uint32_t ifm = 0; ifm < params->inputs[0].feature().v; ifm++)
-            {
-                for (uint32_t y = 0; y < params->convParams.filterSize.y; y++)
-                {
-                    for (uint32_t x = 0; x < params->convParams.filterSize.x; x++)
-                    {
-                        size_t input_idx = x + size[3] * (y + size[4] * (ifm + size[2] * ofm));
-                        const uint32_t slice_id = ofm / sub_group_size;
-                        const uint32_t id_in_slice = ofm % sub_group_size;
-                        size_t output_idx = id_in_slice + 16 * (x + size[3] * (y + size[4] * (ifm + slice_id * size[2])));
-                        //assert(input_idx*bpp < input_size && output_idx*bpp < output_size);
-                        output_ptr[output_idx] = input_ptr[input_idx];
-                    }
-                }
-            }
-        }
-    }
-
-    size_t IGKConvolutionKernelBase::CPUIGKConvolutionReorder::GetNewWeightBufferSizeInBytes() const
-    {
-        constexpr uint32_t sub_group_size = 16;
-        return
-            params->convParams.filterSize.x *
-            params->convParams.filterSize.y *
-            params->inputs[0].feature().v *
-            cldnn::round_up_to(params->output.feature().v, sub_group_size) *
-            BytesPerElement(params->inputs[0].dtype);
-    }
-
     jit_constants IGKConvolutionKernelBase::get_jit_constants(const ConvolutionParams& params, IGKConvolutionKernelBase::DispatchData kd) const
     {
         const auto split = params.convParams.split;

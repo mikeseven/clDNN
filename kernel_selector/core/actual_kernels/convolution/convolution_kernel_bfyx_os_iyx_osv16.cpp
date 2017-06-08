@@ -176,10 +176,7 @@ namespace KernelSelector
         const auto req_input = GetConvolutionPaddedTensorDesc(orgParams);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, req_input);
         const bool bInputPadded = optParams.allow_padding || bProperInputDesc;
-        const bool bSupportedActivation =
-            orgParams.activationFunc == ActivationFunction::NONE ||
-            orgParams.activationFunc == ActivationFunction::RELU || 
-            orgParams.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE;
+        const bool bSupportedActivation = check_activation_support(orgParams.activationFunc);
         
         if (!bInputPadded || !bSupportedActivation || !bWeightsOK)
         {
@@ -229,20 +226,12 @@ namespace KernelSelector
         fill_cl_kernel_data(kernel, run_info, kernel_name, jit, entry_point, true, !orgParams.bias.empty());
         kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
-#if 0
-        auto cpu_kernel = CPUIGKConvolutionReorder(params_ptr, run_info);
-
-        kd.weights_reorder_params.engine = WeightsReorderParams::Engine::CPU;
-        kd.weights_reorder_params.cpu_kernel = std::make_shared<CPUIGKConvolutionReorder>(cpu_kernel);
-        kd.weights_reorder_params.new_buffer_size = cpu_kernel.GetNewWeightBufferSizeInBytes();
-#else
         bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::os_iyx_osv16, kd.weights_reorder_params);
 
         if (!succeed)
         {
             return{};
         }
-#endif
 
         kd.estimated_time = run_info.effiency;
 

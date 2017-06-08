@@ -28,10 +28,8 @@ inline KernelSelector::Datatype tensor_2_data_type(data_types dt)
 {
     switch (dt)
     {
-    case cldnn::data_types::f16:
-        return KernelSelector::Datatype::F16;
-    case cldnn::data_types::f32:
-        return KernelSelector::Datatype::F32;
+    case cldnn::data_types::f16:    return KernelSelector::Datatype::F16;
+    case cldnn::data_types::f32:    return KernelSelector::Datatype::F32;
     default:
         assert(0);
         return KernelSelector::Datatype::F16;
@@ -42,12 +40,9 @@ inline KernelSelector::WeightsType tensor_2_weight_type(data_types dt)
 {
     switch (dt)
     {
-    case cldnn::data_types::i8:
-        return KernelSelector::WeightsType::INT8;
-    case cldnn::data_types::f16:
-        return KernelSelector::WeightsType::F16;
-    case cldnn::data_types::f32:
-        return KernelSelector::WeightsType::F32;
+    case cldnn::data_types::i8:     return KernelSelector::WeightsType::INT8;
+    case cldnn::data_types::f16:    return KernelSelector::WeightsType::F16;
+    case cldnn::data_types::f32:    return KernelSelector::WeightsType::F32;
     default:
         assert(0);
         return KernelSelector::WeightsType::F16;
@@ -58,18 +53,35 @@ inline KernelSelector::DataLayout tensor_format_2_data_layput(format f)
 {
     switch (f)
     {
-    case format::bfyx:
-        return KernelSelector::DataLayout::bfyx;
-    case format::yxfb:
-        return KernelSelector::DataLayout::yxfb;
-    case format::byxf:
-        return KernelSelector::DataLayout::byxf;
-    case format::fyxb:
-        return KernelSelector::DataLayout::fyxb;
-//     case format::brfyx:
-//         return KernelSelector::DataLayout::brfyx;
+    case format::bfyx:              return KernelSelector::DataLayout::bfyx;
+    case format::yxfb:              return KernelSelector::DataLayout::yxfb;
+    case format::byxf:              return KernelSelector::DataLayout::byxf;
+    case format::fyxb:              return KernelSelector::DataLayout::fyxb;
+    case format::bs_x_bsv16:        return KernelSelector::DataLayout::bs_f_bsv16__af8;
+    case format::bs_xs_xsv8_bsv8:   return KernelSelector::DataLayout::bs_f_bsv8__af8;
+    case format::bs_xs_xsv8_bsv16:  return KernelSelector::DataLayout::bs_f_bsv16__af8;
+//     case format::brfyx:          return KernelSelector::DataLayout::brfyx;
     default:
         return KernelSelector::DataLayout::bfyx;
+    }
+}
+
+static inline cldnn::format data_layput_2_tensor_format(KernelSelector::DataLayout l)
+{
+    switch (l)
+    {
+    case KernelSelector::DataLayout::bf:                return cldnn::format::bfyx;
+    case KernelSelector::DataLayout::fb:                return cldnn::format::fyxb;
+    case KernelSelector::DataLayout::bfyx:              return cldnn::format::bfyx;
+    case KernelSelector::DataLayout::yxfb:              return cldnn::format::yxfb;
+    case KernelSelector::DataLayout::byxf:              return cldnn::format::byxf;
+    case KernelSelector::DataLayout::fyxb:              return cldnn::format::fyxb;
+    case KernelSelector::DataLayout::bs_f_bsv8__af8:    return cldnn::format::bs_xs_xsv8_bsv8;
+    case KernelSelector::DataLayout::bs_f_bsv16__af8:   return cldnn::format::bs_x_bsv16;
+    case KernelSelector::DataLayout::brfyx:             return cldnn::format::bfyx;
+    default:
+        return cldnn::format::bfyx;
+        break;
     }
 }
 
@@ -77,20 +89,14 @@ inline KernelSelector::WeightsLayout tensor_format_2_weight_layput(format f)
 {
     switch (f)
     {
-    case format::bfyx:
-        return KernelSelector::WeightsLayout::oiyx;
-    case format::fyxb:
-        return KernelSelector::WeightsLayout::iyxo;
-    case format::byxf:
-        return KernelSelector::WeightsLayout::oyxi;
-    case format::yxfb:
-        return KernelSelector::WeightsLayout::yxio;
-    case format::os_iyx_osv16:
-        return KernelSelector::WeightsLayout::os_iyx_osv16;
-    case format::bs_xs_xsv8_bsv8:
-        return KernelSelector::WeightsLayout::os_is_isv8_osv8;
-    case format::bs_x_bsv16:
-        return KernelSelector::WeightsLayout::os_i_osv16;
+    case format::bfyx:              return KernelSelector::WeightsLayout::oiyx;
+    case format::fyxb:              return KernelSelector::WeightsLayout::iyxo;
+    case format::byxf:              return KernelSelector::WeightsLayout::oyxi;
+    case format::yxfb:              return KernelSelector::WeightsLayout::yxio;
+    case format::os_iyx_osv16:      return KernelSelector::WeightsLayout::os_iyx_osv16;
+    case format::bs_xs_xsv8_bsv8:   return KernelSelector::WeightsLayout::os_i_osv8__ai8;
+    case format::bs_xs_xsv8_bsv16:  return KernelSelector::WeightsLayout::os_i_osv16__ai8;
+    case format::bs_x_bsv16:        return KernelSelector::WeightsLayout::os_i_osv16;
     default:
         return KernelSelector::WeightsLayout::oi;
     }
@@ -101,21 +107,15 @@ static inline cldnn::format weight_layput_2_tensor_format(KernelSelector::Weight
     switch (l)
     {
     case KernelSelector::WeightsLayout::oi:
-    case KernelSelector::WeightsLayout::oiyx:
-        return cldnn::format::bfyx;
-    case KernelSelector::WeightsLayout::oyxi:
-        return cldnn::format::byxf;
-    case KernelSelector::WeightsLayout::iyxo:
-        return cldnn::format::fyxb;
+    case KernelSelector::WeightsLayout::oiyx:               return cldnn::format::bfyx;
+    case KernelSelector::WeightsLayout::oyxi:               return cldnn::format::byxf;
     case KernelSelector::WeightsLayout::io:
-    case KernelSelector::WeightsLayout::yxio:
-        return cldnn::format::yxfb;
-    case KernelSelector::WeightsLayout::os_iyx_osv16:
-        return cldnn::format::os_iyx_osv16;
-    case KernelSelector::WeightsLayout::os_is_isv8_osv8:
-        return cldnn::format::os_iyx_osv16;
-    case KernelSelector::WeightsLayout::os_i_osv16:
-        return cldnn::format::os_iyx_osv16;
+    case KernelSelector::WeightsLayout::iyxo:               return cldnn::format::fyxb;
+    case KernelSelector::WeightsLayout::yxio:               return cldnn::format::yxfb;
+    case KernelSelector::WeightsLayout::os_iyx_osv16:       return cldnn::format::os_iyx_osv16;
+    case KernelSelector::WeightsLayout::os_i_osv16:         return cldnn::format::bs_x_bsv16;
+    case KernelSelector::WeightsLayout::os_i_osv8__ai8:     return cldnn::format::bs_xs_xsv8_bsv8;
+    case KernelSelector::WeightsLayout::os_i_osv16__ai8:    return cldnn::format::bs_xs_xsv8_bsv16;
     default:
         return cldnn::format::bfyx;
     }
@@ -226,12 +226,12 @@ inline ParamsT GetWeightsBiasDefaultParams(const ArgT& arg, uint32_t split = 1)
 {
     ParamsT params = GetDefaultParams<ParamsT>(arg, split);
 
-    const auto& weights_layout = arg.weights(0).get_output_layout();
+    const auto& weights_layout = arg.weights().get_output_layout();
     params.weights = tensor_2_weight_tensor(weights_layout);
 
     if (arg.bias_term())
     {
-        const auto& bias_layout = arg.bias(0).get_output_layout();
+        const auto& bias_layout = arg.bias().get_output_layout();
         params.bias.push_back(tensor_2_data_tensor(bias_layout, padding(), 1));
     }
 

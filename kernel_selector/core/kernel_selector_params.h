@@ -895,6 +895,7 @@ namespace KernelSelector
     struct FullyConnectedOptionalParams : WeightsBiasOptionalParams
     {
         FullyConnectedOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED) {}
+        bool allow_reorder_input = false;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

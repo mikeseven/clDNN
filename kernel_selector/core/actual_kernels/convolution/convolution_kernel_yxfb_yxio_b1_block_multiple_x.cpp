@@ -108,11 +108,7 @@ namespace KernelSelector
         const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
         const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
 
-        const bool bSupportedActivation =
-            orgParams.activationFunc == ActivationFunction::NONE ||
-            orgParams.activationFunc == ActivationFunction::RELU ||
-            orgParams.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE;
-
+        const bool bSupportedActivation = check_activation_support(orgParams.activationFunc);
         const bool bSupportedWeightsLayout = orgParams.weights.layout == WeightsLayout::yxio;
         const bool bWeightsOK = bSupportedWeightsLayout || optParams.allow_weights_reorder;
         

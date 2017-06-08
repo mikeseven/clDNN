@@ -109,14 +109,14 @@ namespace KernelSelector
         {
             jit << "#define __convolution_f16" << "\n";
             run_info = SubGroupInfo(1, cp.filterSize.x, 32, 1, 16, 1, 32, 1, 1);
-            wLayout = WeightsLayout::iyxo_om16x2_ax_g32;
+            wLayout = WeightsLayout::iy_xs_os_xsv2_osv16__ao32;
             kd.estimated_time = FORCE_PRIORITY_6;
         }
         else
         {
             jit << "#define __convolution_f32" << "\n";
             run_info = SubGroupInfo(2, cp.filterSize.x, 32, 1, 8, 1, 32, 2, 1);
-            wLayout = WeightsLayout::iyxo_om8x2_ax_g32;
+            wLayout = WeightsLayout::iy_xs_os_xsv2_osv8__ao32;
             kd.estimated_time = FORCE_PRIORITY_8;
         }
 
@@ -142,12 +142,6 @@ namespace KernelSelector
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id, AGE_BASED);
         kernel.args_desc = GetArgumentDesc(1, true, !newParams.bias.empty());
         kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
-#if 0
-        auto cpu_kernel = CPUCNNConvolutionReorder(CPUCNNConvolutionReorder::WeightsReorderMode::CONVOLUTION_GEMM, params_ptr, run_info);
-        kd.weights_reorder_params.engine = WeightsReorderParams::Engine::CPU;
-        kd.weights_reorder_params.cpu_kernel = std::make_shared<CPUCNNConvolutionReorder>(cpu_kernel);
-        kd.weights_reorder_params.new_buffer_size = cpu_kernel.GetNewWeightBufferSizeInBytes();
-#else
 
         bool succeed = SetWeightsReorderParams(newParams, wLayout, kd.weights_reorder_params);
 
@@ -155,7 +149,6 @@ namespace KernelSelector
         {
             return{};
         }
-#endif
 
         return{ kd };
     }
