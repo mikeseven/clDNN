@@ -217,16 +217,17 @@ namespace KernelSelctor {
         std::string method("LINEAR");
         switch (activation)
         {
-        case ActivationFunction::LOGISTIC:       method = "LOGISTIC"; break;
-        case ActivationFunction::HYPERBOLIC_TAN: method = "HYPERBOLIC_TAN"; break;
-        case ActivationFunction::RELU:           method = "RELU"; break;
-        case ActivationFunction::BRELU:          method = "BRELU"; break;
-        case ActivationFunction::SOFTRELU:       method = "SOFTRELU"; break;
-        case ActivationFunction::ABS:            method = "ABS"; break;
-        case ActivationFunction::SQUARE:         method = "SQUARE"; break;
-        case ActivationFunction::SQRT:           method = "SQRT"; break;
-        case ActivationFunction::LINEAR:         method = "LINEAR"; break;
-        case ActivationFunction::NONE:           method = "NONE"; break;
+        case ActivationFunction::LOGISTIC:              method = "LOGISTIC"; break;
+        case ActivationFunction::HYPERBOLIC_TAN:        method = "HYPERBOLIC_TAN"; break;
+        case ActivationFunction::RELU:                  method = "RELU"; break;
+        case ActivationFunction::RELU_NEGATIVE_SLOPE:   method = "RELU_NEGATIVE_SLOPE"; break;
+        case ActivationFunction::BRELU:                 method = "BRELU"; break;
+        case ActivationFunction::SOFTRELU:              method = "SOFTRELU"; break;
+        case ActivationFunction::ABS:                   method = "ABS"; break;
+        case ActivationFunction::SQUARE:                method = "SQUARE"; break;
+        case ActivationFunction::SQRT:                  method = "SQRT"; break;
+        case ActivationFunction::LINEAR:                method = "LINEAR"; break;
+        case ActivationFunction::NONE:                  method = "NONE"; break;
         default: break;
         }
         return method;
