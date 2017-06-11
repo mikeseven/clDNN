@@ -126,8 +126,8 @@ memory TestRunnerProposal<Dtype>::Run(std::vector<Dtype>& cls_scores_vals,
     memory cls_scores = memory::attach(_cls_scores_layout, cls_scores_vals.data(), cls_scores_vals.size());
     memory bbox_pred  = memory::attach(_bbox_pred_layout, bbox_pred_vals.data(), bbox_pred_vals.size());
 
-    Dtype image_info_vals[] = { (Dtype)((float)image_w - 0.0000001f), // check fp robustness of the layer
-                                (Dtype)((float)image_h + 0.0000001f), // check fp robustness of the layer 
+    Dtype image_info_vals[] = { (Dtype)((float)image_h - 0.0000001f), // check fp robustness of the layer
+                                (Dtype)((float)image_w + 0.0000001f), // check fp robustness of the layer 
                                 (Dtype)((float)image_z) };
     memory image_info = memory::attach(_image_info_layout, &image_info_vals[0], 3);
    
