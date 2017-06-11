@@ -75,11 +75,12 @@ public:
     // indices of the image info parameters inside the image_info memory object (the object
     // is an integer array of these parameters)
 	enum image_info_size_index {
-		image_info_width_index,
 		image_info_height_index,
+		image_info_width_index,
 		image_info_depth_index,
-        image_info_scale_min_bbox_x,
         image_info_scale_min_bbox_y,
+        image_info_scale_min_bbox_x,
+		image_info_scale_depth_index,
 	};
 
     static layout calc_output_layout(proposal_node const& node);
