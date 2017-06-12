@@ -632,7 +632,7 @@ void run_topology(const execution_params &ep)
         auto all_ids = primitives.get_primitive_ids();
         if (std::find(all_ids.begin(), all_ids.end(), ep.run_single_kernel_name) == all_ids.end())
         {
-            throw std::runtime_error("Topology does not contains this primitve!");
+            throw std::runtime_error("Topology does not contain actual run_single_kernel name!");
         }
     }
     auto network = build_network(engine, primitives, ep);
