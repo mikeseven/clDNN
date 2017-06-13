@@ -117,6 +117,7 @@ typedef struct
     uint32_t enable_profiling;         ///< Enable per-primitive profiling.
     uint32_t meaningful_kernels_names; ///< Generate meaniful names fo OpenCL kernels.
     const char* compiler_options;      ///< OpenCL compiler options string.
+    const char* single_kernel_name;    ///< If provided, runs specific layer.
 }  cldnn_engine_configuration;
 
 /// @brief Information about the engine returned by cldnn_get_engine_info().

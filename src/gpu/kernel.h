@@ -428,14 +428,27 @@ public:
         cl::Event end_event;
         std::vector<cl::Event> events;
         events.reserve(dependencies.size());
-        for(auto& dependency : dependencies)
+        for (auto& dependency : dependencies)
         {
             events.emplace_back(dependency->get());
         }
-
         auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
         setArgs<0>(clkernel, std::forward<Args>(args)...);
-        context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
+
+        if (context()->enabled_single_kernel())
+        {
+            std::string proper_layer_name = _kernel_id.substr(0, _kernel_id.rfind("_"));
+            if (proper_layer_name.compare(context()->single_kernel_name()) == 0)
+            {
+                context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range() , nullptr, &end_event);
+            }
+        }
+        else
+        {
+            context()->queue().enqueueNDRangeKernel(clkernel, cl::NullRange, options.global_range(), options.local_range(), &events, &end_event);
+        }
+
+       
 
         return{ new cldnn::event_impl(end_event), false };
     }

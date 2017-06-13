@@ -39,8 +39,14 @@ public:
         {
             events.emplace_back(dependency->get());
         }
-
-        const_cast<cl::CommandQueue&>(context()->queue()).enqueueMarkerWithWaitList(&events, &end_event);
+        if (context()->enabled_single_kernel() == false)
+        {
+            const_cast<cl::CommandQueue&>(context()->queue()).enqueueMarkerWithWaitList(&events, &end_event);
+        }
+        else
+        {
+            const_cast<cl::CommandQueue&>(context()->queue()).enqueueMarkerWithWaitList(nullptr, &end_event);
+        }
 		return { new cldnn::event_impl(end_event), false };
     }
 };

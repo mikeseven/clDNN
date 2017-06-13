@@ -26,6 +26,7 @@
 
 #include <regex>
 #include <string>
+#include <algorithm>
 #include <api/CPP/data.hpp>
 #include <api/CPP/network.hpp>
 
@@ -478,7 +479,6 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
             throw std::runtime_error("ERROR: can't open power_log.csv file");
         }
     }
-
     decltype(network.execute()) outputs;
     cldnn::instrumentation::timer<> timer_execution;
 
@@ -495,7 +495,10 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     if (ep.topology_name != "microbench")
     {
         std::string output_primitve_id = ep.run_until_primitive_name.empty() ? "output" : ep.run_until_primitive_name;
-        output = outputs.at(output_primitve_id).get_memory();
+        if (ep.run_single_kernel_name.empty())
+        {
+            output = outputs.at(output_primitve_id).get_memory();
+        } 
     }
     
     auto execution_time(timer_execution.uptime());
@@ -551,7 +554,14 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
         std::vector<cldnn::instrumentation::profiling_info> profiling_table;
         for (auto& p : outputs)
         {
-            profiling_table.push_back({ p.first, p.second.get_event().get_profiling_info() });
+            if (ep.run_single_kernel_name.empty())
+            {
+                profiling_table.push_back({ p.first, p.second.get_event().get_profiling_info() });
+            }
+            else if (ep.run_single_kernel_name == p.first)
+            {
+                profiling_table.push_back({ p.first, p.second.get_event().get_profiling_info() });
+            }
         }
         print_profiling_table(std::cout, profiling_table);
     }
@@ -570,7 +580,7 @@ void run_topology(const execution_params &ep)
             << " dummy images per batch!!! Please use batch=" << gpu_batch_size << "." << std::endl;
     }
 
-    cldnn::engine_configuration configuration(ep.profiling, ep.meaningful_kernels_names);
+    cldnn::engine_configuration configuration(ep.profiling, ep.meaningful_kernels_names, "", ep.run_single_kernel_name);
     cldnn::engine engine(configuration);
 
     CIntelPowerGadgetLib energyLib;
@@ -617,7 +627,14 @@ void run_topology(const execution_params &ep)
     {
         std::cout << "Building " << ep.topology_name << " finished in " << instrumentation::to_string(build_time) << std::endl;
     }
-
+    if (!ep.run_single_kernel_name.empty())
+    {
+        auto all_ids = primitives.get_primitive_ids();
+        if (std::find(all_ids.begin(), all_ids.end(), ep.run_single_kernel_name) == all_ids.end())
+        {
+            throw std::runtime_error("Topology does not contain actual run_single_kernel name!");
+        }
+    }
     auto network = build_network(engine, primitives, ep);
     auto input = cldnn::memory::allocate(engine, input_layout);
     //TODO check if we can define the 'empty' memory
@@ -664,10 +681,18 @@ void run_topology(const execution_params &ep)
 
             auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
            
-            if (ep.run_until_primitive_name.empty())
+            if (ep.run_until_primitive_name.empty() && ep.run_single_kernel_name.empty())
+            {
                 output_file.batch(output, join_path(get_executable_info()->dir(), neurons_list_filename), images_in_batch, ep.print_type);
-            else
+            }
+            else if (!ep.run_until_primitive_name.empty())
+            {
                 std::cout << "Finished at user custom primtive: " << ep.run_until_primitive_name << std::endl;
+            }
+            else if (!ep.run_single_kernel_name.empty())
+            {
+                std::cout << "Run_single_layer finished correctly." << std::endl;
+            }
 
             if (time_in_sec != 0.0)
             {
