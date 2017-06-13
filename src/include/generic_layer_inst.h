@@ -50,7 +50,8 @@ public:
 public:
     typed_primitive_inst(network_impl& network, generic_layer_node const& node);
 
-    const memory& input_memory() const { return dep_memory(0); }
+    size_t        inputs_memory_count() const { return dependencies().size(); }
+    const memory& input_memory(size_t idx = 0) const { return dep_memory(idx); }
 };
 
 using generic_layer_inst = typed_primitive_inst<generic_layer>;

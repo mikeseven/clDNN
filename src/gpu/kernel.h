@@ -461,13 +461,16 @@ public:
         }
 
         auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
-
-        const cl::Buffer* input_b   = inputs[0] ? &kernel_arg_handler<gpu::input_mem>::get(*inputs[0]) : nullptr;
+        std::vector<const cl::Buffer*> inputs_b;
+        for (const auto i : inputs)
+        {
+            inputs_b.push_back(i ? &kernel_arg_handler<gpu::input_mem>::get(*i) : nullptr);
+        }
         const cl::Buffer* output_b  = output    ? &kernel_arg_handler<gpu::output_mem>::get(*output)   : nullptr;
         const cl::Buffer* weights_b = weights   ? &kernel_arg_handler<gpu::input_mem>::get(*weights)   : nullptr;
         const cl::Buffer* bias_b    = bias      ? &kernel_arg_handler<gpu::input_mem>::get(*bias)      : nullptr;
 
-        kernel_data.args_desc.SetArguments(clkernel, { input_b }, output_b, weights_b, bias_b, nullptr, split_num);
+        kernel_data.args_desc.SetArguments(clkernel, inputs_b, output_b, weights_b, bias_b, nullptr, split_num);
 
         context()->queue().enqueueNDRangeKernel(
             clkernel, 
