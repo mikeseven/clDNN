@@ -29,9 +29,9 @@ namespace KernelSelector {
         s << toString(activationFunc) << "_";
         s << nlParams.m << "_" << nlParams.n << "_";
         s << inputs[0].x().v << "_" << inputs[0].y().v << "_" << inputs[0].feature().v << "_" << inputs[0].batch().v << "_";
-        s << inputs[0].offset << "_" << inputs[0].x().pitch << "_" << inputs[0].y().pitch << "_" << inputs[0].feature().pitch << "_" << inputs[0].batch().pitch << "_";
-        s << output.x().v << "_" << output.y().v << "_" << output.feature().v << "_" << output.batch().v << "_";
-        s << output.offset << "_" << output.x().pitch << "_" << output.y().pitch << "_" << output.feature().pitch << "_" << output.batch().pitch;
+        //s << inputs[0].offset << "_" << inputs[0].x().pitch << "_" << inputs[0].y().pitch << "_" << inputs[0].feature().pitch << "_" << inputs[0].batch().pitch << "_";
+        s << output.x().v << "_" << output.y().v << "_" << output.feature().v << "_" << output.batch().v;
+        //s << output.offset << "_" << output.x().pitch << "_" << output.y().pitch << "_" << output.feature().pitch << "_" << output.batch().pitch;
         return s.str();
     }
 
@@ -39,10 +39,20 @@ namespace KernelSelector {
     {
         std::stringstream s;
 
-        s << BaseParams::to_string() << "_";;
+        s << BaseParams::to_string() << "_";
+        s << toString(weights.layout) << "_";
+        if (bias.size())
+        {
+            s << toString(bias[0].layout) << "_";
+        }
+        else
+        {
+            s << "nobias_";
+        }
         s << convParams.filterSize.x << "_" << convParams.filterSize.y << "_";
         s << convParams.padding.x << "_" << convParams.padding.y << "_";
-        s << convParams.stride.x << "_" << convParams.stride.y;
+        s << convParams.stride.x << "_" << convParams.stride.y << "_";
+        s << convParams.dilation.x << "_" << convParams.dilation.y;
 
         return s.str();
     }

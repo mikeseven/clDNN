@@ -232,7 +232,8 @@ inline ParamsT GetWeightsBiasDefaultParams(const ArgT& arg, uint32_t split = 1)
     if (arg.bias_term())
     {
         const auto& bias_layout = arg.bias().get_output_layout();
-        params.bias.push_back(tensor_2_data_tensor(bias_layout, padding(), 1));
+        // bias per output is not supported on cldnn
+        params.bias.push_back(tensor_2_data_tensor(bias_layout, padding(), 1).flatten_fyx_2_f());
     }
 
     return params;

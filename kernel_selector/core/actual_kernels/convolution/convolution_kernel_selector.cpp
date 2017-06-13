@@ -43,6 +43,8 @@ namespace KernelSelector
 
     KernelsData ConvolutionKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
+        //const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
+        //std::cout << orgParams.to_string() << std::endl;
         return GetNaiveBestKernel(params, options, KernelType::CONVOLUTION);
     }
 }
