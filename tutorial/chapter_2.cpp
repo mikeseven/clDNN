@@ -108,5 +108,6 @@ topology chapter_2(engine& engine)
     {
         std::cout << ex.what();
     }
+    return topology();
 
 }
