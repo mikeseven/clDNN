@@ -268,6 +268,7 @@ public:
 int main( int argc, char* argv[ ] )
 {
     ConvolutionCostModel().run();
+    return 0;
 }
 
 void InitConvParams()

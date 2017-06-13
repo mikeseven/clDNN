@@ -76,7 +76,10 @@ struct softmax_gpu : typed_primitive_impl<softmax>
         kd.fp16_supported = engine_info.supports_fp16 != 0;
         kd.leftovers = 0;
         kd.items_num = 0;
-
+        kd.gws0 = 0;
+        kd.gws1 = 0;
+        kd.lws0 = 0;
+        kd.norm_index = 0;
         kd.data_sets_count = 0;
         kd.data_set_size = 1;
 
