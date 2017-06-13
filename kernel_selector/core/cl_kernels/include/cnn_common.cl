@@ -262,7 +262,7 @@ inline TYPE_T CAT(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
 #elif defined ACTIVATION_FUNCTION_RELU_NEGATIVE_SLOPE
 #define ACTIVATION_FUNCTION(TYPE_T) \
 inline TYPE_T CAT(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
-    return isinf(NEGATIVE_SLOPE) ? ((in_f >= (TYPE_T)0) ? in_f : -(TYPE_T)NEGATIVE_SLOPE) : (fmax(in_f, (TYPE_T)0) + (TYPE_T)NEGATIVE_SLOPE * fmin(in_f, (TYPE_T)0));
+    { return isinf((TYPE_T)m) ? ((value >= (TYPE_T)0) ? value : -(TYPE_T)m) : (fmax(value, (TYPE_T)0) + (TYPE_T)m * fmin(value, (TYPE_T)0)); }
 
 #elif defined ACTIVATION_FUNCTION_ABS
 #define ACTIVATION_FUNCTION(TYPE_T) \
