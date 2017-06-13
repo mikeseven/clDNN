@@ -38,10 +38,16 @@ void            chapter_5(cldnn::engine&, cldnn::topology&); // Other building o
 
 int main()
 {
-    cldnn::engine eng = chapter_1();
-    cldnn::topology topology = chapter_2(eng);
-    chapter_3(eng, topology);
-    chapter_4(eng, topology);
-    chapter_5(eng, topology);
+    try {
+        cldnn::engine eng = chapter_1();
+        cldnn::topology topology = chapter_2(eng);
+        chapter_3(eng, topology);
+        chapter_4(eng, topology);
+        chapter_5(eng, topology);
+    }
+    catch (const std::exception& ex)
+    {
+        std::cout << ex.what();
+    }
     return 0;
 }

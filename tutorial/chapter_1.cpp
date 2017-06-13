@@ -33,47 +33,40 @@ using namespace cldnn;
 
 engine chapter_1()
 {
-    try
-    {
-        std::cout << std::endl << "-- Chapter 1 --" << std::endl;
-        // To create memory we have to create engine first. Engine is responsible for memory and kernel handling (creation, compilation, allocation).
-        // Currently OCL backend implementaion only is avaiable.
-        engine engine;
-        // We have to choose data type (f32 or f16):
-        data_types data_type = data_types::f32;
-        // Format (order of dimensions in memory), bfyx is the most optimal and common:
-        format::type format = format::byxf;
 
-        // Before memory allocation we have to create tensor that describes memory size. We can do it in serveral ways:
-        tensor tensor1(
-            4, // batches
-            1, // features
-            32, // width (spatial x)
-            32); // height (spatial y)
+    std::cout << std::endl << "-- Chapter 1 --" << std::endl;
+    // To create memory we have to create engine first. Engine is responsible for memory and kernel handling (creation, compilation, allocation).
+    // Currently OCL backend implementaion only is avaiable.
+    engine engine;
+    // We have to choose data type (f32 or f16):
+    data_types data_type = data_types::f32;
+    // Format (order of dimensions in memory), bfyx is the most optimal and common:
+    format::type format = format::byxf;
 
-        tensor tensor2(spatial(32, 32), batch(4), feature(1));
-        tensor tensor3(spatial(32, 32), batch(4)); // default value for non-initalized dimension is 1
+    // Before memory allocation we have to create tensor that describes memory size. We can do it in serveral ways:
+    tensor tensor1(
+        4, // batches
+        1, // features
+        32, // width (spatial x)
+        32); // height (spatial y)
 
-        std::cout << "Is tensor1 == tensor2 == tensor3?:" <<
-            (((tensor1 == tensor2) && (tensor2 == tensor3)) ? "yes" : "no") << std::endl;
-        std::cout << "print tensor:" << tensor1 << std::endl;
+    tensor tensor2(spatial(32, 32), batch(4), feature(1));
+    tensor tensor3(spatial(32, 32), batch(4)); // default value for non-initalized dimension is 1
 
-        // Now we are ready to create layout:
-        layout layout1(data_type, format, tensor1);
-        // which can be used to allocate memory for given engine:
-        memory memory1 = memory::allocate(engine, layout1);
+    std::cout << "Is tensor1 == tensor2 == tensor3?:" <<
+        (((tensor1 == tensor2) && (tensor2 == tensor3)) ? "yes" : "no") << std::endl;
+    std::cout << "print tensor:" << tensor1 << std::endl;
 
-        // Special type of layout is input layout. It is named layout. Name is a string with identifier of layout.
-        input_layout in_layout("input", layout1);
+    // Now we are ready to create layout:
+    layout layout1(data_type, format, tensor1);
+    // which can be used to allocate memory for given engine:
+    memory memory1 = memory::allocate(engine, layout1);
 
-        // You can also give name to memory to create a data.
-        data data("named_memory", memory1);
+    // Special type of layout is input layout. It is named layout. Name is a string with identifier of layout.
+    input_layout in_layout("input", layout1);
 
-        return engine;
-    }
-    catch (const std::exception& ex)
-    {
-        std::cout << ex.what();   
-    }
-    return engine();
+    // You can also give name to memory to create a data.
+    data data("named_memory", memory1);
+
+    return engine;
 }
