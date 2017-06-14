@@ -35,7 +35,7 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
 
     auto input_offset = desc->input_offset;
     auto strd = desc->stride;
-	auto dilation = desc->dilation;
+    auto dilation = desc->dilation;
     auto split = desc->weights.size();
 
     // compute how many outputs in rows and columns will be generate by filter. 
@@ -50,7 +50,7 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
     if (strd.spatial[0] <= 0 || strd.spatial[1] <= 0)
         throw std::invalid_argument("Stride must be positive (>= 1)");
     if (dilation.spatial[0] <= 0 || dilation.spatial[1] <= 0)
-		throw std::invalid_argument("Dilation must be positive (>= 1)");
+        throw std::invalid_argument("Dilation must be positive (>= 1)");
     if (2 * input_offset.spatial[0] > input_layout.size.spatial[0] || 2 * input_offset.spatial[1] > input_layout.size.spatial[1])
         throw std::invalid_argument("Input offset is greater than input data range. There is no input data to process");
 
