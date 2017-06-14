@@ -422,33 +422,37 @@ namespace KernelSelector
                 case KernelSelector::Tensor::fb:
                     return *this;
                 case KernelSelector::Tensor::bfyx:
-                    if (feature().pitch != x().v*y().v)
+                    if (feature().pitch == x().v*y().v)
                     {
-                        throw std::runtime_error("Unsupported - cannot flatten with padding");
+                        l = DataLayout::bf;
+                        break;
                     }
-                    l = DataLayout::bf;
-                    break;
+                    throw std::runtime_error("Unsupported - cannot flatten with padding");
                 case KernelSelector::Tensor::byxf:
-                    if (y().pitch != x().v*feature().v)
+                    if ((y().pitch == feature().pitch) ||
+                        (y().v == 1 && x().pitch == feature().pitch) ||
+                        (y().v == 1 && x().v == 1))
                     {
-                        throw std::runtime_error("Unsupported - cannot flatten with padding");
+                        l = DataLayout::bf;
+                        break;
                     }
-                    l = DataLayout::bf;
-                    break;
+                    throw std::runtime_error("Unsupported - cannot flatten yxf to f if y/x != 1");
                 case KernelSelector::Tensor::yxfb:
-                    if (y().pitch != x().v*feature().v*feature().pitch)
+                    if ((y().pitch == feature().pitch) ||
+                        (y().v == 1 && x().pitch == feature().pitch) ||
+                        (y().v == 1 && x().v == 1))
                     {
-                        throw std::runtime_error("Unsupported - cannot flatten with padding");
+                        l = DataLayout::fb;
+                        break;
                     }
-                    l = DataLayout::fb;
-                    break;
+                    throw std::runtime_error("Unsupported - cannot flatten yxf to f if y/x != 1");
                 case KernelSelector::Tensor::fyxb:
-                    if (feature().pitch != y().v*x().v*x().pitch)
+                    if (feature().pitch == y().v*x().v*x().pitch)
                     {
-                        throw std::runtime_error("Unsupported - cannot flatten with padding");
+                        l = DataLayout::fb;
+                        break;
                     }
-                    l = DataLayout::fb;
-                    break;
+                    throw std::runtime_error("Unsupported - cannot flatten with padding");
                 default:
                     throw std::runtime_error("Unsupported - unsupported layout");
                     break;

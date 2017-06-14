@@ -33,7 +33,7 @@ namespace KernelSelector
         k.SetOutputLayout(DataLayout::fb);
         k.SetOutputLayout(DataLayout::bs_f_bsv16__af8);
         k.SetBatchingSupport();
-        k.SetBiasPerOutput();
+        k.SetBiasPerFeatureMap();
         k.SetNonBiasSupport();
         //k.SetOffsetSupport();
         //k.SetPitchesSupport();

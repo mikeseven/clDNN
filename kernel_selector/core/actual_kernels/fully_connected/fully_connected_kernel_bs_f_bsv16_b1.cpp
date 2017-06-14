@@ -31,7 +31,7 @@ namespace KernelSelector
         k.SetInputLayout(DataLayout::bfyx);
         k.SetInputLayout(DataLayout::bf);
         k.SetOutputLayout(DataLayout::bf);
-        k.SetBiasPerOutput();
+        k.SetBiasPerFeatureMap();
         k.SetNonBiasSupport();
         //k.SetOffsetSupport();
         //k.SetPitchesSupport();

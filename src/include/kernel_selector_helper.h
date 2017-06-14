@@ -243,7 +243,13 @@ template <typename OptionalParamsT>
 inline OptionalParamsT GetDefaultOptionalParams(const program_impl& program)
 {
     OptionalParamsT params;
+    
+    const auto& context = program.get_engine()->get_context();
+    const auto& engine_info = context->get_engine_info();
+
     params.bSupportSubGroupExt = program.get_engine()->get_context()->extension_supported("cl_intel_subgroups_short");
+    params.maxWorkGroupSize = engine_info.max_work_group_size;
+    params.maxLocalMemSize = engine_info.max_local_mem_size;
     return params;
 }
 

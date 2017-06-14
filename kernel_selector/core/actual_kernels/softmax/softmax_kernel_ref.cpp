@@ -26,9 +26,16 @@ namespace KernelSelector
         k.SetOutputDataType(Datatype::F16);
         k.SetOutputDataType(Datatype::F32);
         k.SetInputLayout(DataLayout::bfyx);
+        k.SetInputLayout(DataLayout::yxfb);
         k.SetInputLayout(DataLayout::bf);
+        k.SetInputLayout(DataLayout::fb);
         k.SetOutputLayout(DataLayout::bfyx);
+        k.SetOutputLayout(DataLayout::yxfb);
         k.SetOutputLayout(DataLayout::bf);
+        k.SetOutputLayout(DataLayout::fb);
+        k.SetSoftmaxDim(SoftmaxDim::X);
+        k.SetSoftmaxDim(SoftmaxDim::Y);
+        k.SetSoftmaxDim(SoftmaxDim::FEATURE);
         k.SetOffsetSupport();
         k.SetPitchesSupport();
         k.SetBatchingSupport();
@@ -39,15 +46,53 @@ namespace KernelSelector
     {
         assert(params.GetType() == KernelType::SOFT_MAX);
 
-        KernelData kd = KernelData::Default<SoftMaxParams>(params, 1);
+        KernelData kd = KernelData::Default<SoftmaxParams>(params, 1);
 
-        SoftMaxParams& newParams = *static_cast<SoftMaxParams*>(kd.params.get());
+        SoftmaxParams& newParams = *static_cast<SoftmaxParams*>(kd.params.get());
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
         const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        auto jit = GetBaseJit(newParams, kernel_id);
+        switch (newParams.smParams.dim)
+        {
+        case SoftmaxDim::X:
+            jit +=
+                "#define INPUT_OTHER0_PITCH INPUT_Y_PITCH\n"
+                "#define INPUT_OTHER1_PITCH INPUT_FEATURE_PITCH\n"
+                "#define INPUT_CLASS_PITCH  INPUT_X_PITCH\n"
+                "#define INPUT_CLASS_NUM    INPUT_WIDTH\n"
+                "#define OUT_OTHER0_PITCH   OUT_Y_PITCH\n"
+                "#define OUT_OTHER1_PITCH   OUT_FEATURE_PITCH\n"
+                "#define OUT_CLASS_PITCH    OUT_X_PITCH\n";
+            kernel.work_groups.global = cl::NDRange(out.y().v, out.feature().v, out.batch().v);
+            break;
+        case SoftmaxDim::Y:
+            jit +=
+                "#define INPUT_OTHER0_PITCH INPUT_X_PITCH\n"
+                "#define INPUT_OTHER1_PITCH INPUT_FEATURE_PITCH\n"
+                "#define INPUT_CLASS_PITCH  INPUT_Y_PITCH\n"
+                "#define INPUT_CLASS_NUM    INPUT_HEIGHT\n"
+                "#define OUT_OTHER0_PITCH   OUT_X_PITCH\n"
+                "#define OUT_OTHER1_PITCH   OUT_FEATURE_PITCH\n"
+                "#define OUT_CLASS_PITCH    OUT_Y_PITCH\n";
+            kernel.work_groups.global = cl::NDRange(out.x().v, out.feature().v, out.batch().v);
+            break;
+        case SoftmaxDim::FEATURE:
+            jit +=
+                "#define INPUT_OTHER0_PITCH INPUT_X_PITCH\n"
+                "#define INPUT_OTHER1_PITCH INPUT_Y_PITCH\n"
+                "#define INPUT_CLASS_PITCH  INPUT_FEATURE_PITCH\n"
+                "#define INPUT_CLASS_NUM    INPUT_DEPTH\n"
+                "#define OUT_OTHER0_PITCH   OUT_X_PITCH\n"
+                "#define OUT_OTHER1_PITCH   OUT_Y_PITCH\n"
+                "#define OUT_CLASS_PITCH    OUT_FEATURE_PITCH\n";
+            kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.batch().v);
+            break;
+        default:
+            break;
+        }
 
-        kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.batch().v);
-        kernel.kernel_string = GetKernelString(kernel_name, GetBaseJit(newParams, kernel_id), kernel_id);
+        kernel.kernel_string = GetKernelString(kernel_name, jit, kernel_id);
         kernel.args_desc = GetArgumentDesc(1, false, false);
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;

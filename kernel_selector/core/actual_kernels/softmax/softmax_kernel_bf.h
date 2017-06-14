@@ -14,22 +14,20 @@
 // limitations under the License.
 */
 
-#include "vxa_softmax_kernel.h"
-#include "softmax/softmax_kernel_selector.h"
+#pragma once
 
-namespace clDNN
-{
-    SoftMaxKernelBinary::SoftMaxKernelBinary(
-        const SoftMaxParams& params) :
-        BaseKernelBinary(KernelType::SOFT_MAX),
-        m_Params(params)
+#include "igk_softmax_kernel_base.h"
+ 
+namespace KernelSelector 
+{    
+    class SoftmaxKernel_bf : public IGKSoftmaxKernelBase
     {
-        KernelSelector::SoftmaxParams ksParams;
+    public:
+        SoftmaxKernel_bf() : IGKSoftmaxKernelBase("softmax_gpu_bf") {}
+        virtual ~SoftmaxKernel_bf() {}
 
-        InitBaseParams(params, ksParams);
-
-        KernelSelector::SoftmaxOptionalParams ksOptParams;
-
-        HandleBestKernels(KernelSelector::SoftmaxKernelSelctor::instance(), ksParams, ksOptParams);
-    }
+        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual ParamsKey GetSupportedKey() const override;
+        DispatchData set_default(const SoftmaxParams& params, const OptionalParams& optParams) const override;
+    };
 }

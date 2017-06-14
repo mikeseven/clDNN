@@ -27,6 +27,7 @@ namespace KernelSelector
         k.SetOutputDataType(Datatype::F32);
         k.SetInputLayout(DataLayout::bf);
         k.SetOutputLayout(DataLayout::bf);
+        k.SetSoftmaxDim(SoftmaxDim::FEATURE);
         k.SetOffsetSupport();
         return k;
     }
@@ -35,9 +36,9 @@ namespace KernelSelector
     {
         assert(params.GetType() == KernelType::SOFT_MAX);
 
-        KernelData kd = KernelData::Default<SoftMaxParams>(params, 1);
+        KernelData kd = KernelData::Default<SoftmaxParams>(params, 1);
 
-        SoftMaxParams& newParams = *static_cast<SoftMaxParams*>(kd.params.get());
+        SoftmaxParams& newParams = *static_cast<SoftmaxParams*>(kd.params.get());
 
         const size_t maxLocalWorkGroup    = 32;
         const size_t dst_size             = newParams.output.Length();
@@ -72,7 +73,7 @@ namespace KernelSelector
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
         kernel.args_desc = GetArgumentDesc(1, false, false);
 
-        kd.estimated_time = FORCE_PRIORITY_1;
+        kd.estimated_time = FORCE_PRIORITY_8;
 
         return{ kd };
     }

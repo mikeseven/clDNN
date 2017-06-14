@@ -76,6 +76,7 @@ namespace KernelSelector {
     KernelsData KernelSelctorBase::GetNaiveBestKernel(const Params& params, const OptionalParams& options, KernelType kType) const
     {
         KernelsData kernelsData;
+        std::string kernelName;
 
         if (params.GetType() == kType &&
             options.GetType() == kType)
@@ -88,7 +89,7 @@ namespace KernelSelector {
                 {
                     KernelsData kds = implementation->GetKernelsData(params, options);
 
-                    if (kds.size())
+                    if (kds.size() && kds[0].kernels.size())
                     {
 #ifdef ENABLE_ENV
                         const auto& it = force_kernels.find(implementation->GetName());
@@ -111,12 +112,15 @@ namespace KernelSelector {
                                 kds[0].estimated_time < kernelsData[0].estimated_time)
                             {
                                 kernelsData = kds;
+                                kernelName = implementation->GetName();
                             }
                         }
                     }
                 }
             }
         }
+
+        //printf("%s\n", kernelName.c_str());
 
         return kernelsData;
     }

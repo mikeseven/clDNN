@@ -93,7 +93,12 @@ namespace KernelSelector
                         } conv;
                         struct fc_t {} fc;
                         struct lc_t {} lc;
-                        struct softmax_t {} softmax;
+                        struct softmax_t 
+                        {
+                            uint32_t dim_x : 1;
+                            uint32_t dim_y : 1;
+                            uint32_t dim_feature : 1;
+                        } softmax;
                     } dedicated;
                 } val;
                 uint64_t raw;
@@ -336,6 +341,24 @@ namespace KernelSelector
             key.restrict.val.dedicated.conv.dilation = 1;
         }
 
+        void SetSoftmaxDim(SoftmaxDim d)
+        {
+            switch (d)
+            {
+            case SoftmaxDim::X:
+                key.restrict.val.dedicated.softmax.dim_x = 1;
+                break;
+            case SoftmaxDim::Y:
+                key.restrict.val.dedicated.softmax.dim_y = 1;
+                break;
+            case SoftmaxDim::FEATURE:
+                key.restrict.val.dedicated.softmax.dim_feature = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
         bool Support(const ParamsKey& k) const
         {
             return 
@@ -471,13 +494,14 @@ namespace KernelSelector
             {
                 k.SetNonBiasSupport();
             }
+            else if (bias[0].layout == DataLayout::bf ||
+                     bias[0].layout == DataLayout::fb)
+            {
+                k.SetBiasPerFeatureMap();
+            }
             else if (bias[0].layout == output.layout)
             {
                 k.SetBiasPerOutput();
-            }
-            else if (bias[0].layout == DataLayout::bf)
-            {
-                k.SetBiasPerFeatureMap();
             }
 
             return k;
@@ -652,13 +676,22 @@ namespace KernelSelector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // SoftMaxParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct SoftMaxParams : public BaseParams
+    struct SoftmaxParams : public BaseParams
     {
-        SoftMaxParams() : BaseParams(KernelType::SOFT_MAX) {}
+        SoftmaxParams() : BaseParams(KernelType::SOFT_MAX) {}
+
+        struct DedicatedParams
+        {
+            SoftmaxDim dim = SoftmaxDim::FEATURE;
+        };
+
+        DedicatedParams smParams;
 
         virtual ParamsKey GetParamsKey() const
         {
-            return BaseParams::GetParamsKey();
+            auto k = BaseParams::GetParamsKey();
+            k.SetSoftmaxDim(smParams.dim);
+            return k;
         }
     };
 
@@ -818,6 +851,8 @@ namespace KernelSelector
         std::vector<DataLayout> input_layouts;
         std::vector<DataLayout> output_layouts;
         bool bSupportSubGroupExt = false;
+        uint64_t maxWorkGroupSize = 1;
+        uint64_t maxLocalMemSize = 16*1024*1024;
 
         virtual ParamsKey GetSupportedKey() const
         {

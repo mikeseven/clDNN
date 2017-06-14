@@ -31,7 +31,7 @@ namespace KernelSelector
         k.EnableAllInputLayout();
         k.SetOutputLayout(DataLayout::bf);
         k.SetBatchingSupport();
-        k.SetBiasPerOutput();
+        k.SetBiasPerFeatureMap();
         k.SetNonBiasSupport();
         return k;
     }
