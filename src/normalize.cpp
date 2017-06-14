@@ -61,7 +61,7 @@ normalize_inst::typed_primitive_inst(network_impl& network, normalize_node const
     if ((scale_feature_size != 1) && (scale_feature_size != input_feature_size))
     {
         throw std::invalid_argument("Dimensions mismatch between input and scale input in Normalize layer!");
-    }        
+    }
 
     // All other dimensions should be 1
     if((int32_t)scale_size.count() != scale_feature_size)

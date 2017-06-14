@@ -94,16 +94,16 @@ struct activation_gpu : typed_primitive_impl<activation>
 
         gpu::jit_constants mem_consts
         {
-            gpu::make_jit_constant("INPUT",                            input_size),
-            gpu::make_jit_constant("INPUT_PADDING",                    input_padding),
+            gpu::make_jit_constant("INPUT",                         input_size),
+            gpu::make_jit_constant("INPUT_PADDING",                 input_padding),
             gpu::make_jit_constant("OUTPUT",                        output_size),
             gpu::make_jit_constant("OUTPUT_PADDING",                output_padding),
-            gpu::make_jit_constant("RELU",                            is_parameterized ? 0 : 1),
-            gpu::make_jit_constant("PRELU",                            is_parameterized ? 1 : 0),
+            gpu::make_jit_constant("RELU",                          is_parameterized ? 0 : 1),
+            gpu::make_jit_constant("PRELU",                         is_parameterized ? 1 : 0),
             gpu::make_jit_constant("NEGATIVE_SLOPE",                outer.get_primitive()->negative_slope),
             gpu::make_jit_constant("FP16_SUPPORTED",                static_cast<int>(engine_info.supports_fp16)),
             gpu::make_jit_constant("FP16_UNIT_USED",                static_cast<int>(data.fp16_unit_used)),
-            gpu::make_jit_constant("UNIT_TYPE",                        data.fp16_unit_used ? "half" : "float")
+            gpu::make_jit_constant("UNIT_TYPE",                     data.fp16_unit_used ? "half" : "float")
         };
 
         return mem_consts;

@@ -33,7 +33,7 @@ namespace cldnn
 
 /// @brief Generates a set of default bounding boxes with different sizes and aspect ratios.
 /// @details The prior-boxes are shared across all the images in a batch (since they have the same width and height).
-///    First feature stores the mean of each prior coordinate. 
+/// First feature stores the mean of each prior coordinate. 
 /// Second feature stores the variance of each prior coordinate.
 struct prior_box : public primitive_base<prior_box, CLDNN_PRIMITIVE_DESC(prior_box)>
 {

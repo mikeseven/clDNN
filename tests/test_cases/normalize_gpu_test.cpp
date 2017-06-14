@@ -638,7 +638,7 @@ public:
         else
         {
             return generate_reference_typed<FLOAT16>(inputs);
-        }        
+        }
     }
 
 private:
@@ -647,7 +647,6 @@ private:
     static std::vector<tests::test_params*> all_generic_params_scale_per_channel;
     static std::vector<cldnn::primitive*> all_layer_params;
     static std::vector<std::tuple<tests::test_params*, cldnn::primitive*>> all_test_params;
-    
 };
 
 std::vector<tests::test_params*> normalize_test::all_generic_params_scale_shared = {};

@@ -646,16 +646,16 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_bx) {
     //  Output : 2x3
 
     //  Input:
-    //  b0:    1        2        -0.75
-    //  b1: 0        -1.5    -3
+    //  b0: 1  2  -0.75
+    //  b1: 0 -1.5  -3
     //
     //  Scale:
-    //  b0: 3.1        0.2        0.17   
-    //  b1: 10        -3        1
+    //  b0: 3.1  0.2  0.17
+    //  b1:  10   -3     1
 
     //  Bias:
-    //  b0: -0.1    3.2        7   
-    //  b1: 0        1        -1
+    //  b0: -0.1 3.2  7
+    //  b1: 0    1   -1
 
     engine engine;
 
@@ -710,16 +710,16 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_xb) {
     //  Output : 2x3
 
     //  Input:
-    //  x0:    1        2        -0.75
-    //  x1: 0        -1.5    -3
+    //  x0: 1     2  -0.75
+    //  x1: 0  -1.5     -3
     //
     //  Scale:
-    //  x0: 3.1        0.2        0.17   
-    //  x1: 10        -3        1
+    //  x0: 3.1   0.2  0.17
+    //  x1: 10     -3     1
 
     //  Bias:
-    //  x0: -0.1    3.2        7   
-    //  x1: 0        1        -1
+    //  x0: -0.1  3.2   7
+    //  x1: 0       1  -1
 
     engine engine;
 
@@ -774,8 +774,8 @@ TEST(scale_gpu, basic_in2x3_scale_single_value_bx) {
     //  Output : 2x3
 
     //  Input:
-    //  b0:    1        2        -0.75
-    //  b1: 0        -1.5    -3
+    //  b0: 1    2 -0.75
+    //  b1: 0 -1.5    -3
     //
     //  Scale:
     //  3.1
@@ -834,8 +834,8 @@ TEST(scale_gpu, basic_in2x3_scale_single_value_xb) {
     //  Output : 2x3
 
     //  Input:
-    //  x0:    1        2        -0.75
-    //  x1: 0        -1.5    -3
+    //  x0: 1     2 -0.75
+    //  x1: 0  -1.5    -3
     //
     //  Scale:
     //  3.1
@@ -893,12 +893,12 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_no_bias_bx) {
     //  Output : 2x3
 
     //  Input:
-    //  b0:    1        2        -0.75
-    //  b1: 0        -1.5    -3
+    //  b0: 1    2 -0.75
+    //  b1: 0 -1.5    -3
     //
     //  Scale:
-    //  b0: 3.1        0.2        0.17   
-    //  b1: 10        -3        1
+    //  b0: 3.1   0.2   0.17
+    //  b1: 10     -3      1
 
     engine engine;
 
@@ -943,12 +943,12 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_no_bias_xb) {
     //  Output : 2x3
 
     //  Input:
-    //  x0:    1        2        -0.75
-    //  x1: 0        -1.5    -3
+    //  x0: 1     2  -0.75
+    //  x1: 0  -1.5     -3
     //
     //  Scale:
-    //  x0: 3.1        0.2        0.17   
-    //  x1: 10        -3        1
+    //  x0: 3.1    0.2   0.17
+    //  x1: 10      -3      1
 
     engine engine;
 

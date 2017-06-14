@@ -284,7 +284,7 @@ public:
 
 class generic_test : public ::testing::TestWithParam<std::tuple<test_params*, cldnn::primitive*>>
 {
-    
+
 public:
     generic_test();
 
@@ -409,7 +409,7 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
     {
         throw std::runtime_error("Not implemented yet for this primitive.");
     }
-        
+
     *os << str.str();
 }
 }

@@ -2463,7 +2463,7 @@ public:
                         }
                     }
                 }
-            }        
+            }
         }
 
         // Create all the combinations for the test.
@@ -2647,11 +2647,10 @@ public:
                                     int weight_fi = in_f;
                                     int weight_yi = kernel_y;
                                     int weight_xi = kernel_x;
-                                    size_t weight_index = get_linear_index(inputs[1].get_layout(), weight_bi, weight_fi, weight_yi, weight_xi);                    
-
+                                    size_t weight_index = get_linear_index(inputs[1].get_layout(), weight_bi, weight_fi, weight_yi, weight_xi);
                                     output_mem[output_index] += input_mem[input_index] * weights_mem[weight_index];
                                 }
-                            }        
+                            }
                         }
                     }
                 }
@@ -2679,7 +2678,7 @@ public:
         else
         {
             return generate_reference_typed<FLOAT16>(inputs);
-        }        
+        }
     }
 
 private:
@@ -2687,7 +2686,6 @@ private:
     static std::vector<tests::test_params*> all_generic_params;
     static std::vector<cldnn::primitive*> all_layer_params;
     static std::vector<std::tuple<tests::test_params*, cldnn::primitive*>> all_test_params;
-    
 };
 
 std::vector<tests::test_params*> convolution_test::all_generic_params = {};

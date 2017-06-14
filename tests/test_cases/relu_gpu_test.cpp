@@ -683,7 +683,7 @@ public:
         else
         {
             return generate_reference_typed<FLOAT16>(inputs);
-        }        
+        }
     }
 
 private:

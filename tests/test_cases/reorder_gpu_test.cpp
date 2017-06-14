@@ -778,7 +778,7 @@ public:
                     (format == cldnn_format_type::cldnn_format_byxf) ||
                     (format == cldnn_format_type::cldnn_format_bfyx) ||
                     (format == cldnn_format_type::cldnn_format_fyxb)
-                );    
+                );
     }
 
     template<typename InputType, typename OutputType>
@@ -828,7 +828,7 @@ public:
             {
                 return generate_reference_typed<FLOAT16, FLOAT16>(inputs);
             }
-        }        
+        }
     }
 
 private:

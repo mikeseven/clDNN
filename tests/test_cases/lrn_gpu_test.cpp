@@ -841,7 +841,7 @@ public:
         else
         {
             return generate_reference_typed<FLOAT16>(inputs);
-        }        
+        }
     }
 
     static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<tests::test_params*, cldnn::primitive*>>& info)

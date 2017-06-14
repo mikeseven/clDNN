@@ -105,35 +105,35 @@ struct reorder_gpu : typed_primitive_impl<reorder>
         // 0 - batch (b), 1 - feature (f), 2, 3 - spatial (x -> 2, y -> 3)
         case format::byxf:
             return "return lpad[1] + pos[1] + (lpad[1] + size[1] + upad[1]) * (lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[3] + pos[3] + (lpad[3] + size[3] + upad[3]) * (lpad[0] + pos[0])));";
-        
+
         case format::yxfb:
             return "return lpad[0] + pos[0] + (lpad[0] + size[0] + upad[0]) * (lpad[1] + pos[1] + (lpad[1] + size[1] + upad[1]) * (lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[3] + pos[3])));";
-        
+
         case format::fyxb:
             return "return lpad[0] + pos[0] + (lpad[0] + size[0] + upad[0]) * (lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[3] + pos[3] + (lpad[3] + size[3] + upad[3]) * (lpad[1] + pos[1])));";
-        
+
         case format::bfyx:
             return "return lpad[2] + pos[2] + (lpad[2] + size[2] + upad[2]) * (lpad[3] + pos[3] + (lpad[3] + size[3] + upad[3]) * (lpad[1] + pos[1] + (lpad[1] + size[1] + upad[1]) * (lpad[0] + pos[0])));";
-        
+
         case format::os_iyx_osv16:
             return R"__C(uint _slice_id = pos[0] / 16; \
                         uint _id_in_slice = pos[0] % 16; \
                         return _id_in_slice + 16 * (pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + _slice_id * size[1])));)__C";
-        
+
         case format::bs_xs_xsv8_bsv8:
             return R"__C(uint _b_slice_id = pos[0] / 8; \
                         uint _b_id_in_slice = pos[0] % 8; \
                         uint _x_slice_id = pos[2] / 8; \
                         uint _x_id_in_slice = pos[2] % 8; \
                         return _b_id_in_slice + 8 * (_x_id_in_slice + 8 * _x_slice_id + _b_slice_id * size[2]);)__C";
-        
+
         case format::bs_xs_xsv8_bsv16:
             return R"__C(uint _b_slice_id = pos[0] / 16; \
                         uint _b_id_in_slice = pos[0] % 16; \
                         uint _x_slice_id = pos[2] / 8; \
                         uint _x_id_in_slice = pos[2] % 8; \
                         return _b_id_in_slice + 16 * (_x_id_in_slice + 8 * _x_slice_id + _b_slice_id * size[2]);)__C";
-        
+
         case format::bs_x_bsv16:
             return R"__C(uint _slice_id = pos[0] / 16; \
                         uint _id_in_slice = pos[0] % 16; \
@@ -182,27 +182,27 @@ struct reorder_gpu : typed_primitive_impl<reorder>
                         uint _x_slice_id = (pos[2] + size[2] * (pos[3] + size[3] * pos[1])) / 8; \
                         uint _x_id_in_slice = (pos[2] + size[2] * (pos[3] + size[3] * pos[1])) % 8; \
                         return _b_id_in_slice + 8 * (_x_id_in_slice + 8 * _x_slice_id + _b_slice_id * (size[2] * size[3] * size[1]));)__C";
-        
+
         case format::bs_xs_xsv8_bsv16:
             return R"__C(uint _b_slice_id = pos[0] / 16; \
                         uint _b_id_in_slice = pos[0] % 16; \
                         uint _x_slice_id = (pos[2] + size[2] * (pos[3] + size[3] * pos[1])) / 8; \
                         uint _x_id_in_slice = (pos[2] + size[2] * (pos[3] + size[3] * pos[1])) % 8; \
                         return _b_id_in_slice + 16 * (_x_id_in_slice + 8 * _x_slice_id + _b_slice_id * (size[2] * size[3] * size[1]));)__C";
-        
+
         case format::bs_x_bsv16:
             return R"__C(uint _slice_id = pos[0] / 16; \
                         uint _id_in_slice = pos[0] % 16; \
                         return _id_in_slice + 16 * (pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * _slice_id)));)__C";
-        
+
         //equivalent to axis = 1 (feature), end_axis = -1(x) in caffe
         case format::bfyx:
             return "return pos[2] + size[2] * (pos[3] + size[3] * (pos[1] + size[1] * pos[0]));";
-        
+
         //equivalent to axis = 0 (batch), end_axis = 2(y) in caffe
         case format::yxfb:
             return "return pos[0] + size[0] * ((pos[1] * size[2] * size[3]) + size[1] * (pos[2] + size[2] * pos[3]) / size[2]);";
-        
+
         default:
             throw std::invalid_argument("This format is not supported in GPU reorder_inst - flatten");
         }
