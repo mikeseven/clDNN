@@ -661,188 +661,188 @@ class lrn_test : public tests::generic_test
 
 public:
 
-	static void TearDownTestCase() 
-	{
-		for (auto generic_params : all_generic_params)
-		{
-			delete generic_params;
-		}
+    static void TearDownTestCase() 
+    {
+        for (auto generic_params : all_generic_params)
+        {
+            delete generic_params;
+        }
 
-		for (auto layer_params : all_layer_params)
-		{
-			delete layer_params;
-		}
-	}
+        for (auto layer_params : all_layer_params)
+        {
+            delete layer_params;
+        }
+    }
 
-	static std::vector<cldnn::primitive*> generate_specific_test_params()
-	{
-		std::vector<cldnn_lrn_norm_region> norm_regions = { cldnn_lrn_norm_region_across_channel, cldnn_lrn_norm_region_within_channel };
+    static std::vector<cldnn::primitive*> generate_specific_test_params()
+    {
+        std::vector<cldnn_lrn_norm_region> norm_regions = { cldnn_lrn_norm_region_across_channel, cldnn_lrn_norm_region_within_channel };
 
-		//The test checks only valid combinations.
-		for (auto norm_region : norm_regions)
-		{
-			// No padding
-			all_layer_params.push_back(new lrn("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region));
-			all_layer_params.push_back(new lrn("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region));
-			
-			// Output padding
+        //The test checks only valid combinations.
+        for (auto norm_region : norm_regions)
+        {
+            // No padding
+            all_layer_params.push_back(new lrn("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region));
+            all_layer_params.push_back(new lrn("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region));
+            
+            // Output padding
             all_layer_params.push_back(new lrn("lrn", "input0", 3, 1.f, 5e-05f, 0.75f, norm_region, { { 0, 0, 6, 13 }, 0 }));
-			all_layer_params.push_back(new lrn("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region, { { 0, 0, 11, 5 },{ 0, 0, 0, 19 } }));
+            all_layer_params.push_back(new lrn("lrn", "input0", 5, 17.19f, 0.079f, 0.19f, norm_region, { { 0, 0, 11, 5 },{ 0, 0, 0, 19 } }));
 
-			// Input padding
-			all_layer_params.push_back(new lrn("lrn", "reorder0", 3, 1.f, 5e-05f, 0.75f, norm_region));
-			all_layer_params.push_back(new lrn("lrn", "reorder0", 5, 17.19f, 0.079f, 0.19f, norm_region));
+            // Input padding
+            all_layer_params.push_back(new lrn("lrn", "reorder0", 3, 1.f, 5e-05f, 0.75f, norm_region));
+            all_layer_params.push_back(new lrn("lrn", "reorder0", 5, 17.19f, 0.079f, 0.19f, norm_region));
 
-			// Input + Output padding
+            // Input + Output padding
             all_layer_params.push_back(new lrn("lrn", "reorder0", 3, 1.f, 5e-05f, 0.75f, norm_region, { { 0, 0, 17, 2 }, 0 }));
-			all_layer_params.push_back(new lrn("lrn", "reorder0", 5, 17.19f, 0.079f, 0.19f, norm_region, { { 0, 0, 1, 3 },{ 0, 0, 9, 6 } }));
-		}
-		
-		return all_layer_params;
-	}
+            all_layer_params.push_back(new lrn("lrn", "reorder0", 5, 17.19f, 0.079f, 0.19f, norm_region, { { 0, 0, 1, 3 },{ 0, 0, 9, 6 } }));
+        }
+        
+        return all_layer_params;
+    }
 
-	static std::vector<tests::test_params*> generate_generic_test_params()
-	{
-		return generic_test::generate_generic_test_params(all_generic_params);
-	}
+    static std::vector<tests::test_params*> generate_generic_test_params()
+    {
+        return generic_test::generate_generic_test_params(all_generic_params);
+    }
 
-	virtual bool is_format_supported(cldnn::format format)
-	{
-		return ((format == cldnn_format_type::cldnn_format_yxfb) || (format == cldnn_format_type::cldnn_format_bfyx));
-	}
+    virtual bool is_format_supported(cldnn::format format)
+    {
+        return ((format == cldnn_format_type::cldnn_format_yxfb) || (format == cldnn_format_type::cldnn_format_bfyx));
+    }
 
-	template<typename Type>
-	memory generate_reference_typed(const std::vector<cldnn::memory>& inputs)
-	{
-		const cldnn::lrn* lrn = (cldnn::lrn*)layer_params;
+    template<typename Type>
+    memory generate_reference_typed(const std::vector<cldnn::memory>& inputs)
+    {
+        const cldnn::lrn* lrn = (cldnn::lrn*)layer_params;
 
-		//Output is bfyx
+        //Output is bfyx
         data_types dt = inputs[0].get_layout().data_type;
-		auto output = memory::allocate(engine, cldnn::layout(dt, cldnn::format::bfyx, inputs[0].get_layout().size, lrn->output_padding));
+        auto output = memory::allocate(engine, cldnn::layout(dt, cldnn::format::bfyx, inputs[0].get_layout().size, lrn->output_padding));
 
-		Type beta = lrn->beta;
-		Type k = lrn->k;
-		uint32_t size = lrn->size;
-		cldnn_lrn_norm_region lrn_norm_region = lrn->norm_region;
-		Type alpha_sign = std::signbit(lrn->alpha) ? -1.0f : 1.0f;
-		Type alpha = (dt == cldnn::data_types::f32) ? (Type)lrn->alpha : alpha_sign;
-		Type alpha_div_by_size = (dt == cldnn::data_types::f32) ? (Type)(lrn->alpha / lrn->size) : alpha_sign;
-		Type alpha_div_by_size_abs_sqrt = (dt == cldnn::data_types::f32) ? 1.0f : std::sqrt(std::abs(lrn->alpha / lrn->size));
-		Type alpha_abs_sqrt = (dt == cldnn::data_types::f32) ? 1.0f : std::sqrt(std::abs(lrn->alpha));
+        Type beta = lrn->beta;
+        Type k = lrn->k;
+        uint32_t size = lrn->size;
+        cldnn_lrn_norm_region lrn_norm_region = lrn->norm_region;
+        Type alpha_sign = std::signbit(lrn->alpha) ? -1.0f : 1.0f;
+        Type alpha = (dt == cldnn::data_types::f32) ? (Type)lrn->alpha : alpha_sign;
+        Type alpha_div_by_size = (dt == cldnn::data_types::f32) ? (Type)(lrn->alpha / lrn->size) : alpha_sign;
+        Type alpha_div_by_size_abs_sqrt = (dt == cldnn::data_types::f32) ? 1.0f : std::sqrt(std::abs(lrn->alpha / lrn->size));
+        Type alpha_abs_sqrt = (dt == cldnn::data_types::f32) ? 1.0f : std::sqrt(std::abs(lrn->alpha));
 
-		auto input_mem = inputs[0].pointer<Type>();
-		auto output_mem = output.pointer<Type>();
-		int batch = inputs[0].get_layout().size.batch[0];
-		int feature = inputs[0].get_layout().size.feature[0];
-		int height = inputs[0].get_layout().size.spatial[1];
-		int width = inputs[0].get_layout().size.spatial[0];
+        auto input_mem = inputs[0].pointer<Type>();
+        auto output_mem = output.pointer<Type>();
+        int batch = inputs[0].get_layout().size.batch[0];
+        int feature = inputs[0].get_layout().size.feature[0];
+        int height = inputs[0].get_layout().size.spatial[1];
+        int width = inputs[0].get_layout().size.spatial[0];
 
-		int output_height = output.get_layout().get_buffer_size().spatial[1];
-		int output_width = output.get_layout().get_buffer_size().spatial[0];
+        int output_height = output.get_layout().get_buffer_size().spatial[1];
+        int output_width = output.get_layout().get_buffer_size().spatial[0];
 
-		//Initialized output with zeros.
+        //Initialized output with zeros.
         std::fill(output_mem.begin(), output_mem.end(), static_cast<Type>(0));
 
-		switch (lrn_norm_region)
-		{
-			case cldnn_lrn_norm_region::cldnn_lrn_norm_region_across_channel:
-			{
-				for (int n = 0; n < batch; ++n) 
-				{
-					for (int c = 0; c < feature; ++c) 
-					{
-						for (int h = 0; h < height; ++h) 
-						{
-							for (int w = 0; w < width; ++w) 
-							{
-								int c_start = c - (size - 1) / 2;
-								int c_end = std::min((int)(c_start + size), feature);
-								c_start = std::max(c_start, 0);
-								Type scale = 0;
-								for (int i = c_start; i < c_end; ++i) 
-								{
-									size_t input_index = get_linear_index(inputs[0].get_layout(), n, i, h, w);
-									Type value = input_mem[input_index] * alpha_div_by_size_abs_sqrt;
-									scale += value * value;
-								}
-								scale = scale * alpha_div_by_size + k;
+        switch (lrn_norm_region)
+        {
+            case cldnn_lrn_norm_region::cldnn_lrn_norm_region_across_channel:
+            {
+                for (int n = 0; n < batch; ++n) 
+                {
+                    for (int c = 0; c < feature; ++c) 
+                    {
+                        for (int h = 0; h < height; ++h) 
+                        {
+                            for (int w = 0; w < width; ++w) 
+                            {
+                                int c_start = c - (size - 1) / 2;
+                                int c_end = std::min((int)(c_start + size), feature);
+                                c_start = std::max(c_start, 0);
+                                Type scale = 0;
+                                for (int i = c_start; i < c_end; ++i) 
+                                {
+                                    size_t input_index = get_linear_index(inputs[0].get_layout(), n, i, h, w);
+                                    Type value = input_mem[input_index] * alpha_div_by_size_abs_sqrt;
+                                    scale += value * value;
+                                }
+                                scale = scale * alpha_div_by_size + k;
 
-								int output_index = (n * feature + c) * output_height * output_width;
-								tensor lower_padding = lrn->output_padding.lower_size(); 
-								output_index += (lower_padding.spatial[1] + h) * output_width + lower_padding.spatial[0] + w;
+                                int output_index = (n * feature + c) * output_height * output_width;
+                                tensor lower_padding = lrn->output_padding.lower_size(); 
+                                output_index += (lower_padding.spatial[1] + h) * output_width + lower_padding.spatial[0] + w;
 
-								size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
-								output_mem[output_index] = input_mem[input_index] * (Type)(float)pow((float)scale, -(float)beta);
-							}
-						}
-					}
-				}
-				break;
-			}
-			case cldnn_lrn_norm_region::cldnn_lrn_norm_region_within_channel:
-			{
-				int pad = (size - 1) / 2;
-				for (int n = 0; n < batch; ++n) 
-				{
-					for (int c = 0; c < feature; ++c) 
-					{
-						for (int h = 0; h < height; ++h) 
-						{
-							for (int w = 0; w < width; ++w) 
-							{
-								Type scale = 0.f;
-								int h_start = h - pad;
-								int w_start = w - pad;
-								int h_end = std::min((int)(h_start + size), height + pad);
-								int w_end = std::min((int)(w_start + size), width + pad);
-								int pool_size = (h_end - h_start) * (w_end - w_start);
-								h_start = std::max(h_start, 0);
-								w_start = std::max(w_start, 0);
-								h_end = std::min(h_end, height);
-								w_end = std::min(w_end, width);
-								for (int nh = h_start; nh < h_end; ++nh) 
-								{
-									for (int nw = w_start; nw < w_end; ++nw) 
-									{
-										size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, nh, nw);
-										Type value = input_mem[input_index] * alpha_abs_sqrt;
-										scale += value * value;
-									}
-								}
-								scale /= pool_size;
-								size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
+                                size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
+                                output_mem[output_index] = input_mem[input_index] * (Type)(float)pow((float)scale, -(float)beta);
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            case cldnn_lrn_norm_region::cldnn_lrn_norm_region_within_channel:
+            {
+                int pad = (size - 1) / 2;
+                for (int n = 0; n < batch; ++n) 
+                {
+                    for (int c = 0; c < feature; ++c) 
+                    {
+                        for (int h = 0; h < height; ++h) 
+                        {
+                            for (int w = 0; w < width; ++w) 
+                            {
+                                Type scale = 0.f;
+                                int h_start = h - pad;
+                                int w_start = w - pad;
+                                int h_end = std::min((int)(h_start + size), height + pad);
+                                int w_end = std::min((int)(w_start + size), width + pad);
+                                int pool_size = (h_end - h_start) * (w_end - w_start);
+                                h_start = std::max(h_start, 0);
+                                w_start = std::max(w_start, 0);
+                                h_end = std::min(h_end, height);
+                                w_end = std::min(w_end, width);
+                                for (int nh = h_start; nh < h_end; ++nh) 
+                                {
+                                    for (int nw = w_start; nw < w_end; ++nw) 
+                                    {
+                                        size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, nh, nw);
+                                        Type value = input_mem[input_index] * alpha_abs_sqrt;
+                                        scale += value * value;
+                                    }
+                                }
+                                scale /= pool_size;
+                                size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
 
-								int output_index = (n * feature + c) * output_height * output_width;
-								tensor lower_padding = lrn->output_padding.lower_size();
-								output_index += (lower_padding.spatial[1] + h) * output_width + lower_padding.spatial[0] + w;
+                                int output_index = (n * feature + c) * output_height * output_width;
+                                tensor lower_padding = lrn->output_padding.lower_size();
+                                output_index += (lower_padding.spatial[1] + h) * output_width + lower_padding.spatial[0] + w;
 
-								output_mem[output_index] = input_mem[input_index] * (Type)(float)pow((float)(scale * alpha + k), -(float)beta);							
-							}
-						}
-					}
-				}
-				break;
-			}
-			default:
-			{
-				assert(0);
-			}
-		}
+                                output_mem[output_index] = input_mem[input_index] * (Type)(float)pow((float)(scale * alpha + k), -(float)beta);                            
+                            }
+                        }
+                    }
+                }
+                break;
+            }
+            default:
+            {
+                assert(0);
+            }
+        }
 
-		return output;
-	}
+        return output;
+    }
 
-	virtual memory generate_reference(const std::vector<cldnn::memory>& inputs)
-	{
-		if (generic_params->data_type == data_types::f32)
-		{
-			return generate_reference_typed<float>(inputs);
-		}
-		else
-		{
-			return generate_reference_typed<FLOAT16>(inputs);
-		}		
-	}
+    virtual memory generate_reference(const std::vector<cldnn::memory>& inputs)
+    {
+        if (generic_params->data_type == data_types::f32)
+        {
+            return generate_reference_typed<float>(inputs);
+        }
+        else
+        {
+            return generate_reference_typed<FLOAT16>(inputs);
+        }        
+    }
 
     static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<tests::test_params*, cldnn::primitive*>>& info)
     {
@@ -882,9 +882,9 @@ public:
 
 private:
 
-	static std::vector<tests::test_params*> all_generic_params;
-	static std::vector<cldnn::primitive*> all_layer_params;
-	
+    static std::vector<tests::test_params*> all_generic_params;
+    static std::vector<cldnn::primitive*> all_layer_params;
+    
 };
 
 std::vector<cldnn::primitive*> lrn_test::all_layer_params = {};
@@ -892,12 +892,12 @@ std::vector<tests::test_params*> lrn_test::all_generic_params = {};
 
 TEST_P(lrn_test, DISABLED_test_all)
 {
-	run_single_test();
+    run_single_test();
 }
 
 INSTANTIATE_TEST_CASE_P(LRN, 
-						lrn_test, 
-						::testing::Combine(::testing::ValuesIn(lrn_test::generate_generic_test_params()),
-										   ::testing::ValuesIn(lrn_test::generate_specific_test_params())), 
-						lrn_test::custom_param_name);
+                        lrn_test, 
+                        ::testing::Combine(::testing::ValuesIn(lrn_test::generate_generic_test_params()),
+                                           ::testing::ValuesIn(lrn_test::generate_specific_test_params())), 
+                        lrn_test::custom_param_name);
 

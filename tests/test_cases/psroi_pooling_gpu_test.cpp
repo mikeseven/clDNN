@@ -245,8 +245,8 @@ public:
         return all_generic_params;
     }
 
-	static std::vector<cldnn::primitive*> generate_layer_params()
-	{
+    static std::vector<cldnn::primitive*> generate_layer_params()
+    {
         float spatial_scale = 0.0625f;
 
         const int group_sz = 4;
@@ -307,10 +307,10 @@ public:
         return (format == cldnn_format_type::cldnn_format_bfyx);
     }
 
-	virtual cldnn::tensor get_expected_output_tensor()
-	{
-		return get_output_layout();
-	}
+    virtual cldnn::tensor get_expected_output_tensor()
+    {
+        return get_output_layout();
+    }
 
     static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info)
     {

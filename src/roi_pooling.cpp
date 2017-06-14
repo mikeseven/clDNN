@@ -36,15 +36,15 @@ layout roi_pooling_inst::calc_output_layout(roi_pooling_node const& node)
 
     int gss = desc->group_sz * desc->group_sz;
 
-	if (desc->group_sz < 0 || (gss && fm % gss != 0))
-	{
-		throw std::runtime_error("group_sz must be either 0 (For RoIPooling) or satisfy fm % (group_sz^2) == 0");
-	}
+    if (desc->group_sz < 0 || (gss && fm % gss != 0))
+    {
+        throw std::runtime_error("group_sz must be either 0 (For RoIPooling) or satisfy fm % (group_sz^2) == 0");
+    }
 
-	if (gss)
-	{
-		fm /= gss;
-	}
+    if (gss)
+    {
+        fm /= gss;
+    }
 
     return layout(rois_layout.data_type, format::bfyx, { num_rois, fm, desc->pooled_width, desc->pooled_height });
 }

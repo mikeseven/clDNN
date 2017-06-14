@@ -38,48 +38,48 @@ typedef bool (*IPGIsGTAvailable) ();
 class CIntelPowerGadgetLib
 {
 public:
-	CIntelPowerGadgetLib(void);
-	~CIntelPowerGadgetLib(void);
-	
-	bool IntelEnergyLibInitialize(void);
-	bool GetNumNodes(int * nNodes);
-	bool GetNumMsrs(int *nMsrs);
-	bool GetMsrName(int iMsr, wchar_t *szName);
-	bool GetMsrFunc(int iMsr, int *funcID);
-	bool GetIAFrequency(int iNode, int *freqInMHz);
-	bool GetGTFrequency(int *freq);
-	bool GetTDP(int iNode, double *TDP);
-	bool GetMaxTemperature(int iNode, int *degreeC);
-	bool GetTemperature(int iNode, int *degreeC);
-	bool ReadSample();
-	bool GetTimeInterval(double *offset);
-	bool GetBaseFrequency(int iNode, double *baseFrequency);
-	bool GetPowerData(int iNode, int iMSR, double *results, int *nResult);
-	bool StartLog(wchar_t *szFilename);
-	bool StopLog();
-	bool IsGTAvailable();
-	std::string GetLastError();
+    CIntelPowerGadgetLib(void);
+    ~CIntelPowerGadgetLib(void);
+    
+    bool IntelEnergyLibInitialize(void);
+    bool GetNumNodes(int * nNodes);
+    bool GetNumMsrs(int *nMsrs);
+    bool GetMsrName(int iMsr, wchar_t *szName);
+    bool GetMsrFunc(int iMsr, int *funcID);
+    bool GetIAFrequency(int iNode, int *freqInMHz);
+    bool GetGTFrequency(int *freq);
+    bool GetTDP(int iNode, double *TDP);
+    bool GetMaxTemperature(int iNode, int *degreeC);
+    bool GetTemperature(int iNode, int *degreeC);
+    bool ReadSample();
+    bool GetTimeInterval(double *offset);
+    bool GetBaseFrequency(int iNode, double *baseFrequency);
+    bool GetPowerData(int iNode, int iMSR, double *results, int *nResult);
+    bool StartLog(wchar_t *szFilename);
+    bool StopLog();
+    bool IsGTAvailable();
+    std::string GetLastError();
     bool isInitialized;
     bool print_power_results(double);
 
 private:
-	IPGInitialize pInitialize;
-	IPGGetNumNodes pGetNumNodes;
-	IPGGetNumMsrs pGetNumMsrs;
-	IPGGetMsrName pGetMsrName;
-	IPGGetMsrFunc pGetMsrFunc;
-	IPGGetIAFrequency pGetIAFrequency;
-	IPGGetGTFrequency pGetGTFrequency;
-	IPGGetTDP pGetTDP;
-	IPGGetMaxTemperature pGetMaxTemperature;
-	IPGGetTemperature pGetTemperature;
-	IPGReadSample pReadSample; 
-	IPGGetTimeInterval pGetTimeInterval;
-	IPGGetBaseFrequency pGetBaseFrequency;
-	IPGGetPowerData pGetPowerData;
-	IPGStartLog pStartLog;
-	IPGStopLog pStopLog;
-	IPGIsGTAvailable pIsGTAvailable;
+    IPGInitialize pInitialize;
+    IPGGetNumNodes pGetNumNodes;
+    IPGGetNumMsrs pGetNumMsrs;
+    IPGGetMsrName pGetMsrName;
+    IPGGetMsrFunc pGetMsrFunc;
+    IPGGetIAFrequency pGetIAFrequency;
+    IPGGetGTFrequency pGetGTFrequency;
+    IPGGetTDP pGetTDP;
+    IPGGetMaxTemperature pGetMaxTemperature;
+    IPGGetTemperature pGetTemperature;
+    IPGReadSample pReadSample; 
+    IPGGetTimeInterval pGetTimeInterval;
+    IPGGetBaseFrequency pGetBaseFrequency;
+    IPGGetPowerData pGetPowerData;
+    IPGStartLog pStartLog;
+    IPGStopLog pStopLog;
+    IPGIsGTAvailable pIsGTAvailable;
 };
 
 

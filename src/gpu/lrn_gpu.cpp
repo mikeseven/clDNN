@@ -78,7 +78,7 @@ struct lrn_gpu : typed_primitive_impl<lrn>
     static kernel_data set_default(const lrn_node& arg)
     {
         auto input_layout = arg.input().get_output_layout();  // input
-		auto output_layout = arg.get_output_layout(); // output
+        auto output_layout = arg.get_output_layout(); // output
 
         kernel_data kd;
 

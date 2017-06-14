@@ -66,7 +66,7 @@ public:
     enum input_index {
         cls_scores_index,
         bbox_pred_index,
-		image_info_index
+        image_info_index
     };
 
     //TODO(ruv): missign validation?? for image_info dimensions? also faster r-cnn expected it to be dim3 while the new networks expect dim 6!!! ([5] being unused)
@@ -74,14 +74,14 @@ public:
 
     // indices of the image info parameters inside the image_info memory object (the object
     // is an integer array of these parameters)
-	enum image_info_size_index {
-		image_info_height_index,
-		image_info_width_index,
-		image_info_depth_index,
+    enum image_info_size_index {
+        image_info_height_index,
+        image_info_width_index,
+        image_info_depth_index,
         image_info_scale_min_bbox_y,
         image_info_scale_min_bbox_x,
-		image_info_scale_depth_index,
-	};
+        image_info_scale_depth_index,
+    };
 
     static layout calc_output_layout(proposal_node const& node);
     static std::string to_string(proposal_node const& node);

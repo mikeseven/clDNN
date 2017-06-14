@@ -257,7 +257,7 @@ struct proposal_gpu : typed_primitive_impl<proposal>
     template<typename dtype>
     inline void float_write_helper(dtype* mem, float f)
     {
-		bool is_fp32 = (sizeof(dtype) == 4);
+        bool is_fp32 = (sizeof(dtype) == 4);
 
         if (is_fp32) 
         {

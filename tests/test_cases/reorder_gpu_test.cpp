@@ -724,117 +724,117 @@ class reorder_test : public tests::generic_test
 
 public:
 
-	static void TearDownTestCase()
-	{
-		for (auto generic_params : all_generic_params)
-		{
-			delete generic_params;
-		}
-		for (auto test_param : all_test_params)
-		{
-			auto primitive = std::get<1>(test_param);
-			delete primitive;
-		}
-	}
+    static void TearDownTestCase()
+    {
+        for (auto generic_params : all_generic_params)
+        {
+            delete generic_params;
+        }
+        for (auto test_param : all_test_params)
+        {
+            auto primitive = std::get<1>(test_param);
+            delete primitive;
+        }
+    }
 
 
-	static std::vector<std::tuple<test_params*, cldnn::primitive*>> generate_specific_test_params()
-	{
-		generic_test::generate_generic_test_params(all_generic_params);
+    static std::vector<std::tuple<test_params*, cldnn::primitive*>> generate_specific_test_params()
+    {
+        generic_test::generate_generic_test_params(all_generic_params);
 
-		const std::vector<cldnn::data_types> data_types = { cldnn::data_types::f32 ,  cldnn::data_types::f16 };
+        const std::vector<cldnn::data_types> data_types = { cldnn::data_types::f32 ,  cldnn::data_types::f16 };
 
-		for (auto test_param : all_generic_params)
-		{
-			cldnn::tensor input_tensor = test_param->input_layouts[0].size;
+        for (auto test_param : all_generic_params)
+        {
+            cldnn::tensor input_tensor = test_param->input_layouts[0].size;
 
-			std::vector<cldnn::layout> output_layouts = {};
+            std::vector<cldnn::layout> output_layouts = {};
 
-			for (auto dt : data_types)
-			{
-				for (auto fmt : generic_test::test_input_formats)
-				{
-					output_layouts.push_back({ dt, fmt, input_tensor });
-				}
-			}
-			// TODO: check unsupported formats.
+            for (auto dt : data_types)
+            {
+                for (auto fmt : generic_test::test_input_formats)
+                {
+                    output_layouts.push_back({ dt, fmt, input_tensor });
+                }
+            }
+            // TODO: check unsupported formats.
 
-			//TODO: check subtract.
-			std::vector<float> subtract = {};
+            //TODO: check subtract.
+            std::vector<float> subtract = {};
 
-			for (auto output_layout : output_layouts)
-			{
-				//TODO: check input + output padding.
-				all_test_params.push_back(std::make_tuple(test_param, new reorder("reorder", "input0", output_layout, subtract)));
-			}
-		}
+            for (auto output_layout : output_layouts)
+            {
+                //TODO: check input + output padding.
+                all_test_params.push_back(std::make_tuple(test_param, new reorder("reorder", "input0", output_layout, subtract)));
+            }
+        }
 
-		return all_test_params;
-	}
+        return all_test_params;
+    }
 
-	virtual bool is_format_supported(cldnn::format format)
-	{
-		return (	(format == cldnn_format_type::cldnn_format_yxfb) ||
-					(format == cldnn_format_type::cldnn_format_byxf) ||
-					(format == cldnn_format_type::cldnn_format_bfyx) ||
-					(format == cldnn_format_type::cldnn_format_fyxb)
-				);	
-	}
+    virtual bool is_format_supported(cldnn::format format)
+    {
+        return (    (format == cldnn_format_type::cldnn_format_yxfb) ||
+                    (format == cldnn_format_type::cldnn_format_byxf) ||
+                    (format == cldnn_format_type::cldnn_format_bfyx) ||
+                    (format == cldnn_format_type::cldnn_format_fyxb)
+                );    
+    }
 
-	template<typename InputType, typename OutputType>
-	memory generate_reference_typed(const std::vector<cldnn::memory>& inputs)
-	{
-		const cldnn::reorder* reorder = (cldnn::reorder*)layer_params;
-		primitive_id mean = reorder->mean;
-		std::vector<float> subtract_per_feature = reorder->subtract_per_feature;
-		assert(mean == "");
-		assert(subtract_per_feature.size() == 0);
-		
-		auto output = memory::allocate(engine, cldnn::layout(reorder->output_data_type, inputs[0].get_layout().format, inputs[0].get_layout().size));
+    template<typename InputType, typename OutputType>
+    memory generate_reference_typed(const std::vector<cldnn::memory>& inputs)
+    {
+        const cldnn::reorder* reorder = (cldnn::reorder*)layer_params;
+        primitive_id mean = reorder->mean;
+        std::vector<float> subtract_per_feature = reorder->subtract_per_feature;
+        assert(mean == "");
+        assert(subtract_per_feature.size() == 0);
+        
+        auto output = memory::allocate(engine, cldnn::layout(reorder->output_data_type, inputs[0].get_layout().format, inputs[0].get_layout().size));
 
-		cldnn::pointer<InputType> input_mem = inputs[0].pointer<InputType>();
-		cldnn::pointer<OutputType> output_mem = output.pointer<OutputType>();
+        cldnn::pointer<InputType> input_mem = inputs[0].pointer<InputType>();
+        cldnn::pointer<OutputType> output_mem = output.pointer<OutputType>();
 
-		for (size_t i = 0; i < inputs[0].get_layout().get_linear_size(); i++)
-		{
-			// Write the output in the same order as the input with type conversion as needed.
-			// The correct order will be checked in generic_test::compare_buffers.
-			output_mem[i] = (OutputType)input_mem[i];
-		}
+        for (size_t i = 0; i < inputs[0].get_layout().get_linear_size(); i++)
+        {
+            // Write the output in the same order as the input with type conversion as needed.
+            // The correct order will be checked in generic_test::compare_buffers.
+            output_mem[i] = (OutputType)input_mem[i];
+        }
 
-		return output;
-	}
+        return output;
+    }
 
-	virtual memory generate_reference(const std::vector<cldnn::memory>& inputs)
-	{
-		if (generic_params->data_type == data_types::f32)
-		{
-			if (((cldnn::reorder*)layer_params)->output_data_type == data_types::f32)
-			{
-				return generate_reference_typed<float, float>(inputs);
-			}
-			else
-			{
-				return generate_reference_typed<float, FLOAT16>(inputs);
-			}
-		}
-		else
-		{
-			if (((cldnn::reorder*)layer_params)->output_data_type == data_types::f32)
-			{
-				return generate_reference_typed<FLOAT16, float>(inputs);
-			}
-			else
-			{
-				return generate_reference_typed<FLOAT16, FLOAT16>(inputs);
-			}
-		}		
-	}
+    virtual memory generate_reference(const std::vector<cldnn::memory>& inputs)
+    {
+        if (generic_params->data_type == data_types::f32)
+        {
+            if (((cldnn::reorder*)layer_params)->output_data_type == data_types::f32)
+            {
+                return generate_reference_typed<float, float>(inputs);
+            }
+            else
+            {
+                return generate_reference_typed<float, FLOAT16>(inputs);
+            }
+        }
+        else
+        {
+            if (((cldnn::reorder*)layer_params)->output_data_type == data_types::f32)
+            {
+                return generate_reference_typed<FLOAT16, float>(inputs);
+            }
+            else
+            {
+                return generate_reference_typed<FLOAT16, FLOAT16>(inputs);
+            }
+        }        
+    }
 
 private:
 
-	static std::vector<tests::test_params*> all_generic_params;
-	static std::vector<std::tuple<test_params*, cldnn::primitive*>> all_test_params;
+    static std::vector<tests::test_params*> all_generic_params;
+    static std::vector<std::tuple<test_params*, cldnn::primitive*>> all_test_params;
 
 };
 
@@ -843,10 +843,10 @@ std::vector<std::tuple<test_params*, cldnn::primitive*>> reorder_test::all_test_
 
 TEST_P(reorder_test, DISABLED_test_all)
 {
-	run_single_test();
+    run_single_test();
 }
 
 INSTANTIATE_TEST_CASE_P(REORDER,
-						reorder_test,
-						::testing::ValuesIn(reorder_test::generate_specific_test_params()),
-						tests::generic_test::custom_param_name_functor());
+                        reorder_test,
+                        ::testing::ValuesIn(reorder_test::generate_specific_test_params()),
+                        tests::generic_test::custom_param_name_functor());

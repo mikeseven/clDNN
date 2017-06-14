@@ -69,8 +69,8 @@ binary_data gpu_compiler::compile(context* context, kernel kernel) // throws cl:
     }
 
     auto binaries = program.getInfo<CL_PROGRAM_BINARIES>();
-	assert(binaries.size() == 1 && "There should be only one binary");
-	return binary_data(binaries[0].begin(), binaries[0].end());
+    assert(binaries.size() == 1 && "There should be only one binary");
+    return binary_data(binaries[0].begin(), binaries[0].end());
 }
 
 } } }

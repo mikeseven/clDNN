@@ -89,93 +89,93 @@ std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldnn::memo
 
 std::vector<std::string> load_category_names(const std::string & file_name)
 {
-	std::ifstream file(file_name, std::ios::binary);
-	if (file.is_open())
-	{
-		std::stringstream data;
-		data << file.rdbuf();
-		file.close();
-		std::string tmp;
-		std::vector<std::string> ret;
-		while (std::getline(data, tmp)) { ret.push_back(tmp); }
-		return ret;
-	}
-	throw std::system_error(errno, std::system_category( ));
+    std::ifstream file(file_name, std::ios::binary);
+    if (file.is_open())
+    {
+        std::stringstream data;
+        data << file.rdbuf();
+        file.close();
+        std::string tmp;
+        std::vector<std::string> ret;
+        while (std::getline(data, tmp)) { ret.push_back(tmp); }
+        return ret;
+    }
+    throw std::system_error(errno, std::system_category( ));
 }
 
 html::html(const std::string & file_name, const std::string & title)
 {
-	auto t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now( ));
-	html_file.open(file_name + "_" + std::to_string(t) + ".html", std::ios::out | std::ios::trunc);
-	if(html_file.is_open( ))
-	{
-		// begin HTML file
-		html_file <<
-			R"(<!DOCTYPE html>
-			<html>
-			<head>
-				<meta charset="utf-8" />
-				<title>)"<< title << R"(</title>
-				<style>
-					body {font-family: sans-serif;}
-					p, h1, h2, th, td, li {padding: 0.5em;}
-					img {margin: 0.5em 0px 0px 0.5em;}
-					table.recognitions {padding:0.5em;}
-					.thright {text-align:right;}
-					.recognition {font-family:monospace;
-					vertical-align:top;width:300px;
-					-webkit-box-shadow: 5px 5px 9px 1px rgba(0,0,0,0.79);
-					-moz-box-shadow: 5px 5px 9px 1px rgba(0, 0, 0, 0.79);
-					box-shadow: 5px 5px 9px 1px rgba(0, 0, 0, 0.79);}
-					.goal {font-weight: bold; color: red;}
-				</style>
-			</head>
-			<body>)";
-		// HTML file content
-		html_file << "<h2>" << title << "</h2>"<< std::endl << "<ul> " << "</ul><hr><hr>" << std::endl;
-	}
-	else
-	{
-		throw std::system_error(errno, std::system_category( ));
-	}
+    auto t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now( ));
+    html_file.open(file_name + "_" + std::to_string(t) + ".html", std::ios::out | std::ios::trunc);
+    if(html_file.is_open( ))
+    {
+        // begin HTML file
+        html_file <<
+            R"(<!DOCTYPE html>
+            <html>
+            <head>
+                <meta charset="utf-8" />
+                <title>)"<< title << R"(</title>
+                <style>
+                    body {font-family: sans-serif;}
+                    p, h1, h2, th, td, li {padding: 0.5em;}
+                    img {margin: 0.5em 0px 0px 0.5em;}
+                    table.recognitions {padding:0.5em;}
+                    .thright {text-align:right;}
+                    .recognition {font-family:monospace;
+                    vertical-align:top;width:300px;
+                    -webkit-box-shadow: 5px 5px 9px 1px rgba(0,0,0,0.79);
+                    -moz-box-shadow: 5px 5px 9px 1px rgba(0, 0, 0, 0.79);
+                    box-shadow: 5px 5px 9px 1px rgba(0, 0, 0, 0.79);}
+                    .goal {font-weight: bold; color: red;}
+                </style>
+            </head>
+            <body>)";
+        // HTML file content
+        html_file << "<h2>" << title << "</h2>"<< std::endl << "<ul> " << "</ul><hr><hr>" << std::endl;
+    }
+    else
+    {
+        throw std::system_error(errno, std::system_category( ));
+    }
 }
 
 void html::batch(const cldnn::memory& mem_primitive, const std::string& categories_file, const std::vector<std::string>& image_names, PrintType printType)
 {
-	auto batch = read_output(mem_primitive);
-	auto categories = load_category_names(categories_file);
-	html_file << "<table class=\"recognitions\" width=\"" << 301 * batch.size( ) << "px\"><tr>" << std::endl;
-	// Per image
-	for (size_t img_idx = 0; img_idx < batch.size( ); img_idx++)
-	{
+    auto batch = read_output(mem_primitive);
+    auto categories = load_category_names(categories_file);
+    html_file << "<table class=\"recognitions\" width=\"" << 301 * batch.size( ) << "px\"><tr>" << std::endl;
+    // Per image
+    for (size_t img_idx = 0; img_idx < batch.size( ); img_idx++)
+    {
         if (img_idx >= image_names.size())
             break;
 
-		auto& img_name = image_names[img_idx];
-		auto idx = img_name.find_last_of("/\\");
+        auto& img_name = image_names[img_idx];
+        auto idx = img_name.find_last_of("/\\");
     
         bool not_found = idx == std::string::npos;
 
-		auto img_file = img_name.substr(not_found ? 0 : idx + 1);
+        auto img_file = img_name.substr(not_found ? 0 : idx + 1);
         auto without_file = img_name.substr(0, not_found ? 0 : idx);
 
         auto idx1 = without_file.find_last_of("/\\");
         bool not_found1 = idx1 == std::string::npos;
         auto img_dir = without_file.substr(not_found1 ? 0 : idx1 + 1);
 
-		html_file << "<td class=\"recognition\"><img height=\"150\" alt=\""
-				  << img_name << "\" src=\"" << img_name << "\">" 
-				  << "</p><p>" << img_file << "</p>" << std::endl 
-				  << "</b><p>Recognitions:</p><ol>" << std::endl;
-		// Top 5 categories
-		for (size_t i = 0; i < std::min((size_t)5, batch[img_idx].size( )); i++)
-		{
-			auto& category = categories[batch[img_idx][i].second];
-			std::ostringstream rounded_float;
-			rounded_float.str("");
-			rounded_float << std::setprecision(1) << std::fixed << batch[img_idx][i].first * 100 <<"% ";
-			html_file << "<li>" << rounded_float.str( )	<< category << "</li>" << std::endl;
-		}
+        html_file << "<td class=\"recognition\"><img height=\"150\" alt=\""
+                  << img_name << "\" src=\"" << img_name << "\">" 
+                  << "</p><p>" << img_file << "</p>" << std::endl 
+                  << "</b><p>Recognitions:</p><ol>" << std::endl;
+        // Top 5 categories
+        for (size_t i = 0; i < std::min((size_t)5, batch[img_idx].size( )); i++)
+        {
+            auto& category = categories[batch[img_idx][i].second];
+            std::ostringstream rounded_float;
+            rounded_float.str("");
+            rounded_float << std::setprecision(1) << std::fixed << batch[img_idx][i].first * 100 <<"% ";
+            html_file << "<li>" << rounded_float.str( )    << category << "</li>" << std::endl;
+        }
 
         // for testing enviroment we also output data to std out
         // this should be done on some global config flag set by
@@ -186,8 +186,8 @@ void html::batch(const cldnn::memory& mem_primitive, const std::string& categori
 
             switch(printType)
             {
-			case PrintType::ExtendedTesting:
-			{
+            case PrintType::ExtendedTesting:
+            {
                 bool correct = img_dir.compare(category) == 0;
                 std::cout //<< "    " 
                           /*<< img_file << " "
@@ -197,7 +197,7 @@ void html::batch(const cldnn::memory& mem_primitive, const std::string& categori
                     << (correct ? "CORRECT" : "wrong")
                     << std::endl;
             }
-			break;
+            break;
             case PrintType::Verbose:
             {
                 std::cout << "    " << img_file << " ";
@@ -207,17 +207,17 @@ void html::batch(const cldnn::memory& mem_primitive, const std::string& categori
             break;
             default:
                 throw std::invalid_argument("Unsupported print type.");
-			}
+            }
         }
-		// table cell end
-		html_file << "</ol>" << std::endl << "    </td>";
-	}
-	// table end
-	html_file << "</tr></table><hr>" << std::endl;
+        // table cell end
+        html_file << "</ol>" << std::endl << "    </td>";
+    }
+    // table end
+    html_file << "</tr></table><hr>" << std::endl;
 }
 
 html::~html()
 {
-	html_file << std::endl << " </body>" << std::endl << "</html>" << std::endl;
-	html_file.close();
+    html_file << std::endl << " </body>" << std::endl << "</html>" << std::endl;
+    html_file.close();
 }

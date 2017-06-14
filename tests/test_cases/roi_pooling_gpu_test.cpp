@@ -225,26 +225,26 @@ public:
     {        
     }
 
-	static void TearDownTestCase() 
-	{
-		generic_test::TearDownTestCase();
+    static void TearDownTestCase() 
+    {
+        generic_test::TearDownTestCase();
 
-		for (auto generic_params : all_generic_params)
-		{
-			delete generic_params;
-		}
+        for (auto generic_params : all_generic_params)
+        {
+            delete generic_params;
+        }
 
-		for (auto layer_params : all_layer_params)
-		{
-			delete layer_params;
-		}
-	}
+        for (auto layer_params : all_layer_params)
+        {
+            delete layer_params;
+        }
+    }
     
-	static std::vector<test_params*> generate_input_buffers_params()
-	{        
+    static std::vector<test_params*> generate_input_buffers_params()
+    {        
         std::vector<int> test_rois_sizes = { 1, 20 };          
         
-		for (cldnn::data_types data_type : test_data_types)
+        for (cldnn::data_types data_type : test_data_types)
         for (int batch_size : { 1 } /*test_batch_sizes*/)
         for (int feature_size : test_feature_sizes)
         for (tensor input_size : test_input_sizes)
@@ -259,12 +259,12 @@ public:
             all_generic_params.push_back(tp);
         }
 
-		return all_generic_params;
-	}
+        return all_generic_params;
+    }
     
 
-	static std::vector<cldnn::primitive*> generate_layer_params()
-	{
+    static std::vector<cldnn::primitive*> generate_layer_params()
+    {
         float spatial_scale = 0.0625f;
         
         struct {
@@ -325,10 +325,10 @@ public:
         return (format == cldnn_format_type::cldnn_format_bfyx);
     }
 
-	virtual cldnn::tensor get_expected_output_tensor()
-	{
-		return get_output_layout();
-	}
+    virtual cldnn::tensor get_expected_output_tensor()
+    {
+        return get_output_layout();
+    }
 
     static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info)
     {
@@ -489,17 +489,17 @@ private:
                             output_mem[pool_index] = 0;
                             //   argmax_data[pool_index] = -1;
                         }
-						else
-						{
-							if (sizeof(Type) == 4)
-							{
-								output_mem[pool_index] = -FLT_MAX;
-							}
-							else
-							{
-								output_mem[pool_index] = FLOAT16::min_val();
-							}
-						}
+                        else
+                        {
+                            if (sizeof(Type) == 4)
+                            {
+                                output_mem[pool_index] = -FLT_MAX;
+                            }
+                            else
+                            {
+                                output_mem[pool_index] = FLOAT16::min_val();
+                            }
+                        }
 
                         float res = max_pool && xstart < xend && ystart < yend ? std::numeric_limits<float>::lowest() : 0.f;
 

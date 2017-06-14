@@ -112,7 +112,7 @@ TestRunnerProposal<Dtype>::TestRunnerProposal() :
 {    
     _topology.add(input_layout(cls_scores_name, _cls_scores_layout));
     _topology.add(input_layout(bbox_pred_name, _bbox_pred_layout));
-	_topology.add(input_layout(image_info_name, _image_info_layout));
+    _topology.add(input_layout(image_info_name, _image_info_layout));
 
     _topology.add(_test_layer);
 
@@ -133,7 +133,7 @@ memory TestRunnerProposal<Dtype>::Run(std::vector<Dtype>& cls_scores_vals,
    
     _network->set_input_data(cls_scores_name, cls_scores);
     _network->set_input_data(bbox_pred_name, bbox_pred);
-	_network->set_input_data(image_info_name, image_info);
+    _network->set_input_data(image_info_name, image_info);
 
     std::map<primitive_id, network_output> network_output = _network->execute();
     EXPECT_EQ(network_output.begin()->first, layer_name);

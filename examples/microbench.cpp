@@ -93,7 +93,7 @@ void test_conv(
         { id + "_bias" },
         stride,
         offset,
-		{ 1,1,1,1 },
+        { 1,1,1,1 },
         true);
 
     topology.add(data(id + "_input", input), data(id + "_weights", weights), data(id + "_bias", bias), conv);
