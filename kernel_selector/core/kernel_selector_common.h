@@ -103,6 +103,7 @@ namespace KernelSelector {
             WEIGHTS,
             BIAS,
             LOOKUP_TABLE,
+            SCALE_TABLE,
             SPLIT,
             UINT8,
             UINT16,
@@ -124,14 +125,20 @@ namespace KernelSelector {
 
         std::vector<Args> data;
 
+        struct SetArgumentParams
+        {
+            std::vector<const cl::Buffer*> inputs;
+            const cl::Buffer* output = nullptr;
+            const cl::Buffer* weights = nullptr;
+            const cl::Buffer* bias = nullptr;
+            const cl::Buffer* lookup_table = nullptr;
+            const cl::Buffer* scale_table = nullptr;
+            uint32_t split = 0;
+        };
+
         bool SetArguments(
             cl::Kernel& kernel,
-            std::vector<const cl::Buffer*> inputs,
-            const cl::Buffer* output,
-            const cl::Buffer* weights,
-            const cl::Buffer* bias,
-            const cl::Buffer* lookup_table,
-            uint32_t split) const;
+            const SetArgumentParams& params) const;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

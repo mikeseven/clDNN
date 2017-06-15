@@ -271,6 +271,21 @@ namespace KernelSelector
             }
         }
 
+        void SetNormalizeMode(NormalizeMode m)
+        {
+            switch (m)
+            {
+            case NormalizeMode::ACROSS_SPATIAL:
+                key.restrict.val.dedicated.norm.across = 1;
+                break;
+            case NormalizeMode::WITHIN_SPATIAL:
+                key.restrict.val.dedicated.norm.within = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
         void SetLRNKernelDividerMode(KernelDividerMode m)
         {
             switch (m)
@@ -617,6 +632,32 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // NormalizeParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct NormalizeParams : public BaseParams
+    {
+        NormalizeParams() : BaseParams(KernelType::NORMALIZE), normParams() {}
+
+        struct DedicatedParams
+        {
+            NormalizeMode normMode = NormalizeMode::ACROSS_SPATIAL;
+            float         epsilon  = 1e-10f;
+            DataTensor    scale_table;
+        };
+
+        DedicatedParams normParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            ParamsKey k = BaseParams::GetParamsKey();
+
+            k.SetNormalizeMode(normParams.normMode);
+
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // PoolingParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct PoolingParams : public BaseParams
@@ -953,6 +994,14 @@ namespace KernelSelector
     struct LRNOptionalParams : OptionalParams
     {
         LRNOptionalParams() : OptionalParams(KernelType::LRN) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // NormalizeOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct NormalizeOptionalParams : OptionalParams
+    {
+        NormalizeOptionalParams() : OptionalParams(KernelType::NORMALIZE) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

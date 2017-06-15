@@ -49,9 +49,6 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, fully_connected_inst& instance) override
     {
         const auto* input_mem = &instance.input_memory();
-        const auto* output_mem = &instance.output_memory();
-        const auto* filter_mem = &instance.weights_memory();
-        const auto* bias_mem = instance.bias_term() ? &instance.bias_memory() : nullptr;
 
         if (_reorders.empty() == false)
         {
@@ -62,15 +59,13 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
             input_mem = &network->get_primitive(output_id)->output_memory();
         }
 
-        auto event = _kernel.run_ks(
-            _ks_kernel_data.kernels[0],
-            events,
-            { input_mem },
-            output_mem,
-            filter_mem,
-            bias_mem);
+        gpu::kernel::kernel_arguments_desc args;
+        args.inputs = { input_mem };
+        args.output = &instance.output_memory();
+        args.weights = &instance.weights_memory();
+        args.bias = instance.bias_term() ? &instance.bias_memory() : nullptr;;
 
-        return event;
+        return _kernel.run_ks(_ks_kernel_data.kernels[0], events, args);
     }
 
     static primitive_impl* create(const fully_connected_node& arg)

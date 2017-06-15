@@ -41,16 +41,11 @@ struct softmax_gpu : typed_primitive_impl<softmax>
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, softmax_inst& instance) override
     {
-        const auto* input_mem = &instance.input_memory();
-        const auto* output_mem = &instance.output_memory();
+        gpu::kernel::kernel_arguments_desc args;
+        args.inputs = { &instance.input_memory() };
+        args.output = &instance.output_memory();
 
-        auto event = _kernel.run_ks(
-            _ks_kernel_data.kernels[0],
-            events,
-            { input_mem },
-            output_mem);
-
-        return event;
+        return _kernel.run_ks(_ks_kernel_data.kernels[0], events, args);
     }
 
     

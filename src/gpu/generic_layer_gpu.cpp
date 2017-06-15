@@ -38,22 +38,18 @@ struct generic_layer_gpu : typed_primitive_impl<generic_layer>
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, generic_layer_inst& instance) override
     {
+        gpu::kernel::kernel_arguments_desc args;
+
         std::vector<const memory*> inputs(instance.inputs_memory_count());
         for (size_t i = 0; i < instance.inputs_memory_count(); i++)
         {
-            inputs[i] = &instance.input_memory(i);
+            args.inputs.push_back(&instance.input_memory(i));
         }
-        auto& output_mem = instance.output_memory();
+        args.output = &instance.output_memory();
 
         const auto& kernel_data = *outer.get_primitive()->generic_params.cl_kernel.get();
         
-        auto event = _kernel.run_ks(
-            kernel_data,
-            events,
-            inputs,
-            &output_mem);
-
-        return event;
+        return _kernel.run_ks(kernel_data, events, args);
     }
 };
 

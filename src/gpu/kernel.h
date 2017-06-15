@@ -443,14 +443,21 @@ public:
         return{ new cldnn::event_impl(end_event), false };
     }
 
+    struct kernel_arguments_desc
+    {
+        std::vector<const cldnn::memory*> inputs;
+        const cldnn::memory* output = nullptr;
+        const cldnn::memory* weights = nullptr;
+        const cldnn::memory* bias = nullptr;
+        const cldnn::memory* lookup_table = nullptr;
+        const cldnn::memory* scale_table = nullptr;
+        uint32_t split = 0;
+    };
+
     cldnn::refcounted_obj_ptr<cldnn::event_impl> run_ks(
         const KernelSelector::clKernelData& kernel_data,
         const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& dependencies,
-        const std::vector<const cldnn::memory*> inputs,
-        const cldnn::memory* output,
-        const cldnn::memory* weights = nullptr,
-        const cldnn::memory* bias = nullptr,
-        const uint32_t split_num = 0) const
+        const kernel_arguments_desc& args) const
     {
         cl::Event end_event;
         std::vector<cl::Event> events;
@@ -461,16 +468,19 @@ public:
         }
 
         auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
-        std::vector<const cl::Buffer*> inputs_b;
-        for (const auto i : inputs)
+        KernelSelector::ArgumentDescpirtor::SetArgumentParams params;
+        for (const auto i : args.inputs)
         {
-            inputs_b.push_back(i ? &kernel_arg_handler<gpu::input_mem>::get(*i) : nullptr);
+            params.inputs.push_back(i ? &kernel_arg_handler<gpu::input_mem>::get(*i) : nullptr);
         }
-        const cl::Buffer* output_b  = output    ? &kernel_arg_handler<gpu::output_mem>::get(*output)   : nullptr;
-        const cl::Buffer* weights_b = weights   ? &kernel_arg_handler<gpu::input_mem>::get(*weights)   : nullptr;
-        const cl::Buffer* bias_b    = bias      ? &kernel_arg_handler<gpu::input_mem>::get(*bias)      : nullptr;
+        params.output       = args.output       ? &kernel_arg_handler<gpu::output_mem>::get(*args.output)       : nullptr;
+        params.weights      = args.weights      ? &kernel_arg_handler<gpu::input_mem>::get(*args.weights)       : nullptr;
+        params.bias         = args.bias         ? &kernel_arg_handler<gpu::input_mem>::get(*args.bias)          : nullptr;
+        params.lookup_table = args.lookup_table ? &kernel_arg_handler<gpu::input_mem>::get(*args.lookup_table)  : nullptr;
+        params.scale_table  = args.scale_table  ? &kernel_arg_handler<gpu::input_mem>::get(*args.scale_table)   : nullptr;
+        params.split        = args.split;
 
-        kernel_data.args_desc.SetArguments(clkernel, inputs_b, output_b, weights_b, bias_b, nullptr, split_num);
+        kernel_data.args_desc.SetArguments(clkernel, params);
 
         context()->queue().enqueueNDRangeKernel(
             clkernel, 

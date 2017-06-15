@@ -45,13 +45,11 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         const auto* input_mem = &instance.input_memory();
         const auto* output_mem = &instance.output_memory();
 
-        auto event = _kernel.run_ks(
-            _ks_kernel_data.kernels[0],
-            events,
-            { input_mem },
-            output_mem);
+        gpu::kernel::kernel_arguments_desc args;
+        args.inputs = { input_mem };
+        args.output = output_mem;
 
-        return event;
+        return _kernel.run_ks(_ks_kernel_data.kernels[0], events, args);
     }
 
     static KernelSelector::PoolType cldnn_2_pool_type(cldnn::pooling_mode mode)

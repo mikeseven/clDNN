@@ -20,12 +20,7 @@ namespace KernelSelector {
 
     bool ArgumentDescpirtor::SetArguments(
         cl::Kernel& kernel,
-        std::vector<const cl::Buffer*> inputs,
-        const cl::Buffer* output,
-        const cl::Buffer* weights,
-        const cl::Buffer* bias,
-        const cl::Buffer* lookup_table,
-        uint32_t split) const
+        const SetArgumentParams& params) const
     {
         size_t inputIndex = 0;
         for (uint32_t i = 0; i < static_cast<uint32_t>(data.size()); i++)
@@ -35,38 +30,44 @@ namespace KernelSelector {
             switch (data[i].t)
             {
             case ArgumentDescpirtor::Types::INPUT:
-                if (inputIndex < inputs.size() && inputs[inputIndex])
+                if (inputIndex < params.inputs.size() && params.inputs[inputIndex])
                 {
-                    status = kernel.setArg(i, *inputs[inputIndex]);
+                    status = kernel.setArg(i, *params.inputs[inputIndex]);
                     inputIndex++;
                 }
                 break;
             case ArgumentDescpirtor::Types::OUTPUT:
-                if (output)
+                if (params.output)
                 {
-                    status = kernel.setArg(i, *output);
+                    status = kernel.setArg(i, *params.output);
                 }
                 break;
             case ArgumentDescpirtor::Types::WEIGHTS:
-                if (weights)
+                if (params.weights)
                 {
-                    status = kernel.setArg(i, *weights);
+                    status = kernel.setArg(i, *params.weights);
                 }
                 break;
             case ArgumentDescpirtor::Types::BIAS:
-                if (bias)
+                if (params.bias)
                 {
-                    status = kernel.setArg(i, *bias);
+                    status = kernel.setArg(i, *params.bias);
                 }
                 break;
             case ArgumentDescpirtor::Types::LOOKUP_TABLE:
-                if (lookup_table)
+                if (params.lookup_table)
                 {
-                    status = kernel.setArg(i, *lookup_table);
+                    status = kernel.setArg(i, *params.lookup_table);
+                }
+                break;
+            case ArgumentDescpirtor::Types::SCALE_TABLE:
+                if (params.scale_table)
+                {
+                    status = kernel.setArg(i, *params.scale_table);
                 }
                 break;
             case ArgumentDescpirtor::Types::SPLIT:
-                status = kernel.setArg(i, split);
+                status = kernel.setArg(i, params.split);
                 break;
             case ArgumentDescpirtor::Types::UINT8:
                 status = kernel.setArg(i, data[i].v.u8);

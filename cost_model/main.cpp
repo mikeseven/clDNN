@@ -89,7 +89,12 @@ public:
         cl::Buffer weights(clContext, CL_MEM_READ_WRITE, weightsSize, nullptr, &status);
         cl::Buffer bias(clContext, CL_MEM_READ_WRITE, newParams.output.feature().v, nullptr, &status);
 
-        if (!clData.args_desc.SetArguments(clKernel, { &input }, &output, &weights, &bias, nullptr, 0))
+        ArgumentDescpirtor::SetArgumentParams params;
+        params.inputs.push_back(&input);
+        params.output = &output;
+        params.weights = &weights;
+        params.bias = &bias;
+        if (!clData.args_desc.SetArguments(clKernel, params))
         {
             printf("Error: setting args\n");
             return 0.f;
