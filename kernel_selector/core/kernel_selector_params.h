@@ -548,6 +548,45 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // DeconvolutionParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct DeconvolutionParams : public WeightBiasParams
+    {
+        DeconvolutionParams() : WeightBiasParams(KernelType::DECONVOLUTION), deconvParams() {}
+
+        struct DedicatedParams
+        {
+            uSize    filterSize;
+            uSize    stride;
+            uSize    dilation;
+            uSize    padding;
+            uint32_t split = 1;
+        };
+
+        DedicatedParams deconvParams;
+
+        virtual std::string to_string() const override;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            ParamsKey k = WeightBiasParams::GetParamsKey();
+
+            if (deconvParams.split > 1)
+            {
+                k.SetSplitSupport();
+            }
+
+            if (deconvParams.dilation.x != 1 ||
+                deconvParams.dilation.y != 1)
+            {
+                k.SetDilationSupport();
+            }
+
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // LRNParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct LRNParams : public BaseParams
@@ -898,6 +937,14 @@ namespace KernelSelector
     {
         ConvolutionOptionalParams() : WeightsBiasOptionalParams(KernelType::CONVOLUTION) {}
         bool allow_padding = false;
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // DeconvolutionOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct DeconvolutionOptionalParams : WeightsBiasOptionalParams
+    {
+        DeconvolutionOptionalParams() : WeightsBiasOptionalParams(KernelType::DECONVOLUTION) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

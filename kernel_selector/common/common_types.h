@@ -27,6 +27,7 @@ namespace KernelSelector
     {
         UNKNOWN,
         CONVOLUTION,
+        DECONVOLUTION,
         LRN,
         POOLING,
         ROI_POOLING,

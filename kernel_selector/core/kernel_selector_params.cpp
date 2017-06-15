@@ -56,4 +56,26 @@ namespace KernelSelector {
 
         return s.str();
     }
+
+    std::string DeconvolutionParams::to_string() const
+    {
+        std::stringstream s;
+
+        s << BaseParams::to_string() << "_";
+        s << toString(weights.layout) << "_";
+        if (bias.size())
+        {
+            s << toString(bias[0].layout) << "_";
+        }
+        else
+        {
+            s << "nobias_";
+        }
+        s << deconvParams.filterSize.x << "_" << deconvParams.filterSize.y << "_";
+        s << deconvParams.padding.x << "_" << deconvParams.padding.y << "_";
+        s << deconvParams.stride.x << "_" << deconvParams.stride.y << "_";
+        s << deconvParams.dilation.x << "_" << deconvParams.dilation.y;
+
+        return s.str();
+    }
 }
