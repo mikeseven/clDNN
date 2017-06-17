@@ -87,6 +87,7 @@ namespace KernelSelector
         HYPERBOLIC_TAN,
         RELU,
         RELU_NEGATIVE_SLOPE,
+        PRELU,
         BRELU,
         SOFTRELU,
         ABS,

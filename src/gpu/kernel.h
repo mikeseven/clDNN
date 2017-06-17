@@ -451,6 +451,7 @@ public:
         const cldnn::memory* bias = nullptr;
         const cldnn::memory* lookup_table = nullptr;
         const cldnn::memory* scale_table = nullptr;
+        const cldnn::memory* slope = nullptr;
         uint32_t split = 0;
     };
 
@@ -478,6 +479,7 @@ public:
         params.bias         = args.bias         ? &kernel_arg_handler<gpu::input_mem>::get(*args.bias)          : nullptr;
         params.lookup_table = args.lookup_table ? &kernel_arg_handler<gpu::input_mem>::get(*args.lookup_table)  : nullptr;
         params.scale_table  = args.scale_table  ? &kernel_arg_handler<gpu::input_mem>::get(*args.scale_table)   : nullptr;
+        params.slope        = args.slope        ? &kernel_arg_handler<gpu::input_mem>::get(*args.slope)         : nullptr;
         params.split        = args.split;
 
         kernel_data.args_desc.SetArguments(clkernel, params);

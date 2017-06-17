@@ -104,6 +104,7 @@ namespace KernelSelector {
             BIAS,
             LOOKUP_TABLE,
             SCALE_TABLE,
+            SLOPE,
             SPLIT,
             UINT8,
             UINT16,
@@ -133,6 +134,7 @@ namespace KernelSelector {
             const cl::Buffer* bias = nullptr;
             const cl::Buffer* lookup_table = nullptr;
             const cl::Buffer* scale_table = nullptr;
+            const cl::Buffer* slope = nullptr;
             uint32_t split = 0;
         };
 
@@ -238,6 +240,7 @@ namespace KernelSelector {
         case ActivationFunction::RELU:                  method = "RELU"; break;
         case ActivationFunction::RELU_NEGATIVE_SLOPE:   method = "RELU_NEGATIVE_SLOPE"; break;
         case ActivationFunction::BRELU:                 method = "BRELU"; break;
+        case ActivationFunction::PRELU:                 method = "PRELU"; break;
         case ActivationFunction::SOFTRELU:              method = "SOFTRELU"; break;
         case ActivationFunction::ABS:                   method = "ABS"; break;
         case ActivationFunction::SQUARE:                method = "SQUARE"; break;

@@ -16,20 +16,31 @@
 
 #include "include/cnn_common.cl"
 
-KERNEL(activation)(__global DATA_TYPE* input, __global DATA_TYPE* output)
+KERNEL(activation)(
+    __global DATA_TYPE* input, 
+    __global DATA_TYPE* output
+#ifdef ACTIVATION_FUNCTION_PRELU 
+    , __global DATA_TYPE* slope
+#endif
+    )
 {
     const unsigned x = get_global_id(0);
     const unsigned y = get_global_id(1);
 #if OUT_BATCH == 1
-    const unsigned z = get_global_id(2);
-    const unsigned w = 0;
+    const unsigned feature = get_global_id(2);
+    const unsigned batch = 0;
 #else
-    const unsigned z = get_global_id(2) % OUT_DEPTH;
-    const unsigned w = get_global_id(2) / OUT_DEPTH;
+    const unsigned feature = get_global_id(2) % OUT_DEPTH;
+    const unsigned batch = get_global_id(2) / OUT_DEPTH;
 #endif
 
-    const unsigned src_index = w*INPUT_BATCH_PITCH + z*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x + INPUT_OFFSET;
-    const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x + OUT_OFFSET;
+    const unsigned src_index = batch*INPUT_BATCH_PITCH + feature*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x*INPUT_X_PITCH + INPUT_OFFSET;
+    const unsigned dst_index = batch*OUT_BATCH_PITCH + feature*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x*INPUT_X_PITCH + OUT_OFFSET;
 
-    output[dst_index] = FUNC_CALL(activation_function)(input[src_index], NL_M, NL_N);
+#ifdef ACTIVATION_FUNCTION_PRELU 
+    float nl_m = (float)slope[feature];
+#else
+    float nl_m = (float)NL_M;
+#endif
+    output[dst_index] = FUNC_CALL(activation_function)(input[src_index], nl_m, NL_N);
 }

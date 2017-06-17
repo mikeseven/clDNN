@@ -66,6 +66,12 @@ namespace KernelSelector {
                     status = kernel.setArg(i, *params.scale_table);
                 }
                 break;
+            case ArgumentDescpirtor::Types::SLOPE:
+                if (params.slope)
+                {
+                    status = kernel.setArg(i, *params.slope);
+                }
+                break;
             case ArgumentDescpirtor::Types::SPLIT:
                 status = kernel.setArg(i, params.split);
                 break;

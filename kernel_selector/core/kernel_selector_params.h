@@ -67,6 +67,7 @@ namespace KernelSelector
                     uint32_t biasPerFeatureMap : 1;
                     uint32_t biasPerOutput : 1;
                     uint32_t nonBias : 1;
+                    uint32_t prelu : 1;
 
                     union dedicated_t
                     {
@@ -254,6 +255,11 @@ namespace KernelSelector
         void SetBiasPerOutput()
         {
             key.restrict.val.biasPerOutput = 1;
+        }
+
+        void SetPReluSupport()
+        {
+            key.restrict.val.prelu = 1;
         }
 
         void SetLRNMode(LRNMode m)
@@ -474,6 +480,11 @@ namespace KernelSelector
                 output.offset != 0)
             {
                 k.SetOffsetSupport();
+            }
+
+            if (activationFunc == ActivationFunction::PRELU)
+            {
+                k.SetPReluSupport();
             }
 
             return k;

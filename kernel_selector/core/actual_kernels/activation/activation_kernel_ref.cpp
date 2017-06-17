@@ -25,6 +25,7 @@ namespace KernelSelector {
         k.SetInputDataType(Datatype::F32);
         k.SetOutputDataType(Datatype::F16);
         k.SetOutputDataType(Datatype::F32);
+        k.SetPReluSupport();
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
         k.SetOffsetSupport();
@@ -47,6 +48,10 @@ namespace KernelSelector {
         kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
         kernel.kernel_string = GetKernelString(kernel_name, GetBaseJit(newParams, kernel_id), kernel_id);
         kernel.args_desc = GetArgumentDesc(1, false, false);
+        if (newParams.activationFunc == ActivationFunction::PRELU)
+        {
+            kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SLOPE, 0 });
+        }
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
