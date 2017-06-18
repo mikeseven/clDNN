@@ -22,7 +22,7 @@ namespace KernelSelector
 {
     jit_constants IGKPoolingKernelBase::get_jit_constants(const PoolingParams& params, IGKPoolingKernelBase::DispatchData kd) const
     {
-        jit_constants mem_consts = get_common_jit_constants(params, kd);
+        jit_constants mem_consts = get_common_jit_constants(params);
 
         const auto& pp = params.poolParams;
 

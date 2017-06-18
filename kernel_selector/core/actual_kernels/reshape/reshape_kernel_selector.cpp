@@ -14,24 +14,18 @@
 // limitations under the License.
 */
 
-#pragma once
+#include "reshape_kernel_selector.h"
+#include "reshape_kernel_ref.h"
+ 
+namespace KernelSelector {
 
-#include "igk_kernel_base.h"
-#include "kernel_selector_params.h"
-
-namespace KernelSelector 
-{
-    class IGKDeconvolutionKernelBase : public IGKKernelBase
+    ReshapeKernelSelctor::ReshapeKernelSelctor()
     {
-    public:
-        using IGKKernelBase::IGKKernelBase;
-        virtual ~IGKDeconvolutionKernelBase() {}
+        Attach<ReshapeKernelRef>();
+    }
 
-        using DispatchData = CommonDispatchData;
-    
-    protected:
-        jit_constants get_jit_constants(const DeconvolutionParams& params) const;
-        virtual DispatchData set_default(const DeconvolutionParams& params) const;
-        bool check_pitch_for_split_only(const DeconvolutionParams& params) const;
-    };
+    KernelsData ReshapeKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    {
+        return GetNaiveBestKernel(params, options, KernelType::REORDER);
+    }
 }

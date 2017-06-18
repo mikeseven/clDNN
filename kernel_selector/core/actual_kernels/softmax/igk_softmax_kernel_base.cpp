@@ -22,7 +22,7 @@ namespace KernelSelector
 {
     jit_constants IGKSoftmaxKernelBase::get_jit_constants(const SoftmaxParams& params, IGKSoftmaxKernelBase::DispatchData kd) const
     {
-        jit_constants mem_consts = get_common_jit_constants(params, kd);
+        jit_constants mem_consts = get_common_jit_constants(params);
 
         mem_consts.add_constants({
             gpu::make_jit_constant("ITEMS_NUM",      kd.items_num),

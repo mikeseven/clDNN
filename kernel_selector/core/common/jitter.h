@@ -187,6 +187,30 @@ public:
             { _name + "_LAYOUT_" + toString(_tensor.layout), "1" },
         };
 
+        definitions.push_back({ _name + "_SIZE", std::to_string(_tensor.dims.size()) });
+
+        // TODO: refactor it
+        {
+            std::stringstream ss;
+            ss << "(size_t []){ ";
+            for (size_t i = 0; i < _tensor.dims.size(); i++)
+                ss << to_code_string(_tensor.dims[i].v) << ",";
+            for (size_t i = _tensor.dims.size(); i < CLDNN_TENSOR_DIM_MAX; i++)
+                ss << 1 << ",";
+            ss << " } ";
+            definitions.push_back({ _name + "_SIZES", ss.str() });
+        }
+        {
+            std::stringstream ss;
+            ss << "(size_t []){ ";
+            for (size_t i = 0; i < _tensor.dims.size(); i++)
+                ss << to_code_string(_tensor.dims[i].pitch) << ",";
+            for (size_t i = _tensor.dims.size(); i < CLDNN_TENSOR_DIM_MAX; i++)
+                ss << 1 << ",";
+            ss << " } ";
+            definitions.push_back({ _name + "_PITCHS", ss.str() });
+        }
+
         return definitions;
     }
 };
@@ -221,6 +245,31 @@ public:
             { "TO_" + _name + "_TYPE",  "convert_" + weight_type_2_cl_type(_tensor.wtype) },
             { _name + "_LAYOUT_" + toString(_tensor.layout), "1" },
         };
+
+        // TODO: refactor it
+        
+        definitions.push_back({ _name + "_SIZE", std::to_string(_tensor.dims.size()) });
+        
+        {
+            std::stringstream ss;
+            ss << "(size_t []){ ";
+            for (size_t i = 0; i < _tensor.dims.size(); i++)
+                ss << to_code_string(_tensor.dims[i].v) << ",";
+            for (size_t i = _tensor.dims.size(); i < CLDNN_TENSOR_DIM_MAX; i++)
+                ss << 1 << ",";
+            ss << " } ";
+            definitions.push_back({ _name + "_SIZES", ss.str() });
+        }
+        {
+            std::stringstream ss;
+            ss << "(size_t []){ ";
+            for (size_t i = 0; i < _tensor.dims.size(); i++)
+                ss << to_code_string(_tensor.dims[i].pitch) << ",";
+            for (size_t i = _tensor.dims.size(); i < CLDNN_TENSOR_DIM_MAX; i++)
+                ss << 1 << ",";
+            ss << " } ";
+            definitions.push_back({ _name + "_PITCHS", ss.str() });
+        }
 
         return definitions;
     }

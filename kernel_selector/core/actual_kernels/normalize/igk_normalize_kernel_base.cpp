@@ -18,9 +18,9 @@
 
 namespace KernelSelector 
 {
-    jit_constants IGKNormalizeKernelBase::get_jit_constants(const NormalizeParams& params, IGKNormalizeKernelBase::DispatchData kd) const
+    jit_constants IGKNormalizeKernelBase::get_jit_constants(const NormalizeParams& params) const
     {
-        gpu::jit_constants mem_consts = get_common_jit_constants(params, kd);
+        gpu::jit_constants mem_consts = get_common_jit_constants(params);
 
         auto scale_feature_size = params.normParams.scale_table.feature().v;
 
@@ -84,7 +84,7 @@ namespace KernelSelector
 
         KernelData kd = KernelData::Default<NormalizeParams>(params, 1);
 
-        auto cldnn_jit = get_jit_constants(orgParams, run_info);
+        auto cldnn_jit = get_jit_constants(orgParams);
         auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
         auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
 

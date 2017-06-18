@@ -48,7 +48,7 @@ namespace KernelSelector {
         ArgumentDescpirtor get_args_desc(uint32_t num_of_input, bool use_weights, bool use_bias) const;
         KernelString get_kernel_string(std::string kernel_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN) const;
         void fill_cl_kernel_data(clKernelData& kernel, const CommonDispatchData& run_info, std::string kernel_map_name, std::string jit, std::string entry_point, bool weights = false, bool bias = false) const;
-        jit_constants get_common_jit_constants(const BaseParams& params, const CommonDispatchData& kd) const;
+        jit_constants get_common_jit_constants(const BaseParams& params) const;
     };
 
     inline cldnn::format params_2_cldnn(Tensor::DataLayout l)

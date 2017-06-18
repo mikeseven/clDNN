@@ -25,7 +25,7 @@ namespace KernelSelector
         const auto& input = params.inputs[0];
         const auto x_size = input.Length() / input.batch().v;
 
-        jit_constants mem_consts = get_common_jit_constants(params, data);
+        jit_constants mem_consts = get_common_jit_constants(params);
 
         mem_consts.add_constants({
             gpu::make_jit_constant("INPUT_ELEMENTS_COUNT",      x_size),

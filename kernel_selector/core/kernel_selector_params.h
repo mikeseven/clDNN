@@ -808,11 +808,24 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ReorderParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ReorderBaseParams : public BaseParams
+    {
+        ReorderBaseParams() : BaseParams(KernelType::REORDER) {}
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            return BaseParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ReorderVxParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ReorderVxParams : public BaseParams
+    struct ReorderVxParams : public ReorderBaseParams
     {
-        ReorderVxParams() : BaseParams(KernelType::REORDER), reorderParams() {}
+        ReorderVxParams() : reorderParams() {}
 
         struct DedicatedParams
         {
@@ -823,16 +836,16 @@ namespace KernelSelector
 
         virtual ParamsKey GetParamsKey() const
         {
-            return BaseParams::GetParamsKey();
+            return ReorderBaseParams::GetParamsKey();
         }
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ReorderParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ReorderParams : public BaseParams
+    struct ReorderParams : public ReorderBaseParams
     {
-        ReorderParams() : BaseParams(KernelType::REORDER), reorderParams() {}
+        ReorderParams() : reorderParams() {}
 
         struct DedicatedParams
         {
@@ -845,7 +858,7 @@ namespace KernelSelector
 
         virtual ParamsKey GetParamsKey() const
         {
-            return BaseParams::GetParamsKey();
+            return ReorderBaseParams::GetParamsKey();
         }
     };
 

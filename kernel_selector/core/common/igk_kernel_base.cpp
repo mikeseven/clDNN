@@ -285,7 +285,7 @@ static const char* kernels_header = R"__krnl(
         kernel.args_desc = get_args_desc(1, weights, bias);
     }
 
-    jit_constants IGKKernelBase::get_common_jit_constants(const BaseParams& params, const CommonDispatchData& kd) const
+    jit_constants IGKKernelBase::get_common_jit_constants(const BaseParams& params) const
     {
         const bool relu =
             params.activationFunc == ActivationFunction::RELU ||
@@ -294,16 +294,22 @@ static const char* kernels_header = R"__krnl(
             params.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE ?
             params.nlParams.m : 0.f;
 
+        bool fp16_unit_used = params.output.dtype == Datatype::F16;
+        for (const auto& i : params.inputs)
+        {
+            fp16_unit_used |= i.dtype == Datatype::F16;
+        }
+
         jit_constants mem_consts{
             gpu::make_jit_constant("INPUT",                     params.inputs[0]),
             gpu::make_jit_constant("OUTPUT",                    params.output),
-            gpu::make_jit_constant("FP16_SUPPORTED",            static_cast<int>(kd.fp16_unit_used)),   // TODO: use engine
-            gpu::make_jit_constant("FP16_UNIT_USED",            static_cast<int>(kd.fp16_unit_used)),
-            gpu::make_jit_constant("UNIT_TYPE",                 kd.fp16_unit_used ? "half" : "float"),
-            gpu::make_jit_constant("UNIT_VAL_ZERO",             kd.fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("UNIT_VAL_MAX",              kd.fp16_unit_used ? "HALF_MAX" : "FLT_MAX"),
+            gpu::make_jit_constant("FP16_SUPPORTED",            static_cast<int>(fp16_unit_used)),   // TODO: use engine
+            gpu::make_jit_constant("FP16_UNIT_USED",            static_cast<int>(fp16_unit_used)),
+            gpu::make_jit_constant("UNIT_TYPE",                 fp16_unit_used ? "half" : "float"),
+            gpu::make_jit_constant("UNIT_VAL_ZERO",             fp16_unit_used ? "0.0h" : "0.0f"),
+            gpu::make_jit_constant("UNIT_VAL_MAX",              fp16_unit_used ? "HALF_MAX" : "FLT_MAX"),
             gpu::make_jit_constant("UNIT_VAL_MIN",              "-(UNIT_VAL_MAX)"),
-            gpu::make_jit_constant("TO_UNIT_TYPE_V1(v)",        kd.fp16_unit_used ? "convert_half(v)" : "(float)(v)"),
+            gpu::make_jit_constant("TO_UNIT_TYPE_V1(v)",        fp16_unit_used ? "convert_half(v)" : "(float)(v)"),
             gpu::make_jit_constant("RELU",                      static_cast<int>(relu)),
             gpu::make_jit_constant("NEGATIVE_SLOPE",            negative_slope),
         };

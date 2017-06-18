@@ -16,22 +16,22 @@
 
 #pragma once
 
-#include "igk_kernel_base.h"
-#include "kernel_selector_params.h"
-
+#include "kernel_selector.h"
+ 
 namespace KernelSelector 
 {
-    class IGKDeconvolutionKernelBase : public IGKKernelBase
+    class ReshapeKernelSelctor : public KernelSelctorBase
     {
     public:
-        using IGKKernelBase::IGKKernelBase;
-        virtual ~IGKDeconvolutionKernelBase() {}
+        static ReshapeKernelSelctor &instance() {
+            static ReshapeKernelSelctor instance_;
+            return instance_;
+        }
 
-        using DispatchData = CommonDispatchData;
-    
-    protected:
-        jit_constants get_jit_constants(const DeconvolutionParams& params) const;
-        virtual DispatchData set_default(const DeconvolutionParams& params) const;
-        bool check_pitch_for_split_only(const DeconvolutionParams& params) const;
+        ReshapeKernelSelctor();
+
+        virtual ~ReshapeKernelSelctor() {}
+
+        virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
     };
 }

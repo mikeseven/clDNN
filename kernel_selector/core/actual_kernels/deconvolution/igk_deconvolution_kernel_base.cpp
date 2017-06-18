@@ -20,7 +20,7 @@
 
 namespace KernelSelector 
 {
-    jit_constants IGKDeconvolutionKernelBase::get_jit_constants(const DeconvolutionParams& params, IGKDeconvolutionKernelBase::DispatchData kd) const
+    jit_constants IGKDeconvolutionKernelBase::get_jit_constants(const DeconvolutionParams& params) const
     {
         const auto split = params.deconvParams.split;
 
@@ -53,7 +53,7 @@ namespace KernelSelector
               (tensor_vt)cp.dilation.y);
         auto input_offset_with_padding = params.inputs[0].offset - cp.padding.x - params.inputs[0].y().pitch*cp.padding.y;
 
-        jit_constants mem_consts = get_common_jit_constants(params, kd);
+        jit_constants mem_consts = get_common_jit_constants(params);
 
         mem_consts.add_constants({
             gpu::make_jit_constant("STRIDE",                    stride),

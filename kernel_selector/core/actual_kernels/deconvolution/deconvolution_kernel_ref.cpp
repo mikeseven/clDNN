@@ -68,7 +68,7 @@ namespace KernelSelector
         DispatchData run_info = set_default(orgParams);
         KernelData kd = KernelData::Default<DeconvolutionParams>(params, 1);
 
-        auto cldnn_jit = get_jit_constants(orgParams, run_info);
+        auto cldnn_jit = get_jit_constants(orgParams);
         auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
         auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
 
