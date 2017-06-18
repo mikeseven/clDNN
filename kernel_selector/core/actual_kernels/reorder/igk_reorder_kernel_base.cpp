@@ -20,17 +20,6 @@
 
 namespace KernelSelector 
 {
-    inline std::string weight_type_2_cl_type(WeightsType wType)
-    {
-        switch (wType)
-        {
-        case WeightsType::F16: return "half";
-        case WeightsType::F32: return "float";
-        case WeightsType::INT8: return "char";
-        default: return "";
-        }
-    }
-
     inline uint32_t sub_group_size(WeightsLayout l)
     {
         switch (l)
@@ -49,38 +38,77 @@ namespace KernelSelector
         }
     }
 
+    inline uint32_t sub_group_size(DataLayout l)
+    {
+        switch (l)
+        {
+        case DataLayout::bs_f_bsv16__af8:
+            return 16;
+        case DataLayout::bs_f_bsv8__af8:
+            return 8;
+        default:
+            return 1;
+        }
+    }
+
+    template<typename TensorT>
+    static inline jit_constants _get_common_jit_constants(const TensorT& input, const TensorT& output, bool fp16_supported, uint32_t sub_group)
+    {
+        gpu::jit_constants mem_consts{
+            gpu::make_jit_constant("FP16_SUPPORTED",    fp16_supported),
+            gpu::make_jit_constant("INPUT",             input),
+            gpu::make_jit_constant("OUTPUT",            output),
+            gpu::make_jit_constant("SUB_GROUP_SIZE",    sub_group),
+        };
+
+        return mem_consts;
+    }
+
     jit_constants IGKReorderKernelBase::get_jit_constants(const ReorderWeightsParams& params) const
     {
         const auto& input = params.reorderParams.input;
         const auto& output = params.reorderParams.output;
 
-        gpu::jit_constants mem_consts{
-            gpu::make_jit_constant("SRC_TYPE",                  weight_type_2_cl_type(input.wtype)),
-            gpu::make_jit_constant("DEST_TYPE",                 weight_type_2_cl_type(output.wtype)),
-            gpu::make_jit_constant("FP16_SUPPORTED",            input.wtype == WeightsType::F16 || output.wtype == WeightsType::F16),
-            gpu::make_jit_constant("INPUT_DIMS",                input.dims.size()),
-            gpu::make_jit_constant("OUT_DIMS",                  output.dims.size()),
-            gpu::make_jit_constant("INPUT_OFFSET",              input.offset),
-            gpu::make_jit_constant("OUT_OFFSET",                output.offset),
-            gpu::make_jit_constant("INPUT_X",                   input.x().v),
-            gpu::make_jit_constant("INPUT_Y",                   input.y().v),
-            gpu::make_jit_constant("OUTPUT_X",                  output.x().v),
-            gpu::make_jit_constant("OUTPUT_Y",                  output.y().v),
-            gpu::make_jit_constant("INPUT_X_PITCH",             input.x().pitch),
-            gpu::make_jit_constant("INPUT_Y_PITCH",             input.y().pitch),
-            gpu::make_jit_constant("INPUT_IFM_PITCH",           input.ifm().pitch),
-            gpu::make_jit_constant("INPUT_OFM_PITCH",           input.ofm().pitch),
-            gpu::make_jit_constant("OUT_X_PITCH",               output.x().pitch),
-            gpu::make_jit_constant("OUT_Y_PITCH",               output.y().pitch),
-            gpu::make_jit_constant("OUT_IFM_PITCH",             output.ifm().pitch),
-            gpu::make_jit_constant("OUT_OFM_PITCH",             output.ofm().pitch),
-            gpu::make_jit_constant("SIMPLE_INPUT",              input.SimpleLayout()),
-            gpu::make_jit_constant("SIMPLE_OUTPUT",             output.SimpleLayout()),
-            gpu::make_jit_constant("SUB_GROUP_SIZE",            sub_group_size(output.layout)),
-        };
+        return _get_common_jit_constants(input, output, output.wtype == WeightsType::F16 || input.wtype == WeightsType::F16, sub_group_size(output.layout));
+    }
 
-        mem_consts.add_constant(gpu::make_jit_constant("INPUT_LAYOUT_" + toString(input.layout), 1));
-        mem_consts.add_constant(gpu::make_jit_constant("OUTPUT_LAYOUT_" + toString(output.layout), 1));
+    inline Datatype more_aqurate_data_type(Datatype a, Datatype b)
+    {
+        assert(a == Datatype::F16 || a == Datatype::F32);
+        assert(b == Datatype::F16 || b == Datatype::F32);
+
+        if (a == b)
+        {
+            return a;
+        }
+
+        return Datatype::F32;
+    }
+
+    jit_constants IGKReorderKernelBase::get_jit_constants(const ReorderParams& params) const
+    {
+        const auto& input = params.inputs[0];
+        const auto& output = params.output;
+
+        gpu::jit_constants mem_consts = _get_common_jit_constants(input, output, output.dtype == Datatype::F16 || input.dtype == Datatype::F16, sub_group_size(output.layout));
+        mem_consts.add_constant(gpu::make_jit_constant("MEAN_SUBTRUCT_" + toString(params.reorderParams.mode), 1));
+
+        Datatype calc_type = more_aqurate_data_type(input.dtype, output.dtype);
+        if (params.reorderParams.mode == MeanSubtructMode::INSIDE_PARAMS)
+        {
+            mem_consts.add_constant(gpu::make_jit_constant("VALUE_TO_SUBTRACT", params.reorderParams.mean_values));
+            calc_type = more_aqurate_data_type(calc_type, Datatype::F32);
+        }
+        else if (params.reorderParams.mode == MeanSubtructMode::IN_BUFFER)
+        {
+            mem_consts.add_constant(gpu::make_jit_constant("MEAN_SUBTRUCT", params.reorderParams.mean));
+            calc_type = more_aqurate_data_type(calc_type, params.reorderParams.mean.dtype);
+        }
+        
+        mem_consts.add_constants({
+            gpu::make_jit_constant("CALC_TYPE",                      gpu::data_type_2_cl_type(calc_type)),
+            gpu::make_jit_constant("TO_CALC_TYPE",      "convert_" + gpu::data_type_2_cl_type(calc_type)),
+        });
 
         return mem_consts;
     }

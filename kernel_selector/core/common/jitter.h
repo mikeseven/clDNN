@@ -19,6 +19,7 @@
 #include "api/CPP/memory.hpp"
 #include "api/CPP/tensor.hpp"
 #include "api/CPP/profiling.hpp"
+#include "tensor_type.h"
 #include <iostream>
 #include <sstream>
 #include <cmath>
@@ -133,8 +134,100 @@ public:
     }
 };
 
+
 inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const cldnn::tensor& value) {
     return std::static_pointer_cast<jit_constant>(std::make_shared<vector_jit_constant>(name, value));
+}
+
+inline std::string weight_type_2_cl_type(WeightsType wType)
+{
+    switch (wType)
+    {
+    case WeightsType::F16: return "half";
+    case WeightsType::F32: return "float";
+    case WeightsType::INT8: return "char";
+    default: return "";
+    }
+}
+
+inline std::string data_type_2_cl_type(Datatype wType)
+{
+    switch (wType)
+    {
+    case Datatype::F16: return "half";
+    case Datatype::F32: return "float";
+    default: return "";
+    }
+}
+
+class data_tensor_jit_constant : public jit_constant 
+{
+    const KernelSelector::DataTensor _tensor;
+
+public:
+    data_tensor_jit_constant(const std::string& name, const KernelSelector::DataTensor& t) : jit_constant(name), _tensor(t) {}
+
+    jit_definitions get_definitions() const override 
+    {
+        jit_definitions definitions{
+            { _name + "_TYPE",          data_type_2_cl_type(_tensor.dtype) },
+            { _name + "_OFFSET",        std::to_string(_tensor.offset) },
+            { _name + "_LIMIT",         std::to_string(_tensor.LengthWithPadding()) },
+            { _name + "_DIMS",          std::to_string(_tensor.dims.size()) },
+            { _name + "_SIZE_X",        std::to_string(_tensor.x().v) },
+            { _name + "_SIZE_Y",        std::to_string(_tensor.y().v) },
+            { _name + "_FEATURE_NUM",   std::to_string(_tensor.feature().v) },
+            { _name + "_BATCH_NUM",     std::to_string(_tensor.batch().v) },
+            { _name + "_X_PITCH",       std::to_string(_tensor.x().pitch) },
+            { _name + "_Y_PITCH",       std::to_string(_tensor.y().pitch) },
+            { _name + "_FEATURE_PITCH", std::to_string(_tensor.feature().pitch) },
+            { _name + "_BATCH_PITCH",   std::to_string(_tensor.batch().pitch) },
+            { _name + "_SIMPLE",        std::to_string(_tensor.SimpleLayout()) },
+            { "TO_" + _name + "_TYPE",  "convert_" + data_type_2_cl_type(_tensor.dtype) },
+            { _name + "_LAYOUT_" + toString(_tensor.layout), "1" },
+        };
+
+        return definitions;
+    }
+};
+
+inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const KernelSelector::DataTensor& value) {
+    return std::static_pointer_cast<jit_constant>(std::make_shared<data_tensor_jit_constant>(name, value));
+}
+
+class weight_tensor_jit_constant : public jit_constant 
+{
+    const KernelSelector::WeightsTensor _tensor;
+
+public:
+    weight_tensor_jit_constant(const std::string& name, const KernelSelector::WeightsTensor& t) : jit_constant(name), _tensor(t) {}
+
+    jit_definitions get_definitions() const override 
+    {
+        jit_definitions definitions{
+            { _name + "_TYPE",          weight_type_2_cl_type(_tensor.wtype) },
+            { _name + "_OFFSET",        std::to_string(_tensor.offset) },
+            { _name + "_LIMIT",         std::to_string(_tensor.LengthWithPadding()) },
+            { _name + "_DIMS",          std::to_string(_tensor.dims.size()) },
+            { _name + "_SIZE_X",        std::to_string(_tensor.x().v) },
+            { _name + "_SIZE_Y",        std::to_string(_tensor.y().v) },
+            { _name + "_IFM_NUM",       std::to_string(_tensor.ifm().v) },
+            { _name + "_OFM_NUM",       std::to_string(_tensor.ofm().v) },
+            { _name + "_X_PITCH",       std::to_string(_tensor.x().pitch) },
+            { _name + "_Y_PITCH",       std::to_string(_tensor.y().pitch) },
+            { _name + "_IFM_PITCH",     std::to_string(_tensor.ifm().pitch) },
+            { _name + "_OFM_PITCH",     std::to_string(_tensor.ofm().pitch) },
+            { _name + "_SIMPLE",        std::to_string(_tensor.SimpleLayout()) },
+            { "TO_" + _name + "_TYPE",  "convert_" + weight_type_2_cl_type(_tensor.wtype) },
+            { _name + "_LAYOUT_" + toString(_tensor.layout), "1" },
+        };
+
+        return definitions;
+    }
+};
+
+inline std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const KernelSelector::WeightsTensor& value) {
+    return std::static_pointer_cast<jit_constant>(std::make_shared<weight_tensor_jit_constant>(name, value));
 }
 
 class padding_jit_constant : public jit_constant {
@@ -219,6 +312,49 @@ public:
 
 inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const std::vector<cldnn::memory> value) {
     return std::static_pointer_cast<jit_constant>(std::make_shared<memories_jit_constant>(name, value));
+}
+
+template <typename T>
+inline std::string get_type_name() { throw std::runtime_error("Implement me"); }
+template <>
+inline std::string get_type_name<double>() { return "double"; }
+template <>
+inline std::string get_type_name<float>() { return "float"; }
+template <>
+inline std::string get_type_name<int>() { return "int"; }
+template <>
+inline std::string get_type_name<unsigned>() { return "unsigned"; }
+template <>
+inline std::string get_type_name<char>() { return "char"; }
+template <>
+inline std::string get_type_name<short>() { return "short"; }
+
+template <typename T>
+class vector_data_jit_constant : public jit_constant 
+{
+    const std::vector<T> _data;
+
+public:
+    vector_data_jit_constant(const std::string& name, const std::vector<T>& data) : jit_constant(name), _data(data) {}
+
+    jit_definitions get_definitions() const override 
+    {
+        std::stringstream ss;
+        jit_definitions result;
+        result.push_back({ _name + "_SIZE", std::to_string(_data.size()) });
+        ss << "(" << get_type_name<T>() << "[]){ ";
+        for (size_t i = 0; i < _data.size(); i++)
+            ss << to_code_string(_data[i]) << ",";
+        ss << " } ";
+        
+        result.push_back({ _name, ss.str() });
+        return result;
+    }
+};
+
+template <typename T>
+inline  std::shared_ptr<jit_constant> make_jit_constant(const std::string& name, const std::vector<T> value) {
+    return std::static_pointer_cast<jit_constant>(std::make_shared<vector_data_jit_constant<T>>(name, value));
 }
 
 class jit_constants {

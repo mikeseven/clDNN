@@ -57,35 +57,35 @@ namespace KernelSelector
         {
         case SoftmaxDim::X:
             jit +=
-                "#define INPUT_OTHER0_PITCH INPUT_Y_PITCH\n"
-                "#define INPUT_OTHER1_PITCH INPUT_FEATURE_PITCH\n"
-                "#define INPUT_CLASS_PITCH  INPUT_X_PITCH\n"
-                "#define INPUT_CLASS_NUM    INPUT_WIDTH\n"
-                "#define OUT_OTHER0_PITCH   OUT_Y_PITCH\n"
-                "#define OUT_OTHER1_PITCH   OUT_FEATURE_PITCH\n"
-                "#define OUT_CLASS_PITCH    OUT_X_PITCH\n";
+                "#define INPUT_OTHER0_PITCH     INPUT_Y_PITCH\n"
+                "#define INPUT_OTHER1_PITCH     INPUT_FEATURE_PITCH\n"
+                "#define INPUT_CLASS_PITCH      INPUT_X_PITCH\n"
+                "#define INPUT_CLASS_NUM        INPUT_SIZE_X\n"
+                "#define OUTPUT_OTHER0_PITCH    OUTPUT_Y_PITCH\n"
+                "#define OUTPUT_OTHER1_PITCH    OUTPUT_FEATURE_PITCH\n"
+                "#define OUTPUT_CLASS_PITCH     OUTPUT_X_PITCH\n";
             kernel.work_groups.global = cl::NDRange(out.y().v, out.feature().v, out.batch().v);
             break;
         case SoftmaxDim::Y:
             jit +=
-                "#define INPUT_OTHER0_PITCH INPUT_X_PITCH\n"
-                "#define INPUT_OTHER1_PITCH INPUT_FEATURE_PITCH\n"
-                "#define INPUT_CLASS_PITCH  INPUT_Y_PITCH\n"
-                "#define INPUT_CLASS_NUM    INPUT_HEIGHT\n"
-                "#define OUT_OTHER0_PITCH   OUT_X_PITCH\n"
-                "#define OUT_OTHER1_PITCH   OUT_FEATURE_PITCH\n"
-                "#define OUT_CLASS_PITCH    OUT_Y_PITCH\n";
+                "#define INPUT_OTHER0_PITCH     INPUT_X_PITCH\n"
+                "#define INPUT_OTHER1_PITCH     INPUT_FEATURE_PITCH\n"
+                "#define INPUT_CLASS_PITCH      INPUT_Y_PITCH\n"
+                "#define INPUT_CLASS_NUM        INPUT_SIZE_Y\n"
+                "#define OUTPUT_OTHER0_PITCH    OUTPUT_X_PITCH\n"
+                "#define OUTPUT_OTHER1_PITCH    OUTPUT_FEATURE_PITCH\n"
+                "#define OUTPUT_CLASS_PITCH     OUTPUT_Y_PITCH\n";
             kernel.work_groups.global = cl::NDRange(out.x().v, out.feature().v, out.batch().v);
             break;
         case SoftmaxDim::FEATURE:
             jit +=
-                "#define INPUT_OTHER0_PITCH INPUT_X_PITCH\n"
-                "#define INPUT_OTHER1_PITCH INPUT_Y_PITCH\n"
-                "#define INPUT_CLASS_PITCH  INPUT_FEATURE_PITCH\n"
-                "#define INPUT_CLASS_NUM    INPUT_DEPTH\n"
-                "#define OUT_OTHER0_PITCH   OUT_X_PITCH\n"
-                "#define OUT_OTHER1_PITCH   OUT_Y_PITCH\n"
-                "#define OUT_CLASS_PITCH    OUT_FEATURE_PITCH\n";
+                "#define INPUT_OTHER0_PITCH     INPUT_X_PITCH\n"
+                "#define INPUT_OTHER1_PITCH     INPUT_Y_PITCH\n"
+                "#define INPUT_CLASS_PITCH      INPUT_FEATURE_PITCH\n"
+                "#define INPUT_CLASS_NUM        INPUT_FEATURE_NUM\n"
+                "#define OUTPUT_OTHER0_PITCH    OUTPUT_X_PITCH\n"
+                "#define OUTPUT_OTHER1_PITCH    OUTPUT_Y_PITCH\n"
+                "#define OUTPUT_CLASS_PITCH     OUTPUT_FEATURE_PITCH\n";
             kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.batch().v);
             break;
         default:

@@ -50,7 +50,7 @@ KERNEL (normalize_gpu_across_spatial_bfyx)(const __global UNIT_TYPE* input, __gl
     }
     norm = native_powr(norm, -0.5f);
 
-    uint output_idx = OUTPUT_OFFSET + b * OUT_BATCH_PITCH;
+    uint output_idx = OUTPUT_OFFSET + b * OUTPUT_BATCH_PITCH;
 
     // Scale the input
     input_idx = input_first;
@@ -62,13 +62,13 @@ KERNEL (normalize_gpu_across_spatial_bfyx)(const __global UNIT_TYPE* input, __gl
             {
                 output[output_idx] = UNIT_CVT_FUNC(norm) * input[input_idx] * scale_input[SCALE_INDEX];
                 input_idx += INPUT_X_PITCH;
-                output_idx += OUT_X_PITCH;
+                output_idx += OUTPUT_X_PITCH;
             }
             input_idx += INPUT_Y_PITCH - INPUT_SIZE_X*INPUT_X_PITCH;
-            output_idx += OUT_Y_PITCH - INPUT_SIZE_X*OUT_X_PITCH;
+            output_idx += OUTPUT_Y_PITCH - INPUT_SIZE_X*OUTPUT_X_PITCH;
         }
         input_idx += INPUT_FEATURE_PITCH - INPUT_Y_PITCH*INPUT_SIZE_Y;
-        output_idx += OUT_FEATURE_PITCH - INPUT_SIZE_Y*OUT_Y_PITCH;
+        output_idx += OUTPUT_FEATURE_PITCH - INPUT_SIZE_Y*OUTPUT_Y_PITCH;
     }
 }
 

@@ -52,7 +52,6 @@ namespace KernelSelector {
 
         jit << "#define NUM_ROWS_WI (" << NUM_ROWS_WI << ")\n"
             << "#define NUM_COLS_WI (" << NUM_COLS_WI << ")\n"
-            << "#define INPUT_WIDTH (" << newParams.inputs[0].x().v << ")\n"
             << "#define INPUT_ROWS (" << nonWidthDim << ")\n"
             << "#define INPUT_ROWS_MOD_ROWS_WI " << nonWidthDim % NUM_ROWS_WI << "\n"
             << "#define INPUT_WIDTH_MOD_COLS_WI " << newParams.inputs[0].x().v % NUM_COLS_WI << "\n";

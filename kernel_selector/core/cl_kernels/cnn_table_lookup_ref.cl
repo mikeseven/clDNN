@@ -25,16 +25,16 @@ KERNEL(table_lookup)(
 {
     const unsigned x = get_global_id(0);
     const unsigned y = get_global_id(1);
-#if OUT_BATCH == 1
+#if OUTPUT_BATCH_NUM == 1
     const unsigned z = get_global_id(2);
     const unsigned w = 0;
 #else
-    const unsigned z = get_global_id(2) % OUT_DEPTH;
-    const unsigned w = get_global_id(2) / OUT_DEPTH;
+    const unsigned z = get_global_id(2) % OUTPUT_FEATURE_NUM;
+    const unsigned w = get_global_id(2) / OUTPUT_FEATURE_NUM;
 #endif
     
     const unsigned src_index = w*INPUT_BATCH_PITCH + z*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x + INPUT_OFFSET;
-    const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x + OUT_OFFSET;
+    const unsigned dst_index = w*OUTPUT_BATCH_PITCH + z*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x + OUTPUT_OFFSET;
     
     unsigned lut_idx = (unsigned)input[src_index];
     

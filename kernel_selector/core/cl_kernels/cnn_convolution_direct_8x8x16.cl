@@ -121,34 +121,34 @@ __kernel void convolution_f16_8x8x16(
             } )
         } )
     }
-    while ( ++patch_depth < INPUT_DEPTH );
+    while ( ++patch_depth < INPUT_FEATURE_NUM );
 
     // Dst resembles a cube of width x height x (output channel * batches).  Each tile writes:
     // TILE_K x TILE_M x SIMD.  Partial writes most likely generated if output padding used.
     // Group stores into vectors to expedite writeback.  One large write is faster than many
     // small saves. Right-most column may be smaller if output width not divisible by tile width.
     __global half *out = dst
-     + batch_id * OUT_BATCH_PITCH            // batch offset
-     + out_fm * OUT_FEATURE_PITCH              // channel offset
-     + ( global_y * TILE_M ) * OUT_Y_PITCH // y offset
+     + batch_id * OUTPUT_BATCH_PITCH            // batch offset
+     + out_fm * OUTPUT_FEATURE_PITCH              // channel offset
+     + ( global_y * TILE_M ) * OUTPUT_Y_PITCH // y offset
      + ( global_x * TILE_K );                // x offset
 
-    if ( batch_id < OUT_BATCH && out_fm < OUT_DEPTH )
+    if ( batch_id < OUTPUT_BATCH_NUM && out_fm < OUTPUT_FEATURE_NUM )
     {
         half bias = biases[out_fm];
-        if ( OUT_WIDTH % TILE_K == 0 ||
+        if ( OUTPUT_SIZE_X % TILE_K == 0 ||
              group_x < max_group_x - 1 )
         {
             typedef CAT( half, TILE_K ) half_t;
             half bias = biases[out_fm];
             for( unsigned y = 0; y < TILE_M; y++ )
             {
-                if ( global_y * TILE_M + y < OUT_HEIGHT )
+                if ( global_y * TILE_M + y < OUTPUT_SIZE_Y )
                 {
                     half_t vBlockC;
                     half *pvBlockC = (half*)&vBlockC;
                     for (unsigned i = 0; i < TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
-                    *(__global half_t*)(out + y * OUT_Y_PITCH) = vBlockC;
+                    *(__global half_t*)(out + y * OUTPUT_Y_PITCH) = vBlockC;
                 }
             }
         }
@@ -157,12 +157,12 @@ __kernel void convolution_f16_8x8x16(
             typedef CAT( half, RIGHT_PARTIAL_TILE_K ) half_t;
             for( unsigned y = 0; y < TILE_M; y++ )
             {
-                if ( global_y * TILE_M + y < OUT_HEIGHT )
+                if ( global_y * TILE_M + y < OUTPUT_SIZE_Y )
                 {
                     half_t vBlockC;
                     half *pvBlockC = (half*)&vBlockC;
                     for (unsigned i = 0; i < RIGHT_PARTIAL_TILE_K; i++) pvBlockC[i] = activation_function(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
-                    *(__global half_t*)(out + y * OUT_Y_PITCH) = vBlockC;
+                    *(__global half_t*)(out + y * OUTPUT_Y_PITCH) = vBlockC;
                 }
             }
         }

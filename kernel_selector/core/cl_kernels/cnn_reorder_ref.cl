@@ -34,7 +34,7 @@ inline unsigned int get_output_index(unsigned int z, unsigned int y, unsigned in
 inline unsigned int get_output_index(unsigned int y, unsigned int x, unsigned int z, unsigned int w)
 #endif
 { 
-   return OUT_OFFSET + w*OUT_BATCH_PITCH + z*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x;
+   return OUTPUT_OFFSET + w*OUTPUT_BATCH_PITCH + z*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x;
 }
 
 KERNEL(reorder)(
@@ -43,12 +43,12 @@ KERNEL(reorder)(
 {
     const unsigned x = get_global_id(0);
     const unsigned y = get_global_id(1);
-#if INPUT_BATCH == 1
+#if INPUT_BATCH_NUM == 1
     const unsigned z = get_global_id(2);
     const unsigned w = 0;
 #else
-    const unsigned z = get_global_id(2) % INPUT_DEPTH;
-    const unsigned w = get_global_id(2) / INPUT_DEPTH;
+    const unsigned z = get_global_id(2) % INPUT_FEATURE_NUM;
+    const unsigned w = get_global_id(2) / INPUT_FEATURE_NUM;
 #endif
     
     const unsigned int src_index = INPUT_OFFSET + w*INPUT_BATCH_PITCH + z*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH;

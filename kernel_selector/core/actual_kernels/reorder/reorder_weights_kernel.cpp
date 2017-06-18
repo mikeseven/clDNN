@@ -29,6 +29,7 @@ namespace KernelSelector
         //k.SetInputWeightsType(WeightsType::INT8);
         //k.SetOutputWeightsType(WeightsType::INT8);
         k.EnableAllWeightsLayout();
+        k.SetDifferentTypesSupport();
         k.SetOffsetSupport();
         k.SetPitchesSupport();
         return k;

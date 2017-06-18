@@ -827,7 +827,6 @@ namespace KernelSelector
         }
     };
 
-#if 0
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ReorderParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -837,8 +836,9 @@ namespace KernelSelector
 
         struct DedicatedParams
         {
-            bool 
-            std::vector<float> substractPerFeature;
+            MeanSubtructMode    mode = MeanSubtructMode::NONE;
+            std::vector<float>  mean_values;
+            DataTensor          mean;
         };
 
         DedicatedParams reorderParams;
@@ -848,7 +848,6 @@ namespace KernelSelector
             return BaseParams::GetParamsKey();
         }
     };
-#endif
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ReorderWeightsParams

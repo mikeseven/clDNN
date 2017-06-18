@@ -157,43 +157,43 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
     for(uint s = 0; s < BATCHES_PER_WORK_ITEM / 2; s++)
     {
         uint _out_id = out_id + chunk_size * s * LOCAL_WORK_GROUP_SIZE;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s0, _data[chunk_size * s + 1].s0)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s1, _data[chunk_size * s + 1].s1)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s2, _data[chunk_size * s + 1].s2)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s3, _data[chunk_size * s + 1].s3)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s4, _data[chunk_size * s + 1].s4)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s5, _data[chunk_size * s + 1].s5)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s6, _data[chunk_size * s + 1].s6)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s7, _data[chunk_size * s + 1].s7)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s8, _data[chunk_size * s + 1].s8)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s9, _data[chunk_size * s + 1].s9)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].sa, _data[chunk_size * s + 1].sa)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].sb, _data[chunk_size * s + 1].sb)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].sc, _data[chunk_size * s + 1].sc)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].sd, _data[chunk_size * s + 1].sd)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].se, _data[chunk_size * s + 1].se)); _out_id += OUT_FEATURE_PITCH;
-        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].sf, _data[chunk_size * s + 1].sf)); _out_id += OUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s0, _data[chunk_size * s + 1].s0)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s1, _data[chunk_size * s + 1].s1)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s2, _data[chunk_size * s + 1].s2)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s3, _data[chunk_size * s + 1].s3)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s4, _data[chunk_size * s + 1].s4)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s5, _data[chunk_size * s + 1].s5)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s6, _data[chunk_size * s + 1].s6)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s7, _data[chunk_size * s + 1].s7)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s8, _data[chunk_size * s + 1].s8)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s9, _data[chunk_size * s + 1].s9)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].sa, _data[chunk_size * s + 1].sa)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].sb, _data[chunk_size * s + 1].sb)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].sc, _data[chunk_size * s + 1].sc)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].sd, _data[chunk_size * s + 1].sd)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].se, _data[chunk_size * s + 1].se)); _out_id += OUTPUT_FEATURE_PITCH;
+        *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].sf, _data[chunk_size * s + 1].sf)); _out_id += OUTPUT_FEATURE_PITCH;
     }
 #else
     for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
     {
         int _out_id = out_id + s * LOCAL_WORK_GROUP_SIZE;
-        output[_out_id] = _data[s].s0; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].s1; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].s2; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].s3; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].s4; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].s5; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].s6; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].s7; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].s8; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].s9; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].sa; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].sb; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].sc; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].sd; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].se; _out_id += OUT_FEATURE_PITCH;
-        output[_out_id] = _data[s].sf; _out_id += OUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].s0; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].s1; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].s2; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].s3; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].s4; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].s5; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].s6; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].s7; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].s8; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].s9; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].sa; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].sb; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].sc; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].sd; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].se; _out_id += OUTPUT_FEATURE_PITCH;
+        output[_out_id] = _data[s].sf; _out_id += OUTPUT_FEATURE_PITCH;
     }
 #endif
 }

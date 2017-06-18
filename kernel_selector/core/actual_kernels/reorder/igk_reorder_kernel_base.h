@@ -29,5 +29,6 @@ namespace KernelSelector
     
     protected:
         jit_constants get_jit_constants(const ReorderWeightsParams& params) const;
+        jit_constants get_jit_constants(const ReorderParams& params) const;
     };
 }

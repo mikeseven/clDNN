@@ -24,7 +24,7 @@ inline unsigned int get_output_index(unsigned int f, unsigned int b, unsigned in
 inline unsigned int get_output_index(unsigned int b, unsigned int f, unsigned int, unsigned int, unsigned int)
 #endif
 { 
-   return OUT_OFFSET + b*OUT_BATCH_PITCH + f*OUT_FEATURE_PITCH
+   return OUTPUT_OFFSET + b*OUTPUT_BATCH_PITCH + f*OUTPUT_FEATURE_PITCH
 }
 #endif
 
@@ -39,7 +39,7 @@ inline unsigned int get_output_index(unsigned int f, unsigned int x, unsigned in
 inline unsigned int get_output_index(unsigned int b, unsigned int x, unsigned int y, unsigned int f, unsigned int)
 #endif
 { 
-   return OUT_OFFSET + b*OUT_BATCH_PITCH + f*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x*OUT_X_PITCH;
+   return OUTPUT_OFFSET + b*OUTPUT_BATCH_PITCH + f*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH;
 }
 #endif
 
@@ -48,32 +48,32 @@ inline unsigned int get_output_index(unsigned int b, unsigned int x, unsigned in
 inline unsigned int get_output_index(unsigned int x, unsigned int y, unsigned int f, unsigned int r, unsigned int b)
 #endif
 { 
-   return OUT_OFFSET + b*OUT_BATCH_PITCH + r*OUT_ROI_PITCH + f*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x*OUT_X_PITCH;
+   return OUTPUT_OFFSET + b*OUTPUT_BATCH_PITCH + r*OUTPUT_ROI_PITCH + f*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH;
 }
 #endif
 
-#if   defined REORDER_OUT_MODE_XYZW
+#if   defined REORDER_OUTPUT_MODE_XYZW
 inline unsigned int get_output_index(unsigned int x, unsigned int y, unsigned int z, unsigned int w)
-#elif defined REORDER_OUT_MODE_XYWZ
+#elif defined REORDER_OUTPUT_MODE_XYWZ
 inline unsigned int get_output_index(unsigned int x, unsigned int y, unsigned int w, unsigned int z)
-#elif defined REORDER_OUT_MODE_XWYZ
+#elif defined REORDER_OUTPUT_MODE_XWYZ
 inline unsigned int get_output_index(unsigned int x, unsigned int w, unsigned int y, unsigned int z)
-#elif defined REORDER_OUT_MODE_WXYZ
+#elif defined REORDER_OUTPUT_MODE_WXYZ
 inline unsigned int get_output_index(unsigned int w, unsigned int x, unsigned int y, unsigned int z)
-#elif defined REORDER_OUT_MODE_XZYW
+#elif defined REORDER_OUTPUT_MODE_XZYW
 inline unsigned int get_output_index(unsigned int x, unsigned int z, unsigned int y, unsigned int w)
-#elif defined REORDER_OUT_MODE_ZYXW
+#elif defined REORDER_OUTPUT_MODE_ZYXW
 inline unsigned int get_output_index(unsigned int z, unsigned int y, unsigned int x, unsigned int w)
-#elif defined REORDER_OUT_MODE_YXZW
+#elif defined REORDER_OUTPUT_MODE_YXZW
 inline unsigned int get_output_index(unsigned int y, unsigned int x, unsigned int z, unsigned int w)
 #endif
 { 
-   return OUT_OFFSET + w*OUT_PITCH_3 + z*OUT_PITCH_2 + y*OUT_PITCH_1 + x/*OUT_PITCH_0*/;
+   return OUTPUT_OFFSET + w*OUTPUT_PITCH_3 + z*OUTPUT_PITCH_2 + y*OUTPUT_PITCH_1 + x/*OUTPUT_PITCH_0*/;
 }
 
-uint FUNC(OUT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS], uint lpad[DIMENSIONS], uint upad[DIMENSIONS]) 
+uint FUNC(OUTPUT_FORMAT)(uint size[DIMENSIONS], uint pos[DIMENSIONS], uint lpad[DIMENSIONS], uint upad[DIMENSIONS]) 
 {
-    OUT_FORMAT_IMPLEMENTATION
+    OUTPUT_FORMAT_IMPLEMENTATION
 }
 
 KERNEL (reorder)(const __global SRC_TYPE* input, __global DEST_TYPE* output)
@@ -99,7 +99,7 @@ KERNEL (reorder)(const __global SRC_TYPE* input, __global DEST_TYPE* output)
         pos1D /= SIZE[order_idx];
     }
 
-    uint output_pos = FUNC_CALL(OUT_FORMAT)(SIZE, pos, LOWER_PADDING, UPPER_PADDING);
+    uint output_pos = FUNC_CALL(OUTPUT_FORMAT)(SIZE, pos, LOWER_PADDING, UPPER_PADDING);
     uint input_idx = (global_id_2 * global_size_1 + global_id_1) * global_size_0 + global_id_0;
     output[output_pos] = SRC_DEST_TYPE_CVT_FUNC(input[input_idx]);
 }

@@ -24,8 +24,8 @@ KERNEL(softmax)(__global DATA_TYPE* input, __global DATA_TYPE* output)
     const uint other1 = get_global_id(1);
     const uint batch  = get_global_id(2);
 
-    const uint in_depth_offset  = batch*INPUT_BATCH_PITCH + other1*INPUT_OTHER1_PITCH + other0*INPUT_OTHER0_PITCH + INPUT_OFFSET;
-    const uint out_depth_offset = batch*OUT_BATCH_PITCH   + other1*OUT_OTHER1_PITCH   + other0*OUT_OTHER0_PITCH   + OUT_OFFSET;
+    const uint in_depth_offset  = batch*INPUT_BATCH_PITCH  + other1*INPUT_OTHER1_PITCH  + other0*INPUT_OTHER0_PITCH  + INPUT_OFFSET;
+    const uint out_depth_offset = batch*OUTPUT_BATCH_PITCH + other1*OUTPUT_OTHER1_PITCH + other0*OUTPUT_OTHER0_PITCH + OUTPUT_OFFSET;
     
     DATA_TYPE max_value = input[in_depth_offset];
     for (uint cls = 0; cls < INPUT_CLASS_NUM; ++cls)
@@ -46,7 +46,7 @@ KERNEL(softmax)(__global DATA_TYPE* input, __global DATA_TYPE* output)
     for (uint cls = 0; cls < INPUT_CLASS_NUM; ++cls)
     {
         const uint input_idx  = in_depth_offset + cls*INPUT_CLASS_PITCH;
-        const uint output_idx = out_depth_offset + cls*OUT_CLASS_PITCH;
+        const uint output_idx = out_depth_offset + cls*OUTPUT_CLASS_PITCH;
         const DATA_TYPE res = exp(input[input_idx] - max_value) / (DATA_TYPE)denominator;
         output[output_idx] = FUNC_CALL(activation_function)(res, NL_M, NL_N);
     }

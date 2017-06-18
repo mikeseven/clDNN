@@ -121,8 +121,9 @@ static inline cldnn::format weight_layput_2_tensor_format(KernelSelector::Weight
     }
 }
 
-inline KernelSelector::DataTensor tensor_2_data_tensor(const layout& l, const padding& pad, uint32_t split)
+inline KernelSelector::DataTensor tensor_2_data_tensor(const layout& l, uint32_t split = 1)
 {
+    const auto& pad = l.data_padding;
     const auto& vals = l.size.sizes(l.format);
     const auto& lower_pad = pad.lower_size().sizes(l.format);
     const auto& upper_pad = pad.upper_size().sizes(l.format);
@@ -209,12 +210,10 @@ inline ParamsT GetDefaultParams(const ArgT& arg, uint32_t split = 1)
     ParamsT params;
     
     const auto& input_layout    = arg.input().get_output_layout();
-    const auto& input_padding   = arg.input().get_output_layout().data_padding;
     const auto& output_layout   = arg.get_output_layout();
-    const auto& output_padding  = arg.get_output_layout().data_padding;
 
-    params.inputs[0] = tensor_2_data_tensor(input_layout, input_padding, split);
-    params.output = tensor_2_data_tensor(output_layout, output_padding, split);
+    params.inputs[0] = tensor_2_data_tensor(input_layout, split);
+    params.output = tensor_2_data_tensor(output_layout, split);
 
     params.layerID = arg.id();
 
@@ -233,7 +232,7 @@ inline ParamsT GetWeightsBiasDefaultParams(const ArgT& arg, uint32_t split = 1)
     {
         const auto& bias_layout = arg.bias().get_output_layout();
         // bias per output is not supported on cldnn
-        params.bias.push_back(tensor_2_data_tensor(bias_layout, padding(), 1).flatten_fyx_2_f());
+        params.bias.push_back(tensor_2_data_tensor(bias_layout).flatten_fyx_2_f());
     }
 
     return params;

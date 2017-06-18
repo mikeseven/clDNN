@@ -33,15 +33,15 @@ KERNEL(normalization)(__global const DATA_TYPE* input, __global DATA_TYPE* outpu
 {
     const unsigned int x                = get_global_id(0);
     const unsigned int y                = get_global_id(1);
-#if OUT_BATCH == 1
+#if OUTPUT_BATCH_NUM == 1
     const unsigned int z                = get_global_id(2);
     const unsigned int w                = 0;
 #else
-    const unsigned int z                = get_global_id(2) % OUT_DEPTH;
-    const unsigned int w                = get_global_id(2) / OUT_DEPTH;
+    const unsigned int z                = get_global_id(2) % OUTPUT_FEATURE_NUM;
+    const unsigned int w                = get_global_id(2) / OUTPUT_FEATURE_NUM;
 #endif
     const unsigned int input_index      = w*INPUT_BATCH_PITCH + z*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x + INPUT_OFFSET;
-    const unsigned int output_index     = w*OUT_BATCH_PITCH + z*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x + OUT_OFFSET;
+    const unsigned int output_index     = w*OUTPUT_BATCH_PITCH + z*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x + OUTPUT_OFFSET;
 
     COUNTER_TYPE sum = 0.0f;
 
@@ -52,7 +52,7 @@ KERNEL(normalization)(__global const DATA_TYPE* input, __global DATA_TYPE* outpu
     for(int j = 0 ; j < ROUND_NORM_SIZE ; j++)
     {
         const int z_idx = (j + z - ROUND_NORM_HALF_SIZE);
-        bool zero = (z_idx < 0 || z_idx >= INPUT_DEPTH);
+        bool zero = (z_idx < 0 || z_idx >= INPUT_FEATURE_NUM);
         DATA_TYPE val = zero ? 0.0f : input[j_offset];
         sum += val*val;
         j_offset += INPUT_FEATURE_PITCH;
@@ -75,8 +75,8 @@ KERNEL(normalization)(__global const DATA_TYPE* input, __global DATA_TYPE* outpu
             bool zero = false;
             zero = input_offset_x < 0 ? true : zero;
             zero = input_offset_y < 0 ? true : zero;
-            zero = input_offset_x >= INPUT_WIDTH ? true : zero;
-            zero = input_offset_y >= INPUT_HEIGHT ? true : zero;
+            zero = input_offset_x >= INPUT_SIZE_X ? true : zero;
+            zero = input_offset_y >= INPUT_SIZE_Y ? true : zero;
 
             DATA_TYPE val = zero ? 0.0f : input[input_offset];
             

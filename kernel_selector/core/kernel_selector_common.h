@@ -356,6 +356,17 @@ namespace KernelSelector {
         }
     }
 
+    inline std::string toString(MeanSubtructMode mode)
+    {
+        switch (mode)
+        {
+        case MeanSubtructMode::NONE:            return "NONE";
+        case MeanSubtructMode::INSIDE_PARAMS:   return "INSIDE_PARAMS";
+        case MeanSubtructMode::IN_BUFFER:       return "IN_BUFFER";
+        default: return "";
+        }
+    }
+
     inline std::string toString(PoolType mode)
     {
         switch (mode)

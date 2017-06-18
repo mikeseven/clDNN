@@ -49,8 +49,8 @@ gpu::make_jit_constant("FILTER",                    filter_mem.argument().size),
 gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
 gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"),
 gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM",  "FILTER_FEATURE_NUM_1"),
-gpu::make_jit_constant("OUT_BLOCK_WIDTH",           _kernel_data.block_width));
-gpu::make_jit_constant("OUT_BLOCK_HEIGHT",          _kernel_data.block_height));
+gpu::make_jit_constant("OUTPUT_BLOCK_WIDTH",           _kernel_data.block_width));
+gpu::make_jit_constant("OUTPUT_BLOCK_HEIGHT",          _kernel_data.block_height));
 gpu::make_jit_constant("IN_BLOCK_ARRAY_SIZE",       _kernel_data.input_block_array_size));
 gpu::make_jit_constant("IN_BLOCK_WIDTH",            _kernel_data.input_block_width));
 gpu::make_jit_constant("PREFETCH",                  _kernel_data.prefetch));
@@ -95,8 +95,8 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
 #endif   
     uint split_idx) // TODO: removing this parameter cause a performance degradation... :)
 {
-    const uint oc  = (uint)get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column
-    const uint or  = (uint)get_global_id(1) * OUT_BLOCK_HEIGHT; // or = Output Row
+    const uint oc  = (uint)get_global_id(0) * OUTPUT_BLOCK_WIDTH;  // oc = Output Column
+    const uint or  = (uint)get_global_id(1) * OUTPUT_BLOCK_HEIGHT; // or = Output Row
     const uint fm  = get_global_id(2);                    // fm = Feature Map = od = Output Depth
     const uint lid = get_sub_group_local_id();
 
@@ -105,12 +105,12 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
     uint fmg = feature_idx / SUB_GROUP_SIZE;
 
     UNIT_TYPE in[IN_BLOCK_ARRAY_SIZE];
-    UNIT_TYPE out[OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT];
+    UNIT_TYPE out[OUTPUT_BLOCK_WIDTH * OUTPUT_BLOCK_HEIGHT];
     UNIT_TYPE w[PREFETCH];
     uint in_addr;
     uint weight_addr = fmg * FILTER_INPUT_FEATURE_NUM * FILTER_SIZE_X * FILTER_SIZE_Y * SUB_GROUP_SIZE + lid;
 
-    for(int i = 0; i < (OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT); i++) {
+    for(int i = 0; i < (OUTPUT_BLOCK_WIDTH * OUTPUT_BLOCK_HEIGHT); i++) {
         out[i] = UNIT_VAL_ZERO;
     }
 
@@ -183,8 +183,8 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
             LOOP(FILTER_SIZE_X, kc,
             {
                 //w = weights[weight_addr];
-                for(uint br=0; br<OUT_BLOCK_HEIGHT; br++) {
-                    for(uint bc=0; bc<OUT_BLOCK_WIDTH; bc++) {
+                for(uint br=0; br<OUTPUT_BLOCK_HEIGHT; br++) {
+                    for(uint bc=0; bc<OUTPUT_BLOCK_WIDTH; bc++) {
 
 #if IN_BLOCK_WIDTH != SUB_GROUP_SIZE
                         //if we fix the programming model, then we could use a nice simple 2d array: val = in[br * STRIDE_SIZE_Y + kr][bc * STRIDE_SIZE_X + kc];
@@ -194,7 +194,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
                         UNIT_TYPE val = intel_sub_group_shuffle( in[br * STRIDE_SIZE_Y + kr * DILATION_SIZE_Y], bc * STRIDE_SIZE_X + kc * DILATION_SIZE_X);
 #endif
 
-                        out[br * OUT_BLOCK_WIDTH + bc] = mad(w[wi % PREFETCH], val, out[br * OUT_BLOCK_WIDTH + bc]);
+                        out[br * OUTPUT_BLOCK_WIDTH + bc] = mad(w[wi % PREFETCH], val, out[br * OUTPUT_BLOCK_WIDTH + bc]);
                     }
                 }
                 w[wi % PREFETCH] = weights[weight_addr];
@@ -206,42 +206,42 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
         weight_addr -= PREFETCH * SUB_GROUP_SIZE;
     }
 
-    uint out_split_offset = split_idx * OUT_FEATURE_PITCH * FILTER_OUTPUT_FEATURE_NUM;
+    uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * FILTER_OUTPUT_FEATURE_NUM;
     uint out_addr = OUTPUT_OFFSET;
-    out_addr += batch_idx * OUT_BATCH_PITCH;
-    out_addr += out_split_offset + feature_idx * OUT_FEATURE_PITCH; // out_addr indices into start of 16 feature maps.
-    out_addr += or * OUT_Y_PITCH + oc;  // offset for the 4x3 block that this workitem is working on;
+    out_addr += batch_idx * OUTPUT_BATCH_PITCH;
+    out_addr += out_split_offset + feature_idx * OUTPUT_FEATURE_PITCH; // out_addr indices into start of 16 feature maps.
+    out_addr += or * OUTPUT_Y_PITCH + oc;  // offset for the 4x3 block that this workitem is working on;
 
 #if BIAS_TERM
-    for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
-        for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
+    for(uint r = 0; r < OUTPUT_BLOCK_HEIGHT; r++) {
+        for(uint c = 0; c < OUTPUT_BLOCK_WIDTH; c++) {
 #ifdef BIAS_PER_OUTPUT
             const unsigned bias_index = feature_idx*OUTPUT_SIZE_X*OUTPUT_SIZE_Y + or*OUTPUT_SIZE_X + oc;
 #else
             const unsigned bias_index = feature_idx;
 #endif
-            out[r * OUT_BLOCK_WIDTH + c] += bias[bias_index];
+            out[r * OUTPUT_BLOCK_WIDTH + c] += bias[bias_index];
         }
     }
 #endif
 
 
-    for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
-        for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
-            ACTIVATION(out[r * OUT_BLOCK_WIDTH + c], out[r * OUT_BLOCK_WIDTH + c]);
+    for(uint r = 0; r < OUTPUT_BLOCK_HEIGHT; r++) {
+        for(uint c = 0; c < OUTPUT_BLOCK_WIDTH; c++) {
+            ACTIVATION(out[r * OUTPUT_BLOCK_WIDTH + c], out[r * OUTPUT_BLOCK_WIDTH + c]);
         }
     }
 
 #ifdef LEFTOVERS
     if (feature_idx < OUTPUT_FEATURE_NUM)
 #endif
-    for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
+    for(uint r = 0; r < OUTPUT_BLOCK_HEIGHT; r++) {
         if(!(or + r >= OUTPUT_SIZE_Y))
         {
-            for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
+            for(uint c = 0; c < OUTPUT_BLOCK_WIDTH; c++) {
                 // this does a scattered write to 16 different feature maps, so that data within one map is contiguous, thus ready for input to next layer.
                 if(!(oc + c >= OUTPUT_SIZE_X))
-                    output[out_addr + r * OUT_Y_PITCH + c] = out[r * OUT_BLOCK_WIDTH + c];
+                    output[out_addr + r * OUTPUT_Y_PITCH + c] = out[r * OUTPUT_BLOCK_WIDTH + c];
             }
         }
     }

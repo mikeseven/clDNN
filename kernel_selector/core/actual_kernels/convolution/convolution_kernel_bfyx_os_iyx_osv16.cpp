@@ -210,8 +210,8 @@ namespace KernelSelector
 
         auto cldnn_jit = get_jit_constants(newParams, run_info);
         cldnn_jit.add_constant(gpu::make_jit_constant("SUB_GROUP_SIZE", run_info.lws2));
-        cldnn_jit.add_constant(gpu::make_jit_constant("OUT_BLOCK_WIDTH", run_info.block_width));
-        cldnn_jit.add_constant(gpu::make_jit_constant("OUT_BLOCK_HEIGHT", run_info.block_height));
+        cldnn_jit.add_constant(gpu::make_jit_constant("OUTPUT_BLOCK_WIDTH", run_info.block_width));
+        cldnn_jit.add_constant(gpu::make_jit_constant("OUTPUT_BLOCK_HEIGHT", run_info.block_height));
         cldnn_jit.add_constant(gpu::make_jit_constant("IN_BLOCK_ARRAY_SIZE", run_info.input_block_array_size));
         cldnn_jit.add_constant(gpu::make_jit_constant("IN_BLOCK_WIDTH", run_info.input_block_width));
         cldnn_jit.add_constant(gpu::make_jit_constant("PREFETCH", run_info.prefetch));

@@ -31,18 +31,18 @@ KERNEL(fc_f16)(
     local half slm[WORK_GROUP_X];
     const unsigned x = get_local_id(0);
     const unsigned y = get_global_id(1);
-#if OUT_BATCH == 1
-    const unsigned oidx = (y / OUT_WIDTH) * OUT_Y_PITCH + y % OUT_WIDTH + OUT_OFFSET;
+#if OUTPUT_BATCH_NUM == 1
+    const unsigned oidx = (y / OUTPUT_SIZE_X) * OUTPUT_Y_PITCH + y % OUTPUT_SIZE_X + OUTPUT_OFFSET;
     const unsigned batch_id = 0;
 #else
     const unsigned batch_id = get_global_id(2);
     
-    const unsigned out_z = y / (OUT_WIDTH * OUT_HEIGHT);
-    const unsigned out_yx = y % (OUT_WIDTH * OUT_HEIGHT);
-    const unsigned out_y = out_yx / (OUT_WIDTH);
-    const unsigned out_x = out_yx % (OUT_WIDTH);
+    const unsigned out_z = y / (OUTPUT_SIZE_X * OUTPUT_SIZE_Y);
+    const unsigned out_yx = y % (OUTPUT_SIZE_X * OUTPUT_SIZE_Y);
+    const unsigned out_y = out_yx / (OUTPUT_SIZE_X);
+    const unsigned out_x = out_yx % (OUTPUT_SIZE_X);
     
-    const unsigned oidx = batch_id*OUT_BATCH_PITCH + out_z*OUT_FEATURE_PITCH + out_y*OUT_Y_PITCH + out_x + OUT_OFFSET;
+    const unsigned oidx = batch_id*OUTPUT_BATCH_PITCH + out_z*OUTPUT_FEATURE_PITCH + out_y*OUTPUT_Y_PITCH + out_x + OUTPUT_OFFSET;
 #endif
     
     // TODO: we need to support multi dims. currently it doesn't
@@ -142,18 +142,18 @@ KERNEL(fc_f32)(
     local float slm[WORK_GROUP_X];
     const unsigned x = get_local_id(0);
     const unsigned y = get_global_id(1);
-#if OUT_BATCH == 1
-    const unsigned oidx = (y / OUT_WIDTH) * OUT_Y_PITCH + y % OUT_WIDTH + OUT_OFFSET;
+#if OUTPUT_BATCH_NUM == 1
+    const unsigned oidx = (y / OUTPUT_SIZE_X) * OUTPUT_Y_PITCH + y % OUTPUT_SIZE_X + OUTPUT_OFFSET;
     const unsigned batch_id = 0;
 #else
     const unsigned batch_id = get_global_id(2);
     
-    const unsigned out_z = y / (OUT_WIDTH * OUT_HEIGHT);
-    const unsigned out_yx = y % (OUT_WIDTH * OUT_HEIGHT);
-    const unsigned out_y = out_yx / (OUT_WIDTH);
-    const unsigned out_x = out_yx % (OUT_WIDTH);
+    const unsigned out_z = y / (OUTPUT_SIZE_X * OUTPUT_SIZE_Y);
+    const unsigned out_yx = y % (OUTPUT_SIZE_X * OUTPUT_SIZE_Y);
+    const unsigned out_y = out_yx / (OUTPUT_SIZE_X);
+    const unsigned out_x = out_yx % (OUTPUT_SIZE_X);
     
-    const unsigned oidx = batch_id*OUT_BATCH_PITCH + out_z*OUT_FEATURE_PITCH + out_y*OUT_Y_PITCH + out_x + OUT_OFFSET;
+    const unsigned oidx = batch_id*OUTPUT_BATCH_PITCH + out_z*OUTPUT_FEATURE_PITCH + out_y*OUTPUT_Y_PITCH + out_x + OUTPUT_OFFSET;
 #endif
     // TODO: we need to support multi dims. currently it doesn't
     // TODO: check cases we have padding in y/z dimensions

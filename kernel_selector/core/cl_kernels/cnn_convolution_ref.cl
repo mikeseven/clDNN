@@ -25,18 +25,18 @@ KERNEL(convolution)(
 {
     const uint x = get_global_id(0);
     const uint y = get_global_id(1);
-#if OUT_BATCH == 1
+#if OUTPUT_BATCH_NUM == 1
     const uint z = get_global_id(2);
     const uint w = 0;
 #else
-    const uint z = get_global_id(2) % OUT_DEPTH;
-    const uint w = get_global_id(2) / OUT_DEPTH;
+    const uint z = get_global_id(2) % OUTPUT_FEATURE_NUM;
+    const uint w = get_global_id(2) / OUTPUT_FEATURE_NUM;
 #endif
 
-    const uint filter_size = INPUT_DEPTH * KERNEL_HEIGHT * KERNEL_WIDTH;
+    const uint filter_size = INPUT_FEATURE_NUM * KERNEL_HEIGHT * KERNEL_WIDTH;
     
 #if   defined BIAS_PER_OUTPUT
-    const uint bias_index = z*OUT_WIDTH*OUT_HEIGHT + y*OUT_WIDTH + x;
+    const uint bias_index = z*OUTPUT_SIZE_X*OUTPUT_SIZE_Y + y*OUTPUT_SIZE_X + x;
 #elif defined BIAS_PER_OFM
     const uint bias_index = z;
 #endif
@@ -49,23 +49,23 @@ KERNEL(convolution)(
     const int input_x = x * STRIDE_X - INPUT_PADDING_X;
     const int input_y = y * STRIDE_Y - INPUT_PADDING_Y;
 
-    const uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * INPUT_DEPTH;
+    const uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * INPUT_FEATURE_NUM;
     const uint filter_offset = z*filter_size;
     const uint input_offset = w*INPUT_BATCH_PITCH + INPUT_OFFSET + in_split_offset;
 
-    for (uint k = 0; k < INPUT_DEPTH; ++k)
+    for (uint k = 0; k < INPUT_FEATURE_NUM; ++k)
     {
         for (uint j = 0; j < KERNEL_HEIGHT ; ++j)
         {
             const int input_offset_y = input_y + j * DILATION_Y;
-            const bool zero_y = input_offset_y >= INPUT_HEIGHT || input_offset_y < 0;
+            const bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
 
             if(!zero_y)
             {
                 for (uint i = 0; i < KERNEL_WIDTH ; ++i)
                 {
                     const int input_offset_x = input_x + i * DILATION_X;
-                    const bool zero_x = input_offset_x >= INPUT_WIDTH || input_offset_x < 0;
+                    const bool zero_x = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
 
                     if(!zero_x)
                     {
@@ -78,7 +78,7 @@ KERNEL(convolution)(
         }
     }
     
-    const uint out_split_offset = split_idx * OUT_FEATURE_PITCH * OUT_DEPTH;
-    const uint dst_index = w*OUT_BATCH_PITCH + z*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x + OUT_OFFSET + out_split_offset;
+    const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * OUTPUT_FEATURE_NUM;
+    const uint dst_index = w*OUTPUT_BATCH_PITCH + z*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x + OUTPUT_OFFSET + out_split_offset;
     output[dst_index] = FUNC_CALL(activation_function)(dotProd, NL_M, NL_N);
 }

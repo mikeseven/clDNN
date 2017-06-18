@@ -80,7 +80,7 @@ KERNEL (fully_connected_gpu_yxfn)(
             }
         }
     }
-    uint output_idx = OUTPUT_OFFSET + batch_id*OUT_BATCH_PITCH + neuronIdx*OUT_FEATURE_PITCH;
+    uint output_idx = OUTPUT_OFFSET + batch_id*OUTPUT_BATCH_PITCH + neuronIdx*OUTPUT_FEATURE_PITCH;
 
 #if BIAS_TERM
     result += bias[neuronIdx];

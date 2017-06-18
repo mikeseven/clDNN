@@ -63,7 +63,7 @@ KERNEL (lrn_gpu_across_channel_ref)(const __global UNIT_TYPE* input, __global UN
     acc = mad(acc, UNIT_CVT_FUNC(ALPHA_DIV_BY_SIZE), UNIT_CVT_FUNC(K));
     acc = native_powr(acc, -UNIT_CVT_FUNC(BETA));
 
-    const uint output_idx = OUTPUT_OFFSET + batch_id*OUT_BATCH_PITCH + feature_id*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x*OUT_X_PITCH;
+    const uint output_idx = OUTPUT_OFFSET + batch_id*OUTPUT_BATCH_PITCH + feature_id*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH;
     output[output_idx] = acc * input[input_id];
 }
 

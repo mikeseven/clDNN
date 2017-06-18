@@ -117,7 +117,7 @@ KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     #endif
 #endif
 
-    const uint output_pos = OUTPUT_OFFSET + b*OUT_BATCH_PITCH + f*OUT_FEATURE_PITCH + y*OUT_Y_PITCH + x*OUT_X_PITCH;
+    const uint output_pos = OUTPUT_OFFSET + b*OUTPUT_BATCH_PITCH + f*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH;
     output[output_pos] = result;
 }
 

@@ -20,15 +20,13 @@
  
 namespace KernelSelector 
 {    
-#if 0
-    class ReorderKernel : public IGKReorderKernelBase
+    class ReorderKernelRef : public IGKReorderKernelBase
     {
     public:
-        ReorderKernel() : IGKReorderKernelBase("reorder") {}
-        virtual ~ReorderKernel() {}
+        ReorderKernelRef() : IGKReorderKernelBase("reorder_data") {}
+        virtual ~ReorderKernelRef() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     };
-#endif
 }

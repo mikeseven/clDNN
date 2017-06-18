@@ -18,12 +18,14 @@
  
 namespace KernelSelector 
 {
-#if 0
-    ParamsKey ReorderKernel::GetSupportedKey() const
+    ParamsKey ReorderKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
+        k.SetInputDataType(Datatype::F16);
+        k.SetInputDataType(Datatype::F32);
+        k.SetOutputDataType(Datatype::F16);
+        k.SetOutputDataType(Datatype::F32);
+        k.SetDifferentTypesSupport();
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
         k.SetOffsetSupport();
@@ -32,27 +34,39 @@ namespace KernelSelector
         return k;
     }
 
-    KernelsData ReorderKernel::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData ReorderKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
     {
         assert(params.GetType() == KernelType::REORDER);
 
-        KernelData kd = KernelData::Default<ReorderVxParams>(params, 1);
+        KernelData kd = KernelData::Default<ReorderParams>(params, 1);
+        ReorderParams& newParams = *static_cast<ReorderParams*>(kd.params.get());
 
-        ReorderVxParams& newParams = *static_cast<ReorderVxParams*>(kd.params.get());
+        std::string jit;
 
-        std::stringstream jit;
-        jit << GetBaseJit(newParams);
-        jit << "#define REORDER_MODE_" << toString(newParams.reorderParams.mode);
+        auto entry_point = get_entry_point(kernel_name, newParams.layerID);
 
-        const auto& in = newParams.input;
+        try
+        {
+            auto cldnn_jit = get_jit_constants(newParams);
+            jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
+        }
+        catch (const std::runtime_error&)
+        {
+            return KernelsData();
+        }
+
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(in.x().v, in.y().v, in.feature().v*in.batch().v);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "reorder");
-        kernel.args_desc = GetArgumentDesc(1, false, false);
+        kernel.work_groups.global = cl::NDRange(out.batch().v, out.feature().v, out.x().v*out.y().v);
+        kernel.kernel_string = get_kernel_string(kernel_name, jit, entry_point, ROUND_ROBIN);
+        kernel.args_desc = get_args_desc(1, false, false);
+        if (newParams.reorderParams.mode == MeanSubtructMode::IN_BUFFER)
+        {
+            kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::BIAS, 0 });
+        }
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         return{ kd };
     }
-#endif
 }

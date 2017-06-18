@@ -22,11 +22,11 @@ KERNEL(activation)(__global DATA_TYPE* input, __global DATA_TYPE* output)
 {
     const unsigned int x = get_global_id(0) * NUM_COLS_WI;
     const unsigned int y = get_global_id(1);
-    const unsigned int z = get_global_id(2) / OUT_BATCH;
-    const unsigned int w = get_global_id(2) / OUT_DEPTH;
+    const unsigned int z = get_global_id(2) / OUTPUT_BATCH_NUM;
+    const unsigned int w = get_global_id(2) / OUTPUT_FEATURE_NUM;
 
     unsigned int input_offset = x  + y * INPUT_Y_PITCH + INPUT_OFFSET; 
-    unsigned int out_offset = x  + y * OUT_Y_PITCH + OUT_OFFSET; 
+    unsigned int out_offset = x  + y * OUTPUT_Y_PITCH + OUTPUT_OFFSET; 
 
     CAT(DATA_TYPE, 4) v = ((__global CAT(DATA_TYPE,4)*) (input + input_offset))[0];
     int m = NL_M;
@@ -37,7 +37,7 @@ KERNEL(activation)(__global DATA_TYPE* input, __global DATA_TYPE* output)
 #if (INPUT_WIDTH_MOD_COLS_WI == 0)
     *((__global CAT(DATA_TYPE,4)*)(output + out_offset)) = v;
 #else
-    if ((x + NUM_COLS_WI) < INPUT_WIDTH)
+    if ((x + NUM_COLS_WI) < INPUT_SIZE_X)
     {
         *((__global CAT(DATA_TYPE,4)*)(output + out_offset)) = v;
     }

@@ -57,14 +57,13 @@ struct normalize_gpu : typed_primitive_impl<normalize>
         auto norm_optional_params = GetDefaultOptionalParams<KernelSelector::NormalizeOptionalParams>(arg.get_program());
 
         const auto& scale_layout  = arg.scale().get_output_layout();
-        const auto& scale_padding = arg.scale().get_output_layout().data_padding;
 
         norm_params.normParams.normMode = 
             arg.get_primitive()->across_spatial ?
             KernelSelector::NormalizeMode::ACROSS_SPATIAL :
             KernelSelector::NormalizeMode::WITHIN_SPATIAL;
         norm_params.normParams.epsilon = arg.get_primitive()->epsilon;
-        norm_params.normParams.scale_table = tensor_2_data_tensor(scale_layout, scale_padding, 1).flatten_fyx_2_f();
+        norm_params.normParams.scale_table = tensor_2_data_tensor(scale_layout).flatten_fyx_2_f();
 
         auto& kernel_selector = KernelSelector::NormalizeKernelSelctor::instance();
         auto best_kernels = kernel_selector.GetBestKernels(norm_params, norm_optional_params);

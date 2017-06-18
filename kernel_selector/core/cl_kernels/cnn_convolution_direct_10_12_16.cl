@@ -51,7 +51,7 @@ KERNEL(convolution_f16_10x12x16)(
 
     half blockC[TILE_M * TILE_K] = { 0 };
 
-    const uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * INPUT_DEPTH;
+    const uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * INPUT_FEATURE_NUM;
     uint src0_offset_tile = INPUT_OFFEST_FOR_PADDED_PART    // data offset
      + in_split_offset
      + batch_id * INPUT_BATCH_PITCH                         // batch offset
@@ -141,20 +141,20 @@ KERNEL(convolution_f16_10x12x16)(
             } )
         } )
     }
-    while ( ++patch_depth < INPUT_DEPTH );
+    while ( ++patch_depth < INPUT_FEATURE_NUM );
 
     // Dst resembles a cube of width x height x (output channel * batches).  Each tile writes:
     // TILE_K x TILE_M x SIMD.  Partial writes most likely generated if output padding used.
     // Group stores into vectors to expedite writeback.  One large write is faster than many
     // small saves. Right-most column may be smaller if output width not divisible by tile width.
-    const uint out_split_offset = split_idx * OUT_FEATURE_PITCH * OUT_DEPTH;
-    __global half *out = dst + OUT_OFFSET + out_split_offset +
-     + batch_id * OUT_BATCH_PITCH            // batch offset
-     + out_fm * OUT_FEATURE_PITCH              // channel offset
-     + ( global_y * TILE_M ) * OUT_Y_PITCH // y offset
+    const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * OUTPUT_FEATURE_NUM;
+    __global half *out = dst + OUTPUT_OFFSET + out_split_offset +
+     + batch_id * OUTPUT_BATCH_PITCH            // batch offset
+     + out_fm * OUTPUT_FEATURE_PITCH              // channel offset
+     + ( global_y * TILE_M ) * OUTPUT_Y_PITCH // y offset
      + ( global_x * TILE_K );                // x offset
 
-    if ( batch_id < OUT_BATCH && out_fm < OUT_DEPTH )
+    if ( batch_id < OUTPUT_BATCH_NUM && out_fm < OUTPUT_FEATURE_NUM )
     {
 #if !defined OUTPUT_BIASED
         const half bias = 0.h;
@@ -162,26 +162,26 @@ KERNEL(convolution_f16_10x12x16)(
         const half bias = biases[out_fm];
 #endif
         
-        if ( OUT_WIDTH % TILE_K == 0 ||
+        if ( OUTPUT_SIZE_X % TILE_K == 0 ||
              group_x < max_group_x - 1 )
         {
             typedef CAT( half, TILE_K ) half_t;
             for( unsigned y = 0; y < TILE_M; y++ )
             {
-                if ( global_y * TILE_M + y < OUT_HEIGHT )
+                if ( global_y * TILE_M + y < OUTPUT_SIZE_Y )
                 {
                     half_t vBlockC;
                     half *pvBlockC = (half*)&vBlockC;
                     for (unsigned i = 0; i < TILE_K; i++) 
                     {
                     #ifdef BIAS_PER_OUTPUT
-                        const unsigned bias_index = out_fm*OUT_WIDTH*OUT_HEIGHT + ( global_y * TILE_M + y )*OUT_WIDTH + ( global_x * TILE_K + i);
+                        const unsigned bias_index = out_fm*OUTPUT_SIZE_X*OUTPUT_SIZE_Y + ( global_y * TILE_M + y )*OUTPUT_SIZE_X + ( global_x * TILE_K + i);
                         const half bias = biases[bias_index];
                     #endif
                         pvBlockC[i] = FUNC_CALL(activation_function)(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
-                        ((__global half*)(out + y * OUT_Y_PITCH))[i] = pvBlockC[i];
+                        ((__global half*)(out + y * OUTPUT_Y_PITCH))[i] = pvBlockC[i];
                     }
-                    //*(__global half_t*)(out + y * OUT_Y_PITCH) = vBlockC;
+                    //*(__global half_t*)(out + y * OUTPUT_Y_PITCH) = vBlockC;
                 }
             }
         }
@@ -190,20 +190,20 @@ KERNEL(convolution_f16_10x12x16)(
             typedef CAT( half, RIGHT_PARTIAL_TILE_K ) half_t;
             for( unsigned y = 0; y < TILE_M; y++ )
             {
-                if ( global_y * TILE_M + y < OUT_HEIGHT )
+                if ( global_y * TILE_M + y < OUTPUT_SIZE_Y )
                 {
                     half_t vBlockC;
                     half *pvBlockC = (half*)&vBlockC;
                     for (unsigned i = 0; i < RIGHT_PARTIAL_TILE_K; i++) 
                     {
                     #ifdef BIAS_PER_OUTPUT
-                        const unsigned bias_index = out_fm*OUT_WIDTH*OUT_HEIGHT + ( global_y * TILE_M + y )*OUT_WIDTH + ( global_x * TILE_K + i);
+                        const unsigned bias_index = out_fm*OUTPUT_SIZE_X*OUTPUT_SIZE_Y + ( global_y * TILE_M + y )*OUTPUT_SIZE_X + ( global_x * TILE_K + i);
                         const half bias = biases[bias_index];
                     #endif
                         pvBlockC[i] = FUNC_CALL(activation_function)(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
-                        ((__global half*)(out + y * OUT_Y_PITCH))[i] = pvBlockC[i];
+                        ((__global half*)(out + y * OUTPUT_Y_PITCH))[i] = pvBlockC[i];
                     }
-                    //*(__global half_t*)(out + y * OUT_Y_PITCH) = vBlockC;
+                    //*(__global half_t*)(out + y * OUTPUT_Y_PITCH) = vBlockC;
                 }
             }
         }
