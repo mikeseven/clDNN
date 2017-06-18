@@ -377,6 +377,8 @@ template <>
 inline std::string get_type_name<char>() { return "char"; }
 template <>
 inline std::string get_type_name<short>() { return "short"; }
+template <>
+inline std::string get_type_name<uint16_t>() { return "unsigned short"; }
 
 template <typename T>
 class vector_data_jit_constant : public jit_constant 
