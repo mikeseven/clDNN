@@ -71,7 +71,7 @@ struct eltwise_gpu : typed_primitive_impl<eltwise>
         const auto& primitive = arg.get_primitive();
         cldnn_activation_to_ks(primitive, ew_params);
 
-        ew_params.eltwiseParams.push_back({ 
+        ew_params.eltwiseParams.operations.push_back({ 
             { EltwiseParams::InputType::Buffer(0), EltwiseParams::InputType::Buffer(1) }, 
             convect_to_eltwise_mode(primitive->mode) });
 

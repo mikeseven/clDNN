@@ -65,18 +65,21 @@ namespace KernelSelector {
         }
 
         jit.add_constant(gpu::make_jit_constant("INPUTS_DECLS", inputs_decls));
+        jit.add_constant(gpu::make_jit_constant("ELTWISE_LAYOUT_BASED", params.eltwiseParams.layoutBased));
 
         std::string do_eltwise;
 
-        if (params.eltwiseParams.size() == 0)
+        auto& operations = params.eltwiseParams.operations;
+
+        if (operations.size() == 0)
         {
             throw std::runtime_error("eltwise without operations");
         }
 
-        for (size_t op_num = 0; op_num < params.eltwiseParams.size(); op_num++)
+        for (size_t op_num = 0; op_num < operations.size(); op_num++)
         {
             const std::string op_num_str = std::to_string(op_num);
-            const auto& ew = params.eltwiseParams[op_num];
+            const auto& ew = operations[op_num];
             if (ew.inputs.size() != get_number_of_inputs(ew.mode))
             {
                 throw std::runtime_error("error number of inputs to elwise params");
@@ -95,7 +98,7 @@ namespace KernelSelector {
                     {
                         throw std::runtime_error("input index is greater than the provided inputs");
                     }
-                    jit.add_constant(gpu::make_jit_constant(name, "input" + std::to_string(input_idx) + "[GET_INDEX(INPUT, " + std::to_string(input.index) +")]"));
+                    jit.add_constant(gpu::make_jit_constant(name, "input" + std::to_string(input.index) + "[GET_INDEX(INPUT, " + std::to_string(input.index) +")]"));
                     break;
                 case EltwiseInputMode::INTERMEDIATE_RESULTS_INDEX:
                     jit.add_constant(gpu::make_jit_constant(name, "tmp" + std::to_string(input.index)));
@@ -130,7 +133,7 @@ namespace KernelSelector {
             do_eltwise += "\\\n\t" + opname + ";";
         }
 
-        do_eltwise += "\\\n\tres = tmp" + std::to_string(params.eltwiseParams.size() - 1) + ";";
+        do_eltwise += "\\\n\tres = tmp" + std::to_string(operations.size() - 1) + ";";
 
         jit.add_constant(gpu::make_jit_constant("DO_ELTWISE", do_eltwise));
 
@@ -167,18 +170,25 @@ namespace KernelSelector {
 
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        std::vector<size_t> gws;
-        for (const auto& o : out.dims)
+        if (newParams.eltwiseParams.layoutBased)
         {
-            gws.push_back(o.v);
+            kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
         }
-
-        for (size_t i = gws.size(); i < 4; i++)
+        else
         {
-            gws.push_back(1U);
-        }
+            std::vector<size_t> gws;
+            for (const auto& o : out.dims)
+            {
+                gws.push_back(o.v);
+            }
 
-        kernel.work_groups.global = cl::NDRange(gws[0], gws[1], gws[2] * gws[3]);
+            for (size_t i = gws.size(); i < 4; i++)
+            {
+                gws.push_back(1U);
+            }
+
+            kernel.work_groups.global = cl::NDRange(gws[0], gws[1], gws[2] * gws[3]);
+        }
         kernel.kernel_string = get_kernel_string(kernel_name, jit, entry_point, ROUND_ROBIN);
         kernel.args_desc = get_args_desc((uint32_t)newParams.inputs.size(), false, false);
 

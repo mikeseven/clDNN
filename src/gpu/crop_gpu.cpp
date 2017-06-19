@@ -53,7 +53,7 @@ struct crop_gpu : typed_primitive_impl<crop>
         auto ew_params = GetDefaultParams<EltwiseParams>(arg, 1);
         auto ew_optional_params = GetDefaultOptionalParams<EltwiseOptionalParams>(arg.get_program());
 
-        ew_params.eltwiseParams.push_back({{ EltwiseParams::InputType::Buffer(0) }, EltwiseMode::ASSIGN });
+        ew_params.eltwiseParams.operations.push_back({{ EltwiseParams::InputType::Buffer(0) }, EltwiseMode::ASSIGN });
 
         const auto& input_layout = arg.input().get_output_layout();
         ew_params.inputs[0] = tensor_2_data_tensor(input_layout, 1, arg.get_primitive()->offsets);
