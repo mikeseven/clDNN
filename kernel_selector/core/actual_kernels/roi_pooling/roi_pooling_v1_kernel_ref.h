@@ -17,20 +17,21 @@
 #pragma once
 
 #include "igk_kernel_base.h"
-#include "kernel_selector_params.h"
 
-namespace KernelSelector 
+namespace KernelSelector
 {
-    class IGKLRNKernelBase : public IGKKernelBase
+    class ROIPoolingV1KernelRef : public IGKKernelBase
     {
     public:
-        using IGKKernelBase::IGKKernelBase;
-        virtual ~IGKLRNKernelBase() {}
+        ROIPoolingV1KernelRef() : IGKKernelBase("roi_pooling_v1_ref") {}
+        virtual ~ROIPoolingV1KernelRef() {}
 
         using DispatchData = CommonDispatchData;
 
+        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual ParamsKey GetSupportedKey() const override;
+
     protected:
-        jit_constants get_jit_constants(const LRNParams& params, DispatchData kd) const;
-        DispatchData set_default(const LRNParams& params) const;
+        jit_constants get_jit_constants(const ROIPoolingV1Params& params) const;
     };
 }

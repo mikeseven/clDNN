@@ -16,21 +16,22 @@
 
 #pragma once
 
-#include "igk_kernel_base.h"
-#include "kernel_selector_params.h"
-
+#include "kernel_selector.h"
+ 
 namespace KernelSelector 
 {
-    class IGKLRNKernelBase : public IGKKernelBase
+    class ROIPoolingV1KernelSelctor : public KernelSelctorBase
     {
     public:
-        using IGKKernelBase::IGKKernelBase;
-        virtual ~IGKLRNKernelBase() {}
+        static ROIPoolingV1KernelSelctor &instance() {
+            static ROIPoolingV1KernelSelctor instance_;
+            return instance_;
+        }
 
-        using DispatchData = CommonDispatchData;
+        ROIPoolingV1KernelSelctor();
 
-    protected:
-        jit_constants get_jit_constants(const LRNParams& params, DispatchData kd) const;
-        DispatchData set_default(const LRNParams& params) const;
+        virtual ~ROIPoolingV1KernelSelctor() {}
+
+        virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
     };
 }

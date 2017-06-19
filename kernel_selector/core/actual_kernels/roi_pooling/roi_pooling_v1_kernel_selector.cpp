@@ -14,23 +14,18 @@
 // limitations under the License.
 */
 
-#pragma once
-
-#include "igk_kernel_base.h"
-#include "kernel_selector_params.h"
-
+#include "roi_pooling_v1_kernel_selector.h"
+#include "roi_pooling_v1_kernel_ref.h"
+ 
 namespace KernelSelector 
 {
-    class IGKLRNKernelBase : public IGKKernelBase
+    ROIPoolingV1KernelSelctor::ROIPoolingV1KernelSelctor()
     {
-    public:
-        using IGKKernelBase::IGKKernelBase;
-        virtual ~IGKLRNKernelBase() {}
+        Attach<ROIPoolingV1KernelRef>();
+    }
 
-        using DispatchData = CommonDispatchData;
-
-    protected:
-        jit_constants get_jit_constants(const LRNParams& params, DispatchData kd) const;
-        DispatchData set_default(const LRNParams& params) const;
-    };
+    KernelsData ROIPoolingV1KernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    {
+        return GetNaiveBestKernel(params, options, KernelType::ROI_POOLING);
+    }
 }
