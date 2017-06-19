@@ -82,9 +82,9 @@ struct scale_gpu : typed_primitive_impl<scale>
             throw std::runtime_error("Unsupported - didn't find a proper kernel for this arguments");
         }
 
-        auto crop = new scale_gpu(arg, best_kernels[0]);
+        auto scale = new scale_gpu(arg, best_kernels[0]);
 
-        return crop;
+        return scale;
     }
 };
 
