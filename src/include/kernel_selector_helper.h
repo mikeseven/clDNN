@@ -121,10 +121,11 @@ static inline cldnn::format weight_layput_2_tensor_format(KernelSelector::Weight
     }
 }
 
-inline KernelSelector::DataTensor tensor_2_data_tensor(const layout& l, uint32_t split = 1)
+inline KernelSelector::DataTensor tensor_2_data_tensor(const layout& l, uint32_t split = 1, const tensor additional_offest = {})
 {
     const auto& pad = l.data_padding;
     const auto& vals = l.size.sizes(l.format);
+    const auto& add_offsets = additional_offest.sizes(l.format);
     const auto& lower_pad = pad.lower_size().sizes(l.format);
     const auto& upper_pad = pad.upper_size().sizes(l.format);
     const auto ks_layout = tensor_format_2_data_layput(l.format);
@@ -143,7 +144,7 @@ inline KernelSelector::DataTensor tensor_2_data_tensor(const layout& l, uint32_t
         elm.v = static_cast<size_t>(d);
         elm.pitch = pitch;
 
-        offset += pitch*lp;
+        offset += pitch*(lp + add_offsets[tensor_index]);
         pitch *= (d + lp + up);
     }
 

@@ -16,6 +16,7 @@
 
 #include "include/cnn_common.cl"
 
+// TODO: move it from layout based to memory based
 KERNEL(activation)(
     __global DATA_TYPE* input, 
     __global DATA_TYPE* output
@@ -35,7 +36,7 @@ KERNEL(activation)(
 #endif
 
     const unsigned src_index = batch*INPUT_BATCH_PITCH + feature*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x*INPUT_X_PITCH + INPUT_OFFSET;
-    const unsigned dst_index = batch*OUTPUT_BATCH_PITCH + feature*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*INPUT_X_PITCH + OUTPUT_OFFSET;
+    const unsigned dst_index = batch*OUTPUT_BATCH_PITCH + feature*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH + OUTPUT_OFFSET;
 
 #ifdef ACTIVATION_FUNCTION_PRELU 
     float nl_m = (float)slope[feature];
