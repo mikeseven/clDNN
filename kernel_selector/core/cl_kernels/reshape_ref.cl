@@ -20,10 +20,10 @@ KERNEL (reshape_padding)(const __global UNIT_TYPE* input, __global UNIT_TYPE* ou
 {
     const uint d1 = get_global_id(0);
     const uint d2 = get_global_id(1);
-    const uint d3 = get_global_id(2) % INPUT_SIZES[2];
-    const uint d4 = get_global_id(2) / INPUT_SIZES[2];
+    const uint d3 = get_global_id(2) % INPUT0_SIZES[2];
+    const uint d4 = get_global_id(2) / INPUT0_SIZES[2];
 
-    uint linear = d1 + d2*INPUT_SIZES[0] + d3*INPUT_SIZES[0]*INPUT_SIZES[1] + d4*INPUT_SIZES[0]*INPUT_SIZES[1]*INPUT_SIZES[2];
+    uint linear = d1 + d2*INPUT0_SIZES[0] + d3*INPUT0_SIZES[0]*INPUT0_SIZES[1] + d4*INPUT0_SIZES[0]*INPUT0_SIZES[1]*INPUT0_SIZES[2];
 
     const uint od1 = linear % OUTPUT_SIZES[0]; linear /= OUTPUT_SIZES[0];
     const uint od2 = linear % OUTPUT_SIZES[1]; linear /= OUTPUT_SIZES[1];
@@ -31,15 +31,15 @@ KERNEL (reshape_padding)(const __global UNIT_TYPE* input, __global UNIT_TYPE* ou
     const uint od4 = linear;
     
     uint input_offset =  INPUT_OFFSET +
-                         d1*INPUT_PITCHS[0] +
-                         d2*INPUT_PITCHS[1] +
-                         d3*INPUT_PITCHS[2] +
-                         d4*INPUT_PITCHS[3];
+                         d1*INPUT0_PITCHES[0] +
+                         d2*INPUT0_PITCHES[1] +
+                         d3*INPUT0_PITCHES[2] +
+                         d4*INPUT0_PITCHES[3];
     uint output_offset = OUTPUT_OFFSET +
-                         od1*OUTPUT_PITCHS[0] +
-                         od2*OUTPUT_PITCHS[1] +
-                         od3*OUTPUT_PITCHS[2] +
-                         od4*OUTPUT_PITCHS[3];
+                         od1*OUTPUT_PITCHES[0] +
+                         od2*OUTPUT_PITCHES[1] +
+                         od3*OUTPUT_PITCHES[2] +
+                         od4*OUTPUT_PITCHES[3];
     
     output[output_offset] = input[input_offset];
 }

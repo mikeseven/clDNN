@@ -14,20 +14,22 @@
 // limitations under the License.
 */
 
-#include "eltwise_kernel_selector.h"
-#include "eltwise_kernel_ref.h"
-#include "generic_eltwise_kernel_ref.h"
- 
-namespace KernelSelector 
-{
-    EltwiseKernelSelctor::EltwiseKernelSelctor()
-    {
-        //Attach<EltwiseKernelRef>();
-        Attach<GenericEltwiseKernelRef>();
-    }
+#pragma once
 
-    KernelsData EltwiseKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+#include "igk_kernel_base.h"
+
+namespace KernelSelector
+{
+    class GenericEltwiseKernelRef : public IGKKernelBase
     {
-        return GetNaiveBestKernel(params, options, KernelType::ELTWISE);
-    }
+    public:
+        GenericEltwiseKernelRef() : IGKKernelBase("eltwise_ref") {}
+        virtual ~GenericEltwiseKernelRef() {}
+
+        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual ParamsKey GetSupportedKey() const override;
+
+    protected:
+        jit_constants get_jit_constants(const EltwiseParams& params) const;
+    };
 }

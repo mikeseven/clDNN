@@ -34,8 +34,8 @@ namespace clDNN
             params.inDims,
             params.eltwiseParams.inDesc1, 
             ksParams.inputs[1]);
-        ksParams.eltwiseParams.mode = params.eltwiseParams.mode;
-        ksParams.eltwiseParams.scalar = params.eltwiseParams.scalar;
+//         ksParams.eltwiseParams.mode = params.eltwiseParams.mode;
+//         ksParams.eltwiseParams.scalar = params.eltwiseParams.scalar;
 
         KernelSelector::EltwiseOptionalParams ksOptParams;
 

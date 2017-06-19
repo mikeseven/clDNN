@@ -17,7 +17,7 @@
 #include "crop_inst.h"
 #include "kernel.h"
 #include "implementation_map.h"
-#include "activation/activation_kernel_selector.h"
+#include "eltwise/eltwise_kernel_selector.h"
 #include "kernel_selector_helper.h"
 
 using namespace cldnn;
@@ -49,15 +49,24 @@ struct crop_gpu : typed_primitive_impl<crop>
 
     static primitive_impl* create(const crop_node& arg) 
     { 
-        auto activation_params = GetDefaultParams<KernelSelector::ActivationParams>(arg, 1);
-        auto activation_optional_params = GetDefaultOptionalParams<KernelSelector::ActivationOptionalParams>(arg.get_program());
-        activation_params.activationFunc = KernelSelector::ActivationFunction::NONE;
+        auto ew_params = GetDefaultParams<KernelSelector::EltwiseParams>(arg, 1);
+        auto ew_optional_params = GetDefaultOptionalParams<KernelSelector::EltwiseOptionalParams>(arg.get_program());
+
+        KernelSelector::EltwiseParams::InputType input_type;
+        input_type.mode = KernelSelector::EltwiseInputMode::INPUT_BUFFER;
+        input_type.index = 0;
+        KernelSelector::EltwiseParams::Node node;
+        node.mode = KernelSelector::EltwiseMode::ASSIGN;
+        node.inputs.push_back(input_type);
+
+        ew_params.eltwiseParams.push_back(node);
 
         const auto& input_layout = arg.input().get_output_layout();
-        activation_params.inputs[0] = tensor_2_data_tensor(input_layout, 1, arg.get_primitive()->offsets);
+        ew_params.inputs[0] = tensor_2_data_tensor(input_layout, 1, arg.get_primitive()->offsets);
 
-        auto& kernel_selector = KernelSelector::ActivationKernelSelctor::instance();
-        auto best_kernels = kernel_selector.GetBestKernels(activation_params, activation_optional_params);
+        auto& kernel_selector = KernelSelector::EltwiseKernelSelctor::instance();
+        auto best_kernels = kernel_selector.GetBestKernels(ew_params, ew_optional_params);
+
         if (best_kernels.empty())
         {
             throw std::runtime_error("Unsupported - didn't find a proper kernel for this arguments");

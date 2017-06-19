@@ -22,8 +22,8 @@ KERNEL (reshape_padding)(const __global UNIT_TYPE* input, __global UNIT_TYPE* ou
     
     input_indices[0] = get_global_id(0);
     input_indices[1] = get_global_id(1);
-    input_indices[2] = get_global_id(2) % INPUT_SIZES[2];
-    input_indices[3] = get_global_id(2) / INPUT_SIZES[2];
+    input_indices[2] = get_global_id(2) % INPUT0_SIZES[2];
+    input_indices[3] = get_global_id(2) / INPUT0_SIZES[2];
     
     output_indices[0] = input_indices[PERMUTE_ORDER[0]];
     output_indices[1] = input_indices[PERMUTE_ORDER[1]];
@@ -31,15 +31,15 @@ KERNEL (reshape_padding)(const __global UNIT_TYPE* input, __global UNIT_TYPE* ou
     output_indices[3] = input_indices[PERMUTE_ORDER[3]];
     
     uint input_offset =  INPUT_OFFSET +
-                         input_indices[0]*INPUT_PITCHS[0] +
-                         input_indices[1]*INPUT_PITCHS[1] +
-                         input_indices[2]*INPUT_PITCHS[2] +
-                         input_indices[3]*INPUT_PITCHS[3];
+                         input_indices[0]*INPUT0_PITCHES[0] +
+                         input_indices[1]*INPUT0_PITCHES[1] +
+                         input_indices[2]*INPUT0_PITCHES[2] +
+                         input_indices[3]*INPUT0_PITCHES[3];
     uint output_offset = OUTPUT_OFFSET +
-                         output_indices[0]*OUTPUT_PITCHS[0] +
-                         output_indices[1]*OUTPUT_PITCHS[1] +
-                         output_indices[2]*OUTPUT_PITCHS[2] +
-                         output_indices[3]*OUTPUT_PITCHS[3];
+                         output_indices[0]*OUTPUT_PITCHES[0] +
+                         output_indices[1]*OUTPUT_PITCHES[1] +
+                         output_indices[2]*OUTPUT_PITCHES[2] +
+                         output_indices[3]*OUTPUT_PITCHES[3];
 
     output[output_offset] = input[input_offset];
 }

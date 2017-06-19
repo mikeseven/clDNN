@@ -208,7 +208,7 @@ public:
             for (size_t i = _tensor.dims.size(); i < CLDNN_TENSOR_DIM_MAX; i++)
                 ss << 1 << ",";
             ss << " } ";
-            definitions.push_back({ _name + "_PITCHS", ss.str() });
+            definitions.push_back({ _name + "_PITCHES", ss.str() });
         }
 
         return definitions;
@@ -268,7 +268,7 @@ public:
             for (size_t i = _tensor.dims.size(); i < CLDNN_TENSOR_DIM_MAX; i++)
                 ss << 1 << ",";
             ss << " } ";
-            definitions.push_back({ _name + "_PITCHS", ss.str() });
+            definitions.push_back({ _name + "_PITCHES", ss.str() });
         }
 
         return definitions;

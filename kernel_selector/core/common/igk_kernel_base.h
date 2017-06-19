@@ -43,7 +43,7 @@ namespace KernelSelector {
         virtual ~IGKKernelBase() {}
 
     protected:
-        std::string create_jit_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_name) const;
+        std::string create_jit_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_name, bool inject_header = true) const;
         std::string get_entry_point(const std::string& template_name, const std::string& layer_id) const;
         ArgumentDescpirtor get_args_desc(uint32_t num_of_input, bool use_weights, bool use_bias) const;
         KernelString get_kernel_string(std::string kernel_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN) const;

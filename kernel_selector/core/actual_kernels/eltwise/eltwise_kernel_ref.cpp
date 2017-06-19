@@ -48,8 +48,9 @@ namespace KernelSelector {
             << "#define INPUT_ROW_PITCH1 (" << newParams.inputs[1].y().pitch << ")\n"
             << "#define INPUT_SLICE_PITCH1 (" << newParams.inputs[1].feature().pitch << ")\n"
             << "#define INPUT_BATCH_PITCH1 (" << newParams.inputs[1].batch().pitch << ")\n"
-            << "#define ELTWISE_MODE_" << toString(newParams.eltwiseParams.mode) << "\n"
-            << "#define SCALAR (" << newParams.eltwiseParams.scalar << ")\n";
+            //<< "#define ELTWISE_MODE_" << toString(newParams.eltwiseParams.mode) << "\n"
+            //<< "#define SCALAR (" << newParams.eltwiseParams.scalar << ")\n"
+            ;
 
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];

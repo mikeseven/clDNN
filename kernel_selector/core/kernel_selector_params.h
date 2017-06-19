@@ -791,15 +791,22 @@ namespace KernelSelector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct EltwiseParams : public BaseParams
     {
-        EltwiseParams() : BaseParams(KernelType::ELTWISE), eltwiseParams() {}
+        EltwiseParams() : BaseParams(KernelType::ELTWISE) {}
 
-        struct DedicatedParams
+        struct InputType
         {
-            EltwiseMode mode   = EltwiseMode::ADD;
-            float       scalar = 0;
+            EltwiseInputMode mode   = EltwiseInputMode::INPUT_BUFFER;
+            uint32_t         index  = 0; // for inputs/temp results;
+            float            scalar = 0.f;
         };
 
-        DedicatedParams eltwiseParams;
+        struct Node
+        {
+            std::vector<InputType> inputs;
+            EltwiseMode mode = EltwiseMode::ADD;
+        };
+
+        std::vector<EltwiseParams::Node> eltwiseParams;
 
         virtual ParamsKey GetParamsKey() const
         {

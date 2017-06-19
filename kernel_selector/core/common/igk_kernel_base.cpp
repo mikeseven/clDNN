@@ -23,7 +23,8 @@
 namespace KernelSelector 
 {
 static const char* kernels_header = R"__krnl(
-#define CAT(x, y) x##y
+#define __CAT(x, y) x##y
+#define CAT(x, y) __CAT(x, y)
 #define LOOP1(VAR, STMT) (STMT); (VAR)++;
 #define LOOP2(VAR, STMT) LOOP1(VAR, STMT); (STMT); (VAR)++;
 #define LOOP3(VAR, STMT) LOOP2(VAR, STMT); (STMT); (VAR)++;
@@ -215,7 +216,7 @@ static const char* kernels_header = R"__krnl(
         return kernel_id;
     }
 
-    std::string IGKKernelBase::create_jit_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_id) const
+    std::string IGKKernelBase::create_jit_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_id, bool inject_header) const
     {
         class code_builder code;
         code.add_line("\n//====================================================")
@@ -230,7 +231,14 @@ static const char* kernels_header = R"__krnl(
             code.value_macro(definition.first, definition.second);
         }
 
-        auto jit = std::string(kernels_header) + code.str();
+        std::string jit;
+
+        if (inject_header)
+        {
+            jit += std::string(kernels_header);
+        }
+
+        jit += code.str();
 
         return jit;
     }
@@ -301,7 +309,6 @@ static const char* kernels_header = R"__krnl(
         }
 
         jit_constants mem_consts{
-            gpu::make_jit_constant("INPUT",                     params.inputs[0]),
             gpu::make_jit_constant("OUTPUT",                    params.output),
             gpu::make_jit_constant("FP16_SUPPORTED",            static_cast<int>(fp16_unit_used)),   // TODO: use engine
             gpu::make_jit_constant("FP16_UNIT_USED",            static_cast<int>(fp16_unit_used)),
@@ -313,6 +320,17 @@ static const char* kernels_header = R"__krnl(
             gpu::make_jit_constant("RELU",                      static_cast<int>(relu)),
             gpu::make_jit_constant("NEGATIVE_SLOPE",            negative_slope),
         };
+
+        if (params.inputs.size() >= 1)
+        {
+            // default input is input 0
+            mem_consts.add_constant(gpu::make_jit_constant("INPUT", params.inputs[0]));
+        }
+
+        for (size_t i = 0; i < params.inputs.size(); i++)
+        {
+            mem_consts.add_constant(gpu::make_jit_constant("INPUT" + std::to_string(i), params.inputs[i]));
+        }
 
         return mem_consts;
     }
