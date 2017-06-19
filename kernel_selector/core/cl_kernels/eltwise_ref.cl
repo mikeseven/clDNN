@@ -16,12 +16,12 @@
 
 #include "include/cnn_common.cl"
 
-#define GET_INDEX(prefix, num)  \
-    CAT(CAT(prefix, num), _OFFSET) +            \
-    d1*CAT(CAT(prefix, num), _PITCHES)[0] +     \
-    d2*CAT(CAT(prefix, num), _PITCHES)[1] +     \
-    d3*CAT(CAT(prefix, num), _PITCHES)[2] +     \
-    d4*CAT(CAT(prefix, num), _PITCHES)[3]
+#define GET_INDEX(prefix, num)                                                      \
+    CAT(CAT(prefix, num), _OFFSET) +                                                \
+    (d1 % CAT(CAT(prefix, num), _SIZES)[0])*CAT(CAT(prefix, num), _PITCHES)[0] +    \
+    (d2 % CAT(CAT(prefix, num), _SIZES)[1])*CAT(CAT(prefix, num), _PITCHES)[1] +    \
+    (d3 % CAT(CAT(prefix, num), _SIZES)[2])*CAT(CAT(prefix, num), _PITCHES)[2] +    \
+    (d4 % CAT(CAT(prefix, num), _SIZES)[3])*CAT(CAT(prefix, num), _PITCHES)[3]
 
 
 KERNEL(eltwise)(

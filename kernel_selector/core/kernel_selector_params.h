@@ -798,12 +798,36 @@ namespace KernelSelector
             EltwiseInputMode mode   = EltwiseInputMode::INPUT_BUFFER;
             uint32_t         index  = 0; // for inputs/temp results;
             float            scalar = 0.f;
+
+            static InputType Buffer(uint32_t index) 
+            {
+                EltwiseParams::InputType input;
+                input.mode = EltwiseInputMode::INPUT_BUFFER;
+                input.index = index;
+                return input;
+            }
+
+            static InputType Intermediate(uint32_t index)
+            {
+                EltwiseParams::InputType input;
+                input.mode = EltwiseInputMode::INTERMEDIATE_RESULTS_INDEX;
+                input.index = index;
+                return input;
+            }
+
+            static InputType Scalar(float s)
+            {
+                EltwiseParams::InputType input;
+                input.mode = EltwiseInputMode::SCALAR;
+                input.scalar = s;
+                return input;
+            }
         };
 
         struct Node
         {
             std::vector<InputType> inputs;
-            EltwiseMode mode = EltwiseMode::ADD;
+            EltwiseMode mode;
         };
 
         std::vector<EltwiseParams::Node> eltwiseParams;

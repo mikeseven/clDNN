@@ -21,6 +21,7 @@
 #include "kernel_selector_helper.h"
 
 using namespace cldnn;
+using namespace KernelSelector;
 
 namespace neural
 {
@@ -30,7 +31,7 @@ struct crop_gpu : typed_primitive_impl<crop>
     const crop_node& outer;
     gpu::kernel _kernel;
 
-    crop_gpu(const crop_node& arg, const KernelSelector::KernelData& kd)
+    crop_gpu(const crop_node& arg, const KernelData& kd)
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string)
     {
@@ -49,22 +50,15 @@ struct crop_gpu : typed_primitive_impl<crop>
 
     static primitive_impl* create(const crop_node& arg) 
     { 
-        auto ew_params = GetDefaultParams<KernelSelector::EltwiseParams>(arg, 1);
-        auto ew_optional_params = GetDefaultOptionalParams<KernelSelector::EltwiseOptionalParams>(arg.get_program());
+        auto ew_params = GetDefaultParams<EltwiseParams>(arg, 1);
+        auto ew_optional_params = GetDefaultOptionalParams<EltwiseOptionalParams>(arg.get_program());
 
-        KernelSelector::EltwiseParams::InputType input_type;
-        input_type.mode = KernelSelector::EltwiseInputMode::INPUT_BUFFER;
-        input_type.index = 0;
-        KernelSelector::EltwiseParams::Node node;
-        node.mode = KernelSelector::EltwiseMode::ASSIGN;
-        node.inputs.push_back(input_type);
-
-        ew_params.eltwiseParams.push_back(node);
+        ew_params.eltwiseParams.push_back({{ EltwiseParams::InputType::Buffer(0) }, EltwiseMode::ASSIGN });
 
         const auto& input_layout = arg.input().get_output_layout();
         ew_params.inputs[0] = tensor_2_data_tensor(input_layout, 1, arg.get_primitive()->offsets);
 
-        auto& kernel_selector = KernelSelector::EltwiseKernelSelctor::instance();
+        auto& kernel_selector = EltwiseKernelSelctor::instance();
         auto best_kernels = kernel_selector.GetBestKernels(ew_params, ew_optional_params);
 
         if (best_kernels.empty())

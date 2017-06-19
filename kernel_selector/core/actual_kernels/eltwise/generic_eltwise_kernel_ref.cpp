@@ -37,17 +37,17 @@ namespace KernelSelector {
     {
         switch (m)
         {
-        case KernelSelector::EltwiseMode::ADD:
-        case KernelSelector::EltwiseMode::SUB:
-        case KernelSelector::EltwiseMode::MUL:
-        case KernelSelector::EltwiseMode::DIV:
-        case KernelSelector::EltwiseMode::MIN:
-        case KernelSelector::EltwiseMode::MAX:
-        case KernelSelector::EltwiseMode::POW:
-        case KernelSelector::EltwiseMode::MODULU:
+        case EltwiseMode::ADD:
+        case EltwiseMode::SUB:
+        case EltwiseMode::MUL:
+        case EltwiseMode::DIV:
+        case EltwiseMode::MIN:
+        case EltwiseMode::MAX:
+        case EltwiseMode::POW:
+        case EltwiseMode::MODULU:
             return 2;
-        case KernelSelector::EltwiseMode::SQRT:
-        case KernelSelector::EltwiseMode::ASSIGN:
+        case EltwiseMode::SQRT:
+        case EltwiseMode::ASSIGN:
             return 1;
         default:
             return 0;
@@ -59,9 +59,9 @@ namespace KernelSelector {
         auto jit = get_common_jit_constants(params);
         
         std::string inputs_decls;
-        for (size_t i = 0; i < params.inputs.size(); i++)
+        for (size_t op_num = 0; op_num < params.inputs.size(); op_num++)
         {
-            inputs_decls += "const __global UNIT_TYPE* input" + std::to_string(i) + ",";
+            inputs_decls += "const __global UNIT_TYPE* input" + std::to_string(op_num) + ", ";
         }
 
         jit.add_constant(gpu::make_jit_constant("INPUTS_DECLS", inputs_decls));
@@ -73,18 +73,18 @@ namespace KernelSelector {
             throw std::runtime_error("eltwise without operations");
         }
 
-        for (size_t i = 0; i < params.eltwiseParams.size(); i++)
+        for (size_t op_num = 0; op_num < params.eltwiseParams.size(); op_num++)
         {
-            const std::string i_str = std::to_string(i);
-            const auto& ew = params.eltwiseParams[i];
+            const std::string op_num_str = std::to_string(op_num);
+            const auto& ew = params.eltwiseParams[op_num];
             if (ew.inputs.size() != get_number_of_inputs(ew.mode))
             {
                 throw std::runtime_error("error number of inputs to elwise params");
             }
-            for (size_t j = 0; j < ew.inputs.size(); j++)
+            for (size_t input_idx = 0; input_idx < ew.inputs.size(); input_idx++)
             {
-                const auto& input = ew.inputs[i];
-                const std::string name = "INPUT_" + i_str + "_" + std::to_string(j);
+                const auto& input = ew.inputs[input_idx];
+                const std::string name = "INPUT_" + op_num_str + "_" + std::to_string(input_idx);
                 switch (input.mode)
                 {
                 case EltwiseInputMode::SCALAR:
@@ -95,9 +95,9 @@ namespace KernelSelector {
                     {
                         throw std::runtime_error("input index is greater than the provided inputs");
                     }
-                    jit.add_constant(gpu::make_jit_constant(name, "input" + std::to_string(j) + "[GET_INDEX(INPUT, " + std::to_string(input.index) +")]"));
+                    jit.add_constant(gpu::make_jit_constant(name, "input" + std::to_string(input_idx) + "[GET_INDEX(INPUT, " + std::to_string(input.index) +")]"));
                     break;
-                case EltwiseInputMode::TEMP_RESULTS_INDEX:
+                case EltwiseInputMode::INTERMEDIATE_RESULTS_INDEX:
                     jit.add_constant(gpu::make_jit_constant(name, "tmp" + std::to_string(input.index)));
                     break;
                 default:
@@ -105,32 +105,32 @@ namespace KernelSelector {
                 }
             }
 
-            std::string input0_str = "INPUT_" + i_str + "_0";
-            std::string input1_str = "INPUT_" + i_str + "_1";
+            std::string input0_str = "(UNIT_TYPE)INPUT_" + op_num_str + "_0";
+            std::string input1_str = "(UNIT_TYPE)INPUT_" + op_num_str + "_1";
 
-            std::string op = "UNIT_TYPE tmp" + i_str + " = ";
+            std::string op = "UNIT_TYPE tmp" + op_num_str + " = ";
             switch (ew.mode)
             {
-            case KernelSelector::EltwiseMode::ADD:      op += input0_str + " + " + input1_str; break;
-            case KernelSelector::EltwiseMode::SUB:      op += input0_str + " - " + input1_str; break;
-            case KernelSelector::EltwiseMode::MUL:      op += input0_str + " * " + input1_str; break;
-            case KernelSelector::EltwiseMode::DIV:      op += input0_str + " / " + input1_str; break;
-            case KernelSelector::EltwiseMode::MODULU:   op += input0_str + " % " + input1_str; break;
-            case KernelSelector::EltwiseMode::MIN:      op += "fmin(" + input0_str + ", " + input1_str + ")"; break;
-            case KernelSelector::EltwiseMode::MAX:      op += "fmax(" + input0_str + ", " + input1_str + ")"; break;
-            case KernelSelector::EltwiseMode::POW:      op += "pow("  + input0_str + ", " + input1_str + ")"; break;
-            case KernelSelector::EltwiseMode::SQRT:     op += "sqrt(" + input0_str + ")"; break;
-            case KernelSelector::EltwiseMode::ASSIGN:   op += input0_str; break;
+            case EltwiseMode::ADD:      op += input0_str + " + " + input1_str; break;
+            case EltwiseMode::SUB:      op += input0_str + " - " + input1_str; break;
+            case EltwiseMode::MUL:      op += input0_str + " * " + input1_str; break;
+            case EltwiseMode::DIV:      op += input0_str + " / " + input1_str; break;
+            case EltwiseMode::MODULU:   op += input0_str + " % " + input1_str; break;
+            case EltwiseMode::MIN:      op += "fmin(" + input0_str + ", " + input1_str + ")"; break;
+            case EltwiseMode::MAX:      op += "fmax(" + input0_str + ", " + input1_str + ")"; break;
+            case EltwiseMode::POW:      op += "pow("  + input0_str + ", " + input1_str + ")"; break;
+            case EltwiseMode::SQRT:     op += "sqrt(" + input0_str + ")"; break;
+            case EltwiseMode::ASSIGN:   op += input0_str; break;
             default:
                 break;;
             }
 
-            std::string opname = "OPERATION" + i_str;
+            std::string opname = "OPERATION" + op_num_str;
             jit.add_constant(gpu::make_jit_constant(opname, op));
-            do_eltwise += opname + ";";
+            do_eltwise += "\\\n\t" + opname + ";";
         }
 
-        do_eltwise += "res = tmp" + std::to_string(params.eltwiseParams.size() - 1) + ";";
+        do_eltwise += "\\\n\tres = tmp" + std::to_string(params.eltwiseParams.size() - 1) + ";";
 
         jit.add_constant(gpu::make_jit_constant("DO_ELTWISE", do_eltwise));
 
@@ -180,7 +180,7 @@ namespace KernelSelector {
 
         kernel.work_groups.global = cl::NDRange(gws[0], gws[1], gws[2] * gws[3]);
         kernel.kernel_string = get_kernel_string(kernel_name, jit, entry_point, ROUND_ROBIN);
-        kernel.args_desc = get_args_desc(1, false, false);
+        kernel.args_desc = get_args_desc((uint32_t)newParams.inputs.size(), false, false);
 
         kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
