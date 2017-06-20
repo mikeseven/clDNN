@@ -38,6 +38,11 @@ namespace KernelSelector
 
     KernelsData FullyConnected_fb_io_ref::GetKernelsData(const Params& params, const OptionalParams& optParams) const
     {
-        return GetCommonKernelsData(params, optParams, DataLayout::fb, WeightsLayout::io, FORCE_PRIORITY_6);
+        // TODO: it should be fb_io. but the original code use this kernel with yxfb and yxio 
+        //       (fb == fyxb flatten fyx, not yxfb flatten yxf).
+        //       the order of the add operation cause some numeric changes. in order to avoid them right now we use yxfb/oiyx instead.
+        // return GetCommonKernelsData(params, optParams, DataLayout::fb, WeightsLayout::io, FORCE_PRIORITY_6);
+
+        return GetCommonKernelsData(params, optParams, DataLayout::yxfb, WeightsLayout::yxio, FORCE_PRIORITY_6);
     }
 }

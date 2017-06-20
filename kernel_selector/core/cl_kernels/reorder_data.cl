@@ -30,15 +30,15 @@ inline uint FUNC(get_mean_index)(uint b, uint f, uint y, uint x)
 
 inline uint4 FUNC(reshape_mean)(uint b, uint f, uint y, uint x)
 {
-#if (MEAN_SUBTRUCT_DIMS == OUTPUT_DIMS)
+#if (INPUT_DIMS == MEAN_SUBTRUCT_DIMS)
     return (uint4)(b,f,y,x);
-#elif (MEAN_SUBTRUCT_DIMS == 4 && OUTPUT_DIMS == 2)
+#elif (INPUT_DIMS == 2 && MEAN_SUBTRUCT_DIMS == 4)
     uint _f  = f / (INPUT_SIZE_Y*INPUT_SIZE_X);
     uint _yx = f % (INPUT_SIZE_Y*INPUT_SIZE_X);
     uint _y = _yx / INPUT_SIZE_X;
     uint _x = _yx % INPUT_SIZE_X;
     return (uint4)(b,_f,_y,_x);
-#elif (MEAN_SUBTRUCT_DIMS == 2 && OUTPUT_DIMS == 4)
+#elif (INPUT_DIMS == 4 && MEAN_SUBTRUCT_DIMS == 2)
     uint _f = f*INPUT_SIZE_Y*INPUT_SIZE_X + y*INPUT_SIZE_X + x;
     return (uint4)(b,_f,0,0);
 #else
@@ -82,13 +82,13 @@ inline uint4 FUNC(reshape)(uint b, uint f, uint y, uint x)
 {
 #if (INPUT_DIMS == OUTPUT_DIMS)
     return (uint4)(b,f,y,x);
-#elif (INPUT_DIMS == 4 && OUTPUT_DIMS == 2)
+#elif (INPUT_DIMS == 2 && OUTPUT_DIMS == 4)
     uint _f  = f / (INPUT_SIZE_Y*INPUT_SIZE_X);
     uint _yx = f % (INPUT_SIZE_Y*INPUT_SIZE_X);
     uint _y = _yx / INPUT_SIZE_X;
     uint _x = _yx % INPUT_SIZE_X;
     return (uint4)(b,_f,_y,_x);
-#elif (INPUT_DIMS == 2 && OUTPUT_DIMS == 4)
+#elif (INPUT_DIMS == 4 && OUTPUT_DIMS == 2)
     uint _f = f*INPUT_SIZE_Y*INPUT_SIZE_X + y*INPUT_SIZE_X + x;
     return (uint4)(b,_f,0,0);
 #else
@@ -105,29 +105,31 @@ KERNEL (reorder_weights)(
 #endif
     )
 {
-    const unsigned b = get_global_id(0);
-    const unsigned f = get_global_id(1);
-#if   OUTPUT_DIMS == 2
+    const unsigned b = get_global_id(GWS_BATCH);
+    const unsigned f = get_global_id(GWS_FEATURE);
+#if   INPUT_DIMS == 2
     const unsigned y = 0;
     const unsigned x = 0;
-#elif OUTPUT_DIMS == 4
-    const unsigned y = get_global_id(2) / INPUT_SIZE_X;
-    const unsigned x = get_global_id(2) % INPUT_SIZE_X;
+#elif INPUT_DIMS == 4
+    const unsigned y = get_global_id(GWS_YX) / INPUT_SIZE_X;
+    const unsigned x = get_global_id(GWS_YX) % INPUT_SIZE_X;
 #endif
 
-    uint4 ir = FUNC_CALL(reshape)(b,f,y,x);
-    CALC_TYPE res = TO_CALC_TYPE(input[FUNC_CALL(get_input_index)(ir[0],ir[1],ir[2],ir[3])]);
+    uint4 ov = FUNC_CALL(reshape)(b,f,y,x);
+    const uint input_idx  = FUNC_CALL(get_input_index)(b, f, y, x);
+    const uint output_idx = FUNC_CALL(get_output_index)(ov[0],ov[1],ov[2],ov[3]);
+    CALC_TYPE res = TO_CALC_TYPE(input[input_idx]);
     
 #if   defined MEAN_SUBTRUCT_INSIDE_PARAMS
     res -= TO_CALC_TYPE(VALUE_TO_SUBTRACT[f % VALUE_TO_SUBTRACT_SIZE]);
 #elif defined MEAN_SUBTRUCT_IN_BUFFER
-    uint4 msr = FUNC_CALL(reshape_mean)(b,f,y,x);
+    uint4 msv = FUNC_CALL(reshape_mean)(b,f,y,x);
     res -= TO_CALC_TYPE(mean_subtruct[FUNC_CALL(get_mean_index)(
-        msr[0] % MEAN_SUBTRUCT_BATCH_NUM,
-        msr[1] % MEAN_SUBTRUCT_FEATURE_NUM,
-        msr[2] % MEAN_SUBTRUCT_SIZE_Y,
-        msr[3] % MEAN_SUBTRUCT_SIZE_X)]);
+        msv[0] % MEAN_SUBTRUCT_BATCH_NUM,
+        msv[1] % MEAN_SUBTRUCT_FEATURE_NUM,
+        msv[2] % MEAN_SUBTRUCT_SIZE_Y,
+        msv[3] % MEAN_SUBTRUCT_SIZE_X)]);
 #endif
 
-    output[FUNC_CALL(get_output_index)(b, f, y, x)] = TO_OUTPUT_TYPE(res);
+    output[output_idx] = TO_OUTPUT_TYPE(res);
 }

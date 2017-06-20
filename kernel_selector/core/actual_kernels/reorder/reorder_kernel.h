@@ -28,5 +28,6 @@ namespace KernelSelector
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
+        virtual jit_constants get_jit_constants(const ReorderParams& params) const;
     };
 }

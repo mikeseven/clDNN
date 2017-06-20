@@ -34,6 +34,33 @@ namespace KernelSelector
         return k;
     }
 
+    jit_constants ReorderKernelRef::get_jit_constants(const ReorderParams& params) const
+    {
+        auto jit = IGKReorderKernelBase::get_jit_constants(params);
+        const auto& in = params.inputs[0];
+        auto b = Tensor::channelndex(in.layout, Tensor::DataChannelName::NAME_BATCH);
+        auto f = Tensor::channelndex(in.layout, Tensor::DataChannelName::NAME_FEATURE);
+        auto x = Tensor::channelndex(in.layout, Tensor::DataChannelName::NAME_X);
+
+        if (x == -1)
+        {
+            x = 2;
+        }
+        else
+        {
+            b = (b < x) ? b : b - 1;
+            f = (f < x) ? f : f - 1;
+        }
+
+        jit.add_constants({
+            gpu::make_jit_constant("GWS_BATCH", b),
+            gpu::make_jit_constant("GWS_FEATURE", f),
+            gpu::make_jit_constant("GWS_YX", x),
+        });
+
+        return jit;
+    }
+
     KernelsData ReorderKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
     {
         assert(params.GetType() == KernelType::REORDER);
@@ -55,9 +82,30 @@ namespace KernelSelector
             return KernelsData();
         }
 
-        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.batch().v, out.feature().v, out.x().v*out.y().v);
+        std::vector<size_t> gws;
+        const auto& in = newParams.inputs[0];
+        auto y = Tensor::channelndex(in.layout, Tensor::DataChannelName::NAME_Y);
+        for (size_t i = 0; i < in.dims.size(); i++)
+        {
+            const auto& o = in.dims[i];
+            if (y == (int)i)
+            {
+                gws.back() *= o.v;
+            }
+            else
+            {
+                gws.push_back(o.v);
+            }
+        }
+
+        for (size_t i = gws.size(); i < 3; i++)
+        {
+            gws.push_back(1U);
+        }
+
+        kernel.work_groups.global = cl::NDRange(gws[0], gws[1], gws[2]);
+
         kernel.kernel_string = get_kernel_string(kernel_name, jit, entry_point, ROUND_ROBIN);
         kernel.args_desc = get_args_desc(1, false, false);
         if (newParams.reorderParams.mode == MeanSubtructMode::IN_BUFFER)
