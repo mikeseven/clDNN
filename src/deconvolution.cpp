@@ -32,19 +32,14 @@ layout deconvolution_inst::calc_output_layout(deconvolution_node const& node)
 
     auto input_layout = node.input().get_output_layout();
     auto weights_layout = node.weights(0).get_output_layout(); //weights are stored after inputs
-
-    if (desc->with_output_size)
-    {
-        auto result = layout({ input_layout.data_type, input_layout.format, desc->output_size });
-        return result;
-    }
-
     auto input_offset = desc->input_offset;
     auto strd = desc->stride;
     auto split = desc->weights.size();
 
     //compute output_dim <= stride * (input_size - 1) + kernel_size + 2 * input_offset;
     auto kernel_xy = weights_layout.size.spatial;
+    if (kernel_xy.size() != 2) 
+        throw std::runtime_error("Weights have to have 2 dimensions in spatial domain.");
 
     auto output_spatial_x = strd.spatial[0] * (input_layout.size.spatial[0] - 1) + kernel_xy[0] + 2 * input_offset.spatial[0];
     auto output_spatial_y = strd.spatial[1] * (input_layout.size.spatial[1] - 1) + kernel_xy[1] + 2 * input_offset.spatial[1];

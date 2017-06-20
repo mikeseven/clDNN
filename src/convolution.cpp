@@ -54,12 +54,6 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
     if (2 * input_offset.spatial[0] > input_layout.size.spatial[0] || 2 * input_offset.spatial[1] > input_layout.size.spatial[1])
         throw std::invalid_argument("Input offset is greater than input data range. There is no input data to process");
 
-    if (desc->with_output_size)
-    {
-        auto result = layout({ input_layout.data_type, input_layout.format, desc->output_size });
-        return result;
-    }
-
     // NOTE: Using most common calculation.
     //       For example - consider convolution with input=224x224, filter=7x7, offset=-3 (top/left/right/bottom), stride=2x2:
     //       Input index range is: 0-223, including offset: (-3)-226 (values outside of input index range are assumed to be 0).
@@ -79,14 +73,14 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
     //       behavior (it can omit from calculation up to stride-1 last rows and columns).
     auto output_spatial_x = static_cast<cldnn::tensor::value_type>(
         2 * input_offset.spatial[0] < input_layout.size.spatial[0]
-            ? std::max(input_layout.size.spatial[0] - 2 * input_offset.spatial[0] - kernel_extent.spatial[0], 0) / strd.spatial[0] + 1
-            // ? ceil_div(std::max(input_layout.size.spatial[0] - 2 * input_offset.spatial[0] - kernel_xy[0], 0), strd.spatial[0]) + 1
-            : 0);
+        ? std::max(input_layout.size.spatial[0] - 2 * input_offset.spatial[0] - kernel_extent.spatial[0], 0) / strd.spatial[0] + 1
+        // ? ceil_div(std::max(input_layout.size.spatial[0] - 2 * input_offset.spatial[0] - kernel_xy[0], 0), strd.spatial[0]) + 1
+        : 0);
     auto output_spatial_y = static_cast<cldnn::tensor::value_type>(
         2 * input_offset.spatial[1] < input_layout.size.spatial[1]
-            ? std::max(input_layout.size.spatial[1] - 2 * input_offset.spatial[1] - kernel_extent.spatial[1], 0) / strd.spatial[1] + 1
-            // ? ceil_div(std::max(input_layout.size.spatial[1] - 2 * input_offset.spatial[1] - kernel_xy[1], 0), strd.spatial[1]) + 1
-            : 0);
+        ? std::max(input_layout.size.spatial[1] - 2 * input_offset.spatial[1] - kernel_extent.spatial[1], 0) / strd.spatial[1] + 1
+        // ? ceil_div(std::max(input_layout.size.spatial[1] - 2 * input_offset.spatial[1] - kernel_xy[1], 0), strd.spatial[1]) + 1
+        : 0);
     // get output feature map from weights. It should be the same as number of biases. Will be verifed in convolution::create()
     auto number_of_features = weights_layout.size.batch[0] * static_cast<int32_t>(split);
 

@@ -50,10 +50,6 @@ cldnn_tensor input_offset;
 cldnn_tensor stride;
 /// @brief Pooling kernel size.
 cldnn_tensor size;
-/// @brief Indicates that the primitive has user-defined output size (non-zero value).
-uint32_t with_output_size;
-/// @brief User-defined output data size of the primitive (w/o padding).
-cldnn_tensor output_size;
 CLDNN_END_PRIMITIVE_DESC(pooling)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(pooling);
