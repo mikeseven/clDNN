@@ -91,7 +91,7 @@ namespace KernelSelector
             throw std::runtime_error("Unsupported filter size (> 11) in bfyx convolution");
         }
 
-        run_info.effiency = arg.inputs[0].x().v <= sub_group_size ? FORCE_PRIORITY_3 : FORCE_PRIORITY_5;
+        run_info.effiency = FORCE_PRIORITY_3;
 
         if (cp.stride.x == 1 && cp.stride.y == 1)
         {
@@ -100,7 +100,6 @@ namespace KernelSelector
                 run_info.block_width = 16;
                 run_info.block_height = 1;
                 run_info.prefetch = 4;
-                run_info.effiency = FORCE_PRIORITY_3;
             }
             //if less than 16 values is required to compute one single row of output
             //then each WI shall compute one single row to maximize reuse within SIMD subgroup (this gives very nice performance results)
@@ -109,21 +108,18 @@ namespace KernelSelector
                 run_info.block_width = arg.output.x().v;
                 run_info.block_height = 1;
                 run_info.prefetch = 4;
-                run_info.effiency = FORCE_PRIORITY_3;
             }
             else if (cp.filterSize.x < 5 && cp.filterSize.y < 5)
             {
                 run_info.block_width = sub_group_size - cp.filterSize.x + 1;
                 run_info.block_height = 2;
                 run_info.prefetch = 4;
-                run_info.effiency = FORCE_PRIORITY_3;
             }
             else
             {
                 run_info.block_width = 4;
                 run_info.block_height = 3;
                 run_info.prefetch = 4;
-                //run_info.effiency = FORCE_PRIORITY_3;
             }
         }
         else if (cp.stride.x == 2 && cp.stride.y == 2)
@@ -131,14 +127,13 @@ namespace KernelSelector
             run_info.block_width = 5;
             run_info.block_height = 4;
             run_info.prefetch = 4;
-            run_info.effiency = FORCE_PRIORITY_3;
         }
         else
         {
             run_info.block_width = 4;
             run_info.block_height = 3;
             run_info.prefetch = 5;
-            run_info.effiency = FORCE_PRIORITY_7;
+            //run_info.effiency = FORCE_PRIORITY_7; // GEMM is better
         }
 
 
