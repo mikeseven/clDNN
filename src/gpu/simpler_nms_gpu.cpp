@@ -190,7 +190,6 @@ struct simpler_nms_gpu : typed_primitive_impl<simpler_nms>
         std::string kernel_name;
         bool fp16_unit_used;
     } _kernel_data;
-    gpu::kernel _kernel;
 
     static kd_selector_t<kernel_data, simpler_nms_node, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
 
@@ -203,8 +202,7 @@ struct simpler_nms_gpu : typed_primitive_impl<simpler_nms>
             outer.cls_score().get_output_layout().format,
             outer.cls_score().get_output_layout().size.batch[0],
             _engine_info.architecture,
-            _engine_info.configuration)),
-        _kernel(outer.get_program().get_engine()->get_context(), _kernel_data.kernel_name, get_jit_constants(outer, _kernel_data))
+            _engine_info.configuration))
     {}
 
     static kernel_data set_default(const simpler_nms_node& outer)

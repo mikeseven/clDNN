@@ -121,6 +121,7 @@ namespace KernelSelector {
         }
 
         //printf("%s\n", kernelName.c_str());
+        kernelsData[0].kernelName = kernelName;
 
         return kernelsData;
     }

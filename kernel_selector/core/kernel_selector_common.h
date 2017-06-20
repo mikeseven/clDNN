@@ -211,6 +211,7 @@ namespace KernelSelector {
 
         bool reorder_input = false;
         WeightsReorderParams weights_reorder_params;
+        std::string kernelName;
 
         template <typename T>
         inline static KernelData Default(const Params& _params, size_t kernel_nums)
