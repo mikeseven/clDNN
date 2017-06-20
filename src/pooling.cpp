@@ -36,6 +36,12 @@ layout pooling_inst::calc_output_layout(parent::typed_node const& node)
     if (input_spatial_size != 2)
         throw std::runtime_error("Only two dimensional spatials are supported by pooling");
 
+    if (desc->with_output_size)
+    {
+        auto result = layout({ input_layout.data_type, input_layout.format, desc->output_size });
+        return result;
+    }
+
     auto input_offsets = desc->input_offset.sizes();
     auto strides = desc->stride.sizes();
     auto window_sizes = desc->size.sizes();
