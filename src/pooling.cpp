@@ -57,10 +57,7 @@ layout pooling_inst::calc_output_layout(parent::typed_node const& node)
 
     // TODO: Check compatibility of output size calculation (with caffe).
     auto output_range = calc_sliding_window_output_range<swor_mode::exceed_once>(
-        input_layout.size, window_size, input_offset, stride);
-
-    if (output_range.spatial[0] <= 0 || output_range.spatial[1] <= 0)
-        throw std::runtime_error("Calculated size of output layout must be positive. There is nothing to compute.");
+        input_layout.size, window_size, input_offset, stride, {1, 1, 1, 1}, false, 1);
 
     tensor output_size(input_layout.size.batch[0], input_layout.size.feature[0],
                        output_range.spatial[0], output_range.spatial[1]);

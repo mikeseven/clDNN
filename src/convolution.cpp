@@ -65,10 +65,7 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
     }
 
     auto output_range = calc_sliding_window_output_range<swor_mode::all>(
-        input_layout.size, filter_size, input_offset, stride, dilation);
-
-    if (output_range.spatial[0] <= 0 || output_range.spatial[1] <= 0)
-        throw std::runtime_error("Calculated size of output layout must be positive. There is nothing to compute.");
+        input_layout.size, filter_size, input_offset, stride, dilation, true, 1);
 
     tensor output_size(input_layout.size.batch[0], number_of_features,
                        output_range.spatial[0], output_range.spatial[1]);

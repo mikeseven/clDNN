@@ -53,10 +53,8 @@ layout deconvolution_inst::calc_output_layout(deconvolution_node const& node)
     //compute output_dim <= stride * (input_size - 1) + kernel_size + 2 * input_offset;
     auto filter_size = weights_layout.size;
 
-    auto output_range = calc_sliding_window_needed_input_range(input_layout.size, filter_size, input_offset, strd);
-
-    if (output_range.spatial[0] <= 0 || output_range.spatial[1] <= 0)
-        throw std::runtime_error("Calculated size of output layout must be positive. There is nothing to compute.");
+    auto output_range = calc_sliding_window_needed_input_range(
+        input_layout.size, filter_size, input_offset, strd, {1, 1, 1, 1}, true, 1);
 
     tensor output_size(input_layout.size.batch[0], number_of_features,
                        output_range.spatial[0], output_range.spatial[1]);

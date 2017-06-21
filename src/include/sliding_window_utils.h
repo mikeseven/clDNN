@@ -46,17 +46,25 @@ enum class swor_mode
 ///                   is applied from both sides of input data: negative value extends/pads data, positive - crops it.
 /// @param stride     Horizontal/Vertical stride of sliding in input data.
 /// @param dilation   Horizontal/Vertical dilation of sliding window on input data.
+/// @param sym_offset Treat offset as applied on input symmetrically (from both sides). If @c false, the @p offset
+///                   is applied only from left/upper side.
+/// @param degen_val  If values from calculation are in allowed range, but calculated output size is invalid,
+///                   the @p degen_val is returned. Any non-positive value is considered degenerated and will be
+///                   switched to value passed in this parameter.
 /// @return Output range (size) of sliding window.
 template <swor_mode RangeMode = swor_mode::all>
 tensor calc_sliding_window_output_range(const tensor& input_size,
                                         const tensor& size,
                                         const tensor& offset,
                                         const tensor& stride,
-                                        const tensor& dilation = {1, 1, 1, 1});
+                                        const tensor& dilation = {1, 1, 1, 1},
+                                        bool sym_offset = true,
+                                        const tensor::value_type& degen_val = 0);
 
 /// @brief Fall-back implementation.
 template <swor_mode RangeMode>
-tensor calc_sliding_window_output_range(const tensor&, const tensor&, const tensor&, const tensor&, const tensor&)
+tensor calc_sliding_window_output_range(
+    const tensor&, const tensor&, const tensor&, const tensor&, const tensor&, bool, const tensor::value_type&)
 {
     static_assert(meta::always_false<meta::val_tuple<swor_mode, RangeMode>>::value,
                   "Sliding window output range calculation mode is not supported. Please implement specialization "
@@ -67,7 +75,8 @@ tensor calc_sliding_window_output_range(const tensor&, const tensor&, const tens
 
 template <>
 inline tensor calc_sliding_window_output_range<swor_mode::all>(
-    const tensor& input_size, const tensor& size, const tensor& offset, const tensor& stride, const tensor& dilation)
+    const tensor& input_size, const tensor& size, const tensor& offset, const tensor& stride, const tensor& dilation,
+    bool sym_offset, const tensor::value_type& degen_val)
 {
     if(input_size.spatial[0] <= 0 || input_size.spatial[1] <= 0)
         throw std::invalid_argument("Input data spatial sizes must be positive (>= 1).");
@@ -78,24 +87,26 @@ inline tensor calc_sliding_window_output_range<swor_mode::all>(
     if(dilation.spatial[0] <= 0 || dilation.spatial[1] <= 0)
         throw std::invalid_argument("Sliding window h/v input dialations must be positive (>= 1).");
 
+    auto off_factor = sym_offset ? 2 : 1;
     tensor wnd_ext_size{1, 1, (size.spatial[0] - 1) * dilation.spatial[0] + 1,
                               (size.spatial[1] - 1) * dilation.spatial[1] + 1};
 
     auto output_range_x = static_cast<cldnn::tensor::value_type>(
-        2 * offset.spatial[0] + wnd_ext_size.spatial[0] <= input_size.spatial[0]
-            ? (input_size.spatial[0] - 2 * offset.spatial[0] - wnd_ext_size.spatial[0]) / stride.spatial[0] + 1
-            : 0);
+        off_factor * offset.spatial[0] + wnd_ext_size.spatial[0] <= input_size.spatial[0]
+            ? (input_size.spatial[0] - off_factor * offset.spatial[0] - wnd_ext_size.spatial[0]) / stride.spatial[0] + 1
+            : degen_val);
     auto output_range_y = static_cast<cldnn::tensor::value_type>(
-        2 * offset.spatial[1] + wnd_ext_size.spatial[1] <= input_size.spatial[1]
-            ? (input_size.spatial[1] - 2 * offset.spatial[1] - wnd_ext_size.spatial[1]) / stride.spatial[1] + 1
-            : 0);
+        off_factor * offset.spatial[1] + wnd_ext_size.spatial[1] <= input_size.spatial[1]
+            ? (input_size.spatial[1] - off_factor * offset.spatial[1] - wnd_ext_size.spatial[1]) / stride.spatial[1] + 1
+            : degen_val);
 
     return {1, 1, output_range_x, output_range_y};
 }
 
 template <>
 inline tensor calc_sliding_window_output_range<swor_mode::exceed_once>(
-    const tensor& input_size, const tensor& size, const tensor& offset, const tensor& stride, const tensor& dilation)
+    const tensor& input_size, const tensor& size, const tensor& offset, const tensor& stride, const tensor& dilation,
+    bool sym_offset, const tensor::value_type& degen_val)
 {
     if(input_size.spatial[0] <= 0 || input_size.spatial[1] <= 0)
         throw std::invalid_argument("Input data spatial sizes must be positive (>= 1).");
@@ -106,24 +117,26 @@ inline tensor calc_sliding_window_output_range<swor_mode::exceed_once>(
     if(dilation.spatial[0] <= 0 || dilation.spatial[1] <= 0)
         throw std::invalid_argument("Sliding window h/v input dialations must be positive (>= 1).");
 
+    auto off_factor = sym_offset ? 2 : 1;
     tensor wnd_ext_size{1, 1, (size.spatial[0] - 1) * dilation.spatial[0] + 1,
                               (size.spatial[1] - 1) * dilation.spatial[1] + 1};
 
     auto output_range_x = static_cast<cldnn::tensor::value_type>(
-        2 * offset.spatial[0] + wnd_ext_size.spatial[0] <= input_size.spatial[0] + stride.spatial[0] - 1
-            ? (input_size.spatial[0] - 2 * offset.spatial[0] - wnd_ext_size.spatial[0] + stride.spatial[0] - 1) / stride.spatial[0] + 1
-            : 0);
+        off_factor * offset.spatial[0] + wnd_ext_size.spatial[0] <= input_size.spatial[0] + stride.spatial[0] - 1
+            ? (input_size.spatial[0] - off_factor * offset.spatial[0] - wnd_ext_size.spatial[0] + stride.spatial[0] - 1) / stride.spatial[0] + 1
+            : degen_val);
     auto output_range_y = static_cast<cldnn::tensor::value_type>(
-        2 * offset.spatial[1] + wnd_ext_size.spatial[1] <= input_size.spatial[1] + stride.spatial[1] - 1
-            ? (input_size.spatial[1] - 2 * offset.spatial[1] - wnd_ext_size.spatial[1] + stride.spatial[1] - 1) / stride.spatial[1] + 1
-            : 0);
+        off_factor * offset.spatial[1] + wnd_ext_size.spatial[1] <= input_size.spatial[1] + stride.spatial[1] - 1
+            ? (input_size.spatial[1] - off_factor * offset.spatial[1] - wnd_ext_size.spatial[1] + stride.spatial[1] - 1) / stride.spatial[1] + 1
+            : degen_val);
 
     return {1, 1, output_range_x, output_range_y};
 }
 
 template <>
 inline tensor calc_sliding_window_output_range<swor_mode::any>(
-    const tensor& input_size, const tensor& size, const tensor& offset, const tensor& stride, const tensor& dilation)
+    const tensor& input_size, const tensor& size, const tensor& offset, const tensor& stride, const tensor& dilation,
+    bool sym_offset, const tensor::value_type& degen_val)
 {
     if(input_size.spatial[0] <= 0 || input_size.spatial[1] <= 0)
         throw std::invalid_argument("Input data spatial sizes must be positive (>= 1).");
@@ -134,17 +147,16 @@ inline tensor calc_sliding_window_output_range<swor_mode::any>(
     if(dilation.spatial[0] <= 0 || dilation.spatial[1] <= 0)
         throw std::invalid_argument("Sliding window h/v input dialations must be positive (>= 1).");
 
-    tensor wnd_ext_size{1, 1, (size.spatial[0] - 1) * dilation.spatial[0] + 1,
-                              (size.spatial[1] - 1) * dilation.spatial[1] + 1};
+    auto off_factor = sym_offset ? 2 : 1;
 
     auto output_range_x = static_cast<cldnn::tensor::value_type>(
-        2 * offset.spatial[0] <= input_size.spatial[0] - 1
-            ? (input_size.spatial[0] - 2 * offset.spatial[0] - 1) / stride.spatial[0] + 1
-            : 0);
+        off_factor * offset.spatial[0] <= input_size.spatial[0] - 1
+            ? (input_size.spatial[0] - off_factor * offset.spatial[0] - 1) / stride.spatial[0] + 1
+            : degen_val);
     auto output_range_y = static_cast<cldnn::tensor::value_type>(
-        2 * offset.spatial[1] <= input_size.spatial[1] - 1
-            ? (input_size.spatial[1] - 2 * offset.spatial[1] - 1) / stride.spatial[1] + 1
-            : 0);
+        off_factor * offset.spatial[1] <= input_size.spatial[1] - 1
+            ? (input_size.spatial[1] - off_factor * offset.spatial[1] - 1) / stride.spatial[1] + 1
+            : degen_val);
 
     return {1, 1, output_range_x, output_range_y};
 }
@@ -162,12 +174,19 @@ inline tensor calc_sliding_window_output_range<swor_mode::any>(
 ///                    is applied from both sides of input data: negative value extends/pads data, positive - crops it.
 /// @param stride      Horizontal/Vertical stride of sliding in input data.
 /// @param dilation    Horizontal/Vertical dilation of sliding window on input data.
+/// @param sym_offset  Treat offset as applied on input symmetrically (from both sides). If @c false, the @p offset
+///                    is applied only from left/upper side.
+/// @param degen_val   If values from calculation are in allowed range, but calculated output size is invalid,
+///                    the @p degen_val is returned. Any non-positive value is considered degenerated and will be
+///                    switched to value passed in this parameter.
 /// @return Input range (size) for sliding window to get equal or greater @p output_size.
 inline tensor calc_sliding_window_needed_input_range(const tensor& output_size,
                                                      const tensor& size,
                                                      const tensor& offset,
                                                      const tensor& stride,
-                                                     const tensor& dilation = {1, 1, 1, 1})
+                                                     const tensor& dilation = {1, 1, 1, 1},
+                                                     bool sym_offset = true,
+                                                     const tensor::value_type& degen_val = 0)
 {
     if(output_size.spatial[0] <= 0 || output_size.spatial[1] <= 0)
         throw std::invalid_argument("Output data spatial sizes must be positive (>= 1).");
@@ -178,11 +197,17 @@ inline tensor calc_sliding_window_needed_input_range(const tensor& output_size,
     if(dilation.spatial[0] <= 0 || dilation.spatial[1] <= 0)
         throw std::invalid_argument("Sliding window h/v input dialations must be positive (>= 1).");
 
+    auto off_factor = sym_offset ? 2 : 1;
     tensor wnd_ext_size{1, 1, (size.spatial[0] - 1) * dilation.spatial[0] + 1,
                               (size.spatial[1] - 1) * dilation.spatial[1] + 1};
 
-    auto output_range_x = 2 * offset.spatial[0] + (output_size.spatial[0] - 1) * stride.spatial[0] + wnd_ext_size.spatial[0];
-    auto output_range_y = 2 * offset.spatial[1] + (output_size.spatial[1] - 1) * stride.spatial[1] + wnd_ext_size.spatial[1];
+    auto output_range_x = off_factor * offset.spatial[0] + (output_size.spatial[0] - 1) * stride.spatial[0] + wnd_ext_size.spatial[0];
+    auto output_range_y = off_factor * offset.spatial[1] + (output_size.spatial[1] - 1) * stride.spatial[1] + wnd_ext_size.spatial[1];
+
+    if (output_range_x <= 0)
+        output_range_x = degen_val;
+    if (output_range_y <= 0)
+        output_range_y = degen_val;
 
     return {1, 1, output_range_x, output_range_y};
 }
