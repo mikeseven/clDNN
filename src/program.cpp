@@ -1,4 +1,4 @@
-/*
+  /*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -33,6 +33,7 @@
 #include "convolution_inst.h"
 #include "concatenation_inst.h"
 #include "detection_output_inst.h"
+#include "sliding_window_utils.h"
 
 namespace cldnn
 {
@@ -522,6 +523,49 @@ void program_impl::optimize_weights(layout_optimizer& lo)
 
 void program_impl::prepare_padding()
 {
+    /*
+    for (const auto& node : processing_order)
+    {
+        if (node->is_type<convolution>())
+        {
+            auto& prim_node = node->as<convolution>();
+            const auto& prim = prim_node.get_primitive();
+
+            if (!prim->with_output_size)
+                continue;
+
+            auto filter_size = prim_node.weights(0).get_output_layout().size;
+
+            // TODO: Needed pad size should be here max(nis - offset - ais, apadd)
+            auto needed_input_size = calc_sliding_window_needed_input_range(
+                prim->output_size, filter_size, prim->input_offset, prim->stride, prim->dilation, true, 1);
+
+            auto expand_output_sizes = [](program_node& node, program_node& prev_node, const tensor& needed_upad_size)
+            {
+                auto target_layout = prev_node.get_output_layout();
+
+                if (target_layout.size.spatial[0] >= needed_upad_size.spatial[0] &&
+                    target_layout.size.spatial[1] >= needed_upad_size.spatial[1])
+                    return;
+
+                //target_layout.data_padding = std::max()
+
+                if (prev_node.is_type<input_layout>())
+                {
+                    auto r_prim = std::make_shared<reorder>("reorder_" + prev_node.id(), prev_node, target_layout);
+                    add_intermediate(r_prim, node, 0);
+                    return;
+                }
+
+                prev_node.merge_output_padding(target_layout.data_padding);
+            };
+
+            expand_output_sizes(prim_node, prim_node.input(), needed_input_size);
+        }
+    }
+    */
+
+
     for (auto& pair : nodes_map)
     {
         if (pair.second->get_primitive()->type != convolution::type_id())
