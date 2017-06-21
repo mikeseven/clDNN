@@ -49,7 +49,7 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
         const primitive_id& id,
         const primitive_id& input,
         const std::vector<primitive_id>& weights,
-        const std::vector<primitive_id>& bias = std::vector<primitive_id>(0),
+        const std::vector<primitive_id>& bias,
         tensor stride = { 1, 1, 1, 1 },
         tensor input_offset = { 0,0,0,0 },
         bool with_activation = false,
@@ -69,6 +69,37 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
     {
     }
 
+    /// @brief Constructs deconvolution primitive (w/o bias).
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param weights List of primitive ids containing weights data.
+    /// @param input_offset Input padding/offset.
+    /// @param stride Defines shift in input buffer between adjacent calculations of output values.
+    /// @param with_activation Enables Relu activation.
+    /// @param activation_slp Relu activation slope.
+    deconvolution(
+        const primitive_id& id,
+        const primitive_id& input,
+        const std::vector<primitive_id>& weights,
+        tensor stride = { 1, 1, 1, 1 },
+        tensor input_offset = { 0,0,0,0 },
+        bool with_activation = false,
+        float activation_slp = 0.0f,
+        const padding& output_padding = padding()
+    )
+        :primitive_base(id, { input }, output_padding)
+        , weights(_weights.cpp_ids)
+        , bias(_bias.cpp_ids)
+        , input_offset(input_offset)
+        , stride(stride)
+        , with_activation(with_activation)
+        , activation_negative_slope(activation_slp)
+        , with_output_size(false)
+        , _weights(weights)
+        , _bias(std::vector<primitive_id>(0))
+    {
+    }
+
     /// @brief Constructs deconvolution primitive (computes input paddings to match output size).
     /// @param id This primitive id.
     /// @param input Input primitive id.
@@ -83,7 +114,7 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
         const primitive_id& id,
         const primitive_id& input,
         const std::vector<primitive_id>& weights,
-        const std::vector<primitive_id>& bias = std::vector<primitive_id>(0),
+        const std::vector<primitive_id>& bias,
         tensor stride,
         tensor input_offset,
         bool with_activation,
@@ -102,6 +133,40 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
         , output_size(output_size)
         , _weights(weights)
         , _bias(bias)
+    {
+    }
+
+    /// @brief Constructs deconvolution primitive (w/o bias, computes input paddings to match output size).
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param weights List of primitive ids containing weights data.
+    /// @param input_offset Input padding/offset.
+    /// @param stride Defines shift in input buffer between adjacent calculations of output values.
+    /// @param with_activation Enables Relu activation.
+    /// @param activation_slp Relu activation slope.
+    /// @param output_size User-defined output data size of the primitive (w/o padding).
+    deconvolution(
+        const primitive_id& id,
+        const primitive_id& input,
+        const std::vector<primitive_id>& weights,
+        tensor stride,
+        tensor input_offset,
+        bool with_activation,
+        float activation_slp,
+        tensor output_size,
+        const padding& output_padding = padding()
+    )
+        :primitive_base(id, { input }, output_padding)
+        , weights(_weights.cpp_ids)
+        , bias(_bias.cpp_ids)
+        , input_offset(input_offset)
+        , stride(stride)
+        , with_activation(with_activation)
+        , activation_negative_slope(activation_slp)
+        , with_output_size(true)
+        , output_size(output_size)
+        , _weights(weights)
+        , _bias(std::vector<primitive_id>(0))
     {
     }
 
@@ -173,7 +238,7 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
         const padding& output_padding = padding()
     )
     {
-        return deconvolution(id, input, weights, std::vector<primitive_id>(0), stride, input_offset, with_activation,
+        return deconvolution(id, input, weights, stride, input_offset, with_activation,
             activation_slp, output_size, output_padding);
     }
 
