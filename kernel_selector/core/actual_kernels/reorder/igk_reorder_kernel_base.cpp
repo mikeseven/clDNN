@@ -93,16 +93,18 @@ namespace KernelSelector
         gpu::jit_constants mem_consts = _get_common_jit_constants(input, output, output.dtype == Datatype::F16 || input.dtype == Datatype::F16, sub_group_size(output.layout));
         mem_consts.add_constant(gpu::make_jit_constant("MEAN_SUBTRUCT_" + toString(params.reorderParams.mode), 1));
 
-        Datatype calc_type = more_aqurate_data_type(input.dtype, output.dtype);
+        // TODO: we need to think what's more aprropriate hear - better aqurate or input type
+        Datatype calc_type = input.dtype;
+        //Datatype calc_type = more_aqurate_data_type(input.dtype, output.dtype);
         if (params.reorderParams.mode == MeanSubtructMode::INSIDE_PARAMS)
         {
             mem_consts.add_constant(gpu::make_jit_constant("VALUE_TO_SUBTRACT", params.reorderParams.mean_values));
-            calc_type = more_aqurate_data_type(calc_type, Datatype::F32);
+            //calc_type = more_aqurate_data_type(calc_type, Datatype::F32);
         }
         else if (params.reorderParams.mode == MeanSubtructMode::IN_BUFFER)
         {
             mem_consts.add_constant(gpu::make_jit_constant("MEAN_SUBTRUCT", params.reorderParams.mean));
-            calc_type = more_aqurate_data_type(calc_type, params.reorderParams.mean.dtype);
+            //calc_type = more_aqurate_data_type(calc_type, params.reorderParams.mean.dtype);
         }
         
         mem_consts.add_constants({
