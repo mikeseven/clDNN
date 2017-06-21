@@ -55,8 +55,27 @@ namespace KernelSelector {
         }
     }
 
+    static bool noPitchSameDims(const EltwiseParams& params)
+    {
+        bool no_pitch_same_dims = !params.inputs[0].PaddingExists();
+
+        for (size_t i = 1; i < params.inputs.size(); i++)
+        {
+            no_pitch_same_dims = no_pitch_same_dims && (params.inputs[0] == params.inputs[i]);
+        }
+
+        no_pitch_same_dims = no_pitch_same_dims && (params.inputs[0] == params.output);
+
+        return no_pitch_same_dims;
+    }
+
     jit_constants GenericEltwiseKernelRef::get_jit_constants(const EltwiseParams& params) const
     {
+        if (params.inputs.size() == 0)
+        {
+            throw std::runtime_error("error - eltwise without inputs");
+        }
+
         auto jit = get_common_jit_constants(params);
         
         std::string inputs_decls;
@@ -67,6 +86,7 @@ namespace KernelSelector {
 
         jit.add_constant(gpu::make_jit_constant("INPUTS_DECLS", inputs_decls));
         jit.add_constant(gpu::make_jit_constant("ELTWISE_LAYOUT_BASED", params.eltwiseParams.layoutBased));
+        jit.add_constant(gpu::make_jit_constant("ELTWISE_NO_PITCH_SAME_DIMS", noPitchSameDims(params)));
 
         std::string do_eltwise;
 
@@ -145,6 +165,11 @@ namespace KernelSelector {
             gpu::make_jit_constant("NL_N", params.nlParams.n),
         });
 
+        if (params.eltwiseParams.layoutBased)
+        {
+            jit.merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
+        }
+
         return jit;
     }
 
@@ -173,7 +198,11 @@ namespace KernelSelector {
         auto& kernel = kd.kernels[0];
         if (newParams.eltwiseParams.layoutBased)
         {
-            kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
+            kernel.work_groups.global = GetTensorFriendlyWorkGroups(newParams.inputs[0]);
+        }
+        else if (noPitchSameDims(newParams))
+        {
+            kernel.work_groups.global = { newParams.inputs[0].Length(), 1, 1 };
         }
         else
         {

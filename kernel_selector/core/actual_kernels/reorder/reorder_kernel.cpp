@@ -38,27 +38,7 @@ namespace KernelSelector
     jit_constants ReorderKernelRef::get_jit_constants(const ReorderParams& params) const
     {
         auto jit = IGKReorderKernelBase::get_jit_constants(params);
-        const auto& in = params.inputs[0];
-        auto b = Tensor::channelndex(in.layout, Tensor::DataChannelName::NAME_BATCH);
-        auto f = Tensor::channelndex(in.layout, Tensor::DataChannelName::NAME_FEATURE);
-        auto x = Tensor::channelndex(in.layout, Tensor::DataChannelName::NAME_X);
-
-        if (x == -1)
-        {
-            x = 2;
-        }
-        else
-        {
-            b = (b < x) ? b : b - 1;
-            f = (f < x) ? f : f - 1;
-        }
-
-        jit.add_constants({
-            gpu::make_jit_constant("GWS_BATCH", b),
-            gpu::make_jit_constant("GWS_FEATURE", f),
-            gpu::make_jit_constant("GWS_YX", x),
-        });
-
+        jit.merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
         return jit;
     }
 
@@ -84,28 +64,8 @@ namespace KernelSelector
         }
 
         auto& kernel = kd.kernels[0];
-        std::vector<size_t> gws;
-        const auto& in = newParams.inputs[0];
-        auto y = Tensor::channelndex(in.layout, Tensor::DataChannelName::NAME_Y);
-        for (size_t i = 0; i < in.dims.size(); i++)
-        {
-            const auto& o = in.dims[i];
-            if (y == (int)i)
-            {
-                gws.back() *= o.v;
-            }
-            else
-            {
-                gws.push_back(o.v);
-            }
-        }
 
-        for (size_t i = gws.size(); i < 3; i++)
-        {
-            gws.push_back(1U);
-        }
-
-        kernel.work_groups.global = cl::NDRange(gws[0], gws[1], gws[2]);
+        kernel.work_groups.global = GetTensorFriendlyWorkGroups(newParams.inputs[0]);
         kernel.work_groups.local = GetOptimalLocalWorkGroupSizes(kernel.work_groups.global);
 
         kernel.kernel_string = get_kernel_string(kernel_name, jit, entry_point, ROUND_ROBIN);

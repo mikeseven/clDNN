@@ -318,7 +318,7 @@ namespace KernelSelector
                 return (Length() != LengthWithPadding());
             }
 
-            bool operator==(const DataTensor& t)
+            bool operator==(const DataTensor& t) const
             {
                 bool same = 
                     dtype == t.dtype &&

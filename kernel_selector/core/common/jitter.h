@@ -428,6 +428,11 @@ public:
         }
     }
 
+    void merge(const jit_constants& jit)
+    {
+        add_constants(jit._constants);
+    }
+
     jit_definitions get_definitions() const {
         jit_definitions definitons;
         definitons.reserve(_constants.size() * 6); //assuming max 6 pairs per jit_constant

@@ -16,11 +16,12 @@
 
 #pragma once
 
+#include "jitter.h"
 #include "tensor_type.h"
 #include "kernel_selector_common.h"
 #include "reorder/reorder_weights_kernel_selector.h"
 
-namespace KernelSelector 
+namespace KernelSelector { namespace
 {
     inline bool CheckConvolutionPaddedInputDesc(const ConvolutionParams& params, const DataTensor& reqDesc)
     {
@@ -100,7 +101,32 @@ namespace KernelSelector
         return true;
     }
 
-    inline  cl::NDRange toNDRange(const std::vector<size_t>& v)
+    inline gpu::jit_constants GetTensorFriendlyWorkGroupsJit(const DataTensor& t)
+    {
+        auto b = Tensor::channelndex(t.layout, Tensor::DataChannelName::NAME_BATCH);
+        auto f = Tensor::channelndex(t.layout, Tensor::DataChannelName::NAME_FEATURE);
+        auto x = Tensor::channelndex(t.layout, Tensor::DataChannelName::NAME_X);
+
+        if (x == -1)
+        {
+            x = 2;
+        }
+        else
+        {
+            b = (b < x) ? b : b - 1;
+            f = (f < x) ? f : f - 1;
+        }
+
+        gpu::jit_constants jit{
+            gpu::make_jit_constant("GWS_BATCH", b),
+            gpu::make_jit_constant("GWS_FEATURE", f),
+            gpu::make_jit_constant("GWS_YX", x),
+        };
+
+        return jit;
+    }
+
+    inline cl::NDRange toNDRange(const std::vector<size_t>& v)
     {
         switch (v.size())
         {
@@ -113,6 +139,31 @@ namespace KernelSelector
         default:
             throw std::logic_error("Unacceptable NDRange dimension: " + std::to_string(v.size()));
         }
+    }
+
+    cl::NDRange GetTensorFriendlyWorkGroups(const DataTensor& t)
+    {
+        std::vector<size_t> sizes;
+        auto y = Tensor::channelndex(t.layout, Tensor::DataChannelName::NAME_Y);
+        for (size_t i = 0; i < t.dims.size(); i++)
+        {
+            const auto& o = t.dims[i];
+            if (y == (int)i)
+            {
+                sizes.back() *= o.v;
+            }
+            else
+            {
+                sizes.push_back(o.v);
+            }
+        }
+
+        for (size_t i = sizes.size(); i < 3; i++)
+        {
+            sizes.push_back(1U);
+        }
+
+        return toNDRange(sizes);
     }
 
     inline cl::NDRange GetOptimalLocalWorkGroupSizes(cl::NDRange gws)
@@ -135,4 +186,4 @@ namespace KernelSelector
 
         return toNDRange(lws);
     }
-}
+} }

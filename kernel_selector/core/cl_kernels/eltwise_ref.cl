@@ -25,6 +25,10 @@
     (d3 % CAT(CAT(prefix, num), _FEATURE_NUM))*CAT(CAT(prefix, num), _FEATURE_PITCH) +   \
     (d4 % CAT(CAT(prefix, num), _BATCH_NUM  ))*CAT(CAT(prefix, num), _BATCH_PITCH)
 
+#elif ELTWISE_NO_PITCH_SAME_DIMS
+#define GET_INDEX(prefix, num)                                                      \
+    CAT(CAT(prefix, num), _OFFSET) + d1
+
 #else
 
 #define GET_INDEX(prefix, num)                                                      \
@@ -41,23 +45,25 @@ KERNEL(eltwise)(
     __global UNIT_TYPE* output)
 {
 #if ELTWISE_LAYOUT_BASED
-    const uint modulu_val = OUTPUT_FEATURE_NUM;
-#else
-    const uint modulu_val = OUTPUT_SIZES[2];
-#endif
+    const uint d1 = get_global_id(GWS_YX) % INPUT_SIZE_X;   // X
+    const uint d2 = get_global_id(GWS_YX) / INPUT_SIZE_X;   // Y
+    const uint d3 = get_global_id(GWS_FEATURE);             // Feature
+    const uint d4 = get_global_id(GWS_BATCH);               // Batch
 
-    const uint d1 = get_global_id(0);
-    const uint d2 = get_global_id(1);
-    const uint d3 = get_global_id(2) % modulu_val;
-    const uint d4 = get_global_id(2) / modulu_val;
-
-#if ELTWISE_LAYOUT_BASED
     uint output_offset = OUTPUT_OFFSET +
                          d1*OUTPUT_X_PITCH +
                          d2*OUTPUT_Y_PITCH +
                          d3*OUTPUT_FEATURE_PITCH +
                          d4*OUTPUT_BATCH_PITCH;
+#elif ELTWISE_NO_PITCH_SAME_DIMS
+    const uint d1 = get_global_id(0);
+    uint output_offset = OUTPUT_OFFSET + d1;
 #else
+    const uint d1 = get_global_id(0);
+    const uint d2 = get_global_id(1);
+    const uint d3 = get_global_id(2) % OUTPUT_SIZES[2];
+    const uint d4 = get_global_id(2) / OUTPUT_SIZES[2];
+    
     uint output_offset = OUTPUT_OFFSET +
                          d1*OUTPUT_PITCHES[0] +
                          d2*OUTPUT_PITCHES[1] +
