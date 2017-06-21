@@ -15,6 +15,7 @@
 */
 
 #include "reorder_kernel.h"
+#include "kernel_selector_utils.h"
  
 namespace KernelSelector 
 {
@@ -105,6 +106,7 @@ namespace KernelSelector
         }
 
         kernel.work_groups.global = cl::NDRange(gws[0], gws[1], gws[2]);
+        kernel.work_groups.local = GetOptimalLocalWorkGroupSizes(kernel.work_groups.global);
 
         kernel.kernel_string = get_kernel_string(kernel_name, jit, entry_point, ROUND_ROBIN);
         kernel.args_desc = get_args_desc(1, false, false);

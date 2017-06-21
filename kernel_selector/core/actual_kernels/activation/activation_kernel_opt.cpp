@@ -15,7 +15,8 @@
 */
 
 #include "activation_kernel_opt.h"
- 
+#include "kernel_selector_utils.h" 
+
 namespace KernelSelector {
 
     ParamsKey ActivationKernelOpt::GetSupportedKey() const
@@ -61,6 +62,7 @@ namespace KernelSelector {
             (newParams.inputs[0].x().v + NUM_COLS_WI - 1) / NUM_COLS_WI,
             (nonWidthDim + NUM_ROWS_WI - 1) / NUM_ROWS_WI,
             newParams.output.batch().v);
+        kernel.work_groups.local = GetOptimalLocalWorkGroupSizes(kernel.work_groups.global);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
         kernel.args_desc = GetArgumentDesc(1, false, false);
 

@@ -15,6 +15,7 @@
 */
 
 #include "roi_pooling_kernel_ref.h"
+#include "kernel_selector_utils.h" 
  
 namespace KernelSelector {
 
@@ -65,6 +66,7 @@ namespace KernelSelector {
 
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(newParams.output.Length(), 1, 1);
+        kernel.work_groups.local = GetOptimalLocalWorkGroupSizes(kernel.work_groups.global);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
         kernel.args_desc = GetArgumentDesc(2, false, false);
 

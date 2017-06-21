@@ -15,6 +15,7 @@
 */
 
 #include "softmax_kernel_ref.h"
+#include "kernel_selector_utils.h" 
  
 namespace KernelSelector 
 {
@@ -92,6 +93,7 @@ namespace KernelSelector
             break;
         }
 
+        kernel.work_groups.local = GetOptimalLocalWorkGroupSizes(kernel.work_groups.global);
         kernel.kernel_string = GetKernelString(kernel_name, jit, kernel_id);
         kernel.args_desc = GetArgumentDesc(1, false, false);
 

@@ -15,7 +15,8 @@
 */
 
 #include "lrn_kernel_ref.h"
- 
+#include "kernel_selector_utils.h" 
+
 namespace KernelSelector 
 {
     ParamsKey LRNKernelRef::GetSupportedKey() const
@@ -69,6 +70,7 @@ namespace KernelSelector
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
         kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
+        kernel.work_groups.local = GetOptimalLocalWorkGroupSizes(kernel.work_groups.global);
         kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id, ROUND_ROBIN, "");
         kernel.args_desc = GetArgumentDesc(1, false, false);
 

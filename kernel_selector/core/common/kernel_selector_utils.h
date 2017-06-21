@@ -99,4 +99,40 @@ namespace KernelSelector
 
         return true;
     }
+
+    inline  cl::NDRange toNDRange(const std::vector<size_t>& v)
+    {
+        switch (v.size())
+        {
+        case 1:
+            return cl::NDRange(v[0]);
+        case 2:
+            return cl::NDRange(v[0], v[1]);
+        case 3:
+            return cl::NDRange(v[0], v[1], v[2]);
+        default:
+            throw std::logic_error("Unacceptable NDRange dimension: " + std::to_string(v.size()));
+        }
+    }
+
+    inline cl::NDRange GetOptimalLocalWorkGroupSizes(cl::NDRange gws)
+    {
+        const size_t lws_max = 256;
+        const size_t optimal_lws_values[] = { 256, 224, 192, 160, 128, 96, 64, 32, 16, 8, 7, 6, 5, 4, 3, 2, 1 };
+        size_t total_lws = 1;
+        std::vector<size_t> lws;
+        for (size_t i = 0; i < gws.dimensions(); ++i)
+        {
+            auto rest_lws = lws_max / total_lws;
+            size_t lws_idx = 0;
+            while (rest_lws < optimal_lws_values[lws_idx]) lws_idx++;
+
+            while (gws[i] % optimal_lws_values[lws_idx]) lws_idx++;
+
+            lws.push_back(optimal_lws_values[lws_idx]);
+            total_lws *= optimal_lws_values[lws_idx];
+        }
+
+        return toNDRange(lws);
+    }
 }
