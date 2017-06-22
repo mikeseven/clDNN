@@ -37,14 +37,14 @@ namespace KernelSelector
         return k;
     }
 
-    FullyConnected_fb_io_b8_f8::DispatchData FullyConnected_fb_io_b8_f8::set_default(const FullyConnectedParams& arg) const
+    FullyConnected_fb_io_b8_f8::DispatchData FullyConnected_fb_io_b8_f8::SetDefault(const FullyConnectedParams& arg) const
     {
-        DispatchData kd = set_kernel_data(arg);
+        DispatchData kd = SetKernelData(arg);
 
         const auto& output = arg.output;
         
-        size_t groups_per_batches = get_local_groups_size(arg);
-        kd.gws0 = output.Length() / (get_neurons_per_work_item(arg) * get_batches_per_work_item(arg) * groups_per_batches);
+        size_t groups_per_batches = GetLocalGroupsSize(arg);
+        kd.gws0 = output.Length() / (GetNeuronsPerWorkItem(arg) * GetBatchesPerWorkItem(arg) * groups_per_batches);
         kd.gws1 = groups_per_batches;
         kd.lws0 = 8;
         kd.lws1 = 1;

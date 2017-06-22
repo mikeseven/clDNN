@@ -20,12 +20,12 @@
 
 namespace KernelSelector 
 {
-    jit_constants IGKFullyConnectedKernelBase::get_jit_constants(const FullyConnectedParams& params, const IGKFullyConnectedKernelBase::DispatchData& data) const
+    jit_constants IGKFullyConnectedKernelBase::GetJitConstants(const FullyConnectedParams& params, const IGKFullyConnectedKernelBase::DispatchData& data) const
     {
         const auto& input = params.inputs[0];
         const auto x_size = input.Length() / input.batch().v;
 
-        jit_constants mem_consts = get_common_jit_constants(params);
+        jit_constants mem_consts = GetCommonJitConstants(params);
 
         mem_consts.add_constants({
             gpu::make_jit_constant("INPUT_ELEMENTS_COUNT",      x_size),
@@ -39,9 +39,9 @@ namespace KernelSelector
 
         if (data.vload_kernel_type)
         {
-            const auto batches_per_work_item = get_batches_per_work_item(params);
+            const auto batches_per_work_item = GetBatchesPerWorkItem(params);
 
-            mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", get_neurons_per_work_item(params))); // how many neurons for a single batch will a single work item produce
+            mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", GetNeuronsPerWorkItem(params))); // how many neurons for a single batch will a single work item produce
             mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", batches_per_work_item));             // how many batches will a single work item compute
             mem_consts.add_constant(gpu::make_jit_constant("OUTPUT_ELEMENTS_COUNT", params.output.Length() / params.output.batch().v));
         }
@@ -49,11 +49,11 @@ namespace KernelSelector
         return mem_consts;
     }
 
-    IGKFullyConnectedKernelBase::DispatchData IGKFullyConnectedKernelBase::set_kernel_data(const FullyConnectedParams& params) const
+    IGKFullyConnectedKernelBase::DispatchData IGKFullyConnectedKernelBase::SetKernelData(const FullyConnectedParams& params) const
     {
         DispatchData kd;
 
-        kd.fp16_unit_used = params.inputs[0].dtype == Datatype::F16;
+        kd.fp16UnitUsed = params.inputs[0].dtype == Datatype::F16;
 
         // Determine global work sizes.
         kd.gws0 = params.output.Length();
@@ -78,7 +78,7 @@ namespace KernelSelector
         const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
         const auto& orgOptParams = static_cast<const FullyConnectedOptionalParams&>(optParams);
 
-        const bool bSupportedActivation = check_activation_support(orgParams.activationFunc);
+        const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
         
         bool bProperInput = orgParams.inputs[0].layout == dl;
         if (!bProperInput && orgParams.inputs[0].PaddingExists() == false)
@@ -96,8 +96,8 @@ namespace KernelSelector
                 (wl == WeightsLayout::oi && orgParams.weights.layout == WeightsLayout::oiyx);
         }
 
-        const bool bSupportedLayout = orgOptParams.allow_reorder_input || bProperInput;
-        const bool bSupportedWeightsLayout = orgOptParams.allow_weights_reorder || bProperWeights;
+        const bool bSupportedLayout = orgOptParams.allowReorderInput || bProperInput;
+        const bool bSupportedWeightsLayout = orgOptParams.allowWeightsReorder || bProperWeights;
 
         if (!bSupportedActivation || 
             !bSupportedLayout || 
@@ -112,7 +112,7 @@ namespace KernelSelector
         if (!bProperInput)
         {
             newParams.inputs[0] = newParams.inputs[0].transform(dl);
-            kd.reorder_input = true;
+            kd.reorderInput = true;
         }
 
         if (!bProperWeights)
@@ -124,13 +124,13 @@ namespace KernelSelector
         DispatchData run_info;
         std::string jit;
 
-        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
 
         try
         {
-            run_info = set_default(newParams);
-            auto cldnn_jit = get_jit_constants(newParams, run_info);
-            jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
+            run_info = SetDefault(newParams);
+            auto cldnn_jit = GetJitConstants(newParams, run_info);
+            jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
         }
         catch (const std::runtime_error&)
         {
@@ -138,11 +138,11 @@ namespace KernelSelector
         }
 
         auto& kernel = kd.kernels[0];
-        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, entry_point, true, !orgParams.bias.empty());
+        FillCLKernelData(kernel, run_info, kernelName, jit, entry_point, true, !orgParams.bias.empty());
 
         if (!bProperWeights)
         {
-            bool succeed = SetWeightsReorderParams(orgParams, wl, kd.weights_reorder_params);
+            bool succeed = SetWeightsReorderParams(orgParams, wl, kd.weightsReorderParams);
 
             if (!succeed)
             {
@@ -150,7 +150,7 @@ namespace KernelSelector
             }
         }
 
-        kd.estimated_time = estimated_time;
+        kd.estimatedTime = estimated_time;
 
         return{ kd };
     }

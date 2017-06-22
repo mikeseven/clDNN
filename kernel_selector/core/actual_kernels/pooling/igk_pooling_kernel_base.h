@@ -29,13 +29,11 @@ namespace KernelSelector
 
         struct DispatchData : public CommonDispatchData
         {
-            bool needs_boundary;
+            bool needsBoundary;
         };
 
-        DispatchData _kernel_data;
-
     protected:
-        jit_constants get_jit_constants(const PoolingParams& params, DispatchData kd) const;
-        DispatchData set_default(const PoolingParams& params) const;
+        jit_constants GetJitConstants(const PoolingParams& params, DispatchData kd) const;
+        DispatchData SetDefault(const PoolingParams& params) const;
     };
 }

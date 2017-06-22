@@ -39,7 +39,7 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
 
     fully_connected_gpu(const fully_connected_node& arg, const KernelSelector::KernelData& kd, std::vector<network_impl::ptr> reorders)
         : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string)
+        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
         _use_ks = true;
         _ks_kernel_data = kd;
@@ -72,15 +72,15 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
     {
         auto fc_params = GetWeightsBiasDefaultParams<KernelSelector::FullyConnectedParams>(arg);
         auto fc_optional_params = GetDefaultWeightsBiasOptionalParams<KernelSelector::FullyConnectedOptionalParams>(arg.get_program());
-        fc_optional_params.allow_reorder_input = true;
+        fc_optional_params.allowReorderInput = true;
 
-        cldnn_activation_to_ks(arg.get_primitive(), fc_params);
+        ConvertActivationFuncParams(arg.get_primitive(), fc_params);
 
         fc_params.output = fc_params.output.flatten_fyx_2_f();
 
         const auto primitive = arg.get_primitive();
 
-        auto& kernel_selector = KernelSelector::FullyConnectedKernelSelctor::instance();
+        auto& kernel_selector = KernelSelector::FullyConnectedKernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(fc_params, fc_optional_params);
 
         if (best_kernels.empty())
@@ -95,7 +95,7 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
             const auto& input_layout = arg.input().get_output_layout();
             cldnn::topology topology(
                 cldnn::input_layout("input", input_layout),
-                cldnn::reorder("reorder", "input", data_layput_2_tensor_format(new_fc_params.inputs[0].layout), input_layout.data_type)
+                cldnn::reorder("reorder", "input", ToDataLayout(new_fc_params.inputs[0].layout), input_layout.data_type)
             );
 
             reorders.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });

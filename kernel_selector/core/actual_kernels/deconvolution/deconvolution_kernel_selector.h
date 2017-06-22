@@ -23,7 +23,7 @@ namespace KernelSelector
     class DeconvolutionKernelSelctor : public KernelSelctorBase
     {
     public:
-        static DeconvolutionKernelSelctor &instance() {
+        static DeconvolutionKernelSelctor &Instance() {
             static DeconvolutionKernelSelctor instance_;
             return instance_;
         }

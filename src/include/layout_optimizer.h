@@ -176,9 +176,9 @@ public:
             _enabled)
         {
             if (reorder_params.engine == KernelSelector::WeightsReorderParams::Engine::CPU &&
-                reorder_params.cpu_kernel != nullptr)
+                reorder_params.cpuKernel != nullptr)
             {
-                const auto intermediate_format = weight_layput_2_tensor_format(reorder_params.cpu_kernel->GetInputLayout());
+                const auto intermediate_format = ToWeightsLayout(reorder_params.cpuKernel->GetInputLayout());
                 if (intermediate_format != old_layout.format)
                 {
                     const layout intermediate_layout = { old_layout.data_type, intermediate_format, old_layout.size.transform(intermediate_format, 1) };
@@ -195,7 +195,7 @@ public:
             const auto bpp = data_type_traits::size_of(old_layout.data_type);
             layout expected_layout = {
                 old_layout.data_type, format::bfyx, // simple linear format (flatten to x channel)
-                { 1,1,1,(tensor::value_type)(reorder_params.new_buffer_size / bpp) }
+                { 1,1,1,(tensor::value_type)(reorder_params.newBufferSize / bpp) }
             };
             auto reorder = create_ks_reorder_if_needed(input_id, expected_layout, reorder_params);
             if (reorder.first)

@@ -34,7 +34,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
     pooling_gpu(const pooling_node &arg, const KernelSelector::KernelData& kd)
         : outer(arg)
         , _engine_info(arg.get_program().get_engine()->get_context()->get_engine_info())
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string)
+        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
         _use_ks = true;
         _ks_kernel_data = kd;
@@ -124,7 +124,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
             (uint32_t)stride.spatial[1]
         };
 
-        auto& kernel_selector   = KernelSelector::PoolingKernelSelctor::instance();
+        auto& kernel_selector   = KernelSelector::PoolingKernelSelctor::Instance();
         auto best_kernels       = kernel_selector.GetBestKernels(pool_params, pool_optional_params);
 
         if (best_kernels.empty())

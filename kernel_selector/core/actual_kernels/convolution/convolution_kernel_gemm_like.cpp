@@ -53,9 +53,9 @@ namespace KernelSelector
         const DataTensor newInput = GetConvolutionPaddedTensorDesc(orgParams);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, newInput);
         const bool bSupportedWeightsLayout = orgParams.weights.layout == WeightsLayout::oiyx;
-        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allow_weights_reorder;
+        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
         // TODO: enable non padding path again
-        const bool bInputPadded = optParams.allow_padding || bProperInputDesc;
+        const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
 
         if (!bInputPadded || !bWeightsOK)
         {
@@ -77,9 +77,9 @@ namespace KernelSelector
         SubGroupInfo run_info;
         
         // for KW only
-        kd.reorder_input = false;
+        kd.reorderInput = false;
 
-        if (optParams.allow_padding)
+        if (optParams.allowPadding)
         {
             jit << "#define INPUT_BUFFER_WIDTH_PADDED" << "\n"
                 << "#define INPUT_BUFFER_HEIGHT_PADDED" << "\n";
@@ -87,7 +87,7 @@ namespace KernelSelector
             if (!bProperInputDesc)
             {
                 newParams.inputs[0] = newInput;
-                kd.reorder_input = true;
+                kd.reorderInput = true;
             }
         }
         else
@@ -110,14 +110,14 @@ namespace KernelSelector
             jit << "#define __convolution_f16" << "\n";
             run_info = SubGroupInfo(1, cp.filterSize.x, 32, 1, 16, 1, 32, 1, 1);
             wLayout = WeightsLayout::iy_xs_os_xsv2_osv16__ao32;
-            kd.estimated_time = FORCE_PRIORITY_6;
+            kd.estimatedTime = FORCE_PRIORITY_6;
         }
         else
         {
             jit << "#define __convolution_f32" << "\n";
             run_info = SubGroupInfo(2, cp.filterSize.x, 32, 1, 8, 1, 32, 2, 1);
             wLayout = WeightsLayout::iy_xs_os_xsv2_osv8__ao32;
-            kd.estimated_time = FORCE_PRIORITY_8;
+            kd.estimatedTime = FORCE_PRIORITY_8;
         }
 
         const std::string kernel_id = params.layerID + std::to_string(UniqeID());
@@ -129,21 +129,21 @@ namespace KernelSelector
         size_t sgemm_n = cldnn::round_up_to(newParams.output.feature().v, (size_t)run_info.subBlockDimN);
 
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(
+        kernel.workGroups.global = cl::NDRange(
             cldnn::round_up_to(int(std::ceil((float)sgemm_n / (float)run_info.globalWorkSizeDX)), run_info.localWorkSizeX),
             cldnn::round_up_to(int(std::ceil((float)sgemm_m / (float)run_info.globalWorkSizeDY)), run_info.localWorkSizeY),
             newParams.output.batch().v);
         
-        kernel.work_groups.local = cl::NDRange(
+        kernel.workGroups.local = cl::NDRange(
             run_info.localWorkSizeX,
             run_info.localWorkSizeY,
             run_info.localWorkSizeZ);
 
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id, AGE_BASED);
-        kernel.args_desc = GetArgumentDesc(1, true, !newParams.bias.empty());
-        kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
+        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id, AGE_BASED);
+        kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
+        kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
-        bool succeed = SetWeightsReorderParams(newParams, wLayout, kd.weights_reorder_params);
+        bool succeed = SetWeightsReorderParams(newParams, wLayout, kd.weightsReorderParams);
 
         if (!succeed)
         {

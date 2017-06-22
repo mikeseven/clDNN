@@ -35,7 +35,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
     convolution_gpu(const convolution_node &arg, const KernelSelector::KernelData& kd)
         : outer(arg)
         , _engine_info(arg.get_program().get_engine()->get_context()->get_engine_info())
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string)
+        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
         _use_ks = true;
         _ks_kernel_data = kd;
@@ -98,7 +98,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
         auto conv_params = GetWeightsBiasDefaultParams<KernelSelector::ConvolutionParams>(arg, split);
         auto conv_optional_params = GetDefaultWeightsBiasOptionalParams<KernelSelector::ConvolutionOptionalParams>(arg.get_program());
 
-        cldnn_activation_to_ks(primitive, conv_params);
+        ConvertActivationFuncParams(primitive, conv_params);
 
         conv_params.convParams.split = split;
         conv_params.convParams.filterSize = {
@@ -120,7 +120,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
             (uint32_t)std::min(dilation.spatial[1], input_size.spatial[1])
         };
 
-        auto& kernel_selector = KernelSelector::ConvolutionKernelSelctor::instance();
+        auto& kernel_selector = KernelSelector::ConvolutionKernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(conv_params, conv_optional_params);
         if (best_kernels.empty())
         {

@@ -23,7 +23,7 @@ namespace KernelSelector
     class LRNKernelSelctor : public KernelSelctorBase
     {
     public:
-        static LRNKernelSelctor &instance() {
+        static LRNKernelSelctor &Instance() {
             static LRNKernelSelctor instance_;
             return instance_;
         }

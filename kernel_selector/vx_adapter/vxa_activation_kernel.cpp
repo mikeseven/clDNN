@@ -30,6 +30,6 @@ namespace clDNN
 
         KernelSelector::ActivationOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelector::ActivationKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::ActivationKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

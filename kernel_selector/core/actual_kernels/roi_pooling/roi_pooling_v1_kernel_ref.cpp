@@ -37,7 +37,7 @@ namespace KernelSelector {
     {
         ROIPoolingV1KernelRef::DispatchData kd;
 
-        kd.fp16_unit_used = (params.inputs[0].dtype == Datatype::F16);
+        kd.fp16UnitUsed = (params.inputs[0].dtype == Datatype::F16);
 
         // Determine global work sizes.
         kd.gws0 = params.output.Length();
@@ -58,12 +58,12 @@ namespace KernelSelector {
 
     jit_constants ROIPoolingV1KernelRef::get_jit_constants(const ROIPoolingV1Params& params) const
     {
-        gpu::jit_constants mem_consts = get_common_jit_constants(params);
+        gpu::jit_constants mem_consts = GetCommonJitConstants(params);
 
         mem_consts.add_constants({
-            gpu::make_jit_constant("POOLED_HEIGHT",     params.roiParams.pooled_height),
-            gpu::make_jit_constant("POOLED_WIDTH",      params.roiParams.pooled_width),
-            gpu::make_jit_constant("SPATIAL_SCALE",     params.roiParams.spatial_scale),
+            gpu::make_jit_constant("POOLED_HEIGHT",     params.roiParams.pooledHeight),
+            gpu::make_jit_constant("POOLED_WIDTH",      params.roiParams.pooledWidth),
+            gpu::make_jit_constant("SPATIAL_SCALE",     params.roiParams.spatialScale),
         });
         return mem_consts;
     }
@@ -84,14 +84,14 @@ namespace KernelSelector {
         KernelData kd = KernelData::Default<ROIPoolingV1Params>(params, 1);
 
         auto cldnn_jit = get_jit_constants(orgParams);
-        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
-        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
+        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
 
         auto& kernel = kd.kernels[0];
-        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, entry_point);
-        kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::INPUT, 0 });
+        FillCLKernelData(kernel, run_info, kernelName, jit, entry_point);
+        kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::INPUT, 0 });
 
-        kd.estimated_time = FORCE_PRIORITY_9;
+        kd.estimatedTime = FORCE_PRIORITY_9;
 
         return{ kd };
     }

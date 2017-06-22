@@ -32,7 +32,7 @@ struct permute_gpu : typed_primitive_impl<permute>
 
     permute_gpu(const permute_node& arg, const KernelSelector::KernelData& kd)
         : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string)
+        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
         _use_ks = true;
         _ks_kernel_data = kd;
@@ -58,7 +58,7 @@ struct permute_gpu : typed_primitive_impl<permute>
             auto order = permute_order[permute_order.size() - 1 - i];
             reorder_params.permuteParams.order.push_back(max_input_index - order);
         }
-        auto& kernel_selector = KernelSelector::PermuteKernelSelctor::instance();
+        auto& kernel_selector = KernelSelector::PermuteKernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(reorder_params, reorder_optional_params);
         if (best_kernels.empty())
         {

@@ -39,6 +39,6 @@ namespace clDNN
 
         KernelSelector::EltwiseOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelector::EltwiseKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::EltwiseKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

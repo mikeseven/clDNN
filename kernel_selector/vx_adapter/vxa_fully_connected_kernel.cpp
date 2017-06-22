@@ -30,6 +30,6 @@ namespace clDNN
 
         KernelSelector::FullyConnectedOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelector::FullyConnectedKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::FullyConnectedKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

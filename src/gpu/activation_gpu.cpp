@@ -32,7 +32,7 @@ struct activation_gpu : typed_primitive_impl<activation>
 
     activation_gpu(const activation_node& arg, const KernelSelector::KernelData& kd)
         : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string)
+        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
         _use_ks = true;
         _ks_kernel_data = kd;
@@ -66,7 +66,7 @@ struct activation_gpu : typed_primitive_impl<activation>
             activation_params.activationFunc = KernelSelector::ActivationFunction::RELU_NEGATIVE_SLOPE;
         }
 
-        auto& kernel_selector = KernelSelector::ActivationKernelSelctor::instance();
+        auto& kernel_selector = KernelSelector::ActivationKernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(activation_params, activation_optional_params);
         if (best_kernels.empty())
         {

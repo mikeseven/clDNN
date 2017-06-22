@@ -23,7 +23,7 @@ namespace KernelSelector
     class ROIPoolingV1KernelSelctor : public KernelSelctorBase
     {
     public:
-        static ROIPoolingV1KernelSelctor &instance() {
+        static ROIPoolingV1KernelSelctor &Instance() {
             static ROIPoolingV1KernelSelctor instance_;
             return instance_;
         }

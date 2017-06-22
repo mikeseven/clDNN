@@ -23,7 +23,7 @@ namespace KernelSelector
     class FullyConnectedKernelSelctor : public KernelSelctorBase
     {
     public:
-        static FullyConnectedKernelSelctor &instance() {
+        static FullyConnectedKernelSelctor &Instance() {
             static FullyConnectedKernelSelctor instance_;
             return instance_;
         }

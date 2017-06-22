@@ -23,7 +23,7 @@ namespace KernelSelector
     class ReorderVxKernelSelctor : public KernelSelctorBase
     {
     public:
-        static ReorderVxKernelSelctor &instance() {
+        static ReorderVxKernelSelctor &Instance() {
             static ReorderVxKernelSelctor instance_;
             return instance_;
         }

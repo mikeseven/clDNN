@@ -34,7 +34,7 @@ struct lrn_gpu : typed_primitive_impl<lrn>
     lrn_gpu(const lrn_node& arg, const KernelSelector::KernelData& kd)
         : outer(arg)
         , _engine_info(arg.get_program().get_engine()->get_context()->get_engine_info())
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string)
+        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
         _use_ks = true;
         _ks_kernel_data = kd;
@@ -66,7 +66,7 @@ struct lrn_gpu : typed_primitive_impl<lrn>
             KernelSelector::LRNMode::WITHIN_CHANNEL :
             KernelSelector::LRNMode::ACROSS_CHANNEL;
 
-        auto& kernel_selector = KernelSelector::LRNKernelSelctor::instance();
+        auto& kernel_selector = KernelSelector::LRNKernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(lrn_params, lrn_optional_params);
         if (best_kernels.empty())
         {

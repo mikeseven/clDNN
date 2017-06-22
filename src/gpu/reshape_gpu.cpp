@@ -32,7 +32,7 @@ struct reshape_gpu : public typed_primitive_impl<reshape>
     std::unique_ptr<gpu::kernel> _kernel;
 
     reshape_gpu(reshape_node const& node, const KernelSelector::KernelData& kd)
-        : _kernel(std::make_unique<gpu::kernel>(node.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string))
+        : _kernel(std::make_unique<gpu::kernel>(node.get_program().get_engine()->get_context(), kd.kernels[0].kernelString))
     {
         _use_ks = true;
         _ks_kernel_data = kd;
@@ -68,7 +68,7 @@ struct reshape_gpu : public typed_primitive_impl<reshape>
         auto reorder_params = GetDefaultParams<KernelSelector::ReorderBaseParams>(node);
         auto reorder_optional_params = GetDefaultOptionalParams<KernelSelector::ReorderOptionalParams>(node.get_program());
 
-        auto& kernel_selector = KernelSelector::ReshapeKernelSelctor::instance();
+        auto& kernel_selector = KernelSelector::ReshapeKernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(reorder_params, reorder_optional_params);
         if (best_kernels.empty())
         {

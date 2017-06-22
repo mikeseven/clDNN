@@ -39,9 +39,9 @@ namespace KernelSelector
         return k;
     }
 
-    jit_constants FullyConnected_bs_f_bsv16_b1::get_jit_constants(const FullyConnectedParams& params, const DispatchData& run_info) const
+    jit_constants FullyConnected_bs_f_bsv16_b1::GetJitConstants(const FullyConnectedParams& params, const DispatchData& run_info) const
     {
-        auto cldnn_jit = IGKFullyConnectedKernelBase::get_jit_constants(params, run_info);
+        auto cldnn_jit = IGKFullyConnectedKernelBase::GetJitConstants(params, run_info);
         cldnn_jit.add_constants({
             gpu::make_jit_constant("SUB_GROUP_SIZE",             run_info.lws0),
             gpu::make_jit_constant("WORK_ITEMS_PER_BATCH",       run_info.gws1),
@@ -59,13 +59,13 @@ namespace KernelSelector
         return cldnn_jit;
     }
 
-    FullyConnected_bs_f_bsv16_b1::DispatchData FullyConnected_bs_f_bsv16_b1::set_default(const FullyConnectedParams& arg) const
+    FullyConnected_bs_f_bsv16_b1::DispatchData FullyConnected_bs_f_bsv16_b1::SetDefault(const FullyConnectedParams& arg) const
     {
-        DispatchData run_info = set_kernel_data(arg);
+        DispatchData run_info = SetKernelData(arg);
 
         // Properties of chunk and unit.
         const     char*    chunk_type           = "uint";
-        const     uint32_t unit_byte_size       = run_info.fp16_unit_used ? sizeof(cl_half) : sizeof(float);
+        const     uint32_t unit_byte_size       = run_info.fp16UnitUsed ? sizeof(cl_half) : sizeof(float);
         constexpr uint32_t chunk_byte_size      = sizeof(cl_uint);
         constexpr uint32_t sub_group_size       = 16;
         const     uint32_t units_per_chunk      = chunk_byte_size / unit_byte_size;

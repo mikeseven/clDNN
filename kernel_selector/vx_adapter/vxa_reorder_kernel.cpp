@@ -31,6 +31,6 @@ namespace clDNN
 
         KernelSelector::ReorderVxOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelector::ReorderVxKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::ReorderVxKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

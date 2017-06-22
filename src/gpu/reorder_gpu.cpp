@@ -32,7 +32,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
 
     reorder_gpu(const reorder_node& arg, const KernelSelector::KernelData& kd)
         : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string)
+        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
         _use_ks = true;
         _ks_kernel_data = kd;
@@ -70,23 +70,23 @@ struct reorder_gpu : typed_primitive_impl<reorder>
 
             layout new_layout = { mean_layout.data_type, mean_layout.format, {b,f,x,y}, mean_layout.data_padding };
             
-            reorder_params.reorderParams.mean = tensor_2_data_tensor(new_layout);
+            reorder_params.reorderParams.mean = ConvertDataTensor(new_layout);
 #else
-            reorder_params.reorderParams.mean = tensor_2_data_tensor(mean_layout);
+            reorder_params.reorderParams.mean = ConvertDataTensor(mean_layout);
 #endif
             reorder_params.reorderParams.mode = KernelSelector::MeanSubtructMode::IN_BUFFER;
         }
         else if (arg.get_primitive()->subtract_per_feature.empty() == false)
         {
             reorder_params.reorderParams.mode = KernelSelector::MeanSubtructMode::INSIDE_PARAMS;
-            reorder_params.reorderParams.mean_values = arg.get_primitive()->subtract_per_feature;
+            reorder_params.reorderParams.meanValues = arg.get_primitive()->subtract_per_feature;
         }
         else
         {
             reorder_params.reorderParams.mode = KernelSelector::MeanSubtructMode::NONE;
         }
 
-        auto& kernel_selector = KernelSelector::ReorderKernelSelctor::instance();
+        auto& kernel_selector = KernelSelector::ReorderKernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(reorder_params, reorder_optional_params);
         if (best_kernels.empty())
         {

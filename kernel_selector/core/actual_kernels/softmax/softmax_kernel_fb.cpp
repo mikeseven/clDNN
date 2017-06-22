@@ -36,34 +36,34 @@ namespace KernelSelector
         return k;
     }
 
-    IGKSoftmaxKernelBase::DispatchData SoftmaxKernel_fb::set_default(const SoftmaxParams& params, const OptionalParams& optParams) const
+    IGKSoftmaxKernelBase::DispatchData SoftmaxKernel_fb::SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const
     {
-        auto kd = IGKSoftmaxKernelBase::set_default(params, optParams);
+        auto kd = IGKSoftmaxKernelBase::SetDefault(params, optParams);
         //start with 1 thread per data set
-        kd.gws0 = kd.data_sets_count;
+        kd.gws0 = kd.dataSetsCount;
         kd.gws1 = 1;
-        kd.items_num = kd.data_set_size;
+        kd.itemsNum = kd.dataSetSize;
 
-        kd.norm_index = 1;
+        kd.normIndex = 1;
 
         // We have two units of data per work item in current implementation.
-        auto local_mem_per_wi = 2 * (kd.fp16_unit_used ? sizeof(half_t) : sizeof(float));
+        auto local_mem_per_wi = 2 * (kd.fp16UnitUsed ? sizeof(half_t) : sizeof(float));
         // Combining device execution and local memory restrictions to compute maximum possible LWS.
         auto max_lws = std::min(optParams.maxWorkGroupSize, optParams.maxLocalMemSize / local_mem_per_wi);
 
-        kd.lws0 = kd.data_sets_count;
+        kd.lws0 = kd.dataSetsCount;
         // Compute maximum possible LWS that does not exceed device capabilities and optimizes number of global memory reads.
-        while ((kd.items_num > 32 || kd.lws0 < kd.items_num) && (2 * kd.lws0 <= max_lws))
+        while ((kd.itemsNum > 32 || kd.lws0 < kd.itemsNum) && (2 * kd.lws0 <= max_lws))
         {
             kd.lws0 *= 2;
-            kd.items_num /= 2;
+            kd.itemsNum /= 2;
         }
 
         kd.gws0 = kd.lws0;
         kd.gws1 = 1;
-        kd.leftovers = (kd.data_set_size * kd.data_sets_count) % kd.lws0;
+        kd.leftovers = (kd.dataSetSize * kd.dataSetsCount) % kd.lws0;
 
-        assert(kd.items_num > 0 && kd.lws0 && kd.gws0 > 0);
+        assert(kd.itemsNum > 0 && kd.lws0 && kd.gws0 > 0);
 
         return kd;
     }

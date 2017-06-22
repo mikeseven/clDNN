@@ -52,7 +52,7 @@ namespace KernelSelector
 
         const DeconvolutionParams& orgParams = static_cast<const DeconvolutionParams&>(params);
 
-        const bool bSupportedActivation = check_activation_support(orgParams.activationFunc);
+        const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
 
         const bool bSupportedWeightsLayout =
             orgParams.weights.layout == WeightsLayout::yxio ||
@@ -65,18 +65,18 @@ namespace KernelSelector
             return{};
         }
 
-        DispatchData run_info = set_default(orgParams);
+        DispatchData run_info = SetDefault(orgParams);
         KernelData kd = KernelData::Default<DeconvolutionParams>(params, 1);
 
-        auto cldnn_jit = get_jit_constants(orgParams);
-        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
-        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
+        auto cldnn_jit = GetJitConstants(orgParams);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
+        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
 
         auto& kernel = kd.kernels[0];
-        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, entry_point, true, !orgParams.bias.empty());
-        kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
+        FillCLKernelData(kernel, run_info, kernelName, jit, entry_point, true, !orgParams.bias.empty());
+        kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
-        kd.estimated_time = run_info.effiency;
+        kd.estimatedTime = run_info.effiency;
 
         return{ kd };
     }

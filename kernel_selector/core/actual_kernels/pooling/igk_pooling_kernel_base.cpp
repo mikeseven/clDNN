@@ -20,9 +20,9 @@
 
 namespace KernelSelector 
 {
-    jit_constants IGKPoolingKernelBase::get_jit_constants(const PoolingParams& params, IGKPoolingKernelBase::DispatchData kd) const
+    jit_constants IGKPoolingKernelBase::GetJitConstants(const PoolingParams& params, IGKPoolingKernelBase::DispatchData kd) const
     {
-        jit_constants mem_consts = get_common_jit_constants(params);
+        jit_constants mem_consts = GetCommonJitConstants(params);
 
         const auto& pp = params.poolParams;
 
@@ -51,7 +51,7 @@ namespace KernelSelector
         mem_consts.add_constant(gpu::make_jit_constant(toString(pp.poolType) + "_POOLING", 1));
         mem_consts.add_constant(gpu::make_jit_constant("LAYOUT_" + toString(params.inputs[0].layout), 1));
 
-        if (kd.needs_boundary)
+        if (kd.needsBoundary)
         {
             mem_consts.add_constant(gpu::make_jit_constant("CHECK_BOUNDRY", 1));
         }
@@ -77,13 +77,13 @@ namespace KernelSelector
         return mod_x || mod_y;
     }
 
-    IGKPoolingKernelBase::DispatchData IGKPoolingKernelBase::set_default(const PoolingParams& params) const
+    IGKPoolingKernelBase::DispatchData IGKPoolingKernelBase::SetDefault(const PoolingParams& params) const
     {
         const auto& output = params.output;
 
         DispatchData kd;
 
-        kd.fp16_unit_used = params.inputs[0].dtype == Datatype::F16;
+        kd.fp16UnitUsed = params.inputs[0].dtype == Datatype::F16;
 
         if (params.inputs[0].layout == DataLayout::bfyx)
         {
@@ -113,7 +113,7 @@ namespace KernelSelector
             kd.lws2 = 1;
         }
 
-        kd.needs_boundary = needs_boundary_check(params);
+        kd.needsBoundary = needs_boundary_check(params);
 
         return kd;
     }

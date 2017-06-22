@@ -58,7 +58,7 @@ namespace KernelSelector
 
         try
         {
-            run_info = set_default(orgParams);
+            run_info = SetDefault(orgParams);
         }
         catch (const std::runtime_error&)
         {
@@ -67,14 +67,14 @@ namespace KernelSelector
 
         KernelData kd = KernelData::Default<PoolingParams>(params, 1);
 
-        auto cldnn_jit = get_jit_constants(orgParams, run_info);
-        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
-        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
+        auto cldnn_jit = GetJitConstants(orgParams, run_info);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
+        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
 
         auto& kernel = kd.kernels[0];
-        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, entry_point);
+        FillCLKernelData(kernel, run_info, kernelName, jit, entry_point);
 
-        kd.estimated_time = FORCE_PRIORITY_9;
+        kd.estimatedTime = FORCE_PRIORITY_9;
 
         return{ kd };
     }

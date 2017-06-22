@@ -43,6 +43,6 @@ namespace KernelSelector
         virtual KernelsData GetNaiveBestKernel(const Params& params, const OptionalParams& options, KernelType kType) const;
 
         KernelList implementations;
-        ForceList force_kernels;
+        ForceList forceKernels;
     };
 }

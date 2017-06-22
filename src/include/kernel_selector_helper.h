@@ -24,7 +24,7 @@
 
 using namespace cldnn;
 
-inline KernelSelector::Datatype tensor_2_data_type(data_types dt)
+inline KernelSelector::Datatype ConvertDataType(data_types dt)
 {
     switch (dt)
     {
@@ -36,7 +36,7 @@ inline KernelSelector::Datatype tensor_2_data_type(data_types dt)
     }
 }
 
-inline KernelSelector::WeightsType tensor_2_weight_type(data_types dt)
+inline KernelSelector::WeightsType ConvertWeightsType(data_types dt)
 {
     switch (dt)
     {
@@ -49,7 +49,7 @@ inline KernelSelector::WeightsType tensor_2_weight_type(data_types dt)
     }
 }
 
-inline KernelSelector::DataLayout tensor_format_2_data_layput(format f)
+inline KernelSelector::DataLayout FromDataLayout(format f)
 {
     switch (f)
     {
@@ -66,7 +66,7 @@ inline KernelSelector::DataLayout tensor_format_2_data_layput(format f)
     }
 }
 
-static inline cldnn::format data_layput_2_tensor_format(KernelSelector::DataLayout l)
+static inline cldnn::format ToDataLayout(KernelSelector::DataLayout l)
 {
     switch (l)
     {
@@ -85,7 +85,7 @@ static inline cldnn::format data_layput_2_tensor_format(KernelSelector::DataLayo
     }
 }
 
-inline KernelSelector::WeightsLayout tensor_format_2_weight_layput(format f)
+inline KernelSelector::WeightsLayout FromWeightsLayout(format f)
 {
     switch (f)
     {
@@ -102,7 +102,7 @@ inline KernelSelector::WeightsLayout tensor_format_2_weight_layput(format f)
     }
 }
 
-static inline cldnn::format weight_layput_2_tensor_format(KernelSelector::WeightsLayout l)
+static inline cldnn::format ToWeightsLayout(KernelSelector::WeightsLayout l)
 {
     switch (l)
     {
@@ -121,14 +121,14 @@ static inline cldnn::format weight_layput_2_tensor_format(KernelSelector::Weight
     }
 }
 
-inline KernelSelector::DataTensor tensor_2_data_tensor(const layout& l, uint32_t split = 1, const tensor additional_offest = {})
+inline KernelSelector::DataTensor ConvertDataTensor(const layout& l, uint32_t split = 1, const tensor additional_offest = {})
 {
     const auto& pad = l.data_padding;
     const auto& vals = l.size.sizes(l.format);
     const auto& add_offsets = additional_offest.sizes(l.format);
     const auto& lower_pad = pad.lower_size().sizes(l.format);
     const auto& upper_pad = pad.upper_size().sizes(l.format);
-    const auto ks_layout = tensor_format_2_data_layput(l.format);
+    const auto ks_layout = FromDataLayout(l.format);
     KernelSelector::Tensor::NDims vec(KernelSelector::Tensor::channelsCount(ks_layout));
 
     size_t pitch = 1;
@@ -152,20 +152,20 @@ inline KernelSelector::DataTensor tensor_2_data_tensor(const layout& l, uint32_t
     vec[feature_index].v /= split;
 
     return KernelSelector::DataTensor(
-        tensor_2_data_type(l.data_type),
+        ConvertDataType(l.data_type),
         ks_layout,
         KernelSelector::Tensor::PADDED_VAL::ZERO,
         offset,
         vec);
 }
 
-inline KernelSelector::WeightsTensor tensor_2_weight_tensor(const layout& l)
+inline KernelSelector::WeightsTensor ConvertWeightsTensor(const layout& l)
 {
     assert(l.format.dimension() == 4);
     const auto& t = l.size.sizes(format::bfyx);
     const auto base_layout = KernelSelector::WeightsLayout::oiyx;
-    const auto ks_type = tensor_2_weight_type(l.data_type);
-    const auto ks_layout = tensor_format_2_weight_layput(l.format);
+    const auto ks_type = ConvertWeightsType(l.data_type);
+    const auto ks_layout = FromWeightsLayout(l.format);
     std::vector<size_t> vec(KernelSelector::Tensor::channelsCount(base_layout));
 
     for (size_t i = 0; i < vec.size(); i++)
@@ -184,7 +184,7 @@ inline KernelSelector::WeightsTensor tensor_2_weight_tensor(const layout& l)
 }
 
 template <typename PType>
-inline void cldnn_activation_to_ks(const PType primitive, KernelSelector::BaseParams& params)
+inline void ConvertActivationFuncParams(const PType primitive, KernelSelector::BaseParams& params)
 {
     if (primitive->with_activation)
     {
@@ -213,8 +213,8 @@ inline ParamsT GetDefaultParams(const ArgT& arg, uint32_t split = 1)
     const auto& input_layout    = arg.input().get_output_layout();
     const auto& output_layout   = arg.get_output_layout();
 
-    params.inputs[0] = tensor_2_data_tensor(input_layout, split);
-    params.output = tensor_2_data_tensor(output_layout, split);
+    params.inputs[0] = ConvertDataTensor(input_layout, split);
+    params.output = ConvertDataTensor(output_layout, split);
 
     params.layerID = arg.id();
 
@@ -227,13 +227,13 @@ inline ParamsT GetWeightsBiasDefaultParams(const ArgT& arg, uint32_t split = 1)
     ParamsT params = GetDefaultParams<ParamsT>(arg, split);
 
     const auto& weights_layout = arg.weights().get_output_layout();
-    params.weights = tensor_2_weight_tensor(weights_layout);
+    params.weights = ConvertWeightsTensor(weights_layout);
 
     if (arg.bias_term())
     {
         const auto& bias_layout = arg.bias().get_output_layout();
         // bias per output is not supported on cldnn
-        params.bias.push_back(tensor_2_data_tensor(bias_layout).flatten_fyx_2_f());
+        params.bias.push_back(ConvertDataTensor(bias_layout).flatten_fyx_2_f());
     }
 
     return params;
@@ -258,6 +258,6 @@ inline OptionalParamsT GetDefaultWeightsBiasOptionalParams(const program_impl& p
 {
     OptionalParamsT params = GetDefaultOptionalParams<OptionalParamsT>(program);
     //params.allow_padding = true; - TODO:
-    params.allow_weights_reorder = program.get_options().get<build_option_type::optimize_data>()->enabled();
+    params.allowWeightsReorder = program.get_options().get<build_option_type::optimize_data>()->enabled();
     return params;
 }

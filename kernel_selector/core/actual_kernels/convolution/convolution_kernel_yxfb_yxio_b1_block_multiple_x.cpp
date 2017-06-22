@@ -43,7 +43,7 @@ namespace KernelSelector
 
     IGKConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::default_yxfb_yxio_b1_multiple_x(const ConvolutionParams& arg) const
     {
-        DispatchData run_info = set_default(arg);
+        DispatchData run_info = SetDefault(arg);
 
         const auto filter_ofm_num = arg.weights.ofm().v;
         const auto batch_size = arg.output.batch().v;
@@ -76,24 +76,24 @@ namespace KernelSelector
         }
         else*/ if (filter_ofm_num % (run_info.lws0 * 4) == 0)
         {
-            run_info.ofm_per_work_item = 4;
+            run_info.ofmPerWorkItem = 4;
             // We compute multiple spatial coordinates "x" in a single workitem that's why we must divide
             run_info.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(run_info.gws1) / 4.0f));
         }
         else if (filter_ofm_num % (run_info.lws0 * 2) == 0)
         {
-            run_info.ofm_per_work_item = 2;
+            run_info.ofmPerWorkItem = 2;
             run_info.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(run_info.gws1) / 8.0f));
         }
         else
         {
-            run_info.ofm_per_work_item = 1;
+            run_info.ofmPerWorkItem = 1;
             run_info.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(run_info.gws1) / 8.0f));
         }
 
-        run_info.gws0 = filter_ofm_num * batch_size / (run_info.ofm_per_work_item * run_info.batches_per_work_item);
+        run_info.gws0 = filter_ofm_num * batch_size / (run_info.ofmPerWorkItem * run_info.batchesPerWorkItem);
 
-        if (!check_work_groups(run_info))
+        if (!CheckWorkGroups(run_info))
         {
             throw std::runtime_error("Internal Error - wrong calculation of global/local work group sizes");
         }
@@ -108,11 +108,11 @@ namespace KernelSelector
         const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
         const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
 
-        const bool bSupportedActivation = check_activation_support(orgParams.activationFunc);
+        const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
         const bool bSupportedWeightsLayout = orgParams.weights.layout == WeightsLayout::yxio;
-        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allow_weights_reorder;
+        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
         
-        if (!bSupportedActivation || !bWeightsOK || !check_pitch_for_split_only(orgParams))
+        if (!bSupportedActivation || !bWeightsOK || !CheckPitchForSplitOnly(orgParams))
         {
             return{};
         }
@@ -130,14 +130,14 @@ namespace KernelSelector
 
         KernelData kd = KernelData::Default<ConvolutionParams>(params, 1);
 
-        auto cldnn_jit = get_jit_constants(orgParams, run_info);
+        auto cldnn_jit = GetJitConstants(orgParams, run_info);
 
-        cldnn_jit.add_constant(gpu::make_jit_constant("USE_VECTOR", run_info.ofm_per_work_item));
-        if (run_info.ofm_per_work_item == 8)
+        cldnn_jit.add_constant(gpu::make_jit_constant("USE_VECTOR", run_info.ofmPerWorkItem));
+        if (run_info.ofmPerWorkItem == 8)
         {
             cldnn_jit.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 2));
         }
-        else if (run_info.ofm_per_work_item == 4)
+        else if (run_info.ofmPerWorkItem == 4)
         {
             cldnn_jit.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 4));
         }
@@ -146,24 +146,24 @@ namespace KernelSelector
             cldnn_jit.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 8));
         }
 
-        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
-        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
+        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
 
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(run_info.gws0, run_info.gws1, run_info.gws2);
-        kernel.work_groups.local = cl::NDRange(run_info.lws0, run_info.lws1, run_info.lws2);
-        kernel.kernel_string = get_kernel_string(kernel_name, jit, entry_point);
-        kernel.args_desc = get_args_desc(1, true, !orgParams.bias.empty());
-        kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
+        kernel.workGroups.global = cl::NDRange(run_info.gws0, run_info.gws1, run_info.gws2);
+        kernel.workGroups.local = cl::NDRange(run_info.lws0, run_info.lws1, run_info.lws2);
+        kernel.kernelString = GetKernelString(kernelName, jit, entry_point);
+        kernel.argsDesc = GetArgsDesc(1, true, !orgParams.bias.empty());
+        kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
-        bool succeed = SetWeightsReorderParams(orgParams, WeightsLayout::yxio, kd.weights_reorder_params);
+        bool succeed = SetWeightsReorderParams(orgParams, WeightsLayout::yxio, kd.weightsReorderParams);
 
         if (!succeed)
         {
             return{};
         }
 
-        kd.estimated_time = run_info.effiency;
+        kd.estimatedTime = run_info.effiency;
 
         return{ kd };
     }

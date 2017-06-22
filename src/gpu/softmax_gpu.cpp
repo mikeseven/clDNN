@@ -33,7 +33,7 @@ struct softmax_gpu : typed_primitive_impl<softmax>
 
     softmax_gpu(const softmax_node& arg, const KernelSelector::KernelData& kd)
         : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string)
+        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
         _use_ks = true;
         _ks_kernel_data = kd;
@@ -81,7 +81,7 @@ struct softmax_gpu : typed_primitive_impl<softmax>
             throw std::runtime_error("Wrong API - no such softmax");
         }
 
-        auto& kernel_selector = KernelSelector::SoftmaxKernelSelctor::instance();
+        auto& kernel_selector = KernelSelector::SoftmaxKernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(sm_params, sm_optional_params);
 
         if (best_kernels.empty())

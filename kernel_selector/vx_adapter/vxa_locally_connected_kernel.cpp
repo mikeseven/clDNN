@@ -33,6 +33,6 @@ namespace clDNN
 
         KernelSelector::LocallyConnectedOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelector::LocallyConnectedKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::LocallyConnectedKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

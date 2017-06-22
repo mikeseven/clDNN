@@ -33,7 +33,7 @@ struct generic_layer_gpu : typed_primitive_impl<generic_layer>
 
     generic_layer_gpu(const generic_layer_node& arg)
     : outer(arg)
-    , _kernel(arg.get_program().get_engine()->get_context(), outer.get_primitive()->generic_params.cl_kernel->kernel_string)
+    , _kernel(arg.get_program().get_engine()->get_context(), outer.get_primitive()->generic_params.clKernel->kernelString)
     {}
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, generic_layer_inst& instance) override
@@ -47,7 +47,7 @@ struct generic_layer_gpu : typed_primitive_impl<generic_layer>
         }
         args.output = &instance.output_memory();
 
-        const auto& kernel_data = *outer.get_primitive()->generic_params.cl_kernel.get();
+        const auto& kernel_data = *outer.get_primitive()->generic_params.clKernel.get();
         
         return _kernel.run_ks(kernel_data, events, args);
     }
@@ -74,7 +74,7 @@ struct generic_layer_cpu : typed_primitive_impl<generic_layer>
         auto  old_pointer = input_mem.pointer<uint8_t>();;
         auto  new_pointer = output_mem.pointer<uint8_t>();;
 
-        const auto& cpu_kernel = *outer.get_primitive()->generic_params.cpu_kernel.get();
+        const auto& cpu_kernel = *outer.get_primitive()->generic_params.cpuKernel.get();
 
         cpu_kernel.Execute(old_pointer.data(), old_pointer.size(), new_pointer.data(), new_pointer.size());
 

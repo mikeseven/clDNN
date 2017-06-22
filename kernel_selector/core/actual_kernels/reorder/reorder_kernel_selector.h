@@ -23,7 +23,7 @@ namespace KernelSelector
     class ReorderKernelSelctor : public KernelSelctorBase
     {
     public:
-        static ReorderKernelSelctor &instance() {
+        static ReorderKernelSelctor &Instance() {
             static ReorderKernelSelctor instance_;
             return instance_;
         }

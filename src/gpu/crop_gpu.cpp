@@ -33,7 +33,7 @@ struct crop_gpu : typed_primitive_impl<crop>
 
     crop_gpu(const crop_node& arg, const KernelData& kd)
         : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string)
+        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
         _use_ks = true;
         _ks_kernel_data = kd;
@@ -56,9 +56,9 @@ struct crop_gpu : typed_primitive_impl<crop>
         ew_params.eltwiseParams.operations.push_back({{ EltwiseParams::InputType::Buffer(0) }, EltwiseMode::ASSIGN });
 
         const auto& input_layout = arg.input().get_output_layout();
-        ew_params.inputs[0] = tensor_2_data_tensor(input_layout, 1, arg.get_primitive()->offsets);
+        ew_params.inputs[0] = ConvertDataTensor(input_layout, 1, arg.get_primitive()->offsets);
 
-        auto& kernel_selector = EltwiseKernelSelctor::instance();
+        auto& kernel_selector = EltwiseKernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(ew_params, ew_optional_params);
 
         if (best_kernels.empty())

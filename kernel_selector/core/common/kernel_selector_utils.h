@@ -51,14 +51,14 @@ namespace KernelSelector { namespace
         const auto left_padding = cp.padding.x;
         const auto top_padding = cp.padding.y;
 
-        const auto input_limit_x = (params.output.x().v - 1) * cp.stride.x + (cp.filterSize.x - 1) * cp.dilation.x + 1;
-        const auto input_limit_y = (params.output.y().v - 1) * cp.stride.y + (cp.filterSize.y - 1) * cp.dilation.y + 1;
+        const auto inputLimitX = (params.output.x().v - 1) * cp.stride.x + (cp.filterSize.x - 1) * cp.dilation.x + 1;
+        const auto inputLimitY = (params.output.y().v - 1) * cp.stride.y + (cp.filterSize.y - 1) * cp.dilation.y + 1;
 
-        const size_t right_padding = (size_t)std::max((int)input_limit_x - (int)t.x().v - (int)left_padding, (int)0);
-        const size_t bottom_padding = (size_t)std::max((int)input_limit_y - (int)t.y().v - (int)top_padding, (int)0);
+        const size_t rightPadding = (size_t)std::max((int)inputLimitX - (int)t.x().v - (int)left_padding, (int)0);
+        const size_t bottomPadding = (size_t)std::max((int)inputLimitY - (int)t.y().v - (int)top_padding, (int)0);
 
-        const size_t paddedInputWidth = t.x().v + left_padding + right_padding;
-        const size_t paddedInputHeight = t.y().v + top_padding + bottom_padding;
+        const size_t paddedInputWidth = t.x().v + left_padding + rightPadding;
+        const size_t paddedInputHeight = t.y().v + top_padding + bottomPadding;
         const size_t offest = paddedInputWidth*params.convParams.padding.y + params.convParams.padding.x;
 
         t.offset = offest;
@@ -74,11 +74,11 @@ namespace KernelSelector { namespace
         return t;
     }
 
-    inline bool SetWeightsReorderParams(const WeightBiasParams& params, WeightsLayout layout, WeightsReorderParams& weights_reorder_params)
+    inline bool SetWeightsReorderParams(const WeightBiasParams& params, WeightsLayout layout, WeightsReorderParams& weightsReorderParams)
     {
         if (layout != params.weights.layout)
         {
-            auto& reorderKS = ReorderWeightsKernelSelctor::instance();
+            auto& reorderKS = ReorderWeightsKernelSelctor::Instance();
             ReorderWeightsParams r_params;
 
             r_params.layerID = params.layerID + "_reorder_";
@@ -93,9 +93,9 @@ namespace KernelSelector { namespace
                 return false;
             }
 
-            weights_reorder_params.engine = WeightsReorderParams::Engine::GPU;
-            weights_reorder_params.cl_kernel = std::make_shared<clKernelData>(kernels_data[0].kernels[0]);
-            weights_reorder_params.new_buffer_size = r_params.reorderParams.output.PhysicalSize();
+            weightsReorderParams.engine = WeightsReorderParams::Engine::GPU;
+            weightsReorderParams.clKernel = std::make_shared<clKernelData>(kernels_data[0].kernels[0]);
+            weightsReorderParams.newBufferSize = r_params.reorderParams.output.PhysicalSize();
         }
 
         return true;

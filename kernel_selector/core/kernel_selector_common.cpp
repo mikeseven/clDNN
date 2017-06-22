@@ -55,15 +55,15 @@ namespace KernelSelector {
                 }
                 break;
             case ArgumentDescpirtor::Types::LOOKUP_TABLE:
-                if (params.lookup_table)
+                if (params.lookupTable)
                 {
-                    status = kernel.setArg(i, *params.lookup_table);
+                    status = kernel.setArg(i, *params.lookupTable);
                 }
                 break;
             case ArgumentDescpirtor::Types::SCALE_TABLE:
-                if (params.scale_table)
+                if (params.scaleTable)
                 {
-                    status = kernel.setArg(i, *params.scale_table);
+                    status = kernel.setArg(i, *params.scaleTable);
                 }
                 break;
             case ArgumentDescpirtor::Types::SLOPE:
@@ -121,7 +121,7 @@ namespace KernelSelector {
 
     binary_data clKernelData::GetBinary(context_device cl_context, program_cache& compiler) const
     {
-        return compiler.get(cl_context, kernel_string.jit + kernel_string.str, kernel_string.options);
+        return compiler.get(cl_context, kernelString.jit + kernelString.str, kernelString.options);
     }
 
     std::string GetStringEnv(const char* varName)

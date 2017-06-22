@@ -477,18 +477,18 @@ public:
         params.output       = args.output       ? &kernel_arg_handler<gpu::output_mem>::get(*args.output)       : nullptr;
         params.weights      = args.weights      ? &kernel_arg_handler<gpu::input_mem>::get(*args.weights)       : nullptr;
         params.bias         = args.bias         ? &kernel_arg_handler<gpu::input_mem>::get(*args.bias)          : nullptr;
-        params.lookup_table = args.lookup_table ? &kernel_arg_handler<gpu::input_mem>::get(*args.lookup_table)  : nullptr;
-        params.scale_table  = args.scale_table  ? &kernel_arg_handler<gpu::input_mem>::get(*args.scale_table)   : nullptr;
+        params.lookupTable = args.lookup_table ? &kernel_arg_handler<gpu::input_mem>::get(*args.lookup_table)  : nullptr;
+        params.scaleTable  = args.scale_table  ? &kernel_arg_handler<gpu::input_mem>::get(*args.scale_table)   : nullptr;
         params.slope        = args.slope        ? &kernel_arg_handler<gpu::input_mem>::get(*args.slope)         : nullptr;
         params.split        = args.split;
 
-        kernel_data.args_desc.SetArguments(clkernel, params);
+        kernel_data.argsDesc.SetArguments(clkernel, params);
 
         context()->queue().enqueueNDRangeKernel(
             clkernel, 
             cl::NullRange, 
-            kernel_data.work_groups.global,
-            kernel_data.work_groups.local,
+            kernel_data.workGroups.global,
+            kernel_data.workGroups.local,
             &events, 
             &end_event);
 

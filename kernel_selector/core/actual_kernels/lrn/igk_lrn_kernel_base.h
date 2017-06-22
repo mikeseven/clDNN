@@ -30,7 +30,7 @@ namespace KernelSelector
         using DispatchData = CommonDispatchData;
 
     protected:
-        jit_constants get_jit_constants(const LRNParams& params, DispatchData kd) const;
-        DispatchData set_default(const LRNParams& params) const;
+        jit_constants GetJitConstants(const LRNParams& params, DispatchData kd) const;
+        DispatchData SetDefault(const LRNParams& params) const;
     };
 }

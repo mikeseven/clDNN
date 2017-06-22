@@ -73,7 +73,7 @@ namespace KernelSelector
 
     IGKConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_os_iyx_osv16::default_bfyx_os_iyx_osv16(const ConvolutionParams& arg) const
     {
-        DispatchData run_info = set_default(arg);
+        DispatchData run_info = SetDefault(arg);
 
         // Maximum supported size (in any dimension) of filter by "kernel_name_bfyx_os_iyx_osv16" kernel.
         constexpr size_t max_supported_filter_size = 11;
@@ -97,60 +97,60 @@ namespace KernelSelector
         {
             if (cp.filterSize.x == 1 && cp.filterSize.y == 1)
             {
-                run_info.block_width = 16;
-                run_info.block_height = 1;
+                run_info.blockWidth = 16;
+                run_info.blockHeight = 1;
                 run_info.prefetch = 4;
             }
             //if less than 16 values is required to compute one single row of output
             //then each WI shall compute one single row to maximize reuse within SIMD subgroup (this gives very nice performance results)
             else if (arg.output.x().v + (cp.filterSize.x - 1)*cp.dilation.x < sub_group_size)
             {
-                run_info.block_width = arg.output.x().v;
-                run_info.block_height = 1;
+                run_info.blockWidth = arg.output.x().v;
+                run_info.blockHeight = 1;
                 run_info.prefetch = 4;
             }
             else if (cp.filterSize.x < 5 && cp.filterSize.y < 5)
             {
-                run_info.block_width = sub_group_size - cp.filterSize.x + 1;
-                run_info.block_height = 2;
+                run_info.blockWidth = sub_group_size - cp.filterSize.x + 1;
+                run_info.blockHeight = 2;
                 run_info.prefetch = 4;
             }
             else
             {
-                run_info.block_width = 4;
-                run_info.block_height = 3;
+                run_info.blockWidth = 4;
+                run_info.blockHeight = 3;
                 run_info.prefetch = 4;
             }
         }
         else if (cp.stride.x == 2 && cp.stride.y == 2)
         {
-            run_info.block_width = 5;
-            run_info.block_height = 4;
+            run_info.blockWidth = 5;
+            run_info.blockHeight = 4;
             run_info.prefetch = 4;
         }
         else
         {
-            run_info.block_width = 4;
-            run_info.block_height = 3;
+            run_info.blockWidth = 4;
+            run_info.blockHeight = 3;
             run_info.prefetch = 5;
             //run_info.effiency = FORCE_PRIORITY_7; // GEMM is better
         }
 
 
         auto input_block_dims = get_bfyx_req_input_block_dims(
-            run_info.block_width, 
-            run_info.block_height,
+            run_info.blockWidth, 
+            run_info.blockHeight,
             cp.filterSize,
             cp.stride,
             cp.dilation,
             sub_group_size,
-            run_info.fp16_unit_used ? sub_group_size : sub_group_size / 2,
+            run_info.fp16UnitUsed ? sub_group_size : sub_group_size / 2,
             sub_group_size);
-        run_info.input_block_array_size = input_block_dims.first;
-        run_info.input_block_width = input_block_dims.second;
+        run_info.inputBlockArraySize = input_block_dims.first;
+        run_info.inputBlockWidth = input_block_dims.second;
 
-        run_info.gws0 = cldnn::ceil_div(arg.output.x().v, run_info.block_width);
-        run_info.gws1 = cldnn::ceil_div(arg.output.y().v, run_info.block_height);
+        run_info.gws0 = cldnn::ceil_div(arg.output.x().v, run_info.blockWidth);
+        run_info.gws1 = cldnn::ceil_div(arg.output.y().v, run_info.blockHeight);
         run_info.gws2 = of_threads_per_batch * arg.output.batch().v;
 
         run_info.lws0 = 1;
@@ -167,11 +167,11 @@ namespace KernelSelector
         const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
         const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
         const bool bSupportedWeightsLayout = orgParams.weights.layout == WeightsLayout::oiyx;
-        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allow_weights_reorder;
+        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
         const auto req_input = GetConvolutionPaddedTensorDesc(orgParams);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, req_input);
-        const bool bInputPadded = optParams.allow_padding || bProperInputDesc;
-        const bool bSupportedActivation = check_activation_support(orgParams.activationFunc);
+        const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
+        const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
         
         if (!bInputPadded || !bSupportedActivation || !bWeightsOK)
         {
@@ -197,38 +197,38 @@ namespace KernelSelector
             return KernelsData();
         }
         
-        if (optParams.allow_padding && !bProperInputDesc)
+        if (optParams.allowPadding && !bProperInputDesc)
         {
             newParams.inputs[0] = req_input;
-            kd.reorder_input = true;
+            kd.reorderInput = true;
         }
 
-        auto cldnn_jit = get_jit_constants(newParams, run_info);
+        auto cldnn_jit = GetJitConstants(newParams, run_info);
         cldnn_jit.add_constant(gpu::make_jit_constant("SUB_GROUP_SIZE", run_info.lws2));
-        cldnn_jit.add_constant(gpu::make_jit_constant("OUTPUT_BLOCK_WIDTH", run_info.block_width));
-        cldnn_jit.add_constant(gpu::make_jit_constant("OUTPUT_BLOCK_HEIGHT", run_info.block_height));
-        cldnn_jit.add_constant(gpu::make_jit_constant("IN_BLOCK_ARRAY_SIZE", run_info.input_block_array_size));
-        cldnn_jit.add_constant(gpu::make_jit_constant("IN_BLOCK_WIDTH", run_info.input_block_width));
+        cldnn_jit.add_constant(gpu::make_jit_constant("OUTPUT_BLOCK_WIDTH", run_info.blockWidth));
+        cldnn_jit.add_constant(gpu::make_jit_constant("OUTPUT_BLOCK_HEIGHT", run_info.blockHeight));
+        cldnn_jit.add_constant(gpu::make_jit_constant("IN_BLOCK_ARRAY_SIZE", run_info.inputBlockArraySize));
+        cldnn_jit.add_constant(gpu::make_jit_constant("IN_BLOCK_WIDTH", run_info.inputBlockWidth));
         cldnn_jit.add_constant(gpu::make_jit_constant("PREFETCH", run_info.prefetch));
         if (run_info.leftovers)
         {
             cldnn_jit.add_constant(gpu::make_jit_constant("LEFTOVERS", run_info.leftovers));
         }
-        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
-        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
+        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
 
         auto& kernel = kd.kernels[0];
-        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, entry_point, true, !orgParams.bias.empty());
-        kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
+        FillCLKernelData(kernel, run_info, kernelName, jit, entry_point, true, !orgParams.bias.empty());
+        kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
-        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::os_iyx_osv16, kd.weights_reorder_params);
+        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::os_iyx_osv16, kd.weightsReorderParams);
 
         if (!succeed)
         {
             return{};
         }
 
-        kd.estimated_time = run_info.effiency;
+        kd.estimatedTime = run_info.effiency;
 
         return{ kd };
     }

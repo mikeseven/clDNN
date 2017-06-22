@@ -34,9 +34,9 @@ namespace KernelSelector
         return k;
     }
 
-    FullyConnected_fb_oi_b8_ref::DispatchData FullyConnected_fb_oi_b8_ref::set_default(const FullyConnectedParams& arg) const
+    FullyConnected_fb_oi_b8_ref::DispatchData FullyConnected_fb_oi_b8_ref::SetDefault(const FullyConnectedParams& arg) const
     {
-        DispatchData kd = set_kernel_data(arg);
+        DispatchData kd = SetKernelData(arg);
 
         const auto& output = arg.output;
         kd.gws0 = output.batch().v;

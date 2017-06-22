@@ -30,7 +30,7 @@ namespace KernelSelector {
         virtual ParamsKey GetSupportedKey() const override;
     
     protected:
-        jit_constants get_jit_constants(const FullyConnectedParams& params, const DispatchData& kd) const override;
-        DispatchData set_default(const FullyConnectedParams& arg) const;
+        jit_constants GetJitConstants(const FullyConnectedParams& params, const DispatchData& kd) const override;
+        DispatchData SetDefault(const FullyConnectedParams& arg) const;
     };
 }

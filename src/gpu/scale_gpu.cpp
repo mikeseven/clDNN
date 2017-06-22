@@ -33,7 +33,7 @@ struct scale_gpu : typed_primitive_impl<scale>
 
     scale_gpu(const scale_node& arg, const KernelData& kd)
         : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string)
+        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
         _use_ks = true;
         _ks_kernel_data = kd; 
@@ -58,7 +58,7 @@ struct scale_gpu : typed_primitive_impl<scale>
         auto ew_params = GetDefaultParams<EltwiseParams>(arg);
         auto ew_optional_params = GetDefaultOptionalParams<EltwiseOptionalParams>(arg.get_program());
 
-        ew_params.inputs.push_back(tensor_2_data_tensor(arg.scale_in().get_output_layout()));
+        ew_params.inputs.push_back(ConvertDataTensor(arg.scale_in().get_output_layout()));
 
         ew_params.eltwiseParams.operations.push_back({
             { EltwiseParams::InputType::Buffer(0), EltwiseParams::InputType::Buffer(1) },
@@ -66,7 +66,7 @@ struct scale_gpu : typed_primitive_impl<scale>
 
         if (arg.bias_term())
         {
-            ew_params.inputs.push_back(tensor_2_data_tensor(arg.bias().get_output_layout()));
+            ew_params.inputs.push_back(ConvertDataTensor(arg.bias().get_output_layout()));
             ew_params.eltwiseParams.operations.push_back({
                 { EltwiseParams::InputType::Intermediate(0), EltwiseParams::InputType::Buffer(2) },
                 EltwiseMode::ADD });
@@ -74,7 +74,7 @@ struct scale_gpu : typed_primitive_impl<scale>
 
         ew_params.eltwiseParams.layoutBased = true;
 
-        auto& kernel_selector = EltwiseKernelSelctor::instance();
+        auto& kernel_selector = EltwiseKernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(ew_params, ew_optional_params);
 
         if (best_kernels.empty())

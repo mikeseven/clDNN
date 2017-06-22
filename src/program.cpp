@@ -525,14 +525,14 @@ void program_impl::optimize_ks_weights(layout_optimizer& lo)
         if (wtype == data::type_id())
         {
             lo.add_ks_weights_for_optimization(
-                impl->_ks_kernel_data.weights_reorder_params,
+                impl->_ks_kernel_data.weightsReorderParams,
                 weights.as<data>().typed_desc(),
                 weights_type);
         }
         else if (wtype == input_layout::type_id())
         {
             auto reorders = lo.get_generic_layer(
-                impl->_ks_kernel_data.weights_reorder_params,
+                impl->_ks_kernel_data.weightsReorderParams,
                 weights.as<input_layout>().typed_desc()->id,
                 output_layout,
                 weights_type);

@@ -43,48 +43,48 @@ namespace KernelSelector
 
     IGKConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b8::default_yxfb_yxio_b8(const ConvolutionParams& arg) const
     {
-        DispatchData run_info = set_default(arg);
+        DispatchData runInfo = SetDefault(arg);
 
-        const auto filter_ofm_num = arg.weights.ofm().v;
-        const auto batch_size = arg.output.batch().v;
+        const auto filterOfmNum = arg.weights.ofm().v;
+        const auto batchSize = arg.output.batch().v;
 
         const bool bInputValidated =
-            (filter_ofm_num > 0) &&
-            (batch_size > 0) &&
-            (arg.output.feature().v == filter_ofm_num);
+            (filterOfmNum > 0) &&
+            (batchSize > 0) &&
+            (arg.output.feature().v == filterOfmNum);
 
         if (!bInputValidated)
         {
             throw std::runtime_error("Unsupported");
         }
 
-        run_info.lws0 = batch_size == 8 ? 8 : 16;
+        runInfo.lws0 = batchSize == 8 ? 8 : 16;
 
-        if ((filter_ofm_num * batch_size) % run_info.lws0 != 0 ||
-            batch_size > 16 || batch_size == 1)
+        if ((filterOfmNum * batchSize) % runInfo.lws0 != 0 ||
+            batchSize > 16 || batchSize == 1)
         {
             throw std::runtime_error("Unsupported");
         }
 
-        if (((filter_ofm_num * batch_size) / 16) % run_info.lws0)
+        if (((filterOfmNum * batchSize) / 16) % runInfo.lws0)
         {
-            run_info.ofm_per_work_item = 8;
+            runInfo.ofmPerWorkItem = 8;
         }
         else
         {
-            run_info.ofm_per_work_item = 16;
+            runInfo.ofmPerWorkItem = 16;
         }
 
-        run_info.gws0 = filter_ofm_num * batch_size / (run_info.ofm_per_work_item * run_info.batches_per_work_item);
+        runInfo.gws0 = filterOfmNum * batchSize / (runInfo.ofmPerWorkItem * runInfo.batchesPerWorkItem);
 
-        run_info.effiency = FORCE_PRIORITY_9;
+        runInfo.effiency = FORCE_PRIORITY_9;
 
-        if (!check_work_groups(run_info))
+        if (!CheckWorkGroups(runInfo))
         {
             throw std::runtime_error("Internal Error - wrong calculation of global/local work group sizes");
         }
         
-        return run_info;
+        return runInfo;
     }
 
     KernelsData ConvolutionKernel_yxfb_yxio_b8::GetKernelsData(const Params& params, const OptionalParams& options) const
@@ -94,20 +94,20 @@ namespace KernelSelector
         const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
         const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
 
-        const bool bSupportedActivation = check_activation_support(orgParams.activationFunc);
+        const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
         const bool bSupportedWeightsLayout = orgParams.weights.layout == WeightsLayout::yxio;
-        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allow_weights_reorder;
+        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
 
-        if (!bSupportedActivation || !bWeightsOK || !check_pitch_for_split_only(orgParams))
+        if (!bSupportedActivation || !bWeightsOK || !CheckPitchForSplitOnly(orgParams))
         {
             return{};
         }
 
-        DispatchData run_info;
+        DispatchData runInfo;
         
         try
         {
-            run_info = default_yxfb_yxio_b8(orgParams);
+            runInfo = default_yxfb_yxio_b8(orgParams);
         }
         catch (const std::runtime_error& )
         {
@@ -116,25 +116,25 @@ namespace KernelSelector
 
         KernelData kd = KernelData::Default<ConvolutionParams>(params, 1);
 
-        auto cldnn_jit = get_jit_constants(orgParams, run_info);
-        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
-        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
+        auto cldnn_jit = GetJitConstants(orgParams, runInfo);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
+        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
 
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global   = cl::NDRange(run_info.gws0, run_info.gws1, run_info.gws2);
-        kernel.work_groups.local    = cl::NDRange(run_info.lws0, run_info.lws1, run_info.lws2);
-        kernel.kernel_string        = get_kernel_string(kernel_name, jit, entry_point);
-        kernel.args_desc            = get_args_desc(1, true, !orgParams.bias.empty());
-        kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
+        kernel.workGroups.global   = cl::NDRange(runInfo.gws0, runInfo.gws1, runInfo.gws2);
+        kernel.workGroups.local    = cl::NDRange(runInfo.lws0, runInfo.lws1, runInfo.lws2);
+        kernel.kernelString        = GetKernelString(kernelName, jit, entry_point);
+        kernel.argsDesc            = GetArgsDesc(1, true, !orgParams.bias.empty());
+        kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
-        bool succeed = SetWeightsReorderParams(orgParams, WeightsLayout::yxio, kd.weights_reorder_params);
+        bool succeed = SetWeightsReorderParams(orgParams, WeightsLayout::yxio, kd.weightsReorderParams);
 
         if (!succeed)
         {
             return{};
         }
 
-        kd.estimated_time = run_info.effiency;
+        kd.estimatedTime = runInfo.effiency;
 
         return{ kd };
     }

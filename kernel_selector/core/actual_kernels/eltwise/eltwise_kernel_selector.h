@@ -23,7 +23,7 @@ namespace KernelSelector
     class EltwiseKernelSelctor : public KernelSelctorBase
     {
     public:
-        static EltwiseKernelSelctor &instance() {
+        static EltwiseKernelSelctor &Instance() {
             static EltwiseKernelSelctor instance_;
             return instance_;
         }

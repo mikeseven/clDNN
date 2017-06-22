@@ -23,7 +23,7 @@ namespace KernelSelector
     class NormalizeKernelSelctor : public KernelSelctorBase
     {
     public:
-        static NormalizeKernelSelctor &instance() {
+        static NormalizeKernelSelctor &Instance() {
             static NormalizeKernelSelctor instance_;
             return instance_;
         }

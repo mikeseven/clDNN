@@ -43,13 +43,13 @@ namespace KernelSelector
         const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
         const auto& orgOptParams = static_cast<const FullyConnectedOptionalParams&>(optParams);
 
-        const bool bSupportedActivation = check_activation_support(orgParams.activationFunc);
+        const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
         const bool bProperInput = orgParams.inputs[0].layout == DataLayout::bf;
-        const bool bSupportedLayout = orgOptParams.allow_reorder_input || bProperInput;
+        const bool bSupportedLayout = orgOptParams.allowReorderInput || bProperInput;
         const bool bProperWeights =
             (orgParams.weights.layout == WeightsLayout::io) ||
             (orgParams.weights.layout == WeightsLayout::iyxo && orgParams.weights.PaddingExists() == false);
-        const bool bSupportedWeightsLayout = orgOptParams.allow_weights_reorder || bProperWeights;
+        const bool bSupportedWeightsLayout = orgOptParams.allowWeightsReorder || bProperWeights;
 
         if (!bSupportedActivation || !bSupportedLayout || !bSupportedWeightsLayout)
         {
@@ -62,7 +62,7 @@ namespace KernelSelector
         if (!bProperInput)
         {
             newParams.inputs[0] = newParams.inputs[0].transform(DataLayout::bf);
-            kd.reorder_input = true;
+            kd.reorderInput = true;
         }
 
         if (!bProperWeights)
@@ -74,13 +74,13 @@ namespace KernelSelector
         DispatchData run_info;
         std::string jit;
         
-        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
 
         try
         {
-            run_info = set_kernel_data(newParams);
-            auto cldnn_jit = get_jit_constants(newParams, run_info);
-            jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
+            run_info = SetKernelData(newParams);
+            auto cldnn_jit = GetJitConstants(newParams, run_info);
+            jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
         }
         catch (const std::runtime_error& )
         {
@@ -88,11 +88,11 @@ namespace KernelSelector
         }
 
         auto& kernel = kd.kernels[0];
-        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, entry_point, true, !orgParams.bias.empty());
+        FillCLKernelData(kernel, run_info, kernelName, jit, entry_point, true, !orgParams.bias.empty());
 
         if (!bProperWeights)
         {
-            bool succeed = SetWeightsReorderParams(orgParams, WeightsLayout::io, kd.weights_reorder_params);
+            bool succeed = SetWeightsReorderParams(orgParams, WeightsLayout::io, kd.weightsReorderParams);
 
             if (!succeed)
             {

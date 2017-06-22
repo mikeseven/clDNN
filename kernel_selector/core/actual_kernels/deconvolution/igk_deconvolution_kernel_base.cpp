@@ -20,7 +20,7 @@
 
 namespace KernelSelector 
 {
-    jit_constants IGKDeconvolutionKernelBase::get_jit_constants(const DeconvolutionParams& params) const
+    jit_constants IGKDeconvolutionKernelBase::GetJitConstants(const DeconvolutionParams& params) const
     {
         const auto split = params.deconvParams.split;
 
@@ -53,7 +53,7 @@ namespace KernelSelector
               (tensor_vt)cp.dilation.y);
         auto input_offset_with_padding = params.inputs[0].offset - cp.padding.x - params.inputs[0].y().pitch*cp.padding.y;
 
-        jit_constants mem_consts = get_common_jit_constants(params);
+        jit_constants mem_consts = GetCommonJitConstants(params);
 
         mem_consts.add_constants({
             gpu::make_jit_constant("STRIDE",                    stride),
@@ -77,20 +77,20 @@ namespace KernelSelector
 
     namespace
     {
-        bool check_tensor_for_split(const DataTensor& t, uint32_t split)
+        bool checkTensorForSplit(const DataTensor& t, uint32_t split)
         {
             if (t.PaddingExists())
             {
-                auto new_tensor = t;
+                auto newTensor = t;
                 auto feature = t.feature();
-                auto feature_index = Tensor::channelndex(t.layout, Tensor::DataChannelName::NAME_FEATURE);
-                if (feature_index >= 0 && feature_index+1 < (int)Tensor::channelsCount(t.layout))
+                auto featureIndex = Tensor::channelndex(t.layout, Tensor::DataChannelName::NAME_FEATURE);
+                if (featureIndex >= 0 && featureIndex+1 < (int)Tensor::channelsCount(t.layout))
                 {
-                    if (feature.v*split <= t.dims[feature_index+1].pitch)
+                    if (feature.v*split <= t.dims[featureIndex+1].pitch)
                     {
-                        new_tensor.dims[feature_index].v = feature.v*split;
+                        newTensor.dims[featureIndex].v = feature.v*split;
 
-                        if (new_tensor.PaddingExists() == false)
+                        if (newTensor.PaddingExists() == false)
                         {
                             return true;
                         }
@@ -104,22 +104,22 @@ namespace KernelSelector
         }
     }
 
-    bool IGKDeconvolutionKernelBase::check_pitch_for_split_only(const DeconvolutionParams& params) const
+    bool IGKDeconvolutionKernelBase::CheckPitchForSplitOnly(const DeconvolutionParams& params) const
     {
         // TODO: it's better to add pitch+offset support than handle this case
         return
-            check_tensor_for_split(params.output, params.deconvParams.split) &&
-            check_tensor_for_split(params.inputs[0], params.deconvParams.split);
+            checkTensorForSplit(params.output, params.deconvParams.split) &&
+            checkTensorForSplit(params.inputs[0], params.deconvParams.split);
     }
 
-    IGKDeconvolutionKernelBase::DispatchData IGKDeconvolutionKernelBase::set_default(const DeconvolutionParams& params) const
+    IGKDeconvolutionKernelBase::DispatchData IGKDeconvolutionKernelBase::SetDefault(const DeconvolutionParams& params) const
     {
         auto batch_size = params.output.batch().v;
         auto output_features = params.output.feature().v;
 
         DispatchData kd;
 
-        kd.fp16_unit_used = params.inputs[0].dtype == Datatype::F16;
+        kd.fp16UnitUsed = params.inputs[0].dtype == Datatype::F16;
         size_t gws0 = output_features * batch_size;
         size_t lws0 = std::min(gws0, static_cast<size_t>(32));
         while (gws0 % lws0)

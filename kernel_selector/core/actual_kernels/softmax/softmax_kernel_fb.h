@@ -28,6 +28,6 @@ namespace KernelSelector
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
-        DispatchData set_default(const SoftmaxParams& params, const OptionalParams& optParams) const override;
+        DispatchData SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const override;
     };
 }

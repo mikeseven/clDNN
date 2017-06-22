@@ -37,19 +37,19 @@ namespace KernelSelector
         return k;
     }
 
-    CommonDispatchData LRNKernelWithinChannel::default_within_channel(const LRNParams& params) const
+    CommonDispatchData LRNKernelWithinChannel::defaultWithinChannel(const LRNParams& params) const
     {
-        CommonDispatchData run_info = set_default(params);
+        CommonDispatchData runInfo = SetDefault(params);
 
-        run_info.gws0 = 128 * 128;
-        run_info.gws1 = 1;
-        run_info.gws2 = 1;
+        runInfo.gws0 = 128 * 128;
+        runInfo.gws1 = 1;
+        runInfo.gws2 = 1;
 
-        run_info.lws0 = 128;
-        run_info.lws1 = 1;
-        run_info.lws2 = 1;
+        runInfo.lws0 = 128;
+        runInfo.lws1 = 1;
+        runInfo.lws2 = 1;
 
-        return run_info;
+        return runInfo;
     }
 
     KernelsData LRNKernelWithinChannel::GetKernelsData(const Params& params, const OptionalParams&) const
@@ -65,11 +65,11 @@ namespace KernelSelector
             return{};
         }
         
-        DispatchData run_info;
+        DispatchData runInfo;
 
         try
         {
-            run_info = default_within_channel(orgParams);
+            runInfo = defaultWithinChannel(orgParams);
         }
         catch (const std::runtime_error&)
         {
@@ -78,14 +78,14 @@ namespace KernelSelector
 
         KernelData kd = KernelData::Default<LRNParams>(params, 1);
 
-        auto cldnn_jit = get_jit_constants(orgParams, run_info);
-        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
-        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
+        auto cldnn_jit = GetJitConstants(orgParams, runInfo);
+        auto entryPoint = GetEntryPoint(kernelName, orgParams.layerID);
+        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entryPoint);
 
         auto& kernel = kd.kernels[0];
-        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, entry_point);
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entryPoint);
 
-        kd.estimated_time = FORCE_PRIORITY_9;
+        kd.estimatedTime = FORCE_PRIORITY_9;
 
         return{ kd };
     }

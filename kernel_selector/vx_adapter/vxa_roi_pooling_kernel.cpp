@@ -36,11 +36,11 @@ namespace clDNN
         }
 
         ksParams.rois = params.rois;
-        ksParams.pitch_rois_r = params.pitch_rois_r;
-        ksParams.pitch_rois_b = params.pitch_rois_b;
+        ksParams.pitchRoisR = params.pitch_rois_r;
+        ksParams.pitchRoisB = params.pitch_rois_b;
 
         KernelSelector::ROIPoolingOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelector::ROIPoolingKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::ROIPoolingKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 } // clDNN namespace

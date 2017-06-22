@@ -30,7 +30,7 @@ namespace clDNN
 
     bool BaseKernelBinary::ShouldChangeInputTensor() const 
     {
-        return m_cldnnKernelData.reorder_input;
+        return m_cldnnKernelData.reorderInput;
     }
 
     TensorDesc BaseKernelBinary::GetNewInputTensorDesc() const
@@ -76,14 +76,14 @@ namespace clDNN
 
     bool BaseKernelBinary::ShouldReorderWeights() const
     {
-        return m_cldnnKernelData.weights_reorder_params.engine != KernelSelector::WeightsReorderParams::Engine::NONE;
+        return m_cldnnKernelData.weightsReorderParams.engine != KernelSelector::WeightsReorderParams::Engine::NONE;
     }
 
     size_t BaseKernelBinary::GetNewWeightBufferSizeInBytes() const
     {
         if (ShouldReorderWeights())
         {
-            return m_cldnnKernelData.weights_reorder_params.new_buffer_size;
+            return m_cldnnKernelData.weightsReorderParams.newBufferSize;
         }
 
         return 0;
@@ -91,15 +91,15 @@ namespace clDNN
 
     bool BaseKernelBinary::ReorderWeightsWithKernel() const
     {
-        return m_cldnnKernelData.weights_reorder_params.engine == KernelSelector::WeightsReorderParams::Engine::GPU;
+        return m_cldnnKernelData.weightsReorderParams.engine == KernelSelector::WeightsReorderParams::Engine::GPU;
     }
 
     void BaseKernelBinary::ReorderWeights(void* org, size_t orgBufSize, void* newBuf, size_t newBufSize) const
     {
         if (ShouldReorderWeights() &&
-            m_cldnnKernelData.weights_reorder_params.cpu_kernel)
+            m_cldnnKernelData.weightsReorderParams.cpuKernel)
         {
-            m_cldnnKernelData.weights_reorder_params.cpu_kernel->Execute(org, orgBufSize, newBuf, newBufSize);
+            m_cldnnKernelData.weightsReorderParams.cpuKernel->Execute(org, orgBufSize, newBuf, newBufSize);
         }
     }
 
@@ -222,15 +222,15 @@ namespace clDNN
     void BaseKernelBinary::UpdateBinary(const KernelSelector::clKernelData& cldnn_data, CLKernelData& data, binary_data& binary, std::shared_ptr<ArgumentsInfoBase>& args)
     {
         binary = cldnn_data.GetBinary({ context()->context(), context()->device() }, *GetKernelCache());
-        args = SetupArguments(cldnn_data.args_desc);
+        args = SetupArguments(cldnn_data.argsDesc);
 
         if (binary.size() > 0 && args != nullptr)
         {
             data.desc.binary = binary.data();
             data.desc.size = binary.size();
-            data.entry_point = cldnn_data.kernel_string.entry_point.c_str();
+            data.entry_point = cldnn_data.kernelString.entry_point.c_str();
             data.args = args.get();
-            data.workGroup = GetWorkGroups(cldnn_data.work_groups);
+            data.workGroup = GetWorkGroups(cldnn_data.workGroups);
         }
     }
 
@@ -248,10 +248,10 @@ namespace clDNN
                 m_Binary, 
                 m_ArgInfo);
 
-            if (m_cldnnKernelData.weights_reorder_params.engine == KernelSelector::WeightsReorderParams::Engine::GPU)
+            if (m_cldnnKernelData.weightsReorderParams.engine == KernelSelector::WeightsReorderParams::Engine::GPU)
             {
                 UpdateBinary(
-                    *m_cldnnKernelData.weights_reorder_params.cl_kernel.get(),
+                    *m_cldnnKernelData.weightsReorderParams.clKernel.get(),
                     m_WeightsKernelData, 
                     m_WeightsReorderBinary, 
                     m_WeightsReorderArgInfo);

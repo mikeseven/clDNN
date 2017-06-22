@@ -38,10 +38,10 @@ namespace KernelSelector
         ParamsKey()
         {
             key.restrict.raw = 0;
-            key.machine_info.raw = 0;
-            key.input_layout = 0;
-            key.output_layout = 0;
-            key.weights_layout = 0;
+            key.machineInfo.raw = 0;
+            key.inputLayout = 0;
+            key.outputLayout = 0;
+            key.weightsLayout = 0;
         }
 
         struct Key
@@ -75,8 +75,8 @@ namespace KernelSelector
                         {
                             uint32_t across : 1;
                             uint32_t within : 1;
-                            uint32_t fixed_kenrel_divider : 1;
-                            uint32_t dynamic_kenrel_divider : 1;
+                            uint32_t fixedKenrelDivider : 1;
+                            uint32_t dynamicKenrelDivider : 1;
                         } norm;
                         struct pooling_t
                         {
@@ -84,8 +84,8 @@ namespace KernelSelector
                             uint32_t avg : 1;
                             uint32_t floor : 1;
                             uint32_t ceil : 1;
-                            uint32_t fixed_kenrel_divider : 1;
-                            uint32_t dynamic_kenrel_divider : 1;
+                            uint32_t fixedKenrelDivider : 1;
+                            uint32_t dynamicKenrelDivider : 1;
                         } pooling;
                         struct conv_t 
                         {
@@ -96,9 +96,9 @@ namespace KernelSelector
                         struct lc_t {} lc;
                         struct softmax_t 
                         {
-                            uint32_t dim_x : 1;
-                            uint32_t dim_y : 1;
-                            uint32_t dim_feature : 1;
+                            uint32_t dimX : 1;
+                            uint32_t dimY : 1;
+                            uint32_t dimFeature : 1;
                         } softmax;
                     } dedicated;
                 } val;
@@ -112,13 +112,13 @@ namespace KernelSelector
                     uint32_t subgroup : 1;
                 } val;
                 uint32_t raw;
-            } machine_info;
+            } machineInfo;
 
             static_assert(sizeof(restrict_t) == sizeof(uint64_t), "problem with union");
 
-            uint32_t input_layout;
-            uint32_t output_layout;
-            uint32_t weights_layout;
+            uint32_t inputLayout;
+            uint32_t outputLayout;
+            uint32_t weightsLayout;
         };
 
         void SetInputDataType(Datatype dt)
@@ -194,32 +194,32 @@ namespace KernelSelector
 
         void SetInputLayout(DataLayout l)
         {
-            key.input_layout |= (1 << l);
+            key.inputLayout |= (1 << l);
         }
 
         void EnableAllInputLayout()
         {
-            key.input_layout = 0xffffffff;
+            key.inputLayout = 0xffffffff;
         }
 
         void SetOutputLayout(DataLayout l)
         {
-            key.output_layout |= (1 << l);
+            key.outputLayout |= (1 << l);
         }
 
         void EnableAllOutputLayout()
         {
-            key.output_layout = 0xffffffff;
+            key.outputLayout = 0xffffffff;
         }
 
         void SetWeightsLayout(WeightsLayout l)
         {
-            key.weights_layout |= (1 << l);
+            key.weightsLayout |= (1 << l);
         }
 
         void EnableAllWeightsLayout()
         {
-            key.weights_layout = 0xffffffff;
+            key.weightsLayout = 0xffffffff;
         }
 
         void SetOffsetSupport()
@@ -239,7 +239,7 @@ namespace KernelSelector
 
         void SetSubGroupSupport()
         {
-            key.machine_info.val.subgroup = 1;
+            key.machineInfo.val.subgroup = 1;
         }
 
         void SetNonBiasSupport()
@@ -297,10 +297,10 @@ namespace KernelSelector
             switch (m)
             {
             case KernelDividerMode::FIXED:
-                key.restrict.val.dedicated.norm.fixed_kenrel_divider = 1;
+                key.restrict.val.dedicated.norm.fixedKenrelDivider = 1;
                 break;
             case KernelDividerMode::DYNAMIC:
-                key.restrict.val.dedicated.norm.dynamic_kenrel_divider = 1;
+                key.restrict.val.dedicated.norm.dynamicKenrelDivider = 1;
                 break;
             default:
                 break;
@@ -312,10 +312,10 @@ namespace KernelSelector
             switch (m)
             {
             case KernelDividerMode::FIXED:
-                key.restrict.val.dedicated.pooling.fixed_kenrel_divider = 1;
+                key.restrict.val.dedicated.pooling.fixedKenrelDivider = 1;
                 break;
             case KernelDividerMode::DYNAMIC:
-                key.restrict.val.dedicated.pooling.dynamic_kenrel_divider = 1;
+                key.restrict.val.dedicated.pooling.dynamicKenrelDivider = 1;
                 break;
             default:
                 break;
@@ -367,13 +367,13 @@ namespace KernelSelector
             switch (d)
             {
             case SoftmaxDim::X:
-                key.restrict.val.dedicated.softmax.dim_x = 1;
+                key.restrict.val.dedicated.softmax.dimX = 1;
                 break;
             case SoftmaxDim::Y:
-                key.restrict.val.dedicated.softmax.dim_y = 1;
+                key.restrict.val.dedicated.softmax.dimY = 1;
                 break;
             case SoftmaxDim::FEATURE:
-                key.restrict.val.dedicated.softmax.dim_feature = 1;
+                key.restrict.val.dedicated.softmax.dimFeature = 1;
                 break;
             default:
                 break;
@@ -384,20 +384,20 @@ namespace KernelSelector
         {
             return 
                 ((key.restrict.raw & k.key.restrict.raw) == k.key.restrict.raw) && // check if this kernel supports this params
-                ((key.machine_info.raw & k.key.machine_info.raw) == key.machine_info.raw) && // check if machine supports this kernel
-                ((key.input_layout & k.key.input_layout) != 0 || key.input_layout == k.key.input_layout) &&
-                ((key.output_layout & k.key.output_layout) != 0 || key.output_layout == k.key.output_layout) &&
-                ((key.weights_layout & k.key.weights_layout) != 0 || key.weights_layout == k.key.weights_layout);
+                ((key.machineInfo.raw & k.key.machineInfo.raw) == key.machineInfo.raw) && // check if machine supports this kernel
+                ((key.inputLayout & k.key.inputLayout) != 0 || key.inputLayout == k.key.inputLayout) &&
+                ((key.outputLayout & k.key.outputLayout) != 0 || key.outputLayout == k.key.outputLayout) &&
+                ((key.weightsLayout & k.key.weightsLayout) != 0 || key.weightsLayout == k.key.weightsLayout);
         }
 
         ParamsKey Merge(const ParamsKey& k) const
         {
             ParamsKey ret;
             ret.key.restrict.raw = key.restrict.raw | k.key.restrict.raw;
-            ret.key.machine_info.raw = key.machine_info.raw | k.key.machine_info.raw;
-            ret.key.input_layout = key.input_layout | k.key.input_layout;
-            ret.key.output_layout = key.output_layout | k.key.output_layout;
-            ret.key.weights_layout = key.weights_layout | k.key.weights_layout;
+            ret.key.machineInfo.raw = key.machineInfo.raw | k.key.machineInfo.raw;
+            ret.key.inputLayout = key.inputLayout | k.key.inputLayout;
+            ret.key.outputLayout = key.outputLayout | k.key.outputLayout;
+            ret.key.weightsLayout = key.weightsLayout | k.key.weightsLayout;
             return ret;
         }
 
@@ -653,7 +653,7 @@ namespace KernelSelector
         {
             NormalizeMode normMode = NormalizeMode::ACROSS_SPATIAL;
             float         epsilon  = 1e-10f;
-            DataTensor    scale_table;
+            DataTensor    scaleTable;
         };
 
         DedicatedParams normParams;
@@ -707,8 +707,8 @@ namespace KernelSelector
         ROIPoolingParams() : BaseParams(KernelType::ROI_POOLING) {}
 
         size_t rois = 0;
-        size_t pitch_rois_r = 0;
-        size_t pitch_rois_b = 0;
+        size_t pitchRoisR = 0;
+        size_t pitchRoisB = 0;
 
         virtual ParamsKey GetParamsKey() const
         {
@@ -725,9 +725,9 @@ namespace KernelSelector
 
         struct DedicatedParams
         {
-            size_t pooled_width  = 0;
-            size_t pooled_height = 0;
-            float  spatial_scale = 0.f;
+            size_t pooledWidth  = 0;
+            size_t pooledHeight = 0;
+            float  spatialScale = 0.f;
         };
 
         DedicatedParams roiParams;
@@ -929,7 +929,7 @@ namespace KernelSelector
         struct DedicatedParams
         {
             MeanSubtructMode    mode = MeanSubtructMode::NONE;
-            std::vector<float>  mean_values;
+            std::vector<float>  meanValues;
             DataTensor          mean;
         };
 
@@ -1030,8 +1030,8 @@ namespace KernelSelector
 
         KernelType GetType() const { return kType; }
 
-        std::vector<DataLayout> input_layouts;
-        std::vector<DataLayout> output_layouts;
+        std::vector<DataLayout> inputLayouts;
+        std::vector<DataLayout> outputLayouts;
         bool bSupportSubGroupExt = false;
         uint64_t maxWorkGroupSize = 1;
         uint64_t maxLocalMemSize = 16*1024*1024;
@@ -1040,12 +1040,12 @@ namespace KernelSelector
         {
             ParamsKey k;
 
-            for (auto l : input_layouts)
+            for (auto l : inputLayouts)
             {
                 k.SetInputLayout(l);
             }
 
-            for (auto l : output_layouts)
+            for (auto l : outputLayouts)
             {
                 k.SetOutputLayout(l);
             }
@@ -1068,7 +1068,7 @@ namespace KernelSelector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct WeightsBiasOptionalParams : OptionalParams
     {
-        bool allow_weights_reorder = true;
+        bool allowWeightsReorder = true;
     protected:
         WeightsBiasOptionalParams(KernelType kt) : OptionalParams(kt) {}
     };
@@ -1079,7 +1079,7 @@ namespace KernelSelector
     struct ConvolutionOptionalParams : WeightsBiasOptionalParams
     {
         ConvolutionOptionalParams() : WeightsBiasOptionalParams(KernelType::CONVOLUTION) {}
-        bool allow_padding = false;
+        bool allowPadding = false;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1128,7 +1128,7 @@ namespace KernelSelector
     struct FullyConnectedOptionalParams : WeightsBiasOptionalParams
     {
         FullyConnectedOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED) {}
-        bool allow_reorder_input = false;
+        bool allowReorderInput = false;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

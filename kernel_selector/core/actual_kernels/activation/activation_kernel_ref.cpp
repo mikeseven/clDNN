@@ -46,16 +46,16 @@ namespace KernelSelector {
 
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
-        kernel.work_groups.local = GetOptimalLocalWorkGroupSizes(kernel.work_groups.global);
-        kernel.kernel_string = GetKernelString(kernel_name, GetBaseJit(newParams, kernel_id), kernel_id);
-        kernel.args_desc = GetArgumentDesc(1, false, false);
+        kernel.workGroups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
+        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
+        kernel.kernelString = GetKernelString(kernelName, GetBaseJit(newParams, kernel_id), kernel_id);
+        kernel.argsDesc = GetArgumentDesc(1, false, false);
         if (newParams.activationFunc == ActivationFunction::PRELU)
         {
-            kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SLOPE, 0 });
+            kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SLOPE, 0 });
         }
 
-        kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         return{ kd };
     }

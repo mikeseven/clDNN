@@ -200,7 +200,7 @@ static const char* kernels_header = R"__krnl(
         };
     }
 
-    std::string IGKKernelBase::get_entry_point(const std::string& template_name, const std::string& layer_id) const
+    std::string IGKKernelBase::GetEntryPoint(const std::string& template_name, const std::string& layer_id) const
     {
         std::string kernel_id = layer_id;
 
@@ -216,7 +216,7 @@ static const char* kernels_header = R"__krnl(
         return kernel_id;
     }
 
-    std::string IGKKernelBase::create_jit_from_template(const std::string& template_name, jit_definitions definitions, std::string kernel_id, bool inject_header) const
+    std::string IGKKernelBase::CreateJit(const std::string& template_name, jit_definitions definitions, std::string kernel_id, bool inject_header) const
     {
         class code_builder code;
         code.add_line("\n//====================================================")
@@ -243,7 +243,7 @@ static const char* kernels_header = R"__krnl(
         return jit;
     }
 
-    ArgumentDescpirtor IGKKernelBase::get_args_desc(uint32_t num_of_input, bool use_weights, bool use_bias) const
+    ArgumentDescpirtor IGKKernelBase::GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const
     {
         ArgumentDescpirtor desc;
 
@@ -267,7 +267,7 @@ static const char* kernels_header = R"__krnl(
         return desc;
     }
 
-    KernelString IGKKernelBase::get_kernel_string(std::string name, std::string jit, std::string entry_point, std::string exe_mode) const
+    KernelString IGKKernelBase::GetKernelString(std::string name, std::string jit, std::string entry_point, std::string exe_mode) const
     {
         KernelString kernel_string;
 
@@ -285,15 +285,15 @@ static const char* kernels_header = R"__krnl(
         return kernel_string;
     }
 
-    void IGKKernelBase::fill_cl_kernel_data(clKernelData& kernel, const CommonDispatchData& run_info, std::string kernel_map_name, std::string jit, std::string entry_point, bool weights, bool bias) const
+    void IGKKernelBase::FillCLKernelData(clKernelData& kernel, const CommonDispatchData& run_info, std::string kernel_map_name, std::string jit, std::string entry_point, bool weights, bool bias) const
     {
-        kernel.work_groups.global = cl::NDRange(run_info.gws0, run_info.gws1, run_info.gws2);
-        kernel.work_groups.local = cl::NDRange(run_info.lws0, run_info.lws1, run_info.lws2);
-        kernel.kernel_string = get_kernel_string(kernel_map_name, jit, entry_point);
-        kernel.args_desc = get_args_desc(1, weights, bias);
+        kernel.workGroups.global = cl::NDRange(run_info.gws0, run_info.gws1, run_info.gws2);
+        kernel.workGroups.local = cl::NDRange(run_info.lws0, run_info.lws1, run_info.lws2);
+        kernel.kernelString = GetKernelString(kernel_map_name, jit, entry_point);
+        kernel.argsDesc = GetArgsDesc(1, weights, bias);
     }
 
-    jit_constants IGKKernelBase::get_common_jit_constants(const BaseParams& params) const
+    jit_constants IGKKernelBase::GetCommonJitConstants(const BaseParams& params) const
     {
         const bool relu =
             params.activationFunc == ActivationFunction::RELU ||

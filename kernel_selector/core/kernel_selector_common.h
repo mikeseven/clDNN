@@ -132,8 +132,8 @@ namespace KernelSelector {
             const cl::Buffer* output = nullptr;
             const cl::Buffer* weights = nullptr;
             const cl::Buffer* bias = nullptr;
-            const cl::Buffer* lookup_table = nullptr;
-            const cl::Buffer* scale_table = nullptr;
+            const cl::Buffer* lookupTable = nullptr;
+            const cl::Buffer* scaleTable = nullptr;
             const cl::Buffer* slope = nullptr;
             uint32_t split = 0;
         };
@@ -150,9 +150,9 @@ namespace KernelSelector {
     {
         binary_data GetBinary(context_device cl_context, program_cache& compiler) const;
 
-        KernelString kernel_string;
-        WorkGroupSizes work_groups;
-        ArgumentDescpirtor args_desc;
+        KernelString kernelString;
+        WorkGroupSizes workGroups;
+        ArgumentDescpirtor argsDesc;
         // TODO: maybe we want an estimated time per cl kernel
         // float estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
     };
@@ -179,8 +179,8 @@ namespace KernelSelector {
         };
 
         Engine engine = Engine::NONE;
-        std::shared_ptr<clKernelData> cl_kernel;
-        std::shared_ptr<CPUKernel> cpu_kernel;
+        std::shared_ptr<clKernelData> clKernel;
+        std::shared_ptr<CPUKernel> cpuKernel;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -188,16 +188,7 @@ namespace KernelSelector {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct WeightsReorderParams : public GenericKernelParams
     {
-        size_t new_buffer_size = 0;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // InputReorderParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct InputReorderParams
-    {
-        bool pad_buffer = false;
-        DataLayout layout = DataLayout::bfyx;
+        size_t newBufferSize = 0;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -207,10 +198,10 @@ namespace KernelSelector {
     {
         std::shared_ptr<Params> params;
         std::vector<clKernelData> kernels;
-        float estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        float estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
-        bool reorder_input = false;
-        WeightsReorderParams weights_reorder_params;
+        bool reorderInput = false;
+        WeightsReorderParams weightsReorderParams;
         std::string kernelName;
 
         template <typename T>
@@ -220,8 +211,8 @@ namespace KernelSelector {
             const T& orgParams = static_cast<const T&>(_params);
             kd.params = std::make_shared<T>(orgParams);
             kd.kernels.resize(kernel_nums);
-            kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE; // for KW
-            kd.reorder_input = false; // for KW
+            kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE; // for KW
+            kd.reorderInput = false; // for KW
             return kd;
         }
     };

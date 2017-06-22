@@ -23,7 +23,7 @@ namespace KernelSelector
     class PoolingKernelSelctor : public KernelSelctorBase
     {
     public:
-        static PoolingKernelSelctor &instance() {
+        static PoolingKernelSelctor &Instance() {
             static PoolingKernelSelctor instance_;
             return instance_;
         }

@@ -24,16 +24,16 @@ namespace KernelSelector
     class KernelBase
     {
     public:
-        KernelBase(const std::string name) : kernel_name(name) {}
+        KernelBase(const std::string name) : kernelName(name) {}
         virtual ~KernelBase() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const = 0;
         virtual ParamsKey GetSupportedKey() const = 0;
-        virtual const std::string GetName() const { return kernel_name; }
+        virtual const std::string GetName() const { return kernelName; }
     
     protected:
         static const primitive_db db;
-        const std::string kernel_name;
+        const std::string kernelName;
 
         static size_t UniqeID() { return counter++; } // TODO: use interlocked
         

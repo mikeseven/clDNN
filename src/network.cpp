@@ -41,7 +41,7 @@ network_impl::network_impl(program_impl::cptr program)
         allocate_primitive_instance(*node);
     
     clKernelData cl_kernel;
-    cl_kernel.kernel_string.str = R"(
+    cl_kernel.kernelString.str = R"(
         __kernel void warm_up_gpu(int c, int a, int b, __global int* out)
         {
             int res = (get_global_id(0) * a + get_global_id(1)) * b + get_global_id(2);
@@ -52,9 +52,9 @@ network_impl::network_impl(program_impl::cptr program)
         }
     )";
 
-    cl_kernel.kernel_string.entry_point = "warm_up_gpu";
-    cl_kernel.work_groups.global = cl::NDRange(1024, 8);
-    cl_kernel.args_desc.data = {
+    cl_kernel.kernelString.entry_point = "warm_up_gpu";
+    cl_kernel.workGroups.global = cl::NDRange(1024, 8);
+    cl_kernel.argsDesc.data = {
         { ArgumentDescpirtor::Types::INT32, 0 },
         { ArgumentDescpirtor::Types::INT32, 111 },
         { ArgumentDescpirtor::Types::INT32, 7 },
@@ -67,7 +67,7 @@ network_impl::network_impl(program_impl::cptr program)
     auto out        = memory::allocate(api_engine, { data_types::f32 ,format::bfyx,{ 1,1,1,1 } });
 
     //pre-compile program and warm-up
-    neural::gpu::kernel warmup_kernel(context, cl_kernel.kernel_string);
+    neural::gpu::kernel warmup_kernel(context, cl_kernel.kernelString);
     neural::gpu::kernel::kernel_arguments_desc args;
     args.output = &out;
 

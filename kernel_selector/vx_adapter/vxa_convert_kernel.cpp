@@ -31,6 +31,6 @@ namespace clDNN
 
         KernelSelector::ConvertOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelector::ConvertKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::ConvertKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

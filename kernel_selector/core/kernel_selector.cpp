@@ -68,8 +68,8 @@ namespace KernelSelector {
     KernelSelctorBase::KernelSelctorBase()
     {
 #ifdef ENABLE_ENV
-        AddToForceMap(force_kernels, true, "CL_DNN_FORCE_KERNELS");
-        AddToForceMap(force_kernels, false, "CL_DNN_DENY_KERNELS");
+        AddToForceMap(forceKernels, true, "CL_DNN_FORCE_KERNELS");
+        AddToForceMap(forceKernels, false, "CL_DNN_DENY_KERNELS");
 #endif
     }
 
@@ -92,8 +92,8 @@ namespace KernelSelector {
                     if (kds.size() && kds[0].kernels.size())
                     {
 #ifdef ENABLE_ENV
-                        const auto& it = force_kernels.find(implementation->GetName());
-                        if (it != force_kernels.end())
+                        const auto& it = forceKernels.find(implementation->GetName());
+                        if (it != forceKernels.end())
                         {
                             if (it->second == true)
                             {
@@ -109,7 +109,7 @@ namespace KernelSelector {
 #endif
                         {
                             if (kernelsData.size() == 0 ||
-                                kds[0].estimated_time < kernelsData[0].estimated_time)
+                                kds[0].estimatedTime < kernelsData[0].estimatedTime)
                             {
                                 kernelsData = kds;
                                 kernelName = implementation->GetName();

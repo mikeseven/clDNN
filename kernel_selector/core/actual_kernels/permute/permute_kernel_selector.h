@@ -23,7 +23,7 @@ namespace KernelSelector
     class PermuteKernelSelctor : public KernelSelctorBase
     {
     public:
-        static PermuteKernelSelctor &instance() {
+        static PermuteKernelSelctor &Instance() {
             static PermuteKernelSelctor instance_;
             return instance_;
         }

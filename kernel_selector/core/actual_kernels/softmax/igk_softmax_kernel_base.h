@@ -29,18 +29,16 @@ namespace KernelSelector
 
         struct DispatchData : public CommonDispatchData
         {
-            size_t items_num;
+            size_t itemsNum;
             size_t leftovers;
-            size_t data_sets_count;
-            size_t data_set_size;
-            size_t norm_index; //which dimension (from in-memory representation) is normalized, e.g. for bfyx and softmax::normalize_f, it will be f's index == 2 (used only by naive kernel)
+            size_t dataSetsCount;
+            size_t dataSetSize;
+            size_t normIndex; //which dimension (from in-memory representation) is normalized, e.g. for bfyx and softmax::normalize_f, it will be f's index == 2 (used only by naive kernel)
         };
 
-        DispatchData _kernel_data;
-
     protected:
-        jit_constants get_jit_constants(const SoftmaxParams& params, DispatchData kd) const;
-        virtual DispatchData set_default(const SoftmaxParams& params, const OptionalParams& optParams) const;
+        jit_constants GetJitConstants(const SoftmaxParams& params, DispatchData kd) const;
+        virtual DispatchData SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const;
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& optParams, float estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE) const;
     };
 }

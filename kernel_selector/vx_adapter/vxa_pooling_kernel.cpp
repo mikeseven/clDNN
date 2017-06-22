@@ -34,6 +34,6 @@ namespace clDNN
 
         KernelSelector::PoolingOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelector::PoolingKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::PoolingKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

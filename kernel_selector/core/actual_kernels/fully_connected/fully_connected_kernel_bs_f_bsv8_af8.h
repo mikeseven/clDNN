@@ -30,6 +30,6 @@ namespace KernelSelector {
         virtual ParamsKey GetSupportedKey() const override;
     
     protected:
-        DispatchData set_default(const FullyConnectedParams& arg) const override;
+        DispatchData SetDefault(const FullyConnectedParams& arg) const override;
     };
 }

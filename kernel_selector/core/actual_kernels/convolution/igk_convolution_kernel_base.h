@@ -29,19 +29,19 @@ namespace KernelSelector
 
         struct DispatchData : public CommonDispatchData
         {
-            size_t ofm_per_work_item; // how many output feature maps a single work item compute
-            size_t batches_per_work_item; // how many batches will a single work item compute
-            size_t block_width, block_height; // used for kernels processing blocks
+            size_t ofmPerWorkItem; // how many output feature maps a single work item compute
+            size_t batchesPerWorkItem; // how many batches will a single work item compute
+            size_t blockWidth, blockHeight; // used for kernels processing blocks
             size_t prefetch;
-            size_t input_block_array_size; ///< Number of elements in array of UNIT_TYPE that must be specified in kernel to store/cache input block.
-            size_t input_block_width;      ///< Number of elements in X dimension stored/cached in input block.
+            size_t inputBlockArraySize; ///< Number of elements in array of UNIT_TYPE that must be specified in kernel to store/cache input block.
+            size_t inputBlockWidth;      ///< Number of elements in X dimension stored/cached in input block.
             size_t leftovers;
         };
     
     protected:
-        jit_constants get_jit_constants(const ConvolutionParams& params, DispatchData kd) const;
-        DispatchData set_default(const ConvolutionParams& params) const;
-        bool check_work_groups(const DispatchData&) const;
-        bool check_pitch_for_split_only(const ConvolutionParams& params) const;
+        jit_constants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const;
+        DispatchData SetDefault(const ConvolutionParams& params) const;
+        bool CheckWorkGroups(const DispatchData&) const;
+        bool CheckPitchForSplitOnly(const ConvolutionParams& params) const;
     };
 }

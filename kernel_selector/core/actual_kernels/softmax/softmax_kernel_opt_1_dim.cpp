@@ -68,12 +68,12 @@ namespace KernelSelector
         }
 
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(globalWorkGroup, 1, 1);
-        kernel.work_groups.local = cl::NDRange(localWorkGroup, 1, 1);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
-        kernel.args_desc = GetArgumentDesc(1, false, false);
+        kernel.workGroups.global = cl::NDRange(globalWorkGroup, 1, 1);
+        kernel.workGroups.local = cl::NDRange(localWorkGroup, 1, 1);
+        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
+        kernel.argsDesc = GetArgumentDesc(1, false, false);
 
-        kd.estimated_time = FORCE_PRIORITY_8;
+        kd.estimatedTime = FORCE_PRIORITY_8;
 
         return{ kd };
     }

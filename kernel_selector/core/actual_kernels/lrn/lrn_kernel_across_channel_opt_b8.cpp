@@ -38,7 +38,7 @@ namespace KernelSelector
 
     CommonDispatchData LRNKernelAcrossChannel_b8::default_across_channel_b8(const LRNParams& params) const
     {
-        CommonDispatchData run_info = set_default(params);
+        CommonDispatchData run_info = SetDefault(params);
 
         run_info.gws0 /= 8;
         run_info.lws0 = 8; // gws0 is dividable by 64, so after correction it will be dividable by 8.
@@ -79,16 +79,16 @@ namespace KernelSelector
 
         KernelData kd = KernelData::Default<LRNParams>(params, 1);
 
-        auto cldnn_jit = get_jit_constants(orgParams, run_info);
+        auto cldnn_jit = GetJitConstants(orgParams, run_info);
         
         cldnn_jit.add_constant(gpu::make_jit_constant("SUB_GROUP_SIZE", 8));
-        auto entry_point = get_entry_point(kernel_name, orgParams.layerID);
-        auto jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
+        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
 
         auto& kernel = kd.kernels[0];
-        fill_cl_kernel_data(kernel, run_info, kernel_name, jit, entry_point);
+        FillCLKernelData(kernel, run_info, kernelName, jit, entry_point);
 
-        kd.estimated_time = FORCE_PRIORITY_9;
+        kd.estimatedTime = FORCE_PRIORITY_9;
 
         return{ kd };
     }

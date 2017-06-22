@@ -20,7 +20,7 @@
 
 namespace KernelSelector 
 {
-    jit_constants IGKConvolutionKernelBase::get_jit_constants(const ConvolutionParams& params, IGKConvolutionKernelBase::DispatchData kd) const
+    jit_constants IGKConvolutionKernelBase::GetJitConstants(const ConvolutionParams& params, IGKConvolutionKernelBase::DispatchData kd) const
     {
         const auto split = params.convParams.split;
 
@@ -53,7 +53,7 @@ namespace KernelSelector
               (tensor_vt)cp.dilation.y);
         auto input_offset_with_padding = params.inputs[0].offset - cp.padding.x - params.inputs[0].y().pitch*cp.padding.y;
 
-        jit_constants mem_consts = get_common_jit_constants(params);
+        jit_constants mem_consts = GetCommonJitConstants(params);
 
         mem_consts.add_constants({
             gpu::make_jit_constant("STRIDE",                    stride),
@@ -80,17 +80,17 @@ namespace KernelSelector
 
             mem_consts.add_constants({
                 gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE", local_work_group_size),
-                gpu::make_jit_constant("OFM_PER_WORK_ITEM", kd.ofm_per_work_item), // how many output feature maps for a single batch will a single work item produce
-                gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", kd.batches_per_work_item), // how many batches will a single work item compute
-                gpu::make_jit_constant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS", std::max(batch_size / kd.batches_per_work_item / local_work_group_size, static_cast<size_t>(1))), // how many local work groups we need to compute single element for each batch
-                gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / kd.batches_per_work_item), // how many work items we need to compute single element for each batch
+                gpu::make_jit_constant("OFM_PER_WORK_ITEM", kd.ofmPerWorkItem), // how many output feature maps for a single batch will a single work item produce
+                gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", kd.batchesPerWorkItem), // how many batches will a single work item compute
+                gpu::make_jit_constant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS", std::max(batch_size / kd.batchesPerWorkItem / local_work_group_size, static_cast<size_t>(1))), // how many local work groups we need to compute single element for each batch
+                gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / kd.batchesPerWorkItem), // how many work items we need to compute single element for each batch
             });
         }
 
         return mem_consts;
     }
 
-    bool IGKConvolutionKernelBase::check_work_groups(const IGKConvolutionKernelBase::DispatchData& kd) const
+    bool IGKConvolutionKernelBase::CheckWorkGroups(const IGKConvolutionKernelBase::DispatchData& kd) const
     {
         if (kd.gws0 == 0 ||
             kd.gws1 == 0 ||
@@ -114,7 +114,7 @@ namespace KernelSelector
 
     namespace
     {
-        bool check_tensor_for_split(const DataTensor& t, uint32_t split)
+        bool checkTensorForSplit(const DataTensor& t, uint32_t split)
         {
             if (t.PaddingExists())
             {
@@ -141,22 +141,22 @@ namespace KernelSelector
         }
     }
 
-    bool IGKConvolutionKernelBase::check_pitch_for_split_only(const ConvolutionParams& params) const
+    bool IGKConvolutionKernelBase::CheckPitchForSplitOnly(const ConvolutionParams& params) const
     {
         // TODO: it's better to add pitch+offset support than handle this case
         return
-            check_tensor_for_split(params.output, params.convParams.split) &&
-            check_tensor_for_split(params.inputs[0], params.convParams.split);
+            checkTensorForSplit(params.output, params.convParams.split) &&
+            checkTensorForSplit(params.inputs[0], params.convParams.split);
     }
 
-    IGKConvolutionKernelBase::DispatchData IGKConvolutionKernelBase::set_default(const ConvolutionParams& params) const
+    IGKConvolutionKernelBase::DispatchData IGKConvolutionKernelBase::SetDefault(const ConvolutionParams& params) const
     {
         auto batch_size = params.output.batch().v;
         auto output_features = params.output.feature().v;
 
         DispatchData kd;
 
-        kd.fp16_unit_used = params.inputs[0].dtype == Datatype::F16;
+        kd.fp16UnitUsed = params.inputs[0].dtype == Datatype::F16;
         size_t gws0 = output_features * batch_size;
         size_t lws0 = std::min(gws0, static_cast<size_t>(32));
         while (gws0 % lws0)
@@ -169,13 +169,13 @@ namespace KernelSelector
         kd.lws0 = lws0;
         kd.lws1 = 1;
         kd.lws2 = 1;
-        kd.ofm_per_work_item = 1;
-        kd.batches_per_work_item = 1;
-        kd.block_width = 1;
-        kd.block_height = 1;
+        kd.ofmPerWorkItem = 1;
+        kd.batchesPerWorkItem = 1;
+        kd.blockWidth = 1;
+        kd.blockHeight = 1;
         kd.prefetch = 0;
-        kd.input_block_array_size = 0;
-        kd.input_block_width = 0;
+        kd.inputBlockArraySize = 0;
+        kd.inputBlockWidth = 0;
         kd.leftovers = 0;
         kd.effiency = DONT_USE_IF_HAVE_SOMETHING_ELSE;
         return kd;

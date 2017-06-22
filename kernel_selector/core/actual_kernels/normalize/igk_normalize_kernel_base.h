@@ -30,8 +30,8 @@ namespace KernelSelector
         using DispatchData = CommonDispatchData;
 
     protected:
-        jit_constants get_jit_constants(const NormalizeParams& params) const;
-        DispatchData set_default(const NormalizeParams& params) const;
+        jit_constants GetJitConstants(const NormalizeParams& params) const;
+        DispatchData SetDefault(const NormalizeParams& params) const;
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimated_time) const;
     };
 }

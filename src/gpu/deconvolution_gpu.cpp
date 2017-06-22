@@ -34,7 +34,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
 
     deconvolution_gpu(const deconvolution_node &arg, const KernelSelector::KernelData& kd)
         : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string)
+        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
         _use_ks = true;
         _ks_kernel_data = kd;
@@ -113,7 +113,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
         auto deconv_params = GetWeightsBiasDefaultParams<KernelSelector::DeconvolutionParams>(arg, split);
         auto deconv_optional_params = GetDefaultWeightsBiasOptionalParams<KernelSelector::DeconvolutionOptionalParams>(arg.get_program());
 
-        cldnn_activation_to_ks(primitive, deconv_params);
+        ConvertActivationFuncParams(primitive, deconv_params);
 
         deconv_params.deconvParams.split = split;
         deconv_params.deconvParams.filterSize = {
@@ -136,7 +136,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
             (uint32_t)dilation.spatial[1]
         };
 
-        auto& kernel_selector = KernelSelector::DeconvolutionKernelSelctor::instance();
+        auto& kernel_selector = KernelSelector::DeconvolutionKernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(deconv_params, deconv_optional_params);
         if (best_kernels.empty())
         {

@@ -45,12 +45,12 @@ namespace KernelSelector
 
         std::string jit;
 
-        auto entry_point = get_entry_point(kernel_name, newParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, newParams.layerID);
 
         try
         {
-            auto cldnn_jit = get_jit_constants(newParams);
-            jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
+            auto cldnn_jit = GetJitConstants(newParams);
+            jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
         }
         catch (const std::runtime_error&)
         {
@@ -59,12 +59,12 @@ namespace KernelSelector
 
         const auto& out = newParams.reorderParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.ofm().v, out.ifm().v, out.x().v*out.y().v);
-        kernel.work_groups.local = GetOptimalLocalWorkGroupSizes(kernel.work_groups.global);
-        kernel.kernel_string = get_kernel_string(kernel_name, jit, entry_point, ROUND_ROBIN);
-        kernel.args_desc = get_args_desc(1, false, false);
+        kernel.workGroups.global = cl::NDRange(out.ofm().v, out.ifm().v, out.x().v*out.y().v);
+        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
+        kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
+        kernel.argsDesc = GetArgsDesc(1, false, false);
 
-        kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         return{ kd };
     }

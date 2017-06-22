@@ -34,9 +34,9 @@ namespace KernelSelector
         return k;
     }
 
-    FullyConnected_fb_io_block::DispatchData FullyConnected_fb_io_block::set_default(const FullyConnectedParams& arg) const
+    FullyConnected_fb_io_block::DispatchData FullyConnected_fb_io_block::SetDefault(const FullyConnectedParams& arg) const
     {
-        DispatchData kd = set_kernel_data(arg);
+        DispatchData kd = SetKernelData(arg);
 
         const auto& output = arg.output;
         
@@ -81,9 +81,9 @@ namespace KernelSelector
         return kd;
     }
 
-    jit_constants FullyConnected_fb_io_block::get_jit_constants(const FullyConnectedParams& params, const DispatchData& run_info) const
+    jit_constants FullyConnected_fb_io_block::GetJitConstants(const FullyConnectedParams& params, const DispatchData& run_info) const
     {
-        auto cldnn_jit = IGKFullyConnectedKernelBase::get_jit_constants(params, run_info);
+        auto cldnn_jit = IGKFullyConnectedKernelBase::GetJitConstants(params, run_info);
         cldnn_jit.add_constants({
             gpu::make_jit_constant("SUB_GROUP_SIZE",        run_info.lws0),
             gpu::make_jit_constant("WORK_ITEMS_PER_BATCH",  run_info.gws1),

@@ -64,7 +64,7 @@ namespace KernelSelector
         return mem_consts;
     }
 
-    jit_constants IGKReorderKernelBase::get_jit_constants(const ReorderWeightsParams& params) const
+    jit_constants IGKReorderKernelBase::GetJitConstants(const ReorderWeightsParams& params) const
     {
         const auto& input = params.reorderParams.input;
         const auto& output = params.reorderParams.output;
@@ -85,7 +85,7 @@ namespace KernelSelector
         return Datatype::F32;
     }
 
-    jit_constants IGKReorderKernelBase::get_jit_constants(const ReorderParams& params) const
+    jit_constants IGKReorderKernelBase::GetJitConstants(const ReorderParams& params) const
     {
         const auto& input = params.inputs[0];
         const auto& output = params.output;
@@ -98,7 +98,7 @@ namespace KernelSelector
         //Datatype calc_type = more_aqurate_data_type(input.dtype, output.dtype);
         if (params.reorderParams.mode == MeanSubtructMode::INSIDE_PARAMS)
         {
-            mem_consts.add_constant(gpu::make_jit_constant("VALUE_TO_SUBTRACT", params.reorderParams.mean_values));
+            mem_consts.add_constant(gpu::make_jit_constant("VALUE_TO_SUBTRACT", params.reorderParams.meanValues));
             //calc_type = more_aqurate_data_type(calc_type, Datatype::F32);
         }
         else if (params.reorderParams.mode == MeanSubtructMode::IN_BUFFER)

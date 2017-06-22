@@ -69,20 +69,20 @@ namespace KernelSelector {
             << "#define LAST_INPUT_SIZE_DIV_4 (" << matrixLineSize % vecSize << ")\n";
         
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(globalWorkSizeX, newParams.output.feature().v, newParams.output.batch().v);
-        kernel.work_groups.local = cl::NDRange(localWorkSizeX, 1, 1);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
-        kernel.args_desc = GetArgumentDesc(1, true, !newParams.bias.empty());
+        kernel.workGroups.global = cl::NDRange(globalWorkSizeX, newParams.output.feature().v, newParams.output.batch().v);
+        kernel.workGroups.local = cl::NDRange(localWorkSizeX, 1, 1);
+        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
+        kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
 
         // TODO: handle padding per in x/y (for openvx)
-        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::oiyx, kd.weights_reorder_params);
+        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::oiyx, kd.weightsReorderParams);
 
         if (!succeed)
         {
             return{};
         }
 
-        kd.estimated_time = FORCE_PRIORITY_6;
+        kd.estimatedTime = FORCE_PRIORITY_6;
 
         return{ kd };
     }

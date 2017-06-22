@@ -33,7 +33,7 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
 
     roi_pooling_gpu(const roi_pooling_node& arg, const KernelData& kd)
         : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string)
+        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
         _use_ks = true;
         _ks_kernel_data = kd;
@@ -67,13 +67,13 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
         auto roi_params = GetDefaultParams<ROIPoolingV1Params>(arg);
         auto roi_optional_params = GetDefaultOptionalParams<ROIPoolingOptionalParams>(arg.get_program());
         
-        roi_params.inputs.push_back(tensor_2_data_tensor(arg.rois().get_output_layout()));
+        roi_params.inputs.push_back(ConvertDataTensor(arg.rois().get_output_layout()));
         roi_params.output.layout = DataLayout::brfyx; // TOOD: it's an hack - cldnn doesn't support roi pooling with batching
-        roi_params.roiParams.pooled_width  = primitive->pooled_width;
-        roi_params.roiParams.pooled_height = primitive->pooled_height;
-        roi_params.roiParams.spatial_scale = primitive->spatial_scale;
+        roi_params.roiParams.pooledWidth  = primitive->pooled_width;
+        roi_params.roiParams.pooledHeight = primitive->pooled_height;
+        roi_params.roiParams.spatialScale = primitive->spatial_scale;
 
-        auto& kernel_selector = ROIPoolingV1KernelSelctor::instance();
+        auto& kernel_selector = ROIPoolingV1KernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(roi_params, roi_optional_params);
 
         if (best_kernels.empty())

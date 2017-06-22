@@ -30,6 +30,6 @@ namespace clDNN
 
         KernelSelector::SoftmaxOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelector::SoftmaxKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::SoftmaxKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

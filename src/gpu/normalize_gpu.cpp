@@ -34,7 +34,7 @@ struct normalize_gpu : typed_primitive_impl<normalize>
 
     normalize_gpu(const normalize_node& arg, const KernelSelector::KernelData& kd)
         : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernel_string)
+        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
         _use_ks = true;
         _ks_kernel_data = kd;
@@ -63,9 +63,9 @@ struct normalize_gpu : typed_primitive_impl<normalize>
             KernelSelector::NormalizeMode::ACROSS_SPATIAL :
             KernelSelector::NormalizeMode::WITHIN_SPATIAL;
         norm_params.normParams.epsilon = arg.get_primitive()->epsilon;
-        norm_params.normParams.scale_table = tensor_2_data_tensor(scale_layout).flatten_fyx_2_f();
+        norm_params.normParams.scaleTable = ConvertDataTensor(scale_layout).flatten_fyx_2_f();
 
-        auto& kernel_selector = KernelSelector::NormalizeKernelSelctor::instance();
+        auto& kernel_selector = KernelSelector::NormalizeKernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(norm_params, norm_optional_params);
         if (best_kernels.empty())
         {

@@ -51,8 +51,8 @@ namespace KernelSelector {
         const DataTensor newInput = GetConvolutionPaddedTensorDesc(orgParams);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, newInput);
         const bool bSupportedWeightsLayout = orgParams.weights.layout == WeightsLayout::oiyx;
-        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allow_weights_reorder;
-        const bool bInputPadded = optParams.allow_padding || bProperInputDesc;
+        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
+        const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
         const bool bStrideOK = (cp.stride.x == 1 && cp.stride.y == 1);
         const bool bFilter3x3 = (cp.filterSize.x == 3 && cp.filterSize.y == 3);
         const bool bFilter5x5 = (cp.filterSize.x == 5 && cp.filterSize.y == 5);
@@ -75,14 +75,14 @@ namespace KernelSelector {
         SubGroupInfo run_info;
 
         // for KW only
-        kd.reorder_input = false;
+        kd.reorderInput = false;
 
-        if (optParams.allow_padding)
+        if (optParams.allowPadding)
         {
             if (!bProperInputDesc)
             {
                 newParams.inputs[0] = newInput;
-                kd.reorder_input = true;
+                kd.reorderInput = true;
             }
         }
 
@@ -106,28 +106,28 @@ namespace KernelSelector {
             << GetConvolutionJit(newParams, run_info, true);
 
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(
+        kernel.workGroups.global = cl::NDRange(
             cldnn::round_up_to(orgParams.output.x().v, run_info.globalWorkSizeDX) / run_info.globalWorkSizeDX,
             cldnn::round_up_to(orgParams.output.y().v, run_info.globalWorkSizeDY) / run_info.globalWorkSizeDY,
             cldnn::round_up_to(orgParams.output.feature().v, TILE_N) * orgParams.output.batch().v);
 
-        kernel.work_groups.local = cl::NDRange(
+        kernel.workGroups.local = cl::NDRange(
             run_info.localWorkSizeX,
             run_info.localWorkSizeY,
             run_info.localWorkSizeZ);
 
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id, AGE_BASED);
-        kernel.args_desc = GetArgumentDesc(1, true, !newParams.bias.empty());
-        kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
+        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id, AGE_BASED);
+        kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
+        kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
-        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::i_yxs_os_yxsv2_osv16, kd.weights_reorder_params);
+        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::i_yxs_os_yxsv2_osv16, kd.weightsReorderParams);
 
         if (!succeed)
         {
             return{};
         }
 
-        kd.estimated_time = FORCE_PRIORITY_4;
+        kd.estimatedTime = FORCE_PRIORITY_4;
 
         return{ kd };
     }

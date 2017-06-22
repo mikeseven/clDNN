@@ -20,9 +20,9 @@
 
 namespace KernelSelector 
 {
-    jit_constants IGKLRNKernelBase::get_jit_constants(const LRNParams& params, IGKLRNKernelBase::DispatchData kd) const
+    jit_constants IGKLRNKernelBase::GetJitConstants(const LRNParams& params, IGKLRNKernelBase::DispatchData kd) const
     {
-        jit_constants mem_consts = get_common_jit_constants(params);
+        jit_constants mem_consts = GetCommonJitConstants(params);
 
         const auto& np = params.lrnParams;
 
@@ -40,10 +40,10 @@ namespace KernelSelector
             gpu::make_jit_constant("COUNT",                         params.inputs[0].Length()),
             gpu::make_jit_constant("P_SIZE",                        np.localSize),
             gpu::make_jit_constant("PAD",                           pad),
-            gpu::make_jit_constant("ALPHA",                         kd.fp16_unit_used ? alpha_sign : alpha),
-            gpu::make_jit_constant("ALPHA_DIV_BY_SIZE",             kd.fp16_unit_used ? alpha_sign : alpha_div_by_size),
-            gpu::make_jit_constant("ALPHA_VAL_FACTOR",              kd.fp16_unit_used ? alpha_abs_sqrt : 1.0f),
-            gpu::make_jit_constant("ALPHA_VAL_FACTOR_DIV_BY_SIZE",  kd.fp16_unit_used ? alpha_div_by_size_abs_sqrt : 1.0f),
+            gpu::make_jit_constant("ALPHA",                         kd.fp16UnitUsed ? alpha_sign : alpha),
+            gpu::make_jit_constant("ALPHA_DIV_BY_SIZE",             kd.fp16UnitUsed ? alpha_sign : alpha_div_by_size),
+            gpu::make_jit_constant("ALPHA_VAL_FACTOR",              kd.fp16UnitUsed ? alpha_abs_sqrt : 1.0f),
+            gpu::make_jit_constant("ALPHA_VAL_FACTOR_DIV_BY_SIZE",  kd.fp16UnitUsed ? alpha_div_by_size_abs_sqrt : 1.0f),
             gpu::make_jit_constant("BETA",                          np.beta),
             gpu::make_jit_constant("K",                             np.k),
         });
@@ -53,13 +53,13 @@ namespace KernelSelector
         return mem_consts;
     }
 
-    IGKLRNKernelBase::DispatchData IGKLRNKernelBase::set_default(const LRNParams& params) const
+    IGKLRNKernelBase::DispatchData IGKLRNKernelBase::SetDefault(const LRNParams& params) const
     {
         const auto& output = params.output;
 
         DispatchData kd;
 
-        kd.fp16_unit_used = params.inputs[0].dtype == Datatype::F16;
+        kd.fp16UnitUsed = params.inputs[0].dtype == Datatype::F16;
         // Determine global work sizes.
         kd.gws0 = output.batch().v * output.feature().v;    // B, F
         kd.gws1 = output.x().v;                             // X

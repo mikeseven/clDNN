@@ -59,29 +59,29 @@ namespace KernelSelector
         };
     
     protected:
-        virtual jit_constants get_jit_constants(const FullyConnectedParams& params, const DispatchData& kd) const;
-        DispatchData set_kernel_data(const FullyConnectedParams& params) const;
-        virtual DispatchData set_default(const FullyConnectedParams& params) const { return set_kernel_data(params); }
+        virtual jit_constants GetJitConstants(const FullyConnectedParams& params, const DispatchData& kd) const;
+        DispatchData SetKernelData(const FullyConnectedParams& params) const;
+        virtual DispatchData SetDefault(const FullyConnectedParams& params) const { return SetKernelData(params); }
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& optParams, DataLayout dl, WeightsLayout wl, float estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE) const;
 
         // how many batches will a single work item compute
-        static size_t get_batches_per_work_item(const FullyConnectedParams& params)
+        static size_t GetBatchesPerWorkItem(const FullyConnectedParams& params)
         {
-            auto batch_size = params.output.batch().v;
-            return std::min(batch_size, static_cast<size_t>(32U));
+            auto batchSize = params.output.batch().v;
+            return std::min(batchSize, static_cast<size_t>(32U));
         }
 
-        static size_t get_local_groups_size(const FullyConnectedParams& params)
+        static size_t GetLocalGroupsSize(const FullyConnectedParams& params)
         {
-            auto batch_size = params.output.batch().v;
-            return std::max(static_cast<size_t>(1U), batch_size / get_batches_per_work_item(params));
+            auto batchSize = params.output.batch().v;
+            return std::max(static_cast<size_t>(1U), batchSize / GetBatchesPerWorkItem(params));
         }
 
         // how many neurons for a single batch will a single work item produce 
-        static size_t get_neurons_per_work_item(const FullyConnectedParams& params)
+        static size_t GetNeuronsPerWorkItem(const FullyConnectedParams& params)
         {
-            auto batch_size = params.output.batch().v;
-            auto out_elements_count_per_batch = params.output.Length() / batch_size;
+            auto batchSize = params.output.batch().v;
+            auto out_elements_count_per_batch = params.output.Length() / batchSize;
             if (out_elements_count_per_batch % 16 == 0)
                 return 2;
             else

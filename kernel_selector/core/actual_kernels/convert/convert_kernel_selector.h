@@ -23,7 +23,7 @@ namespace KernelSelector
     class ConvertKernelSelctor : public KernelSelctorBase
     {
     public:
-        static ConvertKernelSelctor &instance() {
+        static ConvertKernelSelctor &Instance() {
             static ConvertKernelSelctor instance_;
             return instance_;
         }

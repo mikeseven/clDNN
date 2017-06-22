@@ -32,6 +32,6 @@ namespace clDNN
 
         KernelSelector::TableLookupOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelector::TableLookupKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::TableLookupKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

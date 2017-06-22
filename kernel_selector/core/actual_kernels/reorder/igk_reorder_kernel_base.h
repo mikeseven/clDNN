@@ -28,7 +28,7 @@ namespace KernelSelector
         virtual ~IGKReorderKernelBase() {}
     
     protected:
-        virtual jit_constants get_jit_constants(const ReorderWeightsParams& params) const;
-        virtual jit_constants get_jit_constants(const ReorderParams& params) const;
+        virtual jit_constants GetJitConstants(const ReorderWeightsParams& params) const;
+        virtual jit_constants GetJitConstants(const ReorderParams& params) const;
     };
 }

@@ -57,20 +57,20 @@ namespace KernelSelector {
             << "#define PITCH_SRC_H (" << newParams.inputs[0].y().pitch << ")\n"
             << "#define PITCH_SRC_C (" << newParams.inputs[0].feature().pitch << ")\n"
             << "#define PITCH_SRC_B (" << newParams.inputs[0].batch().pitch << ")\n"
-            << "#define PITCH_ROI_R (" << newParams.pitch_rois_r << ")\n"
-            << "#define PITCH_ROI_B (" << newParams.pitch_rois_b << ")\n"
+            << "#define PITCH_ROI_R (" << newParams.pitchRoisR << ")\n"
+            << "#define PITCH_ROI_B (" << newParams.pitchRoisB << ")\n"
             << "#define PITCH_DST_H (" << newParams.output.y().pitch << ")\n"
             << "#define PITCH_DST_C (" << newParams.output.feature().pitch << ")\n"
             << "#define PITCH_DST_R (" << newParams.output.roi().pitch << ")\n"
             << "#define PITCH_DST_B (" << newParams.output.batch().pitch << ")\n";
 
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(newParams.output.Length(), 1, 1);
-        kernel.work_groups.local = GetOptimalLocalWorkGroupSizes(kernel.work_groups.global);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), kernel_id);
-        kernel.args_desc = GetArgumentDesc(2, false, false);
+        kernel.workGroups.global = cl::NDRange(newParams.output.Length(), 1, 1);
+        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
+        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
+        kernel.argsDesc = GetArgumentDesc(2, false, false);
 
-        kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         return{ kd };
     }

@@ -23,7 +23,7 @@ namespace KernelSelector
     class ReshapeKernelSelctor : public KernelSelctorBase
     {
     public:
-        static ReshapeKernelSelctor &instance() {
+        static ReshapeKernelSelctor &Instance() {
             static ReshapeKernelSelctor instance_;
             return instance_;
         }

@@ -41,12 +41,12 @@ namespace KernelSelector
         return k;
     }
 
-    FullyConnected_bs_f_bsv16_af8::DispatchData FullyConnected_bs_f_bsv16_af8::set_default(const FullyConnectedParams& arg) const
+    FullyConnected_bs_f_bsv16_af8::DispatchData FullyConnected_bs_f_bsv16_af8::SetDefault(const FullyConnectedParams& arg) const
     {
-        DispatchData kd = set_kernel_data(arg);
+        DispatchData kd = SetKernelData(arg);
 
-        size_t groups_per_batches = get_local_groups_size(arg);
-        kd.gws0 = cldnn::align_to(arg.output.Length() / (get_batches_per_work_item(arg) * groups_per_batches), 16);
+        size_t groups_per_batches = GetLocalGroupsSize(arg);
+        kd.gws0 = cldnn::align_to(arg.output.Length() / (GetBatchesPerWorkItem(arg) * groups_per_batches), 16);
         kd.gws1 = groups_per_batches;
         kd.lws0 = 16;
         kd.lws1 = 1;
@@ -73,7 +73,7 @@ namespace KernelSelector
 
         const bool bProperBatch = orgParams.inputs[0].batch().v == 16;
         const bool bProperInput = check_input_layout(orgParams.inputs[0]);
-        const bool bSupportedLayout = orgOptParams.allow_reorder_input || bProperInput;
+        const bool bSupportedLayout = orgOptParams.allowReorderInput || bProperInput;
         
         if (!bProperBatch || !bSupportedLayout)
         {

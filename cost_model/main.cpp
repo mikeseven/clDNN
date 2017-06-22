@@ -76,13 +76,13 @@ public:
 
         CL_CHECK(status, "Error: cannot create program");
 
-        cl::Kernel clKernel(program, clData.kernel_string.entry_point.c_str(), &status);
+        cl::Kernel clKernel(program, clData.kernelString.entry_point.c_str(), &status);
         CL_CHECK(status, "Error: cannot create kernel");
 
         auto& newParams = *static_cast<ConvolutionParams*>(kernelData.params.get());
         std::size_t weightsSize =
-            kernelData.weights_reorder_params.engine != WeightsReorderParams::Engine::NONE ?
-            kernelData.weights_reorder_params.new_buffer_size :
+            kernelData.weightsReorderParams.engine != WeightsReorderParams::Engine::NONE ?
+            kernelData.weightsReorderParams.newBufferSize :
             newParams.convParams.filterSize.x * newParams.convParams.filterSize.y * newParams.inputs[0].feature().v * newParams.output.feature().v;
         cl::Buffer input(clContext, CL_MEM_READ_WRITE, newParams.inputs[0].PhysicalSize(), nullptr, &status);
         cl::Buffer output(clContext, CL_MEM_READ_WRITE, newParams.output.PhysicalSize(), nullptr, &status);
@@ -94,7 +94,7 @@ public:
         params.output = &output;
         params.weights = &weights;
         params.bias = &bias;
-        if (!clData.args_desc.SetArguments(clKernel, params))
+        if (!clData.argsDesc.SetArguments(clKernel, params))
         {
             printf("Error: setting args\n");
             return 0.f;
@@ -110,8 +110,8 @@ public:
             status = gpu_context->queue().enqueueNDRangeKernel(
                 clKernel,
                 cl::NullRange,
-                clData.work_groups.global,
-                clData.work_groups.local,
+                clData.workGroups.global,
+                clData.workGroups.local,
                 nullptr);
             CL_CHECK(status, "Error: enqueue failed");
         }
@@ -121,8 +121,8 @@ public:
             status = gpu_context->queue().enqueueNDRangeKernel(
                 clKernel,
                 cl::NullRange,
-                clData.work_groups.global,
-                clData.work_groups.local,
+                clData.workGroups.global,
+                clData.workGroups.local,
                 nullptr,
                 &event);
             CL_CHECK(status, "Error: enqueue failed");
@@ -162,8 +162,8 @@ class ConvolutionCostModel : public ConvolutionKernelSelctor
         for (std::size_t i = 0; i < implementations.size(); i++)
         {
             const auto& implementation = implementations[i];
-            const auto& it = force_kernels.find(implementation->GetName());
-            if (it != force_kernels.end())
+            const auto& it = forceKernels.find(implementation->GetName());
+            if (it != forceKernels.end())
             {
                 if (it->second == true)
                 {
@@ -205,8 +205,8 @@ public:
 #endif
 
             ConvolutionOptionalParams optParams;
-            optParams.allow_padding = true;
-            optParams.allow_weights_reorder = true;
+            optParams.allowPadding = true;
+            optParams.allowWeightsReorder = true;
             optParams.bSupportSubGroupExt = true;
 
             for (const auto& params : params_vec)
@@ -221,8 +221,8 @@ public:
                 if (impl_key.Support(params_key))
                 {
                     ConvolutionOptionalParams optParams;
-                    optParams.allow_padding = true;
-                    optParams.allow_weights_reorder = true;
+                    optParams.allowPadding = true;
+                    optParams.allowWeightsReorder = true;
                     optParams.bSupportSubGroupExt = true;
 
                     KernelsData kernelsData = kernel.GetKernelsData(params, optParams);
@@ -230,10 +230,10 @@ public:
                     {
                         avg_time = cl_runner.run(kernelsData[0]);
 #if RUN_MODE == 2
-                        float diff = abs((float)(avg_time - kernelsData[0].estimated_time));
+                        float diff = abs((float)(avg_time - kernelsData[0].estimatedTime));
                         if (diff > 0.1)
                         {
-                            printf("ERROR: bad value (%f, %f, %f) - %s\n", avg_time, kernelsData[0].estimated_time, diff, param_str.c_str());
+                            printf("ERROR: bad value (%f, %f, %f) - %s\n", avg_time, kernelsData[0].estimatedTime, diff, param_str.c_str());
                         }
 #endif
                     }

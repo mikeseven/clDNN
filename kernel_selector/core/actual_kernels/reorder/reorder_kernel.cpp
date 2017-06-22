@@ -35,9 +35,9 @@ namespace KernelSelector
         return k;
     }
 
-    jit_constants ReorderKernelRef::get_jit_constants(const ReorderParams& params) const
+    jit_constants ReorderKernelRef::GetJitConstants(const ReorderParams& params) const
     {
-        auto jit = IGKReorderKernelBase::get_jit_constants(params);
+        auto jit = IGKReorderKernelBase::GetJitConstants(params);
         jit.merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
         return jit;
     }
@@ -51,12 +51,12 @@ namespace KernelSelector
 
         std::string jit;
 
-        auto entry_point = get_entry_point(kernel_name, newParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, newParams.layerID);
 
         try
         {
-            auto cldnn_jit = get_jit_constants(newParams);
-            jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point);
+            auto cldnn_jit = GetJitConstants(newParams);
+            jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
         }
         catch (const std::runtime_error&)
         {
@@ -65,17 +65,17 @@ namespace KernelSelector
 
         auto& kernel = kd.kernels[0];
 
-        kernel.work_groups.global = GetTensorFriendlyWorkGroups(newParams.inputs[0]);
-        kernel.work_groups.local = GetOptimalLocalWorkGroupSizes(kernel.work_groups.global);
+        kernel.workGroups.global = GetTensorFriendlyWorkGroups(newParams.inputs[0]);
+        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
 
-        kernel.kernel_string = get_kernel_string(kernel_name, jit, entry_point, ROUND_ROBIN);
-        kernel.args_desc = get_args_desc(1, false, false);
+        kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
+        kernel.argsDesc = GetArgsDesc(1, false, false);
         if (newParams.reorderParams.mode == MeanSubtructMode::IN_BUFFER)
         {
-            kernel.args_desc.data.push_back({ ArgumentDescpirtor::Types::BIAS, 0 });
+            kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::BIAS, 0 });
         }
 
-        kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         return{ kd };
     }

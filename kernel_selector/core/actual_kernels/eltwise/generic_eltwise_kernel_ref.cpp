@@ -76,7 +76,7 @@ namespace KernelSelector {
             throw std::runtime_error("error - eltwise without inputs");
         }
 
-        auto jit = get_common_jit_constants(params);
+        auto jit = GetCommonJitConstants(params);
         
         std::string inputs_decls;
         for (size_t op_num = 0; op_num < params.inputs.size(); op_num++)
@@ -182,12 +182,12 @@ namespace KernelSelector {
 
         std::string jit;
 
-        auto entry_point = get_entry_point(kernel_name, newParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, newParams.layerID);
 
         try
         {
             auto cldnn_jit = get_jit_constants(newParams);
-            jit = create_jit_from_template(kernel_name, cldnn_jit.get_definitions(), entry_point, false);
+            jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point, false);
         }
         catch (const std::runtime_error&)
         {
@@ -198,11 +198,11 @@ namespace KernelSelector {
         auto& kernel = kd.kernels[0];
         if (newParams.eltwiseParams.layoutBased)
         {
-            kernel.work_groups.global = GetTensorFriendlyWorkGroups(newParams.inputs[0]);
+            kernel.workGroups.global = GetTensorFriendlyWorkGroups(newParams.inputs[0]);
         }
         else if (noPitchSameDims(newParams))
         {
-            kernel.work_groups.global = { newParams.inputs[0].Length(), 1, 1 };
+            kernel.workGroups.global = { newParams.inputs[0].Length(), 1, 1 };
         }
         else
         {
@@ -217,13 +217,13 @@ namespace KernelSelector {
                 gws.push_back(1U);
             }
 
-            kernel.work_groups.global = cl::NDRange(gws[0], gws[1], gws[2] * gws[3]);
+            kernel.workGroups.global = cl::NDRange(gws[0], gws[1], gws[2] * gws[3]);
         }
-        kernel.work_groups.local = GetOptimalLocalWorkGroupSizes(kernel.work_groups.global);
-        kernel.kernel_string = get_kernel_string(kernel_name, jit, entry_point, ROUND_ROBIN);
-        kernel.args_desc = get_args_desc((uint32_t)newParams.inputs.size(), false, false);
+        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
+        kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
+        kernel.argsDesc = GetArgsDesc((uint32_t)newParams.inputs.size(), false, false);
 
-        kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         return{ kd };
     }

@@ -23,7 +23,7 @@ namespace KernelSelector
     class LocallyConnectedKernelSelctor : public KernelSelctorBase
     {
     public:
-        static LocallyConnectedKernelSelctor &instance() {
+        static LocallyConnectedKernelSelctor &Instance() {
             static LocallyConnectedKernelSelctor instance_;
             return instance_;
         }
