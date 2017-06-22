@@ -56,7 +56,7 @@ layout pooling_inst::calc_output_layout(parent::typed_node const& node)
     }
 
     // TODO: Check compatibility of output size calculation (with caffe).
-    auto output_range = calc_sliding_window_output_range<swor_mode::exceed_once>(
+    auto output_range = calc_sliding_window_output_range<swor_mode::exceed_once_data>(
         input_layout.size, window_size, input_offset, stride, {1, 1, 1, 1}, true, 1);
 
     tensor output_size(input_layout.size.batch[0], input_layout.size.feature[0],

@@ -29,13 +29,21 @@ namespace cldnn
 /// @brief Sliding window output range computation mode.
 enum class swor_mode
 {
+    // Single modes:
     all,         ///< Range is computed in the way that each sliding window in range is fully contained inside
-                 ///< (non-padded) input data.
+                 ///< (optionally upper-padded by offset) input data.
     exceed_once, ///< Range is computed in the way that each except at most one sliding window in range is fully
-                 ///< contained inside (non-padded) input data. The last window may partially exceed (non-padded)
-                 ///< input data range.
+                 ///< contained inside (optionally upper-padded by offset) input data. The last window may partially
+                 ///< exceed (optionally upper-padded by offset) input data range.
     any,         ///< Range is computed in the way that each sliding window in range is fully or at least partially
-                 ///< contained inside (non-padded) input data.
+                 ///< contained inside (optionally upper-padded by offset) input data.
+    // Mixed modes:
+    exceed_once_data, ///< Range is computed in the way that each except at most one sliding window in range is fully
+                      ///< contained inside (optionally upper-padded by offset) input data. The last window may
+                      ///< partially exceed (non-upper-padded) input data range.
+                      ///< This mode is effectievely minimum of combination of @c swor_mode::exceed_once mode
+                      ///< and @c swor_mode::any mode (with always @c sym_offset = false).
+    max               ///< Maximum of all single modes with all cominations of @c sym_offset.
 };
 
 /// @brief Calculates output range (size) for sliding window moving on input data range specified by @p input_size.
@@ -176,6 +184,66 @@ inline tensor calc_sliding_window_output_range<swor_mode::any>(
             : degen_val);
 
     return {0, 0, output_range_x, output_range_y};
+}
+
+template <>
+inline tensor calc_sliding_window_output_range<swor_mode::exceed_once_data>(
+    const tensor& input_size, const tensor& size, const tensor& offset, const tensor& stride, const tensor& dilation,
+    bool sym_offset, const tensor::value_type& degen_val)
+{
+    if(input_size.spatial[0] <= 0 || input_size.spatial[1] <= 0)
+        throw std::invalid_argument("Input data spatial sizes must be positive (>= 1).");
+    if(size.spatial[0] <= 0 || size.spatial[1] <= 0)
+        throw std::invalid_argument("Sliding window spatial sizes must be positive (>= 1).");
+    if(stride.spatial[0] <= 0 || stride.spatial[1] <= 0)
+        throw std::invalid_argument("Sliding window h/v strides must be positive (>= 1).");
+    if(dilation.spatial[0] <= 0 || dilation.spatial[1] <= 0)
+        throw std::invalid_argument("Sliding window h/v input dialations must be positive (>= 1).");
+
+    auto output_range_exceed_once = calc_sliding_window_output_range<swor_mode::exceed_once>(
+        input_size, size, offset, stride, dilation, sym_offset, degen_val);
+    auto output_range_exceed_any_data = calc_sliding_window_output_range<swor_mode::any>(
+        input_size, size, offset, stride, dilation, false, degen_val);
+
+    return tensor::min(output_range_exceed_once, output_range_exceed_any_data);
+}
+
+template <>
+inline tensor calc_sliding_window_output_range<swor_mode::max>(
+    const tensor& input_size, const tensor& size, const tensor& offset, const tensor& stride, const tensor& dilation,
+    bool, const tensor::value_type& degen_val)
+{
+    if(input_size.spatial[0] <= 0 || input_size.spatial[1] <= 0)
+        throw std::invalid_argument("Input data spatial sizes must be positive (>= 1).");
+    if(size.spatial[0] <= 0 || size.spatial[1] <= 0)
+        throw std::invalid_argument("Sliding window spatial sizes must be positive (>= 1).");
+    if(stride.spatial[0] <= 0 || stride.spatial[1] <= 0)
+        throw std::invalid_argument("Sliding window h/v strides must be positive (>= 1).");
+    if(dilation.spatial[0] <= 0 || dilation.spatial[1] <= 0)
+        throw std::invalid_argument("Sliding window h/v input dialations must be positive (>= 1).");
+
+    auto output_range_all_sym  = calc_sliding_window_output_range<swor_mode::all>(
+        input_size, size, offset, stride, dilation, true, degen_val);
+    auto output_range_all_asym = calc_sliding_window_output_range<swor_mode::all>(
+        input_size, size, offset, stride, dilation, false, degen_val);
+
+    auto output_range_exceed_once_sym  = calc_sliding_window_output_range<swor_mode::exceed_once>(
+        input_size, size, offset, stride, dilation, true, degen_val);
+    auto output_range_exceed_once_asym = calc_sliding_window_output_range<swor_mode::exceed_once>(
+        input_size, size, offset, stride, dilation, false, degen_val);
+
+    auto output_range_any_sym  = calc_sliding_window_output_range<swor_mode::any>(
+        input_size, size, offset, stride, dilation, true, degen_val);
+    auto output_range_any_asym = calc_sliding_window_output_range<swor_mode::any>(
+        input_size, size, offset, stride, dilation, false, degen_val);
+
+    return tensor::max(
+        tensor::max(
+            tensor::max(output_range_all_sym, output_range_all_asym),
+            tensor::max(output_range_exceed_once_sym, output_range_exceed_once_asym)
+        ),
+        tensor::max(output_range_any_sym, output_range_any_asym)
+    );
 }
 
 
