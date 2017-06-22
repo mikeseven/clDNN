@@ -81,9 +81,9 @@ namespace KernelSelector
 
         auto cldnn_jit = GetJitConstants(orgParams, run_info);
         
-        cldnn_jit.add_constant(gpu::make_jit_constant("SUB_GROUP_SIZE", 8));
+        cldnn_jit.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", 8));
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
-        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
+        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, run_info, kernelName, jit, entry_point);

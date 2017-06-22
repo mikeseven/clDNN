@@ -39,7 +39,7 @@ namespace KernelSelector
         };
     
     protected:
-        jit_constants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const;
+        JitConstants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const;
         DispatchData SetDefault(const ConvolutionParams& params) const;
         bool CheckWorkGroups(const DispatchData&) const;
         bool CheckPitchForSplitOnly(const ConvolutionParams& params) const;

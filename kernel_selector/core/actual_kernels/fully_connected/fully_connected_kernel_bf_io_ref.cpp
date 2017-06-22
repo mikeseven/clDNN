@@ -80,7 +80,7 @@ namespace KernelSelector
         {
             run_info = SetKernelData(newParams);
             auto cldnn_jit = GetJitConstants(newParams, run_info);
-            jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
+            jit = CreateJit(kernelName, cldnn_jit, entry_point);
         }
         catch (const std::runtime_error& )
         {

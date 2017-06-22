@@ -56,16 +56,9 @@ namespace KernelSelector {
         return kd;
     }
 
-    jit_constants ROIPoolingV1KernelRef::get_jit_constants(const ROIPoolingV1Params& params) const
+    JitConstants ROIPoolingV1KernelRef::get_jit_constants(const ROIPoolingV1Params& params) const
     {
-        gpu::jit_constants mem_consts = GetCommonJitConstants(params);
-
-        mem_consts.add_constants({
-            gpu::make_jit_constant("POOLED_HEIGHT",     params.roiParams.pooledHeight),
-            gpu::make_jit_constant("POOLED_WIDTH",      params.roiParams.pooledWidth),
-            gpu::make_jit_constant("SPATIAL_SCALE",     params.roiParams.spatialScale),
-        });
-        return mem_consts;
+        return MakeROIPoolingV1JitConstants(params);
     }
 
     KernelsData ROIPoolingV1KernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
@@ -85,7 +78,7 @@ namespace KernelSelector {
 
         auto cldnn_jit = get_jit_constants(orgParams);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
-        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
+        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, run_info, kernelName, jit, entry_point);

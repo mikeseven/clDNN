@@ -15,52 +15,23 @@
 */
 
 #include "igk_pooling_kernel_base.h"
-#include "api/CPP/tensor.hpp"
-#include "api/CPP/cldnn_defs.h"
 
 namespace KernelSelector 
 {
-    jit_constants IGKPoolingKernelBase::GetJitConstants(const PoolingParams& params, IGKPoolingKernelBase::DispatchData kd) const
+    JitConstants IGKPoolingKernelBase::GetJitConstants(const PoolingParams& params, IGKPoolingKernelBase::DispatchData kd) const
     {
-        jit_constants mem_consts = GetCommonJitConstants(params);
-
-        const auto& pp = params.poolParams;
-
-        cldnn::tensor stride(
-            (tensor_vt)1,
-            (tensor_vt)1,
-            (tensor_vt)std::min((size_t)pp.poolStride.x, params.inputs[0].x().v),
-            (tensor_vt)std::min((size_t)pp.poolStride.y, params.inputs[0].y().v));
-        cldnn::tensor window(
-            (tensor_vt)1,
-            (tensor_vt)1,
-            (tensor_vt)pp.poolSize.x,
-            (tensor_vt)pp.poolSize.y);
-        cldnn::tensor input_padding(
-            (tensor_vt)0,
-            (tensor_vt)0,
-            (tensor_vt)pp.poolPad.x,
-            (tensor_vt)pp.poolPad.y);
-
-        mem_consts.add_constants({
-            gpu::make_jit_constant("WINDOW",        window),
-            gpu::make_jit_constant("STRIDE",        stride),
-            gpu::make_jit_constant("INPUT_PADDING", input_padding),
-        });
-
-        mem_consts.add_constant(gpu::make_jit_constant(toString(pp.poolType) + "_POOLING", 1));
-        mem_consts.add_constant(gpu::make_jit_constant("LAYOUT_" + toString(params.inputs[0].layout), 1));
+        JitConstants mem_consts = MakePoolingJitConstants(params);
 
         if (kd.needsBoundary)
         {
-            mem_consts.add_constant(gpu::make_jit_constant("CHECK_BOUNDRY", 1));
+            mem_consts.AddConstant(MakeJitConstant("CHECK_BOUNDRY", 1));
         }
 
         return mem_consts;
     }
 
     // Checks if we need boundary checking in kernel.
-    static bool needs_boundary_check(const PoolingParams& params)
+    static bool NeedsBoundaryCheck(const PoolingParams& params)
     {
         const auto& pp = params.poolParams;
 
@@ -113,7 +84,7 @@ namespace KernelSelector
             kd.lws2 = 1;
         }
 
-        kd.needsBoundary = needs_boundary_check(params);
+        kd.needsBoundary = NeedsBoundaryCheck(params);
 
         return kd;
     }

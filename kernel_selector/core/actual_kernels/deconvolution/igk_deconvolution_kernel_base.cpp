@@ -15,64 +15,12 @@
 */
 
 #include "igk_deconvolution_kernel_base.h"
-#include "api/CPP/tensor.hpp"
-#include "api/CPP/cldnn_defs.h"
 
 namespace KernelSelector 
 {
-    jit_constants IGKDeconvolutionKernelBase::GetJitConstants(const DeconvolutionParams& params) const
+    JitConstants IGKDeconvolutionKernelBase::GetJitConstants(const DeconvolutionParams& params) const
     {
-        const auto split = params.deconvParams.split;
-
-        const auto& cp = params.deconvParams;
-
-        cldnn::tensor stride(
-              (tensor_vt)1,
-              (tensor_vt)1,
-              (tensor_vt)cp.stride.x,
-              (tensor_vt)cp.stride.y);
-        cldnn::tensor filter_tensor = cldnn::tensor(
-              (tensor_vt)params.output.feature().v,
-              (tensor_vt)params.inputs[0].feature().v,
-              (tensor_vt)cp.filterSize.x,
-              (tensor_vt)cp.filterSize.y );
-        cldnn::tensor input_padding_tensor = cldnn::tensor(
-              (tensor_vt)0,
-              (tensor_vt)0,
-              (tensor_vt)cp.padding.x,
-              (tensor_vt)cp.padding.y );
-        cldnn::tensor output_padding_tensor = cldnn::tensor(
-              (tensor_vt)0,
-              (tensor_vt)0,
-              (tensor_vt)0,
-              (tensor_vt)0 );
-        cldnn::tensor dilation = cldnn::tensor(
-              (tensor_vt)1,
-              (tensor_vt)1,
-              (tensor_vt)cp.dilation.x,
-              (tensor_vt)cp.dilation.y);
-        auto input_offset_with_padding = params.inputs[0].offset - cp.padding.x - params.inputs[0].y().pitch*cp.padding.y;
-
-        jit_constants mem_consts = GetCommonJitConstants(params);
-
-        mem_consts.add_constants({
-            gpu::make_jit_constant("STRIDE",                    stride),
-            gpu::make_jit_constant("INPUT_OFFSET_WITH_PADDING", input_offset_with_padding),
-            gpu::make_jit_constant("INPUT_PADDING",             input_padding_tensor),
-            gpu::make_jit_constant("OUTPUT_PADDING",            output_padding_tensor),                 // TODO
-            gpu::make_jit_constant("FILTER",                    filter_tensor),
-            gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
-            gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_BATCH_NUM"),
-            gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM",  "FILTER_FEATURE_NUM"),
-            gpu::make_jit_constant("BIAS_TERM",                 static_cast<int>(!params.bias.empty())),
-            gpu::make_jit_constant("DILATION",                  dilation),
-            gpu::make_jit_constant("FILTER_X_PITCH",            params.weights.x().pitch),
-            gpu::make_jit_constant("FILTER_Y_PITCH",            params.weights.y().pitch),
-            gpu::make_jit_constant("FILTER_IFM_PITCH",          params.weights.ifm().pitch),
-            gpu::make_jit_constant("FILTER_OFM_PITCH",          params.weights.ofm().pitch),
-        });
-
-        return mem_consts;
+        return MakeDeconvolutionJitConstants(params);
     }
 
     namespace

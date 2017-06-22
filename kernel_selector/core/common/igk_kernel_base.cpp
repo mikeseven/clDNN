@@ -151,13 +151,13 @@ static const char* kernels_header = R"__krnl(
 
     namespace {
 
-        class code_builder
+        class CodeBuilder
         {
             std::ostringstream oss;
             std::string code;
             std::vector<std::string> defined_macroses;
 
-            code_builder& register_macro(const std::string& name)
+            CodeBuilder& register_macro(const std::string& name)
             {
                 assert(std::count(defined_macroses.begin(), defined_macroses.end(), name) == 0);
                 defined_macroses.push_back(name);
@@ -165,26 +165,26 @@ static const char* kernels_header = R"__krnl(
             }
 
         public:
-            code_builder& set_code(const std::string& c)
+            CodeBuilder& set_code(const std::string& c)
             {
                 assert(code.empty());
                 code = c;
                 return *this;
             }
 
-            code_builder& add_line(const std::string& line) {
+            CodeBuilder& add_line(const std::string& line) {
                 oss << line << "\n";
                 return *this;
             }
 
-            code_builder& decoration_macro(const std::string& name, const std::string& prefix, const std::string& postfix, const std::string& name_prefix = std::string())
+            CodeBuilder& decoration_macro(const std::string& name, const std::string& prefix, const std::string& postfix, const std::string& name_prefix = std::string())
             {
                 oss << "#define " << name << "(name) " << prefix << " " + name_prefix + "_##" + "name" << (postfix.empty() ? "" : "##_") << postfix << std::endl;
                 return register_macro(name);
             }
 
 
-            code_builder& value_macro(const std::string& name, const std::string& value)
+            CodeBuilder& value_macro(const std::string& name, const std::string& value)
             {
                 oss << "#define " << name << " " << value << std::endl;
                 return register_macro(name.substr(0, name.find('(')));
@@ -216,9 +216,9 @@ static const char* kernels_header = R"__krnl(
         return kernel_id;
     }
 
-    std::string IGKKernelBase::CreateJit(const std::string& template_name, jit_definitions definitions, std::string kernel_id, bool inject_header) const
+    std::string IGKKernelBase::CreateJit(const std::string& template_name, JitConstants constants, std::string kernel_id, bool inject_header) const
     {
-        class code_builder code;
+        class CodeBuilder code;
         code.add_line("\n//====================================================")
             .add_line("// Kernel template: " + template_name + " ")
             .add_line("// Kernel name: " + kernel_id)
@@ -226,7 +226,7 @@ static const char* kernels_header = R"__krnl(
             .decoration_macro("FUNC", "", kernel_id)
             .decoration_macro("FUNC_CALL", "", kernel_id);
         
-        for (auto& definition : definitions) 
+        for (auto& definition : constants.GetDefinitions())
         {
             code.value_macro(definition.first, definition.second);
         }
@@ -291,47 +291,5 @@ static const char* kernels_header = R"__krnl(
         kernel.workGroups.local = cl::NDRange(run_info.lws0, run_info.lws1, run_info.lws2);
         kernel.kernelString = GetKernelString(kernel_map_name, jit, entry_point);
         kernel.argsDesc = GetArgsDesc(1, weights, bias);
-    }
-
-    jit_constants IGKKernelBase::GetCommonJitConstants(const BaseParams& params) const
-    {
-        const bool relu =
-            params.activationFunc == ActivationFunction::RELU ||
-            params.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE;
-        const float negative_slope =
-            params.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE ?
-            params.nlParams.m : 0.f;
-
-        bool fp16_unit_used = params.output.dtype == Datatype::F16;
-        for (const auto& i : params.inputs)
-        {
-            fp16_unit_used |= i.dtype == Datatype::F16;
-        }
-
-        jit_constants mem_consts{
-            gpu::make_jit_constant("OUTPUT",                    params.output),
-            gpu::make_jit_constant("FP16_SUPPORTED",            static_cast<int>(fp16_unit_used)),   // TODO: use engine
-            gpu::make_jit_constant("FP16_UNIT_USED",            static_cast<int>(fp16_unit_used)),
-            gpu::make_jit_constant("UNIT_TYPE",                 fp16_unit_used ? "half" : "float"),
-            gpu::make_jit_constant("UNIT_VAL_ZERO",             fp16_unit_used ? "0.0h" : "0.0f"),
-            gpu::make_jit_constant("UNIT_VAL_MAX",              fp16_unit_used ? "HALF_MAX" : "FLT_MAX"),
-            gpu::make_jit_constant("UNIT_VAL_MIN",              "-(UNIT_VAL_MAX)"),
-            gpu::make_jit_constant("TO_UNIT_TYPE_V1(v)",        fp16_unit_used ? "convert_half(v)" : "(float)(v)"),
-            gpu::make_jit_constant("RELU",                      static_cast<int>(relu)),
-            gpu::make_jit_constant("NEGATIVE_SLOPE",            negative_slope),
-        };
-
-        if (params.inputs.size() >= 1)
-        {
-            // default input is input 0
-            mem_consts.add_constant(gpu::make_jit_constant("INPUT", params.inputs[0]));
-        }
-
-        for (size_t i = 0; i < params.inputs.size(); i++)
-        {
-            mem_consts.add_constant(gpu::make_jit_constant("INPUT" + std::to_string(i), params.inputs[i]));
-        }
-
-        return mem_consts;
     }
 }

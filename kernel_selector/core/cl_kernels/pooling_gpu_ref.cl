@@ -37,7 +37,7 @@ inline UNIT_TYPE FUNC(apply_pooling)(UNIT_TYPE tmp, UNIT_TYPE in)
 
 KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
-#if   defined LAYOUT_BFYX
+#if   defined OUTPUT_LAYOUT_BFYX
     const uint x    = (uint)get_global_id(0);
     const uint y    = (uint)get_global_id(1);
     const uint bf   = (uint)get_global_id(2);
@@ -48,7 +48,7 @@ KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     {
         return;
     }
-#elif defined LAYOUT_YXFB
+#elif defined OUTPUT_LAYOUT_YXFB
     const uint x    = (uint)get_global_id(1);
     const uint y    = (uint)get_global_id(2);
     const uint bf   = (uint)get_global_id(0);
@@ -56,8 +56,8 @@ KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     const uint b    = bf % INPUT_BATCH_NUM;
 #endif
 
-    const int offset_x = (int)x*STRIDE_SIZE_X - INPUT_PADDING_SIZE_X;
-    const int offset_y = (int)y*STRIDE_SIZE_Y - INPUT_PADDING_SIZE_Y;
+    const int offset_x = (int)x*STRIDE_SIZE_X - PADDING_SIZE_X;
+    const int offset_y = (int)y*STRIDE_SIZE_Y - PADDING_SIZE_Y;
     
     UNIT_TYPE result = UNIT_INIT_VAL;
     

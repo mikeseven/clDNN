@@ -160,7 +160,7 @@ namespace KernelSelector
             // TODO - investigate why is this happening
             if (orgParams.inputs[0].feature().v > 4)
             {
-                cldnn_jit.add_constant(gpu::make_jit_constant("USE_BLOCK_READ_2", ""));
+                cldnn_jit.AddConstant(MakeJitConstant("USE_BLOCK_READ_2", ""));
             }
         }
         else
@@ -168,16 +168,16 @@ namespace KernelSelector
             kernel_name_postfix = "_fp16";
             if (batch_size >= 64)
             {
-                cldnn_jit.add_constant(gpu::make_jit_constant("USE_BLOCK_READ_2", ""));
+                cldnn_jit.AddConstant(MakeJitConstant("USE_BLOCK_READ_2", ""));
             }
             else if (batch_size >= 32)
             {
-                cldnn_jit.add_constant(gpu::make_jit_constant("USE_BLOCK_READ_1", ""));
+                cldnn_jit.AddConstant(MakeJitConstant("USE_BLOCK_READ_1", ""));
             }
         }
 
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
-        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
+        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, run_info, kernelName + kernel_name_postfix, jit, entry_point, true, !orgParams.bias.empty());

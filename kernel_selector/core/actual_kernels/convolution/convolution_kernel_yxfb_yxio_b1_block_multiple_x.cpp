@@ -132,22 +132,22 @@ namespace KernelSelector
 
         auto cldnn_jit = GetJitConstants(orgParams, run_info);
 
-        cldnn_jit.add_constant(gpu::make_jit_constant("USE_VECTOR", run_info.ofmPerWorkItem));
+        cldnn_jit.AddConstant(MakeJitConstant("USE_VECTOR", run_info.ofmPerWorkItem));
         if (run_info.ofmPerWorkItem == 8)
         {
-            cldnn_jit.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 2));
+            cldnn_jit.AddConstant(MakeJitConstant("X_PER_WORK_ITEM", 2));
         }
         else if (run_info.ofmPerWorkItem == 4)
         {
-            cldnn_jit.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 4));
+            cldnn_jit.AddConstant(MakeJitConstant("X_PER_WORK_ITEM", 4));
         }
         else
         {
-            cldnn_jit.add_constant(gpu::make_jit_constant("X_PER_WORK_ITEM", 8));
+            cldnn_jit.AddConstant(MakeJitConstant("X_PER_WORK_ITEM", 8));
         }
 
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
-        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
+        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
         kernel.workGroups.global = cl::NDRange(run_info.gws0, run_info.gws1, run_info.gws2);

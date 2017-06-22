@@ -20,14 +20,9 @@
 #include "jitter.h"
 #include <sstream>
 #include <assert.h>
-#include "api/CPP/tensor.hpp"
 
-namespace KernelSelector {
-
-    using jit_definitions = KernelSelector::gpu::jit_definitions;
-    using jit_constants = KernelSelector::gpu::jit_constants;
-    using tensor_vt = cldnn::tensor::value_type;
-
+namespace KernelSelector 
+{
     struct CommonDispatchData
     {
         size_t gws0, gws1, gws2;
@@ -43,39 +38,12 @@ namespace KernelSelector {
         virtual ~IGKKernelBase() {}
 
     protected:
-        std::string CreateJit(const std::string& template_name, jit_definitions definitions, std::string kernel_name, bool inject_header = true) const;
+        std::string CreateJit(const std::string& template_name, JitConstants constants, std::string kernel_name, bool inject_header = true) const;
         std::string GetEntryPoint(const std::string& template_name, const std::string& layer_id) const;
         ArgumentDescpirtor GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const;
         KernelString GetKernelString(std::string kernel_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN) const;
         void FillCLKernelData(clKernelData& kernel, const CommonDispatchData& run_info, std::string kernel_map_name, std::string jit, std::string entry_point, bool weights = false, bool bias = false) const;
-        jit_constants GetCommonJitConstants(const BaseParams& params) const;
     };
-
-    inline cldnn::format params_2_cldnn(Tensor::DataLayout l)
-    {
-        switch (l)
-        {
-        case Tensor::DataLayout::bf: return cldnn::format::bfyx;
-        case Tensor::DataLayout::fb: return cldnn::format::yxfb;
-        case Tensor::DataLayout::bfyx: return cldnn::format::bfyx;
-        case Tensor::DataLayout::yxfb: return cldnn::format::yxfb;
-        case Tensor::DataLayout::byxf: return cldnn::format::byxf;
-        case Tensor::DataLayout::fyxb: return cldnn::format::fyxb;
-        case Tensor::DataLayout::brfyx: return cldnn::format::bfyx;
-        default:
-            assert(0);
-            return cldnn::format::bfyx;
-        }
-    }
-
-    inline cldnn::tensor ks_tensor_2_tensor(const DataTensor& ksTensor)
-    {
-        return{ 
-            static_cast<tensor_vt>(ksTensor.batch().v),
-            static_cast<tensor_vt>(ksTensor.feature().v),
-            static_cast<tensor_vt>(ksTensor.x().v),
-            static_cast<tensor_vt>(ksTensor.y().v) };
-    }
 
     inline bool CheckActivationSupport(ActivationFunction func)
     {

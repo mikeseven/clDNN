@@ -15,62 +15,12 @@
 */
 
 #include "igk_convolution_kernel_base.h"
-#include "api/CPP/tensor.hpp"
-#include "api/CPP/cldnn_defs.h"
 
 namespace KernelSelector 
 {
-    jit_constants IGKConvolutionKernelBase::GetJitConstants(const ConvolutionParams& params, IGKConvolutionKernelBase::DispatchData kd) const
+    JitConstants IGKConvolutionKernelBase::GetJitConstants(const ConvolutionParams& params, IGKConvolutionKernelBase::DispatchData kd) const
     {
-        const auto split = params.convParams.split;
-
-        const auto& cp = params.convParams;
-
-        cldnn::tensor stride(
-              (tensor_vt)1,
-              (tensor_vt)1,
-              (tensor_vt)std::min((size_t)cp.stride.x, params.inputs[0].x().v),
-              (tensor_vt)std::min((size_t)cp.stride.y, params.inputs[0].y().v));
-        cldnn::tensor filter_tensor = cldnn::tensor(
-              (tensor_vt)params.output.feature().v,
-              (tensor_vt)params.inputs[0].feature().v,
-              (tensor_vt)(size_t)cp.filterSize.x,
-              (tensor_vt)(size_t)cp.filterSize.y );
-        cldnn::tensor input_padding_tensor = cldnn::tensor(
-              (tensor_vt)0,
-              (tensor_vt)0,
-              (tensor_vt)cp.padding.x,
-              (tensor_vt)cp.padding.y );
-        cldnn::tensor output_padding_tensor = cldnn::tensor(
-              (tensor_vt)0,
-              (tensor_vt)0,
-              (tensor_vt)0,
-              (tensor_vt)0 );
-        cldnn::tensor dilation = cldnn::tensor(
-              (tensor_vt)1,
-              (tensor_vt)1,
-              (tensor_vt)cp.dilation.x,
-              (tensor_vt)cp.dilation.y);
-        auto input_offset_with_padding = params.inputs[0].offset - cp.padding.x - params.inputs[0].y().pitch*cp.padding.y;
-
-        jit_constants mem_consts = GetCommonJitConstants(params);
-
-        mem_consts.add_constants({
-            gpu::make_jit_constant("STRIDE",                    stride),
-            gpu::make_jit_constant("INPUT_OFFSET_WITH_PADDING", input_offset_with_padding),
-            gpu::make_jit_constant("INPUT_PADDING",             input_padding_tensor),
-            gpu::make_jit_constant("OUTPUT_PADDING",            output_padding_tensor),                 // TODO
-            gpu::make_jit_constant("FILTER",                    filter_tensor),
-            gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
-            gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_BATCH_NUM"),
-            gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM",  "FILTER_FEATURE_NUM"),
-            gpu::make_jit_constant("BIAS_TERM",                 static_cast<int>(!params.bias.empty())),
-            gpu::make_jit_constant("DILATION",                  dilation),
-            gpu::make_jit_constant("FILTER_X_PITCH",            params.weights.x().pitch),
-            gpu::make_jit_constant("FILTER_Y_PITCH",            params.weights.y().pitch),
-            gpu::make_jit_constant("FILTER_IFM_PITCH",          params.weights.ifm().pitch),
-            gpu::make_jit_constant("FILTER_OFM_PITCH",          params.weights.ofm().pitch),
-        });
+        JitConstants mem_consts = MakeConvolutionParamsJitConstants(params);
 
         if (params.inputs[0].layout == DataLayout::yxfb &&
             params.weights.layout == WeightsLayout::yxio)
@@ -78,12 +28,12 @@ namespace KernelSelector
             const auto local_work_group_size = kd.lws0;
             const auto batch_size = params.output.batch().v;
 
-            mem_consts.add_constants({
-                gpu::make_jit_constant("LOCAL_WORK_GROUP_SIZE", local_work_group_size),
-                gpu::make_jit_constant("OFM_PER_WORK_ITEM", kd.ofmPerWorkItem), // how many output feature maps for a single batch will a single work item produce
-                gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", kd.batchesPerWorkItem), // how many batches will a single work item compute
-                gpu::make_jit_constant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS", std::max(batch_size / kd.batchesPerWorkItem / local_work_group_size, static_cast<size_t>(1))), // how many local work groups we need to compute single element for each batch
-                gpu::make_jit_constant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / kd.batchesPerWorkItem), // how many work items we need to compute single element for each batch
+            mem_consts.AddConstants({
+                MakeJitConstant("LOCAL_WORK_GROUP_SIZE",                            local_work_group_size),
+                MakeJitConstant("OFM_PER_WORK_ITEM",                                kd.ofmPerWorkItem), // how many output feature maps for a single batch will a single work item produce
+                MakeJitConstant("BATCHES_PER_WORK_ITEM",                            kd.batchesPerWorkItem), // how many batches will a single work item compute
+                MakeJitConstant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS",    std::max(batch_size / kd.batchesPerWorkItem / local_work_group_size, static_cast<size_t>(1))), // how many local work groups we need to compute single element for each batch
+                MakeJitConstant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS",           batch_size / kd.batchesPerWorkItem), // how many work items we need to compute single element for each batch
             });
         }
 

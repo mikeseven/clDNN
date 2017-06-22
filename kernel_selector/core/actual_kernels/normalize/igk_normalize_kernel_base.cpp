@@ -18,18 +18,9 @@
 
 namespace KernelSelector 
 {
-    jit_constants IGKNormalizeKernelBase::GetJitConstants(const NormalizeParams& params) const
+    JitConstants IGKNormalizeKernelBase::GetJitConstants(const NormalizeParams& params) const
     {
-        gpu::jit_constants mem_consts = GetCommonJitConstants(params);
-
-        auto scale_feature_size = params.normParams.scaleTable.feature().v;
-
-        mem_consts.add_constants({
-            gpu::make_jit_constant("SCALE_INDEX",   (scale_feature_size == 1) ? "0" : "f"),
-            gpu::make_jit_constant("EPSILON",       params.normParams.epsilon),
-        });
-
-        return mem_consts;
+        return MakeNormalizeJitConstants(params);
     }
 
     IGKNormalizeKernelBase::DispatchData IGKNormalizeKernelBase::SetDefault(const NormalizeParams& params) const
@@ -86,7 +77,7 @@ namespace KernelSelector
 
         auto cldnn_jit = GetJitConstants(orgParams);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
-        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
+        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, run_info, kernelName, jit, entry_point);

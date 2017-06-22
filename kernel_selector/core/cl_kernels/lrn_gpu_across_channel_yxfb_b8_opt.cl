@@ -38,14 +38,14 @@ KERNEL (lrn_gpu_yxfb_b8)(const __global UNIT_TYPE* input, __global UNIT_TYPE* ou
     const uint input_id = INPUT_OFFSET + batch_id*INPUT_BATCH_PITCH + feature_id*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x*INPUT_X_PITCH;
     const uint input_id_group = input_id / SUB_GROUP_SIZE;
 
-    int input_offset_f = feature_id - PAD;
+    int input_offset_f = feature_id - PADDING;
     
     const uint input_feature_pitch_group  = (INPUT_FEATURE_PITCH/SUB_GROUP_SIZE);
-    int input_idx_group = (int)input_id_group - PAD*input_feature_pitch_group;
+    int input_idx_group = (int)input_id_group - PADDING*input_feature_pitch_group;
     
     float8 acc = 0;
 
-    for (int i = 0; i < P_SIZE; i++)
+    for (int i = 0; i < LOCAL_SIZE; i++)
     {
         bool zero = input_offset_f < 0 || input_offset_f >= INPUT_FEATURE_NUM;
 

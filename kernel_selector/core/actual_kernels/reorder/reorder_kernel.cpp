@@ -35,10 +35,10 @@ namespace KernelSelector
         return k;
     }
 
-    jit_constants ReorderKernelRef::GetJitConstants(const ReorderParams& params) const
+    JitConstants ReorderKernelRef::GetJitConstants(const ReorderParams& params) const
     {
         auto jit = IGKReorderKernelBase::GetJitConstants(params);
-        jit.merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
+        jit.Merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
         return jit;
     }
 
@@ -56,7 +56,7 @@ namespace KernelSelector
         try
         {
             auto cldnn_jit = GetJitConstants(newParams);
-            jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
+            jit = CreateJit(kernelName, cldnn_jit, entry_point);
         }
         catch (const std::runtime_error&)
         {

@@ -26,16 +26,16 @@
 
 KERNEL (lrn_gpu_within_channel)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
-    for (uint index = get_global_id(0) ; index < COUNT ; index += get_global_size(0))
+    for (uint index = get_global_id(0) ; index < INPUT0_LENGTH ; index += get_global_size(0))
     {
-#if   defined LAYOUT_YXFB
+#if   defined OUTPUT_LAYOUT_YXFB
         const uint batch_id   = index % INPUT_BATCH_NUM;
         const uint yxf        = index / INPUT_BATCH_NUM;
         const uint feature_id = yxf   % INPUT_FEATURE_NUM;
         const uint yx         = yxf   / INPUT_FEATURE_NUM;
         const uint x          = yx    % INPUT_SIZE_X;
         const uint y          = yx    / INPUT_SIZE_X;
-#elif defined LAYOUT_BFYX
+#elif defined OUTPUT_LAYOUT_BFYX
         const uint x          = index % INPUT_SIZE_X;
         const uint bfy        = index / INPUT_SIZE_X;
         const uint y          = bfy   % INPUT_SIZE_Y;
@@ -47,10 +47,10 @@ KERNEL (lrn_gpu_within_channel)(const __global UNIT_TYPE* input, __global UNIT_T
         const uint first_index_in_feature = INPUT_OFFSET + batch_id*INPUT_BATCH_PITCH + feature_id*INPUT_FEATURE_PITCH;
         const uint input_id = first_index_in_feature + y*INPUT_Y_PITCH + x*INPUT_X_PITCH;
 
-        int wstart = x - PAD;
-        int hstart = y - PAD;
-        int hend = min(hstart + P_SIZE, INPUT_SIZE_Y + PAD);
-        int wend = min(wstart + P_SIZE, INPUT_SIZE_X + PAD);
+        int wstart = x - PADDING;
+        int hstart = y - PADDING;
+        int hend = min(hstart + LOCAL_SIZE, INPUT_SIZE_Y + PADDING);
+        int wend = min(wstart + LOCAL_SIZE, INPUT_SIZE_X + PADDING);
         const int pool_size = (hend - hstart) * (wend - wstart);
         hstart = max(hstart, (int)0);
         wstart = max(wstart, (int)0);
@@ -69,7 +69,7 @@ KERNEL (lrn_gpu_within_channel)(const __global UNIT_TYPE* input, __global UNIT_T
         }
 
         UNIT_TYPE acc = aveval / pool_size;
-        acc = mad(acc, UNIT_CVT_FUNC(ALPHA), UNIT_CVT_FUNC(K));
+        acc = mad(acc, UNIT_CVT_FUNC(ALPHA_AFTER_FACTORED), UNIT_CVT_FUNC(K));
         acc = native_powr(acc, -UNIT_CVT_FUNC(BETA));
 
         const uint output_idx = OUTPUT_OFFSET + batch_id*OUTPUT_BATCH_PITCH + feature_id*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH;

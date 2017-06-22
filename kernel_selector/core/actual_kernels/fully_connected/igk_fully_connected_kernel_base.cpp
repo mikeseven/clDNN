@@ -20,30 +20,17 @@
 
 namespace KernelSelector 
 {
-    jit_constants IGKFullyConnectedKernelBase::GetJitConstants(const FullyConnectedParams& params, const IGKFullyConnectedKernelBase::DispatchData& data) const
+    JitConstants IGKFullyConnectedKernelBase::GetJitConstants(const FullyConnectedParams& params, const IGKFullyConnectedKernelBase::DispatchData& data) const
     {
-        const auto& input = params.inputs[0];
-        const auto x_size = input.Length() / input.batch().v;
-
-        jit_constants mem_consts = GetCommonJitConstants(params);
-
-        mem_consts.add_constants({
-            gpu::make_jit_constant("INPUT_ELEMENTS_COUNT",      x_size),
-            gpu::make_jit_constant("WEIGHTS_BATCH_NUM",         params.weights.ofm().v),
-            gpu::make_jit_constant("BIAS_TERM",                 static_cast<int>(!params.bias.empty())),
-            gpu::make_jit_constant("FILTER_X_PITCH",            params.weights.x().pitch),
-            gpu::make_jit_constant("FILTER_Y_PITCH",            params.weights.y().pitch),
-            gpu::make_jit_constant("FILTER_IFM_PITCH",          params.weights.ifm().pitch),
-            gpu::make_jit_constant("FILTER_OFM_PITCH",          params.weights.ofm().pitch),
-        });
+        JitConstants mem_consts = MakeFullyConnectedJitConstants(params);
 
         if (data.vload_kernel_type)
         {
             const auto batches_per_work_item = GetBatchesPerWorkItem(params);
 
-            mem_consts.add_constant(gpu::make_jit_constant("NEURONS_PER_WORK_ITEM", GetNeuronsPerWorkItem(params))); // how many neurons for a single batch will a single work item produce
-            mem_consts.add_constant(gpu::make_jit_constant("BATCHES_PER_WORK_ITEM", batches_per_work_item));             // how many batches will a single work item compute
-            mem_consts.add_constant(gpu::make_jit_constant("OUTPUT_ELEMENTS_COUNT", params.output.Length() / params.output.batch().v));
+            mem_consts.AddConstant(MakeJitConstant("NEURONS_PER_WORK_ITEM", GetNeuronsPerWorkItem(params))); // how many neurons for a single batch will a single work item produce
+            mem_consts.AddConstant(MakeJitConstant("BATCHES_PER_WORK_ITEM", batches_per_work_item));             // how many batches will a single work item compute
+            mem_consts.AddConstant(MakeJitConstant("OUTPUT_ELEMENTS_COUNT", params.output.Length() / params.output.batch().v));
         }
 
         return mem_consts;
@@ -130,7 +117,7 @@ namespace KernelSelector
         {
             run_info = SetDefault(newParams);
             auto cldnn_jit = GetJitConstants(newParams, run_info);
-            jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
+            jit = CreateJit(kernelName, cldnn_jit, entry_point);
         }
         catch (const std::runtime_error&)
         {

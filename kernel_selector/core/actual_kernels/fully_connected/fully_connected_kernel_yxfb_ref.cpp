@@ -74,8 +74,8 @@ namespace KernelSelector
         {
             run_info = SetKernelData(newParams);
             auto cldnn_jit = GetJitConstants(newParams, run_info);
-            cldnn_jit.add_constant(gpu::make_jit_constant("WEIGHTS_DIMS", newParams.weights.dims.size()));
-            jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
+            cldnn_jit.AddConstant(MakeJitConstant("WEIGHTS_DIMS", newParams.weights.dims.size()));
+            jit = CreateJit(kernelName, cldnn_jit, entry_point);
         }
         catch (const std::runtime_error& )
         {

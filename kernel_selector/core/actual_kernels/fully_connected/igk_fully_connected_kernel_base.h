@@ -59,7 +59,7 @@ namespace KernelSelector
         };
     
     protected:
-        virtual jit_constants GetJitConstants(const FullyConnectedParams& params, const DispatchData& kd) const;
+        virtual JitConstants GetJitConstants(const FullyConnectedParams& params, const DispatchData& kd) const;
         DispatchData SetKernelData(const FullyConnectedParams& params) const;
         virtual DispatchData SetDefault(const FullyConnectedParams& params) const { return SetKernelData(params); }
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& optParams, DataLayout dl, WeightsLayout wl, float estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE) const;

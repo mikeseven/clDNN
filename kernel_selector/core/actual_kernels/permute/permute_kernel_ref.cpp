@@ -48,9 +48,8 @@ namespace KernelSelector
 
         try
         {
-            auto cldnn_jit = GetCommonJitConstants(newParams);
-            cldnn_jit.add_constant(gpu::make_jit_constant("PERMUTE_ORDER", newParams.permuteParams.order));
-            jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
+            auto cldnn_jit = MakePermuteJitConstants(newParams);
+            jit = CreateJit(kernelName, cldnn_jit, entry_point);
         }
         catch (const std::runtime_error&)
         {

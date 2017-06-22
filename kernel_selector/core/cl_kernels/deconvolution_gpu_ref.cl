@@ -39,10 +39,10 @@ KERNEL(deconvolution_gpu_yxfb_ref)(
     const uint out_x        = (uint)get_global_id(1);
     const uint out_y        = (uint)get_global_id(2);
 
-    const int x = (int)out_x + INPUT_PADDING_SIZE_X - (FILTER_SIZE_X - 1);
-    const int y = (int)out_y + INPUT_PADDING_SIZE_Y - (FILTER_SIZE_Y - 1);
+    const int x = (int)out_x + PADDING_SIZE_X - (FILTER_SIZE_X - 1);
+    const int y = (int)out_y + PADDING_SIZE_Y - (FILTER_SIZE_Y - 1);
     
-    const uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * FILTER_INPUT_FEATURE_NUM;
+    const uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * FILTER_IFM_NUM;
     const uint input_offset = batch_offset*INPUT_BATCH_PITCH + in_split_offset;
 
     for (uint i = 0; i < FILTER_SIZE_Y; i++)
@@ -65,7 +65,7 @@ KERNEL(deconvolution_gpu_yxfb_ref)(
 
                     uint filter_idx = ofm_offset*FILTER_OFM_PITCH + (FILTER_SIZE_Y - i)*FILTER_Y_PITCH - (j + 1)*FILTER_X_PITCH;
 
-                    for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
+                    for (uint h = 0; h < FILTER_IFM_NUM; h++)
                     {
                         result = fma(input[input_idx], filter[filter_idx], result);
                         filter_idx += FILTER_IFM_PITCH;
@@ -78,7 +78,7 @@ KERNEL(deconvolution_gpu_yxfb_ref)(
 #if BIAS_TERM
     result += bias[ofm_offset];
 #endif
-    const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * FILTER_OUTPUT_FEATURE_NUM;
+    const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * FILTER_OFM_NUM;
     const uint dst_index = batch_offset*OUTPUT_BATCH_PITCH + ofm_offset*OUTPUT_FEATURE_PITCH + out_y*OUTPUT_Y_PITCH + out_x*OUTPUT_X_PITCH + OUTPUT_OFFSET + out_split_offset;
     ACTIVATION(output[dst_index], result);
 }

@@ -33,7 +33,7 @@ namespace KernelSelector
         };
 
     protected:
-        jit_constants GetJitConstants(const PoolingParams& params, DispatchData kd) const;
+        JitConstants GetJitConstants(const PoolingParams& params, DispatchData kd) const;
         DispatchData SetDefault(const PoolingParams& params) const;
     };
 }

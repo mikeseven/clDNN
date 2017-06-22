@@ -69,14 +69,14 @@ namespace KernelSelector {
         return no_pitch_same_dims;
     }
 
-    jit_constants GenericEltwiseKernelRef::get_jit_constants(const EltwiseParams& params) const
+    JitConstants GenericEltwiseKernelRef::get_jit_constants(const EltwiseParams& params) const
     {
         if (params.inputs.size() == 0)
         {
             throw std::runtime_error("error - eltwise without inputs");
         }
 
-        auto jit = GetCommonJitConstants(params);
+        auto jit = MakeEltwiseJitConstants(params);
         
         std::string inputs_decls;
         for (size_t op_num = 0; op_num < params.inputs.size(); op_num++)
@@ -84,9 +84,8 @@ namespace KernelSelector {
             inputs_decls += "const __global UNIT_TYPE* input" + std::to_string(op_num) + ", ";
         }
 
-        jit.add_constant(gpu::make_jit_constant("INPUTS_DECLS", inputs_decls));
-        jit.add_constant(gpu::make_jit_constant("ELTWISE_LAYOUT_BASED", params.eltwiseParams.layoutBased));
-        jit.add_constant(gpu::make_jit_constant("ELTWISE_NO_PITCH_SAME_DIMS", noPitchSameDims(params)));
+        jit.AddConstant(MakeJitConstant("INPUTS_DECLS", inputs_decls));
+        jit.AddConstant(MakeJitConstant("ELTWISE_NO_PITCH_SAME_DIMS", noPitchSameDims(params)));
 
         std::string do_eltwise;
 
@@ -112,17 +111,17 @@ namespace KernelSelector {
                 switch (input.mode)
                 {
                 case EltwiseInputMode::SCALAR:
-                    jit.add_constant(gpu::make_jit_constant(name, input.scalar));
+                    jit.AddConstant(MakeJitConstant(name, input.scalar));
                     break;
                 case EltwiseInputMode::INPUT_BUFFER:
                     if (input.index >= params.inputs.size())
                     {
                         throw std::runtime_error("input index is greater than the provided inputs");
                     }
-                    jit.add_constant(gpu::make_jit_constant(name, "input" + std::to_string(input.index) + "[GET_INDEX(INPUT, " + std::to_string(input.index) +")]"));
+                    jit.AddConstant(MakeJitConstant(name, "input" + std::to_string(input.index) + "[GET_INDEX(INPUT, " + std::to_string(input.index) +")]"));
                     break;
                 case EltwiseInputMode::INTERMEDIATE_RESULTS_INDEX:
-                    jit.add_constant(gpu::make_jit_constant(name, "tmp" + std::to_string(input.index)));
+                    jit.AddConstant(MakeJitConstant(name, "tmp" + std::to_string(input.index)));
                     break;
                 default:
                     break;
@@ -150,24 +149,17 @@ namespace KernelSelector {
             }
 
             std::string opname = "OPERATION" + op_num_str;
-            jit.add_constant(gpu::make_jit_constant(opname, op));
+            jit.AddConstant(MakeJitConstant(opname, op));
             do_eltwise += "\\\n\t" + opname + ";";
         }
 
         do_eltwise += "\\\n\tres = tmp" + std::to_string(operations.size() - 1) + ";";
 
-        jit.add_constant(gpu::make_jit_constant("DO_ELTWISE", do_eltwise));
-
-        jit.add_constants({
-            gpu::make_jit_constant("ACTIVATION_FUNCTION_" + toString(params.activationFunc), ""),
-            gpu::make_jit_constant("TYPE_" + toString(params.output.dtype), ""),
-            gpu::make_jit_constant("NL_M", params.nlParams.m),
-            gpu::make_jit_constant("NL_N", params.nlParams.n),
-        });
+        jit.AddConstant(MakeJitConstant("DO_ELTWISE", do_eltwise));
 
         if (params.eltwiseParams.layoutBased)
         {
-            jit.merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
+            jit.Merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
         }
 
         return jit;
@@ -187,7 +179,7 @@ namespace KernelSelector {
         try
         {
             auto cldnn_jit = get_jit_constants(newParams);
-            jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point, false);
+            jit = CreateJit(kernelName, cldnn_jit, entry_point, false);
         }
         catch (const std::runtime_error&)
         {

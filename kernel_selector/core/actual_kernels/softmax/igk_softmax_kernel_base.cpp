@@ -15,22 +15,20 @@
 */
 
 #include "igk_softmax_kernel_base.h"
-#include "api/CPP/tensor.hpp"
-#include "api/CPP/cldnn_defs.h"
 
 namespace KernelSelector 
 {
-    jit_constants IGKSoftmaxKernelBase::GetJitConstants(const SoftmaxParams& params, IGKSoftmaxKernelBase::DispatchData kd) const
+    JitConstants IGKSoftmaxKernelBase::GetJitConstants(const SoftmaxParams& params, IGKSoftmaxKernelBase::DispatchData kd) const
     {
-        jit_constants mem_consts = GetCommonJitConstants(params);
+        JitConstants mem_consts = MakeSoftmaxJitConstants(params);
 
-        mem_consts.add_constants({
-            gpu::make_jit_constant("ITEMS_NUM",      kd.itemsNum),
-            gpu::make_jit_constant("LWS",            kd.lws0),
-            gpu::make_jit_constant("GWS",            kd.gws0),
-            gpu::make_jit_constant("DATA_SETS_COUNT",kd.dataSetsCount),
-            gpu::make_jit_constant("DATA_SET_SIZE",  kd.dataSetSize),
-            gpu::make_jit_constant("LEFTOVERS",      kd.leftovers),
+        mem_consts.AddConstants({
+            MakeJitConstant("ITEMS_NUM",      kd.itemsNum),
+            MakeJitConstant("LWS",            kd.lws0),
+            MakeJitConstant("GWS",            kd.gws0),
+            MakeJitConstant("DATA_SETS_COUNT",kd.dataSetsCount),
+            MakeJitConstant("DATA_SET_SIZE",  kd.dataSetSize),
+            MakeJitConstant("LEFTOVERS",      kd.leftovers),
         });
 
         return mem_consts;
@@ -115,7 +113,7 @@ namespace KernelSelector
 
         auto cldnn_jit = GetJitConstants(orgParams, run_info);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
-        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
+        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, run_info, kernelName, jit, entry_point);

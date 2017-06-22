@@ -15,19 +15,15 @@
 */
 
 #include "igk_lrn_kernel_base.h"
-#include "api/CPP/tensor.hpp"
-#include "api/CPP/cldnn_defs.h"
 
 namespace KernelSelector 
 {
-    jit_constants IGKLRNKernelBase::GetJitConstants(const LRNParams& params, IGKLRNKernelBase::DispatchData kd) const
+    JitConstants IGKLRNKernelBase::GetJitConstants(const LRNParams& params, IGKLRNKernelBase::DispatchData kd) const
     {
-        jit_constants mem_consts = GetCommonJitConstants(params);
+        JitConstants mem_consts = MakeLRNJitConstants(params);
 
         const auto& np = params.lrnParams;
 
-        // TODO: check why within channel behave different than across channel
-        auto pad = (np.localSize - 1) / 2;
         //auto pad = (np.localSize) / 2;
         auto alpha = np.alpha;
         auto alpha_div_by_size = alpha / np.localSize;
@@ -36,19 +32,12 @@ namespace KernelSelector
         auto alpha_abs_sqrt = std::sqrt(std::abs(alpha));
         auto alpha_div_by_size_abs_sqrt = std::sqrt(std::abs(alpha_div_by_size));
 
-        mem_consts.add_constants({
-            gpu::make_jit_constant("COUNT",                         params.inputs[0].Length()),
-            gpu::make_jit_constant("P_SIZE",                        np.localSize),
-            gpu::make_jit_constant("PAD",                           pad),
-            gpu::make_jit_constant("ALPHA",                         kd.fp16UnitUsed ? alpha_sign : alpha),
-            gpu::make_jit_constant("ALPHA_DIV_BY_SIZE",             kd.fp16UnitUsed ? alpha_sign : alpha_div_by_size),
-            gpu::make_jit_constant("ALPHA_VAL_FACTOR",              kd.fp16UnitUsed ? alpha_abs_sqrt : 1.0f),
-            gpu::make_jit_constant("ALPHA_VAL_FACTOR_DIV_BY_SIZE",  kd.fp16UnitUsed ? alpha_div_by_size_abs_sqrt : 1.0f),
-            gpu::make_jit_constant("BETA",                          np.beta),
-            gpu::make_jit_constant("K",                             np.k),
+        mem_consts.AddConstants({
+            MakeJitConstant("ALPHA_AFTER_FACTORED",          kd.fp16UnitUsed ? alpha_sign : alpha),
+            MakeJitConstant("ALPHA_DIV_BY_SIZE",             kd.fp16UnitUsed ? alpha_sign : alpha_div_by_size),
+            MakeJitConstant("ALPHA_VAL_FACTOR",              kd.fp16UnitUsed ? alpha_abs_sqrt : 1.0f),
+            MakeJitConstant("ALPHA_VAL_FACTOR_DIV_BY_SIZE",  kd.fp16UnitUsed ? alpha_div_by_size_abs_sqrt : 1.0f),
         });
-
-        mem_consts.add_constant(gpu::make_jit_constant("LAYOUT_" + toString(params.inputs[0].layout), ""));
 
         return mem_consts;
     }

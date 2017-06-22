@@ -48,8 +48,8 @@ namespace KernelSelector
 
         try
         {
-            auto cldnn_jit = GetCommonJitConstants(newParams);
-            jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
+            auto cldnn_jit = MakeReorderBaseJitConstants(newParams);
+            jit = CreateJit(kernelName, cldnn_jit, entry_point);
         }
         catch (const std::runtime_error&)
         {

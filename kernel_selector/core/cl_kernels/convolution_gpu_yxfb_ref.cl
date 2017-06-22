@@ -39,8 +39,8 @@ KERNEL(convolution_gpu_yxfb_ref)(
     const uint out_x        = (uint)get_global_id(1);
     const uint out_y        = (uint)get_global_id(2);
 
-    const int x = (int)out_x * STRIDE_SIZE_X - INPUT_PADDING_SIZE_X;
-    const int y = (int)out_y * STRIDE_SIZE_Y - INPUT_PADDING_SIZE_Y;
+    const int x = (int)out_x * STRIDE_SIZE_X - PADDING_SIZE_X;
+    const int y = (int)out_y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
     
     const uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * FILTER_INPUT_FEATURE_NUM;
     const uint input_offset = batch_offset*INPUT_BATCH_PITCH + in_split_offset;

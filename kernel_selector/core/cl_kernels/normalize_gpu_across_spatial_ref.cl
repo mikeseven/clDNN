@@ -56,11 +56,19 @@ KERNEL (normalize_gpu_across_spatial_bfyx)(const __global UNIT_TYPE* input, __gl
     input_idx = input_first;
     for (uint f = 0; f < INPUT_FEATURE_NUM; f++)
     {
+#if SCALE_TABLE_FEATURE_NUM == 1
+        const uint scale_index = 0;
+#elif INPUT_FEATURE_NUM <= SCALE_TABLE_FEATURE_NUM
+        const uint scale_index = f;
+#else
+        const uint scale_index = f % SCALE_TABLE_FEATURE_NUM;
+#endif 
+
         for (uint y = 0; y < INPUT_SIZE_Y; y++)
         {
             for (uint x = 0; x < INPUT_SIZE_X; x++)
             {
-                output[output_idx] = UNIT_CVT_FUNC(norm) * input[input_idx] * scale_input[SCALE_INDEX];
+                output[output_idx] = UNIT_CVT_FUNC(norm) * input[input_idx] * scale_input[scale_index];
                 input_idx += INPUT_X_PITCH;
                 output_idx += OUTPUT_X_PITCH;
             }

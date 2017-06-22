@@ -101,7 +101,7 @@ namespace KernelSelector { namespace
         return true;
     }
 
-    inline gpu::jit_constants GetTensorFriendlyWorkGroupsJit(const DataTensor& t)
+    inline JitConstants GetTensorFriendlyWorkGroupsJit(const DataTensor& t)
     {
         auto b = Tensor::channelndex(t.layout, Tensor::DataChannelName::NAME_BATCH);
         auto f = Tensor::channelndex(t.layout, Tensor::DataChannelName::NAME_FEATURE);
@@ -117,10 +117,10 @@ namespace KernelSelector { namespace
             f = (f < x) ? f : f - 1;
         }
 
-        gpu::jit_constants jit{
-            gpu::make_jit_constant("GWS_BATCH", b),
-            gpu::make_jit_constant("GWS_FEATURE", f),
-            gpu::make_jit_constant("GWS_YX", x),
+        JitConstants jit{
+            MakeJitConstant("GWS_BATCH", b),
+            MakeJitConstant("GWS_FEATURE", f),
+            MakeJitConstant("GWS_YX", x),
         };
 
         return jit;

@@ -380,6 +380,27 @@ namespace KernelSelector {
         }
     }
 
+    inline std::string toString(SoftmaxDim d)
+    {
+        switch (d)
+        {
+        case SoftmaxDim::X:         return "X";
+        case SoftmaxDim::Y:         return "Y";
+        case SoftmaxDim::FEATURE:   return "FEATURE";
+        default: return "";
+        }
+    }
+
+    inline std::string toString(NormalizeMode mode)
+    {
+        switch (mode)
+        {
+        case NormalizeMode::ACROSS_SPATIAL:         return "ACROSS_SPATIAL";
+        case NormalizeMode::WITHIN_SPATIAL:         return "WITHIN_SPATIAL";
+        default: return "";
+        }
+    }
+
     inline std::string toString(WeightsLayout layout)
     {
         switch (layout)

@@ -204,18 +204,18 @@ namespace KernelSelector
         }
 
         auto cldnn_jit = GetJitConstants(newParams, run_info);
-        cldnn_jit.add_constant(gpu::make_jit_constant("SUB_GROUP_SIZE", run_info.lws2));
-        cldnn_jit.add_constant(gpu::make_jit_constant("OUTPUT_BLOCK_WIDTH", run_info.blockWidth));
-        cldnn_jit.add_constant(gpu::make_jit_constant("OUTPUT_BLOCK_HEIGHT", run_info.blockHeight));
-        cldnn_jit.add_constant(gpu::make_jit_constant("IN_BLOCK_ARRAY_SIZE", run_info.inputBlockArraySize));
-        cldnn_jit.add_constant(gpu::make_jit_constant("IN_BLOCK_WIDTH", run_info.inputBlockWidth));
-        cldnn_jit.add_constant(gpu::make_jit_constant("PREFETCH", run_info.prefetch));
+        cldnn_jit.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", run_info.lws2));
+        cldnn_jit.AddConstant(MakeJitConstant("OUTPUT_BLOCK_WIDTH", run_info.blockWidth));
+        cldnn_jit.AddConstant(MakeJitConstant("OUTPUT_BLOCK_HEIGHT", run_info.blockHeight));
+        cldnn_jit.AddConstant(MakeJitConstant("IN_BLOCK_ARRAY_SIZE", run_info.inputBlockArraySize));
+        cldnn_jit.AddConstant(MakeJitConstant("IN_BLOCK_WIDTH", run_info.inputBlockWidth));
+        cldnn_jit.AddConstant(MakeJitConstant("PREFETCH", run_info.prefetch));
         if (run_info.leftovers)
         {
-            cldnn_jit.add_constant(gpu::make_jit_constant("LEFTOVERS", run_info.leftovers));
+            cldnn_jit.AddConstant(MakeJitConstant("LEFTOVERS", run_info.leftovers));
         }
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
-        auto jit = CreateJit(kernelName, cldnn_jit.get_definitions(), entry_point);
+        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, run_info, kernelName, jit, entry_point, true, !orgParams.bias.empty());

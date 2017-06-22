@@ -43,8 +43,6 @@
 
 /*
 gpu::make_jit_constant("OUTPUT_LIMIT",              output_size),
-gpu::make_jit_constant("INPUT_PADDING",             input_padding.size()),
-gpu::make_jit_constant("OUTPUT_PADDING",            outer.argument.output_padding().size()),
 gpu::make_jit_constant("FILTER",                    filter_mem.argument().size),
 gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
 gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"),

@@ -67,8 +67,8 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
 
     bool finish = false;
 
-    finish = out_x >= OUTPUT_SIZE_X || out_x < OUTPUT_PADDING_SIZE_X;
-    finish = (out_y >= OUTPUT_SIZE_Y || out_y < OUTPUT_PADDING_SIZE_Y) ? true : finish;
+    finish = out_x >= OUTPUT_SIZE_X;
+    finish = out_y >= OUTPUT_SIZE_Y ? true : finish;
 
 
     // Each component of vector element contains computation for separate output feature.
@@ -79,8 +79,8 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
     }
     if(!finish)
     {
-        const int x = (int)out_x * STRIDE_SIZE_X - INPUT_PADDING_SIZE_X;
-        const int y = (int)out_y * STRIDE_SIZE_Y - INPUT_PADDING_SIZE_Y;
+        const int x = (int)out_x * STRIDE_SIZE_X - PADDING_SIZE_X;
+        const int y = (int)out_y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
 
         for (uint i = 0; i < FILTER_SIZE_Y; i++)
         {

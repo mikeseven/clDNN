@@ -20,7 +20,7 @@
 
 namespace KernelSelector 
 {
-    inline uint32_t sub_group_size(WeightsLayout l)
+    inline uint32_t SubGroupSize(WeightsLayout l)
     {
         switch (l)
         {
@@ -38,7 +38,7 @@ namespace KernelSelector
         }
     }
 
-    inline uint32_t sub_group_size(DataLayout l)
+    inline uint32_t SubGroupSize(DataLayout l)
     {
         switch (l)
         {
@@ -51,66 +51,20 @@ namespace KernelSelector
         }
     }
 
-    template<typename TensorT>
-    static inline jit_constants _get_common_jit_constants(const TensorT& input, const TensorT& output, bool fp16_supported, uint32_t sub_group)
+    JitConstants IGKReorderKernelBase::GetJitConstants(const ReorderWeightsParams& params) const
     {
-        gpu::jit_constants mem_consts{
-            gpu::make_jit_constant("FP16_SUPPORTED",    fp16_supported),
-            gpu::make_jit_constant("INPUT",             input),
-            gpu::make_jit_constant("OUTPUT",            output),
-            gpu::make_jit_constant("SUB_GROUP_SIZE",    sub_group),
-        };
+        JitConstants mem_consts = MakeReorderWeightsJitConstants(params);
+       
+        mem_consts.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", SubGroupSize(params.reorderParams.output.layout)));
 
         return mem_consts;
     }
 
-    jit_constants IGKReorderKernelBase::GetJitConstants(const ReorderWeightsParams& params) const
+    JitConstants IGKReorderKernelBase::GetJitConstants(const ReorderParams& params) const
     {
-        const auto& input = params.reorderParams.input;
-        const auto& output = params.reorderParams.output;
+        JitConstants mem_consts = MakeReorderJitConstants(params);
 
-        return _get_common_jit_constants(input, output, output.wtype == WeightsType::F16 || input.wtype == WeightsType::F16, sub_group_size(output.layout));
-    }
-
-    inline Datatype more_aqurate_data_type(Datatype a, Datatype b)
-    {
-        assert(a == Datatype::F16 || a == Datatype::F32);
-        assert(b == Datatype::F16 || b == Datatype::F32);
-
-        if (a == b)
-        {
-            return a;
-        }
-
-        return Datatype::F32;
-    }
-
-    jit_constants IGKReorderKernelBase::GetJitConstants(const ReorderParams& params) const
-    {
-        const auto& input = params.inputs[0];
-        const auto& output = params.output;
-
-        gpu::jit_constants mem_consts = _get_common_jit_constants(input, output, output.dtype == Datatype::F16 || input.dtype == Datatype::F16, sub_group_size(output.layout));
-        mem_consts.add_constant(gpu::make_jit_constant("MEAN_SUBTRUCT_" + toString(params.reorderParams.mode), 1));
-
-        // TODO: we need to think what's more aprropriate hear - better aqurate or input type
-        Datatype calc_type = input.dtype;
-        //Datatype calc_type = more_aqurate_data_type(input.dtype, output.dtype);
-        if (params.reorderParams.mode == MeanSubtructMode::INSIDE_PARAMS)
-        {
-            mem_consts.add_constant(gpu::make_jit_constant("VALUE_TO_SUBTRACT", params.reorderParams.meanValues));
-            //calc_type = more_aqurate_data_type(calc_type, Datatype::F32);
-        }
-        else if (params.reorderParams.mode == MeanSubtructMode::IN_BUFFER)
-        {
-            mem_consts.add_constant(gpu::make_jit_constant("MEAN_SUBTRUCT", params.reorderParams.mean));
-            //calc_type = more_aqurate_data_type(calc_type, params.reorderParams.mean.dtype);
-        }
-        
-        mem_consts.add_constants({
-            gpu::make_jit_constant("CALC_TYPE",                      gpu::data_type_2_cl_type(calc_type)),
-            gpu::make_jit_constant("TO_CALC_TYPE",      "convert_" + gpu::data_type_2_cl_type(calc_type)),
-        });
+        mem_consts.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", SubGroupSize(params.output.layout)));
 
         return mem_consts;
     }

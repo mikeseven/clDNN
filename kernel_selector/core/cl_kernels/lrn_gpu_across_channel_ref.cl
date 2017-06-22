@@ -26,7 +26,7 @@
 
 KERNEL (lrn_gpu_across_channel_ref)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
-#if   defined LAYOUT_BFYX
+#if   defined OUTPUT_LAYOUT_BFYX
     const uint x            = get_global_id(0);    
     const uint y            = get_global_id(1);
     const uint b_f          = get_global_id(2);
@@ -35,7 +35,7 @@ KERNEL (lrn_gpu_across_channel_ref)(const __global UNIT_TYPE* input, __global UN
     
     if (x >= INPUT_SIZE_X)
         return;
-#elif defined LAYOUT_YXFB
+#elif defined OUTPUT_LAYOUT_YXFB
     const uint b_f          = get_global_id(0);
     const uint x            = (uint)get_global_id(1);
     const uint y            = (uint)get_global_id(2);
@@ -47,10 +47,10 @@ KERNEL (lrn_gpu_across_channel_ref)(const __global UNIT_TYPE* input, __global UN
 
     UNIT_TYPE acc = UNIT_VAL_ZERO;
 
-    int input_offset_f = feature_id - PAD;
-    int input_idx = (int)input_id - PAD*INPUT_FEATURE_PITCH;
+    int input_offset_f = feature_id - PADDING;
+    int input_idx = (int)input_id - PADDING*INPUT_FEATURE_PITCH;
 
-    for (int i = 0; i < P_SIZE; i++)
+    for (int i = 0; i < LOCAL_SIZE; i++)
     {
         bool zero = input_offset_f < 0 || input_offset_f >= INPUT_FEATURE_NUM;
 
