@@ -33,6 +33,7 @@
 #include "convolution_inst.h"
 #include "concatenation_inst.h"
 #include "detection_output_inst.h"
+#include "crop_inst.h"
 
 namespace cldnn
 {
@@ -590,7 +591,7 @@ void program_impl::prepare_buffer_fusing()
             //       per single input rather than all/none
             // + restrict input types to pooling, convolution and activation only due to problems with output padding on b and f
             for (auto const& input : node.get_dependencies())
-                if (input->get_users().size() > 1 || (!input->is_type<pooling>() && ! input->is_type<convolution>() && !input->is_type<activation>()))
+                if (input->get_users().size() > 1 || (!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>()))
                     return;
 
             // buffer fusing should not be performed if one of inputs produces padded output since
@@ -636,6 +637,55 @@ void program_impl::prepare_buffer_fusing()
             }
             
             node.can_be_optimized(true);
+        });
+
+        // zero copy 
+        do_for_types<crop>(*node, [this](crop_node& node)
+        {
+            if (node.get_dependencies().size() == 1)
+            {
+                // optimization is avaiable for croping across depth(features) only
+                // if output padding has defined padding accross featuers already it wouldn't 
+                // work because it expect to have zeros in the padded area.
+                auto format = node.get_output_layout().format;
+                auto crop_prim = node.get_primitive();
+                auto input_layout = node.get_dependency(0).get_output_layout();
+                auto out_padd = node.get_output_layout().data_padding;
+                if (format == format::bfyx &&
+                    crop_prim->reference_input.batch[0] == input_layout.size.batch[0] &&
+                    crop_prim->reference_input.spatial[0] == input_layout.size.spatial[0] &&
+                    crop_prim->reference_input.spatial[1] == input_layout.size.spatial[1] &&
+                    out_padd.lower_size().feature[0] == 0 &&
+                    out_padd.upper_size().feature[0] == 0)
+                {
+                    //  Regular crop
+                    //  crop input buffer
+                    //  |___________data____________|
+                    //  
+                    //  crop output buffer
+                    //  |-------->| offsets[f]  |<--|
+                    //            |_____data____|
+                    //             <------------>
+                    //           reference size
+                    //
+                    //  Inplace crop
+                    //  crop output buffer
+                    //  |_low_pad_|__data_size__|___|<-upper pad
+
+                    auto in_place_layout = node.get_output_layout();
+                    auto in_place_pad = in_place_layout.data_padding;
+                    in_place_pad.lower_size().feature[0] = crop_prim->offsets.feature[0];
+                    in_place_pad.upper_size().feature[0] = in_place_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_prim->reference_input.feature[0];
+                    in_place_layout.size.feature[0] = crop_prim->reference_input.feature[0];
+                    
+                    node.set_output_layout(in_place_layout);
+                    node.set_output_padding(padding(
+                    {in_place_pad.lower_size().batch[0], crop_prim->offsets.feature[0], in_place_pad.lower_size().spatial[0], in_place_pad.lower_size().spatial[1]},
+                    {in_place_pad.upper_size().batch[0], in_place_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_prim->reference_input.feature[0],
+                     in_place_pad.upper_size().spatial[0], in_place_pad.upper_size().spatial[1] }));
+                    node.can_be_optimized(true);
+                }
+            }
         });
     }
 }
