@@ -266,14 +266,14 @@ TEST(crop_gpu, basic_in1x4x1x1_split) {
     auto output = outputs.at("crop1").get_memory();
     auto output_ptr = output.pointer<float>();
 
-    for (auto i = 0; i < out1.size();i++)
+    for (size_t i = 0; i < out1.size();i++)
         EXPECT_EQ(output_ptr[i], out1[i]);
 
     std::cout << std::endl;
     auto output_2 = outputs.at("crop2").get_memory();
     auto output_ptr_2 = output_2.pointer<float>();
 
-    for (auto i = 0; i < out2.size();i++)
+    for (size_t i = 0; i < out2.size();i++)
         EXPECT_EQ(output_ptr_2[i], out2[i]);
 }
 
@@ -342,14 +342,14 @@ TEST(crop_gpu, basic_in1x4x1x1_split_w_relu) {
     auto output = outputs.at("relu1").get_memory();
     auto output_ptr = output.pointer<float>();
 
-    for (auto i = 0; i < out1.size();i++)
+    for (size_t i = 0; i < out1.size();i++)
         EXPECT_EQ(output_ptr[i], out1[i]);
 
     std::cout << std::endl;
     auto output_2 = outputs.at("relu2").get_memory();
     auto output_ptr_2 = output_2.pointer<float>();
 
-    for (auto i = 0; i < out2.size();i++)
+    for (size_t i = 0; i < out2.size();i++)
         EXPECT_EQ(output_ptr_2[i], out2[i]);
 }
 
