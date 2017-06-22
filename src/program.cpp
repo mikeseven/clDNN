@@ -412,16 +412,17 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
         }
 
         if (new_input)
+        {
             add_intermediate(new_input, conv_node, 0);
+            conv_node.recalc_output_layout();
+        }
     };
 
-    for (auto& p : nodes_map)
+    for (auto& prim : processing_order)
     {
-        auto& prim = *p.second;
-
         //there's an assumption that only convolution will take data/input_layout as input
         //exception to that rule would be a convolution which takes a reorder as input - see reoder_input above
-        do_for_types<convolution>(prim,
+        do_for_types<convolution>(*prim,
             reorder_input       //case for convolution
             );
     }
@@ -635,6 +636,7 @@ void program_impl::add_intermediate(program_node& node, program_node& next, size
     //firstly add connection, later replace dependency, so 'prev' won't become dangling and therefore removed
     add_connection(prev, node);
     next.replace_dependency(prev_idx, node);
+    node.processing_itr = processing_order.insert(next.processing_itr, &node);
 }
 
 void program_impl::remove_if_dangling(program_node& node)
