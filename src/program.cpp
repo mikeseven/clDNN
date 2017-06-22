@@ -1,4 +1,4 @@
-  /*
+/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -32,7 +32,9 @@
 
 #include "convolution_inst.h"
 #include "concatenation_inst.h"
+#include "deconvolution_inst.h"
 #include "detection_output_inst.h"
+
 #include "sliding_window_utils.h"
 
 namespace cldnn
@@ -521,9 +523,32 @@ void program_impl::optimize_weights(layout_optimizer& lo)
         dnode->recalc_output_layout();
 }
 
+
+void program_impl::prepare_needed_upper_padding(program_node& node, program_node& prev_node,
+                                                const padding& needed_padding)
+{
+    auto target_layout = prev_node.get_output_layout();
+
+    // Short circuit if padding did not change.
+    if (target_layout.data_padding == needed_padding)
+        return;
+
+    // Special handling for input nodes.
+    if (prev_node.is_type<input_layout>())
+    {
+        target_layout.data_padding = needed_padding;
+
+        auto r_prim = std::make_shared<reorder>("reorder_" + prev_node.id(), prev_node.id(), target_layout);
+        add_intermediate(r_prim, node, 0);
+        return;
+    }
+
+    prev_node.merge_output_padding(needed_padding);
+}
+
 void program_impl::prepare_padding()
 {
-    /*
+    // Prepare upper padding for primitives that support output_size parameter.
     for (const auto& node : processing_order)
     {
         if (node->is_type<convolution>())
@@ -536,36 +561,46 @@ void program_impl::prepare_padding()
 
             auto filter_size = prim_node.weights(0).get_output_layout().size;
 
-            // TODO: Needed pad size should be here max(nis - offset - ais, apadd)
-            auto needed_input_size = calc_sliding_window_needed_input_range(
-                prim->output_size, filter_size, prim->input_offset, prim->stride, prim->dilation, true, 1);
+            auto needed_padding = calc_sliding_window_needed_input_padding(
+                prim_node.input().get_output_layout(),
+                prim->output_size, filter_size, prim->input_offset, prim->stride, prim->dilation, false, 1);
 
-            auto expand_output_sizes = [](program_node& node, program_node& prev_node, const tensor& needed_upad_size)
-            {
-                auto target_layout = prev_node.get_output_layout();
+            prepare_needed_upper_padding(prim_node, prim_node.input(), needed_padding);
+        }
+        else if (node->is_type<deconvolution>())
+        {
+            auto& prim_node = node->as<deconvolution>();
+            const auto& prim = prim_node.get_primitive();
 
-                if (target_layout.size.spatial[0] >= needed_upad_size.spatial[0] &&
-                    target_layout.size.spatial[1] >= needed_upad_size.spatial[1])
-                    return;
+            if (!prim->with_output_size)
+                continue;
 
-                //target_layout.data_padding = std::max()
+            auto filter_size = prim_node.weights(0).get_output_layout().size;
 
-                if (prev_node.is_type<input_layout>())
-                {
-                    auto r_prim = std::make_shared<reorder>("reorder_" + prev_node.id(), prev_node, target_layout);
-                    add_intermediate(r_prim, node, 0);
-                    return;
-                }
+            auto needed_padding = calc_sliding_window_needed_input_padding(
+                prim_node.input().get_output_layout(),
+                prim->output_size, filter_size, prim->input_offset, prim->stride, {1, 1, 1, 1}, true, 1);
 
-                prev_node.merge_output_padding(target_layout.data_padding);
-            };
+            prepare_needed_upper_padding(prim_node, prim_node.input(), needed_padding);
+        }
+        else if (node->is_type<pooling>())
+        {
+            auto& prim_node = node->as<pooling>();
+            const auto& prim = prim_node.get_primitive();
 
-            expand_output_sizes(prim_node, prim_node.input(), needed_input_size);
+            if (!prim->with_output_size)
+                continue;
+
+            auto needed_padding = calc_sliding_window_needed_input_padding(
+                prim_node.input().get_output_layout(),
+                prim->output_size, prim->size, prim->input_offset, prim->stride, {1, 1, 1, 1}, false, 1);
+
+            prepare_needed_upper_padding(prim_node, prim_node.input(), needed_padding);
         }
     }
-    */
 
 
+    // Prepare optimized padding for bfyx convolution.
     for (auto& pair : nodes_map)
     {
         if (pair.second->get_primitive()->type != convolution::type_id())

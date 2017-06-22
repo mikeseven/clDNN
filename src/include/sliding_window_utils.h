@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <api/CPP/layout.hpp>
 #include <api/CPP/tensor.hpp>
 
 #include <algorithm>
@@ -191,15 +192,6 @@ inline tensor calc_sliding_window_output_range<swor_mode::exceed_once_data>(
     const tensor& input_size, const tensor& size, const tensor& offset, const tensor& stride, const tensor& dilation,
     bool sym_offset, const tensor::value_type& degen_val)
 {
-    if(input_size.spatial[0] <= 0 || input_size.spatial[1] <= 0)
-        throw std::invalid_argument("Input data spatial sizes must be positive (>= 1).");
-    if(size.spatial[0] <= 0 || size.spatial[1] <= 0)
-        throw std::invalid_argument("Sliding window spatial sizes must be positive (>= 1).");
-    if(stride.spatial[0] <= 0 || stride.spatial[1] <= 0)
-        throw std::invalid_argument("Sliding window h/v strides must be positive (>= 1).");
-    if(dilation.spatial[0] <= 0 || dilation.spatial[1] <= 0)
-        throw std::invalid_argument("Sliding window h/v input dialations must be positive (>= 1).");
-
     auto output_range_exceed_once = calc_sliding_window_output_range<swor_mode::exceed_once>(
         input_size, size, offset, stride, dilation, sym_offset, degen_val);
     auto output_range_exceed_any_data = calc_sliding_window_output_range<swor_mode::any>(
@@ -213,15 +205,6 @@ inline tensor calc_sliding_window_output_range<swor_mode::max>(
     const tensor& input_size, const tensor& size, const tensor& offset, const tensor& stride, const tensor& dilation,
     bool, const tensor::value_type& degen_val)
 {
-    if(input_size.spatial[0] <= 0 || input_size.spatial[1] <= 0)
-        throw std::invalid_argument("Input data spatial sizes must be positive (>= 1).");
-    if(size.spatial[0] <= 0 || size.spatial[1] <= 0)
-        throw std::invalid_argument("Sliding window spatial sizes must be positive (>= 1).");
-    if(stride.spatial[0] <= 0 || stride.spatial[1] <= 0)
-        throw std::invalid_argument("Sliding window h/v strides must be positive (>= 1).");
-    if(dilation.spatial[0] <= 0 || dilation.spatial[1] <= 0)
-        throw std::invalid_argument("Sliding window h/v input dialations must be positive (>= 1).");
-
     auto output_range_all_sym  = calc_sliding_window_output_range<swor_mode::all>(
         input_size, size, offset, stride, dilation, true, degen_val);
     auto output_range_all_asym = calc_sliding_window_output_range<swor_mode::all>(
@@ -248,9 +231,6 @@ inline tensor calc_sliding_window_output_range<swor_mode::max>(
 
 
 /// @brief Calculates minumum needed input range (size) for sliding window to get at least specified @p output_size.
-///
-/// Currently @see calc_sliding_window_output_range for @see swor_mode::exceed_once calculates smallest @p output_size,
-/// so input size will be computed assuming this model.
 ///
 /// @param output_size Range/Size of output data (non-padded or treated as valid). Only spatial coordinates are
 ///                    considered.
@@ -295,6 +275,66 @@ inline tensor calc_sliding_window_needed_input_range(const tensor& output_size,
         output_range_y = degen_val;
 
     return {0, 0, output_range_x, output_range_y};
+}
+
+
+/// @brief Calculates safe needed input upper padding for sliding window to be able to compute at least
+/// specified @p output_size.
+///
+/// @param output_size Range/Size of output data (non-padded or treated as valid). Only spatial coordinates are
+///                    considered.
+/// @param size        Size of sliding window. Only spatial coordinates are considered.
+/// @param offset      Offset/Padding of sliding window in input. Only spatial coordinates are considered. Padding/Offset
+///                    is applied from both sides of input data: negative value extends/pads data, positive - crops it.
+/// @param stride      Horizontal/Vertical stride of sliding in input data.
+/// @param dilation    Horizontal/Vertical dilation of sliding window on input data.
+/// @param inverse     Indicate that inverse calculation of needed range should take place (estimation of needed
+///                    ouput size when input size is specified). Used in deconvolution (when we switch input calculation 
+///                    with output calculation).
+/// @param degen_val   If values from calculation are in allowed range, but calculated output size is invalid,
+///                    the @p degen_val is returned. Any non-positive value is considered degenerated and will be
+///                    switched to value passed in this parameter.
+/// @return Input upper padding for sliding window to get equal or greater @p output_size. The padding takes into
+///         consideration actual value of padding (always extends it) and only works on spatial coordinates of upper
+///         padding (rest of padding values are not changed).
+inline padding calc_sliding_window_needed_input_padding(const layout& actual_input_layout,
+                                                        const tensor& output_size,
+                                                        const tensor& size,
+                                                        const tensor& offset,
+                                                        const tensor& stride,
+                                                        const tensor& dilation = {1, 1, 1, 1},
+                                                        bool inverse = false,
+                                                        const tensor::value_type& degen_val = 0)
+{
+    tensor needed_size;
+    if (inverse)
+    {
+        needed_size = calc_sliding_window_output_range<swor_mode::max>(
+            output_size, size, offset, stride, dilation, false /* not important */, degen_val);
+    }
+    else
+    {
+        auto needed_size_sym  = calc_sliding_window_needed_input_range(
+            output_size, size, offset, stride, dilation, true, degen_val);
+        auto needed_size_asym = calc_sliding_window_needed_input_range(
+            output_size, size, offset, stride, dilation, false, degen_val);
+
+        needed_size = tensor::max(needed_size_sym, needed_size_asym);
+    }
+
+
+    const auto& actual_data_size = actual_input_layout.size;
+    const auto& actual_lpad = actual_input_layout.data_padding.lower_size();
+    const auto& actual_upad = actual_input_layout.data_padding.upper_size();
+
+    auto needed_upad = tensor::max(
+        needed_size.sub(actual_data_size),
+        actual_upad);
+
+
+    return padding(
+        actual_lpad.sizes(),
+        {actual_upad.batch[0], actual_upad.feature[0], needed_upad.spatial[0], needed_upad.spatial[1]});
 }
 
 } //namespace cldnn
