@@ -35,8 +35,8 @@ namespace clDNN
         {
             ksParams.bias.resize(1);
             ksParams.bias[0] = {
-                ksParams.output.dtype,
-                ksParams.output.layout,
+                ksParams.output.GetDType(),
+                ksParams.output.GetLayout(),
                 KernelSelector::PADDED_VAL::UNDEFINED,
                 0,
                 ksParams.output.LogicalDims()
@@ -46,11 +46,11 @@ namespace clDNN
         {
             ksParams.bias.resize(1);
             ksParams.bias[0] = {
-                ksParams.output.dtype,
+                ksParams.output.GetDType(),
                 KernelSelector::DataLayout::bf,
                 KernelSelector::PADDED_VAL::UNDEFINED,
                 0,
-                std::vector<size_t>{ ksParams.output.feature().v }
+                std::vector<size_t>{ ksParams.output.Feature().v }
             };
         }
 

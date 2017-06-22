@@ -82,19 +82,19 @@ namespace KernelSelector
         {
             enum class DataChannelName
             {
-                NAME_X       = 0,
-                NAME_Y       = 1,
-                NAME_FEATURE = 2,
-                NAME_ROI     = 3,
-                NAME_BATCH   = 4,
+                X       = 0,
+                Y       = 1,
+                FEATURE = 2,
+                ROI     = 3,
+                BATCH   = 4,
             };
 
             enum class WeightsChannelName
             {
-                NAME_X   = 0,
-                NAME_Y   = 1,
-                NAME_IFM = 2,
-                NAME_OFM = 3,
+                X   = 0,
+                Y   = 1,
+                IFM = 2,
+                OFM = 3,
             };
 
             using ChannelLocation = std::vector<int>;
@@ -130,7 +130,7 @@ namespace KernelSelector
             };
 
             template <typename MapT, typename Layout, typename ChannelName>
-            int channelndex(MapT channelMap, Layout l, ChannelName channelName)
+            inline int Channelndex(MapT channelMap, Layout l, ChannelName channelName)
             {
                 size_t channel = static_cast<size_t>(channelName);
                 assert(channelMap.find(l) != channelMap.end());
@@ -140,67 +140,47 @@ namespace KernelSelector
             }
 
             template <typename MapT, typename Layout, typename ChannelName>
-            Dim extract(MapT channelMap, Layout l, ChannelName channelName, const NDims& dims)
+            inline Dim Extract(MapT channelMap, Layout l, ChannelName channelName, const NDims& dims)
             {
-                const int i = channelndex(channelMap, l, channelName);
+                const int i = Channelndex(channelMap, l, channelName);
                 return ((i < 0) || (i >= (int)dims.size())) ? Dim{1, 1} : dims[i];
             }
 
-            template <typename MapT, typename Layout, typename ChannelName>
-            void set(MapT channelMap, Layout l, ChannelName channelName, NDims& dims, const Dim d)
-            {
-                const int i = channelndex(channelMap, l, channelName);
-                if ((i >= 0) && (i < (int)dims.size()))
-                {
-                    dims[i] = d;
-                }
-            }
-
             template <typename MapT, typename Layout>
-            uint32_t channelsCount(MapT channelMap, Layout l)
+            inline uint32_t ChannelsCount(MapT channelMap, Layout l)
             {
                 const auto& entry = channelMap[l];
                 return std::accumulate(entry.begin(), entry.end(), 0U, [](uint32_t count, int v) {return count + ((v != -1) ? 1 : 0); });
             }
 
-            Dim extract(DataLayout l, DataChannelName channel, const NDims& d)
+            inline Dim Extract(DataLayout l, DataChannelName channel, const NDims& d)
             {
-                return extract(dataChannelMap, l, channel, d);
+                return Extract(dataChannelMap, l, channel, d);
             }
 
-            Dim extract(WeightsLayout l, WeightsChannelName channel, const NDims& d)
+            inline Dim Extract(WeightsLayout l, WeightsChannelName channel, const NDims& d)
             {
-                return extract(weightsChannelMap, l, channel, d);
+                return Extract(weightsChannelMap, l, channel, d);
             }
 
-            void set(DataLayout l, DataChannelName channel, NDims& dims, const Dim d)
+            inline int Channelndex(DataLayout l, DataChannelName channel)
             {
-                set(dataChannelMap, l, channel, dims, d);
+                return Channelndex(dataChannelMap, l, channel);
             }
 
-            void set(WeightsLayout l, WeightsChannelName channel, NDims& dims, const Dim d)
+            inline int Channelndex(WeightsLayout l, WeightsChannelName channel)
             {
-                set(weightsChannelMap, l, channel, dims, d);
+                return Channelndex(weightsChannelMap, l, channel);
             }
 
-            int channelndex(DataLayout l, DataChannelName channel)
+            inline uint32_t ChannelsCount(DataLayout l)
             {
-                return channelndex(dataChannelMap, l, channel);
+                return ChannelsCount(dataChannelMap, l);
             }
 
-            int channelndex(WeightsLayout l, WeightsChannelName channel)
+            inline uint32_t ChannelsCount(WeightsLayout l)
             {
-                return channelndex(weightsChannelMap, l, channel);
-            }
-
-            uint32_t channelsCount(DataLayout l)
-            {
-                return channelsCount(dataChannelMap, l);
-            }
-
-            uint32_t channelsCount(WeightsLayout l)
-            {
-                return channelsCount(weightsChannelMap, l);
+                return ChannelsCount(weightsChannelMap, l);
             }
 
             inline bool SimpleLayout(WeightsLayout l)
@@ -249,49 +229,28 @@ namespace KernelSelector
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // Tensor
+        // TensorBase
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        struct DataTensor
+        struct TensorBase
         {
-            Datatype            dtype = Datatype::F16;
-            DataLayout          layout = DataLayout::bfyx;
-            PADDED_VAL          paddedVal = PADDED_VAL::UNDEFINED;
-            size_t              offset = 0;
-            NDims               dims;
+        protected:
+            PADDED_VAL    paddedVal = PADDED_VAL::UNDEFINED;
+            size_t        offset = 0;
+            NDims         dims;
 
-            DataTensor() = default;
-            DataTensor(Datatype dt, DataLayout l, PADDED_VAL pv = PADDED_VAL::UNDEFINED, size_t of = 0, const NDims& nd = {}) :
-                dtype(dt), layout(l), paddedVal(pv), offset(of), dims(nd) {}
-            DataTensor(Datatype dt, DataLayout l, PADDED_VAL pv, size_t of, const std::vector<size_t>& d) :
-                dtype(dt), layout(l), paddedVal(pv), offset(of), dims(CalcPitches(d)) {}
-            DataTensor(const DataTensor&) = default;
-            DataTensor& operator=(const DataTensor&) = default;
+        public:
+            TensorBase() = default;
+            TensorBase(const TensorBase&) = default;
+            TensorBase& operator=(const TensorBase&) = default;
 
-            NDims CalcPitches(const std::vector<size_t>& d) const
-            {
-                NDims ret(d.size());
-                size_t pitch = 1;
+            TensorBase(PADDED_VAL pv, size_t of, const NDims& nd) :
+                paddedVal(pv), offset(of), dims(nd) {}
 
-                for (size_t i = 0; i < d.size(); i++)
-                {
-                    ret[i] = { d[i], pitch };
-                    pitch *= d[i];
-                }
+            PADDED_VAL   GetPaddedVal()  const { return paddedVal; }
+            size_t       GetOffset()     const { return offset; }
+            const NDims& GetDims()       const { return dims; }
 
-                return ret;
-            }
-
-            Dim x() const { return extract(layout, DataChannelName::NAME_X, dims); }
-            Dim y() const { return extract(layout, DataChannelName::NAME_Y, dims); }
-            Dim feature() const { return extract(layout, DataChannelName::NAME_FEATURE, dims); }
-            Dim roi() const { return extract(layout, DataChannelName::NAME_ROI, dims); }
-            Dim batch() const { return extract(layout, DataChannelName::NAME_BATCH, dims); }
-
-            void SetX(const Dim d) { set(layout, DataChannelName::NAME_X, dims, d); }
-            void SetY(const Dim d) { set(layout, DataChannelName::NAME_Y, dims, d); }
-            void SetFeature(const Dim d) { set(layout, DataChannelName::NAME_FEATURE, dims, d); }
-            void SetRoi(const Dim d) { set(layout, DataChannelName::NAME_ROI, dims, d); }
-            void SetBatch(const Dim d) { set(layout, DataChannelName::NAME_BATCH, dims, d); }
+            virtual uint32_t    ElementSize() const = 0;
 
             size_t Length() const
             {
@@ -305,12 +264,7 @@ namespace KernelSelector
 
             size_t PhysicalSize() const
             {
-                return (offset + LengthWithPadding()) * BytesPerElement(dtype);
-            }
-
-            size_t Dimentions() const
-            {
-                return channelsCount(layout);
+                return (offset + LengthWithPadding()) * ElementSize();
             }
 
             bool PaddingExists() const
@@ -318,19 +272,51 @@ namespace KernelSelector
                 return (Length() != LengthWithPadding());
             }
 
-            bool operator==(const DataTensor& t) const
+            std::vector<size_t> LogicalDims() const
             {
-                bool same = 
-                    dtype == t.dtype &&
-                    layout == t.layout &&
-                    paddedVal == t.paddedVal &&
-                    offset == t.offset &&
+                std::vector<size_t> res(dims.size());
+                std::transform(dims.begin(), dims.end(), res.begin(), [](const Dim& d) { return d.v; });
+                return res;
+            }
+        };
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // TensorBaseT
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        template<typename DType, typename Layout>
+        struct TensorBaseT : public TensorBase
+        {
+        protected:
+            DType     dtype;
+            Layout    layout;
+
+        public:
+            TensorBaseT() = default;
+            TensorBaseT(const TensorBaseT&) = default;
+            TensorBaseT& operator=(const TensorBaseT&) = default;
+
+            TensorBaseT(DType dt, Layout l, PADDED_VAL pv, size_t of, const NDims& nd) :
+                TensorBase(pv, of, nd), dtype(dt), layout(l) {}
+
+            DType       GetDType()      const           { return dtype; }
+            Layout      GetLayout()     const           { return layout; }
+            uint32_t    ElementSize()   const override  { return BytesPerElement(dtype); }
+            size_t      Dimentions()    const           { return ChannelsCount(layout); }
+            bool        SimpleLayout()  const           { return Tensor::SimpleLayout(layout); }
+
+            bool operator==(const TensorBaseT& t) const
+            {
+                bool same =
+                    dtype == t.dtype      &&
+                    layout == t.layout     &&
+                    paddedVal == t.paddedVal  &&
+                    offset == t.offset     &&
                     dims.size() == t.dims.size();
                 if (same)
                 {
                     for (size_t i = 0; i < dims.size(); i++)
                     {
-                        same &= 
+                        same &=
                             dims[i].v == t.dims[i].v &&
                             dims[i].pitch == t.dims[i].pitch; // TODO: do we need it
                     }
@@ -339,9 +325,7 @@ namespace KernelSelector
                 return same;
             }
 
-            bool SimpleLayout() const { return Tensor::SimpleLayout(layout); }
-
-            bool SameDims(const DataTensor& t) const
+            bool SameDims(const TensorBaseT& t) const
             {
                 bool same =
                     dtype == t.dtype &&
@@ -357,280 +341,56 @@ namespace KernelSelector
 
                 return same;
             }
+        };
 
-            std::vector<size_t> LogicalDims()
-            {
-                std::vector<size_t> res(dims.size());
-                std::transform(dims.begin(), dims.end(), res.begin(), [](const Dim& d) { return d.v; });
-                return res;
-            }
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // DataTensor
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        struct DataTensor : public TensorBaseT<Datatype, DataLayout>
+        {
+            DataTensor() = default;
+            DataTensor(const DataTensor&) = default;
+            DataTensor& operator=(const DataTensor&) = default;
 
-            DataTensor transform(DataLayout l) const
-            {
-                const uint32_t src_channels = channelsCount(layout);
-                const uint32_t dst_channels = channelsCount(l);
+            DataTensor(Datatype dt, DataLayout l, PADDED_VAL pv, size_t of, const NDims& nd) :
+                TensorBaseT(dt, l, pv, of, nd) {}
 
-                const size_t src_x = x().v;
-                const size_t src_y = y().v;
+            DataTensor(Datatype dt, DataLayout l, PADDED_VAL pv, size_t of, const std::vector<size_t>& d) :
+                TensorBaseT<Datatype, DataLayout>(dt, l, pv, of, CalcPitches(d)) {}
 
-                std::vector<size_t> vec(dst_channels);
-                if (src_channels == 2 && dst_channels == 2)
-                {
-                    vec[channelndex(l, DataChannelName::NAME_FEATURE)] = feature().v;
-                    vec[channelndex(l, DataChannelName::NAME_BATCH)] = batch().v;
-                }
-                else if (src_channels == 4 && dst_channels == 4)
-                {
-                    vec[channelndex(l, DataChannelName::NAME_X)] = x().v;
-                    vec[channelndex(l, DataChannelName::NAME_Y)] = y().v;
-                    vec[channelndex(l, DataChannelName::NAME_FEATURE)] = feature().v;
-                    vec[channelndex(l, DataChannelName::NAME_BATCH)] = batch().v;
-                }
-                else if (src_channels == 2 && dst_channels == 4)
-                {
-                    const size_t dst_ifm = feature().v / (src_x*src_y);
-                    const size_t dst_xy = feature().v % (src_x*src_y);
-                    const size_t dst_y = dst_xy / src_x;
-                    const size_t dst_x = dst_xy % src_x;
-                    vec[channelndex(l, DataChannelName::NAME_X)] = dst_x;
-                    vec[channelndex(l, DataChannelName::NAME_Y)] = dst_y;
-                    vec[channelndex(l, DataChannelName::NAME_FEATURE)] = dst_ifm;
-                    vec[channelndex(l, DataChannelName::NAME_BATCH)] = batch().v;
-                }
-                else if (src_channels == 4 && dst_channels == 2)
-                {
-                    const size_t dst_ifm = feature().v * src_x * src_y;
-                    vec[channelndex(l, DataChannelName::NAME_FEATURE)] = dst_ifm;
-                    vec[channelndex(l, DataChannelName::NAME_BATCH)] = batch().v;
-                }
-                else
-                {
-                    // TODO: implement ROI
-                    assert(0);
-                }
+            Dim X()         const { return Extract(layout, DataChannelName::X, dims); }
+            Dim Y()         const { return Extract(layout, DataChannelName::Y, dims); }
+            Dim Feature()   const { return Extract(layout, DataChannelName::FEATURE, dims); }
+            Dim ROI()       const { return Extract(layout, DataChannelName::ROI, dims); }
+            Dim Batch()     const { return Extract(layout, DataChannelName::BATCH, dims); }
 
-                return{ dtype, l, PADDED_VAL::UNDEFINED, 0, vec };
-            }
-
-            DataTensor flatten_fyx_2_f() const
-            {
-                DataLayout l;
-
-                switch (layout)
-                {
-                case KernelSelector::Tensor::bf:
-                case KernelSelector::Tensor::fb:
-                    return *this;
-                case KernelSelector::Tensor::bfyx:
-                    if (feature().pitch == x().v*y().v)
-                    {
-                        l = DataLayout::bf;
-                        break;
-                    }
-                    throw std::runtime_error("Unsupported - cannot flatten with padding");
-                case KernelSelector::Tensor::byxf:
-                    if ((y().pitch == feature().pitch) ||
-                        (y().v == 1 && x().pitch == feature().pitch) ||
-                        (y().v == 1 && x().v == 1))
-                    {
-                        l = DataLayout::bf;
-                        break;
-                    }
-                    throw std::runtime_error("Unsupported - cannot flatten yxf to f if y/x != 1");
-                case KernelSelector::Tensor::yxfb:
-                    if ((y().pitch == feature().pitch) ||
-                        (y().v == 1 && x().pitch == feature().pitch) ||
-                        (y().v == 1 && x().v == 1))
-                    {
-                        l = DataLayout::fb;
-                        break;
-                    }
-                    throw std::runtime_error("Unsupported - cannot flatten yxf to f if y/x != 1");
-                case KernelSelector::Tensor::fyxb:
-                    if (feature().pitch == y().v*x().v*x().pitch)
-                    {
-                        l = DataLayout::fb;
-                        break;
-                    }
-                    throw std::runtime_error("Unsupported - cannot flatten with padding");
-                default:
-                    throw std::runtime_error("Unsupported - unsupported layout");
-                    break;
-                }
-
-                DataTensor res = transform(l);
-
-                if (l == DataLayout::bf)
-                {
-                    res.dims[channelndex(l, DataChannelName::NAME_BATCH)].pitch = batch().pitch;
-                }
-                else
-                {
-                    res.dims[channelndex(l, DataChannelName::NAME_FEATURE)].pitch = 
-                        dims[channelndex(l, DataChannelName::NAME_BATCH) + 1].pitch;
-                }
-                
-                return res;
-            }
+            NDims       CalcPitches(const std::vector<size_t>& d) const;
+            DataTensor  Transform(DataLayout l) const;
+            DataTensor  FlattenFeatureAndSpatials() const;
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // WeightsTensor
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        struct WeightsTensor
+        struct WeightsTensor : TensorBaseT<WeightsType, WeightsLayout>
         {
-            WeightsType         wtype = WeightsType::F16;
-            WeightsLayout       layout = WeightsLayout::oiyx;
-            PADDED_VAL          paddedVal = PADDED_VAL::UNDEFINED;
-            size_t              offset = 0;
-            NDims               dims;
-
             WeightsTensor() = default;
-            WeightsTensor(WeightsType wt, WeightsLayout l, PADDED_VAL pv, size_t of, const NDims& nd) :
-                wtype(wt), layout(l), paddedVal(pv), offset(of), dims(nd) {}
-            WeightsTensor(WeightsType wt, WeightsLayout l, PADDED_VAL pv, size_t of, const std::vector<size_t>& d) :
-                wtype(wt), layout(l), paddedVal(pv), offset(of), dims(CalcPitches(d)) {}
             WeightsTensor(const WeightsTensor&) = default;
             WeightsTensor& operator=(const WeightsTensor&) = default;
 
-            NDims CalcPitches(const std::vector<size_t>& d) const
-            {
-                std::vector<size_t> newDims = d;
+            WeightsTensor(WeightsType dt, WeightsLayout l, PADDED_VAL pv, size_t of, const NDims& nd) :
+                TensorBaseT(dt, l, pv, of, nd) {}
 
-                // TOOD: it's not the right pitches. it's here in order to calculate physical size
-                switch (layout)
-                {
-                case os_iyx_osv16:
-                    assert(newDims.size() == 4);
-                    newDims[3] = cldnn::round_up_to(newDims[3], 16);
-                    break;
-                case os_i_osv8__ai8:
-                    assert(newDims.size() == 2);
-                    newDims[0] = cldnn::round_up_to(newDims[0], 8);
-                    newDims[1] = cldnn::round_up_to(newDims[1], 8);
-                    break;
-                case os_i_osv16__ai8:
-                    assert(newDims.size() == 2);
-                    newDims[0] = cldnn::round_up_to(newDims[0], 8);
-                    newDims[1] = cldnn::round_up_to(newDims[1], 16);
-                    break;
-                case os_i_osv16:
-                    assert(newDims.size() == 2);
-                    newDims[1] = cldnn::round_up_to(newDims[1], 16);
-                    break;
-                case i_yxs_os_yxsv2_osv16:
-                    assert(newDims.size() == 4);
-                    newDims[0] = cldnn::round_up_to(newDims[0], 16);
-                    break;
-                case iy_xs_os_xsv2_osv16__ao32:
-                case iy_xs_os_xsv2_osv8__ao32:
-                    assert(newDims.size() == 4);
-                    newDims[0] = cldnn::round_up_to(newDims[0], 32);
-                    break;
-                default:
-                    break;
-                }
+            WeightsTensor(WeightsType wt, WeightsLayout l, PADDED_VAL pv, size_t of, const std::vector<size_t>& d) :
+                TensorBaseT<WeightsType, WeightsLayout>(wt, l, pv, of, CalcPitches(d)) {}
 
-                NDims ret(newDims.size());
-                size_t pitch = 1;
+            NDims           CalcPitches(const std::vector<size_t>& d) const;
+            WeightsTensor   Transform(WeightsLayout l) const;
 
-                for (size_t i = 0; i < newDims.size(); i++)
-                {
-                    ret[i] = { newDims[i], pitch };
-                    pitch *= newDims[i];
-                }
-
-                if (layout == i_yxs_os_yxsv2_osv16)
-                {
-                    ret[3].pitch = cldnn::round_up_to(newDims[1] * newDims[2], 2) * newDims[0];
-                }
-                else if (layout == iy_xs_os_xsv2_osv16__ao32 || 
-                         layout == iy_xs_os_xsv2_osv8__ao32)
-                {
-                    ret[2].pitch = cldnn::round_up_to(newDims[1], 2) * newDims[0];
-                    ret[3].pitch = newDims[2] * ret[2].pitch;
-                }
-
-                return ret;
-            }
-
-            Dim x()   const { return extract(layout, WeightsChannelName::NAME_X, dims); }
-            Dim y()   const { return extract(layout, WeightsChannelName::NAME_Y, dims); }
-            Dim ifm() const { return extract(layout, WeightsChannelName::NAME_IFM, dims); }
-            Dim ofm() const { return extract(layout, WeightsChannelName::NAME_OFM, dims); }
-
-            void SetX(const Dim d) { set(layout, WeightsChannelName::NAME_X, dims, d); }
-            void SetY(const Dim d) { set(layout, WeightsChannelName::NAME_Y, dims, d); }
-            void SetIFM(const Dim d) { set(layout, WeightsChannelName::NAME_IFM, dims, d); }
-            void SetOFM(const Dim d) { set(layout, WeightsChannelName::NAME_OFM, dims, d); }
-
-            size_t Length() const
-            {
-                return std::accumulate(dims.cbegin(), dims.cend(), (size_t)1, [](size_t val, const Dim& d) {return val*d.v; });
-            }
-
-            size_t LengthWithPadding() const
-            {
-                return std::accumulate(dims.cbegin(), dims.cend(), (size_t)1, [](size_t val, const Dim& d) {return std::max(val, d.pitch*d.v); });
-            }
-
-            size_t PhysicalSize() const
-            {
-                return (offset + LengthWithPadding()) * BytesPerElement(wtype);
-            }
-
-            bool PaddingExists() const
-            {
-                return (Length() != LengthWithPadding());
-            }
-
-            bool SimpleLayout() const { return Tensor::SimpleLayout(layout); }
-
-            WeightsTensor transform(WeightsLayout l) const
-            {
-                const uint32_t src_channels = channelsCount(layout);
-                const uint32_t dst_channels = channelsCount(l);
-
-                const size_t src_x = x().v;
-                const size_t src_y = y().v;
-
-                std::vector<size_t> vec(dst_channels);
-                if (src_channels == 2 && dst_channels == 2)
-                {
-                    vec[channelndex(l, WeightsChannelName::NAME_IFM)] = ifm().v;
-                    vec[channelndex(l, WeightsChannelName::NAME_OFM)] = ofm().v;
-                }
-                else if (src_channels == 4 && dst_channels == 4)
-                {
-                    vec[channelndex(l, WeightsChannelName::NAME_X)] = x().v;
-                    vec[channelndex(l, WeightsChannelName::NAME_Y)] = y().v;
-                    vec[channelndex(l, WeightsChannelName::NAME_IFM)] = ifm().v;
-                    vec[channelndex(l, WeightsChannelName::NAME_OFM)] = ofm().v;
-                }
-                else if (src_channels == 2 && dst_channels == 4)
-                {
-                    const size_t dst_ifm = ifm().v / (src_x*src_y);
-                    const size_t dst_xy = ifm().v % (src_x*src_y);
-                    const size_t dst_y = dst_xy / src_x;
-                    const size_t dst_x = dst_xy % src_x;
-                    vec[channelndex(l, WeightsChannelName::NAME_X)] = dst_x;
-                    vec[channelndex(l, WeightsChannelName::NAME_Y)] = dst_y;
-                    vec[channelndex(l, WeightsChannelName::NAME_IFM)] = dst_ifm;
-                    vec[channelndex(l, WeightsChannelName::NAME_OFM)] = ofm().v;
-                }
-                else if (src_channels == 4 && dst_channels == 2)
-                {
-                    const size_t dst_ifm = ifm().v * src_x * src_y;
-                    vec[channelndex(l, WeightsChannelName::NAME_IFM)] = dst_ifm;
-                    vec[channelndex(l, WeightsChannelName::NAME_OFM)] = ofm().v;
-                }
-                else
-                {
-                    assert(0);
-                }
-
-                return{wtype, l, PADDED_VAL::UNDEFINED, 0, vec};
-            }
+            Dim X()   const { return Extract(layout, WeightsChannelName::X, dims); }
+            Dim Y()   const { return Extract(layout, WeightsChannelName::Y, dims); }
+            Dim IFM() const { return Extract(layout, WeightsChannelName::IFM, dims); }
+            Dim OFM() const { return Extract(layout, WeightsChannelName::OFM, dims); }
         };
     }
 }

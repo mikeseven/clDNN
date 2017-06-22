@@ -43,24 +43,24 @@ namespace KernelSelector
 
     IGKConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::default_yxfb_yxio_b1_multiple_x(const ConvolutionParams& arg) const
     {
-        DispatchData run_info = SetDefault(arg);
+        DispatchData runInfo = SetDefault(arg);
 
-        const auto filter_ofm_num = arg.weights.ofm().v;
-        const auto batch_size = arg.output.batch().v;
+        const auto filter_ofm_num = arg.weights.OFM().v;
+        const auto batch_size = arg.output.Batch().v;
 
         const bool bInputValidated =
             (filter_ofm_num > 0) &&
             (batch_size > 0) &&
-            (arg.output.feature().v == filter_ofm_num);
+            (arg.output.Feature().v == filter_ofm_num);
 
         if (!bInputValidated)
         {
             throw std::runtime_error("Unsupported");
         }
 
-        run_info.lws0 = 16;
+        runInfo.lws0 = 16;
 
-        if ((filter_ofm_num * batch_size) % run_info.lws0 != 0)
+        if ((filter_ofm_num * batch_size) % runInfo.lws0 != 0)
         {
             throw std::runtime_error("Unsupported");
         }
@@ -74,31 +74,31 @@ namespace KernelSelector
         run_info.ofm_per_work_item = 8;
         run_info.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(run_info.gws1) / 2.0f));
         }
-        else*/ if (filter_ofm_num % (run_info.lws0 * 4) == 0)
+        else*/ if (filter_ofm_num % (runInfo.lws0 * 4) == 0)
         {
-            run_info.ofmPerWorkItem = 4;
+            runInfo.ofmPerWorkItem = 4;
             // We compute multiple spatial coordinates "x" in a single workitem that's why we must divide
-            run_info.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(run_info.gws1) / 4.0f));
+            runInfo.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(runInfo.gws1) / 4.0f));
         }
-        else if (filter_ofm_num % (run_info.lws0 * 2) == 0)
+        else if (filter_ofm_num % (runInfo.lws0 * 2) == 0)
         {
-            run_info.ofmPerWorkItem = 2;
-            run_info.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(run_info.gws1) / 8.0f));
+            runInfo.ofmPerWorkItem = 2;
+            runInfo.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(runInfo.gws1) / 8.0f));
         }
         else
         {
-            run_info.ofmPerWorkItem = 1;
-            run_info.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(run_info.gws1) / 8.0f));
+            runInfo.ofmPerWorkItem = 1;
+            runInfo.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(runInfo.gws1) / 8.0f));
         }
 
-        run_info.gws0 = filter_ofm_num * batch_size / (run_info.ofmPerWorkItem * run_info.batchesPerWorkItem);
+        runInfo.gws0 = filter_ofm_num * batch_size / (runInfo.ofmPerWorkItem * runInfo.batchesPerWorkItem);
 
-        if (!CheckWorkGroups(run_info))
+        if (!CheckWorkGroups(runInfo))
         {
             throw std::runtime_error("Internal Error - wrong calculation of global/local work group sizes");
         }
         
-        return run_info;
+        return runInfo;
     }
 
     KernelsData ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::GetKernelsData(const Params& params, const OptionalParams& options) const
@@ -109,7 +109,7 @@ namespace KernelSelector
         const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
 
         const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
-        const bool bSupportedWeightsLayout = orgParams.weights.layout == WeightsLayout::yxio;
+        const bool bSupportedWeightsLayout = orgParams.weights.GetLayout() == WeightsLayout::yxio;
         const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
         
         if (!bSupportedActivation || !bWeightsOK || !CheckPitchForSplitOnly(orgParams))

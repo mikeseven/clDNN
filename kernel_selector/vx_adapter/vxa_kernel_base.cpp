@@ -37,11 +37,11 @@ namespace clDNN
     {
         const KernelSelector::BaseParams* pParams = static_cast<const KernelSelector::BaseParams*>(m_cldnnKernelData.params.get());
         TensorDesc ret;
-        ret.offset = pParams->inputs[0].offset;
-        ret.zeroPadded = (pParams->inputs[0].paddedVal == KernelSelector::Tensor::PADDED_VAL::ZERO);
-        ret.pitches.x = (uint32_t)((pParams->inputs[0].dims.size() >= 2) ? pParams->inputs[0].dims[1].pitch : 1);
-        ret.pitches.y = (uint32_t)((pParams->inputs[0].dims.size() >= 3) ? pParams->inputs[0].dims[2].pitch : ret.pitches.x);
-        ret.pitches.z = (uint32_t)((pParams->inputs[0].dims.size() >= 4) ? pParams->inputs[0].dims[3].pitch : ret.pitches.y);
+        ret.offset = pParams->inputs[0].GetOffset();
+        ret.zeroPadded = (pParams->inputs[0].GetPaddedVal() == KernelSelector::Tensor::PADDED_VAL::ZERO);
+        ret.pitches.x = (uint32_t)((pParams->inputs[0].GetDims().size() >= 2) ? pParams->inputs[0].GetDims()[1].pitch : 1);
+        ret.pitches.y = (uint32_t)((pParams->inputs[0].GetDims().size() >= 3) ? pParams->inputs[0].GetDims()[2].pitch : ret.pitches.x);
+        ret.pitches.z = (uint32_t)((pParams->inputs[0].GetDims().size() >= 4) ? pParams->inputs[0].GetDims()[3].pitch : ret.pitches.y);
         ret.pitches.w = (uint32_t)(pParams->inputs[0].LengthWithPadding());
         return ret;
     }
@@ -105,31 +105,35 @@ namespace clDNN
 
     void BaseKernelBinary::UpdateTensor(Datatype dt, DataLayout layout, const uDims& srcDims, const TensorDesc& srcDesc, KernelSelector::DataTensor& dst) const
     {
-        if (layout == DataLayout::bx)
+        if (layout == DataLayout::bf)
         {
-            dst.layout = KernelSelector::DataLayout::bf;
-            dst.dims = {
-                { srcDims.x, 1 },
-                { srcDims.y, srcDesc.pitches.x },
+            dst = {
+                dt,
+                KernelSelector::DataLayout::bf,
+                srcDesc.zeroPadded ? KernelSelector::Tensor::PADDED_VAL::ZERO : KernelSelector::Tensor::PADDED_VAL::UNDEFINED,
+                srcDesc.offset,
+                {
+                    { srcDims.x, 1 },
+                    { srcDims.y, srcDesc.pitches.x },
+                }
+
             };
         }
         else
         {
-            dst.layout = KernelSelector::DataLayout::bfyx;
-
-            dst.dims = {
-                { srcDims.x, 1 },
-                { srcDims.y, srcDesc.pitches.x },
-                { srcDims.z, srcDesc.pitches.y },
-                { srcDims.w, srcDesc.pitches.z },
+            dst = {
+                dt,
+                KernelSelector::DataLayout::bfyx,
+                srcDesc.zeroPadded ? KernelSelector::Tensor::PADDED_VAL::ZERO : KernelSelector::Tensor::PADDED_VAL::UNDEFINED,
+                srcDesc.offset,
+                {
+                    { srcDims.x, 1 },
+                    { srcDims.y, srcDesc.pitches.x },
+                    { srcDims.z, srcDesc.pitches.y },
+                    { srcDims.w, srcDesc.pitches.z },
+                }
             };
         }
-        dst.dtype = dt;
-        dst.offset = srcDesc.offset;
-        dst.paddedVal = 
-            srcDesc.zeroPadded ? 
-            KernelSelector::Tensor::PADDED_VAL::ZERO : 
-            KernelSelector::Tensor::PADDED_VAL::UNDEFINED;
     }
 
     void BaseKernelBinary::InitBaseParams(const BaseParams& vxParams, KernelSelector::BaseParams& ksParams)

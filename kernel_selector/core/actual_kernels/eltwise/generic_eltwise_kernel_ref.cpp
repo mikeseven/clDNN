@@ -199,7 +199,7 @@ namespace KernelSelector {
         else
         {
             std::vector<size_t> gws;
-            for (const auto& o : out.dims)
+            for (const auto& o : out.GetDims())
             {
                 gws.push_back(o.v);
             }

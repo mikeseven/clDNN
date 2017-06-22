@@ -48,7 +48,7 @@ namespace KernelSelector {
         const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
         const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
 
-        const bool bSupportedWeightsLayout = orgParams.weights.layout == WeightsLayout::oiyx;
+        const bool bSupportedWeightsLayout = orgParams.weights.GetLayout() == WeightsLayout::oiyx;
         const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
 
         if (!bWeightsOK)
@@ -61,14 +61,14 @@ namespace KernelSelector {
         ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
         const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
-        SubGroupInfo run_info;
+        SubGroupInfo runInfo;
         std::stringstream jit;
         jit << GetBaseJit(newParams, kernel_id)
-            << GetConvolutionJit(newParams, run_info);
+            << GetConvolutionJit(newParams, runInfo);
 
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
+        kernel.workGroups.global = cl::NDRange(out.X().v, out.Y().v, out.Feature().v*out.Batch().v);
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());

@@ -30,7 +30,7 @@ namespace KernelSelector
 
             mem_consts.AddConstant(MakeJitConstant("NEURONS_PER_WORK_ITEM", GetNeuronsPerWorkItem(params))); // how many neurons for a single batch will a single work item produce
             mem_consts.AddConstant(MakeJitConstant("BATCHES_PER_WORK_ITEM", batches_per_work_item));             // how many batches will a single work item compute
-            mem_consts.AddConstant(MakeJitConstant("OUTPUT_ELEMENTS_COUNT", params.output.Length() / params.output.batch().v));
+            mem_consts.AddConstant(MakeJitConstant("OUTPUT_ELEMENTS_COUNT", params.output.Length() / params.output.Batch().v));
         }
 
         return mem_consts;
@@ -40,7 +40,7 @@ namespace KernelSelector
     {
         DispatchData kd;
 
-        kd.fp16UnitUsed = params.inputs[0].dtype == Datatype::F16;
+        kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 
         // Determine global work sizes.
         kd.gws0 = params.output.Length();
@@ -67,20 +67,20 @@ namespace KernelSelector
 
         const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
         
-        bool bProperInput = orgParams.inputs[0].layout == dl;
+        bool bProperInput = orgParams.inputs[0].GetLayout() == dl;
         if (!bProperInput && orgParams.inputs[0].PaddingExists() == false)
         {
             bProperInput =
-                (dl == DataLayout::fb && orgParams.inputs[0].layout == DataLayout::fyxb) ||
-                (dl == DataLayout::bf && orgParams.inputs[0].layout == DataLayout::bfyx);
+                (dl == DataLayout::fb && orgParams.inputs[0].GetLayout() == DataLayout::fyxb) ||
+                (dl == DataLayout::bf && orgParams.inputs[0].GetLayout() == DataLayout::bfyx);
         }
 
-        bool bProperWeights = orgParams.weights.layout == wl;
+        bool bProperWeights = orgParams.weights.GetLayout() == wl;
         if (!bProperWeights && orgParams.weights.PaddingExists() == false)
         {
             bProperWeights =
-                (wl == WeightsLayout::io && orgParams.weights.layout == WeightsLayout::iyxo) ||
-                (wl == WeightsLayout::oi && orgParams.weights.layout == WeightsLayout::oiyx);
+                (wl == WeightsLayout::io && orgParams.weights.GetLayout() == WeightsLayout::iyxo) ||
+                (wl == WeightsLayout::oi && orgParams.weights.GetLayout() == WeightsLayout::oiyx);
         }
 
         const bool bSupportedLayout = orgOptParams.allowReorderInput || bProperInput;
@@ -98,25 +98,25 @@ namespace KernelSelector
 
         if (!bProperInput)
         {
-            newParams.inputs[0] = newParams.inputs[0].transform(dl);
+            newParams.inputs[0] = newParams.inputs[0].Transform(dl);
             kd.reorderInput = true;
         }
 
         if (!bProperWeights)
         {
-            newParams.weights = newParams.weights.transform(wl);
+            newParams.weights = newParams.weights.Transform(wl);
         }
 
         kd.kernels.resize(1);
-        DispatchData run_info;
+        DispatchData runInfo;
         std::string jit;
 
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
 
         try
         {
-            run_info = SetDefault(newParams);
-            auto cldnn_jit = GetJitConstants(newParams, run_info);
+            runInfo = SetDefault(newParams);
+            auto cldnn_jit = GetJitConstants(newParams, runInfo);
             jit = CreateJit(kernelName, cldnn_jit, entry_point);
         }
         catch (const std::runtime_error&)
@@ -125,7 +125,7 @@ namespace KernelSelector
         }
 
         auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, run_info, kernelName, jit, entry_point, true, !orgParams.bias.empty());
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, true, !orgParams.bias.empty());
 
         if (!bProperWeights)
         {

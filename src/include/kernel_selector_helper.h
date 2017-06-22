@@ -129,7 +129,7 @@ inline KernelSelector::DataTensor ConvertDataTensor(const layout& l, uint32_t sp
     const auto& lower_pad = pad.lower_size().sizes(l.format);
     const auto& upper_pad = pad.upper_size().sizes(l.format);
     const auto ks_layout = FromDataLayout(l.format);
-    KernelSelector::Tensor::NDims vec(KernelSelector::Tensor::channelsCount(ks_layout));
+    KernelSelector::Tensor::NDims vec(KernelSelector::Tensor::ChannelsCount(ks_layout));
 
     size_t pitch = 1;
     size_t offset = 0;
@@ -148,7 +148,7 @@ inline KernelSelector::DataTensor ConvertDataTensor(const layout& l, uint32_t sp
         pitch *= (d + lp + up);
     }
 
-    const int feature_index = KernelSelector::Tensor::channelndex(ks_layout, KernelSelector::Tensor::DataChannelName::NAME_FEATURE);
+    const int feature_index = KernelSelector::Tensor::Channelndex(ks_layout, KernelSelector::Tensor::DataChannelName::FEATURE);
     vec[feature_index].v /= split;
 
     return KernelSelector::DataTensor(
@@ -166,7 +166,7 @@ inline KernelSelector::WeightsTensor ConvertWeightsTensor(const layout& l)
     const auto base_layout = KernelSelector::WeightsLayout::oiyx;
     const auto ks_type = ConvertWeightsType(l.data_type);
     const auto ks_layout = FromWeightsLayout(l.format);
-    std::vector<size_t> vec(KernelSelector::Tensor::channelsCount(base_layout));
+    std::vector<size_t> vec(KernelSelector::Tensor::ChannelsCount(base_layout));
 
     for (size_t i = 0; i < vec.size(); i++)
     {
@@ -180,7 +180,7 @@ inline KernelSelector::WeightsTensor ConvertWeightsTensor(const layout& l)
         base_layout,
         KernelSelector::PADDED_VAL::UNDEFINED,
         0,
-        vec).transform(ks_layout);
+        vec).Transform(ks_layout);
 }
 
 template <typename PType>
@@ -233,7 +233,7 @@ inline ParamsT GetWeightsBiasDefaultParams(const ArgT& arg, uint32_t split = 1)
     {
         const auto& bias_layout = arg.bias().get_output_layout();
         // bias per output is not supported on cldnn
-        params.bias.push_back(ConvertDataTensor(bias_layout).flatten_fyx_2_f());
+        params.bias.push_back(ConvertDataTensor(bias_layout).FlattenFeatureAndSpatials());
     }
 
     return params;

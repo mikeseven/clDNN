@@ -59,7 +59,7 @@ namespace KernelSelector
         const auto& in = newParams.inputs[0];
         auto& kernel = kd.kernels[0];
         std::vector<size_t> gws;
-        for (const auto& o : in.dims)
+        for (const auto& o : in.GetDims())
         {
             gws.push_back(o.v);
         }

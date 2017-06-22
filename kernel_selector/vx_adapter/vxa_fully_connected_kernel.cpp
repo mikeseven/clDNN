@@ -26,7 +26,6 @@ namespace clDNN
         KernelSelector::FullyConnectedParams ksParams;
 
         InitBaseParams(params, ksParams);
-        ksParams.output.layout = KernelSelector::DataLayout::bf;
 
         KernelSelector::FullyConnectedOptionalParams ksOptParams;
 

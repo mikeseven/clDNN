@@ -55,17 +55,17 @@ namespace KernelSelector
         const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
 
         const bool bSupportedWeightsLayout =
-            orgParams.weights.layout == WeightsLayout::yxio ||
-            orgParams.weights.layout == WeightsLayout::iyxo ||
-            orgParams.weights.layout == WeightsLayout::oyxi ||
-            orgParams.weights.layout == WeightsLayout::oiyx;
+            orgParams.weights.GetLayout() == WeightsLayout::yxio ||
+            orgParams.weights.GetLayout() == WeightsLayout::iyxo ||
+            orgParams.weights.GetLayout() == WeightsLayout::oyxi ||
+            orgParams.weights.GetLayout() == WeightsLayout::oiyx;
         
         if (!bSupportedActivation || !bSupportedWeightsLayout)
         {
             return{};
         }
 
-        DispatchData run_info = SetDefault(orgParams);
+        DispatchData runInfo = SetDefault(orgParams);
         KernelData kd = KernelData::Default<DeconvolutionParams>(params, 1);
 
         auto cldnn_jit = GetJitConstants(orgParams);
@@ -73,10 +73,10 @@ namespace KernelSelector
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, run_info, kernelName, jit, entry_point, true, !orgParams.bias.empty());
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, true, !orgParams.bias.empty());
         kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
-        kd.estimatedTime = run_info.effiency;
+        kd.estimatedTime = runInfo.effiency;
 
         return{ kd };
     }

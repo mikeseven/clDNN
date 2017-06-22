@@ -48,7 +48,7 @@ namespace KernelSelector {
 
         std::string entry_point;
         std::stringstream jit;
-        if (newParams.inputs[0].dtype == Datatype::F16)
+        if (newParams.inputs[0].GetDType() == Datatype::F16)
         {
             jit << "#define __fc_f16" << "\n";
         }
@@ -60,7 +60,7 @@ namespace KernelSelector {
         const uint32_t localWorkSizeX = 64;
         const uint32_t globalWorkSizeX = localWorkSizeX;
         const uint32_t vecSize = 4;
-        size_t matrixLineSize = newParams.inputs[0].batch().pitch;
+        size_t matrixLineSize = newParams.inputs[0].Batch().pitch;
         const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         jit << GetBaseJit(newParams, kernel_id)
@@ -69,7 +69,7 @@ namespace KernelSelector {
             << "#define LAST_INPUT_SIZE_DIV_4 (" << matrixLineSize % vecSize << ")\n";
         
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = cl::NDRange(globalWorkSizeX, newParams.output.feature().v, newParams.output.batch().v);
+        kernel.workGroups.global = cl::NDRange(globalWorkSizeX, newParams.output.Feature().v, newParams.output.Batch().v);
         kernel.workGroups.local = cl::NDRange(localWorkSizeX, 1, 1);
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());

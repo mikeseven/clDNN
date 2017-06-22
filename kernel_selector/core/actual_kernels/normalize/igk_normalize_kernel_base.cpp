@@ -29,17 +29,17 @@ namespace KernelSelector
 
         DispatchData kd;
 
-        kd.fp16UnitUsed = params.inputs[0].dtype == Datatype::F16;
+        kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 
         if (params.normParams.normMode == NormalizeMode::WITHIN_SPATIAL)
         {
-            kd.gws0 = output.x().v;
-            kd.gws1 = output.y().v;
-            kd.gws2 = output.batch().v;
+            kd.gws0 = output.X().v;
+            kd.gws1 = output.Y().v;
+            kd.gws2 = output.Batch().v;
         }
         else
         {
-            kd.gws0 = output.batch().v;
+            kd.gws0 = output.Batch().v;
             kd.gws1 = 1;
             kd.gws2 = 1;
         }
@@ -62,11 +62,11 @@ namespace KernelSelector
             return{};
         }
 
-        DispatchData run_info;
+        DispatchData runInfo;
 
         try
         {
-            run_info = SetDefault(orgParams);
+            runInfo = SetDefault(orgParams);
         }
         catch (const std::runtime_error&)
         {
@@ -80,7 +80,7 @@ namespace KernelSelector
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, run_info, kernelName, jit, entry_point);
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point);
         kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SCALE_TABLE, 0 });
 
         kd.estimatedTime = estimated_time;

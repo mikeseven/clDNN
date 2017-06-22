@@ -69,8 +69,8 @@ struct softmax_gpu : typed_primitive_impl<softmax>
             break;
         case softmax::normalize_fyx:
             // W/A for bf/bx issue of cldnn
-            input = input.flatten_fyx_2_f();
-            output = output.flatten_fyx_2_f();
+            input = input.FlattenFeatureAndSpatials();
+            output = output.FlattenFeatureAndSpatials();
         case softmax::normalize_f:
             sm.dim = KernelSelector::SoftmaxDim::FEATURE;
             break;

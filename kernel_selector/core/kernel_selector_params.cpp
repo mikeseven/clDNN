@@ -23,14 +23,14 @@ namespace KernelSelector {
     std::string BaseParams::to_string() const
     {
         std::stringstream s;
-        s << toString(inputs[0].dtype) << "_";
-        s << toString(inputs[0].layout) << "_";
-        s << toString(output.layout) << "_";
+        s << toString(inputs[0].GetDType()) << "_";
+        s << toString(inputs[0].GetLayout()) << "_";
+        s << toString(output.GetLayout()) << "_";
         s << toString(activationFunc) << "_";
         s << nlParams.m << "_" << nlParams.n << "_";
-        s << inputs[0].x().v << "_" << inputs[0].y().v << "_" << inputs[0].feature().v << "_" << inputs[0].batch().v << "_";
+        s << inputs[0].X().v << "_" << inputs[0].Y().v << "_" << inputs[0].Feature().v << "_" << inputs[0].Batch().v << "_";
         //s << inputs[0].offset << "_" << inputs[0].x().pitch << "_" << inputs[0].y().pitch << "_" << inputs[0].feature().pitch << "_" << inputs[0].batch().pitch << "_";
-        s << output.x().v << "_" << output.y().v << "_" << output.feature().v << "_" << output.batch().v;
+        s << output.X().v << "_" << output.Y().v << "_" << output.Feature().v << "_" << output.Batch().v;
         //s << output.offset << "_" << output.x().pitch << "_" << output.y().pitch << "_" << output.feature().pitch << "_" << output.batch().pitch;
         return s.str();
     }
@@ -40,10 +40,10 @@ namespace KernelSelector {
         std::stringstream s;
 
         s << BaseParams::to_string() << "_";
-        s << toString(weights.layout) << "_";
+        s << toString(weights.GetLayout()) << "_";
         if (bias.size())
         {
-            s << toString(bias[0].layout) << "_";
+            s << toString(bias[0].GetLayout()) << "_";
         }
         else
         {
@@ -62,10 +62,10 @@ namespace KernelSelector {
         std::stringstream s;
 
         s << BaseParams::to_string() << "_";
-        s << toString(weights.layout) << "_";
+        s << toString(weights.GetLayout()) << "_";
         if (bias.size())
         {
-            s << toString(bias[0].layout) << "_";
+            s << toString(bias[0].GetLayout()) << "_";
         }
         else
         {

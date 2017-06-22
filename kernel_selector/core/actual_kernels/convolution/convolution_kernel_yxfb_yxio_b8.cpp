@@ -45,13 +45,13 @@ namespace KernelSelector
     {
         DispatchData runInfo = SetDefault(arg);
 
-        const auto filterOfmNum = arg.weights.ofm().v;
-        const auto batchSize = arg.output.batch().v;
+        const auto filterOfmNum = arg.weights.OFM().v;
+        const auto batchSize = arg.output.Batch().v;
 
         const bool bInputValidated =
             (filterOfmNum > 0) &&
             (batchSize > 0) &&
-            (arg.output.feature().v == filterOfmNum);
+            (arg.output.Feature().v == filterOfmNum);
 
         if (!bInputValidated)
         {
@@ -95,7 +95,7 @@ namespace KernelSelector
         const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
 
         const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
-        const bool bSupportedWeightsLayout = orgParams.weights.layout == WeightsLayout::yxio;
+        const bool bSupportedWeightsLayout = orgParams.weights.GetLayout() == WeightsLayout::yxio;
         const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
 
         if (!bSupportedActivation || !bWeightsOK || !CheckPitchForSplitOnly(orgParams))

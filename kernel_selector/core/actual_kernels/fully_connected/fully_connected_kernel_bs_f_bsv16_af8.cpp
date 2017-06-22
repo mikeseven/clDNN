@@ -59,8 +59,8 @@ namespace KernelSelector
     static bool check_input_layout(const DataTensor& t)
     {
         bool b16_layout = false;
-        b16_layout |= t.layout == DataLayout::bs_f_bsv16__af8;
-        b16_layout |= Tensor::channelndex(t.layout, Tensor::DataChannelName::NAME_BATCH) == 0 && t.batch().v == 16;
+        b16_layout |= t.GetLayout() == DataLayout::bs_f_bsv16__af8;
+        b16_layout |= Tensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::BATCH) == 0 && t.Batch().v == 16;
         return b16_layout;
     }
 
@@ -71,7 +71,7 @@ namespace KernelSelector
         const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
         const auto& orgOptParams = static_cast<const FullyConnectedOptionalParams&>(optParams);
 
-        const bool bProperBatch = orgParams.inputs[0].batch().v == 16;
+        const bool bProperBatch = orgParams.inputs[0].Batch().v == 16;
         const bool bProperInput = check_input_layout(orgParams.inputs[0]);
         const bool bSupportedLayout = orgOptParams.allowReorderInput || bProperInput;
         

@@ -205,7 +205,7 @@ namespace KernelSelector {
         std::string kernelName;
 
         template <typename T>
-        inline static KernelData Default(const Params& _params, size_t kernel_nums)
+        inline static KernelData Default(const Params& _params, size_t kernel_nums = 1)
         {
             KernelData kd;
             const T& orgParams = static_cast<const T&>(_params);

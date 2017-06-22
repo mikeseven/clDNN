@@ -76,7 +76,7 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
 
         ConvertActivationFuncParams(arg.get_primitive(), fc_params);
 
-        fc_params.output = fc_params.output.flatten_fyx_2_f();
+        fc_params.output = fc_params.output.FlattenFeatureAndSpatials();
 
         const auto primitive = arg.get_primitive();
 
@@ -90,12 +90,12 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
 
         const auto& new_fc_params = *static_cast<KernelSelector::FullyConnectedParams*>(best_kernels[0].params.get());
         std::vector<network_impl::ptr> reorders; 
-        if (fc_params.inputs[0].layout != new_fc_params.inputs[0].layout)
+        if (fc_params.inputs[0].GetLayout() != new_fc_params.inputs[0].GetLayout())
         {
             const auto& input_layout = arg.input().get_output_layout();
             cldnn::topology topology(
                 cldnn::input_layout("input", input_layout),
-                cldnn::reorder("reorder", "input", ToDataLayout(new_fc_params.inputs[0].layout), input_layout.data_type)
+                cldnn::reorder("reorder", "input", ToDataLayout(new_fc_params.inputs[0].GetLayout()), input_layout.data_type)
             );
 
             reorders.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });

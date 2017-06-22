@@ -55,7 +55,7 @@ namespace KernelSelector
     {
         JitConstants mem_consts = MakeReorderWeightsJitConstants(params);
        
-        mem_consts.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", SubGroupSize(params.reorderParams.output.layout)));
+        mem_consts.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", SubGroupSize(params.reorderParams.output.GetLayout())));
 
         return mem_consts;
     }
@@ -64,7 +64,7 @@ namespace KernelSelector
     {
         JitConstants mem_consts = MakeReorderJitConstants(params);
 
-        mem_consts.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", SubGroupSize(params.output.layout)));
+        mem_consts.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", SubGroupSize(params.output.GetLayout())));
 
         return mem_consts;
     }

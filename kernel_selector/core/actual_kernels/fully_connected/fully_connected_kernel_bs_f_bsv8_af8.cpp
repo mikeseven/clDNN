@@ -59,16 +59,16 @@ namespace KernelSelector
     static bool check_input_layout(const DataTensor& t)
     {
         bool b16_layout = false;
-        b16_layout |= t.layout == DataLayout::bs_f_bsv8__af8;
-        b16_layout |= Tensor::channelndex(t.layout, Tensor::DataChannelName::NAME_BATCH) == 0 && (t.batch().v == 8); // TODO - check f alignment to 8
+        b16_layout |= t.GetLayout() == DataLayout::bs_f_bsv8__af8;
+        b16_layout |= Tensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::BATCH) == 0 && (t.Batch().v == 8); // TODO - check f alignment to 8
         return b16_layout;
     }
 
     static bool check_output_layout(const DataTensor& t)
     {
         bool b16_layout = false;
-        b16_layout |= (t.layout == DataLayout::fb);
-        b16_layout |= (t.layout == DataLayout::bs_f_bsv8__af8) && (t.batch().v == 8);
+        b16_layout |= (t.GetLayout() == DataLayout::fb);
+        b16_layout |= (t.GetLayout() == DataLayout::bs_f_bsv8__af8) && (t.Batch().v == 8);
         return b16_layout;
     }
 
@@ -80,8 +80,8 @@ namespace KernelSelector
         const auto& orgOptParams = static_cast<const FullyConnectedOptionalParams&>(optParams);
 
         const bool bProperBatch = 
-            orgParams.inputs[0].batch().v >= 8 &&
-            orgParams.inputs[0].batch().v % 8 == 0;
+            orgParams.inputs[0].Batch().v >= 8 &&
+            orgParams.inputs[0].Batch().v % 8 == 0;
         const bool bProperInput = check_input_layout(orgParams.inputs[0]);
         const bool bProperOutput = check_output_layout(orgParams.output);
         const bool bSupportedLayout = orgOptParams.allowReorderInput || bProperInput;

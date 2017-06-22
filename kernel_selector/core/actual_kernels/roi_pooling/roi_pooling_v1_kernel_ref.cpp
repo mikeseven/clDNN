@@ -37,7 +37,7 @@ namespace KernelSelector {
     {
         ROIPoolingV1KernelRef::DispatchData kd;
 
-        kd.fp16UnitUsed = (params.inputs[0].dtype == Datatype::F16);
+        kd.fp16UnitUsed = (params.inputs[0].GetDType() == Datatype::F16);
 
         // Determine global work sizes.
         kd.gws0 = params.output.Length();
@@ -73,7 +73,7 @@ namespace KernelSelector {
             return{};
         }
 
-        DispatchData run_info = set_default(orgParams);
+        DispatchData runInfo = set_default(orgParams);
         KernelData kd = KernelData::Default<ROIPoolingV1Params>(params, 1);
 
         auto cldnn_jit = get_jit_constants(orgParams);
@@ -81,7 +81,7 @@ namespace KernelSelector {
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, run_info, kernelName, jit, entry_point);
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point);
         kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::INPUT, 0 });
 
         kd.estimatedTime = FORCE_PRIORITY_9;

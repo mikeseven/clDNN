@@ -36,29 +36,29 @@ namespace KernelSelector {
         }
 
         jit << "#define ACTIVATION_FUNCTION_" << toString(params.activationFunc) << "\n"
-            << "#define TYPE_" << toString(params.inputs[0].dtype) << "\n"
+            << "#define TYPE_" << toString(params.inputs[0].GetDType()) << "\n"
             << "#define NL_M (" << Float2Str(params.nlParams.m) << ")\n"
             << "#define NL_N (" << Float2Str(params.nlParams.n) << ")\n"
-            << "#define INPUT_OFFSET (" << params.inputs[0].offset << ")\n"
-            << "#define OUTPUT_OFFSET (" << params.output.offset << ")\n";
+            << "#define INPUT_OFFSET (" << params.inputs[0].GetOffset() << ")\n"
+            << "#define OUTPUT_OFFSET (" << params.output.GetOffset() << ")\n";
 
-        jit << "#define INPUT_SIZE_X (" << params.inputs[0].x().v << ")\n"
-            << "#define INPUT_SIZE_Y (" << params.inputs[0].y().v << ")\n"
-            << "#define INPUT_FEATURE_NUM (" << params.inputs[0].feature().v << ")\n"
-            << "#define INPUT_BATCH (" << params.inputs[0].batch().v << ")\n"
-            << "#define INPUT_X_PITCH (" << params.inputs[0].x().pitch << ")\n"
-            << "#define INPUT_Y_PITCH (" << params.inputs[0].y().pitch << ")\n"
-            << "#define INPUT_FEATURE_PITCH (" << params.inputs[0].feature().pitch << ")\n"
-            << "#define INPUT_BATCH_PITCH (" << params.inputs[0].batch().pitch << ")\n";
+        jit << "#define INPUT_SIZE_X (" << params.inputs[0].X().v << ")\n"
+            << "#define INPUT_SIZE_Y (" << params.inputs[0].Y().v << ")\n"
+            << "#define INPUT_FEATURE_NUM (" << params.inputs[0].Feature().v << ")\n"
+            << "#define INPUT_BATCH (" << params.inputs[0].Batch().v << ")\n"
+            << "#define INPUT_X_PITCH (" << params.inputs[0].X().pitch << ")\n"
+            << "#define INPUT_Y_PITCH (" << params.inputs[0].Y().pitch << ")\n"
+            << "#define INPUT_FEATURE_PITCH (" << params.inputs[0].Feature().pitch << ")\n"
+            << "#define INPUT_BATCH_PITCH (" << params.inputs[0].Batch().pitch << ")\n";
 
-        jit << "#define OUTPUT_SIZE_X (" << params.output.x().v << ")\n"
-            << "#define OUTPUT_SIZE_Y (" << params.output.y().v << ")\n"
-            << "#define OUTPUT_FEATURE_NUM (" << params.output.feature().v << ")\n"
-            << "#define OUTPUT_BATCH_NUM (" << params.output.batch().v << ")\n"
-            << "#define OUTPUT_X_PITCH (" << params.output.x().pitch << ")\n"
-            << "#define OUTPUT_Y_PITCH (" << params.output.y().pitch << ")\n"
-            << "#define OUTPUT_FEATURE_PITCH (" << params.output.feature().pitch << ")\n"
-            << "#define OUTPUT_BATCH_PITCH (" << params.output.batch().pitch << ")\n";
+        jit << "#define OUTPUT_SIZE_X (" << params.output.X().v << ")\n"
+            << "#define OUTPUT_SIZE_Y (" << params.output.Y().v << ")\n"
+            << "#define OUTPUT_FEATURE_NUM (" << params.output.Feature().v << ")\n"
+            << "#define OUTPUT_BATCH_NUM (" << params.output.Batch().v << ")\n"
+            << "#define OUTPUT_X_PITCH (" << params.output.X().pitch << ")\n"
+            << "#define OUTPUT_Y_PITCH (" << params.output.Y().pitch << ")\n"
+            << "#define OUTPUT_FEATURE_PITCH (" << params.output.Feature().pitch << ")\n"
+            << "#define OUTPUT_BATCH_PITCH (" << params.output.Batch().pitch << ")\n";
 
         return jit.str();
     }

@@ -43,9 +43,9 @@ namespace KernelSelector
 
     IGKConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b1_block::default_yxfb_yxio_b16(const ConvolutionParams& arg) const
     {
-        DispatchData run_info = SetDefault(arg);
+        DispatchData runInfo = SetDefault(arg);
         // TODO: fill the proper data here (I don't know where can I locate it).
-        return run_info;
+        return runInfo;
     }
 
     KernelsData ConvolutionKernel_yxfb_yxio_b1_block::GetKernelsData(const Params& params, const OptionalParams& options) const
@@ -57,7 +57,7 @@ namespace KernelSelector
 
         const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
 
-        const bool bSupportedWeightsLayout = orgParams.weights.layout == WeightsLayout::yxio;
+        const bool bSupportedWeightsLayout = orgParams.weights.GetLayout() == WeightsLayout::yxio;
         const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
         
         if (!bSupportedActivation || !bWeightsOK || !CheckPitchForSplitOnly(orgParams))
@@ -65,11 +65,11 @@ namespace KernelSelector
             return{};
         }
 
-        DispatchData run_info;
+        DispatchData runInfo;
         
         try
         {
-            run_info = default_yxfb_yxio_b16(orgParams);
+            runInfo = default_yxfb_yxio_b16(orgParams);
         }
         catch (const std::runtime_error& )
         {
@@ -78,12 +78,12 @@ namespace KernelSelector
 
         KernelData kd = KernelData::Default<ConvolutionParams>(params, 1);
 
-        auto cldnn_jit = GetJitConstants(orgParams, run_info);
+        auto cldnn_jit = GetJitConstants(orgParams, runInfo);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, run_info, kernelName, jit, entry_point, true, !orgParams.bias.empty());
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, true, !orgParams.bias.empty());
         kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
         bool succeed = SetWeightsReorderParams(orgParams, WeightsLayout::yxio, kd.weightsReorderParams);
@@ -93,7 +93,7 @@ namespace KernelSelector
             return{};
         }
 
-        kd.estimatedTime = run_info.effiency;
+        kd.estimatedTime = runInfo.effiency;
 
         return{ kd };
     }

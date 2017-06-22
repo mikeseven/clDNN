@@ -67,20 +67,20 @@ namespace KernelSelector
         // how many batches will a single work item compute
         static size_t GetBatchesPerWorkItem(const FullyConnectedParams& params)
         {
-            auto batchSize = params.output.batch().v;
+            auto batchSize = params.output.Batch().v;
             return std::min(batchSize, static_cast<size_t>(32U));
         }
 
         static size_t GetLocalGroupsSize(const FullyConnectedParams& params)
         {
-            auto batchSize = params.output.batch().v;
+            auto batchSize = params.output.Batch().v;
             return std::max(static_cast<size_t>(1U), batchSize / GetBatchesPerWorkItem(params));
         }
 
         // how many neurons for a single batch will a single work item produce 
         static size_t GetNeuronsPerWorkItem(const FullyConnectedParams& params)
         {
-            auto batchSize = params.output.batch().v;
+            auto batchSize = params.output.Batch().v;
             auto out_elements_count_per_batch = params.output.Length() / batchSize;
             if (out_elements_count_per_batch % 16 == 0)
                 return 2;

@@ -42,8 +42,8 @@ namespace KernelSelector
 
         const auto& input = params.inputs[0];
 
-        auto mod_x = (input.x().v - pp.poolSize.x) % pp.poolStride.x;
-        auto mod_y = (input.y().v - pp.poolSize.y) % pp.poolStride.y;
+        auto mod_x = (input.X().v - pp.poolSize.x) % pp.poolStride.x;
+        auto mod_y = (input.Y().v - pp.poolSize.y) % pp.poolStride.y;
 
         return mod_x || mod_y;
     }
@@ -54,14 +54,14 @@ namespace KernelSelector
 
         DispatchData kd;
 
-        kd.fp16UnitUsed = params.inputs[0].dtype == Datatype::F16;
+        kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 
-        if (params.inputs[0].layout == DataLayout::bfyx)
+        if (params.inputs[0].GetLayout() == DataLayout::bfyx)
         {
             // Determine global work sizes.
-            kd.gws2 = output.batch().v * output.feature().v;    // B, F
-            kd.gws0 = cldnn::align_to(output.x().v, 32);        // X
-            kd.gws1 = output.y().v;                             // Y
+            kd.gws2 = output.Batch().v * output.Feature().v;    // B, F
+            kd.gws0 = cldnn::align_to(output.X().v, 32);        // X
+            kd.gws1 = output.Y().v;                             // Y
 
             // Find largest positive local work size that is divider for global work size.
             kd.lws0 = 32;
@@ -71,9 +71,9 @@ namespace KernelSelector
         else
         {
             // Determine global work sizes.
-            kd.gws0 = output.batch().v * output.feature().v;    // B, F
-            kd.gws1 = output.x().v;                             // X
-            kd.gws2 = output.y().v;                             // Y
+            kd.gws0 = output.Batch().v * output.Feature().v;    // B, F
+            kd.gws1 = output.X().v;                             // X
+            kd.gws2 = output.Y().v;                             // Y
 
             kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
             while (kd.gws0 % kd.lws0 != 0)

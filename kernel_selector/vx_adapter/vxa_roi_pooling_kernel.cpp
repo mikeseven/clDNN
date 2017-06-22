@@ -27,13 +27,8 @@ namespace clDNN
         KernelSelector::ROIPoolingParams ksParams;
 
         InitBaseParams(params, ksParams);
-        ksParams.output.layout = KernelSelector::DataLayout::brfyx;
-        if (ksParams.inputs[0].batch().v != 1)
-        {
-            ksParams.output.dims.resize(5);
-            ksParams.output.dims[4].v = ksParams.inputs[0].batch().v;
-            ksParams.output.dims[4].pitch = params.outDesc.pitches.w;
-        }
+
+        // TODO port to new tensor
 
         ksParams.rois = params.rois;
         ksParams.pitchRoisR = params.pitch_rois_r;

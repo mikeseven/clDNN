@@ -39,7 +39,7 @@ namespace KernelSelector
         DispatchData kd = SetKernelData(arg);
 
         const auto& output = arg.output;
-        kd.gws0 = output.batch().v;
+        kd.gws0 = output.Batch().v;
         kd.gws1 = output.Length() / kd.gws0;
         kd.lws0 = 8;
         kd.lws1 = 1;
@@ -53,7 +53,7 @@ namespace KernelSelector
 
         const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
 
-        const bool bSupportedBatch = (orgParams.inputs[0].batch().v == 8); // TODO: check why b16 not supported
+        const bool bSupportedBatch = (orgParams.inputs[0].Batch().v == 8); // TODO: check why b16 not supported
 
 
         if (!bSupportedBatch)

@@ -83,11 +83,11 @@ public:
         std::size_t weightsSize =
             kernelData.weightsReorderParams.engine != WeightsReorderParams::Engine::NONE ?
             kernelData.weightsReorderParams.newBufferSize :
-            newParams.convParams.filterSize.x * newParams.convParams.filterSize.y * newParams.inputs[0].feature().v * newParams.output.feature().v;
+            newParams.convParams.filterSize.x * newParams.convParams.filterSize.y * newParams.inputs[0].Feature().v * newParams.output.Feature().v;
         cl::Buffer input(clContext, CL_MEM_READ_WRITE, newParams.inputs[0].PhysicalSize(), nullptr, &status);
         cl::Buffer output(clContext, CL_MEM_READ_WRITE, newParams.output.PhysicalSize(), nullptr, &status);
         cl::Buffer weights(clContext, CL_MEM_READ_WRITE, weightsSize, nullptr, &status);
-        cl::Buffer bias(clContext, CL_MEM_READ_WRITE, newParams.output.feature().v, nullptr, &status);
+        cl::Buffer bias(clContext, CL_MEM_READ_WRITE, newParams.output.Feature().v, nullptr, &status);
 
         ArgumentDescpirtor::SetArgumentParams params;
         params.inputs.push_back(&input);

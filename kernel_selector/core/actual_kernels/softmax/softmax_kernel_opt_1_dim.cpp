@@ -56,7 +56,7 @@ namespace KernelSelector
             << "#define LEFTOVERS (" << leftovers << ")\n"
             ;
 
-        if (newParams.inputs[0].dtype == Datatype::F16)
+        if (newParams.inputs[0].GetDType() == Datatype::F16)
         {
             jit << "#define FP16_SUPPORTED (1)\n"
                 << "#define FP16_UNIT_USED (1)\n";

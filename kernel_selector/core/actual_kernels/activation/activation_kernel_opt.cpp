@@ -44,7 +44,7 @@ namespace KernelSelector {
 
         static const int NUM_ROWS_WI = 1;
         static const int NUM_COLS_WI = 4;
-        const size_t nonWidthDim = newParams.inputs[0].Length() / newParams.inputs[0].x().v;
+        const size_t nonWidthDim = newParams.inputs[0].Length() / newParams.inputs[0].X().v;
 
         const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
@@ -55,13 +55,13 @@ namespace KernelSelector {
             << "#define NUM_COLS_WI (" << NUM_COLS_WI << ")\n"
             << "#define INPUT_ROWS (" << nonWidthDim << ")\n"
             << "#define INPUT_ROWS_MOD_ROWS_WI " << nonWidthDim % NUM_ROWS_WI << "\n"
-            << "#define INPUT_WIDTH_MOD_COLS_WI " << newParams.inputs[0].x().v % NUM_COLS_WI << "\n";
+            << "#define INPUT_WIDTH_MOD_COLS_WI " << newParams.inputs[0].X().v % NUM_COLS_WI << "\n";
 
         auto& kernel = kd.kernels[0];
         kernel.workGroups.global = cl::NDRange(
-            (newParams.inputs[0].x().v + NUM_COLS_WI - 1) / NUM_COLS_WI,
+            (newParams.inputs[0].X().v + NUM_COLS_WI - 1) / NUM_COLS_WI,
             (nonWidthDim + NUM_ROWS_WI - 1) / NUM_ROWS_WI,
-            newParams.output.batch().v);
+            newParams.output.Batch().v);
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
         kernel.argsDesc = GetArgumentDesc(1, false, false);

@@ -17,6 +17,7 @@
 #include <cmath>
 #include "convolution_kernel_gemm_like.h"
 #include "kernel_selector_utils.h"
+#include "api/CPP/cldnn_defs.h"
 
 namespace KernelSelector 
 {
@@ -52,7 +53,7 @@ namespace KernelSelector
 
         const DataTensor newInput = GetConvolutionPaddedTensorDesc(orgParams);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, newInput);
-        const bool bSupportedWeightsLayout = orgParams.weights.layout == WeightsLayout::oiyx;
+        const bool bSupportedWeightsLayout = orgParams.weights.GetLayout() == WeightsLayout::oiyx;
         const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
         // TODO: enable non padding path again
         const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
@@ -74,7 +75,7 @@ namespace KernelSelector
         
         kd.kernels.resize(1);
 
-        SubGroupInfo run_info;
+        SubGroupInfo runInfo;
         
         // for KW only
         kd.reorderInput = false;
@@ -105,17 +106,17 @@ namespace KernelSelector
 
         WeightsLayout wLayout;
         
-        if (newParams.inputs[0].dtype == Datatype::F16)
+        if (newParams.inputs[0].GetDType() == Datatype::F16)
         {
             jit << "#define __convolution_f16" << "\n";
-            run_info = SubGroupInfo(1, cp.filterSize.x, 32, 1, 16, 1, 32, 1, 1);
+            runInfo = SubGroupInfo(1, cp.filterSize.x, 32, 1, 16, 1, 32, 1, 1);
             wLayout = WeightsLayout::iy_xs_os_xsv2_osv16__ao32;
             kd.estimatedTime = FORCE_PRIORITY_6;
         }
         else
         {
             jit << "#define __convolution_f32" << "\n";
-            run_info = SubGroupInfo(2, cp.filterSize.x, 32, 1, 8, 1, 32, 2, 1);
+            runInfo = SubGroupInfo(2, cp.filterSize.x, 32, 1, 8, 1, 32, 2, 1);
             wLayout = WeightsLayout::iy_xs_os_xsv2_osv8__ao32;
             kd.estimatedTime = FORCE_PRIORITY_8;
         }
@@ -123,21 +124,21 @@ namespace KernelSelector
         const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         jit << GetBaseJit(newParams, kernel_id)
-            << GetConvolutionJit(newParams, run_info, true);
+            << GetConvolutionJit(newParams, runInfo, true);
 
-        size_t sgemm_m = cldnn::round_up_to(newParams.output.x().v * newParams.output.y().v, (size_t)run_info.subBlockDimM);
-        size_t sgemm_n = cldnn::round_up_to(newParams.output.feature().v, (size_t)run_info.subBlockDimN);
+        size_t sgemm_m = cldnn::round_up_to(newParams.output.X().v * newParams.output.Y().v, (size_t)runInfo.subBlockDimM);
+        size_t sgemm_n = cldnn::round_up_to(newParams.output.Feature().v, (size_t)runInfo.subBlockDimN);
 
         auto& kernel = kd.kernels[0];
         kernel.workGroups.global = cl::NDRange(
-            cldnn::round_up_to(int(std::ceil((float)sgemm_n / (float)run_info.globalWorkSizeDX)), run_info.localWorkSizeX),
-            cldnn::round_up_to(int(std::ceil((float)sgemm_m / (float)run_info.globalWorkSizeDY)), run_info.localWorkSizeY),
-            newParams.output.batch().v);
+            cldnn::round_up_to(int(std::ceil((float)sgemm_n / (float)runInfo.globalWorkSizeDX)), runInfo.localWorkSizeX),
+            cldnn::round_up_to(int(std::ceil((float)sgemm_m / (float)runInfo.globalWorkSizeDY)), runInfo.localWorkSizeY),
+            newParams.output.Batch().v);
         
         kernel.workGroups.local = cl::NDRange(
-            run_info.localWorkSizeX,
-            run_info.localWorkSizeY,
-            run_info.localWorkSizeZ);
+            runInfo.localWorkSizeX,
+            runInfo.localWorkSizeY,
+            runInfo.localWorkSizeZ);
 
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id, AGE_BASED);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());

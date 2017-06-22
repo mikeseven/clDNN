@@ -39,21 +39,21 @@ namespace KernelSelector
 
     CommonDispatchData LRNKernelAcrossChannelRef::default_across_channel(const LRNParams& params) const
     {
-        CommonDispatchData run_info = SetDefault(params);
+        CommonDispatchData runInfo = SetDefault(params);
 
-        if (params.inputs[0].layout == DataLayout::bfyx)
+        if (params.inputs[0].GetLayout() == DataLayout::bfyx)
         {
             const auto& out = params.output;
-            run_info.gws0 = cldnn::align_to(out.x().v, 32);
-            run_info.gws1 = out.y().v;
-            run_info.gws2 = out.feature().v * out.batch().v;
+            runInfo.gws0 = cldnn::align_to(out.X().v, 32);
+            runInfo.gws1 = out.Y().v;
+            runInfo.gws2 = out.Feature().v * out.Batch().v;
 
-            run_info.lws0 = 32;
-            run_info.lws1 = 1;
-            run_info.lws2 = 1;
+            runInfo.lws0 = 32;
+            runInfo.lws1 = 1;
+            runInfo.lws2 = 1;
         }
 
-        return run_info;
+        return runInfo;
     }
 
     KernelsData LRNKernelAcrossChannelRef::GetKernelsData(const Params& params, const OptionalParams&) const

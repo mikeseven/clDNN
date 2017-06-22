@@ -51,7 +51,7 @@ struct permute_gpu : typed_primitive_impl<permute>
     {
         auto reorder_params = GetDefaultParams<KernelSelector::PermuteParams>(arg);
         auto reorder_optional_params = GetDefaultOptionalParams<KernelSelector::ReorderOptionalParams>(arg.get_program());
-        uint16_t max_input_index = (uint16_t)(reorder_params.inputs[0].dims.size() - 1);
+        uint16_t max_input_index = (uint16_t)(reorder_params.inputs[0].GetDims().size() - 1);
         const auto& permute_order = arg.get_primitive()->permute_order;
         for (size_t i = 0; i < permute_order.size(); i++)
         {

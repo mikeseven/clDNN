@@ -61,7 +61,7 @@ namespace KernelSelector
         const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
 
         const auto& output = orgParams.output;
-        const auto batches = output.batch().v;
+        const auto batches = output.Batch().v;
         const auto x_size = output.Length() / batches;
 
 
@@ -75,7 +75,7 @@ namespace KernelSelector
         }
 
         float estimated_time =
-            orgParams.inputs[0].dtype == Datatype::F16 && batches >= 16 ?
+            orgParams.inputs[0].GetDType() == Datatype::F16 && batches >= 16 ?
             FORCE_PRIORITY_3 : FORCE_PRIORITY_5;
         
         return GetCommonKernelsData(params, optParams, DataLayout::fb, WeightsLayout::io, estimated_time);

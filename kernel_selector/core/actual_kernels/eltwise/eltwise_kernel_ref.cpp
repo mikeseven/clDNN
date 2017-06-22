@@ -45,17 +45,17 @@ namespace KernelSelector {
 
         std::stringstream jit;
         jit << GetBaseJit(newParams, kernel_id)
-            << "#define INPUT_OFFSET1 (" << newParams.inputs[1].offset << ")\n"
-            << "#define INPUT_ROW_PITCH1 (" << newParams.inputs[1].y().pitch << ")\n"
-            << "#define INPUT_SLICE_PITCH1 (" << newParams.inputs[1].feature().pitch << ")\n"
-            << "#define INPUT_BATCH_PITCH1 (" << newParams.inputs[1].batch().pitch << ")\n"
+            << "#define INPUT_OFFSET1 (" << newParams.inputs[1].GetOffset() << ")\n"
+            << "#define INPUT_ROW_PITCH1 (" << newParams.inputs[1].Y().pitch << ")\n"
+            << "#define INPUT_SLICE_PITCH1 (" << newParams.inputs[1].Feature().pitch << ")\n"
+            << "#define INPUT_BATCH_PITCH1 (" << newParams.inputs[1].Batch().pitch << ")\n"
             //<< "#define ELTWISE_MODE_" << toString(newParams.eltwiseParams.mode) << "\n"
             //<< "#define SCALAR (" << newParams.eltwiseParams.scalar << ")\n"
             ;
 
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = cl::NDRange(out.x().v, out.y().v, out.feature().v*out.batch().v);
+        kernel.workGroups.global = cl::NDRange(out.X().v, out.Y().v, out.Feature().v*out.Batch().v);
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
         kernel.argsDesc = GetArgumentDesc(2, false, false);

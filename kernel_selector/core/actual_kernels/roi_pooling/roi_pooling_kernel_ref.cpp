@@ -46,23 +46,23 @@ namespace KernelSelector {
         std::stringstream jit;
         jit << GetBaseJit(newParams, kernel_id)
             << "#define FP16_SUPPORTED 1\n"
-            << "#define UNIT_TYPE " << (newParams.inputs[0].dtype == Datatype::F16 ? "half" : "float") << "\n"
-            << "#define SRC_W (" << newParams.inputs[0].x().v << ")\n"
-            << "#define SRC_H (" << newParams.inputs[0].y().v << ")\n"
-            << "#define DST_W (" << newParams.output.x().v << ")\n"
-            << "#define DST_H (" << newParams.output.y().v << ")\n"
-            << "#define CHAN_NUM (" << newParams.inputs[0].feature().v << ")\n"
+            << "#define UNIT_TYPE " << (newParams.inputs[0].GetDType() == Datatype::F16 ? "half" : "float") << "\n"
+            << "#define SRC_W (" << newParams.inputs[0].X().v << ")\n"
+            << "#define SRC_H (" << newParams.inputs[0].Y().v << ")\n"
+            << "#define DST_W (" << newParams.output.X().v << ")\n"
+            << "#define DST_H (" << newParams.output.Y().v << ")\n"
+            << "#define CHAN_NUM (" << newParams.inputs[0].Feature().v << ")\n"
             << "#define ROIS_NUM (" << newParams.rois << ")\n"
-            << "#define BATCH_NUM (" << newParams.inputs[0].batch().v << ")\n"
-            << "#define PITCH_SRC_H (" << newParams.inputs[0].y().pitch << ")\n"
-            << "#define PITCH_SRC_C (" << newParams.inputs[0].feature().pitch << ")\n"
-            << "#define PITCH_SRC_B (" << newParams.inputs[0].batch().pitch << ")\n"
+            << "#define BATCH_NUM (" << newParams.inputs[0].Batch().v << ")\n"
+            << "#define PITCH_SRC_H (" << newParams.inputs[0].Y().pitch << ")\n"
+            << "#define PITCH_SRC_C (" << newParams.inputs[0].Feature().pitch << ")\n"
+            << "#define PITCH_SRC_B (" << newParams.inputs[0].Batch().pitch << ")\n"
             << "#define PITCH_ROI_R (" << newParams.pitchRoisR << ")\n"
             << "#define PITCH_ROI_B (" << newParams.pitchRoisB << ")\n"
-            << "#define PITCH_DST_H (" << newParams.output.y().pitch << ")\n"
-            << "#define PITCH_DST_C (" << newParams.output.feature().pitch << ")\n"
-            << "#define PITCH_DST_R (" << newParams.output.roi().pitch << ")\n"
-            << "#define PITCH_DST_B (" << newParams.output.batch().pitch << ")\n";
+            << "#define PITCH_DST_H (" << newParams.output.Y().pitch << ")\n"
+            << "#define PITCH_DST_C (" << newParams.output.Feature().pitch << ")\n"
+            << "#define PITCH_DST_R (" << newParams.output.ROI().pitch << ")\n"
+            << "#define PITCH_DST_B (" << newParams.output.Batch().pitch << ")\n";
 
         auto& kernel = kd.kernels[0];
         kernel.workGroups.global = cl::NDRange(newParams.output.Length(), 1, 1);

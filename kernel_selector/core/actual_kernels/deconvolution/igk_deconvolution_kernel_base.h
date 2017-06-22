@@ -32,6 +32,5 @@ namespace KernelSelector
     protected:
         JitConstants GetJitConstants(const DeconvolutionParams& params) const;
         virtual DispatchData SetDefault(const DeconvolutionParams& params) const;
-        bool CheckPitchForSplitOnly(const DeconvolutionParams& params) const;
     };
 }

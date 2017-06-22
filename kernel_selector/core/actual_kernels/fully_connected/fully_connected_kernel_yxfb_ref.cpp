@@ -46,7 +46,7 @@ namespace KernelSelector
         const auto& orgOptParams = static_cast<const FullyConnectedOptionalParams&>(optParams);
 
         const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
-        const bool bProperInput = orgParams.inputs[0].layout == DataLayout::yxfb;
+        const bool bProperInput = orgParams.inputs[0].GetLayout() == DataLayout::yxfb;
         const bool bSupportedLayout = orgOptParams.allowReorderInput || bProperInput;
         const bool bSupportedWeightsLayout = orgParams.weights.SimpleLayout();
 
@@ -60,7 +60,7 @@ namespace KernelSelector
         
         if (!bProperInput)
         {
-            newParams.inputs[0] = newParams.inputs[0].transform(DataLayout::yxfb);
+            newParams.inputs[0] = newParams.inputs[0].Transform(DataLayout::yxfb);
             kd.reorderInput = true;
         }
         
@@ -74,7 +74,7 @@ namespace KernelSelector
         {
             run_info = SetKernelData(newParams);
             auto cldnn_jit = GetJitConstants(newParams, run_info);
-            cldnn_jit.AddConstant(MakeJitConstant("WEIGHTS_DIMS", newParams.weights.dims.size()));
+            cldnn_jit.AddConstant(MakeJitConstant("WEIGHTS_DIMS", newParams.weights.GetDims().size()));
             jit = CreateJit(kernelName, cldnn_jit, entry_point);
         }
         catch (const std::runtime_error& )

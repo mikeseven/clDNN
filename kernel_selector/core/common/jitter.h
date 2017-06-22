@@ -165,29 +165,29 @@ public:
     JitDefinitions GetDefinitions() const override 
     {
         JitDefinitions definitions{
-            { _name + "_TYPE",          ToCLType(_tensor.dtype) },
-            { _name + "_OFFSET",        std::to_string(_tensor.offset) },
+            { _name + "_TYPE",          ToCLType(_tensor.GetDType()) },
+            { _name + "_OFFSET",        std::to_string(_tensor.GetOffset()) },
             { _name + "_LIMIT",         std::to_string(_tensor.LengthWithPadding()) },
             { _name + "_LENGTH",        std::to_string(_tensor.Length()) },
-            { _name + "_DIMS",          std::to_string(_tensor.dims.size()) },
-            { _name + "_SIZE_X",        std::to_string(_tensor.x().v) },
-            { _name + "_SIZE_Y",        std::to_string(_tensor.y().v) },
-            { _name + "_FEATURE_NUM",   std::to_string(_tensor.feature().v) },
-            { _name + "_ROI_NUM",       std::to_string(_tensor.roi().v) },
-            { _name + "_BATCH_NUM",     std::to_string(_tensor.batch().v) },
-            { _name + "_X_PITCH",       std::to_string(_tensor.x().pitch) },
-            { _name + "_Y_PITCH",       std::to_string(_tensor.y().pitch) },
-            { _name + "_FEATURE_PITCH", std::to_string(_tensor.feature().pitch) },
-            { _name + "_ROI_PITCH",     std::to_string(_tensor.roi().pitch) },
-            { _name + "_BATCH_PITCH",   std::to_string(_tensor.batch().pitch) },
+            { _name + "_DIMS",          std::to_string(_tensor.GetDims().size()) },
+            { _name + "_SIZE_X",        std::to_string(_tensor.X().v) },
+            { _name + "_SIZE_Y",        std::to_string(_tensor.Y().v) },
+            { _name + "_FEATURE_NUM",   std::to_string(_tensor.Feature().v) },
+            { _name + "_ROI_NUM",       std::to_string(_tensor.ROI().v) },
+            { _name + "_BATCH_NUM",     std::to_string(_tensor.Batch().v) },
+            { _name + "_X_PITCH",       std::to_string(_tensor.X().pitch) },
+            { _name + "_Y_PITCH",       std::to_string(_tensor.Y().pitch) },
+            { _name + "_FEATURE_PITCH", std::to_string(_tensor.Feature().pitch) },
+            { _name + "_ROI_PITCH",     std::to_string(_tensor.ROI().pitch) },
+            { _name + "_BATCH_PITCH",   std::to_string(_tensor.Batch().pitch) },
             { _name + "_SIMPLE",        std::to_string(_tensor.SimpleLayout()) },
-            { "TO_" + _name + "_TYPE",  "convert_" + ToCLType(_tensor.dtype) },
-            { _name + "_LAYOUT_" + toString(_tensor.layout), "1" },
+            { "TO_" + _name + "_TYPE",  "convert_" + ToCLType(_tensor.GetDType()) },
+            { _name + "_LAYOUT_" + toString(_tensor.GetLayout()), "1" },
         };
 
-        definitions.push_back({ _name + "_SIZE", std::to_string(_tensor.dims.size()) });
-        definitions.push_back({ _name + "_SIZES", toVectorString(_tensor.dims, "size_t", CLDNN_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.v; }) });
-        definitions.push_back({ _name + "_PITCHES", toVectorString(_tensor.dims, "size_t", CLDNN_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.pitch; }) });
+        definitions.push_back({ _name + "_SIZE", std::to_string(_tensor.GetDims().size()) });
+        definitions.push_back({ _name + "_SIZES", toVectorString(_tensor.GetDims(), "size_t", CLDNN_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.v; }) });
+        definitions.push_back({ _name + "_PITCHES", toVectorString(_tensor.GetDims(), "size_t", CLDNN_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.pitch; }) });
 
         return definitions;
     }
@@ -210,28 +210,28 @@ public:
     JitDefinitions GetDefinitions() const override 
     {
         JitDefinitions definitions{
-            { _name + "_TYPE",          ToCLType(_tensor.wtype) },
-            { _name + "_OFFSET",        std::to_string(_tensor.offset) },
+            { _name + "_TYPE",          ToCLType(_tensor.GetDType()) },
+            { _name + "_OFFSET",        std::to_string(_tensor.GetOffset()) },
             { _name + "_LIMIT",         std::to_string(_tensor.LengthWithPadding()) },
-            { _name + "_DIMS",          std::to_string(_tensor.dims.size()) },
-            { _name + "_SIZE_X",        std::to_string(_tensor.x().v) },
-            { _name + "_SIZE_Y",        std::to_string(_tensor.y().v) },
-            { _name + "_IFM_NUM",       std::to_string(_tensor.ifm().v) },
-            { _name + "_OFM_NUM",       std::to_string(_tensor.ofm().v) },
-            { _name + "_X_PITCH",       std::to_string(_tensor.x().pitch) },
-            { _name + "_Y_PITCH",       std::to_string(_tensor.y().pitch) },
-            { _name + "_IFM_PITCH",     std::to_string(_tensor.ifm().pitch) },
-            { _name + "_OFM_PITCH",     std::to_string(_tensor.ofm().pitch) },
+            { _name + "_DIMS",          std::to_string(_tensor.GetDims().size()) },
+            { _name + "_SIZE_X",        std::to_string(_tensor.X().v) },
+            { _name + "_SIZE_Y",        std::to_string(_tensor.Y().v) },
+            { _name + "_IFM_NUM",       std::to_string(_tensor.IFM().v) },
+            { _name + "_OFM_NUM",       std::to_string(_tensor.OFM().v) },
+            { _name + "_X_PITCH",       std::to_string(_tensor.X().pitch) },
+            { _name + "_Y_PITCH",       std::to_string(_tensor.Y().pitch) },
+            { _name + "_IFM_PITCH",     std::to_string(_tensor.IFM().pitch) },
+            { _name + "_OFM_PITCH",     std::to_string(_tensor.OFM().pitch) },
             { _name + "_SIMPLE",        std::to_string(_tensor.SimpleLayout()) },
-            { "TO_" + _name + "_TYPE",  "convert_" + ToCLType(_tensor.wtype) },
-            { _name + "_LAYOUT_" + toString(_tensor.layout), "1" },
+            { "TO_" + _name + "_TYPE",  "convert_" + ToCLType(_tensor.GetDType()) },
+            { _name + "_LAYOUT_" + toString(_tensor.GetLayout()), "1" },
         };
 
         // TODO: refactor it
         
-        definitions.push_back({ _name + "_SIZE", std::to_string(_tensor.dims.size()) });
-        definitions.push_back({ _name + "_SIZES", toVectorString(_tensor.dims, "size_t", CLDNN_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.v; }) });
-        definitions.push_back({ _name + "_PITCHES", toVectorString(_tensor.dims, "size_t", CLDNN_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.pitch; }) });
+        definitions.push_back({ _name + "_SIZE", std::to_string(_tensor.GetDims().size()) });
+        definitions.push_back({ _name + "_SIZES", toVectorString(_tensor.GetDims(), "size_t", CLDNN_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.v; }) });
+        definitions.push_back({ _name + "_PITCHES", toVectorString(_tensor.GetDims(), "size_t", CLDNN_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.pitch; }) });
 
         return definitions;
     }
@@ -345,10 +345,10 @@ inline JitConstants MakeBaseParamsJitConstants(const BaseParams& params)
         params.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE ?
         params.nlParams.m : 0.f;
 
-    bool fp16_unit_used = params.output.dtype == Datatype::F16;
+    bool fp16_unit_used = params.output.GetDType() == Datatype::F16;
     for (const auto& i : params.inputs)
     {
-        fp16_unit_used |= i.dtype == Datatype::F16;
+        fp16_unit_used |= i.GetDType() == Datatype::F16;
     }
 
     JitConstants jit{
@@ -365,7 +365,7 @@ inline JitConstants MakeBaseParamsJitConstants(const BaseParams& params)
         MakeJitConstant("NL_M",                 params.nlParams.m),
         MakeJitConstant("NL_N",                 params.nlParams.n),
         MakeJitConstant("ACTIVATION_FUNCTION_"  + toString(params.activationFunc), ""),
-        MakeJitConstant("TYPE_"                 + toString(params.output.dtype), ""),
+        MakeJitConstant("TYPE_"                 + toString(params.output.GetDType()), ""),
         
     };
 
@@ -413,7 +413,7 @@ inline JitConstants MakeConvolutionParamsJitConstants(const ConvolutionParams& p
     const auto& padding = params.convParams.padding;
     const auto& input = params.inputs[0];
     
-    int64_t input_offset_with_padding = (int64_t)input.offset - padding.x*input.x().pitch - input.y().pitch*padding.y;
+    int64_t input_offset_with_padding = (int64_t)input.GetOffset() - padding.x*input.X().pitch - input.Y().pitch*padding.y;
     input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);
 
     jit.AddConstants({
@@ -434,7 +434,7 @@ inline JitConstants MakeFullyConnectedJitConstants(const FullyConnectedParams& p
 {
     JitConstants jit = MakeWeightBiasParamsJitConstants(params);
     const auto& input = params.inputs[0];
-    const auto x_size = input.Length() / input.batch().v;
+    const auto x_size = input.Length() / input.Batch().v;
 
     jit.AddConstants({
         MakeJitConstant("INPUT_ELEMENTS_COUNT",      x_size),
@@ -544,7 +544,7 @@ inline JitConstants MakeDeconvolutionJitConstants(const DeconvolutionParams& par
     const auto& padding = dp.padding;
     const auto& input = params.inputs[0];
 
-    int64_t input_offset_with_padding = (int64_t)input.offset - padding.x*input.x().pitch - input.y().pitch*padding.y;
+    int64_t input_offset_with_padding = (int64_t)input.GetOffset() - padding.x*input.X().pitch - input.Y().pitch*padding.y;
     input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);
 
     jit.AddConstants({
@@ -598,7 +598,7 @@ inline JitConstants MakeReorderJitConstants(const ReorderParams& params)
         jit.AddConstant(MakeJitConstant("MEAN_SUBTRUCT", params.reorderParams.mean));
     }
 
-    Datatype calc_type = params.inputs[0].dtype;
+    Datatype calc_type = params.inputs[0].GetDType();
     jit.AddConstants({
         MakeJitConstant("CALC_TYPE",                      ToCLType(calc_type)),
         MakeJitConstant("TO_CALC_TYPE",      "convert_" + ToCLType(calc_type)),
@@ -614,7 +614,7 @@ inline JitConstants MakeReorderWeightsJitConstants(const ReorderWeightsParams& p
 {
     const auto& input = params.reorderParams.input;
     const auto& output = params.reorderParams.output;
-    const bool fp16Supported = output.wtype == WeightsType::F16 || input.wtype == WeightsType::F16;
+    const bool fp16Supported = output.GetDType() == WeightsType::F16 || input.GetDType() == WeightsType::F16;
 
     JitConstants jit{
         MakeJitConstant("FP16_SUPPORTED",   static_cast<int>(fp16Supported)),                      // TODO: use engine

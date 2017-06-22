@@ -22,11 +22,11 @@ namespace KernelSelector
     {
         JitConstants mem_consts = MakeConvolutionParamsJitConstants(params);
 
-        if (params.inputs[0].layout == DataLayout::yxfb &&
-            params.weights.layout == WeightsLayout::yxio)
+        if (params.inputs[0].GetLayout() == DataLayout::yxfb &&
+            params.weights.GetLayout() == WeightsLayout::yxio)
         {
             const auto local_work_group_size = kd.lws0;
-            const auto batch_size = params.output.batch().v;
+            const auto batch_size = params.output.Batch().v;
 
             mem_consts.AddConstants({
                 MakeJitConstant("LOCAL_WORK_GROUP_SIZE",                            local_work_group_size),
@@ -64,20 +64,22 @@ namespace KernelSelector
 
     namespace
     {
-        bool checkTensorForSplit(const DataTensor& t, uint32_t split)
+        bool CheckTensorForSplit(const DataTensor& t, uint32_t split)
         {
             if (t.PaddingExists())
             {
-                auto new_tensor = t;
-                auto feature = t.feature();
-                auto feature_index = Tensor::channelndex(t.layout, Tensor::DataChannelName::NAME_FEATURE);
-                if (feature_index >= 0 && feature_index+1 < (int)Tensor::channelsCount(t.layout))
+                auto feature = t.Feature();
+                auto featureIndex = Tensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::FEATURE);
+                if (featureIndex >= 0 && featureIndex+1 < (int)Tensor::ChannelsCount(t.GetLayout()))
                 {
-                    if (feature.v*split <= t.dims[feature_index+1].pitch)
+                    if (feature.v*split <= t.GetDims()[featureIndex+1].pitch)
                     {
-                        new_tensor.dims[feature_index].v = feature.v*split;
+                        Tensor::NDims newDims = t.GetDims();
+                        newDims[featureIndex].v = feature.v*split;
+                        
+                        DataTensor newTensor{t.GetDType(), t.GetLayout(), t.GetPaddedVal(), t.GetOffset(), newDims};
 
-                        if (new_tensor.PaddingExists() == false)
+                        if (newTensor.PaddingExists() == false)
                         {
                             return true;
                         }
@@ -95,18 +97,18 @@ namespace KernelSelector
     {
         // TODO: it's better to add pitch+offset support than handle this case
         return
-            checkTensorForSplit(params.output, params.convParams.split) &&
-            checkTensorForSplit(params.inputs[0], params.convParams.split);
+            CheckTensorForSplit(params.output, params.convParams.split) &&
+            CheckTensorForSplit(params.inputs[0], params.convParams.split);
     }
 
     IGKConvolutionKernelBase::DispatchData IGKConvolutionKernelBase::SetDefault(const ConvolutionParams& params) const
     {
-        auto batch_size = params.output.batch().v;
-        auto output_features = params.output.feature().v;
+        auto batch_size = params.output.Batch().v;
+        auto output_features = params.output.Feature().v;
 
         DispatchData kd;
 
-        kd.fp16UnitUsed = params.inputs[0].dtype == Datatype::F16;
+        kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
         size_t gws0 = output_features * batch_size;
         size_t lws0 = std::min(gws0, static_cast<size_t>(32));
         while (gws0 % lws0)
@@ -114,8 +116,8 @@ namespace KernelSelector
             lws0--;
         }
         kd.gws0 = gws0;
-        kd.gws1 = params.output.x().v;
-        kd.gws2 = params.output.y().v;
+        kd.gws1 = params.output.X().v;
+        kd.gws2 = params.output.Y().v;
         kd.lws0 = lws0;
         kd.lws1 = 1;
         kd.lws2 = 1;

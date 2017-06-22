@@ -45,8 +45,8 @@ namespace KernelSelector
 
     IGKConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_Ref::default_yxfb(const ConvolutionParams& arg) const
     {
-        DispatchData run_info = SetDefault(arg);
-        return run_info;
+        DispatchData runInfo = SetDefault(arg);
+        return runInfo;
     }
 
     KernelsData ConvolutionKernel_yxfb_Ref::GetKernelsData(const Params& params, const OptionalParams& options) const
@@ -59,10 +59,10 @@ namespace KernelSelector
         const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
 
         const bool bSupportedWeightsLayout =
-            orgParams.weights.layout == WeightsLayout::yxio ||
-            orgParams.weights.layout == WeightsLayout::iyxo ||
-            orgParams.weights.layout == WeightsLayout::oyxi ||
-            orgParams.weights.layout == WeightsLayout::oiyx;
+            orgParams.weights.GetLayout() == WeightsLayout::yxio ||
+            orgParams.weights.GetLayout() == WeightsLayout::iyxo ||
+            orgParams.weights.GetLayout() == WeightsLayout::oyxi ||
+            orgParams.weights.GetLayout() == WeightsLayout::oiyx;
         const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
         
         if (!bSupportedActivation || !bWeightsOK)
@@ -70,11 +70,11 @@ namespace KernelSelector
             return{};
         }
 
-        DispatchData run_info;
+        DispatchData runInfo;
         
         try
         {
-            run_info = default_yxfb(orgParams);
+            runInfo = default_yxfb(orgParams);
         }
         catch (const std::runtime_error& )
         {
@@ -83,15 +83,15 @@ namespace KernelSelector
 
         KernelData kd = KernelData::Default<ConvolutionParams>(params, 1);
 
-        auto cldnn_jit = GetJitConstants(orgParams, run_info);
+        auto cldnn_jit = GetJitConstants(orgParams, runInfo);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, run_info, kernelName, jit, entry_point, true, !orgParams.bias.empty());
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, true, !orgParams.bias.empty());
         kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
-        kd.estimatedTime = run_info.effiency;
+        kd.estimatedTime = runInfo.effiency;
 
         return{ kd };
     }

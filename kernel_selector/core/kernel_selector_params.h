@@ -448,17 +448,17 @@ namespace KernelSelector
 
             for (const auto& i : inputs)
             {
-                k.SetInputDataType(i.dtype);
-                k.SetInputLayout(i.layout);
+                k.SetInputDataType(i.GetDType());
+                k.SetInputLayout(i.GetLayout());
 
-                bBatching       |= (i.batch().v > 1);
+                bBatching       |= (i.Batch().v > 1);
                 bPitches        |= (i.PaddingExists());
-                bOffests        |= (i.offset != 0);
-                bDifferentTypes |= (i.dtype != output.dtype);
+                bOffests        |= (i.GetOffset() != 0);
+                bDifferentTypes |= (i.GetDType() != output.GetDType());
             }
 
-            k.SetOutputDataType(output.dtype);
-            k.SetOutputLayout(output.layout);
+            k.SetOutputDataType(output.GetDType());
+            k.SetOutputLayout(output.GetLayout());
 
             if (bBatching)
             {
@@ -477,7 +477,7 @@ namespace KernelSelector
             }
 
             if (bOffests ||
-                output.offset != 0)
+                output.GetOffset() != 0)
             {
                 k.SetOffsetSupport();
             }
@@ -509,7 +509,7 @@ namespace KernelSelector
         {
             ParamsKey k = BaseParams::GetParamsKey();
 
-            k.SetInputWeightsType(weights.wtype);
+            k.SetInputWeightsType(weights.GetDType());
             
             // not needed - can be changed by reorder params
             //k.SetWeightsLayout(weights.layout);
@@ -520,12 +520,12 @@ namespace KernelSelector
             {
                 k.SetNonBiasSupport();
             }
-            else if (bias[0].layout == DataLayout::bf ||
-                     bias[0].layout == DataLayout::fb)
+            else if (bias[0].GetLayout() == DataLayout::bf ||
+                     bias[0].GetLayout() == DataLayout::fb)
             {
                 k.SetBiasPerFeatureMap();
             }
-            else if (bias[0].layout == output.layout)
+            else if (bias[0].GetLayout() == output.GetLayout())
             {
                 k.SetBiasPerOutput();
             }
@@ -961,10 +961,10 @@ namespace KernelSelector
             ParamsKey k;
             const auto& input = reorderParams.input;
             const auto& output = reorderParams.output;
-            k.SetWeightsLayout(input.layout);
-            k.SetWeightsLayout(output.layout);
-            k.SetInputWeightsType(input.wtype);
-            k.SetOutputWeightsType(output.wtype);
+            k.SetWeightsLayout(input.GetLayout());
+            k.SetWeightsLayout(output.GetLayout());
+            k.SetInputWeightsType(input.GetDType());
+            k.SetOutputWeightsType(output.GetDType());
 
             if (input.PaddingExists() ||
                 output.PaddingExists())
@@ -972,7 +972,7 @@ namespace KernelSelector
                 k.SetPitchesSupport();
             }
 
-            if (input.offset != 0 || output.offset != 0)
+            if (input.GetOffset() != 0 || output.GetOffset() != 0)
             {
                 k.SetOffsetSupport();
             }

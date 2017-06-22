@@ -23,51 +23,14 @@ namespace KernelSelector
         return MakeDeconvolutionJitConstants(params);
     }
 
-    namespace
-    {
-        bool checkTensorForSplit(const DataTensor& t, uint32_t split)
-        {
-            if (t.PaddingExists())
-            {
-                auto newTensor = t;
-                auto feature = t.feature();
-                auto featureIndex = Tensor::channelndex(t.layout, Tensor::DataChannelName::NAME_FEATURE);
-                if (featureIndex >= 0 && featureIndex+1 < (int)Tensor::channelsCount(t.layout))
-                {
-                    if (feature.v*split <= t.dims[featureIndex+1].pitch)
-                    {
-                        newTensor.dims[featureIndex].v = feature.v*split;
-
-                        if (newTensor.PaddingExists() == false)
-                        {
-                            return true;
-                        }
-                    }
-                }
-
-                return false;
-            }
-
-            return true;
-        }
-    }
-
-    bool IGKDeconvolutionKernelBase::CheckPitchForSplitOnly(const DeconvolutionParams& params) const
-    {
-        // TODO: it's better to add pitch+offset support than handle this case
-        return
-            checkTensorForSplit(params.output, params.deconvParams.split) &&
-            checkTensorForSplit(params.inputs[0], params.deconvParams.split);
-    }
-
     IGKDeconvolutionKernelBase::DispatchData IGKDeconvolutionKernelBase::SetDefault(const DeconvolutionParams& params) const
     {
-        auto batch_size = params.output.batch().v;
-        auto output_features = params.output.feature().v;
+        auto batch_size = params.output.Batch().v;
+        auto output_features = params.output.Feature().v;
 
         DispatchData kd;
 
-        kd.fp16UnitUsed = params.inputs[0].dtype == Datatype::F16;
+        kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
         size_t gws0 = output_features * batch_size;
         size_t lws0 = std::min(gws0, static_cast<size_t>(32));
         while (gws0 % lws0)
@@ -75,8 +38,8 @@ namespace KernelSelector
             lws0--;
         }
         kd.gws0 = gws0;
-        kd.gws1 = params.output.x().v;
-        kd.gws2 = params.output.y().v;
+        kd.gws1 = params.output.X().v;
+        kd.gws2 = params.output.Y().v;
         kd.lws0 = lws0;
         kd.lws1 = 1;
         kd.lws2 = 1;

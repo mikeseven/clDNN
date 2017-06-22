@@ -285,10 +285,10 @@ static const char* kernels_header = R"__krnl(
         return kernel_string;
     }
 
-    void IGKKernelBase::FillCLKernelData(clKernelData& kernel, const CommonDispatchData& run_info, std::string kernel_map_name, std::string jit, std::string entry_point, bool weights, bool bias) const
+    void IGKKernelBase::FillCLKernelData(clKernelData& kernel, const CommonDispatchData& runInfo, std::string kernel_map_name, std::string jit, std::string entry_point, bool weights, bool bias) const
     {
-        kernel.workGroups.global = cl::NDRange(run_info.gws0, run_info.gws1, run_info.gws2);
-        kernel.workGroups.local = cl::NDRange(run_info.lws0, run_info.lws1, run_info.lws2);
+        kernel.workGroups.global = cl::NDRange(runInfo.gws0, runInfo.gws1, runInfo.gws2);
+        kernel.workGroups.local = cl::NDRange(runInfo.lws0, runInfo.lws1, runInfo.lws2);
         kernel.kernelString = GetKernelString(kernel_map_name, jit, entry_point);
         kernel.argsDesc = GetArgsDesc(1, weights, bias);
     }

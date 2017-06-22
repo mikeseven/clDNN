@@ -40,8 +40,8 @@ namespace KernelSelector
 
         const auto& output = arg.output;
         
-        auto batch_size = output.batch().v;
-        auto response_size = output.feature().v;
+        auto batch_size = output.Batch().v;
+        auto response_size = output.Feature().v;
         //bool batch_size_pow_2 = batch_size > 0 && (batch_size & (batch_size - 1)) == 0;
 
         constexpr uint32_t unit_byte_size = sizeof(cl_half);
@@ -106,7 +106,7 @@ namespace KernelSelector
         const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
 
         const auto& output = orgParams.output;
-        const auto batches = output.batch().v;
+        const auto batches = output.Batch().v;
         const auto x_size = output.Length() / batches;
 
         const bool bSupportedBatch = (batches % 8) == 0;
@@ -119,7 +119,7 @@ namespace KernelSelector
         }
 
         float estimated_time =
-            orgParams.inputs[0].dtype == Datatype::F16 && batches >= 16 ?
+            orgParams.inputs[0].GetDType() == Datatype::F16 && batches >= 16 ?
             FORCE_PRIORITY_3 : FORCE_PRIORITY_5;
 
         return GetCommonKernelsData(params, optParams, DataLayout::fb, WeightsLayout::io, estimated_time);

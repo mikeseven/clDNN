@@ -46,23 +46,23 @@ namespace KernelSelector
 
     IGKConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b16::default_yxfb_yxio_b16(const ConvolutionParams& arg) const
     {
-        DispatchData run_info = SetDefault(arg);
+        DispatchData runInfo = SetDefault(arg);
 
-        const auto filter_ofm_num = arg.weights.ofm().v;
-        const auto batch_size = arg.output.batch().v;
+        const auto filter_ofm_num = arg.weights.OFM().v;
+        const auto batch_size = arg.output.Batch().v;
         const uint32_t min_lws = 16;
 
         const bool bInputValidated =
             (filter_ofm_num > 0) &&
             (batch_size > 0) &&
-            (arg.output.feature().v == filter_ofm_num);
+            (arg.output.Feature().v == filter_ofm_num);
 
         if (!bInputValidated)
         {
             throw std::runtime_error("Unsupported");
         }
 
-        if (arg.inputs[0].dtype == Datatype::F16)
+        if (arg.inputs[0].GetDType() == Datatype::F16)
         {
             const uint32_t min_ofm_per_wi = 16;
             const uint32_t min_batches_per_wi = 1;
@@ -75,21 +75,21 @@ namespace KernelSelector
                 throw std::runtime_error("Unsupported");
             }
 
-            run_info.ofmPerWorkItem = min_ofm_per_wi;
+            runInfo.ofmPerWorkItem = min_ofm_per_wi;
             if (batch_size % (4 * min_batches_per_wi * min_lws) == 0)
             {
-                run_info.batchesPerWorkItem = 4 * min_batches_per_wi; // USE_BLOCK_READ_2 + as_half4
+                runInfo.batchesPerWorkItem = 4 * min_batches_per_wi; // USE_BLOCK_READ_2 + as_half4
             }
             else if (batch_size % (2 * min_batches_per_wi * min_lws) == 0)
             {
-                run_info.batchesPerWorkItem = 2 * min_batches_per_wi; // USE_BLOCK_READ_1 + as_half2
+                runInfo.batchesPerWorkItem = 2 * min_batches_per_wi; // USE_BLOCK_READ_1 + as_half2
             }
             else
             {
-                run_info.batchesPerWorkItem = min_batches_per_wi;
+                runInfo.batchesPerWorkItem = min_batches_per_wi;
             }
             
-            run_info.effiency = FORCE_PRIORITY_7;
+            runInfo.effiency = FORCE_PRIORITY_7;
         }
         else
         {
@@ -100,22 +100,22 @@ namespace KernelSelector
             }
             else
             {
-                run_info.ofmPerWorkItem = 8;
-                run_info.batchesPerWorkItem = 2;
+                runInfo.ofmPerWorkItem = 8;
+                runInfo.batchesPerWorkItem = 2;
             }
 
-            run_info.effiency = FORCE_PRIORITY_9;
+            runInfo.effiency = FORCE_PRIORITY_9;
         }
 
-        run_info.lws0 = min_lws;
-        run_info.gws0 = filter_ofm_num * batch_size / (run_info.ofmPerWorkItem * run_info.batchesPerWorkItem);
+        runInfo.lws0 = min_lws;
+        runInfo.gws0 = filter_ofm_num * batch_size / (runInfo.ofmPerWorkItem * runInfo.batchesPerWorkItem);
 
-        if (!CheckWorkGroups(run_info))
+        if (!CheckWorkGroups(runInfo))
         {
             throw std::runtime_error("Internal Error - wrong calculation of global/local work group sizes");
         }
         
-        return run_info;
+        return runInfo;
     }
 
     KernelsData ConvolutionKernel_yxfb_yxio_b16::GetKernelsData(const Params& params, const OptionalParams& options) const
@@ -126,7 +126,7 @@ namespace KernelSelector
         const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
 
         const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
-        const bool bSupportedWeightsLayout = orgParams.weights.layout == WeightsLayout::yxio;
+        const bool bSupportedWeightsLayout = orgParams.weights.GetLayout() == WeightsLayout::yxio;
         const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
 
         if (!bSupportedActivation || !bWeightsOK || !CheckPitchForSplitOnly(orgParams))
@@ -149,16 +149,16 @@ namespace KernelSelector
 
         auto cldnn_jit = GetJitConstants(orgParams, run_info);
 
-        const auto batch_size = orgParams.output.batch().v;
+        const auto batch_size = orgParams.output.Batch().v;
 
         std::string kernel_name_postfix;
-        if (orgParams.inputs[0].dtype == Datatype::F32)
+        if (orgParams.inputs[0].GetDType() == Datatype::F32)
         {
             kernel_name_postfix = "_fp32";
 
             // A LITTLE HACK, for convolutions with low number of input features don't use block reads, and it will speed up by 25%
             // TODO - investigate why is this happening
-            if (orgParams.inputs[0].feature().v > 4)
+            if (orgParams.inputs[0].Feature().v > 4)
             {
                 cldnn_jit.AddConstant(MakeJitConstant("USE_BLOCK_READ_2", ""));
             }

@@ -63,7 +63,7 @@ struct normalize_gpu : typed_primitive_impl<normalize>
             KernelSelector::NormalizeMode::ACROSS_SPATIAL :
             KernelSelector::NormalizeMode::WITHIN_SPATIAL;
         norm_params.normParams.epsilon = arg.get_primitive()->epsilon;
-        norm_params.normParams.scaleTable = ConvertDataTensor(scale_layout).flatten_fyx_2_f();
+        norm_params.normParams.scaleTable = ConvertDataTensor(scale_layout).FlattenFeatureAndSpatials();
 
         auto& kernel_selector = KernelSelector::NormalizeKernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(norm_params, norm_optional_params);

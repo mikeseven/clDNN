@@ -48,11 +48,11 @@ namespace KernelSelector
 
         DispatchData kd;
 
-        kd.fp16UnitUsed = params.inputs[0].dtype == Datatype::F16;
+        kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
         // Determine global work sizes.
-        kd.gws0 = output.batch().v * output.feature().v;    // B, F
-        kd.gws1 = output.x().v;                             // X
-        kd.gws2 = output.y().v;                             // Y
+        kd.gws0 = output.Batch().v * output.Feature().v;    // B, F
+        kd.gws1 = output.X().v;                             // X
+        kd.gws2 = output.Y().v;                             // Y
                                                             // Find largest positive local work size that is divider for global work size.
         kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
         while (kd.gws0 % kd.lws0 != 0)

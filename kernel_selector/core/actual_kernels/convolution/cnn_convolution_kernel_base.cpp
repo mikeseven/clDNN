@@ -15,12 +15,12 @@
 */
 #define _SCL_SECURE_NO_WARNINGS
 #include "cnn_convolution_kernel_base.h"
-
+#include "api/CPP/cldnn_defs.h"
 #include <algorithm>
 
 namespace KernelSelector 
 {
-    std::string CNNConvolutionKernelBase::GetConvolutionJit(const ConvolutionParams& params, SubGroupInfo& run_info, bool bPad) const
+    std::string CNNConvolutionKernelBase::GetConvolutionJit(const ConvolutionParams& params, SubGroupInfo& runInfo, bool bPad) const
     {
         std::stringstream jit;
         const auto& cp = params.convParams;
@@ -29,10 +29,10 @@ namespace KernelSelector
         {
             const size_t paddedSize =
                 params.convParams.padding.x +
-                params.convParams.padding.y*params.inputs[0].y().pitch;
+                params.convParams.padding.y*params.inputs[0].Y().pitch;
 
-            assert(params.inputs[0].offset >= paddedSize);
-            const size_t inputOffsetForPaddedPart = params.inputs[0].offset - paddedSize;
+            assert(params.inputs[0].GetOffset() >= paddedSize);
+            const size_t inputOffsetForPaddedPart = params.inputs[0].GetOffset() - paddedSize;
 
             jit << "#define INPUT_OFFEST_FOR_PADDED_PART " << inputOffsetForPaddedPart << "\n";
         }
@@ -44,9 +44,9 @@ namespace KernelSelector
             << "#define DILATION_Y ("       << cp.dilation.y << ")\n"
             << "#define INPUT_PADDING_X ("  << cp.padding.x << ")\n"
             << "#define INPUT_PADDING_Y ("  << cp.padding.y << ")\n"
-            << "#define ALIGNED_OFM ("      << cldnn::round_up_to(params.output.feature().v, run_info.subBlockDimN) << ")\n"
-            << "#define DY "                << run_info.globalWorkSizeDY << "\n"
-            << "#define DX "                << run_info.globalWorkSizeDX << "\n"
+            << "#define ALIGNED_OFM ("      << cldnn::round_up_to(params.output.Feature().v, runInfo.subBlockDimN) << ")\n"
+            << "#define DY "                << runInfo.globalWorkSizeDY << "\n"
+            << "#define DX "                << runInfo.globalWorkSizeDX << "\n"
             << "#define KERNEL_WIDTH_DIV2 " << cp.filterSize.x / 2 << "\n"
             << "#define KERNEL_SLICE_DIV2 " << (cp.filterSize.x * cp.filterSize.y) / 2 << "\n";
         

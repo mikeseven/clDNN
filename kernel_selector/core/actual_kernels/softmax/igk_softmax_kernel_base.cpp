@@ -43,17 +43,17 @@ namespace KernelSelector
             return false;
         }
         
-        if (input.layout == DataLayout::bf ||
-            input.layout == DataLayout::fb)
+        if (input.GetLayout() == DataLayout::bf ||
+            input.GetLayout() == DataLayout::fb)
         {
             return true;
         }
 
         switch (params.smParams.dim)
         {
-        case SoftmaxDim::X:         return input.y().v == 1 && input.feature().v == 1;
-        case SoftmaxDim::Y:         return input.x().v == 1 && input.feature().v == 1;
-        case SoftmaxDim::FEATURE:   return input.x().v == 1 && input.y().v == 1;
+        case SoftmaxDim::X:         return input.Y().v == 1 && input.Feature().v == 1;
+        case SoftmaxDim::Y:         return input.X().v == 1 && input.Feature().v == 1;
+        case SoftmaxDim::FEATURE:   return input.X().v == 1 && input.Y().v == 1;
         default:                    return false;
         }
     }
@@ -73,16 +73,16 @@ namespace KernelSelector
         kd.lws2 = 1;
 
 
-        kd.fp16UnitUsed = input.dtype == Datatype::F16;
+        kd.fp16UnitUsed = input.GetDType() == Datatype::F16;
         kd.leftovers = 0;
         kd.itemsNum = 0;
 
         kd.dataSetsCount = 0;
 
         // currently all derived kernels support bf/fb only
-        auto flatten_input = input.flatten_fyx_2_f();
-        kd.dataSetSize = flatten_input.feature().v;
-        kd.dataSetsCount = input.batch().v;
+        auto flatten_input = input.FlattenFeatureAndSpatials();
+        kd.dataSetSize = flatten_input.Feature().v;
+        kd.dataSetsCount = input.Batch().v;
 
         return kd;
     }
@@ -98,11 +98,11 @@ namespace KernelSelector
             return{};
         }
 
-        DispatchData run_info;
+        DispatchData runInfo;
 
         try
         {
-            run_info = SetDefault(orgParams, optParams);
+            runInfo = SetDefault(orgParams, optParams);
         }
         catch (const std::runtime_error&)
         {
@@ -111,12 +111,12 @@ namespace KernelSelector
 
         KernelData kd = KernelData::Default<SoftmaxParams>(params, 1);
 
-        auto cldnn_jit = GetJitConstants(orgParams, run_info);
+        auto cldnn_jit = GetJitConstants(orgParams, runInfo);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, run_info, kernelName, jit, entry_point);
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point);
 
         kd.estimatedTime = estimated_time;
 

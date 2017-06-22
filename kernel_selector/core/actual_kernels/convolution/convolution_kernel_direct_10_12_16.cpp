@@ -16,6 +16,7 @@
 
 #include "convolution_kernel_direct_10_12_16.h"
 #include "kernel_selector_utils.h"
+#include "api/CPP/cldnn_defs.h"
 #include <map>
 
 namespace KernelSelector {
@@ -50,7 +51,7 @@ namespace KernelSelector {
 
         const DataTensor newInput = GetConvolutionPaddedTensorDesc(orgParams);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, newInput);
-        const bool bSupportedWeightsLayout = orgParams.weights.layout == WeightsLayout::oiyx;
+        const bool bSupportedWeightsLayout = orgParams.weights.GetLayout() == WeightsLayout::oiyx;
         const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
         const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
         const bool bStrideOK = (cp.stride.x == 1 && cp.stride.y == 1);
@@ -72,7 +73,7 @@ namespace KernelSelector {
         ConvolutionParams& newParams = *params_ptr.get();
         kd.kernels.resize(1);
 
-        SubGroupInfo run_info;
+        SubGroupInfo runInfo;
 
         // for KW only
         kd.reorderInput = false;
@@ -93,28 +94,28 @@ namespace KernelSelector {
 
         if (bFilter5x5)
         {
-            run_info = SubGroupInfo(1, 1, TILE_N, 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 4, 1);
+            runInfo = SubGroupInfo(1, 1, TILE_N, 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 4, 1);
         }
         else if (bFilter3x3)
         {
-            run_info = SubGroupInfo(1, 1, TILE_N, 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 3, 1);
+            runInfo = SubGroupInfo(1, 1, TILE_N, 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 3, 1);
         }
         const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
-        jit << "#define RIGHT_PARTIAL_TILE_K " << orgParams.output.x().v % run_info.globalWorkSizeDX << "\n"
+        jit << "#define RIGHT_PARTIAL_TILE_K " << orgParams.output.X().v % runInfo.globalWorkSizeDX << "\n"
             << GetBaseJit(newParams, kernel_id)
-            << GetConvolutionJit(newParams, run_info, true);
+            << GetConvolutionJit(newParams, runInfo, true);
 
         auto& kernel = kd.kernels[0];
         kernel.workGroups.global = cl::NDRange(
-            cldnn::round_up_to(orgParams.output.x().v, run_info.globalWorkSizeDX) / run_info.globalWorkSizeDX,
-            cldnn::round_up_to(orgParams.output.y().v, run_info.globalWorkSizeDY) / run_info.globalWorkSizeDY,
-            cldnn::round_up_to(orgParams.output.feature().v, TILE_N) * orgParams.output.batch().v);
+            cldnn::round_up_to(orgParams.output.X().v, runInfo.globalWorkSizeDX) / runInfo.globalWorkSizeDX,
+            cldnn::round_up_to(orgParams.output.Y().v, runInfo.globalWorkSizeDY) / runInfo.globalWorkSizeDY,
+            cldnn::round_up_to(orgParams.output.Feature().v, TILE_N) * orgParams.output.Batch().v);
 
         kernel.workGroups.local = cl::NDRange(
-            run_info.localWorkSizeX,
-            run_info.localWorkSizeY,
-            run_info.localWorkSizeZ);
+            runInfo.localWorkSizeX,
+            runInfo.localWorkSizeY,
+            runInfo.localWorkSizeZ);
 
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id, AGE_BASED);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
