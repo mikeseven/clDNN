@@ -25,12 +25,12 @@
 
 // must be 8 as long as we use block_read8/write8
 #define ELEMENTS_PER_WORK_ITEM 8
-
 #define WORK_GROUP_SIZE 16
+#define INPUT_ELEMENTS_COUNT (INPUT0_LENGTH/INPUT0_BATCH_NUM)
 
 __attribute__((reqd_work_group_size(1, WORK_GROUP_SIZE, 1)))
 __attribute__((intel_reqd_sub_group_size(WORK_GROUP_SIZE)))
-KERNEL (concatenation_gpu_depth_bfyx_no_padding)(__global float* input, __global float* output, uint depth_offset)
+KERNEL (concatenation_gpu_depth_bfyx_no_padding)(__global float* input, __global float* output)
 {
     const uint batch_id = get_group_id(0);
 
@@ -40,16 +40,14 @@ KERNEL (concatenation_gpu_depth_bfyx_no_padding)(__global float* input, __global
 
     const uint element_group_offset = element_group_id * WORK_GROUP_SIZE * ELEMENTS_PER_WORK_ITEM;
 
-    uint input_offset = element_group_offset + batch_id * INPUT_FEATURE_NUM * INPUT_SIZE_X * INPUT_SIZE_Y;
-    uint output_batch_offset = batch_id * OUTPUT_FEATURE_NUM * OUTPUT_SIZE_X * OUTPUT_SIZE_Y;
-    uint output_offset = element_group_offset + output_batch_offset;
-    uint depth_offset_size = OUTPUT_SIZE_X * OUTPUT_SIZE_Y * depth_offset;
-    output_offset += depth_offset_size;
+    const uint input_offset = INPUT_OFFSET + element_group_offset + batch_id * INPUT0_BATCH_PITCH;
+    const uint output_batch_offset = batch_id * OUTPUT_BATCH_PITCH;
+    const uint output_offset = OUTPUT_OFFSET + element_group_offset + output_batch_offset;
 
     //Check if current group in batch starts from 16-byte aligned pos. If not then move block read to 16-byte aligned position.
     //Requirement for intel_sub_group_block_write8.
     uint align_offset = 0;
-    uint group_start_pos = element_group_offset + output_batch_offset + depth_offset_size;
+    const uint group_start_pos = output_offset;
     if(group_start_pos % WORK_GROUP_SIZE != 0)
     {
         uint next_aligned_pos = group_start_pos / WORK_GROUP_SIZE * WORK_GROUP_SIZE + WORK_GROUP_SIZE;
@@ -83,5 +81,6 @@ KERNEL (concatenation_gpu_depth_bfyx_no_padding)(__global float* input, __global
     }
 }
 
+#undef INPUT_ELEMENTS_COUNT
 #undef WORK_GROUP_SIZE
 #undef ELEMENTS_PER_WORK_ITEM

@@ -100,6 +100,13 @@ namespace KernelSelector
                             uint32_t dimY : 1;
                             uint32_t dimFeature : 1;
                         } softmax;
+                        struct concat_t
+                        {
+                            uint32_t axisX : 1;
+                            uint32_t axisY : 1;
+                            uint32_t axisFeature : 1;
+                            uint32_t axisBatch : 1;
+                        } concat;
                     } dedicated;
                 } val;
                 uint64_t raw;
@@ -374,6 +381,27 @@ namespace KernelSelector
                 break;
             case SoftmaxDim::FEATURE:
                 key.restrict.val.dedicated.softmax.dimFeature = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
+        void SetConcatAxis(ConcatAxis a)
+        {
+            switch (a)
+            {
+            case ConcatAxis::X:
+                key.restrict.val.dedicated.concat.axisX = 1;
+                break;
+            case ConcatAxis::Y:
+                key.restrict.val.dedicated.concat.axisY = 1;
+                break;
+            case ConcatAxis::FEATURE:
+                key.restrict.val.dedicated.concat.axisFeature = 1;
+                break;
+            case ConcatAxis::BATCH:
+                key.restrict.val.dedicated.concat.axisBatch = 1;
                 break;
             default:
                 break;
@@ -1022,6 +1050,28 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ConcatenationParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ConcatenationParams : public BaseParams
+    {
+        ConcatenationParams() : BaseParams(KernelType::CONCATENATION), concatParams() {}
+
+        struct DedicatedParams
+        {
+            ConcatAxis axis = ConcatAxis::FEATURE;
+        };
+
+        DedicatedParams concatParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            auto k =  BaseParams::GetParamsKey();
+            k.SetConcatAxis(concatParams.axis);
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // OptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct OptionalParams
@@ -1193,5 +1243,13 @@ namespace KernelSelector
     struct ConvertOptionalParams : OptionalParams
     {
         ConvertOptionalParams() : OptionalParams(KernelType::CONVERT) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ConcatenationOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ConcatenationOptionalParams : OptionalParams
+    {
+        ConcatenationOptionalParams() : OptionalParams(KernelType::CONCATENATION) {}
     };
 }

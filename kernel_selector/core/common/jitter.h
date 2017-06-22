@@ -644,4 +644,18 @@ inline JitConstants MakeROIPoolingV1JitConstants(const ROIPoolingV1Params& param
     return jit;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MakeConcatenationJitConstants
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+inline JitConstants MakeConcatenationJitConstants(const ConcatenationParams& params)
+{
+    JitConstants jit = MakeBaseParamsJitConstants(params);
+
+    jit.AddConstants({
+        MakeJitConstant("CONCAT_" + toString(params.concatParams.axis), 1),
+    });
+
+    return jit;
+}
+
 }

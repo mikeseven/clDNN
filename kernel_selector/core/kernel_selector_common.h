@@ -423,4 +423,16 @@ namespace KernelSelector {
             break;
         }
     }
+
+    inline std::string toString(ConcatAxis a)
+    {
+        switch (a)
+        {
+        case ConcatAxis::X:         return "X";
+        case ConcatAxis::Y:         return "Y";
+        case ConcatAxis::FEATURE:   return "FEATURE";
+        case ConcatAxis::BATCH:     return "BATCH";
+        default: return "";
+        }
+    }
 }
