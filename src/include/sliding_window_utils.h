@@ -16,6 +16,7 @@
 
 #include <api/CPP/tensor.hpp>
 
+#include <algorithm>
 #include <cassert>
 #include <stdexcept>
 
@@ -51,7 +52,7 @@ enum class swor_mode
 /// @param degen_val  If values from calculation are in allowed range, but calculated output size is invalid,
 ///                   the @p degen_val is returned. Any non-positive value is considered degenerated and will be
 ///                   switched to value passed in this parameter.
-/// @return Output range (size) of sliding window.
+/// @return Output range (size) of sliding window. Only spatial dimensions are valid (rest is 0).
 template <swor_mode RangeMode = swor_mode::all>
 tensor calc_sliding_window_output_range(const tensor& input_size,
                                         const tensor& size,
@@ -88,9 +89,14 @@ inline tensor calc_sliding_window_output_range<swor_mode::all>(
         throw std::invalid_argument("Sliding window h/v input dialations must be positive (>= 1).");
 
     auto off_factor = sym_offset ? 2 : 1;
-    tensor wnd_ext_size{1, 1, (size.spatial[0] - 1) * dilation.spatial[0] + 1,
+    tensor wnd_ext_size{0, 0, (size.spatial[0] - 1) * dilation.spatial[0] + 1,
                               (size.spatial[1] - 1) * dilation.spatial[1] + 1};
 
+    // wes = (size - 1) * dilation + 1
+    // lpos(i) = offset + i * stride + wes - 1,   for i = 0, 1, ...
+    //
+    // output_range = max {i | lpos(i) < input_size - offset} + 1,   if sym_offset is true
+    // output_range = max {i | lpos(i) < input_size} + 1,            if sym_offset is false
     auto output_range_x = static_cast<cldnn::tensor::value_type>(
         off_factor * offset.spatial[0] + wnd_ext_size.spatial[0] <= input_size.spatial[0]
             ? (input_size.spatial[0] - off_factor * offset.spatial[0] - wnd_ext_size.spatial[0]) / stride.spatial[0] + 1
@@ -100,7 +106,7 @@ inline tensor calc_sliding_window_output_range<swor_mode::all>(
             ? (input_size.spatial[1] - off_factor * offset.spatial[1] - wnd_ext_size.spatial[1]) / stride.spatial[1] + 1
             : degen_val);
 
-    return {1, 1, output_range_x, output_range_y};
+    return {0, 0, output_range_x, output_range_y};
 }
 
 template <>
@@ -118,19 +124,26 @@ inline tensor calc_sliding_window_output_range<swor_mode::exceed_once>(
         throw std::invalid_argument("Sliding window h/v input dialations must be positive (>= 1).");
 
     auto off_factor = sym_offset ? 2 : 1;
-    tensor wnd_ext_size{1, 1, (size.spatial[0] - 1) * dilation.spatial[0] + 1,
+    tensor wnd_ext_size{0, 0, (size.spatial[0] - 1) * dilation.spatial[0] + 1,
                               (size.spatial[1] - 1) * dilation.spatial[1] + 1};
+    tensor extend = tensor::max(wnd_ext_size, stride);
 
+    // wes = (size - 1) * dilation + 1
+    // fpos(i) = offset + i * stride,             for i = 0, 1, ...
+    // lpos(i) = offset + i * stride + wes - 1,   for i = 0, 1, ...
+    //
+    // output_range = max {i | lpos(i) < input_size - offset - 1 and fpos(i + 1) < input_size - offset} + 2,   if sym_offset is true
+    // output_range = max {i | lpos(i) < input_size - 1          and fpos(i + 1) < input_size} + 2,            if sym_offset is false
     auto output_range_x = static_cast<cldnn::tensor::value_type>(
-        off_factor * offset.spatial[0] + wnd_ext_size.spatial[0] <= input_size.spatial[0] + stride.spatial[0] - 1
-            ? (input_size.spatial[0] - off_factor * offset.spatial[0] - wnd_ext_size.spatial[0] + stride.spatial[0] - 1) / stride.spatial[0] + 1
+        off_factor * offset.spatial[0] + extend.spatial[0] <= input_size.spatial[0] + stride.spatial[0] - 1
+            ? (input_size.spatial[0] - off_factor * offset.spatial[0] - extend.spatial[0] + stride.spatial[0] - 1) / stride.spatial[0] + 1
             : degen_val);
     auto output_range_y = static_cast<cldnn::tensor::value_type>(
-        off_factor * offset.spatial[1] + wnd_ext_size.spatial[1] <= input_size.spatial[1] + stride.spatial[1] - 1
-            ? (input_size.spatial[1] - off_factor * offset.spatial[1] - wnd_ext_size.spatial[1] + stride.spatial[1] - 1) / stride.spatial[1] + 1
+        off_factor * offset.spatial[1] + extend.spatial[1] <= input_size.spatial[1] + stride.spatial[1] - 1
+            ? (input_size.spatial[1] - off_factor * offset.spatial[1] - extend.spatial[1] + stride.spatial[1] - 1) / stride.spatial[1] + 1
             : degen_val);
 
-    return {1, 1, output_range_x, output_range_y};
+    return {0, 0, output_range_x, output_range_y};
 }
 
 template <>
@@ -149,6 +162,10 @@ inline tensor calc_sliding_window_output_range<swor_mode::any>(
 
     auto off_factor = sym_offset ? 2 : 1;
 
+    // fpos(i) = offset + i * stride,             for i = 0, 1, ...
+    //
+    // output_range = max {i | fpos(i) < input_size - offset} + 1,   if sym_offset is true
+    // output_range = max {i | fpos(i) < input_size} + 1,            if sym_offset is false
     auto output_range_x = static_cast<cldnn::tensor::value_type>(
         off_factor * offset.spatial[0] <= input_size.spatial[0] - 1
             ? (input_size.spatial[0] - off_factor * offset.spatial[0] - 1) / stride.spatial[0] + 1
@@ -158,7 +175,7 @@ inline tensor calc_sliding_window_output_range<swor_mode::any>(
             ? (input_size.spatial[1] - off_factor * offset.spatial[1] - 1) / stride.spatial[1] + 1
             : degen_val);
 
-    return {1, 1, output_range_x, output_range_y};
+    return {0, 0, output_range_x, output_range_y};
 }
 
 
@@ -198,7 +215,7 @@ inline tensor calc_sliding_window_needed_input_range(const tensor& output_size,
         throw std::invalid_argument("Sliding window h/v input dialations must be positive (>= 1).");
 
     auto off_factor = sym_offset ? 2 : 1;
-    tensor wnd_ext_size{1, 1, (size.spatial[0] - 1) * dilation.spatial[0] + 1,
+    tensor wnd_ext_size{0, 0, (size.spatial[0] - 1) * dilation.spatial[0] + 1,
                               (size.spatial[1] - 1) * dilation.spatial[1] + 1};
 
     auto output_range_x = off_factor * offset.spatial[0] + (output_size.spatial[0] - 1) * stride.spatial[0] + wnd_ext_size.spatial[0];
@@ -209,7 +226,7 @@ inline tensor calc_sliding_window_needed_input_range(const tensor& output_size,
     if (output_range_y <= 0)
         output_range_y = degen_val;
 
-    return {1, 1, output_range_x, output_range_y};
+    return {0, 0, output_range_x, output_range_y};
 }
 
 } //namespace cldnn
