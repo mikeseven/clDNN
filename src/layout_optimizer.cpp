@@ -184,6 +184,23 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_format, expected_tensor);
 }
 
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const detection_output>, boost::optional<layout> const& output_layout)
+{
+    auto expected_tensor = current_layout.size;
+    auto expected_data_type = data_types::f32;
+    auto expected_format = current_layout.format;
+
+    if (type != data_type::input)
+        throw std::runtime_error("Unsupported data type in layout_optimizer::get_expected_layout for detection-output primitive");
+
+    if (output_layout)
+    {
+        expected_data_type = output_layout.get().data_type;
+    }
+
+    return layout(expected_data_type, expected_format, expected_tensor);
+}
+
 std::pair<std::shared_ptr<cldnn::reorder>, bool>
 layout_optimizer::create_reorder_if_needed(const layout& current_layout, const cldnn::primitive_id& memid, layout const& expected_layout)
 {

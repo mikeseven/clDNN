@@ -32,7 +32,7 @@
 
 #include "convolution_inst.h"
 #include "concatenation_inst.h"
-
+#include "detection_output_inst.h"
 
 namespace cldnn
 {
@@ -418,12 +418,33 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
         }
     };
 
+    const auto reorder_input_detection_output = [this, &lo](typed_program_node<detection_output>& detection_output_node)
+    {
+        auto detection_output_prim = detection_output_node.get_primitive();
+         
+        for (size_t i = 0; i < detection_output_node.get_dependencies().size(); i++)
+        {
+            auto& input = detection_output_node.get_dependency(i);
+            std::shared_ptr<reorder> new_input = lo.get_reorder(
+                input.get_output_layout(),
+                input.id(),
+                layout_optimizer::data_type::input,
+                detection_output_prim).first;
+
+            if (new_input)
+            {
+                add_intermediate(new_input, detection_output_node, i);
+            }
+        }
+    };
+
     for (auto& prim : processing_order)
     {
         //there's an assumption that only convolution will take data/input_layout as input
         //exception to that rule would be a convolution which takes a reorder as input - see reoder_input above
-        do_for_types<convolution>(*prim,
-            reorder_input       //case for convolution
+        do_for_types<convolution, detection_output>(*prim,
+            reorder_input,                  //case for convolution
+            reorder_input_detection_output  //case for detection-output
             );
     }
 }
