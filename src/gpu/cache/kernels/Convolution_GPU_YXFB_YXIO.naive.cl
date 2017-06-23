@@ -88,7 +88,7 @@ KERNEL(convolution_gpu_yxfb_yxio)(
                         {
                             result = mad(input[input_idx], filter[filter_idx], result);
                             filter_idx += FILTER_OUTPUT_FEATURE_NUM;
-                            input_idx += batch_num;
+                            input_idx += input_buffer_batch_num;
                         }
                     }
                 }
