@@ -29,6 +29,12 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
 #endif
     uint split_idx)
 {
+    //constexpr:
+    const uint input_buffer_size_x = INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X + INPUT_PADDING_UPPER_SIZE_X;
+    const uint input_buffer_size_y = INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y + INPUT_PADDING_UPPER_SIZE_Y;
+    const uint input_buffer_feature_num = INPUT_PADDING_LOWER_FEATURE_NUM + INPUT_FEATURE_NUM + INPUT_PADDING_UPPER_FEATURE_NUM;
+    const uint input_buffer_batch_num = INPUT_PADDING_LOWER_BATCH_NUM + INPUT_BATCH_NUM + INPUT_PADDING_UPPER_BATCH_NUM;
+
     const uint linear_id_xy = get_global_id(1) + get_global_size(1) * get_global_id(2);
     // we're computing 8 OUTPUT_FEATURE_MAP so we must divide by 8, but we got 8 batches, so no division is needed.
     uint global_id = (((uint)get_global_id(0) / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM)) * WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS;
@@ -73,9 +79,9 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
 
                     if(!zero)
                     {
-                        int input_idx = (input_offset_x + (input_offset_y * INPUT_SIZE_X)) * INPUT_FEATURE_NUM * INPUT_BATCH_NUM;
-                        input_idx += split_idx * FILTER_INPUT_FEATURE_NUM * INPUT_BATCH_NUM;
-                        input_idx += out_batch_id;
+                        int input_idx = ((INPUT_PADDING_LOWER_SIZE_X + input_offset_x) + ((INPUT_PADDING_LOWER_SIZE_Y + input_offset_y) * input_buffer_size_x)) * input_buffer_feature_num * input_buffer_batch_num;
+                        input_idx += (INPUT_PADDING_LOWER_FEATURE_NUM + split_idx * FILTER_INPUT_FEATURE_NUM) * input_buffer_batch_num;
+                        input_idx += INPUT_PADDING_LOWER_BATCH_NUM + out_batch_id;
 
                         //sub_group_id used as offset to make each workitem load different filter, and then shuffle it
                         int filter_idx = ofm_offset + sub_group_id + FILTER_INPUT_FEATURE_NUM * (FILTER_OUTPUT_FEATURE_NUM * (i * FILTER_SIZE_X + j));
@@ -87,7 +93,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
                             float8 _filter = TRANSPOSE_BLOCK_8(filter[filter_idx]);
                             _data[0] = mad(_input.s0, _filter, _data[0]);
                             _data[1] = mad(_input.s1, _filter, _data[1]);
-                            input_idx += INPUT_BATCH_NUM;
+                            input_idx += input_buffer_batch_num;
 #else
                             float8 _filter = TRANSPOSE_BLOCK_8(filter[filter_idx]);
                             for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
@@ -95,7 +101,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
                                 _data[s] = mad(input[input_idx], _filter, _data[s]);
                                 input_idx += LOCAL_WORK_GROUP_SIZE;
                             }
-                            input_idx += INPUT_BATCH_NUM - BATCHES_PER_WORK_ITEM * LOCAL_WORK_GROUP_SIZE;
+                            input_idx += input_bufer_batch_num - BATCHES_PER_WORK_ITEM * LOCAL_WORK_GROUP_SIZE;
 #endif
                             filter_idx += FILTER_OUTPUT_FEATURE_NUM;
                         }
