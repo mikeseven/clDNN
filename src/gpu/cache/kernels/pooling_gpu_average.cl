@@ -25,7 +25,6 @@ KERNEL(pooling_gpu_average)(const __global UNIT_TYPE* input, __global UNIT_TYPE*
     const int input_buffer_size_y = INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y + INPUT_PADDING_UPPER_SIZE_Y;
     const uint output_buffer_size_x = OUTPUT_PADDING_LOWER_SIZE_X + OUTPUT_SIZE_X + OUTPUT_PADDING_UPPER_SIZE_X;
 
-
     const uint linear_id_xyz = (uint)get_global_id(0) + (uint)get_global_size(0) * (((uint)get_global_id(1) + OUTPUT_PADDING_LOWER_SIZE_X) + (uint)output_buffer_size_x * ((uint)get_global_id(2) + OUTPUT_PADDING_LOWER_SIZE_Y));
 
     const uint x = get_global_id(1);
@@ -50,5 +49,14 @@ KERNEL(pooling_gpu_average)(const __global UNIT_TYPE* input, __global UNIT_TYPE*
         }
         input_idx += OUTPUT_BATCH_NUM * INPUT_FEATURE_NUM * (input_buffer_size_x - WINDOW_SIZE_X);
     }
+
+#if DYNAMIC_AVERAGE
+    const uint last_x = x * STRIDE_SIZE_X + WINDOW_SIZE_X;
+    const uint items_x = (last_x <= INPUT_SIZE_X ? WINDOW_SIZE_X : WINDOW_SIZE_X - last_x + INPUT_SIZE_X);
+    const uint last_y = y * STRIDE_SIZE_Y + WINDOW_SIZE_Y;
+    const uint items_y = (last_y <= INPUT_SIZE_Y ? WINDOW_SIZE_Y : WINDOW_SIZE_Y - last_y + INPUT_SIZE_Y);
+    output[linear_id_xyz] = result / (UNIT_TYPE)(items_x * items_y);
+#else
     output[linear_id_xyz] = result / (UNIT_TYPE)(WINDOW_SIZE_Y * WINDOW_SIZE_X);
+#endif
 }

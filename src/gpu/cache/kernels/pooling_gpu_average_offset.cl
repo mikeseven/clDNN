@@ -57,5 +57,19 @@ KERNEL(pooling_gpu_average_offset)(const __global UNIT_TYPE* input, __global UNI
             }
         }
     }
+
+#if DYNAMIC_AVERAGE
+    const uint last_x = x * STRIDE_SIZE_X + WINDOW_SIZE_X + INPUT_OFFSET_SIZE_X;
+    uint items_x = (last_x <= INPUT_SIZE_X ? WINDOW_SIZE_X : WINDOW_SIZE_X - last_x+- INPUT_SIZE_X);
+    if (INPUT_OFFSET_SIZE_X < 0 && x * STRIDE_SIZE_X < INPUT_OFFSET_SIZE_X)
+        items_x -= (INPUT_OFFSET_SIZE_X - x * STRIDE_SIZE_X);
+    const uint last_y = y * STRIDE_SIZE_Y + WINDOW_SIZE_Y + INPUT_OFFSET_SIZE_Y;
+    uint items_y = (last_y <= INPUT_SIZE_Y ? WINDOW_SIZE_Y : WINDOW_SIZE_Y - last_y + INPUT_SIZE_Y);
+    if (INPUT_OFFSET_SIZE_Y < 0 && y * STRIDE_SIZE_Y < INPUT_OFFSET_SIZE_Y)
+        items_y -= (INPUT_OFFSET_SIZE_Y - y * STRIDE_SIZE_Y);
+
+    output[linear_id_xyz] = result / (UNIT_TYPE)(items_x * items_y);
+#else
     output[linear_id_xyz] = result / (UNIT_TYPE)(WINDOW_SIZE_Y * WINDOW_SIZE_X);
+#endif
 }

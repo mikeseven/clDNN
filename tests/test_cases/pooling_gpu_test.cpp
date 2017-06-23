@@ -847,6 +847,124 @@ TEST(pooling_forward_gpu, max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_inpad2x1_ou
     }
 }
 
+template <class DataType>
+static void generic_average_wo_offset_test(format fmt, tensor output, tensor input, tensor window, tensor stride, tensor offset)
+{
+    constexpr auto dt = std::is_same<DataType, float>::value ? data_types::f32 : data_types::f16;
+
+    engine eng;
+
+    auto input_mem = memory::allocate(eng, layout{ dt, fmt, input });
+    set_values(input_mem, std::vector<DataType>(input.count(), DataType()));
+    std::vector<DataType> expected_output(output.count(), DataType());
+
+    topology tpl;
+    tpl.add(input_layout("in", input_mem.get_layout()));
+
+    auto pool_in = "in";
+    if (offset != tensor())
+    {
+        tpl.add(reorder("reorder", "in", input_mem.get_layout().with_padding(offset.negate().sizes())));
+        pool_in = "reorder";
+    }
+    tpl.add(pooling("pool", pool_in, pooling_mode::average_no_padding, window, stride, offset));
+
+    network net(eng, tpl);
+    net.set_input_data("in", input_mem);
+    auto output_mem = net.execute().at("pool").get_memory();
+
+    ASSERT_TRUE(output_mem.count() == expected_output.size());
+    EXPECT_TRUE(output_mem.get_layout().size == output);
+    auto out_ptr = output_mem.pointer<DataType>();
+
+    for (size_t i = 0; i < expected_output.size(); ++i)
+        EXPECT_FLOAT_EQ(out_ptr[i], expected_output[i]);
+}
+
+//bfyx fp32
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i3x3_w2x2_s2x2)
+{
+    generic_average_wo_offset_test<float>(format::bfyx, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{});
+}
+
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i3x3_w2x2_s2x2_o1x1)
+{
+    generic_average_wo_offset_test<float>(format::bfyx, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i3x3_w2x2_s3x3_o1x1)
+{
+    generic_average_wo_offset_test<float>(format::bfyx, spatial(2, 2), spatial(3, 3), spatial(3, 3), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i1x1_w3x3_s1x1_o1x1)
+{
+    generic_average_wo_offset_test<float>(format::bfyx, spatial(1, 1), spatial(1, 1), spatial(3, 3), tensor{ 0,0,1,1 }, tensor{ 0,0,-1,-1 });
+}
+
+//bfyx fp16
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i3x3_w2x2_s2x2_fp16)
+{
+    generic_average_wo_offset_test<FLOAT16>(format::bfyx, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{});
+}
+
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i3x3_w2x2_s2x2_o1x1_fp16)
+{
+    generic_average_wo_offset_test<FLOAT16>(format::bfyx, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i3x3_w2x2_s3x3_o1x1_fp16)
+{
+    generic_average_wo_offset_test<FLOAT16>(format::bfyx, spatial(2, 2), spatial(3, 3), spatial(3, 3), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i1x1_w3x3_s1x1_o1x1_fp16)
+{
+    generic_average_wo_offset_test<FLOAT16>(format::bfyx, spatial(1, 1), spatial(1, 1), spatial(3, 3), tensor{ 0,0,1,1 }, tensor{ 0,0,-1,-1 });
+}
+
+//yxfb fp32
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i3x3_w2x2_s2x2)
+{
+    generic_average_wo_offset_test<float>(format::yxfb, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{});
+}
+
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i3x3_w2x2_s2x2_o1x1)
+{
+    generic_average_wo_offset_test<float>(format::yxfb, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i3x3_w2x2_s3x3_o1x1)
+{
+    generic_average_wo_offset_test<float>(format::yxfb, spatial(2, 2), spatial(3, 3), spatial(3, 3), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i1x1_w3x3_s1x1_o1x1)
+{
+    generic_average_wo_offset_test<float>(format::yxfb, spatial(1, 1), spatial(1, 1), spatial(3, 3), tensor{ 0,0,1,1 }, tensor{ 0,0,-1,-1 });
+}
+
+//yxfb fp16
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i3x3_w2x2_s2x2_fp16)
+{
+    generic_average_wo_offset_test<FLOAT16>(format::yxfb, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{});
+}
+
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i3x3_w2x2_s2x2_o1x1_fp16)
+{
+    generic_average_wo_offset_test<FLOAT16>(format::yxfb, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i3x3_w2x2_s3x3_o1x1_fp16)
+{
+    generic_average_wo_offset_test<FLOAT16>(format::yxfb, spatial(2, 2), spatial(3, 3), spatial(3, 3), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i1x1_w3x3_s1x1_o1x1_fp16)
+{
+    generic_average_wo_offset_test<FLOAT16>(format::yxfb, spatial(1, 1), spatial(1, 1), spatial(3, 3), tensor{ 0,0,1,1 }, tensor{ 0,0,-1,-1 });
+}
+
 
 class pooling_test : public tests::generic_test
 {

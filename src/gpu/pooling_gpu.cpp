@@ -107,6 +107,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
             kd.kernel_name = needs_boundary ? kernel_name_max_offset : kernel_name_max;
             break;
         case cldnn::pooling_mode::average:
+        case cldnn::pooling_mode::average_no_padding:
             kd.kernel_name = needs_boundary ? kernel_name_average_offset : kernel_name_average;
             break;
 
@@ -167,7 +168,8 @@ struct pooling_gpu : typed_primitive_impl<pooling>
             gpu::make_jit_constant("UNIT_INIT_VAL_MAX", data.fp16_unit_used ? "-HALF_MAX" : "-FLT_MAX"),
             gpu::make_jit_constant("UNIT_INIT_VAL_AVG", data.fp16_unit_used ? "0.0h" : "0.0f"),
             gpu::make_jit_constant("INPUT_PADDING",     input_padding),
-            gpu::make_jit_constant("OUTPUT_PADDING",    output_padding)
+            gpu::make_jit_constant("OUTPUT_PADDING",    output_padding),
+            gpu::make_jit_constant("DYNAMIC_AVERAGE",   outer.get_primitive()->mode == pooling_mode::average_no_padding ? 1 : 0)
         };
         return mem_consts;
     }
@@ -234,11 +236,11 @@ pooling_gpu::kernel_data defauly_bfyx(const pooling_node& arg)
 
     if (needs_boundary)
     {
-        kd.kernel_name = cldnn::pooling_mode::average == arg.get_primitive()->mode ? kernel_name_bfyx_average_offset : kernel_name_bfyx_max_offset;
+        kd.kernel_name = cldnn::pooling_mode::max == arg.get_primitive()->mode ? kernel_name_bfyx_max_offset : kernel_name_bfyx_average_offset;
     }
     else
     {
-        kd.kernel_name = cldnn::pooling_mode::average == arg.get_primitive()->mode ? kernel_name_bfyx_average : kernel_name_bfyx_max;
+        kd.kernel_name = cldnn::pooling_mode::max == arg.get_primitive()->mode ? kernel_name_bfyx_max : kernel_name_bfyx_average;
     }
 
     auto output_size = arg.get_output_layout().size;

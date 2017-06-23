@@ -36,7 +36,9 @@ typedef enum /*:int32_t*/
     /// @brief Maximum-pooling method.
     cldnn_pooling_max,
     /// @brief Average-pooling method.
-    cldnn_pooling_average
+    cldnn_pooling_average,
+    /// @brief
+    cldnn_pooling_average_no_padding
 } cldnn_pooling_mode;
 
 /// @brief Performs "pooling" operation which is a form of non-linear down-sampling.

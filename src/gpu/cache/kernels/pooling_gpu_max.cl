@@ -17,6 +17,9 @@
     #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
+#if DYNAMIC_AVERAGE
+    #error Max pooling kernel selected with DYNAMIC_AVERAGE flag set
+#endif
 
 KERNEL(pooling_gpu_max)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
