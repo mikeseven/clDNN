@@ -18,6 +18,7 @@
 #include "kernel.h"
 #include "kd_selector.h"
 #include "implementation_map.h"
+#include "events_waiter.h"
 
 using namespace cldnn;
 
@@ -117,6 +118,14 @@ struct crop_gpu : typed_primitive_impl<crop>
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, crop_inst& instance) override
     {
         const auto& kd = _kernel_data;
+
+        if (outer.can_be_optimized())
+        {
+            if (events.size() == 1)
+                return events[0];
+
+            return neural::gpu::events_waiter(outer.get_program().get_engine()->get_context()).run(events);
+        }
 
         return _kernel.run<gpu::input_mem, gpu::output_mem>(
         {{ kd.gws0, kd.gws1, kd.gws2 }, { kd.lws0, kd.lws1, kd.lws2 }},
