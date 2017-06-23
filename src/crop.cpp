@@ -92,6 +92,9 @@ crop_inst::typed_primitive_inst(network_impl& network, crop_node const& node)
 
 void crop_inst::on_execute()
 {
+    if (!node.can_be_optimized())
+        return;
+
     if (_output && _output->is_the_same_buffer(input_memory()))
         return;
 

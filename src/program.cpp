@@ -642,7 +642,8 @@ void program_impl::prepare_buffer_fusing()
         // zero copy 
         do_for_types<crop>(*node, [this](crop_node& node)
         {
-            if (node.get_dependencies().size() == 1)
+            if (node.get_dependencies().size() == 1 &&
+                node.get_users().size() > 0)
             {
                 // optimization is avaiable for croping across depth(features) only
                 // if output padding has defined padding accross featuers already it wouldn't 
@@ -677,11 +678,11 @@ void program_impl::prepare_buffer_fusing()
                     in_place_pad.lower_size().feature[0] = crop_prim->offsets.feature[0];
                     in_place_pad.upper_size().feature[0] = in_place_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_prim->reference_input.feature[0];
                     in_place_layout.size.feature[0] = crop_prim->reference_input.feature[0];
-                    
+
                     node.set_output_layout(in_place_layout);
                     node.set_output_padding(padding(
-                    {in_place_pad.lower_size().batch[0], crop_prim->offsets.feature[0], in_place_pad.lower_size().spatial[0], in_place_pad.lower_size().spatial[1]},
-                    {in_place_pad.upper_size().batch[0], in_place_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_prim->reference_input.feature[0],
+                    { in_place_pad.lower_size().batch[0], crop_prim->offsets.feature[0], in_place_pad.lower_size().spatial[0], in_place_pad.lower_size().spatial[1] },
+                    { in_place_pad.upper_size().batch[0], in_place_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_prim->reference_input.feature[0],
                      in_place_pad.upper_size().spatial[0], in_place_pad.upper_size().spatial[1] }));
                     node.can_be_optimized(true);
                 }
