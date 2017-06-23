@@ -651,6 +651,7 @@ void program_impl::prepare_buffer_fusing()
                 auto format = node.get_output_layout().format;
                 auto crop_prim = node.get_primitive();
                 auto input_layout = node.get_dependency(0).get_output_layout();
+                auto in_place_layout = node.get_output_layout();
                 auto out_padd = node.get_output_layout().data_padding;
                 if (format == format::bfyx &&
                     crop_prim->reference_input.batch[0] == input_layout.size.batch[0] &&
@@ -673,17 +674,10 @@ void program_impl::prepare_buffer_fusing()
                     //  crop output buffer
                     //  |_low_pad_|__data_size__|___|<-upper pad
 
-                    auto in_place_layout = node.get_output_layout();
-                    auto in_place_pad = in_place_layout.data_padding;
-                    in_place_pad.lower_size().feature[0] = crop_prim->offsets.feature[0];
-                    in_place_pad.upper_size().feature[0] = in_place_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_prim->reference_input.feature[0];
-                    in_place_layout.size.feature[0] = crop_prim->reference_input.feature[0];
-
-                    node.set_output_layout(in_place_layout);
                     node.set_output_padding(padding(
-                    { in_place_pad.lower_size().batch[0], crop_prim->offsets.feature[0], in_place_pad.lower_size().spatial[0], in_place_pad.lower_size().spatial[1] },
-                    { in_place_pad.upper_size().batch[0], in_place_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_prim->reference_input.feature[0],
-                     in_place_pad.upper_size().spatial[0], in_place_pad.upper_size().spatial[1] }));
+                    { out_padd.lower_size().batch[0], crop_prim->offsets.feature[0], out_padd.lower_size().spatial[0], out_padd.lower_size().spatial[1] },
+                    { out_padd.upper_size().batch[0], in_place_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_prim->reference_input.feature[0],
+                        out_padd.upper_size().spatial[0], out_padd.upper_size().spatial[1] }));
                     node.can_be_optimized(true);
                 }
             }

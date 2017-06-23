@@ -280,11 +280,11 @@ TEST(crop_gpu, basic_in1x4x1x1_split) {
 
 TEST(crop_gpu, basic_in1x4x1x1_split_w_relu) {
     // Tests split with crop implementation
-    //                 _ CROP_1(1x3x1x1,offset(0x0x0x0)) --> RELU
-    //                |
-    //  INPUT(1x4x1x1)  
-    //                |_
-    //                   CROP_2(1x1x1x1,offset(0x3x0x0)) --> RELU
+    //                        _ CROP_1(1x3x1x1,offset(0x0x0x0)) --> RELU
+    //                       |
+    //  INPUT(1x4x1x1)--RELU  
+    //                       |_
+    //                          CROP_2(1x1x1x1,offset(0x3x0x0)) --> RELU
     //
     //  Reference1  : 1x3x1x1
     //  Offsets1    : 0x0x0x0
@@ -324,8 +324,9 @@ TEST(crop_gpu, basic_in1x4x1x1_split_w_relu) {
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
-    topology.add(crop("crop1", "input", tensor(batch(crop_batch_num), spatial(crop_x_size, crop_y_size), feature(crop_feature_num_1)), { tensor(feature(feature_offset_1), spatial(0,0),batch(0)) }));
-    topology.add(crop("crop2", "input", tensor(batch(crop_batch_num), spatial(crop_x_size, crop_y_size), feature(crop_feature_num_2)), { tensor(feature(feature_offset_2), spatial(0,0),batch(0)) }));
+    topology.add(activation("relu", "input", 0.0f));
+    topology.add(crop("crop1", "relu", tensor(batch(crop_batch_num), spatial(crop_x_size, crop_y_size), feature(crop_feature_num_1)), { tensor(feature(feature_offset_1), spatial(0,0),batch(0)) }));
+    topology.add(crop("crop2", "relu", tensor(batch(crop_batch_num), spatial(crop_x_size, crop_y_size), feature(crop_feature_num_2)), { tensor(feature(feature_offset_2), spatial(0,0),batch(0)) }));
     topology.add(activation("relu1", "crop1", 0.0f));
     topology.add(activation("relu2", "crop2", 0.0f));
 
@@ -335,6 +336,7 @@ TEST(crop_gpu, basic_in1x4x1x1_split_w_relu) {
     set_values(input, input_vec);
     build_options bo;
     bo.set_option(build_option::optimize_data(true));
+    bo.set_option(build_option::outputs(topology.get_primitive_ids()));
 
     network network(engine, topology, bo);
     network.set_input_data("input", input);
@@ -343,10 +345,13 @@ TEST(crop_gpu, basic_in1x4x1x1_split_w_relu) {
     auto output = outputs.at("relu1").get_memory();
     auto output_ptr = output.pointer<float>();
 
+    // check if crop has been executed in place
+    auto in_place = outputs.at("crop1").get_memory().is_the_same_buffer(outputs.at("relu").get_memory());
+    EXPECT_TRUE(in_place);
+
     for (size_t i = 0; i < out1.size();i++)
         EXPECT_EQ(output_ptr[i], out1[i]);
 
-    std::cout << std::endl;
     auto output_2 = outputs.at("relu2").get_memory();
     auto output_ptr_2 = output_2.pointer<float>();
 

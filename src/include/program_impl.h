@@ -110,11 +110,6 @@ public:
         return output_layout;
     }
 
-    void set_output_layout(layout layout)
-    {
-        output_layout = layout;
-    }
-
     void recalc_output_layout()
     {
         valid_output_layout = false;
