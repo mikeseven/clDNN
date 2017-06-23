@@ -524,7 +524,7 @@ void program_impl::optimize_weights(layout_optimizer& lo)
 }
 
 
-void program_impl::prepare_needed_upper_padding(program_node& node, program_node& prev_node,
+void program_impl::apply_needed_padding(program_node& node, program_node& prev_node,
                                                 const padding& needed_padding)
 {
     auto target_layout = prev_node.get_output_layout();
@@ -565,7 +565,7 @@ void program_impl::prepare_padding()
                 prim_node.input().get_output_layout(),
                 prim->output_size, filter_size, prim->input_offset, prim->stride, prim->dilation, false, 1);
 
-            prepare_needed_upper_padding(prim_node, prim_node.input(), needed_padding);
+            apply_needed_padding(prim_node, prim_node.input(), needed_padding);
         }
         else if (node->is_type<deconvolution>())
         {
@@ -581,7 +581,7 @@ void program_impl::prepare_padding()
                 prim_node.input().get_output_layout(),
                 prim->output_size, filter_size, prim->input_offset, prim->stride, {1, 1, 1, 1}, true, 1);
 
-            prepare_needed_upper_padding(prim_node, prim_node.input(), needed_padding);
+            apply_needed_padding(prim_node, prim_node.input(), needed_padding);
         }
         else if (node->is_type<pooling>())
         {
@@ -595,7 +595,7 @@ void program_impl::prepare_padding()
                 prim_node.input().get_output_layout(),
                 prim->output_size, prim->size, prim->input_offset, prim->stride, {1, 1, 1, 1}, false, 1);
 
-            prepare_needed_upper_padding(prim_node, prim_node.input(), needed_padding);
+            apply_needed_padding(prim_node, prim_node.input(), needed_padding);
         }
     }
 
@@ -649,8 +649,9 @@ void program_impl::prepare_padding()
         //right_padding = needed_buffer_size_x - left_padding - prev_prim_output_layout.size.spatial[0];
 
         cldnn::padding needed_padding({ 0, 0, left_padding, top_padding }, { 0, 0, right_padding, bottom_padding }, 0);
+        needed_padding = padding::max(prev_prim_output_layout.data_padding, needed_padding);
 
-        conv_input_node.merge_output_padding(needed_padding);
+        apply_needed_padding(node, conv_input_node, needed_padding);
     }
 }
 
