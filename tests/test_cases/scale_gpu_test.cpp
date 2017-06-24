@@ -428,6 +428,140 @@ TEST(scale_gpu, basic_in2x3x2x2_scale_y) {
     }
 }
 
+TEST(scale_gpu, basic_in2x3x2x2_scale_fb) {
+    //  Scale  : 2x3x2x2
+    //  Input  : 2x3x2x2
+    //  Output : 2x3x2x2
+
+    //  Input:
+    //  f0: b0:  1    2  -10   b1:   0    0    -11
+    //  f0: b0:  3    4  -14   b1:   0.5 -0.5  -15  
+    //  f1: b0:  5    6  -12   b1:   1.5  5.2  -13     
+    //  f1: b0:  7    8  -16   b1:   12   8    -17
+    //
+    //  Scale: per feature per batch
+    //  f0b0: 0.1   f0b1: 0.2
+    //  f1b0: 0.5   f1b1: 2.0
+
+    engine engine;
+
+    auto batch_num = 2;
+    auto feature_num = 2;
+    auto x_size = 3;
+    auto y_size = 2;
+
+    auto input = memory::allocate(engine, { data_types::f32,format::yxfb,{ batch_num, feature_num, x_size, y_size } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb,{ batch_num, feature_num, 1, 1 } });
+
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(input_layout("scale_input", scale_input.get_layout()));
+    topology.add(scale("scale", "input", "scale_input"));
+
+    std::vector<float> input_vec = {
+        1.f, 0.f, 5.f, 1.5f,
+        2.f, 0.f, 6.f, 5.2f,
+        -10.f, -11.f, -12.f, -13.f,
+        3.f, 0.5f, 7.f, 12.f,
+        4.f, -0.5f, 8.f, 8.f,
+        -14.f, -15.f, -16.f, -17.f };
+    set_values(input, input_vec);
+
+    std::vector<float> scale_input_vec = {
+        0.1f, 0.2f, 0.5f, 2.0f,
+    };
+    set_values(scale_input, scale_input_vec);
+
+    network network(engine, topology);
+
+    network.set_input_data("input", input);
+    network.set_input_data("scale_input", scale_input);
+
+    auto outputs = network.execute();
+
+    auto output = outputs.at("scale").get_memory();
+    auto output_ptr = output.pointer<float>();
+
+    for (int j = 0; j < feature_num; ++j) { //F
+        for (int i = 0; i < batch_num; ++i) { //B
+            for (int k = 0; k < y_size; ++k) { //Y
+                for (int l = 0; l < x_size; ++l) { //X
+                    int linear_id = i + batch_num * (j + feature_num * (l + x_size * k));
+                    int linear_id_scale = i + feature_num * j;
+                    EXPECT_NEAR(output_ptr[linear_id], input_vec[linear_id] * scale_input_vec[linear_id_scale], 1e-05F);
+                }
+            }
+        }
+    }
+}
+
+TEST(scale_gpu, basic_in2x3x2x2_scale_f) {
+    //  Scale  : 2x3x2x2
+    //  Input  : 2x3x2x2
+    //  Output : 2x3x2x2
+
+    //  Input:
+    //  f0: b0:  1    2  -10   b1:   0    0    -11
+    //  f0: b0:  3    4  -14   b1:   0.5 -0.5  -15  
+    //  f1: b0:  5    6  -12   b1:   1.5  5.2  -13     
+    //  f1: b0:  7    8  -16   b1:   12   8    -17
+    //
+    //  Scale: per feature
+    //  f0bx: 0.1   f1bx: 0.2
+
+    engine engine;
+
+    auto batch_num = 2;
+    auto feature_num = 2;
+    auto x_size = 3;
+    auto y_size = 2;
+
+    auto input = memory::allocate(engine, { data_types::f32,format::yxfb,{ batch_num, feature_num, x_size, y_size } });
+    auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, feature_num, 1, 1 } });
+
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(input_layout("scale_input", scale_input.get_layout()));
+    topology.add(scale("scale", "input", "scale_input"));
+
+    std::vector<float> input_vec = {
+        1.f, 0.f, 5.f, 1.5f,
+        2.f, 0.f, 6.f, 5.2f,
+        -10.f, -11.f, -12.f, -13.f,
+        3.f, 0.5f, 7.f, 12.f,
+        4.f, -0.5f, 8.f, 8.f,
+        -14.f, -15.f, -16.f, -17.f };
+    set_values(input, input_vec);
+
+    std::vector<float> scale_input_vec = {
+        //f0bx  //f1bx
+        0.1f,   0.2f
+    };
+    set_values(scale_input, scale_input_vec);
+
+    network network(engine, topology);
+
+    network.set_input_data("input", input);
+    network.set_input_data("scale_input", scale_input);
+
+    auto outputs = network.execute();
+
+    auto output = outputs.at("scale").get_memory();
+    auto output_ptr = output.pointer<float>();
+
+    for (int j = 0; j < feature_num; ++j) { //F
+        for (int i = 0; i < batch_num; ++i) { //B
+            for (int k = 0; k < y_size; ++k) { //Y
+                for (int l = 0; l < x_size; ++l) { //X
+                    int linear_id = i + batch_num * (j + feature_num * (l + x_size * k));
+                    int linear_id_scale = j;
+                    EXPECT_NEAR(output_ptr[linear_id], input_vec[linear_id] * scale_input_vec[linear_id_scale], 1e-05F);
+                }
+            }
+        }
+    }
+}
+
 TEST(scale_gpu, basic_in2x3x2x2_scale_x) {
     //  Scale  : 3
     //  Input  : 2x3x2x2
@@ -646,16 +780,16 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_bx) {
     //  Output : 2x3
 
     //  Input:
-    //  b0:	1		2		-0.75
-    //  b1: 0		-1.5	-3
+    //  b0: 1  2  -0.75
+    //  b1: 0 -1.5  -3
     //
     //  Scale:
-    //  b0: 3.1		0.2		0.17   
-    //  b1: 10		-3		1
+    //  b0: 3.1  0.2  0.17
+    //  b1:  10   -3     1
 
     //  Bias:
-    //  b0: -0.1	3.2		7   
-    //  b1: 0		1		-1
+    //  b0: -0.1 3.2  7
+    //  b1: 0    1   -1
 
     engine engine;
 
@@ -663,11 +797,11 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_bx) {
     auto scale_input = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 1, 3, 1 } });
     auto bias_input = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 1, 3, 1 } });
 
-	topology topology;
-	topology.add(input_layout("input", input.get_layout()));
-	topology.add(input_layout("scale_input", scale_input.get_layout()));
-	topology.add(input_layout("bias_input", scale_input.get_layout()));
-	topology.add(scale("scale", "input", "scale_input", "bias_input"));
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(input_layout("scale_input", scale_input.get_layout()));
+    topology.add(input_layout("bias_input", scale_input.get_layout()));
+    topology.add(scale("scale", "input", "scale_input", "bias_input"));
 
     std::vector<float> input_vec = {
         1.f, 2.f, -0.75f,
@@ -710,16 +844,16 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_xb) {
     //  Output : 2x3
 
     //  Input:
-    //  x0:	1		2		-0.75
-    //  x1: 0		-1.5	-3
+    //  x0: 1     2  -0.75
+    //  x1: 0  -1.5     -3
     //
     //  Scale:
-    //  x0: 3.1		0.2		0.17   
-    //  x1: 10		-3		1
+    //  x0: 3.1   0.2  0.17
+    //  x1: 10     -3     1
 
     //  Bias:
-    //  x0: -0.1	3.2		7   
-    //  x1: 0		1		-1
+    //  x0: -0.1  3.2   7
+    //  x1: 0       1  -1
 
     engine engine;
 
@@ -727,11 +861,11 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_xb) {
     auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb, { 3, 1, 2, 1 } });
     auto bias_input = memory::allocate(engine, { data_types::f32, format::yxfb, { 3, 1, 2, 1 } });
 
-	topology topology;
-	topology.add(input_layout("input", input.get_layout()));
-	topology.add(input_layout("scale_input", scale_input.get_layout()));
-	topology.add(input_layout("bias_input", scale_input.get_layout()));
-	topology.add(scale("scale", "input", "scale_input", "bias_input"));
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(input_layout("scale_input", scale_input.get_layout()));
+    topology.add(input_layout("bias_input", scale_input.get_layout()));
+    topology.add(scale("scale", "input", "scale_input", "bias_input"));
 
     std::vector<float> input_vec = {
         1.f, 2.f, -0.75f,
@@ -774,8 +908,8 @@ TEST(scale_gpu, basic_in2x3_scale_single_value_bx) {
     //  Output : 2x3
 
     //  Input:
-    //  b0:	1		2		-0.75
-    //  b1: 0		-1.5	-3
+    //  b0: 1    2 -0.75
+    //  b1: 0 -1.5    -3
     //
     //  Scale:
     //  3.1
@@ -789,11 +923,11 @@ TEST(scale_gpu, basic_in2x3_scale_single_value_bx) {
     auto scale_input = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 1, 1 } });
     auto bias_input = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 1, 1 } });
 
-	topology topology;
-	topology.add(input_layout("input", input.get_layout()));
-	topology.add(input_layout("scale_input", scale_input.get_layout()));
-	topology.add(input_layout("bias_input", scale_input.get_layout()));
-	topology.add(scale("scale", "input", "scale_input", "bias_input"));
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(input_layout("scale_input", scale_input.get_layout()));
+    topology.add(input_layout("bias_input", scale_input.get_layout()));
+    topology.add(scale("scale", "input", "scale_input", "bias_input"));
 
     std::vector<float> input_vec = {
         1.f, 2.f, -0.75f,
@@ -834,8 +968,8 @@ TEST(scale_gpu, basic_in2x3_scale_single_value_xb) {
     //  Output : 2x3
 
     //  Input:
-    //  x0:	1		2		-0.75
-    //  x1: 0		-1.5	-3
+    //  x0: 1     2 -0.75
+    //  x1: 0  -1.5    -3
     //
     //  Scale:
     //  3.1
@@ -849,11 +983,11 @@ TEST(scale_gpu, basic_in2x3_scale_single_value_xb) {
     auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 1, 1 } });
     auto bias_input = memory::allocate(engine, { data_types::f32, format::yxfb, { 1, 1, 1, 1 } });
 
-	topology topology;
-	topology.add(input_layout("input", input.get_layout()));
-	topology.add(input_layout("scale_input", scale_input.get_layout()));
-	topology.add(input_layout("bias_input", scale_input.get_layout()));
-	topology.add(scale("scale", "input", "scale_input", "bias_input"));
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(input_layout("scale_input", scale_input.get_layout()));
+    topology.add(input_layout("bias_input", scale_input.get_layout()));
+    topology.add(scale("scale", "input", "scale_input", "bias_input"));
 
     std::vector<float> input_vec = {
         1.f, 2.f, -0.75f,
@@ -893,22 +1027,22 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_no_bias_bx) {
     //  Output : 2x3
 
     //  Input:
-    //  b0:	1		2		-0.75
-    //  b1: 0		-1.5	-3
+    //  b0: 1    2 -0.75
+    //  b1: 0 -1.5    -3
     //
     //  Scale:
-    //  b0: 3.1		0.2		0.17   
-    //  b1: 10		-3		1
+    //  b0: 3.1   0.2   0.17
+    //  b1: 10     -3      1
 
     engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 1, 3, 1 } });
     auto scale_input = memory::allocate(engine, { data_types::f32, format::bfyx, { 2, 1, 3, 1 } });
 
-	topology topology;
-	topology.add(input_layout("input", input.get_layout()));
-	topology.add(input_layout("scale_input", scale_input.get_layout()));
-	topology.add(scale("scale", "input", "scale_input"));
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(input_layout("scale_input", scale_input.get_layout()));
+    topology.add(scale("scale", "input", "scale_input"));
 
     std::vector<float> input_vec = {
         1.f, 2.f, -0.75f,
@@ -943,22 +1077,22 @@ TEST(scale_gpu, basic_in2x3_scale_same_size_no_bias_xb) {
     //  Output : 2x3
 
     //  Input:
-    //  x0:	1		2		-0.75
-    //  x1: 0		-1.5	-3
+    //  x0: 1     2  -0.75
+    //  x1: 0  -1.5     -3
     //
     //  Scale:
-    //  x0: 3.1		0.2		0.17   
-    //  x1: 10		-3		1
+    //  x0: 3.1    0.2   0.17
+    //  x1: 10      -3      1
 
     engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32, format::yxfb, { 3, 1, 2, 1 } });
     auto scale_input = memory::allocate(engine, { data_types::f32, format::yxfb, { 3, 1, 2, 1 } });
 
-	topology topology;
-	topology.add(input_layout("input", input.get_layout()));
-	topology.add(input_layout("scale_input", scale_input.get_layout()));
-	topology.add(scale("scale", "input", "scale_input"));
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(input_layout("scale_input", scale_input.get_layout()));
+    topology.add(scale("scale", "input", "scale_input"));
 
     std::vector<float> input_vec = {
         1.f, 2.f, -0.75f,
@@ -1175,8 +1309,8 @@ public:
         {
             case 0: all_layer_params.push_back(new scale("scale", "input0", "input1")); break;
             case 1: all_layer_params.push_back(new scale("scale", "input0", "input1", "input2")); break;
-                    //	case 3: all_layer_params.push_back(new scale("scale", "input0", "input1", true));	// This case should be checked by negative_scale_test
-                    //	case 4: all_layer_params.push_back(new scale("scale", "input0", "input1", false));	// This case should be checked by negative_scale_test
+                    //    case 3: all_layer_params.push_back(new scale("scale", "input0", "input1", true));    // This case should be checked by negative_scale_test
+                    //    case 4: all_layer_params.push_back(new scale("scale", "input0", "input1", false));    // This case should be checked by negative_scale_test
             default: assert(0);
         }
 
@@ -1196,7 +1330,7 @@ public:
 
             for (int32_t b : test_batch_sizes)
             for (auto f : test_feature_sizes)
-            for (int mask = 0; mask < 16; ++mask)	//TODO: do we want to restrict it to some smaller subset like for (auto mask : { 0, 1, 3, 7, 15, 5, 10})? the problem is that because of the layout we might miss some interesting combinations since this is effectively hardcoded int he kernels
+            for (int mask = 0; mask < 16; ++mask)    //TODO: do we want to restrict it to some smaller subset like for (auto mask : { 0, 1, 3, 7, 15, 5, 10})? the problem is that because of the layout we might miss some interesting combinations since this is effectively hardcoded int he kernels
             {
                 const int w = t.spatial[0];
                 const int h = t.spatial[1];

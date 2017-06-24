@@ -81,13 +81,13 @@ struct normalize_gpu : typed_primitive_impl<normalize>
 
 namespace {
     struct attach 
-	{
+    {
         attach() 
-		{
+        {
             implementation_map<normalize>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), normalize_gpu::create);
             implementation_map<normalize>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), normalize_gpu::create);
-			implementation_map<normalize>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), normalize_gpu::create);
-			implementation_map<normalize>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), normalize_gpu::create);
+            implementation_map<normalize>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), normalize_gpu::create);
+            implementation_map<normalize>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), normalize_gpu::create);
         }
         ~attach() {}
     };

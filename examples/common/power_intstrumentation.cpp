@@ -35,69 +35,69 @@ static bool GetLibraryLocation(string& strLocation)
     size_t ds,sz = 0;
     if (_dupenv_s(&dir_path, &ds, "IPG_Dir") != NULL)
         return false;
-	if (dir_path == NULL || strlen(dir_path) == 0)
-	    return false;
+    if (dir_path == NULL || strlen(dir_path) == 0)
+        return false;
 
     char* version =nullptr;
     if (_dupenv_s(&version, &sz, "IPG_Ver") != NULL)
         return false;
-	if (version == NULL || strlen(version) == 0)
-		return false;
+    if (version == NULL || strlen(version) == 0)
+        return false;
 
     int ver_num = static_cast<int>(atof(version)) * 100;
-	if (ver_num >= 270)
-	{
+    if (ver_num >= 270)
+    {
 #if _M_X64
-		strLocation = string((const char*) dir_path).append("\\EnergyLib64.dll");
+        strLocation = string((const char*) dir_path).append("\\EnergyLib64.dll");
 #else
-		strLocation = string((const char*) dir_path).append("\\EnergyLib32.dll");
+        strLocation = string((const char*) dir_path).append("\\EnergyLib32.dll");
 #endif
-		return true;
-	}
-	else
-		return false;
+        return true;
+    }
+    else
+        return false;
 }
 
 CIntelPowerGadgetLib::CIntelPowerGadgetLib(void) :
-	pInitialize(NULL),
-	pGetNumNodes(NULL),
-	pGetMsrName(NULL),
-	pGetMsrFunc(NULL),
-	pGetIAFrequency(NULL),
-	pGetGTFrequency(NULL),
-	pGetTDP(NULL),
-	pGetMaxTemperature(NULL),
-	pGetTemperature(NULL),
-	pReadSample(NULL),
-	pGetTimeInterval(NULL),
-	pGetBaseFrequency(NULL),
-	pGetPowerData(NULL),
-	pStartLog(NULL),
-	pStopLog(NULL),
-	pGetNumMsrs(NULL),
-	pIsGTAvailable(NULL),
+    pInitialize(NULL),
+    pGetNumNodes(NULL),
+    pGetMsrName(NULL),
+    pGetMsrFunc(NULL),
+    pGetIAFrequency(NULL),
+    pGetGTFrequency(NULL),
+    pGetTDP(NULL),
+    pGetMaxTemperature(NULL),
+    pGetTemperature(NULL),
+    pReadSample(NULL),
+    pGetTimeInterval(NULL),
+    pGetBaseFrequency(NULL),
+    pGetPowerData(NULL),
+    pStartLog(NULL),
+    pStopLog(NULL),
+    pGetNumMsrs(NULL),
+    pIsGTAvailable(NULL),
     isInitialized(false)
 {
-	string strLocation;
-	if (GetLibraryLocation(strLocation) == false)
-	{
-		g_lastError = "Intel Power Gadget 2.7 or higher not found. If unsure, check if the path is in the user's path environment variable";
-		return;
-	}
+    string strLocation;
+    if (GetLibraryLocation(strLocation) == false)
+    {
+        g_lastError = "Intel Power Gadget 2.7 or higher not found. If unsure, check if the path is in the user's path environment variable";
+        return;
+    }
 
-	g_hModule = LoadLibrary((char*) strLocation.c_str());
-	if (g_hModule == NULL)
-	{
-		g_lastError = "LoadLibrary failed on " + strLocation; 
-		return;
-	}
-	
-	pInitialize = (IPGInitialize) GetProcAddress(g_hModule, "IntelEnergyLibInitialize");
+    g_hModule = LoadLibrary((char*) strLocation.c_str());
+    if (g_hModule == NULL)
+    {
+        g_lastError = "LoadLibrary failed on " + strLocation; 
+        return;
+    }
+    
+    pInitialize = (IPGInitialize) GetProcAddress(g_hModule, "IntelEnergyLibInitialize");
     pGetNumNodes = (IPGGetNumNodes) GetProcAddress(g_hModule, "GetNumNodes");
     pGetMsrName = (IPGGetMsrName) GetProcAddress(g_hModule, "GetMsrName");
     pGetMsrFunc = (IPGGetMsrFunc) GetProcAddress(g_hModule, "GetMsrFunc");
     pGetIAFrequency = (IPGGetIAFrequency) GetProcAddress(g_hModule, "GetIAFrequency");
-	pGetGTFrequency = (IPGGetGTFrequency) GetProcAddress(g_hModule, "GetGTFrequency");
+    pGetGTFrequency = (IPGGetGTFrequency) GetProcAddress(g_hModule, "GetGTFrequency");
     pGetTDP = (IPGGetTDP) GetProcAddress(g_hModule, "GetTDP");
     pGetMaxTemperature = (IPGGetMaxTemperature) GetProcAddress(g_hModule, "GetMaxTemperature");
     pGetTemperature = (IPGGetTemperature) GetProcAddress(g_hModule, "GetTemperature");
@@ -108,18 +108,18 @@ CIntelPowerGadgetLib::CIntelPowerGadgetLib(void) :
     pStartLog = (IPGStartLog) GetProcAddress(g_hModule, "StartLog");
     pStopLog = (IPGStopLog) GetProcAddress(g_hModule, "StopLog");
     pGetNumMsrs = (IPGGetNumMsrs) GetProcAddress(g_hModule, "GetNumMsrs");
-	pIsGTAvailable = (IPGIsGTAvailable) GetProcAddress(g_hModule, "IsGTAvailable");
+    pIsGTAvailable = (IPGIsGTAvailable) GetProcAddress(g_hModule, "IsGTAvailable");
 }
 
 CIntelPowerGadgetLib::~CIntelPowerGadgetLib(void)
 {
-	if (g_hModule != NULL)
-		FreeLibrary(g_hModule);
+    if (g_hModule != NULL)
+        FreeLibrary(g_hModule);
 }
 
 string CIntelPowerGadgetLib::GetLastError()
 {
-	return g_lastError;
+    return g_lastError;
 }
 
 bool CIntelPowerGadgetLib::IntelEnergyLibInitialize(void)
@@ -127,100 +127,100 @@ bool CIntelPowerGadgetLib::IntelEnergyLibInitialize(void)
     if (isInitialized)
         return true;
 
-	if (pInitialize == NULL)
-		return false;
-	
-	bool bSuccess = pInitialize();
-	if (!bSuccess)
-	{
-		g_lastError = "Initializing the energy library failed";
-		return false;
-	}
+    if (pInitialize == NULL)
+        return false;
+    
+    bool bSuccess = pInitialize();
+    if (!bSuccess)
+    {
+        g_lastError = "Initializing the energy library failed";
+        return false;
+    }
     isInitialized = true;
-	return isInitialized;
+    return isInitialized;
 }
 
 bool CIntelPowerGadgetLib::GetNumNodes(int * nNodes)
 {
-	return pGetNumNodes(nNodes);
+    return pGetNumNodes(nNodes);
 }
 
 bool CIntelPowerGadgetLib::GetNumMsrs(int * nMsrs)
 {
-	return pGetNumMsrs(nMsrs);
+    return pGetNumMsrs(nMsrs);
 }
 
 bool CIntelPowerGadgetLib::GetMsrName(int iMsr, wchar_t *pszName)
 {
-	return pGetMsrName(iMsr, pszName);
+    return pGetMsrName(iMsr, pszName);
 }
 
 bool CIntelPowerGadgetLib::GetMsrFunc(int iMsr, int *funcID)
 {
-	return pGetMsrFunc(iMsr, funcID);
+    return pGetMsrFunc(iMsr, funcID);
 }
 
 bool CIntelPowerGadgetLib::GetIAFrequency(int iNode, int *freqInMHz)
 {
-	return pGetIAFrequency(iNode, freqInMHz);
+    return pGetIAFrequency(iNode, freqInMHz);
 }
 
 bool CIntelPowerGadgetLib::GetGTFrequency(int *freq)
 {
-	return pGetGTFrequency(freq);
+    return pGetGTFrequency(freq);
 }
 
 bool CIntelPowerGadgetLib::GetTDP(int iNode, double *TDP)
 {
-	return pGetTDP(iNode, TDP);
+    return pGetTDP(iNode, TDP);
 }
 
 bool CIntelPowerGadgetLib::GetMaxTemperature(int iNode, int *degreeC)
 {
-	return pGetMaxTemperature(iNode, degreeC);
+    return pGetMaxTemperature(iNode, degreeC);
 }
 
 bool CIntelPowerGadgetLib::GetTemperature(int iNode, int *degreeC)
 {
-	return pGetTemperature(iNode, degreeC);
+    return pGetTemperature(iNode, degreeC);
 }
 
 bool CIntelPowerGadgetLib::ReadSample()
 {
-	bool bSuccess = pReadSample();
-	if (bSuccess == false)
-		g_lastError = "MSR overflowed. You can safely discard this sample";
-	return bSuccess;
+    bool bSuccess = pReadSample();
+    if (bSuccess == false)
+        g_lastError = "MSR overflowed. You can safely discard this sample";
+    return bSuccess;
 }
 
 bool CIntelPowerGadgetLib::GetTimeInterval(double *offset)
 {
-	return pGetTimeInterval(offset);
+    return pGetTimeInterval(offset);
 }
 
 bool CIntelPowerGadgetLib::GetBaseFrequency(int iNode, double *baseFrequency)
 {
-	return pGetBaseFrequency(iNode, baseFrequency);
+    return pGetBaseFrequency(iNode, baseFrequency);
 }
 
 bool CIntelPowerGadgetLib::GetPowerData(int iNode, int iMSR, double *results, int *nResult)
 {
-	return pGetPowerData(iNode, iMSR, results, nResult);
+    return pGetPowerData(iNode, iMSR, results, nResult);
 }
 
 bool CIntelPowerGadgetLib::StartLog(wchar_t *szFilename)
 {
-	return pStartLog(szFilename);
+    return pStartLog(szFilename);
 }
 
 bool CIntelPowerGadgetLib::StopLog()
 {
-	return pStopLog();
+    return pStopLog();
 }
 
 bool CIntelPowerGadgetLib::IsGTAvailable()
 {
-	return pIsGTAvailable();
+    return pIsGTAvailable();
 }
 
 bool CIntelPowerGadgetLib::print_power_results(double fps)

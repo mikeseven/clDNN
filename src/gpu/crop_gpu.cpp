@@ -16,6 +16,7 @@
 
 #include "crop_inst.h"
 #include "kernel.h"
+#include "events_waiter.h"
 #include "implementation_map.h"
 #include "eltwise/eltwise_kernel_selector.h"
 #include "kernel_selector_helper.h"
@@ -41,6 +42,14 @@ struct crop_gpu : typed_primitive_impl<crop>
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, crop_inst& instance) override
     {
+        if (outer.can_be_optimized())
+        {
+            if (events.size() == 1)
+                return events[0];
+
+            return neural::gpu::events_waiter(outer.get_program().get_engine()->get_context()).run(events);
+        }
+
         gpu::kernel::kernel_arguments_desc args;
         args.inputs = { &instance.input_memory() };
         args.output = &instance.output_memory();

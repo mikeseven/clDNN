@@ -753,9 +753,11 @@ namespace KernelSelector
 
         struct DedicatedParams
         {
-            size_t pooledWidth  = 0;
-            size_t pooledHeight = 0;
-            float  spatialScale = 0.f;
+            PoolType    mode         = PoolType::MAX;
+            size_t      pooledWidth  = 0;
+            size_t      pooledHeight = 0;
+            size_t      groupSize    = 0;
+            float       spatialScale = 1.f;
         };
 
         DedicatedParams roiParams;

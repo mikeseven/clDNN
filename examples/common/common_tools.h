@@ -131,6 +131,7 @@ struct execution_params {
     bool optimize_weights;
     bool use_half;
     std::string run_until_primitive_name;
+    std::string run_single_kernel_name;
 
     // for dumping
     bool        dump_hidden_layers; // dump all

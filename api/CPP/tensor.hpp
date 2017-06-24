@@ -62,7 +62,7 @@ struct format_traits
 };
 
 /// @brief Represents memory formats (orders).
-/// @n In CNN most of data is describe as 4 dimensional blocks. In Intel(R) clDNN library we describe memory with 4 letters
+/// @n In CNN most of data is described as 4 dimensional blocks. In Intel(R) clDNN library we describe memory with 4 letters
 /// - b - number of blocks in batch. For weights formats: output features - conv, neurons - inner product
 /// - f - number of feature maps, features or channels. For weights formats: input features - conv, inputs, inner product
 /// - x - spatial, width
@@ -383,11 +383,26 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const tensor& tensor)
     {
-        for (size_t i = 0; i < tensor.raw.size(); ++i)
+        os << "[b:";
+        for (size_t i = 0; i < tensor.batch.size(); ++i)
         {
-            os << tensor.raw.at(i);
-            i != (tensor.raw.size() - 1) ? os << "x" : os << "";
+            os << tensor.batch[i];
+            i != (tensor.batch.size() - 1) ? os << "," : os << "";
         }
+        os << ", f:";
+        for (size_t i = 0; i < tensor.feature.size(); ++i)
+        {
+            os << tensor.feature[i];
+            i != (tensor.feature.size() - 1) ? os << "," : os << "";
+        }
+
+        std::vector<std::string> spatials = { ", x", ", y", ", z", ", w" };
+        for (size_t i = 0; i < tensor.spatial.size(); ++i)
+        {
+            os  << spatials[i] << ":" << tensor.spatial[i];
+        }
+        os << "]";
+
         return os;
     }
 

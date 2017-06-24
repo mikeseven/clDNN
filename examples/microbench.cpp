@@ -17,7 +17,7 @@
 #include "common/common_tools.h"
 #include "file.h"
 
-
+#include <cmath>
 #include <string>
 #include <api/CPP/input_layout.hpp>
 #include <api/CPP/convolution.hpp>
@@ -93,7 +93,7 @@ void test_conv(
         { id + "_bias" },
         stride,
         offset,
-		{ 1,1,1,1 },
+        { 1,1,1,1 },
         true);
 
     topology.add(data(id + "_input", input), data(id + "_weights", weights), data(id + "_bias", bias), conv);
@@ -301,10 +301,6 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
         3, 3, // kernel size
         use_half
     );
-
-    //not used but needs to be in the topology
-    auto output = data("output", memory::allocate(engine, { input_layout.data_type, format::bfyx, tensor( 1, 1, 1, 1 ) }));
-    topology.add(output);
 
     return topology;
 }

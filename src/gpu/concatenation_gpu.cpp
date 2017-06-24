@@ -44,7 +44,7 @@ struct concatenation_gpu : typed_primitive_impl<concatenation>
     {
         auto context = outer.get_program().get_engine()->get_context();
 
-        const int inputs_count = static_cast<int>(outer.inputs_count());
+        const size_t inputs_count = outer.inputs_count();
 
         if (!outer.can_be_optimized())
         {

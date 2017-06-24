@@ -23,6 +23,13 @@
 using namespace cldnn;
 using namespace KernelSelector;
 
+static inline bool hasSingleBatchOutput(const program_node & node)
+{
+    const auto & batch = node.get_output_layout().size.batch;
+
+    return batch.empty() || (batch.size() == 1 && batch[0] == 1);
+}
+
 namespace neural
 {
 
@@ -63,6 +70,18 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
         if (input_layout.format != output_layout.format) {
             throw std::invalid_argument("ROI pooling input/output data format does not match.");
         }
+
+        auto group_sz = primitive->group_sz;
+        auto in_feat = input_layout.get_buffer_size().feature[0];
+        auto out_feat = output_layout.get_buffer_size().feature[0];
+
+        if (group_sz < 0 || (group_sz && in_feat != group_sz * group_sz * out_feat)) {
+            throw std::invalid_argument("group_sz must be either 0 (For RoIPooling) or satisfy ifm == ofm * group_sz * group_sz (For PSRoIPooling)");
+        }
+
+        if (!hasSingleBatchOutput(arg.input())) {
+            throw std::invalid_argument("PS/ RoI Pooling doesn't support batching.");
+        }
         
         auto roi_params = GetDefaultParams<ROIPoolingV1Params>(arg);
         auto roi_optional_params = GetDefaultOptionalParams<ROIPoolingOptionalParams>(arg.get_program());
@@ -70,9 +89,11 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
         const auto& out = roi_params.output;
         roi_params.inputs.push_back(ConvertDataTensor(arg.rois().get_output_layout()));
         roi_params.output = { out.GetDType(), DataLayout::brfyx, out.GetPaddedVal(), out.GetOffset(), out.GetDims() }; // TOOD: it's an hack - cldnn doesn't support roi pooling with batching
+        roi_params.roiParams.mode         = primitive->mode == pooling_mode::max ? PoolType::MAX : PoolType::AVG;
         roi_params.roiParams.pooledWidth  = primitive->pooled_width;
         roi_params.roiParams.pooledHeight = primitive->pooled_height;
         roi_params.roiParams.spatialScale = primitive->spatial_scale;
+        roi_params.roiParams.groupSize    = group_sz;
 
         auto& kernel_selector = ROIPoolingV1KernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(roi_params, roi_optional_params);

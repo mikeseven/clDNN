@@ -50,9 +50,9 @@ public:
     typed_primitive_inst(network_impl& network, activation_node const& node);
 
     const memory& input_memory() const { return dep_memory(0); }
-	const memory& slope_memory() const { return dep_memory(1); }
+    const memory& slope_memory() const { return dep_memory(1); }
 
-	bool is_parameterized() const { return !argument.negative_slope_input.empty(); }
+    bool is_parameterized() const { return !argument.negative_slope_input.empty(); }
 };
 
 using activation_inst = typed_primitive_inst<activation>;

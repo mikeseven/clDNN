@@ -22,6 +22,7 @@
 #include <assert.h>
 #include <numeric>
 #include <algorithm>
+#include <cstddef>
 
 namespace KernelSelector
 {

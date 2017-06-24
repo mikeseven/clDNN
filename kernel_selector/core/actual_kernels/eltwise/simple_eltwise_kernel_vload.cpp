@@ -43,22 +43,10 @@ namespace KernelSelector {
     {
         const EltwiseParams& ewParams = static_cast<const EltwiseParams&>(params);
 
-        if (!CheckActivationSupport(ewParams.activationFunc))
-        {
-            return false;
-        }
-
-        if (ewParams.inputs.size() != 2)
-        {
-            return false;
-        }
-
-        if (!CheckInputsOutputNoPitchSameDims(ewParams))
-        {
-            return false;
-        }
-
-        if (ewParams.eltwiseParams.operations.size() != 1)
+        if (!CheckActivationSupport(ewParams.activationFunc) ||
+            !CheckInputsOutputNoPitchSameDims(ewParams) ||
+            ewParams.eltwiseParams.operations.size() != 1 ||
+            ewParams.inputs.size() != 2)
         {
             return false;
         }
@@ -104,7 +92,7 @@ namespace KernelSelector {
         }
 
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = { newParams.inputs[0].Length()/8, 1, 1 };
+        kernel.workGroups.global = { std::max(newParams.inputs[0].Length()/8, (size_t)1), 1, 1 };
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
         kernel.argsDesc = GetArgsDesc((uint32_t)newParams.inputs.size(), false, false);

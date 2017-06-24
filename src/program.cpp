@@ -32,7 +32,8 @@
 
 #include "convolution_inst.h"
 #include "concatenation_inst.h"
-
+#include "detection_output_inst.h"
+#include "crop_inst.h"
 
 namespace cldnn
 {
@@ -329,12 +330,16 @@ void program_impl::trim_to_outputs()
         {
             processing_order.erase(node.processing_itr);
             optimized_out.push_back(node.id());
+
+            if (node.is_input())
+            {
+                inputs.remove(&node);
+            }
         }
     });
 
     for (auto const& opt : optimized_out)
     {
-        inputs.remove(nodes_map[opt].get());
         nodes_map.erase(opt);
     }
 }
@@ -416,17 +421,39 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
         }
 
         if (new_input)
+        {
             add_intermediate(new_input, conv_node, 0);
+            conv_node.recalc_output_layout();
+        }
     };
 
-    for (auto& p : nodes_map)
+    const auto reorder_input_detection_output = [this, &lo](typed_program_node<detection_output>& detection_output_node)
     {
-        auto& prim = *p.second;
+        auto detection_output_prim = detection_output_node.get_primitive();
+         
+        for (size_t i = 0; i < detection_output_node.get_dependencies().size(); i++)
+        {
+            auto& input = detection_output_node.get_dependency(i);
+            std::shared_ptr<reorder> new_input = lo.get_reorder(
+                input.get_output_layout(),
+                input.id(),
+                layout_optimizer::data_type::input,
+                detection_output_prim).first;
 
+            if (new_input)
+            {
+                add_intermediate(new_input, detection_output_node, i);
+            }
+        }
+    };
+
+    for (auto& prim : processing_order)
+    {
         //there's an assumption that only convolution will take data/input_layout as input
         //exception to that rule would be a convolution which takes a reorder as input - see reoder_input above
-        do_for_types<convolution>(prim,
-            reorder_input       //case for convolution
+        do_for_types<convolution, detection_output>(*prim,
+            reorder_input,                  //case for convolution
+            reorder_input_detection_output  //case for detection-output
             );
     }
 }
@@ -616,10 +643,10 @@ void program_impl::prepare_padding()
         // Compute initial required paddings for primitive used as input for convolution.
         auto input_offset = conv->input_offset;
         auto stride = conv->stride;
-		auto dilation = conv->dilation;
+        auto dilation = conv->dilation;
 
-		auto input_limit_x = input_offset.spatial[0] + (conv_layout.size.spatial[0] - 1) * stride.spatial[0] + (filter_layout.size.spatial[0] - 1) * dilation.spatial[0] + 1;
-		auto input_limit_y = input_offset.spatial[1] + (conv_layout.size.spatial[1] - 1) * stride.spatial[1] + (filter_layout.size.spatial[1] - 1) * dilation.spatial[1] + 1;
+        auto input_limit_x = input_offset.spatial[0] + (conv_layout.size.spatial[0] - 1) * stride.spatial[0] + (filter_layout.size.spatial[0] - 1) * dilation.spatial[0] + 1;
+        auto input_limit_y = input_offset.spatial[1] + (conv_layout.size.spatial[1] - 1) * stride.spatial[1] + (filter_layout.size.spatial[1] - 1) * dilation.spatial[1] + 1;
 
         auto left_padding = std::max(-input_offset.spatial[0], 0);
         auto top_padding = std::max(-input_offset.spatial[1], 0);
@@ -653,7 +680,7 @@ void program_impl::prepare_buffer_fusing()
             //       per single input rather than all/none
             // + restrict input types to pooling, convolution and activation only due to problems with output padding on b and f
             for (auto const& input : node.get_dependencies())
-                if (input->get_users().size() > 1 || (!input->is_type<pooling>() && ! input->is_type<convolution>() && !input->is_type<activation>()))
+                if (input->get_users().size() > 1 || (!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>()))
                     return;
 
             // buffer fusing should not be performed if one of inputs produces padded output since
@@ -700,6 +727,50 @@ void program_impl::prepare_buffer_fusing()
             
             node.can_be_optimized(true);
         });
+
+        // zero copy 
+        do_for_types<crop>(*node, [this](crop_node& node)
+        {
+            if (node.get_dependencies().size() == 1 &&
+                node.get_users().size() > 0)
+            {
+                // optimization is avaiable for croping across depth(features) only
+                // if output padding has defined padding accross featuers already it wouldn't 
+                // work because it expect to have zeros in the padded area.
+                auto format = node.get_output_layout().format;
+                auto crop_prim = node.get_primitive();
+                auto input_layout = node.get_dependency(0).get_output_layout();
+                auto in_place_layout = node.get_output_layout();
+                auto out_padd = node.get_output_layout().data_padding;
+                if (format == format::bfyx &&
+                    crop_prim->reference_input.batch[0] == input_layout.size.batch[0] &&
+                    crop_prim->reference_input.spatial[0] == input_layout.size.spatial[0] &&
+                    crop_prim->reference_input.spatial[1] == input_layout.size.spatial[1] &&
+                    out_padd.lower_size().feature[0] == 0 &&
+                    out_padd.upper_size().feature[0] == 0)
+                {
+                    //  Regular crop
+                    //  crop input buffer
+                    //  |___________data____________|
+                    //  
+                    //  crop output buffer
+                    //  |-------->| offsets[f]  |<--|
+                    //            |_____data____|
+                    //             <------------>
+                    //           reference size
+                    //
+                    //  Inplace crop
+                    //  crop output buffer
+                    //  |_low_pad_|__data_size__|___|<-upper pad
+
+                    node.set_output_padding(padding(
+                    { out_padd.lower_size().batch[0], crop_prim->offsets.feature[0], out_padd.lower_size().spatial[0], out_padd.lower_size().spatial[1] },
+                    { out_padd.upper_size().batch[0], in_place_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_prim->reference_input.feature[0],
+                        out_padd.upper_size().spatial[0], out_padd.upper_size().spatial[1] }));
+                    node.can_be_optimized(true);
+                }
+            }
+        });
     }
 }
 
@@ -720,6 +791,7 @@ void program_impl::add_intermediate(program_node& node, program_node& next, size
     //firstly add connection, later replace dependency, so 'prev' won't become dangling and therefore removed
     add_connection(prev, node);
     next.replace_dependency(prev_idx, node);
+    node.processing_itr = processing_order.insert(next.processing_itr, &node);
 }
 
 void program_impl::remove_if_dangling(program_node& node)

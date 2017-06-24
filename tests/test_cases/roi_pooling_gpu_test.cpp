@@ -19,7 +19,7 @@
 #include "api/CPP/memory.hpp"
 #include <api/CPP/input_layout.hpp>
 #include "api/CPP/roi_pooling.hpp"
-#include "api/CPP/simpler_nms.hpp"
+#include "api/CPP/proposal.hpp"
 #include <api/CPP/topology.hpp>
 #include <api/CPP/network.hpp>
 #include <api/CPP/engine.hpp>
@@ -53,6 +53,7 @@ public:
             int channels,
             int width,
             int height,
+            pooling_mode mode,
             int pooled_width,
             int pooled_height,
             float spatial_scale);
@@ -78,18 +79,21 @@ TestRunner<Dtype>::TestRunner(
         int channels,
         int width,
         int height,
+        pooling_mode mode,
         int pooled_width,
-                       int pooled_height,
-                       float spatial_scale) :
-                            _data_layout(cldnn::type_to_data_type<Dtype>::value, format::bfyx, { 1, channels, width, height } ),
-                            _rois_layout(cldnn::type_to_data_type<Dtype>::value, format::bfyx, { num_rois, 1, CLDNN_ROI_VECTOR_SIZE, 1 }),
-                            _test_layer(roi_pooling( layer_name, 
-                                    data_name, 
-                                    rois_name,
-                                    pooled_width,
-                                    pooled_height,
-                                    spatial_scale,
-                                    { { 0, 0, 0, 0 }, 0 }))
+        int pooled_height,
+        float spatial_scale) :
+    _data_layout(cldnn::type_to_data_type<Dtype>::value, format::bfyx, { 1, channels, width, height } ),
+    _rois_layout(cldnn::type_to_data_type<Dtype>::value, format::bfyx, { num_rois, 1, CLDNN_ROI_VECTOR_SIZE, 1 }),
+    _test_layer(roi_pooling( layer_name, 
+                data_name, 
+                rois_name,
+                mode,
+                pooled_width,
+                pooled_height,
+                spatial_scale,
+                0,
+                { { 0, 0, 0, 0 }, 0 }))
 {    
     _topology.add(input_layout(data_name, _data_layout));
     _topology.add(input_layout(rois_name, _rois_layout));
@@ -122,7 +126,7 @@ memory TestRunner<Dtype>::Run(std::vector<Dtype>& data_vals,
     return network_output.at(layer_name).get_memory();
 }
 
-TEST(roi_pooling_forward_gpu, basic_test1) {
+TEST(roi_pooling_forward_gpu, basic_test1_max) {
 
     int channels = 1;
     int width = 2;
@@ -137,7 +141,7 @@ TEST(roi_pooling_forward_gpu, basic_test1) {
 
     int num_rois = (int) rois.size() / CLDNN_ROI_VECTOR_SIZE;
 
-    TestRunner<float> t(num_rois, channels, width, height, pooled_width, pooled_height, spatial_scale);
+    TestRunner<float> t(num_rois, channels, width, height, pooling_mode::max, pooled_width, pooled_height, spatial_scale);
 
     memory output = t.Run(data, rois);
 
@@ -148,7 +152,7 @@ TEST(roi_pooling_forward_gpu, basic_test1) {
     EXPECT_EQ(f[0], 4.0f);
 }
 
-TEST(roi_pooling_forward_gpu, basic_test2) {
+TEST(roi_pooling_forward_gpu, basic_test2_max) {
     int channels = 256;
     int width = 5;
     int height = 4;
@@ -164,7 +168,7 @@ TEST(roi_pooling_forward_gpu, basic_test2) {
 
     int num_rois = (int) rois_input_size / CLDNN_ROI_VECTOR_SIZE;
 
-    TestRunner<float> t(num_rois, channels, width, height, pooled_width, pooled_height, spatial_scale);
+    TestRunner<float> t(num_rois, channels, width, height, pooling_mode::max, pooled_width, pooled_height, spatial_scale);
 
     memory output = t.Run(data, rois);
 
@@ -177,7 +181,7 @@ TEST(roi_pooling_forward_gpu, basic_test2) {
     }
 }
 
-TEST(roi_pooling_forward_gpu, test_fp16) {
+TEST(roi_pooling_forward_gpu, test_fp16_max) {
     int channels = 256;
     int width = 5;
     int height = 4;
@@ -197,7 +201,7 @@ TEST(roi_pooling_forward_gpu, test_fp16) {
 
     int num_rois = (int) rois_input_size / CLDNN_ROI_VECTOR_SIZE;
 
-    TestRunner<FLOAT16> t(num_rois, channels, width, height, pooled_width, pooled_height, spatial_scale);
+    TestRunner<FLOAT16> t(num_rois, channels, width, height, pooling_mode::max, pooled_width, pooled_height, spatial_scale);
 
     memory output = t.Run(data, rois);
 
@@ -221,54 +225,46 @@ public:
     {        
     }
 
-	static void TearDownTestCase() 
-	{
-		generic_test::TearDownTestCase();
+    static void TearDownTestCase() 
+    {
+        generic_test::TearDownTestCase();
 
-		for (auto generic_params : all_generic_params)
-		{
-			delete generic_params;
-		}
-
-		for (auto layer_params : all_layer_params)
-		{
-			delete layer_params;
-		}
-	}
-    
-	static std::vector<test_params*> generate_input_buffers_params()
-	{        
-        std::vector<int> test_rois_sizes = { 1, 20 };          
-        
-		for (cldnn::data_types data_type : test_data_types)
-		{      
-                for (int batch_size : test_batch_sizes)
-                {
-                    for (int feature_size : test_feature_sizes)
-                    {
-                        for (tensor input_size : test_input_sizes)
-                        {
-                            for (int num_rois : test_rois_sizes)
-                            {
-                                test_params* tp = new test_params();
-
-                                tp->data_type = data_type;
-                                tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor(batch_size, feature_size, input_size.spatial[0], input_size.spatial[1])));
-                                tp->input_layouts.push_back(cldnn::layout(tp->data_type, tp->fmt, cldnn::tensor(num_rois, 1, CLDNN_ROI_VECTOR_SIZE, 1)));
-
-                                all_generic_params.push_back(tp);
-                            }
-                        }
-                    }
-                }
+        for (auto generic_params : all_generic_params)
+        {
+            delete generic_params;
         }
 
-		return all_generic_params;
-	}
+        for (auto layer_params : all_layer_params)
+        {
+            delete layer_params;
+        }
+    }
+    
+    static std::vector<test_params*> generate_input_buffers_params()
+    {        
+        std::vector<int> test_rois_sizes = { 1, 20 };          
+        
+        for (cldnn::data_types data_type : test_data_types)
+        for (int batch_size : { 1 } /*test_batch_sizes*/)
+        for (int feature_size : test_feature_sizes)
+        for (tensor input_size : test_input_sizes)
+        for (int num_rois : test_rois_sizes)
+        {
+            test_params* tp = new test_params();
+
+            tp->data_type = data_type;
+            tp->input_layouts.emplace_back(tp->data_type, tp->fmt, cldnn::tensor(batch_size, feature_size, input_size.spatial[0], input_size.spatial[1]));
+            tp->input_layouts.emplace_back(tp->data_type, tp->fmt, cldnn::tensor(num_rois, 1, CLDNN_ROI_VECTOR_SIZE, 1));
+
+            all_generic_params.push_back(tp);
+        }
+
+        return all_generic_params;
+    }
     
 
-	static std::vector<cldnn::primitive*> generate_layer_params()
-	{
+    static std::vector<cldnn::primitive*> generate_layer_params()
+    {
         float spatial_scale = 0.0625f;
         
         struct {
@@ -280,15 +276,19 @@ public:
             //{ 10, 30}
         };
 
-        for (size_t i = 0; i < ARRAY_SIZE(test_cases); i++) {
+        for (auto mode : { pooling_mode::max, pooling_mode::average })
+        for (size_t i = 0; i < ARRAY_SIZE(test_cases); i++)
+        {
             std::string test_data_name = "input0"; // currently the framework assumes input0, input1,... naming
             std::string test_rois_name = "input1";
             all_layer_params.push_back(new roi_pooling(layer_name,
                     test_data_name,
                     test_rois_name,
+                    mode,
                     test_cases[i].pooled_width,
                     test_cases[i].pooled_height,
                     spatial_scale,
+                    0,
                     { { 0, 0, 0, 0}, 0 }));
         }
 
@@ -325,10 +325,10 @@ public:
         return (format == cldnn_format_type::cldnn_format_bfyx);
     }
 
-	virtual cldnn::tensor get_expected_output_tensor()
-	{
-		return get_output_layout();
-	}
+    virtual cldnn::tensor get_expected_output_tensor()
+    {
+        return get_output_layout();
+    }
 
     static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info)
     {
@@ -355,11 +355,11 @@ public:
         }
 
         const auto layer = static_cast<cldnn::roi_pooling *>(v);
-        res << "_PooledW" << layer->pooled_width
-            << "_PooledH" << layer->pooled_height;
-        //TODO: we should remove spatial scale altogether
-        //TODO: while it exists it should be escaped in the following
-//            << "_SpatialScale" << layer->spatial_scale;
+        res << (layer->mode == pooling_mode::max ? "_MAX" : "_AVG")
+            << "_PooledW" << layer->pooled_width
+            << "_PooledH" << layer->pooled_height
+            << "_GroupSZ" << layer->group_sz
+            << "_SpatialScaleInv" << (1/layer->spatial_scale);
 
         return res.str();
     }
@@ -395,6 +395,8 @@ private:
         int height = inputs[0].get_layout().size.spatial[1];
         int width = inputs[0].get_layout().size.spatial[0];
 
+        const bool max_pool = roi_layer->mode == pooling_mode::max;
+
         const auto bottom_data = inputs[0].pointer<Type>();
         const auto bottom_rois_pointer = inputs[1].pointer<Type>();
         const Type* bottom_rois = bottom_rois_pointer.data();
@@ -405,13 +407,13 @@ private:
         // For each ROI R = [batch_index x1 y1 x2 y2]: max pool over R
         for (int n = 0; n < num_rois; ++n) 
         {
-            int roi_batch_ind = (int)bottom_rois[0];
+            int roi_batch_ind = 0;// (int)bottom_rois[0];
             int roi_start_x = (int)round((float)(bottom_rois[1] * spatial_scale));
             int roi_start_y = (int)round((float)(bottom_rois[2] * spatial_scale));
             int roi_end_x = (int)round((float)(bottom_rois[3] * spatial_scale));
             int roi_end_y = (int)round((float)(bottom_rois[4] * spatial_scale));
             EXPECT_GE(roi_batch_ind, 0);
-            EXPECT_LT(roi_batch_ind, batch_size);                       
+            EXPECT_LT(roi_batch_ind, batch_size);
             
             int roi_height = std::max(roi_end_y - roi_start_y + 1, 1);
             int roi_width = std::max(roi_end_x - roi_start_x + 1, 1);
@@ -487,32 +489,37 @@ private:
                             output_mem[pool_index] = 0;
                             //   argmax_data[pool_index] = -1;
                         }
-						else
-						{
-							if (sizeof(Type) == 4)
-							{
-								output_mem[pool_index] = -FLT_MAX;
-							}
-							else
-							{
-								output_mem[pool_index] = FLOAT16::min_val();
-							}
-						}
+                        else
+                        {
+                            if (sizeof(Type) == 4)
+                            {
+                                output_mem[pool_index] = -FLT_MAX;
+                            }
+                            else
+                            {
+                                output_mem[pool_index] = FLOAT16::min_val();
+                            }
+                        }
+
+                        float res = max_pool && xstart < xend && ystart < yend ? std::numeric_limits<float>::lowest() : 0.f;
 
                         for (int h = ystart; h < yend; ++h) 
                         {
                             for (int w = xstart; w < xend; ++w) 
                             {
                                 const int index = h * width + w;
-                                Type f1 = batch_data[index];
-                                Type f2 = output_mem[pool_index];
-                                if (f1 > f2) 
-                                {
-                                    output_mem[pool_index] = batch_data[index];
-                                    //      argmax_data[pool_index] = index;
-                                }
+                                Type val = batch_data[index];
+                                
+                                res = max_pool ? std::max(res, (float)val) : res + (float)val;
                             }
                         }
+
+                        if (!max_pool && xstart < xend && ystart < yend)
+                        {
+                            res /= (yend - ystart) * (xend - xstart);
+                        }
+
+                        output_mem[pool_index] = (Type)res;
                     }
                 }
 

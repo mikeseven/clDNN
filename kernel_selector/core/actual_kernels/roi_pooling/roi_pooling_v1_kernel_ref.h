@@ -32,6 +32,6 @@ namespace KernelSelector
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
-        JitConstants get_jit_constants(const ROIPoolingV1Params& params) const;
+        JitConstants GetJitConstants(const ROIPoolingV1Params& params) const;
     };
 }

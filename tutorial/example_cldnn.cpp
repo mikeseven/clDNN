@@ -104,7 +104,7 @@ topology create_topology(const layout& in_layout, const memory& conv1_weights_me
             "pool2",        // Input: "pool2"
             "fc1_weights",  // "fc1_weights" will be added to the topology later
             "fc1_bias",     // will be defined later
-            true            // Use build-in Relu. Slope is set to 0 by default.
+            true            // Use built-in Relu. Slope is set to 0 by default.
         ),
         // Second FC/IP primitive id: "fc2", input: "fc1".
         // Weights ("fc2_weights") and biases ("fc2_bias") will be defined later.
@@ -149,7 +149,7 @@ int recognize_image(network& network, const memory& input_memory)
 // Loads file to a vector of floats.
 vector<float> load_data(const string& filename) { return{ 0 }; }
 
-// Allocates memory and load data from file.
+// Allocates memory and loads data from file.
 // Memory layout is taken from file.
 memory load_mem(const engine& engine, const string& filename) { return{ 0 }; }
 

@@ -33,7 +33,7 @@ namespace KernelSelector {
         return k;
     }
 
-    static ROIPoolingV1KernelRef::DispatchData set_default(const ROIPoolingV1Params& params)
+    static ROIPoolingV1KernelRef::DispatchData SetDefault(const ROIPoolingV1Params& params)
     {
         ROIPoolingV1KernelRef::DispatchData kd;
 
@@ -56,9 +56,16 @@ namespace KernelSelector {
         return kd;
     }
 
-    JitConstants ROIPoolingV1KernelRef::get_jit_constants(const ROIPoolingV1Params& params) const
+    JitConstants ROIPoolingV1KernelRef::GetJitConstants(const ROIPoolingV1Params& params) const
     {
-        return MakeROIPoolingV1JitConstants(params);
+        auto jit = MakeROIPoolingV1JitConstants(params);
+
+        jit.AddConstants({
+            MakeJitConstant("MAX_POOL",                     params.roiParams.mode == PoolType::MAX),
+            MakeJitConstant("USE_OLD_SCALE_AND_ROUNDING",   params.roiParams.groupSize == 0)
+        });
+
+        return jit;
     }
 
     KernelsData ROIPoolingV1KernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
@@ -73,10 +80,10 @@ namespace KernelSelector {
             return{};
         }
 
-        DispatchData runInfo = set_default(orgParams);
+        DispatchData runInfo = SetDefault(orgParams);
         KernelData kd = KernelData::Default<ROIPoolingV1Params>(params, 1);
 
-        auto cldnn_jit = get_jit_constants(orgParams);
+        auto cldnn_jit = GetJitConstants(orgParams);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 

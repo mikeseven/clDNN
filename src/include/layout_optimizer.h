@@ -26,6 +26,7 @@
 #include "api/CPP/convolution.hpp"
 #include "api/CPP/deconvolution.hpp"
 #include "api/CPP/fully_connected.hpp"
+#include "api/CPP/detection_output.hpp"
 
 #include "generic_layer.hpp"
 
@@ -106,6 +107,7 @@ private:
     layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, boost::optional<layout> const& output_layout);
     layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, boost::optional<layout> const& output_layout);
     layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const deconvolution> prim, boost::optional<layout> const& output_layout);
+    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const detection_output> prim, boost::optional<layout> const& output_layout);
 
     //pair.first is reorder (may be nullptr if reorder is not needed), pair.second tells if returned reorder was cached (no need to add it to 'ouputs' etc.)
     //for pair.first == nullptr, pair.second == true
@@ -136,7 +138,7 @@ public:
                      std::shared_ptr<const T> user,
                      boost::optional<layout> user_layout = boost::optional<layout>())
         -> std::enable_if_t<
-            meta::is_any_of_v<T, convolution, fully_connected, deconvolution>,
+            meta::is_any_of_v<T, convolution, fully_connected, deconvolution, detection_output>,
             meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>
         >
     {
@@ -155,7 +157,7 @@ public:
                      std::shared_ptr<const T> user,
                      boost::optional<layout> user_layout = boost::optional<layout>())
         -> std::enable_if_t<
-            !meta::is_any_of_v<T, convolution, fully_connected, deconvolution>,
+            !meta::is_any_of_v<T, convolution, fully_connected, deconvolution, detection_output>,
             meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>
         >
     {

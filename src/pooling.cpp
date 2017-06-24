@@ -40,7 +40,8 @@ layout pooling_inst::calc_output_layout(parent::typed_node const& node)
     auto strides = desc->stride.sizes();
     auto window_sizes = desc->size.sizes();
     //TODO !!!implement correct output size calculation!!!
-    auto output_sizes = input_layout.size.sizes();
+    auto input_sizes = input_layout.size.sizes();
+    auto output_sizes = input_sizes;
     auto spatial_offset = CLDNN_TENSOR_BATCH_DIM_MAX + CLDNN_TENSOR_FEATURE_DIM_MAX;
 
     for (decltype(input_spatial_size) i = spatial_offset; i < input_spatial_size + spatial_offset; i++)
@@ -48,6 +49,8 @@ layout pooling_inst::calc_output_layout(parent::typed_node const& node)
             // TODO: Consider moving general parameter verification to arguments constructor.
             if (strides[i] <= 0)
                 throw std::runtime_error("Stride must be positive (>= 1)");
+            if (window_sizes[i] <= 0)
+                throw std::runtime_error("Size must be positive (>= 1)");
             if (2 * input_offsets[i] >= output_sizes[i])
                 throw std::runtime_error("Input offset is greater than input data range. There is no input data to process");
 
@@ -56,6 +59,11 @@ layout pooling_inst::calc_output_layout(parent::typed_node const& node)
                 // ? std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0) / strides[i] + 1
                 ? ceil_div(std::max(output_sizes[i] - 2 * input_offsets[i] - window_sizes[i], 0), strides[i]) + 1
                 : 0);
+
+            // Make sure that the last pooling starts strictly inside the image.
+            if ((output_sizes[i] - 1) * strides[i] >= input_sizes[i] - input_offsets[i]) {
+                --output_sizes[i];
+            }
     }
 
     return{ input_layout.data_type, input_layout.format, output_sizes };
@@ -68,9 +76,9 @@ std::string pooling_inst::to_string(pooling_node const& node)
     auto input          = node.input();
     auto strd           = desc->stride;
     auto kernel_size    = desc->size;
-    auto mode           = desc->mode == pooling_mode::average ? "avarage" : "max";   
+    auto mode           = desc->mode == pooling_mode::max ? "max" : "average";
 
-    primitive_description << "id: " << desc->id << ", type: pooling" << ", mode: " << mode <<
+    primitive_description << "id: " << desc->id << ", type: pooling, mode: " << mode <<
         "\n\tinput: "         << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
         "\n\tstride: "        << strd.spatial[0] << "x" << strd.spatial[1] << 
         "\n\tkernel size: "   << kernel_size.spatial[0] << "x" << kernel_size.spatial[1] << 

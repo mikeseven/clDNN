@@ -58,7 +58,7 @@ private:
     std::mutex _mutex;
     kernels_code _kernels_code;
     std::map<std::string, kernel_type> _kernels;
-	manager::primitive_db _database;             // TODO: remove once KernelSelctor integration done
+    manager::primitive_db _database;             // TODO: remove once KernelSelctor integration done
 
     sorted_code get_program_source(const kernels_code& kernels_source_code) const;
     friend class gpu_toolkit;

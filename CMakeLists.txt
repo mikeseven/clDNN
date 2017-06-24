@@ -458,6 +458,12 @@ mark_as_advanced(CLDNN__INCLUDE_COST_MODEL)
 
 # ======================================================================================================
 
+# Include and build: clDNN tutorial.
+set(CLDNN__INCLUDE_TUTORIAL ON CACHE BOOL "Include and build: clDNN Tutorial.")
+mark_as_advanced(CLDNN__INCLUDE_TUTORIAL)
+
+# ======================================================================================================
+
 # Run (requires CLDNN__INCLUDE_TESTS to be true): Tests (unit tests and small acceptance tests) for clDNN framework.
 set(CLDNN__RUN_TESTS OFF CACHE BOOL "Run: clDNN framework's tests.")
 mark_as_advanced(CLDNN__RUN_TESTS)
@@ -692,6 +698,7 @@ message(STATUS "[clDNN]  - Include/Build kernel selector: ${CLDNN__INCLUDE_KERNE
 message(STATUS "[clDNN]  - Include/Build examples:        ${CLDNN__INCLUDE_EXAMPLES}")
 message(STATUS "[clDNN]  - Include/Build tests:           ${CLDNN__INCLUDE_TESTS}")
 message(STATUS "[clDNN]  - Include/Build cost_model:      ${CLDNN__INCLUDE_COST_MODEL}")
+message(STATUS "[clDNN]  - Include/Build tutorial:        ${CLDNN__INCLUDE_TUTORIAL}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Run tests:                     ${CLDNN__RUN_TESTS}")
 message(STATUS "[clDNN]")
@@ -1166,6 +1173,10 @@ endif()
 if(CLDNN__INCLUDE_COST_MODEL)
   add_subdirectory(cost_model)
 endif()
+if(CLDNN__INCLUDE_TUTORIAL)
+  add_subdirectory(tutorial)
+endif()
+
 add_subdirectory(docs)
 
 # ======================================================================================================

@@ -56,7 +56,7 @@ void persistent_cache::cache_file::write(const binary_data& data)
         c_file.close();
         return;
     }
-	throw std::system_error(errno, std::system_category( ));
+    throw std::system_error(errno, std::system_category( ));
 }
 #else
 void persistent_cache::cache_file::write(const binary_data&)

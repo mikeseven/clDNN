@@ -48,7 +48,7 @@ struct permute : public primitive_base<permute, CLDNN_PRIMITIVE_DESC(permute)>
         const primitive_id& id,
         const primitive_id& input,
         const std::vector<uint16_t>& permute_order = {},
-		const padding& output_padding = padding()
+        const padding& output_padding = padding()
     )
         : primitive_base(id, { input }, output_padding)
         , permute_order(permute_order)

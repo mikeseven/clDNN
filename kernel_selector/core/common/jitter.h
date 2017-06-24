@@ -639,6 +639,8 @@ inline JitConstants MakeROIPoolingV1JitConstants(const ROIPoolingV1Params& param
         MakeJitConstant("POOLED_HEIGHT",     rp.pooledHeight),
         MakeJitConstant("POOLED_WIDTH",      rp.pooledWidth),
         MakeJitConstant("SPATIAL_SCALE",     rp.spatialScale),
+        MakeJitConstant("GORUP_SIZE",        rp.groupSize),
+        MakeJitConstant(toString(rp.mode) + "_POOLING", 1),
     });
 
     return jit;
