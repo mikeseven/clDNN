@@ -324,10 +324,16 @@ namespace KernelSelector {
     {
         switch (b_mode)
         {
-        case EltwiseMode::ADD: return "ADD";
-        case EltwiseMode::SUB: return "SUB";
-        case EltwiseMode::MUL: return "MUL";
-        case EltwiseMode::DIV: return "DIV";
+        case EltwiseMode::ADD:      return "ADD";
+        case EltwiseMode::SUB:      return "SUB";
+        case EltwiseMode::MUL:      return "MUL";
+        case EltwiseMode::DIV:      return "DIV";
+        case EltwiseMode::MIN:      return "MIN";
+        case EltwiseMode::MAX:      return "MAX";
+        case EltwiseMode::POW:      return "POW";
+        case EltwiseMode::MODULU:   return "MODULU";
+        case EltwiseMode::SQRT:     return "SQRT";
+        case EltwiseMode::ASSIGN:   return "ASSIGN";
         default:
             return "";
         }

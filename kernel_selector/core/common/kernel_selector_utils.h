@@ -187,4 +187,23 @@ namespace KernelSelector { namespace
 
         return toNDRange(lws);
     }
+
+    inline bool CheckInputsOutputNoPitchSameDims(const BaseParams& params)
+    {
+        bool no_pitch_same_dims = true;
+
+        if (params.inputs.size())
+        {
+            no_pitch_same_dims = !params.inputs[0].PaddingExists();
+
+            for (size_t i = 1; i < params.inputs.size(); i++)
+            {
+                no_pitch_same_dims = no_pitch_same_dims && (params.inputs[0] == params.inputs[i]);
+            }
+
+            no_pitch_same_dims = no_pitch_same_dims && (params.inputs[0] == params.output);
+        }
+
+        return no_pitch_same_dims;
+    }
 } }

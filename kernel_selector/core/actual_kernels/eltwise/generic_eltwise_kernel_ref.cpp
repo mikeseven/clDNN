@@ -55,20 +55,6 @@ namespace KernelSelector {
         }
     }
 
-    static bool noPitchSameDims(const EltwiseParams& params)
-    {
-        bool no_pitch_same_dims = !params.inputs[0].PaddingExists();
-
-        for (size_t i = 1; i < params.inputs.size(); i++)
-        {
-            no_pitch_same_dims = no_pitch_same_dims && (params.inputs[0] == params.inputs[i]);
-        }
-
-        no_pitch_same_dims = no_pitch_same_dims && (params.inputs[0] == params.output);
-
-        return no_pitch_same_dims;
-    }
-
     JitConstants GenericEltwiseKernelRef::get_jit_constants(const EltwiseParams& params) const
     {
         if (params.inputs.size() == 0)
@@ -85,7 +71,7 @@ namespace KernelSelector {
         }
 
         jit.AddConstant(MakeJitConstant("INPUTS_DECLS", inputs_decls));
-        jit.AddConstant(MakeJitConstant("ELTWISE_NO_PITCH_SAME_DIMS", noPitchSameDims(params)));
+        jit.AddConstant(MakeJitConstant("ELTWISE_NO_PITCH_SAME_DIMS", CheckInputsOutputNoPitchSameDims(params)));
 
         std::string do_eltwise;
 
@@ -192,7 +178,7 @@ namespace KernelSelector {
         {
             kernel.workGroups.global = GetTensorFriendlyWorkGroups(newParams.inputs[0]);
         }
-        else if (noPitchSameDims(newParams))
+        else if (CheckInputsOutputNoPitchSameDims(newParams))
         {
             kernel.workGroups.global = { newParams.inputs[0].Length(), 1, 1 };
         }

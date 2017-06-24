@@ -42,6 +42,11 @@ namespace KernelSelector
 
         const auto& input = params.inputs[0];
 
+        if (input.X().v < pp.poolSize.x || input.Y().v < pp.poolSize.y)
+        {
+            return true;
+        }
+
         auto mod_x = (input.X().v - pp.poolSize.x) % pp.poolStride.x;
         auto mod_y = (input.Y().v - pp.poolSize.y) % pp.poolStride.y;
 
