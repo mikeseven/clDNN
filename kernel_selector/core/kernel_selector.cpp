@@ -120,11 +120,13 @@ namespace KernelSelector {
             }
         }
 
-        //printf("%s\n", kernelName.c_str());
-
-        // TODO: find a better place to located this asignment 
-        kernelsData[0].kernelName = kernelName;
-        kernelsData[0].kernels[0].layerID = params.layerID;
+        // TODO: find a better place to located this assignment 
+        if (kernelsData.size())
+        {
+            //printf("%s\n", kernelName.c_str());
+            kernelsData[0].kernelName = kernelName;
+            kernelsData[0].kernels[0].layerID = params.layerID;
+        }
 
         return kernelsData;
     }

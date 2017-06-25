@@ -146,19 +146,25 @@ namespace KernelSelector
         }
 
         KernelData kd = KernelData::Default<ConvolutionParams>(params, 1);
+        ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
 
-        auto cldnn_jit = GetJitConstants(orgParams, run_info);
+        if (!bSupportedWeightsLayout)
+        {
+            newParams.weights = newParams.weights.Transform(WeightsLayout::yxio);
+        }
 
-        const auto batch_size = orgParams.output.Batch().v;
+        auto cldnn_jit = GetJitConstants(newParams, run_info);
+
+        const auto batch_size = newParams.output.Batch().v;
 
         std::string kernel_name_postfix;
-        if (orgParams.inputs[0].GetDType() == Datatype::F32)
+        if (newParams.inputs[0].GetDType() == Datatype::F32)
         {
             kernel_name_postfix = "_fp32";
 
             // A LITTLE HACK, for convolutions with low number of input features don't use block reads, and it will speed up by 25%
             // TODO - investigate why is this happening
-            if (orgParams.inputs[0].Feature().v > 4)
+            if (newParams.inputs[0].Feature().v > 4)
             {
                 cldnn_jit.AddConstant(MakeJitConstant("USE_BLOCK_READ_2", ""));
             }
@@ -176,11 +182,11 @@ namespace KernelSelector
             }
         }
 
-        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, newParams.layerID);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, run_info, kernelName + kernel_name_postfix, jit, entry_point, true, !orgParams.bias.empty());
+        FillCLKernelData(kernel, run_info, kernelName + kernel_name_postfix, jit, entry_point, true, !newParams.bias.empty());
         kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
         bool succeed = SetWeightsReorderParams(orgParams, WeightsLayout::yxio, kd.weightsReorderParams);

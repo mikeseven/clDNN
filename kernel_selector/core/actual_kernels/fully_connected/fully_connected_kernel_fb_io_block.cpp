@@ -122,6 +122,10 @@ namespace KernelSelector
             orgParams.inputs[0].GetDType() == Datatype::F16 && batches >= 16 ?
             FORCE_PRIORITY_3 : FORCE_PRIORITY_5;
 
-        return GetCommonKernelsData(params, optParams, DataLayout::fb, WeightsLayout::io, estimated_time);
+        // TODO: it should be fb_io. but the original code use this kernel with yxfb and yxio 
+        //       (fb == fyxb flatten fyx, not yxfb flatten yxf).
+        //       the order of the add operation cause some numeric changes. in order to avoid them right now we use yxfb/oiyx instead.
+        // return GetCommonKernelsData(params, optParams, DataLayout::fb, WeightsLayout::io, estimated_time);
+        return GetCommonKernelsData(params, optParams, DataLayout::yxfb, WeightsLayout::yxio, estimated_time);
     }
 }

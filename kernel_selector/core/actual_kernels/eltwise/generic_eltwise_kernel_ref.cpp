@@ -26,6 +26,7 @@ namespace KernelSelector {
         k.SetInputDataType(Datatype::F32);
         k.SetOutputDataType(Datatype::F16);
         k.SetOutputDataType(Datatype::F32);
+        k.SetDifferentTypesSupport();
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
         k.SetOffsetSupport();
@@ -65,9 +66,14 @@ namespace KernelSelector {
         auto jit = MakeEltwiseJitConstants(params);
         
         std::string inputs_decls;
-        for (size_t op_num = 0; op_num < params.inputs.size(); op_num++)
+        for (size_t i = 0; i < params.inputs.size(); i++)
         {
-            inputs_decls += "const __global UNIT_TYPE* input" + std::to_string(op_num) + ", ";
+            // TODO: replace me: BUG. we need to read the data in the proper type. (in PVANET we have couple of inputs with FP32 in FP16 net)
+#if 1
+            inputs_decls += "const __global UNIT_TYPE* input" + std::to_string(i) + ", ";
+#else
+            inputs_decls += "const __global " + ToCLType(params.inputs[i].GetDType()) + "* input" + std::to_string(i) + ", ";
+#endif
         }
 
         jit.AddConstant(MakeJitConstant("INPUTS_DECLS", inputs_decls));
