@@ -110,7 +110,7 @@ inline std::string toCodeString<double>(double val) {
 // JitConstant
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename VecT, typename Func>
-inline std::string toVectorString(VecT vec, std::string vertorType, size_t maxDim, int padFillingVal, Func fetchVal)
+inline std::string toVectorString(const VecT& vec, const std::string& vertorType, size_t maxDim, int padFillingVal, Func fetchVal)
 {
     std::stringstream ss;
     ss << "(" << vertorType << " []){ ";
@@ -263,7 +263,7 @@ public:
 };
 
 template <typename T>
-inline  std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const std::vector<T> value) {
+inline  std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const std::vector<T>& value) {
     return std::static_pointer_cast<JitConstant>(std::make_shared<VectorDataJitConstant<T>>(name, value));
 }
 
