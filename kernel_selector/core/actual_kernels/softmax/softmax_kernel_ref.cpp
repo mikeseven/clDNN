@@ -93,6 +93,12 @@ namespace KernelSelector
             break;
         }
 
+        // TODO: W/A - currently using low precision accumulator type. (for testing only)
+        if (newParams.output.GetDType() == Datatype::F16)
+        {
+            jit += "#define COUNTER_TYPE_F16\n";
+        }
+
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit, kernel_id);
         kernel.argsDesc = GetArgumentDesc(1, false, false);
