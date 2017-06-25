@@ -137,7 +137,7 @@ struct concatenation_gpu : typed_primitive_impl<concatenation>
 
                 kds.push_back(best_kernels[0]);
 
-                last_offset = input_layout.size.raw[axis];
+                last_offset += input_layout.size.raw[axis];
             }
         }
 
