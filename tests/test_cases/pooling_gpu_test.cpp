@@ -1014,6 +1014,9 @@ public:
             }
         }
 
+        // This case tests the pooling_gpu_bfyx_average_opt kernel.
+        all_layer_params.push_back(new pooling("pooling", "input0", pooling_mode::average, tensor(1, 1, 3, 3), tensor(1, 1, 1, 1), tensor(1, 1, -1, -1)));
+
         return all_layer_params;
     }
 
@@ -1170,8 +1173,9 @@ public:
                 break;
             }
             case cldnn::pooling_mode::average:
+            case cldnn::pooling_mode::average_no_padding:
             {
-                int pool_window_size = kernel_width * kernel_height; // The pool size is fixed for all elements.
+                int fixed_pool_window_size = kernel_width * kernel_height;
                 for (int i = 0; i < (int)output.get_layout().get_buffer_size().count(); i++)
                 {
                     output_mem[i] = 0;
@@ -1196,6 +1200,7 @@ public:
                                 tensor lower_padding = pooling->output_padding.lower_size();
                                 output_index += (lower_padding.spatial[1] + h) * output_width + lower_padding.spatial[0] + w;
 
+                                int num_of_elements = 0;
                                 for (int y = input_offset_y_start; y < input_offset_y_end; y++) 
                                 {
                                     for (int x = input_offset_x_start; x < input_offset_x_end; x++) 
@@ -1203,10 +1208,20 @@ public:
                                         const size_t input_index = get_linear_index(inputs[0].get_layout(), b, f, y, x);
 
                                         output_mem[output_index] += input_mem[input_index];
+                                        num_of_elements++;
                                     }
                                 }
 
-                                output_mem[output_index] /= (Type)pool_window_size;
+                                if (pooling_mode == cldnn::pooling_mode::average)
+                                {
+                                    // The pool size is fixed for all elements in pooling_mode::average.
+                                    output_mem[output_index] /= (Type)fixed_pool_window_size;
+                                }
+                                else
+                                {
+                                    // The pool size is dynamic in pooling_mode::average_no_padding.
+                                    output_mem[output_index] /= (Type)num_of_elements;
+                                }            
                             }
                         }
                     }
