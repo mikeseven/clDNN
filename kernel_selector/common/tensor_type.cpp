@@ -22,12 +22,12 @@ namespace KernelSelector
 {
     namespace Tensor
     {
-        NDims DataTensor::CalcPitches(const std::vector<size_t>& d) const
+        NDims DataTensor::CalcPitches(const std::vector<size_t>& d, DataLayout l)
         {
             std::vector<size_t> newDims = d;
 
             // TOOD: it's not the right pitches. it's here in order to calculate physical size
-            switch (layout)
+            switch (l)
             {
             case bs_f_bsv8__af8:
                 assert(newDims.size() == 2);
@@ -156,12 +156,12 @@ namespace KernelSelector
             return res;
         }
 
-        NDims WeightsTensor::CalcPitches(const std::vector<size_t>& d) const
+        NDims WeightsTensor::CalcPitches(const std::vector<size_t>& d, WeightsLayout l)
         {
             std::vector<size_t> newDims = d;
 
             // TOOD: it's not the right pitches. it's here in order to calculate physical size
-            switch (layout)
+            switch (l)
             {
             case os_iyx_osv16:
                 assert(newDims.size() == 4);
@@ -203,12 +203,12 @@ namespace KernelSelector
                 pitch *= newDims[i];
             }
 
-            if (layout == i_yxs_os_yxsv2_osv16)
+            if (l == i_yxs_os_yxsv2_osv16)
             {
                 ret[3].pitch = cldnn::round_up_to(newDims[1] * newDims[2], 2) * newDims[0];
             }
-            else if (layout == iy_xs_os_xsv2_osv16__ao32 ||
-                layout == iy_xs_os_xsv2_osv8__ao32)
+            else if (l == iy_xs_os_xsv2_osv16__ao32 ||
+                l == iy_xs_os_xsv2_osv8__ao32)
             {
                 ret[2].pitch = cldnn::round_up_to(newDims[1], 2) * newDims[0];
                 ret[3].pitch = newDims[2] * ret[2].pitch;

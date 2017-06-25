@@ -357,7 +357,7 @@ namespace KernelSelector
                 TensorBaseT(dt, l, pv, of, nd) {}
 
             DataTensor(Datatype dt, DataLayout l, PADDED_VAL pv, size_t of, const std::vector<size_t>& d) :
-                TensorBaseT<Datatype, DataLayout>(dt, l, pv, of, CalcPitches(d)) {}
+                TensorBaseT<Datatype, DataLayout>(dt, l, pv, of, CalcPitches(d, l)) {}
 
             Dim X()         const { return Extract(layout, DataChannelName::X, dims); }
             Dim Y()         const { return Extract(layout, DataChannelName::Y, dims); }
@@ -365,9 +365,11 @@ namespace KernelSelector
             Dim ROI()       const { return Extract(layout, DataChannelName::ROI, dims); }
             Dim Batch()     const { return Extract(layout, DataChannelName::BATCH, dims); }
 
-            NDims       CalcPitches(const std::vector<size_t>& d) const;
             DataTensor  Transform(DataLayout l) const;
             DataTensor  FlattenFeatureAndSpatials() const;
+        
+        private:
+            static NDims CalcPitches(const std::vector<size_t>& d, DataLayout l);
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -383,15 +385,17 @@ namespace KernelSelector
                 TensorBaseT(dt, l, pv, of, nd) {}
 
             WeightsTensor(WeightsType wt, WeightsLayout l, PADDED_VAL pv, size_t of, const std::vector<size_t>& d) :
-                TensorBaseT<WeightsType, WeightsLayout>(wt, l, pv, of, CalcPitches(d)) {}
+                TensorBaseT<WeightsType, WeightsLayout>(wt, l, pv, of, CalcPitches(d, l)) {}
 
-            NDims           CalcPitches(const std::vector<size_t>& d) const;
-            WeightsTensor   Transform(WeightsLayout l) const;
+            WeightsTensor Transform(WeightsLayout l) const;
 
             Dim X()   const { return Extract(layout, WeightsChannelName::X, dims); }
             Dim Y()   const { return Extract(layout, WeightsChannelName::Y, dims); }
             Dim IFM() const { return Extract(layout, WeightsChannelName::IFM, dims); }
             Dim OFM() const { return Extract(layout, WeightsChannelName::OFM, dims); }
+
+        private:
+            static NDims CalcPitches(const std::vector<size_t>& d, WeightsLayout l);
         };
     }
 }
