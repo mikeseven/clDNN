@@ -23,9 +23,9 @@
 #include <fstream>
 #include <set>
 
-#ifndef NDEBUG
+//#ifndef NDEBUG
 #define OUT_PORGRAM_TO_FILE
-#endif
+//#endif
 
 namespace neural { namespace gpu {
 

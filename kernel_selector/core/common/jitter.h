@@ -591,7 +591,20 @@ inline JitConstants MakeReorderJitConstants(const ReorderParams& params)
 
     if (params.reorderParams.mode == MeanSubtructMode::INSIDE_PARAMS)
     {
+        // another issue of the old reorder kernel
+#if 1
+        std::stringstream s;
+        s << "(float[]){ ";
+        for (uint32_t i = 0; i < params.reorderParams.meanValues.size(); i++)
+        {
+            s << params.reorderParams.meanValues[i] << ", ";
+        }
+        s << " }";
+        jit.AddConstant(MakeJitConstant("VALUE_TO_SUBTRACT", s.str()));
+        jit.AddConstant(MakeJitConstant("VALUE_TO_SUBTRACT_SIZE", params.reorderParams.meanValues.size()));
+#else
         jit.AddConstant(MakeJitConstant("VALUE_TO_SUBTRACT", params.reorderParams.meanValues));
+#endif
     }
     else if (params.reorderParams.mode == MeanSubtructMode::IN_BUFFER)
     {
