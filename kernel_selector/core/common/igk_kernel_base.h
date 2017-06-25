@@ -41,7 +41,7 @@ namespace KernelSelector
         std::string CreateJit(const std::string& template_name, JitConstants constants, std::string kernel_name, bool inject_header = true) const;
         std::string GetEntryPoint(const std::string& template_name, const std::string& layer_id) const;
         ArgumentDescpirtor GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const;
-        KernelString GetKernelString(std::string kernel_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN) const;
+        std::shared_ptr<KernelString> GetKernelString(std::string kernel_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN) const;
         void FillCLKernelData(clKernelData& kernel, const CommonDispatchData& runInfo, std::string kernel_map_name, std::string jit, std::string entry_point, bool weights = false, bool bias = false) const;
     };
 

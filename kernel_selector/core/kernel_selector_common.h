@@ -150,9 +150,10 @@ namespace KernelSelector {
     {
         binary_data GetBinary(context_device cl_context, program_cache& compiler) const;
 
-        KernelString kernelString;
+        std::shared_ptr<KernelString> kernelString;
         WorkGroupSizes workGroups;
         ArgumentDescpirtor argsDesc;
+        std::string layerID;            // TODO: in order to support run single layer. think about more appropriate place
         // TODO: maybe we want an estimated time per cl kernel
         // float estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
     };

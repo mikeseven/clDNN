@@ -28,6 +28,7 @@
 #include <iostream>
 #include <sstream>
 
+using namespace KernelSelector;
 namespace neural { namespace gpu {
 
 class memory_arg {
@@ -410,8 +411,8 @@ public:
         : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(template_id, definitions, kernel_name)) {}
     explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::string& template_id, const jit_constants& constants, const std::string& kernel_name = std::string())
         : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(template_id, constants.get_definitions(), kernel_name)) {}
-    explicit kernel(std::shared_ptr<gpu_toolkit> context, const KernelSelector::KernelString& kernel_string)
-        : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template_ks({ kernel_string.jit,kernel_string.str }, kernel_string.options, kernel_string.entry_point, kernel_string.batch_compilation)) {}
+    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::shared_ptr<KernelString>& kernel_string)
+        : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template_ks({ kernel_string->jit,kernel_string->str }, kernel_string->options, kernel_string->entry_point, kernel_string->batch_compilation)) {}
 
     kernel(const kernel& other) : context_holder(other.context()), _kernel_id(other._kernel_id) {}
 
@@ -475,35 +476,53 @@ public:
     {
         cl::Event end_event;
         std::vector<cl::Event> events;
-        events.reserve(dependencies.size());
-        for (auto& dependency : dependencies)
+
+        bool run_this_layer = false;
+        if (context()->enabled_single_kernel())
         {
-            events.emplace_back(dependency->get());
+            std::string proper_layer_name = kernel_data.layerID;
+            if (proper_layer_name.compare(context()->single_kernel_name()) == 0)
+            {
+                run_this_layer = true;
+            }
+        }
+        else
+        {
+            run_this_layer = true;
+
+            events.reserve(dependencies.size());
+            for (auto& dependency : dependencies)
+            {
+                events.emplace_back(dependency->get());
+            }
         }
 
-        auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
-        KernelSelector::ArgumentDescpirtor::SetArgumentParams params;
-        for (const auto i : args.inputs)
+        if (run_this_layer)
         {
-            params.inputs.push_back(i ? &kernel_arg_handler<gpu::input_mem>::get(*i) : nullptr);
+            auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
+            KernelSelector::ArgumentDescpirtor::SetArgumentParams params;
+            for (const auto i : args.inputs)
+            {
+                params.inputs.push_back(i ? &kernel_arg_handler<gpu::input_mem>::get(*i) : nullptr);
+            }
+            params.output       = args.output       ? &kernel_arg_handler<gpu::output_mem>::get(*args.output)       : nullptr;
+            params.weights      = args.weights      ? &kernel_arg_handler<gpu::input_mem>::get(*args.weights)       : nullptr;
+            params.bias         = args.bias         ? &kernel_arg_handler<gpu::input_mem>::get(*args.bias)          : nullptr;
+            params.lookupTable  = args.lookup_table ? &kernel_arg_handler<gpu::input_mem>::get(*args.lookup_table)  : nullptr;
+            params.scaleTable   = args.scale_table  ? &kernel_arg_handler<gpu::input_mem>::get(*args.scale_table)   : nullptr;
+            params.slope        = args.slope        ? &kernel_arg_handler<gpu::input_mem>::get(*args.slope)         : nullptr;
+            params.split        = args.split;
+
+            kernel_data.argsDesc.SetArguments(clkernel, params);
+
+            context()->queue().enqueueNDRangeKernel(
+                clkernel,
+                cl::NullRange,
+                kernel_data.workGroups.global,
+                kernel_data.workGroups.local,
+                &events,
+                &end_event);
         }
-        params.output       = args.output       ? &kernel_arg_handler<gpu::output_mem>::get(*args.output)       : nullptr;
-        params.weights      = args.weights      ? &kernel_arg_handler<gpu::input_mem>::get(*args.weights)       : nullptr;
-        params.bias         = args.bias         ? &kernel_arg_handler<gpu::input_mem>::get(*args.bias)          : nullptr;
-        params.lookupTable = args.lookup_table ? &kernel_arg_handler<gpu::input_mem>::get(*args.lookup_table)  : nullptr;
-        params.scaleTable  = args.scale_table  ? &kernel_arg_handler<gpu::input_mem>::get(*args.scale_table)   : nullptr;
-        params.slope        = args.slope        ? &kernel_arg_handler<gpu::input_mem>::get(*args.slope)         : nullptr;
-        params.split        = args.split;
-
-        kernel_data.argsDesc.SetArguments(clkernel, params);
-
-        context()->queue().enqueueNDRangeKernel(
-            clkernel, 
-            cl::NullRange, 
-            kernel_data.workGroups.global,
-            kernel_data.workGroups.local,
-            &events, 
-            &end_event);
 
         return{ new cldnn::event_impl(end_event), false };
     }

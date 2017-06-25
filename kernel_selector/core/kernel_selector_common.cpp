@@ -121,7 +121,7 @@ namespace KernelSelector {
 
     binary_data clKernelData::GetBinary(context_device cl_context, program_cache& compiler) const
     {
-        return compiler.get(cl_context, kernelString.jit + kernelString.str, kernelString.options);
+        return compiler.get(cl_context, kernelString->jit + kernelString->str, kernelString->options);
     }
 
     std::string GetStringEnv(const char* varName)

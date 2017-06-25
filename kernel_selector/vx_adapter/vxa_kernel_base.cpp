@@ -232,7 +232,7 @@ namespace clDNN
         {
             data.desc.binary = binary.data();
             data.desc.size = binary.size();
-            data.entry_point = cldnn_data.kernelString.entry_point.c_str();
+            data.entry_point = cldnn_data.kernelString->entry_point.c_str();
             data.args = args.get();
             data.workGroup = GetWorkGroups(cldnn_data.workGroups);
         }

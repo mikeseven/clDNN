@@ -76,7 +76,7 @@ public:
 
         CL_CHECK(status, "Error: cannot create program");
 
-        cl::Kernel clKernel(program, clData.kernelString.entry_point.c_str(), &status);
+        cl::Kernel clKernel(program, clData.kernelString->entry_point.c_str(), &status);
         CL_CHECK(status, "Error: cannot create kernel");
 
         auto& newParams = *static_cast<ConvolutionParams*>(kernelData.params.get());

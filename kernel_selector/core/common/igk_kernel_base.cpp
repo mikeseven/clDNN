@@ -267,19 +267,19 @@ static const char* kernels_header = R"__krnl(
         return desc;
     }
 
-    KernelString IGKKernelBase::GetKernelString(std::string name, std::string jit, std::string entry_point, std::string exe_mode) const
+    std::shared_ptr<KernelString> IGKKernelBase::GetKernelString(std::string name, std::string jit, std::string entry_point, std::string exe_mode) const
     {
-        KernelString kernel_string;
+        std::shared_ptr<KernelString> kernel_string = std::make_shared<KernelString>();
 
         auto codes = db.get(name);
 
         if (codes.size())
         {
-            kernel_string.str = codes[0];
-            kernel_string.jit = jit;
-            kernel_string.options = exe_mode + " -cl-mad-enable";
-            kernel_string.entry_point = entry_point;
-            kernel_string.batch_compilation = true;
+            kernel_string->str = codes[0];
+            kernel_string->jit = jit;
+            kernel_string->options = exe_mode + " -cl-mad-enable";
+            kernel_string->entry_point = entry_point;
+            kernel_string->batch_compilation = true;
         }
 
         return kernel_string;

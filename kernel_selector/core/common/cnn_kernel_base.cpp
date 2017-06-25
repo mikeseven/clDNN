@@ -14,6 +14,7 @@
 // limitations under the License.
 */
 
+#include <memory>
 #include "cnn_kernel_base.h"
 
 namespace KernelSelector {
@@ -87,19 +88,19 @@ namespace KernelSelector {
         return desc;
     }
 
-    KernelString CNNKernelBase::GetKernelString(std::string name, std::string jit, std::string entry_point, std::string exe_mode, std::string default_build_flags) const
+    std::shared_ptr<KernelString> CNNKernelBase::GetKernelString(std::string name, std::string jit, std::string entry_point, std::string exe_mode, std::string default_build_flags) const
     {
-        KernelString kernel_string;
+        std::shared_ptr<KernelString> kernel_string = std::make_shared<KernelString>();
 
         auto codes = db.get(name);
 
         if (codes.size())
         {
-            kernel_string.str = codes[0];
-            kernel_string.jit = jit;
-            kernel_string.options = exe_mode + " " + default_build_flags;
-            kernel_string.entry_point = entry_point;
-            kernel_string.batch_compilation = true;
+            kernel_string->str = codes[0];
+            kernel_string->jit = jit;
+            kernel_string->options = exe_mode + " " + default_build_flags;
+            kernel_string->entry_point = entry_point;
+            kernel_string->batch_compilation = true;
         }
 
         return kernel_string;
