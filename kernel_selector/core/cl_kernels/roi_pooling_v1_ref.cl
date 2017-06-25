@@ -35,11 +35,18 @@
 #define DST_W POOLED_WIDTH
 #define DST_H POOLED_HEIGHT
 
-#if GROUP_SZ == 0
+#if GORUP_SIZE == 0
 #define DST_C INPUT_FEATURE_NUM
 #else
-#define DST_C (GROUP_SZ ? (INPUT_FEATURE_NUM / GROUP_SZ / GROUP_SZ) : INPUT_FEATURE_NUM)
+#define DST_C (GORUP_SIZE ? (INPUT_FEATURE_NUM / GORUP_SIZE / GORUP_SIZE) : INPUT_FEATURE_NUM)
 #endif
+
+#define PITCH_ROI_R ROI_NUM_ELEMENTS
+#define PITCH_SRC_H INPUT_SIZE_X
+#define PITCH_SRC_C (PITCH_SRC_H * INPUT_SIZE_Y)
+#define PITCH_DST_H DST_W
+#define PITCH_DST_C (PITCH_DST_H * DST_H)
+#define PITCH_DST_R (PITCH_DST_C * DST_C)
 
 // Note: In the non-ROI_OLD case we keep the coordinates in float instead
 //       of using UNIT_TYPE, since with FP16 we might actually lose some
@@ -61,8 +68,8 @@
 KERNEL(roi_pooling_gpu)
 (
     const __global UNIT_TYPE * src_data,
-    const __global UNIT_TYPE * src_rois,
-    __global UNIT_TYPE * dst_data
+    __global UNIT_TYPE * dst_data,
+    const __global UNIT_TYPE * src_rois
 )
 {
     const size_t i = get_global_id(0);
@@ -70,13 +77,13 @@ KERNEL(roi_pooling_gpu)
     const uint x = i % DST_W;
     const uint y = i / DST_W % DST_H;
     const uint c = i / DST_W / DST_H % DST_C;
-    const uint r = i / DST_W / DST_H / DST_C % INPUT1_SIZE_Y;
-    const uint b = i / DST_W / DST_H / DST_C / INPUT1_SIZE_Y;
+    const uint r = i / DST_W / DST_H / DST_C;
+
     // Note: The rounding of the coordinates is done prior to the mul
     //       with SPATIAL_SCALE: It makes sense since the resolution of
     //       the pooled data is limited by its dimensions. (Is this clear?)
 
-    const __global UNIT_TYPE * roi_ptr = &src_rois[INPUT1_Y_PITCH * r];
+    const __global UNIT_TYPE * roi_ptr = &src_rois[PITCH_ROI_R * r];
 #if USE_OLD_SCALE_AND_ROUNDING
     const int roi_x  = round(roi_ptr[1] * SPATIAL_SCALE);
     const int roi_y  = round(roi_ptr[2] * SPATIAL_SCALE);
@@ -129,7 +136,7 @@ KERNEL(roi_pooling_gpu)
     const int y_after = CLAMP(ceil(roi_y + dy_after), 0, SRC_H);
 #endif
 
-#if GROUP_SZ == 0
+#if GORUP_SIZE == 0
     const uint work_c = c;
 #else
 
@@ -137,24 +144,24 @@ KERNEL(roi_pooling_gpu)
     const COORD_T group_bin_w = (COORD_T)roi_w / DST_W;
     const COORD_T group_bin_h = (COORD_T)roi_h / DST_H;
     
-    const uint group_x = CLAMP(x * group_bin_w, 0, GROUP_SZ - 1);
-    const uint group_y = CLAMP(y * group_bin_h, 0, GROUP_SZ - 1);
+    const uint group_x = CLAMP(x * group_bin_w, 0, GORUP_SIZE - 1);
+    const uint group_y = CLAMP(y * group_bin_h, 0, GORUP_SIZE - 1);
 #else
     const uint group_x = x;
     const uint group_y = y;
 #endif
 
-    const uint work_c = group_x + GROUP_SZ * (group_y + GROUP_SZ * c);
+    const uint work_c = group_x + GORUP_SIZE * (group_y + GORUP_SIZE * c);
 #endif
 
-    const __global UNIT_TYPE * data = src_data + INPUT_OFFSET + INPUT_FEATURE_PITCH*work_c + INPUT_BATCH_PITCH*b;
+    const __global UNIT_TYPE * data = src_data + INPUT_OFFSET + PITCH_SRC_C*work_c;
 
     ACCUM_T res = MAX_POOL && x_begin < x_after && y_begin < y_after ? UNIT_VAL_MIN : 0;
 
     for (int yy = y_begin; yy < y_after; ++yy)
     for (int xx = x_begin; xx < x_after; ++xx)
     {
-        UNIT_TYPE val = data[xx*INPUT_X_PITCH + yy*INPUT_Y_PITCH];
+        UNIT_TYPE val = data[xx + SRC_W * yy];
 
         res = MAX_POOL ? MAX(res, (ACCUM_T)val) : res + (ACCUM_T)val;
     }
@@ -166,6 +173,5 @@ KERNEL(roi_pooling_gpu)
         if (area) res /= area;
     }
 
-    const uint output_offset = OUTPUT_OFFSET + x*OUTPUT_X_PITCH + y*OUTPUT_Y_PITCH + c*OUTPUT_FEATURE_PITCH + r*OUTPUT_ROI_PITCH + b*OUTPUT_BATCH_PITCH;
-    dst_data[output_offset] = (UNIT_TYPE)res;
-} 
+    dst_data[x + PITCH_DST_H * y + PITCH_DST_C * c + PITCH_DST_R * r] = (UNIT_TYPE)res;
+}
