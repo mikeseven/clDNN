@@ -58,12 +58,14 @@ struct reorder_gpu : typed_primitive_impl<reorder>
 
         if (arg.has_mean())
         {
+            const auto& mean_layout = arg.mean().get_output_layout();
+
             // TODO: replace it back. it's a W/A to support old bug which use mean dimensions as input dimensions.
             //       (for example - input 224x224 and mean 227x227).
-            const auto& mean_layout = arg.mean().get_output_layout();
 #if 1
             const auto& input_layout = arg.input().get_output_layout();
-            auto b = mean_layout.size.batch[0];
+            // old code doesn't support batching in mean image... :(
+            auto b = 1;// mean_layout.size.batch[0];
             auto f = mean_layout.size.feature[0];
             auto y = input_layout.size.spatial[1];
             auto x = input_layout.size.spatial[0];
