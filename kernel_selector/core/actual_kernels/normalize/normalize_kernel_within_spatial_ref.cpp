@@ -21,18 +21,18 @@ namespace KernelSelector
     ParamsKey NormalizeKernelWithinSpatialRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetInputDataType(Datatype::F16);
-        k.SetInputDataType(Datatype::F32);
-        k.SetOutputDataType(Datatype::F16);
-        k.SetOutputDataType(Datatype::F32);
-        k.SetInputLayout(DataLayout::bfyx);
-        k.SetInputLayout(DataLayout::yxfb);
-        k.SetOutputLayout(DataLayout::bfyx);
-        k.SetOutputLayout(DataLayout::yxfb);
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetBatchingSupport();
-        k.SetNormalizeMode(NormalizeMode::WITHIN_SPATIAL);
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableInputLayout(DataLayout::yxfb);
+        k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::yxfb);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableBatching();
+        k.EnableNormalizeMode(NormalizeMode::WITHIN_SPATIAL);
         return k;
     }
 

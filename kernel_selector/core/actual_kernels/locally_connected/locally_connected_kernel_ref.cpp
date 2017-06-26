@@ -22,15 +22,15 @@ namespace KernelSelector {
     ParamsKey LocallyConnectedKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetInputDataType(Datatype::F16);
-        k.SetInputDataType(Datatype::F32);
-        k.SetOutputDataType(Datatype::F16);
-        k.SetOutputDataType(Datatype::F32);
-        k.SetInputLayout(DataLayout::bfyx);
-        k.SetOutputLayout(DataLayout::bfyx);
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetBatchingSupport();
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableBatching();
         return k;
     }
 

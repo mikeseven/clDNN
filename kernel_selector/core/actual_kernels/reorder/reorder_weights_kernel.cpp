@@ -23,16 +23,14 @@ namespace KernelSelector
     ParamsKey ReorderWeightsKernel::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetInputWeightsType(WeightsType::F16);
-        k.SetInputWeightsType(WeightsType::F32);
-        k.SetOutputWeightsType(WeightsType::F16);
-        k.SetOutputWeightsType(WeightsType::F32);
-        //k.SetInputWeightsType(WeightsType::INT8);
-        //k.SetOutputWeightsType(WeightsType::INT8);
+        k.EnableInputWeightsType(WeightsType::F16);
+        k.EnableInputWeightsType(WeightsType::F32);
+        k.EnableOutputWeightsType(WeightsType::F16);
+        k.EnableOutputWeightsType(WeightsType::F32);
         k.EnableAllWeightsLayout();
-        k.SetDifferentTypesSupport();
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
+        k.EnableDifferentTypes();
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
         return k;
     }
 

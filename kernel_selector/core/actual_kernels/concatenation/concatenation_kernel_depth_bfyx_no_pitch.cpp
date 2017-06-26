@@ -23,15 +23,15 @@ namespace KernelSelector
     ParamsKey ConcatenationKernel_depth_bfyx_no_pitch::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetInputDataType(Datatype::F32);
-        k.SetOutputDataType(Datatype::F32);
-        k.SetInputLayout(DataLayout::bfyx);
-        k.SetInputLayout(DataLayout::bf);
-        k.SetOutputLayout(DataLayout::bfyx);
-        k.SetOutputLayout(DataLayout::bf);
-        k.SetOffsetSupport();
-        k.SetBatchingSupport();
-        k.SetConcatAxis(ConcatAxis::FEATURE);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableInputLayout(DataLayout::bf);
+        k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::bf);
+        k.EnableTensorOffset();
+        k.EnableBatching();
+        k.EnableConcatAxis(ConcatAxis::FEATURE);
         return k;
     }
 

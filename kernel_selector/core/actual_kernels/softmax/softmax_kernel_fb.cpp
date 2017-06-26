@@ -21,18 +21,18 @@ namespace KernelSelector
     ParamsKey SoftmaxKernel_fb::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetInputDataType(Datatype::F16);
-        k.SetInputDataType(Datatype::F32);
-        k.SetOutputDataType(Datatype::F16);
-        k.SetOutputDataType(Datatype::F32);
-        k.SetInputLayout(DataLayout::yxfb);
-        k.SetInputLayout(DataLayout::fb);
-        k.SetOutputLayout(DataLayout::yxfb);
-        k.SetOutputLayout(DataLayout::fb);
-        k.SetSoftmaxDim(SoftmaxDim::X);         // in case that it can be flatten
-        k.SetSoftmaxDim(SoftmaxDim::Y);
-        k.SetSoftmaxDim(SoftmaxDim::FEATURE);
-        k.SetBatchingSupport();
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputLayout(DataLayout::yxfb);
+        k.EnableInputLayout(DataLayout::fb);
+        k.EnableOutputLayout(DataLayout::yxfb);
+        k.EnableOutputLayout(DataLayout::fb);
+        k.EnableSoftmaxDim(SoftmaxDim::X);         // in case that it can be flatten
+        k.EnableSoftmaxDim(SoftmaxDim::Y);
+        k.EnableSoftmaxDim(SoftmaxDim::FEATURE);
+        k.EnableBatching();
         return k;
     }
 

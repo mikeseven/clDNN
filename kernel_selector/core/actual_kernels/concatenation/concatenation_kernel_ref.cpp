@@ -23,19 +23,19 @@ namespace KernelSelector
     ParamsKey ConcatenationKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetInputDataType(Datatype::F16);
-        k.SetInputDataType(Datatype::F32);
-        k.SetOutputDataType(Datatype::F16);
-        k.SetOutputDataType(Datatype::F32);
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetBatchingSupport();
-        k.SetConcatAxis(ConcatAxis::X);
-        k.SetConcatAxis(ConcatAxis::Y);
-        k.SetConcatAxis(ConcatAxis::FEATURE);
-        k.SetConcatAxis(ConcatAxis::BATCH);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableBatching();
+        k.EnableConcatAxis(ConcatAxis::X);
+        k.EnableConcatAxis(ConcatAxis::Y);
+        k.EnableConcatAxis(ConcatAxis::FEATURE);
+        k.EnableConcatAxis(ConcatAxis::BATCH);
         return k;
     }
 

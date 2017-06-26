@@ -24,20 +24,19 @@ namespace KernelSelector
     ParamsKey ConvolutionKernel_yxfb_yxio_b1_block::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetInputDataType(Datatype::F32);
-        k.SetInputWeightsType(WeightsType::F32);
-        k.SetOutputDataType(Datatype::F32);
-        k.SetInputLayout(DataLayout::yxfb);
-        k.SetOutputLayout(DataLayout::yxfb);
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetBiasPerFeatureMap();
-        //k.SetBiasPerOutput();
-        k.SetNonBiasSupport();
-        k.SetBatchingSupport();
-        k.SetSplitSupport();
-        k.SetDilationSupport();
-        k.SetSubGroupSupport();
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableInputWeightsType(WeightsType::F32);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputLayout(DataLayout::yxfb);
+        k.EnableOutputLayout(DataLayout::yxfb);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableBiasPerFeature();
+        k.EnableNonBiasTerm();
+        k.EnableBatching();
+        k.EnableSplitSupport();
+        k.EnableDilation();
+        k.EnableSubGroup();
         return k;
     }
 

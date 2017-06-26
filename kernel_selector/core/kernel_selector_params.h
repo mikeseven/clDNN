@@ -128,7 +128,7 @@ namespace KernelSelector
             uint32_t weightsLayout;
         };
 
-        void SetInputDataType(Datatype dt)
+        void EnableInputDataType(Datatype dt)
         {
             switch (dt)
             {
@@ -143,7 +143,7 @@ namespace KernelSelector
             }
         }
 
-        void SetOutputDataType(Datatype dt)
+        void EnableOutputDataType(Datatype dt)
         {
             switch (dt)
             {
@@ -158,7 +158,7 @@ namespace KernelSelector
             }
         }
 
-        void SetInputWeightsType(WeightsType wt)
+        void EnableInputWeightsType(WeightsType wt)
         {
             switch (wt)
             {
@@ -176,7 +176,7 @@ namespace KernelSelector
             }
         }
 
-        void SetOutputWeightsType(WeightsType wt)
+        void EnableOutputWeightsType(WeightsType wt)
         {
             switch (wt)
             {
@@ -194,12 +194,12 @@ namespace KernelSelector
             }
         }
 
-        void SetDifferentTypesSupport()
+        void EnableDifferentTypes()
         {
             key.restrict.val.different_types = 1;
         }
 
-        void SetInputLayout(DataLayout l)
+        void EnableInputLayout(DataLayout l)
         {
             key.inputLayout |= (1 << l);
         }
@@ -209,7 +209,7 @@ namespace KernelSelector
             key.inputLayout = 0xffffffff;
         }
 
-        void SetOutputLayout(DataLayout l)
+        void EnableOutputLayout(DataLayout l)
         {
             key.outputLayout |= (1 << l);
         }
@@ -219,7 +219,7 @@ namespace KernelSelector
             key.outputLayout = 0xffffffff;
         }
 
-        void SetWeightsLayout(WeightsLayout l)
+        void EnableWeightsLayout(WeightsLayout l)
         {
             key.weightsLayout |= (1 << l);
         }
@@ -229,47 +229,47 @@ namespace KernelSelector
             key.weightsLayout = 0xffffffff;
         }
 
-        void SetOffsetSupport()
+        void EnableTensorOffset()
         {
             key.restrict.val.offset = 1;
         }
 
-        void SetPitchesSupport()
+        void EnableTensorPitches()
         {
             key.restrict.val.pitches = 1;
         }
 
-        void SetBatchingSupport()
+        void EnableBatching()
         {
             key.restrict.val.batching = 1;
         }
 
-        void SetSubGroupSupport()
+        void EnableSubGroup()
         {
             key.machineInfo.val.subgroup = 1;
         }
 
-        void SetNonBiasSupport()
+        void EnableNonBiasTerm()
         {
             key.restrict.val.nonBias = 1;
         }
 
-        void SetBiasPerFeatureMap()
+        void EnableBiasPerFeature()
         {
             key.restrict.val.biasPerFeatureMap = 1;
         }
 
-        void SetBiasPerOutput()
+        void EnableBiasPerOutput()
         {
             key.restrict.val.biasPerOutput = 1;
         }
 
-        void SetPReluSupport()
+        void EnablePRelu()
         {
             key.restrict.val.prelu = 1;
         }
 
-        void SetLRNMode(LRNMode m)
+        void EnableLRNMode(LRNMode m)
         {
             switch (m)
             {
@@ -284,7 +284,7 @@ namespace KernelSelector
             }
         }
 
-        void SetNormalizeMode(NormalizeMode m)
+        void EnableNormalizeMode(NormalizeMode m)
         {
             switch (m)
             {
@@ -299,7 +299,7 @@ namespace KernelSelector
             }
         }
 
-        void SetLRNKernelDividerMode(KernelDividerMode m)
+        void EnableLRNKernelDividerMode(KernelDividerMode m)
         {
             switch (m)
             {
@@ -314,7 +314,7 @@ namespace KernelSelector
             }
         }
 
-        void SetPoolKernelDividerMode(KernelDividerMode m)
+        void EnablePoolKernelDividerMode(KernelDividerMode m)
         {
             switch (m)
             {
@@ -329,7 +329,7 @@ namespace KernelSelector
             }
         }
 
-        void SetPoolType(PoolType t)
+        void EnablePoolType(PoolType t)
         {
             switch (t)
             {
@@ -344,7 +344,7 @@ namespace KernelSelector
             }
         }
 
-        void SetPoolRemainder(PoolRemainder r)
+        void EnablePoolRemainder(PoolRemainder r)
         {
             switch (r)
             {
@@ -359,17 +359,17 @@ namespace KernelSelector
             }
         }
 
-        void SetSplitSupport()
+        void EnableSplitSupport()
         {
             key.restrict.val.dedicated.conv.split = 1;
         }
 
-        void SetDilationSupport()
+        void EnableDilation()
         {
             key.restrict.val.dedicated.conv.dilation = 1;
         }
 
-        void SetSoftmaxDim(SoftmaxDim d)
+        void EnableSoftmaxDim(SoftmaxDim d)
         {
             switch (d)
             {
@@ -387,7 +387,7 @@ namespace KernelSelector
             }
         }
 
-        void SetConcatAxis(ConcatAxis a)
+        void EnableConcatAxis(ConcatAxis a)
         {
             switch (a)
             {
@@ -476,8 +476,8 @@ namespace KernelSelector
 
             for (const auto& i : inputs)
             {
-                k.SetInputDataType(i.GetDType());
-                k.SetInputLayout(i.GetLayout());
+                k.EnableInputDataType(i.GetDType());
+                k.EnableInputLayout(i.GetLayout());
 
                 bBatching       |= (i.Batch().v > 1);
                 bPitches        |= (i.PaddingExists());
@@ -485,34 +485,34 @@ namespace KernelSelector
                 bDifferentTypes |= (i.GetDType() != output.GetDType());
             }
 
-            k.SetOutputDataType(output.GetDType());
-            k.SetOutputLayout(output.GetLayout());
+            k.EnableOutputDataType(output.GetDType());
+            k.EnableOutputLayout(output.GetLayout());
 
             if (bBatching)
             {
-                k.SetBatchingSupport();
+                k.EnableBatching();
             }
 
             if (bPitches ||
                 output.PaddingExists())
             {
-                k.SetPitchesSupport();
+                k.EnableTensorPitches();
             }
 
             if (bDifferentTypes)
             {
-                k.SetDifferentTypesSupport();
+                k.EnableDifferentTypes();
             }
 
             if (bOffests ||
                 output.GetOffset() != 0)
             {
-                k.SetOffsetSupport();
+                k.EnableTensorOffset();
             }
 
             if (activationFunc == ActivationFunction::PRELU)
             {
-                k.SetPReluSupport();
+                k.EnablePRelu();
             }
 
             return k;
@@ -537,25 +537,25 @@ namespace KernelSelector
         {
             ParamsKey k = BaseParams::GetParamsKey();
 
-            k.SetInputWeightsType(weights.GetDType());
+            k.EnableInputWeightsType(weights.GetDType());
             
             // not needed - can be changed by reorder params
-            //k.SetWeightsLayout(weights.layout);
+            //k.EnableWeightsLayout(weights.layout);
 
             assert(bias.size() <= 1);
 
             if (bias.empty())
             {
-                k.SetNonBiasSupport();
+                k.EnableNonBiasTerm();
             }
             else if (bias[0].GetLayout() == DataLayout::bf ||
                      bias[0].GetLayout() == DataLayout::fb)
             {
-                k.SetBiasPerFeatureMap();
+                k.EnableBiasPerFeature();
             }
             else if (bias[0].GetLayout() == output.GetLayout())
             {
-                k.SetBiasPerOutput();
+                k.EnableBiasPerOutput();
             }
 
             return k;
@@ -588,13 +588,13 @@ namespace KernelSelector
 
             if (convParams.split > 1)
             {
-                k.SetSplitSupport();
+                k.EnableSplitSupport();
             }
 
             if (convParams.dilation.x != 1 ||
                 convParams.dilation.y != 1)
             {
-                k.SetDilationSupport();
+                k.EnableDilation();
             }
 
             return k;
@@ -627,13 +627,13 @@ namespace KernelSelector
 
             if (deconvParams.split > 1)
             {
-                k.SetSplitSupport();
+                k.EnableSplitSupport();
             }
 
             if (deconvParams.dilation.x != 1 ||
                 deconvParams.dilation.y != 1)
             {
-                k.SetDilationSupport();
+                k.EnableDilation();
             }
 
             return k;
@@ -663,8 +663,8 @@ namespace KernelSelector
         {
             ParamsKey k = BaseParams::GetParamsKey();
 
-            k.SetLRNMode(lrnParams.normMode);
-            k.SetLRNKernelDividerMode(lrnParams.divMode);
+            k.EnableLRNMode(lrnParams.normMode);
+            k.EnableLRNKernelDividerMode(lrnParams.divMode);
 
             return k;
         }
@@ -690,7 +690,7 @@ namespace KernelSelector
         {
             ParamsKey k = BaseParams::GetParamsKey();
 
-            k.SetNormalizeMode(normParams.normMode);
+            k.EnableNormalizeMode(normParams.normMode);
 
             return k;
         }
@@ -719,9 +719,9 @@ namespace KernelSelector
         {
             ParamsKey k = BaseParams::GetParamsKey();
 
-            k.SetPoolType(poolParams.poolType);
-            k.SetPoolRemainder(poolParams.remainderAction);
-            k.SetPoolKernelDividerMode(poolParams.divMode);
+            k.EnablePoolType(poolParams.poolType);
+            k.EnablePoolRemainder(poolParams.remainderAction);
+            k.EnablePoolKernelDividerMode(poolParams.divMode);
 
             return k;
         }
@@ -833,7 +833,7 @@ namespace KernelSelector
         virtual ParamsKey GetParamsKey() const
         {
             auto k = BaseParams::GetParamsKey();
-            k.SetSoftmaxDim(smParams.dim);
+            k.EnableSoftmaxDim(smParams.dim);
             return k;
         }
     };
@@ -991,20 +991,20 @@ namespace KernelSelector
             ParamsKey k;
             const auto& input = reorderParams.input;
             const auto& output = reorderParams.output;
-            k.SetWeightsLayout(input.GetLayout());
-            k.SetWeightsLayout(output.GetLayout());
-            k.SetInputWeightsType(input.GetDType());
-            k.SetOutputWeightsType(output.GetDType());
+            k.EnableWeightsLayout(input.GetLayout());
+            k.EnableWeightsLayout(output.GetLayout());
+            k.EnableInputWeightsType(input.GetDType());
+            k.EnableOutputWeightsType(output.GetDType());
 
             if (input.PaddingExists() ||
                 output.PaddingExists())
             {
-                k.SetPitchesSupport();
+                k.EnableTensorPitches();
             }
 
             if (input.GetOffset() != 0 || output.GetOffset() != 0)
             {
-                k.SetOffsetSupport();
+                k.EnableTensorOffset();
             }
             return k;
         }
@@ -1068,7 +1068,7 @@ namespace KernelSelector
         virtual ParamsKey GetParamsKey() const
         {
             auto k =  BaseParams::GetParamsKey();
-            k.SetConcatAxis(concatParams.axis);
+            k.EnableConcatAxis(concatParams.axis);
             return k;
         }
     };
@@ -1094,17 +1094,17 @@ namespace KernelSelector
 
             for (auto l : inputLayouts)
             {
-                k.SetInputLayout(l);
+                k.EnableInputLayout(l);
             }
 
             for (auto l : outputLayouts)
             {
-                k.SetOutputLayout(l);
+                k.EnableOutputLayout(l);
             }
 
             if (bSupportSubGroupExt)
             {
-                k.SetSubGroupSupport();
+                k.EnableSubGroup();
             }
 
             return k;

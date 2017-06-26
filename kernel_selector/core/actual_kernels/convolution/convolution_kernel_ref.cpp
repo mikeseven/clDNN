@@ -22,22 +22,22 @@ namespace KernelSelector {
     ParamsKey ConvolutionKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetInputDataType(Datatype::F16);
-        k.SetInputDataType(Datatype::F32);
-        k.SetOutputDataType(Datatype::F16);
-        k.SetOutputDataType(Datatype::F32);
-        k.SetInputWeightsType(WeightsType::F16);
-        k.SetInputWeightsType(WeightsType::F32);
-        k.SetInputLayout(DataLayout::bfyx);
-        k.SetOutputLayout(DataLayout::bfyx);
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetDilationSupport();
-        k.SetBiasPerFeatureMap();
-        k.SetBiasPerOutput();
-        k.SetNonBiasSupport();
-        k.SetBatchingSupport();
-        k.SetSplitSupport();
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputWeightsType(WeightsType::F16);
+        k.EnableInputWeightsType(WeightsType::F32);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableDilation();
+        k.EnableBiasPerFeature();
+        k.EnableBiasPerOutput();
+        k.EnableNonBiasTerm();
+        k.EnableBatching();
+        k.EnableSplitSupport();
         return k;
     }
 

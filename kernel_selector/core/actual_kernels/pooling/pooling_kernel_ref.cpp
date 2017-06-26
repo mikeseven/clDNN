@@ -22,21 +22,21 @@ namespace KernelSelector
     ParamsKey PoolingKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetInputDataType(Datatype::F16);
-        k.SetInputDataType(Datatype::F32);
-        k.SetOutputDataType(Datatype::F16);
-        k.SetOutputDataType(Datatype::F32);
-        k.SetInputLayout(DataLayout::bfyx);
-        k.SetOutputLayout(DataLayout::bfyx);
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetBatchingSupport();
-        k.SetPoolType(PoolType::MAX);
-        k.SetPoolType(PoolType::AVG);
-        k.SetPoolRemainder(PoolRemainder::FLOOR);
-        k.SetPoolRemainder(PoolRemainder::CEIL);
-        k.SetPoolKernelDividerMode(KernelDividerMode::FIXED);
-        k.SetPoolKernelDividerMode(KernelDividerMode::DYNAMIC);
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableBatching();
+        k.EnablePoolType(PoolType::MAX);
+        k.EnablePoolType(PoolType::AVG);
+        k.EnablePoolRemainder(PoolRemainder::FLOOR);
+        k.EnablePoolRemainder(PoolRemainder::CEIL);
+        k.EnablePoolKernelDividerMode(KernelDividerMode::FIXED);
+        k.EnablePoolKernelDividerMode(KernelDividerMode::DYNAMIC);
         return k;
     }
 

@@ -22,24 +22,24 @@ namespace KernelSelector
     ParamsKey SoftmaxKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetInputDataType(Datatype::F16);
-        k.SetInputDataType(Datatype::F32);
-        k.SetOutputDataType(Datatype::F16);
-        k.SetOutputDataType(Datatype::F32);
-        k.SetInputLayout(DataLayout::bfyx);
-        k.SetInputLayout(DataLayout::yxfb);
-        k.SetInputLayout(DataLayout::bf);
-        k.SetInputLayout(DataLayout::fb);
-        k.SetOutputLayout(DataLayout::bfyx);
-        k.SetOutputLayout(DataLayout::yxfb);
-        k.SetOutputLayout(DataLayout::bf);
-        k.SetOutputLayout(DataLayout::fb);
-        k.SetSoftmaxDim(SoftmaxDim::X);
-        k.SetSoftmaxDim(SoftmaxDim::Y);
-        k.SetSoftmaxDim(SoftmaxDim::FEATURE);
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetBatchingSupport();
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableInputLayout(DataLayout::yxfb);
+        k.EnableInputLayout(DataLayout::bf);
+        k.EnableInputLayout(DataLayout::fb);
+        k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::yxfb);
+        k.EnableOutputLayout(DataLayout::bf);
+        k.EnableOutputLayout(DataLayout::fb);
+        k.EnableSoftmaxDim(SoftmaxDim::X);
+        k.EnableSoftmaxDim(SoftmaxDim::Y);
+        k.EnableSoftmaxDim(SoftmaxDim::FEATURE);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableBatching();
         return k;
     }
 

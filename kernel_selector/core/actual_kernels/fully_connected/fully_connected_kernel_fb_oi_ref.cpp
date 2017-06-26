@@ -22,17 +22,17 @@ namespace KernelSelector
     ParamsKey FullyConnected_fb_oi_ref::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetInputDataType(Datatype::F16);
-        k.SetInputDataType(Datatype::F32);
-        k.SetOutputDataType(Datatype::F16);
-        k.SetOutputDataType(Datatype::F32);
-        k.SetInputWeightsType(WeightsType::F16);
-        k.SetInputWeightsType(WeightsType::F32);
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputWeightsType(WeightsType::F16);
+        k.EnableInputWeightsType(WeightsType::F32);
         k.EnableAllInputLayout();
-        k.SetOutputLayout(DataLayout::fb);
-        k.SetBatchingSupport();
-        k.SetBiasPerFeatureMap();
-        k.SetNonBiasSupport();
+        k.EnableOutputLayout(DataLayout::fb);
+        k.EnableBatching();
+        k.EnableBiasPerFeature();
+        k.EnableNonBiasTerm();
         return k;
     }
 

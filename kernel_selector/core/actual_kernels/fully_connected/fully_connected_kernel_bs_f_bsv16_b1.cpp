@@ -22,20 +22,18 @@ namespace KernelSelector
     ParamsKey FullyConnected_bs_f_bsv16_b1::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetInputDataType(Datatype::F16);
-        k.SetInputDataType(Datatype::F32);
-        k.SetOutputDataType(Datatype::F16);
-        k.SetOutputDataType(Datatype::F32);
-        k.SetInputWeightsType(WeightsType::F16);
-        k.SetInputWeightsType(WeightsType::F32);
-        k.SetInputLayout(DataLayout::bfyx);
-        k.SetInputLayout(DataLayout::bf);
-        k.SetOutputLayout(DataLayout::bf);
-        k.SetBiasPerFeatureMap();
-        k.SetNonBiasSupport();
-        //k.SetOffsetSupport();
-        //k.SetPitchesSupport();
-        k.SetSubGroupSupport();
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputWeightsType(WeightsType::F16);
+        k.EnableInputWeightsType(WeightsType::F32);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableInputLayout(DataLayout::bf);
+        k.EnableOutputLayout(DataLayout::bf);
+        k.EnableBiasPerFeature();
+        k.EnableNonBiasTerm();
+        k.EnableSubGroup();
         return k;
     }
 
