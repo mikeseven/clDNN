@@ -37,7 +37,7 @@ typedef enum /*:int32_t*/
     cldnn_pooling_max,
     /// @brief Average-pooling method.
     cldnn_pooling_average,
-    /// @brief
+    /// @brief Average-pooling method without values which are outside of the input.
     cldnn_pooling_average_no_padding
 } cldnn_pooling_mode;
 

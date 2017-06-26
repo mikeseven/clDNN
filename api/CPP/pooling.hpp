@@ -35,7 +35,7 @@ enum class pooling_mode : int32_t
     max     = cldnn_pooling_max,
     /// @brief Average-pooling method - values 
     average = cldnn_pooling_average,
-    /// @brief Average-pooling method but does not consider values which are outside of the input.
+    /// @brief Average-pooling method without values which are outside of the input.
     average_no_padding = cldnn_pooling_average_no_padding
 };
 
