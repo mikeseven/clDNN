@@ -158,6 +158,7 @@ namespace KernelSelector
         POW,
         MODULU,
         SQRT,
+        RSQRT,
         ASSIGN
     };
 

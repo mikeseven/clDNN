@@ -49,6 +49,7 @@ namespace KernelSelector {
         case EltwiseMode::MODULU:
             return 2;
         case EltwiseMode::SQRT:
+        case EltwiseMode::RSQRT:
         case EltwiseMode::ASSIGN:
             return 1;
         default:
@@ -135,6 +136,7 @@ namespace KernelSelector {
             case EltwiseMode::MAX:      op += "fmax(" + input0_str + ", " + input1_str + ")"; break;
             case EltwiseMode::POW:      op += "pow("  + input0_str + ", " + input1_str + ")"; break;
             case EltwiseMode::SQRT:     op += "sqrt(" + input0_str + ")"; break;
+            case EltwiseMode::RSQRT:    op += "1/sqrt(" + input0_str + ")"; break;
             case EltwiseMode::ASSIGN:   op += input0_str; break;
             default:
                 break;;

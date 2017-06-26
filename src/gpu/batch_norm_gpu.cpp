@@ -66,17 +66,22 @@ struct batch_norm_gpu : typed_primitive_impl<batch_norm>
             { EltwiseParams::InputType::Buffer(0), EltwiseParams::InputType::Buffer(1) },
             EltwiseMode::SUB });
 
+        const float epsilon =
+            (arg.input().get_output_layout().data_type == data_types::f16) ?
+            0.f : arg.get_primitive()->epsilon;
+        
+        // TODO: removing the ADD in case that EPSILON == 0 change the precision...
         ew_params.eltwiseParams.operations.push_back({
-            { EltwiseParams::InputType::Buffer(2), EltwiseParams::InputType::Scalar(arg.get_primitive()->epsilon) },
+            { EltwiseParams::InputType::Buffer(2), EltwiseParams::InputType::Scalar(epsilon) },
             EltwiseMode::ADD });
 
         ew_params.eltwiseParams.operations.push_back({
             { EltwiseParams::InputType::Intermediate(1) },
-            EltwiseMode::SQRT });
+            EltwiseMode::RSQRT });
 
         ew_params.eltwiseParams.operations.push_back({
             { EltwiseParams::InputType::Intermediate(0), EltwiseParams::InputType::Intermediate(2) },
-            EltwiseMode::DIV });
+            EltwiseMode::MUL });
 
         ew_params.eltwiseParams.layoutBased = true;
 

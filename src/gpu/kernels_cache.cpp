@@ -23,9 +23,9 @@
 #include <fstream>
 #include <set>
 
-//#ifndef NDEBUG
+#ifndef NDEBUG
 #define OUT_PORGRAM_TO_FILE
-//#endif
+#endif
 
 namespace neural { namespace gpu {
 
@@ -254,7 +254,7 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
         bool                batch_compilation   = code.second.batch_compilation;
         bool                inject_header       = code.second.intect_header;
 
-        batch_compilation |= does_options_support_batch_compilation(options);
+        batch_compilation &= does_options_support_batch_compilation(options);
 
         if (batch_compilation)
         {

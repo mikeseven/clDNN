@@ -334,6 +334,7 @@ namespace KernelSelector {
         case EltwiseMode::POW:      return "POW";
         case EltwiseMode::MODULU:   return "MODULU";
         case EltwiseMode::SQRT:     return "SQRT";
+        case EltwiseMode::RSQRT:    return "RSQRT";
         case EltwiseMode::ASSIGN:   return "ASSIGN";
         default:
             return "";
