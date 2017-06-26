@@ -14,11 +14,11 @@
 // limitations under the License.
 */
 
-#include "igk_pooling_kernel_base.h"
+#include "pooling_kernel_base.h"
 
 namespace KernelSelector 
 {
-    JitConstants IGKPoolingKernelBase::GetJitConstants(const PoolingParams& params, IGKPoolingKernelBase::DispatchData kd) const
+    JitConstants PoolingKernelBase::GetJitConstants(const PoolingParams& params, PoolingKernelBase::DispatchData kd) const
     {
         JitConstants mem_consts = MakePoolingJitConstants(params);
 
@@ -53,7 +53,7 @@ namespace KernelSelector
         return mod_x || mod_y;
     }
 
-    IGKPoolingKernelBase::DispatchData IGKPoolingKernelBase::SetDefault(const PoolingParams& params) const
+    PoolingKernelBase::DispatchData PoolingKernelBase::SetDefault(const PoolingParams& params) const
     {
         const auto& output = params.output;
 

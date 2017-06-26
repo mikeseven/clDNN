@@ -16,20 +16,21 @@
 
 #pragma once
 
-#include "igk_fully_connected_kernel_base.h"
+#include "fully_connected_kernel_base.h"
 
 namespace KernelSelector {
 
-    class FullyConnected_fb_io_b8_f8 : public IGKFullyConnectedKernelBase
+    class FullyConnected_fb_io_b8_f8 : public FullyConnectedKernelBase
     {
     public:
-        FullyConnected_fb_io_b8_f8() : IGKFullyConnectedKernelBase("fully_connected_gpu_fb_io_b8_f8_vload") {}
+        FullyConnected_fb_io_b8_f8() : FullyConnectedKernelBase("fully_connected_gpu_fb_io_b8_f8_vload") {}
         virtual ~FullyConnected_fb_io_b8_f8() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
+        bool Validate(const Params& p, const OptionalParams& o) const override;
         DispatchData SetDefault(const FullyConnectedParams& arg) const override;
     };
 }

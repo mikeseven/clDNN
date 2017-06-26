@@ -87,34 +87,41 @@ namespace KernelSelector {
                 const ParamsKey implKey = implementation->GetSupportedKey();
                 if (implKey.Support(requireKey))
                 {
-                    KernelsData kds = implementation->GetKernelsData(params, options);
-
-                    if (kds.size() && kds[0].kernels.size())
+                    try
                     {
-#ifdef ENABLE_ENV
-                        const auto& it = forceKernels.find(implementation->GetName());
-                        if (it != forceKernels.end())
+                        KernelsData kds = implementation->GetKernelsData(params, options);
+
+                        if (kds.size() && kds[0].kernels.size())
                         {
-                            if (it->second == true)
+#ifdef ENABLE_ENV
+                            const auto& it = forceKernels.find(implementation->GetName());
+                            if (it != forceKernels.end())
                             {
-                                ENV_PRINTF("Force: %s\n", it->first.c_str());
-                                return kds;
+                                if (it->second == true)
+                                {
+                                    ENV_PRINTF("Force: %s\n", it->first.c_str());
+                                    return kds;
+                                }
+                                else
+                                {
+                                    ENV_PRINTF("Deny: %s\n", it->first.c_str());
+                                }
                             }
                             else
-                            {
-                                ENV_PRINTF("Deny: %s\n", it->first.c_str());
-                            }
-                        }
-                        else
 #endif
-                        {
-                            if (kernelsData.size() == 0 ||
-                                kds[0].estimatedTime < kernelsData[0].estimatedTime)
                             {
-                                kernelsData = kds;
-                                kernelName = implementation->GetName();
+                                if (kernelsData.size() == 0 ||
+                                    kds[0].estimatedTime < kernelsData[0].estimatedTime)
+                                {
+                                    kernelsData = kds;
+                                    kernelName = implementation->GetName();
+                                }
                             }
                         }
+                    }
+                    catch (std::runtime_error&)
+                    {
+                        // we have to handle it in order to avoid exception in KernelSelector as much we can
                     }
                 }
             }

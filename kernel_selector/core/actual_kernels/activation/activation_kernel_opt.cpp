@@ -58,10 +58,10 @@ namespace KernelSelector {
             << "#define INPUT_WIDTH_MOD_COLS_WI " << newParams.inputs[0].X().v % NUM_COLS_WI << "\n";
 
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = cl::NDRange(
+        kernel.workGroups.global = {
             (newParams.inputs[0].X().v + NUM_COLS_WI - 1) / NUM_COLS_WI,
             (nonWidthDim + NUM_ROWS_WI - 1) / NUM_ROWS_WI,
-            newParams.output.Batch().v);
+            newParams.output.Batch().v };
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
         kernel.argsDesc = GetArgumentDesc(1, false, false);

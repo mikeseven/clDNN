@@ -19,7 +19,6 @@
 #include <map>
 #include <mutex>
 #include <vector>
-#include "cache/primitive_db.h"
 
 namespace cl {
 class Kernel;
@@ -43,7 +42,6 @@ public:
         source_code source;
         std::string options;
         bool batch_compilation;
-        bool intect_header;
     };
 
     typedef std::string kernel_id;
@@ -58,7 +56,6 @@ private:
     std::mutex _mutex;
     kernels_code _kernels_code;
     std::map<std::string, kernel_type> _kernels;
-    manager::primitive_db _database;             // TODO: remove once KernelSelctor integration done
 
     sorted_code get_program_source(const kernels_code& kernels_source_code) const;
     friend class gpu_toolkit;
@@ -66,8 +63,8 @@ private:
     kernels_map build_program(const program_code& pcode) const;
 
 public:
-    kernel_id create_kernel_from_template(const std::string& template_name, jit_definitions definitions = jit_definitions(), std::string kernel_name = std::string());
-    kernel_id create_kernel_from_template_ks(const source_code& source, const std::string& options, const std::string& entry_point, bool batch_compilation);
+    kernel_id set_kernel_source(const std::string& template_name, jit_definitions definitions = jit_definitions(), std::string kernel_name = std::string());
+    kernel_id set_kernel_source(const source_code& source, const std::string& options, const std::string& entry_point, bool batch_compilation);
     kernel_type get_kernel(kernel_id id);
 };
 

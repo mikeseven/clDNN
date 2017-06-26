@@ -39,31 +39,8 @@ namespace KernelSelector
         return k;
     }
 
-    KernelsData ConcatenationKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData ConcatenationKernelRef::GetKernelsData(const Params& params, const OptionalParams& optParams) const
     {
-        assert(params.GetType() == KernelType::CONCATENATION);
-
-        const ConcatenationParams& orgParams = static_cast<const ConcatenationParams&>(params);
-
-        const bool bSupportedActivation = orgParams.activationFunc == ActivationFunction::NONE;
-        
-        if (!bSupportedActivation)
-        {
-            return{};
-        }
-
-        DispatchData runInfo = SetDefault(orgParams);
-        KernelData kd = KernelData::Default<ConcatenationParams>(params);
-
-        auto cldnnJit = GetJitConstants(orgParams);
-        auto entryPoint = GetEntryPoint(kernelName, orgParams.layerID);
-        auto jit = CreateJit(kernelName, cldnnJit, entryPoint);
-
-        auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, runInfo, kernelName, jit, entryPoint);
-
-        kd.estimatedTime = runInfo.effiency;
-
-        return{ kd };
+        return GetCommonKernelsData(params, optParams);
     }
 }

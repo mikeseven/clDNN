@@ -43,23 +43,13 @@ namespace KernelSelector
         KernelData kd = KernelData::Default<ReorderWeightsParams>(params, 1);
         ReorderWeightsParams& newParams = *static_cast<ReorderWeightsParams*>(kd.params.get());
 
-        std::string jit;
-
         auto entry_point = GetEntryPoint(kernelName, newParams.layerID);
-
-        try
-        {
-            auto cldnn_jit = GetJitConstants(newParams);
-            jit = CreateJit(kernelName, cldnn_jit, entry_point);
-        }
-        catch (const std::runtime_error&)
-        {
-            return KernelsData();
-        }
+        auto cldnn_jit = GetJitConstants(newParams);
+        std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         const auto& out = newParams.reorderParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = cl::NDRange(out.OFM().v, out.IFM().v, out.X().v*out.Y().v);
+        kernel.workGroups.global = { out.OFM().v, out.IFM().v, out.X().v*out.Y().v };
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
         kernel.argsDesc = GetArgsDesc(1, false, false);

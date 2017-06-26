@@ -35,7 +35,7 @@ namespace KernelSelector {
         return k;
     }
 
-    uint32_t get_number_of_inputs(EltwiseMode m)
+    static uint32_t GetNumberOfInputs(EltwiseMode m)
     {
         switch (m)
         {
@@ -57,13 +57,52 @@ namespace KernelSelector {
         }
     }
 
-    JitConstants GenericEltwiseKernelRef::get_jit_constants(const EltwiseParams& params) const
+    bool GenericEltwiseKernelRef::Validate(const Params& p, const OptionalParams&) const
     {
-        if (params.inputs.size() == 0)
+        if (p.GetType() != KernelType::ELTWISE)
         {
-            throw std::runtime_error("error - eltwise without inputs");
+            return false;
         }
 
+        const EltwiseParams& params = static_cast<const EltwiseParams&>(p);
+
+        if (params.inputs.size() == 0)
+        {
+            return false;
+        }
+
+        auto& operations = params.eltwiseParams.operations;
+
+        if (operations.size() == 0)
+        {
+            return false;
+        }
+
+        for (size_t op_num = 0; op_num < operations.size(); op_num++)
+        {
+            const auto& ew = operations[op_num];
+
+            if (ew.inputs.size() != GetNumberOfInputs(ew.mode))
+            {
+                return false;
+            }
+
+            for (size_t input_idx = 0; input_idx < ew.inputs.size(); input_idx++)
+            {
+                const auto& input = ew.inputs[input_idx];
+                if (input.mode == EltwiseInputMode::INPUT_BUFFER &&
+                    input.index >= params.inputs.size())
+                {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    JitConstants GenericEltwiseKernelRef::GetJitConstants(const EltwiseParams& params) const
+    {
         auto jit = MakeEltwiseJitConstants(params);
         
         std::string inputs_decls;
@@ -84,19 +123,11 @@ namespace KernelSelector {
 
         auto& operations = params.eltwiseParams.operations;
 
-        if (operations.size() == 0)
-        {
-            throw std::runtime_error("eltwise without operations");
-        }
-
         for (size_t op_num = 0; op_num < operations.size(); op_num++)
         {
             const std::string op_num_str = std::to_string(op_num);
             const auto& ew = operations[op_num];
-            if (ew.inputs.size() != get_number_of_inputs(ew.mode))
-            {
-                throw std::runtime_error("error number of inputs to elwise params");
-            }
+            
             for (size_t input_idx = 0; input_idx < ew.inputs.size(); input_idx++)
             {
                 const auto& input = ew.inputs[input_idx];
@@ -107,10 +138,6 @@ namespace KernelSelector {
                     jit.AddConstant(MakeJitConstant(name, input.scalar));
                     break;
                 case EltwiseInputMode::INPUT_BUFFER:
-                    if (input.index >= params.inputs.size())
-                    {
-                        throw std::runtime_error("input index is greater than the provided inputs");
-                    }
                     jit.AddConstant(MakeJitConstant(name, "input" + std::to_string(input.index) + "[GET_INDEX(INPUT, " + std::to_string(input.index) +")]"));
                     break;
                 case EltwiseInputMode::INTERMEDIATE_RESULTS_INDEX:
@@ -159,26 +186,19 @@ namespace KernelSelector {
         return jit;
     }
 
-    KernelsData GenericEltwiseKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData GenericEltwiseKernelRef::GetKernelsData(const Params& params, const OptionalParams& optParams) const
     {
-        assert(params.GetType() == KernelType::ELTWISE);
+        if (!Validate(params, optParams))
+        {
+            return{};
+        }
 
-        KernelData kd = KernelData::Default<EltwiseParams>(params, 1);
+        KernelData kd = KernelData::Default<EltwiseParams>(params);
         EltwiseParams& newParams = *static_cast<EltwiseParams*>(kd.params.get());
 
-        std::string jit;
-
         auto entry_point = GetEntryPoint(kernelName, newParams.layerID);
-
-        try
-        {
-            auto cldnn_jit = get_jit_constants(newParams);
-            jit = CreateJit(kernelName, cldnn_jit, entry_point, false);
-        }
-        catch (const std::runtime_error&)
-        {
-            return KernelsData();
-        }
+        auto cldnn_jit = GetJitConstants(newParams);
+        std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
@@ -203,7 +223,7 @@ namespace KernelSelector {
                 gws.push_back(1U);
             }
 
-            kernel.workGroups.global = cl::NDRange(gws[0], gws[1], gws[2] * gws[3]);
+            kernel.workGroups.global = { gws[0], gws[1], gws[2] * gws[3] };
         }
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);

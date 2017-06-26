@@ -16,14 +16,14 @@
 
 #pragma once
 
-#include "igk_normalize_kernel_base.h"
+#include "normalize_kernel_base.h"
  
 namespace KernelSelector 
 {    
-    class NormalizeKernelAcrossSpatialRef : public IGKNormalizeKernelBase
+    class NormalizeKernelAcrossSpatialRef : public NormalizeKernelBase
     {
     public:
-        NormalizeKernelAcrossSpatialRef() : IGKNormalizeKernelBase("normalize_gpu_across_spatial_ref") {}
+        NormalizeKernelAcrossSpatialRef() : NormalizeKernelBase("normalize_gpu_across_spatial_ref") {}
         virtual ~NormalizeKernelAcrossSpatialRef() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;

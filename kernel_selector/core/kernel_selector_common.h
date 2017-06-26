@@ -16,8 +16,7 @@
 
 #pragma once
 #include <string>
-#include "cache/program_cache.h"
-#include "cache/cache_types.h"
+#include <memory>
 #include "cache/primitive_db.h"
 #include "kernel_selector_params.h"
 #include <float.h>
@@ -48,11 +47,7 @@ namespace KernelSelector {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // usings
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    using context_device = KernelSelector::gpu::context_device;
     using primitive_db = KernelSelector::gpu::cache::primitive_db;
-    using program_cache = KernelSelector::gpu::cache::program_cache;
-    using binary_data = KernelSelector::gpu::cache::binary_data;
-
 
     std::string GetStringEnv(const char* varName);
 
@@ -73,8 +68,8 @@ namespace KernelSelector {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct WorkGroupSizes
     {
-        cl::NDRange global = cl::NullRange;
-        cl::NDRange local = cl::NullRange;
+        std::vector<size_t> global;
+        std::vector<size_t> local;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -125,22 +120,6 @@ namespace KernelSelector {
         };
 
         std::vector<Args> data;
-
-        struct SetArgumentParams
-        {
-            std::vector<const cl::Buffer*> inputs;
-            const cl::Buffer* output = nullptr;
-            const cl::Buffer* weights = nullptr;
-            const cl::Buffer* bias = nullptr;
-            const cl::Buffer* lookupTable = nullptr;
-            const cl::Buffer* scaleTable = nullptr;
-            const cl::Buffer* slope = nullptr;
-            uint32_t split = 0;
-        };
-
-        bool SetArguments(
-            cl::Kernel& kernel,
-            const SetArgumentParams& params) const;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -148,8 +127,6 @@ namespace KernelSelector {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct clKernelData
     {
-        binary_data GetBinary(context_device cl_context, program_cache& compiler) const;
-
         std::shared_ptr<KernelString> kernelString;
         WorkGroupSizes workGroups;
         ArgumentDescpirtor argsDesc;

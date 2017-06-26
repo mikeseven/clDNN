@@ -16,16 +16,16 @@
 
 #pragma once
 
-#include "igk_kernel_base.h"
+#include "common_kernel_base.h"
 #include "kernel_selector_params.h"
 
 namespace KernelSelector 
 {
-    class IGKFullyConnectedKernelBase : public IGKKernelBase
+    class FullyConnectedKernelBase : public CommonKernelBase
     {
     public:
-        using IGKKernelBase::IGKKernelBase;
-        virtual ~IGKFullyConnectedKernelBase() {}
+        using CommonKernelBase::CommonKernelBase;
+        virtual ~FullyConnectedKernelBase() {}
 
         struct DispatchData : public CommonDispatchData
         {
@@ -60,9 +60,18 @@ namespace KernelSelector
     
     protected:
         virtual JitConstants GetJitConstants(const FullyConnectedParams& params, const DispatchData& kd) const;
-        DispatchData SetKernelData(const FullyConnectedParams& params) const;
-        virtual DispatchData SetDefault(const FullyConnectedParams& params) const { return SetKernelData(params); }
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& optParams, DataLayout dl, WeightsLayout wl, float estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE) const;
+        virtual DispatchData SetDefault(const FullyConnectedParams& params) const;
+        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& optParams, DataLayout dl, std::vector<WeightsLayout> wl, float estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE) const;
+
+        virtual bool Validate(const Params& p, const OptionalParams&) const override
+        {
+            if (p.GetType() != KernelType::FULLY_CONNECTED)
+            {
+                return false;
+            }
+
+            return true;
+        }
 
         // how many batches will a single work item compute
         static size_t GetBatchesPerWorkItem(const FullyConnectedParams& params)

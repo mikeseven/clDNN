@@ -13,9 +13,7 @@
 // limitations under the License.
 
 
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
+#include "include/common.cl"
 
 #if FP16_UNIT_USED
     #define UNIT_CVT_FUNC(val) convert_half(val)

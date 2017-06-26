@@ -65,7 +65,7 @@ namespace KernelSelector
                 "#define OUTPUT_OTHER0_PITCH    OUTPUT_Y_PITCH\n"
                 "#define OUTPUT_OTHER1_PITCH    OUTPUT_FEATURE_PITCH\n"
                 "#define OUTPUT_CLASS_PITCH     OUTPUT_X_PITCH\n";
-            kernel.workGroups.global = cl::NDRange(out.Y().v, out.Feature().v, out.Batch().v);
+            kernel.workGroups.global = { out.Y().v, out.Feature().v, out.Batch().v };
             break;
         case SoftmaxDim::Y:
             jit +=
@@ -76,7 +76,7 @@ namespace KernelSelector
                 "#define OUTPUT_OTHER0_PITCH    OUTPUT_X_PITCH\n"
                 "#define OUTPUT_OTHER1_PITCH    OUTPUT_FEATURE_PITCH\n"
                 "#define OUTPUT_CLASS_PITCH     OUTPUT_Y_PITCH\n";
-            kernel.workGroups.global = cl::NDRange(out.X().v, out.Feature().v, out.Batch().v);
+            kernel.workGroups.global = { out.X().v, out.Feature().v, out.Batch().v };
             break;
         case SoftmaxDim::FEATURE:
             jit +=
@@ -87,7 +87,7 @@ namespace KernelSelector
                 "#define OUTPUT_OTHER0_PITCH    OUTPUT_X_PITCH\n"
                 "#define OUTPUT_OTHER1_PITCH    OUTPUT_Y_PITCH\n"
                 "#define OUTPUT_CLASS_PITCH     OUTPUT_FEATURE_PITCH\n";
-            kernel.workGroups.global = cl::NDRange(out.X().v, out.Y().v, out.Batch().v);
+            kernel.workGroups.global = { out.X().v, out.Y().v, out.Batch().v };
             break;
         default:
             break;

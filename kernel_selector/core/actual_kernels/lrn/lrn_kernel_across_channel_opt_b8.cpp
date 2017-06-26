@@ -36,9 +36,9 @@ namespace KernelSelector
         return k;
     }
 
-    CommonDispatchData LRNKernelAcrossChannel_b8::default_across_channel_b8(const LRNParams& params) const
+    CommonDispatchData LRNKernelAcrossChannel_b8::SetDefault(const LRNParams& params) const
     {
-        CommonDispatchData run_info = SetDefault(params);
+        CommonDispatchData run_info = LRNKernelBase::SetDefault(params);
 
         run_info.gws0 /= 8;
         run_info.lws0 = 8; // gws0 is dividable by 64, so after correction it will be dividable by 8.
@@ -46,50 +46,40 @@ namespace KernelSelector
         return run_info;
     }
 
-    KernelsData LRNKernelAcrossChannel_b8::GetKernelsData(const Params& params, const OptionalParams&) const
+    bool LRNKernelAcrossChannel_b8::Validate(const Params& p, const OptionalParams& o) const
     {
-        assert(params.GetType() == KernelType::LRN);
+        if (!LRNKernelBase::Validate(p, o))
+        {
+            return false;
+        }
 
-        const LRNParams& orgParams = static_cast<const LRNParams&>(params);
-        const auto& out = orgParams.output;
+        const LRNParams& params = static_cast<const LRNParams&>(p);
+        const auto& out = params.output;
 
-        const bool bSupportedActivation = orgParams.activationFunc == ActivationFunction::NONE;
         const bool bSupportedPitch =
-            orgParams.inputs[0].Batch().pitch == 1 &&
+            params.inputs[0].Batch().pitch == 1 &&
             out.Batch().pitch == 1;
-        const bool bSupportedBatch = 
+        const bool bSupportedBatch =
             (out.Batch().v % 8) == 0 &&
             ((out.Batch().v * out.Feature().v) % 64) == 0;
 
-        if (!bSupportedActivation || !bSupportedPitch || !bSupportedBatch)
+        if (!bSupportedPitch || !bSupportedBatch)
         {
-            return{};
-        }
-        
-        DispatchData runInfo;
-
-        try
-        {
-            runInfo = default_across_channel_b8(orgParams);
-        }
-        catch (const std::runtime_error&)
-        {
-            return{};
+            return false;
         }
 
-        KernelData kd = KernelData::Default<LRNParams>(params, 1);
+        return true;
+    }
 
-        auto cldnn_jit = GetJitConstants(orgParams, runInfo);
-        
-        cldnn_jit.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", 8));
-        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
-        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
+    JitConstants LRNKernelAcrossChannel_b8::GetJitConstants(const LRNParams& params, DispatchData kd) const
+    {
+        auto cldnnJit = LRNKernelBase::GetJitConstants(params, kd);
+        cldnnJit.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", 8));
+        return cldnnJit;
+    }
 
-        auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point);
-
-        kd.estimatedTime = FORCE_PRIORITY_9;
-
-        return{ kd };
+    KernelsData LRNKernelAcrossChannel_b8::GetKernelsData(const Params& params, const OptionalParams& options) const
+    {
+        return GetCommonKernelsData(params, options, FORCE_PRIORITY_8);
     }
 }

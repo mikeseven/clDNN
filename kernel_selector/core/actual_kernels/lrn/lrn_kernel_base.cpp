@@ -14,11 +14,29 @@
 // limitations under the License.
 */
 
-#include "igk_lrn_kernel_base.h"
+#include "lrn_kernel_base.h"
 
 namespace KernelSelector 
 {
-    JitConstants IGKLRNKernelBase::GetJitConstants(const LRNParams& params, IGKLRNKernelBase::DispatchData kd) const
+    bool LRNKernelBase::Validate(const Params& p, const OptionalParams& o) const
+    {
+        if (p.GetType() != KernelType::LRN ||
+            o.GetType() != KernelType::LRN)
+        {
+            return false;
+        }
+
+        const LRNParams& params = static_cast<const LRNParams&>(p);
+
+        if (params.activationFunc != ActivationFunction::NONE)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    JitConstants LRNKernelBase::GetJitConstants(const LRNParams& params, LRNKernelBase::DispatchData kd) const
     {
         JitConstants mem_consts = MakeLRNJitConstants(params);
 
@@ -42,7 +60,7 @@ namespace KernelSelector
         return mem_consts;
     }
 
-    IGKLRNKernelBase::DispatchData IGKLRNKernelBase::SetDefault(const LRNParams& params) const
+    LRNKernelBase::DispatchData LRNKernelBase::SetDefault(const LRNParams& params) const
     {
         const auto& output = params.output;
 
@@ -63,5 +81,29 @@ namespace KernelSelector
         kd.lws2 = 1;
 
         return kd;
+    }
+
+    KernelsData LRNKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, float estimatedTime) const
+    {
+        if (!Validate(params, options))
+        {
+            return{};
+        }
+
+        const LRNParams& orgParams = static_cast<const LRNParams&>(params);
+
+        DispatchData runInfo = SetDefault(orgParams);
+        KernelData kd = KernelData::Default<LRNParams>(params);
+
+        auto cldnnJit = GetJitConstants(orgParams, runInfo);
+        auto entryPoint = GetEntryPoint(kernelName, orgParams.layerID);
+        auto jit = CreateJit(kernelName, cldnnJit, entryPoint);
+
+        auto& kernel = kd.kernels[0];
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entryPoint);
+
+        kd.estimatedTime = estimatedTime;
+
+        return{ kd };
     }
 }

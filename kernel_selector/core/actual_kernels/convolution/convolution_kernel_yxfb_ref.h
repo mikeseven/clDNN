@@ -16,20 +16,30 @@
 
 #pragma once
 
-#include "igk_convolution_kernel_base.h"
+#include "convolution_kernel_base.h"
 
 namespace KernelSelector {
 
-    class ConvolutionKernel_yxfb_Ref : public IGKConvolutionKernelBase
+    class ConvolutionKernel_yxfb_Ref : public ConvolutionKernelBase
     {
     public:
-        ConvolutionKernel_yxfb_Ref() : IGKConvolutionKernelBase("convolution_gpu_yxfb_ref") {}
+        ConvolutionKernel_yxfb_Ref() : ConvolutionKernelBase("convolution_gpu_yxfb_ref") {}
         virtual ~ConvolutionKernel_yxfb_Ref() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     
     protected:
-        DispatchData default_yxfb(const ConvolutionParams& arg) const;
+        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts() const override
+        { 
+            return{ 
+                WeightsLayout::yxio,
+                WeightsLayout::iyxo,
+                WeightsLayout::oyxi,
+                WeightsLayout::oiyx,
+            }; 
+        }
+
+        DispatchData SetDefault(const ConvolutionParams& arg) const override;
     };
 }

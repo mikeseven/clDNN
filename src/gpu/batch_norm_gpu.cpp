@@ -36,7 +36,6 @@ struct batch_norm_gpu : typed_primitive_impl<batch_norm>
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _use_ks = true;
         _ks_kernel_data = kd;
     }
 
@@ -46,7 +45,7 @@ struct batch_norm_gpu : typed_primitive_impl<batch_norm>
         args.inputs = { &instance.input_memory(), &instance.mean_memory(), &instance.variance_memory() };
         args.output = &instance.output_memory();
 
-        return _kernel.run_ks(_ks_kernel_data.kernels[0], events, args);
+        return _kernel.run(_ks_kernel_data.kernels[0], events, args);
     }
 
     static primitive_impl* create(const batch_norm_node &arg) 
@@ -90,7 +89,7 @@ struct batch_norm_gpu : typed_primitive_impl<batch_norm>
 
         if (best_kernels.empty())
         {
-            throw std::runtime_error("Unsupported - didn't find a proper kernel for this arguments");
+            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
         }
 
         auto norm = new batch_norm_gpu(arg, best_kernels[0]);

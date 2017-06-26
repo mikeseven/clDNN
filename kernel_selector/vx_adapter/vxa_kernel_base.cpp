@@ -50,8 +50,8 @@ namespace clDNN
     {
         WorkGroups res;
         
-        cl::NDRange gws = work_groups.global;
-        cl::NDRange lws = work_groups.local;
+        auto gws = work_groups.global;
+        auto lws = work_groups.local;
 
         if (gws.size() != 0)
         {
@@ -225,7 +225,7 @@ namespace clDNN
 
     void BaseKernelBinary::UpdateBinary(const KernelSelector::clKernelData& cldnn_data, CLKernelData& data, binary_data& binary, std::shared_ptr<ArgumentsInfoBase>& args)
     {
-        binary = cldnn_data.GetBinary({ context()->context(), context()->device() }, *GetKernelCache());
+        binary = GetKernelCache()->get({ context()->context(), context()->device() }, cldnn_data.kernelString->jit + cldnn_data.kernelString->str, cldnn_data.kernelString->options);
         args = SetupArguments(cldnn_data.argsDesc);
 
         if (binary.size() > 0 && args != nullptr)

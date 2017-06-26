@@ -255,7 +255,7 @@ void program_impl::pre_optimize_graph()
     {
         layout_optimizer lo(engine);
         reorder_inputs(lo);
-        optimize_weights(lo);
+        pre_optimize_weights(lo);
     }
 
     prepare_padding();
@@ -270,7 +270,7 @@ void program_impl::pre_optimize_graph()
 void program_impl::post_optimize_graph()
 {
     layout_optimizer lo(engine);
-    optimize_ks_weights(lo);
+    post_optimize_weights(lo);
     //prepare_padding(); - TODO: padding should be prepare according to the kernels needs
 }
 
@@ -458,7 +458,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
     }
 }
 
-void program_impl::optimize_weights(layout_optimizer& lo)
+void program_impl::pre_optimize_weights(layout_optimizer& lo)
 {
     std::list<program_node*> outputs_to_recalc;
 
@@ -538,7 +538,7 @@ void program_impl::optimize_weights(layout_optimizer& lo)
         dnode->recalc_output_layout();
 }
 
-void program_impl::optimize_ks_weights(layout_optimizer& lo)
+void program_impl::post_optimize_weights(layout_optimizer& lo)
 {
     //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
     //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
@@ -551,7 +551,7 @@ void program_impl::optimize_ks_weights(layout_optimizer& lo)
 
         if (wtype == data::type_id())
         {
-            lo.add_ks_weights_for_optimization(
+            lo.add_weights_for_optimization(
                 impl->_ks_kernel_data.weightsReorderParams,
                 weights.as<data>().typed_desc(),
                 weights_type);
@@ -591,17 +591,13 @@ void program_impl::optimize_ks_weights(layout_optimizer& lo)
     for (auto& p : nodes_map)
     {
         auto& prim = *p.second;
-        auto* selected_impl = prim.get_selected_impl().get();
-        if (selected_impl->_use_ks)
+        if (prim.type() == convolution::type_id())
         {
-            if (prim.type() == convolution::type_id())
-            {
-                prep_opt(prim.as<convolution>());
-            }
-            else if (prim.type() == fully_connected::type_id())
-            {
-                prep_opt(prim.as<fully_connected>());
-            }
+            prep_opt(prim.as<convolution>());
+        }
+        else if (prim.type() == fully_connected::type_id())
+        {
+            prep_opt(prim.as<fully_connected>());
         }
     }
 

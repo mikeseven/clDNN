@@ -68,8 +68,8 @@ namespace KernelSelector
         }
 
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = cl::NDRange(globalWorkGroup, 1, 1);
-        kernel.workGroups.local = cl::NDRange(localWorkGroup, 1, 1);
+        kernel.workGroups.global = { globalWorkGroup, 1, 1 };
+        kernel.workGroups.local = { localWorkGroup, 1, 1 };
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
         kernel.argsDesc = GetArgumentDesc(1, false, false);
 

@@ -16,21 +16,24 @@
 
 #pragma once
 
-#include "igk_kernel_base.h"
+#include "common_kernel_base.h"
 #include "kernel_selector_params.h"
 
 namespace KernelSelector 
 {
-    class IGKDeconvolutionKernelBase : public IGKKernelBase
+    class PoolingKernelBase : public CommonKernelBase
     {
     public:
-        using IGKKernelBase::IGKKernelBase;
-        virtual ~IGKDeconvolutionKernelBase() {}
+        using CommonKernelBase::CommonKernelBase;
+        virtual ~PoolingKernelBase() {}
 
-        using DispatchData = CommonDispatchData;
-    
+        struct DispatchData : public CommonDispatchData
+        {
+            bool needsBoundary;
+        };
+
     protected:
-        JitConstants GetJitConstants(const DeconvolutionParams& params) const;
-        virtual DispatchData SetDefault(const DeconvolutionParams& params) const;
+        JitConstants GetJitConstants(const PoolingParams& params, DispatchData kd) const;
+        DispatchData SetDefault(const PoolingParams& params) const;
     };
 }

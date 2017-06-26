@@ -13,19 +13,7 @@
 // limitations under the License.
 
 
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
-
-#if RELU && FP16_UNIT_USED
-    #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
-    input : -convert_half(NEGATIVE_SLOPE)) : (max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h));
-#elif RELU
-    #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
-    input : -NEGATIVE_SLOPE) : (max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f));
-#else
-    #define ACTIVATION(output, input) output = input;
-#endif
+#include "include/common.cl"
 
 #define CONCAT_TOKEN_HANDLER1(prefix, suffix) prefix##suffix
 

@@ -16,14 +16,14 @@
 
 #pragma once
 
-#include "igk_softmax_kernel_base.h"
+#include "softmax_kernel_base.h"
  
 namespace KernelSelector 
 {    
-    class SoftmaxKernel_fb : public IGKSoftmaxKernelBase
+    class SoftmaxKernel_fb : public SoftmaxKernelBase
     {
     public:
-        SoftmaxKernel_fb() : IGKSoftmaxKernelBase("softmax_gpu_fb") {}
+        SoftmaxKernel_fb() : SoftmaxKernelBase("softmax_gpu_fb") {}
         virtual ~SoftmaxKernel_fb() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;

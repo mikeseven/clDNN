@@ -16,14 +16,14 @@
 
 #pragma once
 
-#include "igk_deconvolution_kernel_base.h"
+#include "deconvolution_kernel_base.h"
 
 namespace KernelSelector {
 
-    class DeconvolutionKernelRef : public IGKDeconvolutionKernelBase
+    class DeconvolutionKernelRef : public DeconvolutionKernelBase
     {
     public:
-        DeconvolutionKernelRef() : IGKDeconvolutionKernelBase("deconvolution_gpu_ref") {}
+        DeconvolutionKernelRef() : DeconvolutionKernelBase("deconvolution_gpu_ref") {}
         virtual ~DeconvolutionKernelRef() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;

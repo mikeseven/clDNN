@@ -49,7 +49,6 @@ struct primitive_impl
 
     virtual event_impl::ptr execute(const std::vector<event_impl::ptr>& events, primitive_inst& instance) = 0;
 
-    bool _use_ks = false;                       // TODO: remove it when kernel selector integration done
     KernelSelector::KernelData _ks_kernel_data; // TODO: is it the right place to locate this member?
 };
 

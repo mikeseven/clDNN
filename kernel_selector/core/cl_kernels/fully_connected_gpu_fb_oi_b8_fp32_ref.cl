@@ -13,12 +13,7 @@
 // limitations under the License.
 
 
-#if RELU
-    #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
-    input : -NEGATIVE_SLOPE) : (max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f));
-#else
-    #define ACTIVATION(output, input) output = input;
-#endif
+#include "include/common.cl"
 
 
 __attribute__((reqd_work_group_size(8, 1, 1)))

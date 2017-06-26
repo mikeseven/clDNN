@@ -115,7 +115,7 @@ private:
     create_reorder_if_needed(const layout& current_layout, const cldnn::primitive_id& memid, layout const& expected_layout);
 
     std::pair<std::shared_ptr<cldnn::generic_layer>, bool>
-    create_ks_reorder_if_needed(const cldnn::primitive_id& memid, layout const& expected_layout, const KernelSelector::WeightsReorderParams& reorder_params);
+    create_reorder_from_given_source(const cldnn::primitive_id& memid, layout const& expected_layout, const KernelSelector::WeightsReorderParams& reorder_params);
 
 public:
     explicit layout_optimizer(engine_impl::ptr eng, bool enabled = true);
@@ -199,7 +199,7 @@ public:
                 old_layout.data_type, format::bfyx, // simple linear format (flatten to x channel)
                 { 1,1,1,(tensor::value_type)(reorder_params.newBufferSize / bpp) }
             };
-            auto reorder = create_ks_reorder_if_needed(input_id, expected_layout, reorder_params);
+            auto reorder = create_reorder_from_given_source(input_id, expected_layout, reorder_params);
             if (reorder.first)
             {
                 ret.push_back(reorder);
@@ -233,7 +233,7 @@ public:
         return reorder;
     }
 
-    void add_ks_weights_for_optimization(
+    void add_weights_for_optimization(
         const KernelSelector::WeightsReorderParams& reorder_params,
         const std::shared_ptr<data> data_prim,
         data_type type)

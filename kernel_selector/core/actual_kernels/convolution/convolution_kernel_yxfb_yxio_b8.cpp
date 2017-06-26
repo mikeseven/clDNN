@@ -41,30 +41,14 @@ namespace KernelSelector
         return k;
     }
 
-    IGKConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b8::default_yxfb_yxio_b8(const ConvolutionParams& arg) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b8::SetDefault(const ConvolutionParams& arg) const
     {
-        DispatchData runInfo = SetDefault(arg);
+        DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
         const auto filterOfmNum = arg.weights.OFM().v;
         const auto batchSize = arg.output.Batch().v;
 
-        const bool bInputValidated =
-            (filterOfmNum > 0) &&
-            (batchSize > 0) &&
-            (arg.output.Feature().v == filterOfmNum);
-
-        if (!bInputValidated)
-        {
-            throw std::runtime_error("Unsupported");
-        }
-
         runInfo.lws0 = batchSize == 8 ? 8 : 16;
-
-        if ((filterOfmNum * batchSize) % runInfo.lws0 != 0 ||
-            batchSize > 16 || batchSize == 1)
-        {
-            throw std::runtime_error("Unsupported");
-        }
 
         if (((filterOfmNum * batchSize) / 16) % runInfo.lws0)
         {
@@ -78,53 +62,72 @@ namespace KernelSelector
         runInfo.gws0 = filterOfmNum * batchSize / (runInfo.ofmPerWorkItem * runInfo.batchesPerWorkItem);
 
         runInfo.effiency = FORCE_PRIORITY_9;
-
-        if (!CheckWorkGroups(runInfo))
-        {
-            throw std::runtime_error("Internal Error - wrong calculation of global/local work group sizes");
-        }
         
         return runInfo;
     }
 
+    bool ConvolutionKernel_yxfb_yxio_b8::Validate(const Params& p, const OptionalParams& o) const
+    {
+        if (!ConvolutionKernelBase::Validate(p, o))
+        {
+            return false;
+        }
+
+        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
+
+        if (!CheckPitchForSplitOnly(params))
+        {
+            return false;
+        }
+
+        const auto filterOfmNum = params.weights.OFM().v;
+        const auto batchSize = params.output.Batch().v;
+
+        const bool bInputValidated =
+            (filterOfmNum > 0) &&
+            (batchSize > 0) &&
+            (params.output.Feature().v == filterOfmNum);
+
+        if (!bInputValidated)
+        {
+            return false;
+        }
+
+        const uint32_t lws0 = batchSize == 8 ? 8 : 16;
+
+        if ((filterOfmNum * batchSize) % lws0 != 0 ||
+            batchSize > 16 || batchSize == 1)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     KernelsData ConvolutionKernel_yxfb_yxio_b8::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        assert(params.GetType() == KernelType::CONVOLUTION && options.GetType() == KernelType::CONVOLUTION);
+        if (!Validate(params, options))
+        {
+            return{};
+        }
 
         const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
-        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
 
-        const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
-        const bool bSupportedWeightsLayout = orgParams.weights.GetLayout() == WeightsLayout::yxio;
-        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
-
-        if (!bSupportedActivation || !bWeightsOK || !CheckPitchForSplitOnly(orgParams))
+        DispatchData runInfo = SetDefault(orgParams);
+        if (!CheckWorkGroups(runInfo))
         {
+            // Internal Error - wrong calculation of global/local work group sizes
             return{};
         }
 
-        DispatchData runInfo;
-        
-        try
-        {
-            runInfo = default_yxfb_yxio_b8(orgParams);
-        }
-        catch (const std::runtime_error& )
-        {
-            return{};
-        }
-
-        KernelData kd = KernelData::Default<ConvolutionParams>(params, 1);
+        KernelData kd = KernelData::Default<ConvolutionParams>(params);
 
         auto cldnn_jit = GetJitConstants(orgParams, runInfo);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global   = cl::NDRange(runInfo.gws0, runInfo.gws1, runInfo.gws2);
-        kernel.workGroups.local    = cl::NDRange(runInfo.lws0, runInfo.lws1, runInfo.lws2);
-        kernel.kernelString        = GetKernelString(kernelName, jit, entry_point);
-        kernel.argsDesc            = GetArgsDesc(1, true, !orgParams.bias.empty());
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, true, !orgParams.bias.empty());
         kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
         bool succeed = SetWeightsReorderParams(orgParams, WeightsLayout::yxio, kd.weightsReorderParams);

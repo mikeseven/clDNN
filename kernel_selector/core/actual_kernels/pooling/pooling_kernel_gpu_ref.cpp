@@ -47,25 +47,13 @@ namespace KernelSelector
 
         const PoolingParams& orgParams = static_cast<const PoolingParams&>(params);
 
-        const bool bSupportedActivation = orgParams.activationFunc == ActivationFunction::NONE;
-
-        if (!bSupportedActivation)
+        if (orgParams.activationFunc != ActivationFunction::NONE)
         {
             return{};
         }
         
-        DispatchData runInfo;
-
-        try
-        {
-            runInfo = SetDefault(orgParams);
-        }
-        catch (const std::runtime_error&)
-        {
-            return{};
-        }
-
-        KernelData kd = KernelData::Default<PoolingParams>(params, 1);
+        DispatchData runInfo = SetDefault(orgParams);
+        KernelData kd = KernelData::Default<PoolingParams>(params);
 
         auto cldnn_jit = GetJitConstants(orgParams, runInfo);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);

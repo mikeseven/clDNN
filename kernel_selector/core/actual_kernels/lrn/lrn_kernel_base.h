@@ -16,21 +16,23 @@
 
 #pragma once
 
-#include "igk_kernel_base.h"
+#include "common_kernel_base.h"
 #include "kernel_selector_params.h"
 
 namespace KernelSelector 
 {
-    class IGKConcatenationKernelBase : public IGKKernelBase
+    class LRNKernelBase : public CommonKernelBase
     {
     public:
-        using IGKKernelBase::IGKKernelBase;
-        virtual ~IGKConcatenationKernelBase() {}
+        using CommonKernelBase::CommonKernelBase;
+        virtual ~LRNKernelBase() {}
 
         using DispatchData = CommonDispatchData;
-    
+
     protected:
-        JitConstants GetJitConstants(const ConcatenationParams& params) const;
-        virtual DispatchData SetDefault(const ConcatenationParams& params) const;
+        virtual bool Validate(const Params& p, const OptionalParams& o) const override;
+        virtual JitConstants GetJitConstants(const LRNParams& params, DispatchData kd) const;
+        virtual DispatchData SetDefault(const LRNParams& params) const;
+        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimatedTime) const;
     };
 }

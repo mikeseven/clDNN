@@ -53,7 +53,7 @@ namespace KernelSelector
 
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = cl::NDRange(out.Feature().v, out.Batch().v);
+        kernel.workGroups.global = { out.Feature().v, out.Batch().v };
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());

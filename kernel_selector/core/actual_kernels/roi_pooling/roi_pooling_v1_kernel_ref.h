@@ -16,14 +16,14 @@
 
 #pragma once
 
-#include "igk_kernel_base.h"
+#include "common_kernel_base.h"
 
 namespace KernelSelector
 {
-    class ROIPoolingV1KernelRef : public IGKKernelBase
+    class ROIPoolingV1KernelRef : public CommonKernelBase
     {
     public:
-        ROIPoolingV1KernelRef() : IGKKernelBase("roi_pooling_v1_ref") {}
+        ROIPoolingV1KernelRef() : CommonKernelBase("roi_pooling_v1_ref") {}
         virtual ~ROIPoolingV1KernelRef() {}
 
         using DispatchData = CommonDispatchData;

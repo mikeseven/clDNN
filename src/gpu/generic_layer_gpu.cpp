@@ -49,7 +49,7 @@ struct generic_layer_gpu : typed_primitive_impl<generic_layer>
 
         const auto& kernel_data = *outer.get_primitive()->generic_params.clKernel.get();
         
-        return _kernel.run_ks(kernel_data, events, args);
+        return _kernel.run(kernel_data, events, args);
     }
 };
 

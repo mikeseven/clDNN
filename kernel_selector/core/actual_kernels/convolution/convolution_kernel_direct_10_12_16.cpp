@@ -107,15 +107,15 @@ namespace KernelSelector {
             << GetConvolutionJit(newParams, runInfo, true);
 
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = cl::NDRange(
+        kernel.workGroups.global = {
             cldnn::round_up_to(orgParams.output.X().v, runInfo.globalWorkSizeDX) / runInfo.globalWorkSizeDX,
             cldnn::round_up_to(orgParams.output.Y().v, runInfo.globalWorkSizeDY) / runInfo.globalWorkSizeDY,
-            cldnn::round_up_to(orgParams.output.Feature().v, TILE_N) * orgParams.output.Batch().v);
+            cldnn::round_up_to(orgParams.output.Feature().v, TILE_N) * orgParams.output.Batch().v };
 
-        kernel.workGroups.local = cl::NDRange(
+        kernel.workGroups.local = {
             runInfo.localWorkSizeX,
             runInfo.localWorkSizeY,
-            runInfo.localWorkSizeZ);
+            runInfo.localWorkSizeZ };
 
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id, AGE_BASED);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());

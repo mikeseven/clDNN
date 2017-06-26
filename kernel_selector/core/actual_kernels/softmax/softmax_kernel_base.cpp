@@ -14,11 +14,11 @@
 // limitations under the License.
 */
 
-#include "igk_softmax_kernel_base.h"
+#include "softmax_kernel_base.h"
 
 namespace KernelSelector 
 {
-    JitConstants IGKSoftmaxKernelBase::GetJitConstants(const SoftmaxParams& params, IGKSoftmaxKernelBase::DispatchData kd) const
+    JitConstants SoftmaxKernelBase::GetJitConstants(const SoftmaxParams& params, SoftmaxKernelBase::DispatchData kd) const
     {
         JitConstants mem_consts = MakeSoftmaxJitConstants(params);
 
@@ -58,7 +58,7 @@ namespace KernelSelector
         }
     }
 
-    IGKSoftmaxKernelBase::DispatchData IGKSoftmaxKernelBase::SetDefault(const SoftmaxParams& params, const OptionalParams&) const
+    SoftmaxKernelBase::DispatchData SoftmaxKernelBase::SetDefault(const SoftmaxParams& params, const OptionalParams&) const
     {
         const auto& input = params.inputs[0];
 
@@ -87,7 +87,7 @@ namespace KernelSelector
         return kd;
     }
 
-    KernelsData IGKSoftmaxKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& optParams, float estimated_time) const
+    KernelsData SoftmaxKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& optParams, float estimated_time) const
     {
         assert(params.GetType() == KernelType::SOFT_MAX);
 

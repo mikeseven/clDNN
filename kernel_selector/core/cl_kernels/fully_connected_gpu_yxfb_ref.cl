@@ -13,19 +13,7 @@
 // limitations under the License.
 
 
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
-
-#if RELU && FP16_UNIT_USED
-    #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
-    input : -convert_half(NEGATIVE_SLOPE)) : (max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h));
-#elif RELU
-    #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
-    input : -NEGATIVE_SLOPE) : (max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f));
-#else
-    #define ACTIVATION(output, input) output = input;
-#endif
+#include "include/common.cl"
 
 // Required JIT constants:
 //  - FP16_SUPPORTED       - [0/1] Value indicating whether device supports FP16 OpenCL extension (cl_khr_fp16).
@@ -40,9 +28,9 @@
 
 inline uint3 FUNC(reshape)(uint i, uint y, uint x)
 {
-#if (WEIGHTS_DIMS == 4)
+#if (FILTER_DIMS == 4)
     return (uint3)(i,y,x);
-#elif (WEIGHTS_DIMS == 2)
+#elif (FILTER_DIMS == 2)
     uint _i = i*INPUT_SIZE_Y*INPUT_SIZE_X + y*INPUT_SIZE_X + x;
     return (uint3)(_i,0,0);
 #else

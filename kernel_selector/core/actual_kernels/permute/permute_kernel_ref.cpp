@@ -42,19 +42,10 @@ namespace KernelSelector
         KernelData kd = KernelData::Default<PermuteParams>(params, 1);
         PermuteParams& newParams = *static_cast<PermuteParams*>(kd.params.get());
 
-        std::string jit;
 
         auto entry_point = GetEntryPoint(kernelName, newParams.layerID);
-
-        try
-        {
-            auto cldnn_jit = MakePermuteJitConstants(newParams);
-            jit = CreateJit(kernelName, cldnn_jit, entry_point);
-        }
-        catch (const std::runtime_error&)
-        {
-            return KernelsData();
-        }
+        auto cldnn_jit = MakePermuteJitConstants(newParams);
+        std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         const auto& in = newParams.inputs[0];
         auto& kernel = kd.kernels[0];
@@ -69,7 +60,7 @@ namespace KernelSelector
             gws.push_back(1U);
         }
 
-        kernel.workGroups.global = cl::NDRange(gws[0], gws[1], gws[2]*gws[3]);
+        kernel.workGroups.global = { gws[0], gws[1], gws[2] * gws[3] };
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
         kernel.argsDesc = GetArgsDesc(1, false, false);

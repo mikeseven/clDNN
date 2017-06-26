@@ -14,11 +14,44 @@
 // limitations under the License.
 */
 
-#include "igk_convolution_kernel_base.h"
+#include "convolution_kernel_base.h"
 
 namespace KernelSelector 
 {
-    JitConstants IGKConvolutionKernelBase::GetJitConstants(const ConvolutionParams& params, IGKConvolutionKernelBase::DispatchData kd) const
+    bool ConvolutionKernelBase::Validate(const Params& p, const OptionalParams& o) const
+    {
+        if (p.GetType() != KernelType::CONVOLUTION ||
+            o.GetType() != KernelType::CONVOLUTION)
+        {
+            return false;
+        }
+
+        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
+        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(o);
+
+        if (!CheckActivationSupport(params.activationFunc))
+        {
+            return false;
+        }
+
+        bool bSupportedWeightsLayout = false;
+
+        for (WeightsLayout l : GetSupportedWeightLayouts())
+        {
+            bSupportedWeightsLayout |= params.weights.GetLayout() == l;
+        }
+
+        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
+
+        if (!bWeightsOK)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    JitConstants ConvolutionKernelBase::GetJitConstants(const ConvolutionParams& params, ConvolutionKernelBase::DispatchData kd) const
     {
         JitConstants mem_consts = MakeConvolutionParamsJitConstants(params);
 
@@ -40,7 +73,7 @@ namespace KernelSelector
         return mem_consts;
     }
 
-    bool IGKConvolutionKernelBase::CheckWorkGroups(const IGKConvolutionKernelBase::DispatchData& kd) const
+    bool ConvolutionKernelBase::CheckWorkGroups(const ConvolutionKernelBase::DispatchData& kd) const
     {
         if (kd.gws0 == 0 ||
             kd.gws1 == 0 ||
@@ -93,7 +126,7 @@ namespace KernelSelector
         }
     }
 
-    bool IGKConvolutionKernelBase::CheckPitchForSplitOnly(const ConvolutionParams& params) const
+    bool ConvolutionKernelBase::CheckPitchForSplitOnly(const ConvolutionParams& params) const
     {
         // TODO: it's better to add pitch+offset support than handle this case
         return
@@ -101,7 +134,7 @@ namespace KernelSelector
             CheckTensorForSplit(params.inputs[0], params.convParams.split);
     }
 
-    IGKConvolutionKernelBase::DispatchData IGKConvolutionKernelBase::SetDefault(const ConvolutionParams& params) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernelBase::SetDefault(const ConvolutionParams& params) const
     {
         auto batch_size = params.output.Batch().v;
         auto output_features = params.output.Feature().v;

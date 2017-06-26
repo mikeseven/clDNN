@@ -36,7 +36,6 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _use_ks = true;
         _ks_kernel_data = kd;
     }
 
@@ -70,7 +69,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
             args.bias = bias_mem;
             args.split = i;
 
-            auto event = _kernel.run_ks(_ks_kernel_data.kernels[0], tmp_events, args);
+            auto event = _kernel.run(_ks_kernel_data.kernels[0], tmp_events, args);
             tmp_events.clear();
             tmp_events.emplace_back(event);
         }
@@ -140,7 +139,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
         auto best_kernels = kernel_selector.GetBestKernels(deconv_params, deconv_optional_params);
         if (best_kernels.empty())
         {
-            throw std::runtime_error("Unsupported - didn't find a proper kernel for this arguments");
+            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
         }
 
         auto deconv = new deconvolution_gpu(arg, best_kernels[0]);

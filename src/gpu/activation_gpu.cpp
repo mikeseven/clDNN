@@ -34,7 +34,6 @@ struct activation_gpu : typed_primitive_impl<activation>
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _use_ks = true;
         _ks_kernel_data = kd;
     }
 
@@ -48,7 +47,7 @@ struct activation_gpu : typed_primitive_impl<activation>
             args.slope = &instance.slope_memory();
         }
 
-        return _kernel.run_ks(_ks_kernel_data.kernels[0], events, args);
+        return _kernel.run(_ks_kernel_data.kernels[0], events, args);
     }
 
     static primitive_impl* create(const activation_node& arg) 
@@ -70,7 +69,7 @@ struct activation_gpu : typed_primitive_impl<activation>
         auto best_kernels = kernel_selector.GetBestKernels(activation_params, activation_optional_params);
         if (best_kernels.empty())
         {
-            throw std::runtime_error("Unsupported - didn't find a proper kernel for this arguments");
+            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
         }
 
         auto activation = new activation_gpu(arg, best_kernels[0]);

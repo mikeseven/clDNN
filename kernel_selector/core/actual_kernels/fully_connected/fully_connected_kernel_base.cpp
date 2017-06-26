@@ -14,13 +14,13 @@
 // limitations under the License.
 */
 
-#include "igk_fully_connected_kernel_base.h"
+#include "fully_connected_kernel_base.h"
 #include "kernel_selector_utils.h"
 #include "api/CPP/cldnn_defs.h"
 
 namespace KernelSelector 
 {
-    JitConstants IGKFullyConnectedKernelBase::GetJitConstants(const FullyConnectedParams& params, const IGKFullyConnectedKernelBase::DispatchData& data) const
+    JitConstants FullyConnectedKernelBase::GetJitConstants(const FullyConnectedParams& params, const FullyConnectedKernelBase::DispatchData& data) const
     {
         JitConstants mem_consts = MakeFullyConnectedJitConstants(params);
 
@@ -36,7 +36,7 @@ namespace KernelSelector
         return mem_consts;
     }
 
-    IGKFullyConnectedKernelBase::DispatchData IGKFullyConnectedKernelBase::SetKernelData(const FullyConnectedParams& params) const
+    FullyConnectedKernelBase::DispatchData FullyConnectedKernelBase::SetDefault(const FullyConnectedParams& params) const
     {
         DispatchData kd;
 
@@ -58,9 +58,13 @@ namespace KernelSelector
         return kd;
     }
 
-    KernelsData IGKFullyConnectedKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& optParams, DataLayout dl, WeightsLayout wl, float estimated_time) const
+    KernelsData FullyConnectedKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& optParams, DataLayout dl, std::vector<WeightsLayout> wl, float estimated_time) const
     {
-        assert(params.GetType() == KernelType::FULLY_CONNECTED);
+        if (!Validate(params, optParams) ||
+            wl.empty())
+        {
+            return KernelsData();
+        }
 
         const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
         const auto& orgOptParams = static_cast<const FullyConnectedOptionalParams&>(optParams);
@@ -75,12 +79,12 @@ namespace KernelSelector
                 (dl == DataLayout::bf && orgParams.inputs[0].GetLayout() == DataLayout::bfyx);
         }
 
-        bool bProperWeights = orgParams.weights.GetLayout() == wl;
+        bool bProperWeights = std::find(wl.begin(), wl.end(), orgParams.weights.GetLayout()) != wl.end();
         if (!bProperWeights && orgParams.weights.PaddingExists() == false)
         {
             bProperWeights =
-                (wl == WeightsLayout::io && orgParams.weights.GetLayout() == WeightsLayout::iyxo) ||
-                (wl == WeightsLayout::oi && orgParams.weights.GetLayout() == WeightsLayout::oiyx);
+                (std::find(wl.begin(), wl.end(), WeightsLayout::io) != wl.end() && orgParams.weights.GetLayout() == WeightsLayout::iyxo) ||
+                (std::find(wl.begin(), wl.end(), WeightsLayout::oi) != wl.end() && orgParams.weights.GetLayout() == WeightsLayout::oiyx);
         }
 
         const bool bSupportedLayout = orgOptParams.allowReorderInput || bProperInput;
@@ -104,32 +108,23 @@ namespace KernelSelector
 
         if (!bProperWeights)
         {
-            newParams.weights = newParams.weights.Transform(wl);
+            newParams.weights = newParams.weights.Transform(wl[0]);
         }
 
         kd.kernels.resize(1);
-        DispatchData runInfo;
-        std::string jit;
-
+        
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
 
-        try
-        {
-            runInfo = SetDefault(newParams);
-            auto cldnn_jit = GetJitConstants(newParams, runInfo);
-            jit = CreateJit(kernelName, cldnn_jit, entry_point);
-        }
-        catch (const std::runtime_error&)
-        {
-            return KernelsData();
-        }
+        DispatchData runInfo = SetDefault(newParams);
+        auto cldnn_jit = GetJitConstants(newParams, runInfo);
+        std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, true, !orgParams.bias.empty());
 
         if (!bProperWeights)
         {
-            bool succeed = SetWeightsReorderParams(orgParams, wl, kd.weightsReorderParams);
+            bool succeed = SetWeightsReorderParams(orgParams, wl[0], kd.weightsReorderParams);
 
             if (!succeed)
             {

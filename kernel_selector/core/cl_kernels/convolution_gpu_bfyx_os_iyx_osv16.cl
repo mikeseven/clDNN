@@ -13,10 +13,7 @@
 // limitations under the License.
 
 
-// Extensions and additional capabilities.
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
+#include "include/common.cl"
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Just-in-time macro definitions:
@@ -55,21 +52,6 @@ gpu::make_jit_constant("PREFETCH",                  _kernel_data.prefetch));
 if (_kernel_data.leftovers)
     gpu::make_jit_constant("LEFTOVERS",             _kernel_data.leftovers));
 */
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Activation mecro function:
-// ---------------------------------------------------------------------------------------------------------------------
-
-// Activation function used in ReLU.
-#if RELU && FP16_UNIT_USED
-    #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
-    input : -convert_half(NEGATIVE_SLOPE)) : (fmax(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * fmin(input, 0.0h));
-#elif RELU
-    #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
-    input : -NEGATIVE_SLOPE) : (fmax(input, 0.0f) + NEGATIVE_SLOPE * fmin(input, 0.0f));
-#else
-    #define ACTIVATION(output, input) output = input;
-#endif
 
 // FEATURES_THREADS_PER_BATCH defines how many threads in z-dimension are processing single batch.
 // ideally, z-dimension of value n should indicate processing of n-th output feature. however, since

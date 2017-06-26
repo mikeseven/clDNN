@@ -43,45 +43,23 @@ namespace KernelSelector
         return k;
     }
 
-    IGKConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_Ref::default_yxfb(const ConvolutionParams& arg) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_Ref::SetDefault(const ConvolutionParams& arg) const
     {
-        DispatchData runInfo = SetDefault(arg);
+        DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
         return runInfo;
     }
 
     KernelsData ConvolutionKernel_yxfb_Ref::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        assert(params.GetType() == KernelType::CONVOLUTION && options.GetType() == KernelType::CONVOLUTION);
+        if (!Validate(params, options))
+        {
+            return{};
+        }
 
         const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
-        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
 
-        const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
-
-        const bool bSupportedWeightsLayout =
-            orgParams.weights.GetLayout() == WeightsLayout::yxio ||
-            orgParams.weights.GetLayout() == WeightsLayout::iyxo ||
-            orgParams.weights.GetLayout() == WeightsLayout::oyxi ||
-            orgParams.weights.GetLayout() == WeightsLayout::oiyx;
-        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
-        
-        if (!bSupportedActivation || !bWeightsOK)
-        {
-            return{};
-        }
-
-        DispatchData runInfo;
-        
-        try
-        {
-            runInfo = default_yxfb(orgParams);
-        }
-        catch (const std::runtime_error& )
-        {
-            return{};
-        }
-
-        KernelData kd = KernelData::Default<ConvolutionParams>(params, 1);
+        DispatchData runInfo = SetDefault(orgParams);
+        KernelData kd = KernelData::Default<ConvolutionParams>(params);
 
         auto cldnn_jit = GetJitConstants(orgParams, runInfo);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);

@@ -16,21 +16,19 @@
 
 #pragma once
 
-#include "igk_kernel_base.h"
+#include "common_kernel_base.h"
 #include "kernel_selector_params.h"
 
 namespace KernelSelector 
 {
-    class IGKLRNKernelBase : public IGKKernelBase
+    class ReorderKernelBase : public CommonKernelBase
     {
     public:
-        using IGKKernelBase::IGKKernelBase;
-        virtual ~IGKLRNKernelBase() {}
-
-        using DispatchData = CommonDispatchData;
-
+        using CommonKernelBase::CommonKernelBase;
+        virtual ~ReorderKernelBase() {}
+    
     protected:
-        JitConstants GetJitConstants(const LRNParams& params, DispatchData kd) const;
-        DispatchData SetDefault(const LRNParams& params) const;
+        virtual JitConstants GetJitConstants(const ReorderWeightsParams& params) const;
+        virtual JitConstants GetJitConstants(const ReorderParams& params) const;
     };
 }

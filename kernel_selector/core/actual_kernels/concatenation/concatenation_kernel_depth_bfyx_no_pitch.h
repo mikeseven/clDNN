@@ -16,14 +16,14 @@
 
 #pragma once
 
-#include "igk_concatenation_kernel_base.h"
+#include "concatenation_kernel_base.h"
 
 namespace KernelSelector {
 
-    class ConcatenationKernel_depth_bfyx_no_pitch : public IGKConcatenationKernelBase
+    class ConcatenationKernel_depth_bfyx_no_pitch : public ConcatenationKernelBase
     {
     public:
-        ConcatenationKernel_depth_bfyx_no_pitch() : IGKConcatenationKernelBase("concatenation_gpu_depth_bfyx_no_pitch") {}
+        ConcatenationKernel_depth_bfyx_no_pitch() : ConcatenationKernelBase("concatenation_gpu_depth_bfyx_no_pitch") {}
         virtual ~ConcatenationKernel_depth_bfyx_no_pitch() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;

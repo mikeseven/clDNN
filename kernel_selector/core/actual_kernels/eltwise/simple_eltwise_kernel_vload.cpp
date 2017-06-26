@@ -39,8 +39,13 @@ namespace KernelSelector {
         return jit;
     }
 
-    static bool Validate(const Params& params)
+    bool SimpleEltwiseKernel_vload::Validate(const Params& params, const OptionalParams&) const
     {
+        if (params.GetType() != KernelType::ELTWISE)
+        {
+            return false;
+        }
+
         const EltwiseParams& ewParams = static_cast<const EltwiseParams&>(params);
 
         if (!CheckActivationSupport(ewParams.activationFunc) ||
@@ -65,11 +70,9 @@ namespace KernelSelector {
         return true;
     }
 
-    KernelsData SimpleEltwiseKernel_vload::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData SimpleEltwiseKernel_vload::GetKernelsData(const Params& params, const OptionalParams& optParams) const
     {
-        assert(params.GetType() == KernelType::ELTWISE);
-
-        if (!Validate(params))
+        if (!Validate(params, optParams))
         {
             return{};
         }
@@ -84,7 +87,7 @@ namespace KernelSelector {
         try
         {
             auto cldnn_jit = get_jit_constants(newParams);
-            jit = CreateJit(kernelName, cldnn_jit, entry_point, false);
+            jit = CreateJit(kernelName, cldnn_jit, entry_point);
         }
         catch (const std::runtime_error&)
         {

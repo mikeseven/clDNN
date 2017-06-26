@@ -72,12 +72,10 @@ namespace KernelSelector
         return std::make_pair(input_block_array_size, input_block_read_width);
     }
 
-    IGKConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_os_iyx_osv16::default_bfyx_os_iyx_osv16(const ConvolutionParams& arg) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_os_iyx_osv16::SetDefault(const ConvolutionParams& arg) const
     {
-        DispatchData runInfo = SetDefault(arg);
+        DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
-        // Maximum supported size (in any dimension) of filter by "kernel_name_bfyx_os_iyx_osv16" kernel.
-        constexpr size_t max_supported_filter_size = 11;
         // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
         constexpr size_t sub_group_size = 16;
 
@@ -86,11 +84,6 @@ namespace KernelSelector
         runInfo.leftovers = of_threads_per_batch - of_maps;
 
         const auto cp = arg.convParams;
-        if (cp.filterSize.x > max_supported_filter_size ||
-            cp.filterSize.y > max_supported_filter_size)
-        {
-            throw std::runtime_error("Unsupported filter size (> 11) in bfyx convolution");
-        }
 
         runInfo.effiency = FORCE_PRIORITY_3;
 
@@ -161,42 +154,53 @@ namespace KernelSelector
         return runInfo;
     }
 
+    bool ConvolutionKernel_bfyx_os_iyx_osv16::Validate(const Params& p, const OptionalParams& o) const
+    {
+        if (!ConvolutionKernelBase::Validate(p, o))
+        {
+            return false;
+        }
+        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
+        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(o);
+        
+        const auto req_input = GetConvolutionPaddedTensorDesc(params);
+        const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(params, req_input);
+        const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
+        const bool bSupportedActivation = CheckActivationSupport(params.activationFunc);
+
+        if (!bInputPadded || !bSupportedActivation)
+        {
+            return false;
+        }
+
+        // Maximum supported size (in any dimension) of filter by "kernel_name_bfyx_os_iyx_osv16" kernel.
+        constexpr size_t max_supported_filter_size = 11;
+        const auto& cp = params.convParams;
+        if (cp.filterSize.x > max_supported_filter_size ||
+            cp.filterSize.y > max_supported_filter_size)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     KernelsData ConvolutionKernel_bfyx_os_iyx_osv16::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        assert(params.GetType() == KernelType::CONVOLUTION && options.GetType() == KernelType::CONVOLUTION);
+        if (!Validate(params, options))
+        {
+            return{};
+        }
 
         const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
         const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
-        const bool bSupportedWeightsLayout = orgParams.weights.GetLayout() == WeightsLayout::oiyx;
-        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
         const auto req_input = GetConvolutionPaddedTensorDesc(orgParams);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, req_input);
-        const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
-        const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
-        
-        if (!bInputPadded || !bSupportedActivation || !bWeightsOK)
-        {
-            return KernelsData();
-        }
 
-        KernelData kd;
-
-        auto params_ptr = std::make_shared<ConvolutionParams>(orgParams);
-        kd.params = params_ptr;
-
-        ConvolutionParams& newParams = *params_ptr.get();
+        KernelData kd = KernelData::Default<ConvolutionParams>(params);
+        ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
         
-        kd.kernels.resize(1);
-        DispatchData runInfo;
-        
-        try
-        {
-            runInfo = default_bfyx_os_iyx_osv16(newParams);
-        }
-        catch (const std::runtime_error& )
-        {
-            return KernelsData();
-        }
+        DispatchData runInfo = SetDefault(newParams);
         
         if (optParams.allowPadding && !bProperInputDesc)
         {
@@ -211,10 +215,12 @@ namespace KernelSelector
         cldnn_jit.AddConstant(MakeJitConstant("IN_BLOCK_ARRAY_SIZE", runInfo.inputBlockArraySize));
         cldnn_jit.AddConstant(MakeJitConstant("IN_BLOCK_WIDTH", runInfo.inputBlockWidth));
         cldnn_jit.AddConstant(MakeJitConstant("PREFETCH", runInfo.prefetch));
+
         if (runInfo.leftovers)
         {
             cldnn_jit.AddConstant(MakeJitConstant("LEFTOVERS", runInfo.leftovers));
         }
+
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 

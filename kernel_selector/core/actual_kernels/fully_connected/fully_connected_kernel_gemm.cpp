@@ -69,8 +69,8 @@ namespace KernelSelector {
             << "#define LAST_INPUT_SIZE_DIV_4 (" << matrixLineSize % vecSize << ")\n";
         
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = cl::NDRange(globalWorkSizeX, newParams.output.Feature().v, newParams.output.Batch().v);
-        kernel.workGroups.local = cl::NDRange(localWorkSizeX, 1, 1);
+        kernel.workGroups.global = { globalWorkSizeX, newParams.output.Feature().v, newParams.output.Batch().v };
+        kernel.workGroups.local = { localWorkSizeX, 1, 1 };
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
 

@@ -1,4 +1,4 @@
-/*
+﻿/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,23 +13,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-#include "primitive_db.h"
-#include <assert.h>
-#include <algorithm>
 
-namespace neural { namespace gpu { namespace manager {
+#pragma once
 
-primitive_db::primitive_db() : primitives({
-    #include "primitive_db.inc"
-}) { }
+#include "common_kernel_base.h"
+#include "kernel_selector_params.h"
 
-std::vector<code> primitive_db::get(const primitive_id & id)
+namespace KernelSelector 
 {
-    auto codes = primitives.equal_range(id);
-    std::vector<code> temp;
-    std::for_each(codes.first, codes.second, [&](auto c){ temp.push_back(c.second); });
-    assert(temp.size() > 0 && "There should be at least one implementation of primitive");
-    return temp;
-}
+    class DeconvolutionKernelBase : public CommonKernelBase
+    {
+    public:
+        using CommonKernelBase::CommonKernelBase;
+        virtual ~DeconvolutionKernelBase() {}
 
-} } }
+        using DispatchData = CommonDispatchData;
+    
+    protected:
+        JitConstants GetJitConstants(const DeconvolutionParams& params) const;
+        virtual DispatchData SetDefault(const DeconvolutionParams& params) const;
+    };
+}

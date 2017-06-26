@@ -16,16 +16,16 @@
 
 #pragma once
 
-#include "igk_kernel_base.h"
+#include "common_kernel_base.h"
 #include "kernel_selector_params.h"
 
 namespace KernelSelector 
 {
-    class IGKNormalizeKernelBase : public IGKKernelBase
+    class NormalizeKernelBase : public CommonKernelBase
     {
     public:
-        using IGKKernelBase::IGKKernelBase;
-        virtual ~IGKNormalizeKernelBase() {}
+        using CommonKernelBase::CommonKernelBase;
+        virtual ~NormalizeKernelBase() {}
 
         using DispatchData = CommonDispatchData;
 

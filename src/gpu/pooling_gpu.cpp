@@ -36,7 +36,6 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         , _engine_info(arg.get_program().get_engine()->get_context()->get_engine_info())
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _use_ks = true;
         _ks_kernel_data = kd;
     }
 
@@ -49,7 +48,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         args.inputs = { input_mem };
         args.output = output_mem;
 
-        return _kernel.run_ks(_ks_kernel_data.kernels[0], events, args);
+        return _kernel.run(_ks_kernel_data.kernels[0], events, args);
     }
 
     static KernelSelector::PoolType cldnn_2_pool_type(cldnn::pooling_mode mode)
@@ -129,7 +128,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
 
         if (best_kernels.empty())
         {
-            throw std::runtime_error("Unsupported - didn't find a proper kernel for this arguments");
+            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
         }
 
         auto pool = new pooling_gpu(arg, best_kernels[0]);

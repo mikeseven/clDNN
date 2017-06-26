@@ -17,7 +17,7 @@
 #pragma once
 
 #include <cstddef>
-#include "ks_ocl_toolkit.h"
+#include "api/CPP/cldnn_defs.h"
 #include "common_types.h"
 #include "tensor_type.h"
 

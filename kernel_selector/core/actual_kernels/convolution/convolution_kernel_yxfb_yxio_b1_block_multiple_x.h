@@ -16,20 +16,23 @@
 
 #pragma once
 
-#include "igk_convolution_kernel_base.h"
+#include "convolution_kernel_base.h"
 
 namespace KernelSelector {
 
-    class ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x : public IGKConvolutionKernelBase
+    class ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x : public ConvolutionKernelBase
     {
     public:
-        ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x() : IGKConvolutionKernelBase("convolution_gpu_yxfb_yxio_b1_block_multiple_x") {}
+        ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x() : ConvolutionKernelBase("convolution_gpu_yxfb_yxio_b1_block_multiple_x") {}
         virtual ~ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     
     protected:
-        DispatchData default_yxfb_yxio_b1_multiple_x(const ConvolutionParams& arg) const;
+        std::vector<WeightsLayout> GetSupportedWeightLayouts() const override { return{ WeightsLayout::yxio }; }
+        bool Validate(const Params& p, const OptionalParams& o) const override;
+        JitConstants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const override;
+        DispatchData SetDefault(const ConvolutionParams& arg) const override;
     };
 }

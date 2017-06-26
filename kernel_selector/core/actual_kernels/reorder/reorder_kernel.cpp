@@ -37,7 +37,7 @@ namespace KernelSelector
 
     JitConstants ReorderKernelRef::GetJitConstants(const ReorderParams& params) const
     {
-        auto jit = IGKReorderKernelBase::GetJitConstants(params);
+        auto jit = ReorderKernelBase::GetJitConstants(params);
         jit.Merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
         return jit;
     }
@@ -49,20 +49,10 @@ namespace KernelSelector
         KernelData kd = KernelData::Default<ReorderParams>(params, 1);
         ReorderParams& newParams = *static_cast<ReorderParams*>(kd.params.get());
 
-        std::string jit;
-
         auto entry_point = GetEntryPoint(kernelName, newParams.layerID);
-
-        try
-        {
-            auto cldnn_jit = GetJitConstants(newParams);
-            jit = CreateJit(kernelName, cldnn_jit, entry_point);
-        }
-        catch (const std::runtime_error&)
-        {
-            return KernelsData();
-        }
-
+        auto cldnn_jit = GetJitConstants(newParams);
+        std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
+        
         auto& kernel = kd.kernels[0];
 
         kernel.workGroups.global = GetTensorFriendlyWorkGroups(newParams.inputs[0]);

@@ -13,9 +13,7 @@
 // limitations under the License.
 
 
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
+#include "include/common.cl"
 
 #if   defined MAX_POOLING
     #define UNIT_INIT_VAL UNIT_VAL_MIN

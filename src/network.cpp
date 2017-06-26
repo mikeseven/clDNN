@@ -54,7 +54,7 @@ network_impl::network_impl(program_impl::cptr program)
     )";
 
     cl_kernel.kernelString->entry_point = "warm_up_gpu";
-    cl_kernel.workGroups.global = cl::NDRange(1024, 8);
+    cl_kernel.workGroups.global = { 1024, 8 };
     cl_kernel.argsDesc.data = {
         { ArgumentDescpirtor::Types::INT32, 0 },
         { ArgumentDescpirtor::Types::INT32, 111 },
@@ -72,7 +72,7 @@ network_impl::network_impl(program_impl::cptr program)
     neural::gpu::kernel::kernel_arguments_desc args;
     args.output = &out;
 
-    warmup_kernel.run_ks(cl_kernel, {}, args);
+    warmup_kernel.run(cl_kernel, {}, args);
 
     context->queue().finish();
 }

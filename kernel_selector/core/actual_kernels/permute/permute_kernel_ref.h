@@ -16,14 +16,14 @@
 
 #pragma once
 
-#include "igk_kernel_base.h"
+#include "common_kernel_base.h"
  
 namespace KernelSelector 
 {    
-    class PermuteKernelRef : public IGKKernelBase
+    class PermuteKernelRef : public CommonKernelBase
     {
     public:
-        PermuteKernelRef() : IGKKernelBase("permute_ref") {}
+        PermuteKernelRef() : CommonKernelBase("permute_ref") {}
         virtual ~PermuteKernelRef() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;

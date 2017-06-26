@@ -34,7 +34,6 @@ struct reshape_gpu : public typed_primitive_impl<reshape>
     reshape_gpu(reshape_node const& node, const KernelSelector::KernelData& kd)
         : _kernel(std::make_unique<gpu::kernel>(node.get_program().get_engine()->get_context(), kd.kernels[0].kernelString))
     {
-        _use_ks = true;
         _ks_kernel_data = kd;
     }
 
@@ -55,27 +54,27 @@ struct reshape_gpu : public typed_primitive_impl<reshape>
         args.inputs = { &instance.input_memory() };
         args.output = &instance.output_memory();
 
-        return _kernel->run_ks(_ks_kernel_data.kernels[0], events, args);
+        return _kernel->run(_ks_kernel_data.kernels[0], events, args);
     }
 
-    static primitive_impl* create(reshape_node const& node) 
+    static primitive_impl* create(reshape_node const& arg) 
     { 
-        if (node.is_in_place())
+        if (arg.is_in_place())
         {
-            return new reshape_gpu(node);
+            return new reshape_gpu(arg);
         }
 
-        auto reorder_params = GetDefaultParams<KernelSelector::ReorderBaseParams>(node);
-        auto reorder_optional_params = GetDefaultOptionalParams<KernelSelector::ReorderOptionalParams>(node.get_program());
+        auto reorder_params = GetDefaultParams<KernelSelector::ReorderBaseParams>(arg);
+        auto reorder_optional_params = GetDefaultOptionalParams<KernelSelector::ReorderOptionalParams>(arg.get_program());
 
         auto& kernel_selector = KernelSelector::ReshapeKernelSelctor::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(reorder_params, reorder_optional_params);
         if (best_kernels.empty())
         {
-            throw std::runtime_error("Unsupported - didn't find a proper kernel for this arguments");
+            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
         }
 
-        auto reorder = new reshape_gpu(node, best_kernels[0]);
+        auto reorder = new reshape_gpu(arg, best_kernels[0]);
 
         return reorder;
     }

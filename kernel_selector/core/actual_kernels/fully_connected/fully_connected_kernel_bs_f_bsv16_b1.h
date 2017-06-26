@@ -16,14 +16,14 @@
 
 #pragma once
 
-#include "igk_fully_connected_kernel_base.h"
+#include "fully_connected_kernel_base.h"
 
 namespace KernelSelector {
 
-    class FullyConnected_bs_f_bsv16_b1 : public IGKFullyConnectedKernelBase
+    class FullyConnected_bs_f_bsv16_b1 : public FullyConnectedKernelBase
     {
     public:
-        FullyConnected_bs_f_bsv16_b1() : IGKFullyConnectedKernelBase("fully_connected_gpu_bs_f_bsv16_b1") {}
+        FullyConnected_bs_f_bsv16_b1() : FullyConnectedKernelBase("fully_connected_gpu_bs_f_bsv16_b1") {}
         virtual ~FullyConnected_bs_f_bsv16_b1() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;

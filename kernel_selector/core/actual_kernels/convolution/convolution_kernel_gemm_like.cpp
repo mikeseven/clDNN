@@ -130,15 +130,15 @@ namespace KernelSelector
         size_t sgemm_n = cldnn::round_up_to(newParams.output.Feature().v, (size_t)runInfo.subBlockDimN);
 
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = cl::NDRange(
+        kernel.workGroups.global = {
             cldnn::round_up_to(int(std::ceil((float)sgemm_n / (float)runInfo.globalWorkSizeDX)), runInfo.localWorkSizeX),
             cldnn::round_up_to(int(std::ceil((float)sgemm_m / (float)runInfo.globalWorkSizeDY)), runInfo.localWorkSizeY),
-            newParams.output.Batch().v);
+            newParams.output.Batch().v };
         
-        kernel.workGroups.local = cl::NDRange(
+        kernel.workGroups.local = {
             runInfo.localWorkSizeX,
             runInfo.localWorkSizeY,
-            runInfo.localWorkSizeZ);
+            runInfo.localWorkSizeZ };
 
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id, AGE_BASED);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());

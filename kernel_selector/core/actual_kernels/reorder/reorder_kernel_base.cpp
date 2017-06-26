@@ -15,7 +15,7 @@
 */
 
 #include "kernel_selector_common.h"
-#include "igk_reorder_kernel_base.h"
+#include "reorder_kernel_base.h"
 #include "api/CPP/cldnn_defs.h"
 
 namespace KernelSelector 
@@ -51,7 +51,7 @@ namespace KernelSelector
         }
     }
 
-    JitConstants IGKReorderKernelBase::GetJitConstants(const ReorderWeightsParams& params) const
+    JitConstants ReorderKernelBase::GetJitConstants(const ReorderWeightsParams& params) const
     {
         JitConstants mem_consts = MakeReorderWeightsJitConstants(params);
        
@@ -60,7 +60,7 @@ namespace KernelSelector
         return mem_consts;
     }
 
-    JitConstants IGKReorderKernelBase::GetJitConstants(const ReorderParams& params) const
+    JitConstants ReorderKernelBase::GetJitConstants(const ReorderParams& params) const
     {
         JitConstants mem_consts = MakeReorderJitConstants(params);
 

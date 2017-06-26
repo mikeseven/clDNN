@@ -43,7 +43,7 @@ namespace KernelSelector
 
     FullyConnected_bs_f_bsv16_af8::DispatchData FullyConnected_bs_f_bsv16_af8::SetDefault(const FullyConnectedParams& arg) const
     {
-        DispatchData kd = SetKernelData(arg);
+        DispatchData kd = FullyConnectedKernelBase::SetDefault(arg);
 
         size_t groups_per_batches = GetLocalGroupsSize(arg);
         kd.gws0 = cldnn::align_to(arg.output.Length() / (GetBatchesPerWorkItem(arg) * groups_per_batches), 16);
@@ -64,22 +64,30 @@ namespace KernelSelector
         return b16_layout;
     }
 
-    KernelsData FullyConnected_bs_f_bsv16_af8::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    bool FullyConnected_bs_f_bsv16_af8::Validate(const Params& p, const OptionalParams& o) const
     {
-        assert(params.GetType() == KernelType::FULLY_CONNECTED);
-
-        const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
-        const auto& orgOptParams = static_cast<const FullyConnectedOptionalParams&>(optParams);
-
-        const bool bProperBatch = orgParams.inputs[0].Batch().v == 16;
-        const bool bProperInput = check_input_layout(orgParams.inputs[0]);
-        const bool bSupportedLayout = orgOptParams.allowReorderInput || bProperInput;
-        
-        if (!bProperBatch || !bSupportedLayout)
+        if (!FullyConnectedKernelBase::Validate(p, o))
         {
-            return KernelsData();
+            return false;
         }
 
-        return GetCommonKernelsData(params, optParams, DataLayout::bs_f_bsv16__af8, WeightsLayout::os_i_osv16__ai8, FORCE_PRIORITY_2);
+        const auto& params = static_cast<const FullyConnectedParams&>(p);
+        const auto& optParams = static_cast<const FullyConnectedOptionalParams&>(o);
+
+        const bool bProperBatch = params.inputs[0].Batch().v == 16;
+        const bool bProperInput = check_input_layout(params.inputs[0]);
+        const bool bSupportedLayout = optParams.allowReorderInput || bProperInput;
+
+        if (!bProperBatch || !bSupportedLayout)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    KernelsData FullyConnected_bs_f_bsv16_af8::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    {   
+        return GetCommonKernelsData(params, optParams, DataLayout::bs_f_bsv16__af8, { WeightsLayout::os_i_osv16__ai8 }, FORCE_PRIORITY_2);
     }
 }

@@ -126,7 +126,7 @@ namespace KernelSelector { namespace
 
         return jit;
     }
-
+#if 0
     inline cl::NDRange toNDRange(const std::vector<size_t>& v)
     {
         switch (v.size())
@@ -141,8 +141,9 @@ namespace KernelSelector { namespace
             throw std::logic_error("Unacceptable NDRange dimension: " + std::to_string(v.size()));
         }
     }
+#endif
 
-    inline cl::NDRange GetTensorFriendlyWorkGroups(const DataTensor& t)
+    inline std::vector<size_t> GetTensorFriendlyWorkGroups(const DataTensor& t)
     {
         std::vector<size_t> sizes;
         auto y = Tensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::Y);
@@ -164,16 +165,16 @@ namespace KernelSelector { namespace
             sizes.push_back(1U);
         }
 
-        return toNDRange(sizes);
+        return sizes;
     }
 
-    inline cl::NDRange GetOptimalLocalWorkGroupSizes(cl::NDRange gws)
+    inline std::vector<size_t> GetOptimalLocalWorkGroupSizes(std::vector<size_t> gws)
     {
         const size_t lws_max = 256;
         const size_t optimal_lws_values[] = { 256, 224, 192, 160, 128, 96, 64, 32, 16, 8, 7, 6, 5, 4, 3, 2, 1 };
         size_t total_lws = 1;
         std::vector<size_t> lws;
-        for (size_t i = 0; i < gws.dimensions(); ++i)
+        for (size_t i = 0; i < gws.size(); ++i)
         {
             auto rest_lws = lws_max / total_lws;
             size_t lws_idx = 0;
@@ -185,7 +186,7 @@ namespace KernelSelector { namespace
             total_lws *= optimal_lws_values[lws_idx];
         }
 
-        return toNDRange(lws);
+        return lws;
     }
 
     inline bool CheckInputsOutputNoPitchSameDims(const BaseParams& params)

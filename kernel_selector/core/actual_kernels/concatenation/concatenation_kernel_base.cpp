@@ -15,7 +15,7 @@
 */
 
 #include "tensor_type.h"
-#include "igk_concatenation_kernel_base.h"
+#include "concatenation_kernel_base.h"
 
 namespace KernelSelector 
 {
@@ -34,18 +34,35 @@ namespace KernelSelector
         return Tensor::Channelndex(params.inputs[0].GetLayout(), name);
     }
 
-    JitConstants IGKConcatenationKernelBase::GetJitConstants(const ConcatenationParams& params) const
+    bool ConcatenationKernelBase::Validate(const Params& p, const OptionalParams&) const
+    {
+        if (p.GetType() != KernelType::CONCATENATION)
+        {
+            return false;
+        }
+
+        const ConcatenationParams& params = static_cast<const ConcatenationParams&>(p);
+
+        if (GetConcatChannelIndex(params) == -1)
+        {
+            return false;
+        }
+
+        if (params.activationFunc != ActivationFunction::NONE)
+        {
+            return false;
+        }
+
+        return true; 
+    }
+
+    JitConstants ConcatenationKernelBase::GetJitConstants(const ConcatenationParams& params) const
     {
         return MakeConcatenationJitConstants(params);
     }
 
-    IGKConcatenationKernelBase::DispatchData IGKConcatenationKernelBase::SetDefault(const ConcatenationParams& params) const
+    ConcatenationKernelBase::DispatchData ConcatenationKernelBase::SetDefault(const ConcatenationParams& params) const
     {
-        if (GetConcatChannelIndex(params) == -1)
-        {
-            throw std::runtime_error("axis doesn't exist in this layout");
-        }
-
         DispatchData kd;
 
         const auto& dims = params.inputs[0].GetDims();
@@ -64,5 +81,29 @@ namespace KernelSelector
         kd.lws2 = 1;
         kd.effiency = DONT_USE_IF_HAVE_SOMETHING_ELSE;
         return kd;
+    }
+
+    KernelsData ConcatenationKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& optParams) const
+    {
+        if (!Validate(params, optParams))
+        {
+            return{};
+        }
+
+        const ConcatenationParams& orgParams = static_cast<const ConcatenationParams&>(params);
+
+        DispatchData runInfo = SetDefault(orgParams);
+        KernelData kd = KernelData::Default<ConcatenationParams>(params);
+
+        auto cldnnJit = GetJitConstants(orgParams);
+        auto entryPoint = GetEntryPoint(kernelName, orgParams.layerID);
+        auto jit = CreateJit(kernelName, cldnnJit, entryPoint);
+
+        auto& kernel = kd.kernels[0];
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entryPoint);
+
+        kd.estimatedTime = runInfo.effiency;
+
+        return{ kd };
     }
 }

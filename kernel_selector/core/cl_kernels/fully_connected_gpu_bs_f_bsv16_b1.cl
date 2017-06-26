@@ -13,10 +13,7 @@
 // limitations under the License.
 
 
-// Extensions and additional capabilities.
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
+#include "include/common.cl"
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Just-in-time macro definitions:
@@ -103,18 +100,6 @@
     #define CHUNK_UNIT_SELECT(chunk, idx) AS_UNITS(chunk)
 #else
     #error Unsupported number of units per chunk.
-#endif
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Activation mecro function:
-// ---------------------------------------------------------------------------------------------------------------------
-
-// Activation function used in ReLU.
-#if RELU
-    #define ACTIVATION(output, input) output = isinf(CVT_UNIT(NEGATIVE_SLOPE)) ? ((input >= UNIT_VAL_ZERO) ? \
-    input : -CVT_UNIT(NEGATIVE_SLOPE)) : (fma(CVT_UNIT(NEGATIVE_SLOPE), fmin(input, UNIT_VAL_ZERO), fmax(input, UNIT_VAL_ZERO)));
-#else
-    #define ACTIVATION(output, input) output = input
 #endif
 
 // ---------------------------------------------------------------------------------------------------------------------

@@ -14,6 +14,7 @@
 // limitations under the License.
 */
 
+// for activation function
 #include "include/cnn_common.cl"
 
 #if ELTWISE_LAYOUT_BASED

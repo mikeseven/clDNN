@@ -16,14 +16,14 @@
 
 #pragma once
 
-#include "igk_concatenation_kernel_base.h"
+#include "concatenation_kernel_base.h"
 
 namespace KernelSelector {
 
-    class ConcatenationKernelRef : public IGKConcatenationKernelBase
+    class ConcatenationKernelRef : public ConcatenationKernelBase
     {
     public:
-        ConcatenationKernelRef() : IGKConcatenationKernelBase("concatenation_gpu_ref") {}
+        ConcatenationKernelRef() : ConcatenationKernelBase("concatenation_gpu_ref") {}
         virtual ~ConcatenationKernelRef() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;

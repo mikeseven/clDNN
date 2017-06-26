@@ -12,16 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
-
-#if RELU
-    #define ACTIVATION(output, input) output = isinf(TO_UNIT_TYPE_V1(NEGATIVE_SLOPE)) ? ((input >= UNIT_VAL_ZERO) ? \
-    input : -TO_UNIT_TYPE_V1(NEGATIVE_SLOPE)) : (fmax(input, UNIT_VAL_ZERO) + TO_UNIT_TYPE_V1(NEGATIVE_SLOPE) * fmin(input, UNIT_VAL_ZERO));
-#else
-    #define ACTIVATION(output, input) output = input;
-#endif
+#include "include/common.cl"
 
 KERNEL(convolution_gpu_yxfb_ref)(
     const __global UNIT_TYPE* input,

@@ -16,20 +16,20 @@
 
 #pragma once
 
-#include "igk_lrn_kernel_base.h"
+#include "lrn_kernel_base.h"
  
 namespace KernelSelector 
 {    
-    class LRNKernelWithinChannel : public IGKLRNKernelBase
+    class LRNKernelWithinChannel : public LRNKernelBase
     {
     public:
-        LRNKernelWithinChannel() : IGKLRNKernelBase("lrn_gpu_within_channel") {}
+        LRNKernelWithinChannel() : LRNKernelBase("lrn_gpu_within_channel") {}
         virtual ~LRNKernelWithinChannel() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
 
     private:
-        CommonDispatchData defaultWithinChannel(const LRNParams& params) const;
+        CommonDispatchData SetDefault(const LRNParams& params) const override;
     };
 }

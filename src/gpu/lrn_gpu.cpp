@@ -36,7 +36,6 @@ struct lrn_gpu : typed_primitive_impl<lrn>
         , _engine_info(arg.get_program().get_engine()->get_context()->get_engine_info())
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _use_ks = true;
         _ks_kernel_data = kd;
     }
 
@@ -46,7 +45,7 @@ struct lrn_gpu : typed_primitive_impl<lrn>
         args.inputs = { &instance.input_memory() };
         args.output = &instance.output_memory();
 
-        return _kernel.run_ks(_ks_kernel_data.kernels[0], events, args);
+        return _kernel.run(_ks_kernel_data.kernels[0], events, args);
     }
 
     static primitive_impl* create(const lrn_node& arg) 
@@ -70,7 +69,7 @@ struct lrn_gpu : typed_primitive_impl<lrn>
         auto best_kernels = kernel_selector.GetBestKernels(lrn_params, lrn_optional_params);
         if (best_kernels.empty())
         {
-            throw std::runtime_error("Unsupported - didn't find a proper kernel for this arguments");
+            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
         }
 
         auto lrn = new lrn_gpu(arg, best_kernels[0]);

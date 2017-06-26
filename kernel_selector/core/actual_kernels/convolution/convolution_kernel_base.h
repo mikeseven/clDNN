@@ -16,16 +16,16 @@
 
 #pragma once
 
-#include "igk_kernel_base.h"
+#include "common_kernel_base.h"
 #include "kernel_selector_params.h"
 
 namespace KernelSelector 
 {
-    class IGKConvolutionKernelBase : public IGKKernelBase
+    class ConvolutionKernelBase : public CommonKernelBase
     {
     public:
-        using IGKKernelBase::IGKKernelBase;
-        virtual ~IGKConvolutionKernelBase() {}
+        using CommonKernelBase::CommonKernelBase;
+        virtual ~ConvolutionKernelBase() {}
 
         struct DispatchData : public CommonDispatchData
         {
@@ -39,8 +39,10 @@ namespace KernelSelector
         };
     
     protected:
-        JitConstants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const;
-        DispatchData SetDefault(const ConvolutionParams& params) const;
+        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts() const = 0;
+        virtual bool Validate(const Params& p, const OptionalParams& o) const override;
+        virtual JitConstants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const;
+        virtual DispatchData SetDefault(const ConvolutionParams& params) const;
         bool CheckWorkGroups(const DispatchData&) const;
         bool CheckPitchForSplitOnly(const ConvolutionParams& params) const;
     };

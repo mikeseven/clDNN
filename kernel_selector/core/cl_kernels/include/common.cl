@@ -1,4 +1,4 @@
-﻿/*
+/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -13,18 +13,25 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-
-#include "igk_kernel_base.h"
-
-#if defined __INTEL_COMPILER
-#pragma warning disable: 177
+#if FP16_SUPPORTED
+    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
-namespace KernelSelector 
-{
-static const char* kernels_header = R"__krnl(
+#if RELU 
+    #if FP16_UNIT_USED
+        #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
+        input : -convert_half(NEGATIVE_SLOPE)) : (max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h));
+    #else
+        #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
+        input : -NEGATIVE_SLOPE) : (max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f));
+    #endif
+#else
+    #define ACTIVATION(output, input) output = input;
+#endif
+
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
+#define LOOP0(VAR, STMT) 
 #define LOOP1(VAR, STMT) (STMT); (VAR)++;
 #define LOOP2(VAR, STMT) LOOP1(VAR, STMT); (STMT); (VAR)++;
 #define LOOP3(VAR, STMT) LOOP2(VAR, STMT); (STMT); (VAR)++;
@@ -38,6 +45,9 @@ static const char* kernels_header = R"__krnl(
 #define LOOP11(VAR, STMT) LOOP10(VAR, STMT); (STMT); (VAR)++;
 #define LOOP12(VAR, STMT) LOOP11(VAR, STMT); (STMT); (VAR)++;
 #define LOOP13(VAR, STMT) LOOP12(VAR, STMT); (STMT); (VAR)++;
+#define LOOP14(VAR, STMT) LOOP13(VAR, STMT); (STMT); (VAR)++;
+#define LOOP15(VAR, STMT) LOOP14(VAR, STMT); (STMT); (VAR)++;
+#define LOOP16(VAR, STMT) LOOP15(VAR, STMT); (STMT); (VAR)++;
 #define LOOP(N, VAR, STMT) CAT(LOOP, N)((VAR), (STMT))
 
 #define TRANSPOSE_BLOCK_8( _block )   \
@@ -80,7 +90,7 @@ static const char* kernels_header = R"__krnl(
                   intel_sub_group_shuffle( _block.s6, _col ), \
                   intel_sub_group_shuffle( _block.s7, _col ) );
 
-#define TRANSPOSE_BLOCK_16_FP16(_block)                                  \
+#define TRANSPOSE_BLOCK_16_FP16(_block)  \
         (half16)(as_half2(intel_sub_group_shuffle(_block, 0)),  \
                  as_half2(intel_sub_group_shuffle(_block, 1)),  \
                  as_half2(intel_sub_group_shuffle(_block, 2)),  \
@@ -89,6 +99,7 @@ static const char* kernels_header = R"__krnl(
                  as_half2(intel_sub_group_shuffle(_block, 5)),  \
                  as_half2(intel_sub_group_shuffle(_block, 6)),  \
                  as_half2(intel_sub_group_shuffle(_block, 7)));
+
 #define TRANSPOSE_BLOCK_16_FP16_HALF_TYPE(_block)  \
         (half16)(intel_sub_group_shuffle(_block, 0),  \
                  intel_sub_group_shuffle(_block, 1),  \
@@ -146,150 +157,3 @@ static const char* kernels_header = R"__krnl(
 #define OFFSET_GLOBAL_PTR(elem_type, ptr, byte_offset) ((__global elem_type*)((__global char*)(ptr) + byte_offset))
 
 #define MULTIPLY_OFFSET(elem_type, byte_offset) (byte_offset * sizeof(elem_type))
-
-)__krnl";
-
-    namespace {
-
-        class CodeBuilder
-        {
-            std::ostringstream oss;
-            std::string code;
-            std::vector<std::string> defined_macroses;
-
-            CodeBuilder& register_macro(const std::string& name)
-            {
-                assert(std::count(defined_macroses.begin(), defined_macroses.end(), name) == 0);
-                defined_macroses.push_back(name);
-                return *this;
-            }
-
-        public:
-            CodeBuilder& set_code(const std::string& c)
-            {
-                assert(code.empty());
-                code = c;
-                return *this;
-            }
-
-            CodeBuilder& add_line(const std::string& line) {
-                oss << line << "\n";
-                return *this;
-            }
-
-            CodeBuilder& decoration_macro(const std::string& name, const std::string& prefix, const std::string& postfix, const std::string& name_prefix = std::string())
-            {
-                oss << "#define " << name << "(name) " << prefix << " " + name_prefix + "_##" + "name" << (postfix.empty() ? "" : "##_") << postfix << std::endl;
-                return register_macro(name);
-            }
-
-
-            CodeBuilder& value_macro(const std::string& name, const std::string& value)
-            {
-                oss << "#define " << name << " " << value << std::endl;
-                return register_macro(name.substr(0, name.find('(')));
-            }
-
-            std::string str()
-            {
-                std::ostringstream os;
-                os << oss.str();
-                os << code << std::endl;
-                return os.str();
-            }
-        };
-    }
-
-    std::string IGKKernelBase::GetEntryPoint(const std::string& template_name, const std::string& layer_id) const
-    {
-        std::string kernel_id = layer_id;
-
-        std::replace(kernel_id.begin(), kernel_id.end(), '.', '_');
-
-        if (kernel_id.empty() /*|| !_context.get_configuration().meaningful_kernels_names*/)
-        {
-            kernel_id = template_name;
-        }
-
-        kernel_id += std::to_string(UniqeID());
-
-        return kernel_id;
-    }
-
-    std::string IGKKernelBase::CreateJit(const std::string& template_name, JitConstants constants, std::string kernel_id, bool inject_header) const
-    {
-        class CodeBuilder code;
-        code.add_line("\n//====================================================")
-            .add_line("// Kernel template: " + template_name + " ")
-            .add_line("// Kernel name: " + kernel_id)
-            .value_macro("KERNEL(name)", "__kernel void " + kernel_id)
-            .decoration_macro("FUNC", "", kernel_id)
-            .decoration_macro("FUNC_CALL", "", kernel_id);
-        
-        for (auto& definition : constants.GetDefinitions())
-        {
-            code.value_macro(definition.first, definition.second);
-        }
-
-        std::string jit;
-
-        if (inject_header)
-        {
-            jit += std::string(kernels_header);
-        }
-
-        jit += code.str();
-
-        return jit;
-    }
-
-    ArgumentDescpirtor IGKKernelBase::GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const
-    {
-        ArgumentDescpirtor desc;
-
-        for (uint32_t i = 0; i < num_of_input; i++)
-        {
-            desc.data.push_back({ ArgumentDescpirtor::Types::INPUT, 0 });
-        }
-
-        desc.data.push_back({ ArgumentDescpirtor::Types::OUTPUT, 0 });
-
-        if (use_weights)
-        {
-            desc.data.push_back({ ArgumentDescpirtor::Types::WEIGHTS, 0 });
-        }
-
-        if (use_bias)
-        {
-            desc.data.push_back({ ArgumentDescpirtor::Types::BIAS, 0 });
-        }
-
-        return desc;
-    }
-
-    std::shared_ptr<KernelString> IGKKernelBase::GetKernelString(std::string name, std::string jit, std::string entry_point, std::string exe_mode) const
-    {
-        std::shared_ptr<KernelString> kernel_string = std::make_shared<KernelString>();
-
-        auto codes = db.get(name);
-
-        if (codes.size())
-        {
-            kernel_string->str = codes[0];
-            kernel_string->jit = jit;
-            kernel_string->options = exe_mode + " -cl-mad-enable";
-            kernel_string->entry_point = entry_point;
-            kernel_string->batch_compilation = true;
-        }
-
-        return kernel_string;
-    }
-
-    void IGKKernelBase::FillCLKernelData(clKernelData& kernel, const CommonDispatchData& runInfo, std::string kernel_map_name, std::string jit, std::string entry_point, bool weights, bool bias) const
-    {
-        kernel.workGroups.global = cl::NDRange(runInfo.gws0, runInfo.gws1, runInfo.gws2);
-        kernel.workGroups.local = cl::NDRange(runInfo.lws0, runInfo.lws1, runInfo.lws2);
-        kernel.kernelString = GetKernelString(kernel_map_name, jit, entry_point);
-        kernel.argsDesc = GetArgsDesc(1, weights, bias);
-    }
-}

@@ -41,29 +41,14 @@ namespace KernelSelector
         return k;
     }
 
-    IGKConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::default_yxfb_yxio_b1_multiple_x(const ConvolutionParams& arg) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::SetDefault(const ConvolutionParams& arg) const
     {
-        DispatchData runInfo = SetDefault(arg);
+        DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
         const auto filter_ofm_num = arg.weights.OFM().v;
         const auto batch_size = arg.output.Batch().v;
 
-        const bool bInputValidated =
-            (filter_ofm_num > 0) &&
-            (batch_size > 0) &&
-            (arg.output.Feature().v == filter_ofm_num);
-
-        if (!bInputValidated)
-        {
-            throw std::runtime_error("Unsupported");
-        }
-
         runInfo.lws0 = 16;
-
-        if ((filter_ofm_num * batch_size) % runInfo.lws0 != 0)
-        {
-            throw std::runtime_error("Unsupported");
-        }
 
         // We cannot return 8 because we are processing 4 spatial coordinates for batch1,
         // and if we use more than 4 ofm_per_work_item we downgrade simd16 to simd8 which would break this algorithm.
@@ -92,52 +77,20 @@ namespace KernelSelector
         }
 
         runInfo.gws0 = filter_ofm_num * batch_size / (runInfo.ofmPerWorkItem * runInfo.batchesPerWorkItem);
-
-        if (!CheckWorkGroups(runInfo))
-        {
-            throw std::runtime_error("Internal Error - wrong calculation of global/local work group sizes");
-        }
         
         return runInfo;
     }
 
-    KernelsData ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::GetKernelsData(const Params& params, const OptionalParams& options) const
+    JitConstants ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::GetJitConstants(const ConvolutionParams& params, DispatchData kd) const
     {
-        assert(params.GetType() == KernelType::CONVOLUTION && options.GetType() == KernelType::CONVOLUTION);
+        auto cldnn_jit = ConvolutionKernelBase::GetJitConstants(params, kd);
 
-        const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
-        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
-
-        const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
-        const bool bSupportedWeightsLayout = orgParams.weights.GetLayout() == WeightsLayout::yxio;
-        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
-        
-        if (!bSupportedActivation || !bWeightsOK || !CheckPitchForSplitOnly(orgParams))
-        {
-            return{};
-        }
-
-        DispatchData run_info;
-        
-        try
-        {
-            run_info = default_yxfb_yxio_b1_multiple_x(orgParams);
-        }
-        catch (const std::runtime_error& )
-        {
-            return{};
-        }
-
-        KernelData kd = KernelData::Default<ConvolutionParams>(params, 1);
-
-        auto cldnn_jit = GetJitConstants(orgParams, run_info);
-
-        cldnn_jit.AddConstant(MakeJitConstant("USE_VECTOR", run_info.ofmPerWorkItem));
-        if (run_info.ofmPerWorkItem == 8)
+        cldnn_jit.AddConstant(MakeJitConstant("USE_VECTOR", kd.ofmPerWorkItem));
+        if (kd.ofmPerWorkItem == 8)
         {
             cldnn_jit.AddConstant(MakeJitConstant("X_PER_WORK_ITEM", 2));
         }
-        else if (run_info.ofmPerWorkItem == 4)
+        else if (kd.ofmPerWorkItem == 4)
         {
             cldnn_jit.AddConstant(MakeJitConstant("X_PER_WORK_ITEM", 4));
         }
@@ -146,14 +99,68 @@ namespace KernelSelector
             cldnn_jit.AddConstant(MakeJitConstant("X_PER_WORK_ITEM", 8));
         }
 
+        return cldnn_jit;
+    }
+
+    bool ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::Validate(const Params& p, const OptionalParams& o) const
+    {
+        if (!ConvolutionKernelBase::Validate(p, o))
+        {
+            return false;
+        }
+
+        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
+
+        if (!CheckPitchForSplitOnly(params))
+        {
+            return false;
+        }
+
+        const auto filter_ofm_num = params.weights.OFM().v;
+        const auto batch_size = params.output.Batch().v;
+
+        const bool bInputValidated =
+            (filter_ofm_num > 0) &&
+            (batch_size > 0) &&
+            (params.output.Feature().v == filter_ofm_num);
+
+        if (!bInputValidated)
+        {
+            return false;
+        }
+
+        if ((filter_ofm_num * batch_size) % 16 != 0)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    KernelsData ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::GetKernelsData(const Params& params, const OptionalParams& options) const
+    {
+        if (!Validate(params, options))
+        {
+            return{};
+        }
+
+        const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
+
+        DispatchData runInfo = SetDefault(orgParams);
+        if (!CheckWorkGroups(runInfo))
+        {
+            // Internal Error - wrong calculation of global/local work group sizes
+            return{};
+        }
+
+        KernelData kd = KernelData::Default<ConvolutionParams>(params);
+
+        auto cldnn_jit = GetJitConstants(orgParams, runInfo);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = cl::NDRange(run_info.gws0, run_info.gws1, run_info.gws2);
-        kernel.workGroups.local = cl::NDRange(run_info.lws0, run_info.lws1, run_info.lws2);
-        kernel.kernelString = GetKernelString(kernelName, jit, entry_point);
-        kernel.argsDesc = GetArgsDesc(1, true, !orgParams.bias.empty());
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, true, !orgParams.bias.empty());
         kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
         bool succeed = SetWeightsReorderParams(orgParams, WeightsLayout::yxio, kd.weightsReorderParams);
@@ -163,7 +170,7 @@ namespace KernelSelector
             return{};
         }
 
-        kd.estimatedTime = run_info.effiency;
+        kd.estimatedTime = runInfo.effiency;
 
         return{ kd };
     }

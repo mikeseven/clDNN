@@ -16,14 +16,14 @@
 
 #pragma once
 
-#include "igk_kernel_base.h"
+#include "common_kernel_base.h"
  
 namespace KernelSelector 
 {    
-    class ReshapeKernelRef : public IGKKernelBase
+    class ReshapeKernelRef : public CommonKernelBase
     {
     public:
-        ReshapeKernelRef() : IGKKernelBase("reshape_ref") {}
+        ReshapeKernelRef() : CommonKernelBase("reshape_ref") {}
         virtual ~ReshapeKernelRef() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;

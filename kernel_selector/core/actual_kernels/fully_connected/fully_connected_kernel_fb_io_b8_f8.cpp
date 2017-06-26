@@ -39,7 +39,7 @@ namespace KernelSelector
 
     FullyConnected_fb_io_b8_f8::DispatchData FullyConnected_fb_io_b8_f8::SetDefault(const FullyConnectedParams& arg) const
     {
-        DispatchData kd = SetKernelData(arg);
+        DispatchData kd = FullyConnectedKernelBase::SetDefault(arg);
 
         const auto& output = arg.output;
         
@@ -54,30 +54,41 @@ namespace KernelSelector
         return kd;
     }
 
+    bool FullyConnected_fb_io_b8_f8::Validate(const Params& p, const OptionalParams& o) const
+    {
+        if (!FullyConnectedKernelBase::Validate(p, o))
+        {
+            return false;
+        }
+
+        const auto& params = static_cast<const FullyConnectedParams&>(p);
+
+        const auto& output = params.output;
+        const auto batches = output.Batch().v;
+        const auto x_size = output.Length() / batches;
+
+        const bool bSupportedBatch = (batches % 8) == 0;
+        const bool bSupportedFeature = (x_size % 8) == 0;
+
+        if (!bSupportedBatch ||
+            !bSupportedFeature)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     KernelsData FullyConnected_fb_io_b8_f8::GetKernelsData(const Params& params, const OptionalParams& optParams) const
     {
         assert(params.GetType() == KernelType::FULLY_CONNECTED);
 
         const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
 
-        const auto& output = orgParams.output;
-        const auto batches = output.Batch().v;
-        const auto x_size = output.Length() / batches;
-
-
-        const bool bSupportedBatch = (batches % 8) == 0;
-        const bool bSupportedFeature = (x_size % 8) == 0;
-
-        if (!bSupportedBatch || 
-            !bSupportedFeature)
-        {
-            return KernelsData();
-        }
-
         float estimated_time =
-            orgParams.inputs[0].GetDType() == Datatype::F16 && batches >= 16 ?
+            orgParams.inputs[0].GetDType() == Datatype::F16 && orgParams.output.Batch().v >= 16 ?
             FORCE_PRIORITY_3 : FORCE_PRIORITY_5;
         
-        return GetCommonKernelsData(params, optParams, DataLayout::fb, WeightsLayout::io, estimated_time);
+        return GetCommonKernelsData(params, optParams, DataLayout::fb, { WeightsLayout::io }, estimated_time);
     }
 }

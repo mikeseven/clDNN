@@ -41,7 +41,6 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _use_ks = true;
         _ks_kernel_data = kd;
         _reorders = reorders;
     }
@@ -65,7 +64,7 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
         args.weights = &instance.weights_memory();
         args.bias = instance.bias_term() ? &instance.bias_memory() : nullptr;;
 
-        return _kernel.run_ks(_ks_kernel_data.kernels[0], events, args);
+        return _kernel.run(_ks_kernel_data.kernels[0], events, args);
     }
 
     static primitive_impl* create(const fully_connected_node& arg)
@@ -85,7 +84,7 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
 
         if (best_kernels.empty())
         {
-            throw std::runtime_error("Unsupported - didn't find a proper kernel for this arguments");
+            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
         }
 
         const auto& new_fc_params = *static_cast<KernelSelector::FullyConnectedParams*>(best_kernels[0].params.get());

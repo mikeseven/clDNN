@@ -36,7 +36,7 @@ namespace KernelSelector
 
     FullyConnected_fb_oi_b8_ref::DispatchData FullyConnected_fb_oi_b8_ref::SetDefault(const FullyConnectedParams& arg) const
     {
-        DispatchData kd = SetKernelData(arg);
+        DispatchData kd = FullyConnectedKernelBase::SetDefault(arg);
 
         const auto& output = arg.output;
         kd.gws0 = output.Batch().v;
@@ -47,20 +47,25 @@ namespace KernelSelector
         return kd;
     }
 
-    KernelsData FullyConnected_fb_oi_b8_ref::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    bool FullyConnected_fb_oi_b8_ref::Validate(const Params& p, const OptionalParams& o) const
     {
-        assert(params.GetType() == KernelType::FULLY_CONNECTED);
-
-        const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
-
-        const bool bSupportedBatch = (orgParams.inputs[0].Batch().v == 8); // TODO: check why b16 not supported
-
-
-        if (!bSupportedBatch)
+        if (!FullyConnectedKernelBase::Validate(p, o))
         {
-            return KernelsData();
+            return false;
         }
 
-        return GetCommonKernelsData(params, optParams, DataLayout::fb, WeightsLayout::oi, FORCE_PRIORITY_6);
+        const auto& params = static_cast<const FullyConnectedParams&>(p);
+
+        if (params.inputs[0].Batch().v != 8)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    KernelsData FullyConnected_fb_oi_b8_ref::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    {
+        return GetCommonKernelsData(params, optParams, DataLayout::fb, { WeightsLayout::oi }, FORCE_PRIORITY_6);
     }
 }

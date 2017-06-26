@@ -21,10 +21,28 @@
 #include "kernel_base.h"
 #include "kernel_selector.h"
 #include "kernel_selector_params.h"
+#include "cache/program_cache.h"
 #include "actual_kernels/convolution/convolution_kernel_selector.h"
+
+inline cl::NDRange toNDRange(const std::vector<size_t>& v)
+{
+    switch (v.size())
+    {
+    case 1:
+        return cl::NDRange(v[0]);
+    case 2:
+        return cl::NDRange(v[0], v[1]);
+    case 3:
+        return cl::NDRange(v[0], v[1], v[2]);
+    default:
+        return cl::NullRange;
+    }
+}
 
 using namespace KernelSelector;
 using gpu_toolkit = KernelSelector::gpu::gpu_toolkit;
+using program_cache = KernelSelector::gpu::cache::program_cache;
+using binary_data = KernelSelector::gpu::cache::binary_data;
 
 #define  RUN_MODE 1
 
@@ -63,11 +81,128 @@ public:
         gpu_context = std::make_shared<gpu_toolkit>(cfg);
     }
 
+    struct SetArgumentParams
+    {
+        std::vector<const cl::Buffer*> inputs;
+        const cl::Buffer* output = nullptr;
+        const cl::Buffer* weights = nullptr;
+        const cl::Buffer* bias = nullptr;
+        const cl::Buffer* lookupTable = nullptr;
+        const cl::Buffer* scaleTable = nullptr;
+        const cl::Buffer* slope = nullptr;
+        uint32_t split = 0;
+    };
+
+    bool SetArguments(
+        cl::Kernel& kernel,
+        const ArgumentDescpirtor& argDesc,
+        const SetArgumentParams& params) const
+    {
+        const auto& data = argDesc.data;
+
+        size_t inputIndex = 0;
+        for (uint32_t i = 0; i < static_cast<uint32_t>(data.size()); i++)
+        {
+            cl_int status = CL_INVALID_ARG_VALUE;
+
+            switch (data[i].t)
+            {
+            case ArgumentDescpirtor::Types::INPUT:
+                if (inputIndex < params.inputs.size() && params.inputs[inputIndex])
+                {
+                    status = kernel.setArg(i, *params.inputs[inputIndex]);
+                    inputIndex++;
+                }
+                break;
+            case ArgumentDescpirtor::Types::OUTPUT:
+                if (params.output)
+                {
+                    status = kernel.setArg(i, *params.output);
+                }
+                break;
+            case ArgumentDescpirtor::Types::WEIGHTS:
+                if (params.weights)
+                {
+                    status = kernel.setArg(i, *params.weights);
+                }
+                break;
+            case ArgumentDescpirtor::Types::BIAS:
+                if (params.bias)
+                {
+                    status = kernel.setArg(i, *params.bias);
+                }
+                break;
+            case ArgumentDescpirtor::Types::LOOKUP_TABLE:
+                if (params.lookupTable)
+                {
+                    status = kernel.setArg(i, *params.lookupTable);
+                }
+                break;
+            case ArgumentDescpirtor::Types::SCALE_TABLE:
+                if (params.scaleTable)
+                {
+                    status = kernel.setArg(i, *params.scaleTable);
+                }
+                break;
+            case ArgumentDescpirtor::Types::SLOPE:
+                if (params.slope)
+                {
+                    status = kernel.setArg(i, *params.slope);
+                }
+                break;
+            case ArgumentDescpirtor::Types::SPLIT:
+                status = kernel.setArg(i, params.split);
+                break;
+            case ArgumentDescpirtor::Types::UINT8:
+                status = kernel.setArg(i, data[i].v.u8);
+                break;
+            case ArgumentDescpirtor::Types::UINT16:
+                status = kernel.setArg(i, data[i].v.u16);
+                break;
+            case ArgumentDescpirtor::Types::UINT32:
+                status = kernel.setArg(i, data[i].v.u32);
+                break;
+            case ArgumentDescpirtor::Types::UINT64:
+                status = kernel.setArg(i, data[i].v.u64);
+                break;
+            case ArgumentDescpirtor::Types::INT8:
+                status = kernel.setArg(i, data[i].v.s8);
+                break;
+            case ArgumentDescpirtor::Types::INT16:
+                status = kernel.setArg(i, data[i].v.s16);
+                break;
+            case ArgumentDescpirtor::Types::INT32:
+                status = kernel.setArg(i, data[i].v.s32);
+                break;
+            case ArgumentDescpirtor::Types::INT64:
+                status = kernel.setArg(i, data[i].v.s64);
+                break;
+            case ArgumentDescpirtor::Types::FLOAT32:
+                status = kernel.setArg(i, data[i].v.f32);
+                break;
+            case ArgumentDescpirtor::Types::FLOAT64:
+                status = kernel.setArg(i, data[i].v.f64);
+                break;
+            default:
+                break;
+            }
+
+            if (status != CL_SUCCESS)
+            {
+                printf("Error set args\n");
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+
     float run(const KernelData& kernelData)
     {
         cl_int status = CL_SUCCESS;
         const clKernelData& clData = kernelData.kernels[0];
-        binary_data binary = clData.GetBinary({ gpu_context->context(), gpu_context->device() }, m_binaryManager);
+        binary_data binary = m_binaryManager.get({ gpu_context->context(), gpu_context->device() }, clData.kernelString->jit + clData.kernelString->str, clData.kernelString->options);
         cl::Program::Binaries binaries;
         binaries.push_back(binary);
         auto devices = std::vector<cl::Device>(1, gpu_context->device());
@@ -89,12 +224,12 @@ public:
         cl::Buffer weights(clContext, CL_MEM_READ_WRITE, weightsSize, nullptr, &status);
         cl::Buffer bias(clContext, CL_MEM_READ_WRITE, newParams.output.Feature().v, nullptr, &status);
 
-        ArgumentDescpirtor::SetArgumentParams params;
+        SetArgumentParams params;
         params.inputs.push_back(&input);
         params.output = &output;
         params.weights = &weights;
         params.bias = &bias;
-        if (!clData.argsDesc.SetArguments(clKernel, params))
+        if (!SetArguments(clKernel, clData.argsDesc, params))
         {
             printf("Error: setting args\n");
             return 0.f;
@@ -110,8 +245,8 @@ public:
             status = gpu_context->queue().enqueueNDRangeKernel(
                 clKernel,
                 cl::NullRange,
-                clData.workGroups.global,
-                clData.workGroups.local,
+                toNDRange(clData.workGroups.global),
+                toNDRange(clData.workGroups.local),
                 nullptr);
             CL_CHECK(status, "Error: enqueue failed");
         }
@@ -121,8 +256,8 @@ public:
             status = gpu_context->queue().enqueueNDRangeKernel(
                 clKernel,
                 cl::NullRange,
-                clData.workGroups.global,
-                clData.workGroups.local,
+                toNDRange(clData.workGroups.global),
+                toNDRange(clData.workGroups.local),
                 nullptr,
                 &event);
             CL_CHECK(status, "Error: enqueue failed");

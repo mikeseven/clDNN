@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
+#include "include/common.cl"
 
 KERNEL (reshape_padding)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {

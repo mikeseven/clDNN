@@ -36,7 +36,6 @@ struct normalize_gpu : typed_primitive_impl<normalize>
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _use_ks = true;
         _ks_kernel_data = kd;
     }
 
@@ -47,7 +46,7 @@ struct normalize_gpu : typed_primitive_impl<normalize>
         args.output         = &instance.output_memory();
         args.scale_table    = &instance.scale_memory();
 
-        return _kernel.run_ks(_ks_kernel_data.kernels[0], events, args);
+        return _kernel.run(_ks_kernel_data.kernels[0], events, args);
     }
 
 
@@ -69,7 +68,7 @@ struct normalize_gpu : typed_primitive_impl<normalize>
         auto best_kernels = kernel_selector.GetBestKernels(norm_params, norm_optional_params);
         if (best_kernels.empty())
         {
-            throw std::runtime_error("Unsupported - didn't find a proper kernel for this arguments");
+            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
         }
 
         auto lrn = new normalize_gpu(arg, best_kernels[0]);

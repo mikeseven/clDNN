@@ -44,36 +44,18 @@ namespace KernelSelector
         return k;
     }
 
-    IGKConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b16::default_yxfb_yxio_b16(const ConvolutionParams& arg) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b16::SetDefault(const ConvolutionParams& arg) const
     {
-        DispatchData runInfo = SetDefault(arg);
+        DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
         const auto filter_ofm_num = arg.weights.OFM().v;
         const auto batch_size = arg.output.Batch().v;
         const uint32_t min_lws = 16;
 
-        const bool bInputValidated =
-            (filter_ofm_num > 0) &&
-            (batch_size > 0) &&
-            (arg.output.Feature().v == filter_ofm_num);
-
-        if (!bInputValidated)
-        {
-            throw std::runtime_error("Unsupported");
-        }
-
         if (arg.inputs[0].GetDType() == Datatype::F16)
         {
             const uint32_t min_ofm_per_wi = 16;
             const uint32_t min_batches_per_wi = 1;
-
-            const bool bFilterOK = filter_ofm_num % min_ofm_per_wi == 0;            // Number of output features dividable by minimum number of output features processed inside work item.
-            const bool bBatchOK = batch_size % (min_batches_per_wi * min_lws) == 0; // Batch size dividable by minimum number of batches processed when smallest local work size is used.
-
-            if (!bFilterOK || !bBatchOK)
-            {
-                throw std::runtime_error("Unsupported");
-            }
 
             runInfo.ofmPerWorkItem = min_ofm_per_wi;
             if (batch_size % (4 * min_batches_per_wi * min_lws) == 0)
@@ -93,67 +75,95 @@ namespace KernelSelector
         }
         else
         {
-            if ((filter_ofm_num * batch_size) % min_lws != 0 ||
-                batch_size < 32) // TODO: check why it's not supported
-            {
-                throw std::runtime_error("Unsupported");
-            }
-            else
-            {
-                runInfo.ofmPerWorkItem = 8;
-                runInfo.batchesPerWorkItem = 2;
-            }
-
+            runInfo.ofmPerWorkItem = 8;
+            runInfo.batchesPerWorkItem = 2;
             runInfo.effiency = FORCE_PRIORITY_9;
         }
 
         runInfo.lws0 = min_lws;
         runInfo.gws0 = filter_ofm_num * batch_size / (runInfo.ofmPerWorkItem * runInfo.batchesPerWorkItem);
-
-        if (!CheckWorkGroups(runInfo))
-        {
-            throw std::runtime_error("Internal Error - wrong calculation of global/local work group sizes");
-        }
         
         return runInfo;
     }
 
+    bool ConvolutionKernel_yxfb_yxio_b16::Validate(const Params& p, const OptionalParams& o) const
+    {
+        if (!ConvolutionKernelBase::Validate(p, o))
+        {
+            return false;
+        }
+        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
+
+        if (!CheckPitchForSplitOnly(params))
+        {
+            return false;
+        }
+
+        const auto filter_ofm_num = params.weights.OFM().v;
+        const auto batch_size = params.output.Batch().v;
+        const uint32_t min_lws = 16;
+
+        const bool bInputValidated =
+            (filter_ofm_num > 0) &&
+            (batch_size > 0) &&
+            (params.output.Feature().v == filter_ofm_num);
+
+        if (!bInputValidated)
+        {
+            return false;
+        }
+
+        if (params.inputs[0].GetDType() == Datatype::F16)
+        {
+            const uint32_t min_ofm_per_wi = 16;
+            const uint32_t min_batches_per_wi = 1;
+
+            const bool bFilterOK = filter_ofm_num % min_ofm_per_wi == 0;            // Number of output features dividable by minimum number of output features processed inside work item.
+            const bool bBatchOK = batch_size % (min_batches_per_wi * min_lws) == 0; // Batch size dividable by minimum number of batches processed when smallest local work size is used.
+
+            if (!bFilterOK || !bBatchOK)
+            {
+                return false;
+            }
+        }
+        else
+        {
+            if ((filter_ofm_num * batch_size) % min_lws != 0 ||
+                batch_size < 32) // TODO: check why it's not supported
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     KernelsData ConvolutionKernel_yxfb_yxio_b16::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        assert(params.GetType() == KernelType::CONVOLUTION && options.GetType() == KernelType::CONVOLUTION);
+        if (!Validate(params, options))
+        {
+            return{};
+        }
 
         const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
-        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
 
-        const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
-        const bool bSupportedWeightsLayout = orgParams.weights.GetLayout() == WeightsLayout::yxio;
-        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
-
-        if (!bSupportedActivation || !bWeightsOK || !CheckPitchForSplitOnly(orgParams))
-        {
-            return{};
-        }
-
-        DispatchData run_info;
-        
-        try
-        {
-            run_info = default_yxfb_yxio_b16(orgParams);
-        }
-        catch (const std::runtime_error& )
-        {
-            return{};
-        }
-
-        KernelData kd = KernelData::Default<ConvolutionParams>(params, 1);
+        KernelData kd = KernelData::Default<ConvolutionParams>(params);
         ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
 
-        if (!bSupportedWeightsLayout)
+        DispatchData runInfo = SetDefault(newParams);
+
+        if (!CheckWorkGroups(runInfo))
+        {
+            // Internal Error - wrong calculation of global/local work group sizes
+            return{};
+        }
+
+        if (newParams.weights.GetLayout() != WeightsLayout::yxio)
         {
             newParams.weights = newParams.weights.Transform(WeightsLayout::yxio);
         }
 
-        auto cldnn_jit = GetJitConstants(newParams, run_info);
+        auto cldnn_jit = GetJitConstants(newParams, runInfo);
 
         const auto batch_size = newParams.output.Batch().v;
 
@@ -186,7 +196,7 @@ namespace KernelSelector
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, run_info, kernelName + kernel_name_postfix, jit, entry_point, true, !newParams.bias.empty());
+        FillCLKernelData(kernel, runInfo, kernelName + kernel_name_postfix, jit, entry_point, true, !newParams.bias.empty());
         kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
         bool succeed = SetWeightsReorderParams(orgParams, WeightsLayout::yxio, kd.weightsReorderParams);
@@ -196,7 +206,7 @@ namespace KernelSelector
             return{};
         }
 
-        kd.estimatedTime = run_info.effiency;
+        kd.estimatedTime = runInfo.effiency;
 
         return{ kd };
     }

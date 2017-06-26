@@ -35,9 +35,9 @@ namespace KernelSelector
         return k;
     }
 
-    IGKConcatenationKernelBase::DispatchData ConcatenationKernel_depth_bfyx_no_pitch::SetDefault(const ConcatenationParams& params) const
+    ConcatenationKernelBase::DispatchData ConcatenationKernel_depth_bfyx_no_pitch::SetDefault(const ConcatenationParams& params) const
     {
-        DispatchData runInfo = IGKConcatenationKernelBase::SetDefault(params);
+        DispatchData runInfo = ConcatenationKernelBase::SetDefault(params);
         const auto& input = params.inputs[0];
         const auto batch = input.Batch().v;
         runInfo.gws0 = batch;
@@ -53,31 +53,8 @@ namespace KernelSelector
         return runInfo;
     }
 
-    KernelsData ConcatenationKernel_depth_bfyx_no_pitch::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData ConcatenationKernel_depth_bfyx_no_pitch::GetKernelsData(const Params& params, const OptionalParams& optParams) const
     {
-        assert(params.GetType() == KernelType::CONCATENATION);
-
-        const ConcatenationParams& orgParams = static_cast<const ConcatenationParams&>(params);
-
-        const bool bSupportedActivation = orgParams.activationFunc == ActivationFunction::NONE;
-        
-        if (!bSupportedActivation)
-        {
-            return{};
-        }
-
-        DispatchData runInfo = SetDefault(orgParams);
-        KernelData kd = KernelData::Default<ConcatenationParams>(params);
-
-        auto cldnnJit = GetJitConstants(orgParams);
-        auto entryPoint = GetEntryPoint(kernelName, orgParams.layerID);
-        auto jit = CreateJit(kernelName, cldnnJit, entryPoint);
-
-        auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, runInfo, kernelName, jit, entryPoint);
-
-        kd.estimatedTime = runInfo.effiency;
-
-        return{ kd };
+        return GetCommonKernelsData(params, optParams);
     }
 }

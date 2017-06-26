@@ -36,9 +36,9 @@ namespace KernelSelector
         return k;
     }
 
-    IGKSoftmaxKernelBase::DispatchData SoftmaxKernel_bf::SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const
+    SoftmaxKernelBase::DispatchData SoftmaxKernel_bf::SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const
     {
-        auto kd = IGKSoftmaxKernelBase::SetDefault(params, optParams);
+        auto kd = SoftmaxKernelBase::SetDefault(params, optParams);
 
         //start with 1 thread per data set
         kd.gws0 = 1;

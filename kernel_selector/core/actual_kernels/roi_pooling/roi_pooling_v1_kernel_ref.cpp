@@ -73,9 +73,7 @@ namespace KernelSelector {
         assert(params.GetType() == KernelType::ROI_POOLING);
         const ROIPoolingV1Params& orgParams = static_cast<const ROIPoolingV1Params&>(params);
 
-        const bool bSupportedActivation = orgParams.activationFunc == ActivationFunction::NONE;
-
-        if (!bSupportedActivation)
+        if (orgParams.activationFunc != ActivationFunction::NONE)
         {
             return{};
         }

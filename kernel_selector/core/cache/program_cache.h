@@ -22,6 +22,7 @@
 #include "serialization.h"
 #include "persistent_cache.h"
 #include "gpu_compiler.h"
+#include "cache_types.h"
 
 namespace KernelSelector { namespace gpu { namespace cache 
 {
@@ -33,7 +34,7 @@ public:
     program_cache();
     ~program_cache();
 
-    binary_data get(context& context, const code& program_str, const compile_options& options);
+    binary_data get(context context, const code& program_str, const compile_options& options);
 
 private:
     persistent_cache file_cache;

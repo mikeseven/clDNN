@@ -35,7 +35,6 @@ struct eltwise_gpu : typed_primitive_impl<eltwise>
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _use_ks = true;
         _ks_kernel_data = kd;
     }
 
@@ -58,7 +57,7 @@ struct eltwise_gpu : typed_primitive_impl<eltwise>
         args.inputs = { &instance.input_memory(), &instance.input2_memory() };
         args.output = &instance.output_memory();
 
-        return _kernel.run_ks(_ks_kernel_data.kernels[0], events, args);
+        return _kernel.run(_ks_kernel_data.kernels[0], events, args);
     }
 
     static primitive_impl* create(const eltwise_node& arg) 
@@ -80,7 +79,7 @@ struct eltwise_gpu : typed_primitive_impl<eltwise>
 
         if (best_kernels.empty())
         {
-            throw std::runtime_error("Unsupported - didn't find a proper kernel for this arguments");
+            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
         }
 
         auto eltwise = new eltwise_gpu(arg, best_kernels[0]);

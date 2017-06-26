@@ -14,16 +14,16 @@
 // limitations under the License.
 */
 
-#include "igk_deconvolution_kernel_base.h"
+#include "deconvolution_kernel_base.h"
 
 namespace KernelSelector 
 {
-    JitConstants IGKDeconvolutionKernelBase::GetJitConstants(const DeconvolutionParams& params) const
+    JitConstants DeconvolutionKernelBase::GetJitConstants(const DeconvolutionParams& params) const
     {
         return MakeDeconvolutionJitConstants(params);
     }
 
-    IGKDeconvolutionKernelBase::DispatchData IGKDeconvolutionKernelBase::SetDefault(const DeconvolutionParams& params) const
+    DeconvolutionKernelBase::DispatchData DeconvolutionKernelBase::SetDefault(const DeconvolutionParams& params) const
     {
         auto batch_size = params.output.Batch().v;
         auto output_features = params.output.Feature().v;

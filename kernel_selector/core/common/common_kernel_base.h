@@ -31,14 +31,15 @@ namespace KernelSelector
         float effiency;
     };
 
-    class IGKKernelBase : public KernelBase
+    class CommonKernelBase : public KernelBase
     {
     public:
         using KernelBase::KernelBase;
-        virtual ~IGKKernelBase() {}
+        virtual ~CommonKernelBase() {}
 
     protected:
-        std::string CreateJit(const std::string& template_name, JitConstants constants, std::string kernel_name, bool inject_header = true) const;
+        virtual bool Validate(const Params&, const OptionalParams&) const { return true; }
+        std::string CreateJit(const std::string& template_name, JitConstants constants, std::string kernel_name) const;
         std::string GetEntryPoint(const std::string& template_name, const std::string& layer_id) const;
         ArgumentDescpirtor GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const;
         std::shared_ptr<KernelString> GetKernelString(std::string kernel_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN) const;

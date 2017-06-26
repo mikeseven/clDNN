@@ -36,54 +36,46 @@ namespace KernelSelector
 
     FullyConnected_fb_io_block::DispatchData FullyConnected_fb_io_block::SetDefault(const FullyConnectedParams& arg) const
     {
-        DispatchData kd = SetKernelData(arg);
+        DispatchData kd = FullyConnectedKernelBase::SetDefault(arg);
 
         const auto& output = arg.output;
         
         auto batch_size = output.Batch().v;
         auto response_size = output.Feature().v;
-        //bool batch_size_pow_2 = batch_size > 0 && (batch_size & (batch_size - 1)) == 0;
 
-        constexpr uint32_t unit_byte_size = sizeof(cl_half);
+        constexpr uint32_t unit_byte_size = sizeof(short);
         const char* chunk_type = "uint";
-        constexpr uint32_t chunk_byte_size = sizeof(cl_uint);
+        constexpr uint32_t chunk_byte_size = sizeof(uint32_t);
         constexpr uint32_t sub_group_size = 16;
         constexpr uint32_t units_per_chunk = chunk_byte_size / unit_byte_size;
         constexpr uint32_t units_per_sg_read = sub_group_size * units_per_chunk;
 
-        if (batch_size    > 0 && batch_size % units_per_sg_read == 0 &&
-            response_size > 0 && response_size * unit_byte_size % 4 == 0) // Temporary: response size must be compatible with block read.
-        {
-            // Number of response groups. Each group (except last) writes units_per_sg_read responses
-            // for at least one input data set from batch.
-            auto rg_count = cldnn::ceil_div(response_size, units_per_sg_read);
+        
+        // Number of response groups. Each group (except last) writes units_per_sg_read responses
+        // for at least one input data set from batch.
+        auto rg_count = cldnn::ceil_div(response_size, units_per_sg_read);
 
-            kd.lws0 = sub_group_size;
-            // Number of work items needed to process all response groups.
-            kd.gws0 = rg_count * sub_group_size;
-            kd.lws1 = 1;
-            kd.gws1 = batch_size / units_per_sg_read;
+        kd.lws0 = sub_group_size;
+        // Number of work items needed to process all response groups.
+        kd.gws0 = rg_count * sub_group_size;
+        kd.lws1 = 1;
+        kd.gws1 = batch_size / units_per_sg_read;
 
-            kd.data_xb_xb_fp16.unit_byte_size       = unit_byte_size;
-            kd.data_xb_xb_fp16.chunk_type           = chunk_type;
-            kd.data_xb_xb_fp16.chunk_byte_size      = chunk_byte_size;
-            kd.data_xb_xb_fp16.units_per_chunk      = units_per_chunk;
-            kd.data_xb_xb_fp16.bytes_per_sg_read    = sub_group_size * chunk_byte_size;
-            kd.data_xb_xb_fp16.units_per_sg_read    = units_per_sg_read;
-            kd.data_xb_xb_fp16.rg_count             = (uint32_t)rg_count;
-            kd.data_xb_xb_fp16.last_rg_size         = response_size % units_per_sg_read;
-        }
-        else
-        {
-            throw std::runtime_error("Unsupported");
-        }
+        kd.data_xb_xb_fp16.unit_byte_size       = unit_byte_size;
+        kd.data_xb_xb_fp16.chunk_type           = chunk_type;
+        kd.data_xb_xb_fp16.chunk_byte_size      = chunk_byte_size;
+        kd.data_xb_xb_fp16.units_per_chunk      = units_per_chunk;
+        kd.data_xb_xb_fp16.bytes_per_sg_read    = sub_group_size * chunk_byte_size;
+        kd.data_xb_xb_fp16.units_per_sg_read    = units_per_sg_read;
+        kd.data_xb_xb_fp16.rg_count             = (uint32_t)rg_count;
+        kd.data_xb_xb_fp16.last_rg_size         = response_size % units_per_sg_read;
 
         return kd;
     }
 
     JitConstants FullyConnected_fb_io_block::GetJitConstants(const FullyConnectedParams& params, const DispatchData& run_info) const
     {
-        auto cldnn_jit = IGKFullyConnectedKernelBase::GetJitConstants(params, run_info);
+        auto cldnn_jit = FullyConnectedKernelBase::GetJitConstants(params, run_info);
         cldnn_jit.AddConstants({
             MakeJitConstant("SUB_GROUP_SIZE",        run_info.lws0),
             MakeJitConstant("WORK_ITEMS_PER_BATCH",  run_info.gws1),
@@ -99,33 +91,59 @@ namespace KernelSelector
         return cldnn_jit;
     }
 
+    bool FullyConnected_fb_io_block::Validate(const Params& p, const OptionalParams& o) const
+    {
+        if (!FullyConnectedKernelBase::Validate(p, o))
+        {
+            return false;
+        }
+
+        const auto& params = static_cast<const FullyConnectedParams&>(p);
+
+        const auto& output = params.output;
+        const auto responseSize = output.Feature().v;
+        const auto batches = output.Batch().v;
+        const auto xSize = output.Length() / batches;
+
+        constexpr uint32_t subGroupSize         = 16;
+        constexpr uint32_t bytesPerElement      = sizeof(short);
+        constexpr uint32_t chunkSizeInBytes     = sizeof(uint32_t);
+        constexpr uint32_t chunkSizeInElements  = chunkSizeInBytes / bytesPerElement;
+        constexpr uint32_t elementsPerBlockRead = subGroupSize * chunkSizeInElements;
+
+        const bool bSupportedBatch = 
+            (batches > 0) && 
+            ((batches % 8) == 0) &&
+            ((batches % elementsPerBlockRead) == 0);
+
+        const bool bSupportedFeature = 
+            (responseSize > 0) && 
+            (((responseSize * bytesPerElement) % 4) == 0) &&
+            ((xSize % 8) == 0);
+
+        if (!bSupportedBatch ||
+            !bSupportedFeature)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     KernelsData FullyConnected_fb_io_block::GetKernelsData(const Params& params, const OptionalParams& optParams) const
     {
         assert(params.GetType() == KernelType::FULLY_CONNECTED);
 
         const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
 
-        const auto& output = orgParams.output;
-        const auto batches = output.Batch().v;
-        const auto x_size = output.Length() / batches;
-
-        const bool bSupportedBatch = (batches % 8) == 0;
-        const bool bSupportedFeature = (x_size % 8) == 0;
-
-        if (!bSupportedBatch || 
-            !bSupportedFeature)
-        {
-            return KernelsData();
-        }
-
         float estimated_time =
-            orgParams.inputs[0].GetDType() == Datatype::F16 && batches >= 16 ?
+            orgParams.inputs[0].GetDType() == Datatype::F16 && orgParams.output.Batch().v >= 16 ?
             FORCE_PRIORITY_3 : FORCE_PRIORITY_5;
 
         // TODO: it should be fb_io. but the original code use this kernel with yxfb and yxio 
         //       (fb == fyxb flatten fyx, not yxfb flatten yxf).
         //       the order of the add operation cause some numeric changes. in order to avoid them right now we use yxfb/oiyx instead.
         // return GetCommonKernelsData(params, optParams, DataLayout::fb, WeightsLayout::io, estimated_time);
-        return GetCommonKernelsData(params, optParams, DataLayout::yxfb, WeightsLayout::yxio, estimated_time);
+        return GetCommonKernelsData(params, optParams, DataLayout::yxfb, { WeightsLayout::yxio }, estimated_time);
     }
 }

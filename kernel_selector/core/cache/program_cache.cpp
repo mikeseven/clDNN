@@ -15,8 +15,11 @@
 */
 
 #include "program_cache.h"
+#include "ks_ocl_toolkit.h"
 
 namespace KernelSelector { namespace gpu { namespace cache {
+
+using context_device = KernelSelector::gpu::context_device;
 
 static const char* cache_file_name = "cl_dnn_cache.intel"; //TODO building name
 
@@ -30,7 +33,7 @@ program_cache::~program_cache()
     }
 }
 
-binary_data program_cache::get(context& context, const code& program_str, const compile_options& options)
+binary_data program_cache::get(context_device context, const code& program_str, const compile_options& options)
 {
     std::hash<std::string> h;
     size_t hash = h(program_str + options);

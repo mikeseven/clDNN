@@ -43,7 +43,7 @@ namespace KernelSelector
 
     FullyConnected_bs_f_bsv8_af8::DispatchData FullyConnected_bs_f_bsv8_af8::SetDefault(const FullyConnectedParams& arg) const
     {
-        DispatchData kd = SetKernelData(arg);
+        DispatchData kd = FullyConnectedKernelBase::SetDefault(arg);
 
         size_t groups_per_batches = GetLocalGroupsSize(arg);
         kd.gws0 = cldnn::align_to(arg.output.Length() / (GetNeuronsPerWorkItem(arg) * GetBatchesPerWorkItem(arg) * groups_per_batches), 8);
@@ -72,25 +72,33 @@ namespace KernelSelector
         return b16_layout;
     }
 
-    KernelsData FullyConnected_bs_f_bsv8_af8::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    bool FullyConnected_bs_f_bsv8_af8::Validate(const Params& p, const OptionalParams& o) const
     {
-        assert(params.GetType() == KernelType::FULLY_CONNECTED);
+        if (!FullyConnectedKernelBase::Validate(p, o))
+        {
+            return false;
+        }
 
-        const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
-        const auto& orgOptParams = static_cast<const FullyConnectedOptionalParams&>(optParams);
+        const auto& params = static_cast<const FullyConnectedParams&>(p);
+        const auto& optParams = static_cast<const FullyConnectedOptionalParams&>(o);
 
-        const bool bProperBatch = 
-            orgParams.inputs[0].Batch().v >= 8 &&
-            orgParams.inputs[0].Batch().v % 8 == 0;
-        const bool bProperInput = check_input_layout(orgParams.inputs[0]);
-        const bool bProperOutput = check_output_layout(orgParams.output);
-        const bool bSupportedLayout = orgOptParams.allowReorderInput || bProperInput;
-        
+        const bool bProperBatch =
+            params.inputs[0].Batch().v >= 8 &&
+            params.inputs[0].Batch().v % 8 == 0;
+        const bool bProperInput = check_input_layout(params.inputs[0]);
+        const bool bProperOutput = check_output_layout(params.output);
+        const bool bSupportedLayout = optParams.allowReorderInput || bProperInput;
+
         if (!bProperBatch || !bSupportedLayout || !bProperOutput)
         {
-            return KernelsData();
+            return false;
         }
-        
-        return GetCommonKernelsData(params, optParams, DataLayout::bs_f_bsv8__af8, WeightsLayout::os_i_osv8__ai8, FORCE_PRIORITY_4);
+
+        return true;
+    }
+
+    KernelsData FullyConnected_bs_f_bsv8_af8::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    {
+        return GetCommonKernelsData(params, optParams, DataLayout::bs_f_bsv8__af8, { WeightsLayout::os_i_osv8__ai8 }, FORCE_PRIORITY_4);
     }
 }

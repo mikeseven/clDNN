@@ -16,14 +16,14 @@
 
 #pragma once
 
-#include "igk_pooling_kernel_base.h"
+#include "pooling_kernel_base.h"
  
 namespace KernelSelector 
 {    
-    class PoolingKernelGPURef : public IGKPoolingKernelBase
+    class PoolingKernelGPURef : public PoolingKernelBase
     {
     public:
-        PoolingKernelGPURef() : IGKPoolingKernelBase("pooling_gpu_ref") {}
+        PoolingKernelGPURef() : PoolingKernelBase("pooling_gpu_ref") {}
         virtual ~PoolingKernelGPURef() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;

@@ -82,7 +82,7 @@ struct concatenation_gpu : typed_primitive_impl<concatenation>
         {
             args.inputs = { &instance.input_memory(i) };
 
-            auto event = _kernels[i].first.run_ks(_kernels[i].second.kernels[0], events, args);
+            auto event = _kernels[i].first.run(_kernels[i].second.kernels[0], events, args);
 
             tmp_events.clear();
             tmp_events.push_back(event);
@@ -132,7 +132,7 @@ struct concatenation_gpu : typed_primitive_impl<concatenation>
                 auto best_kernels = kernel_selector.GetBestKernels(concat_params, concat_optional_params);
                 if (best_kernels.empty())
                 {
-                    throw std::runtime_error("Unsupported - didn't find a proper kernel for this arguments");
+                    throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
                 }
 
                 kds.push_back(best_kernels[0]);

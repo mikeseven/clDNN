@@ -14,16 +14,16 @@
 // limitations under the License.
 */
 
-#include "igk_normalize_kernel_base.h"
+#include "normalize_kernel_base.h"
 
 namespace KernelSelector 
 {
-    JitConstants IGKNormalizeKernelBase::GetJitConstants(const NormalizeParams& params) const
+    JitConstants NormalizeKernelBase::GetJitConstants(const NormalizeParams& params) const
     {
         return MakeNormalizeJitConstants(params);
     }
 
-    IGKNormalizeKernelBase::DispatchData IGKNormalizeKernelBase::SetDefault(const NormalizeParams& params) const
+    NormalizeKernelBase::DispatchData NormalizeKernelBase::SetDefault(const NormalizeParams& params) const
     {
         const auto& output = params.output;
 
@@ -51,7 +51,7 @@ namespace KernelSelector
         return kd;
     }
 
-    KernelsData IGKNormalizeKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams&, float estimated_time) const
+    KernelsData NormalizeKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams&, float estimated_time) const
     {
         assert(params.GetType() == KernelType::NORMALIZE);
 

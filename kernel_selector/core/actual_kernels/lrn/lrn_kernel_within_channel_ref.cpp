@@ -37,9 +37,9 @@ namespace KernelSelector
         return k;
     }
 
-    CommonDispatchData LRNKernelWithinChannel::defaultWithinChannel(const LRNParams& params) const
+    CommonDispatchData LRNKernelWithinChannel::SetDefault(const LRNParams& params) const
     {
-        CommonDispatchData runInfo = SetDefault(params);
+        CommonDispatchData runInfo = LRNKernelBase::SetDefault(params);
 
         runInfo.gws0 = 128 * 128;
         runInfo.gws1 = 1;
@@ -52,41 +52,8 @@ namespace KernelSelector
         return runInfo;
     }
 
-    KernelsData LRNKernelWithinChannel::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData LRNKernelWithinChannel::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        assert(params.GetType() == KernelType::LRN);
-
-        const LRNParams& orgParams = static_cast<const LRNParams&>(params);
-
-        const bool bSupportedActivation = orgParams.activationFunc == ActivationFunction::NONE;
-
-        if (!bSupportedActivation)
-        {
-            return{};
-        }
-        
-        DispatchData runInfo;
-
-        try
-        {
-            runInfo = defaultWithinChannel(orgParams);
-        }
-        catch (const std::runtime_error&)
-        {
-            return{};
-        }
-
-        KernelData kd = KernelData::Default<LRNParams>(params, 1);
-
-        auto cldnn_jit = GetJitConstants(orgParams, runInfo);
-        auto entryPoint = GetEntryPoint(kernelName, orgParams.layerID);
-        auto jit = CreateJit(kernelName, cldnn_jit, entryPoint);
-
-        auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, runInfo, kernelName, jit, entryPoint);
-
-        kd.estimatedTime = FORCE_PRIORITY_9;
-
-        return{ kd };
+        return GetCommonKernelsData(params, options, FORCE_PRIORITY_9);
     }
 }

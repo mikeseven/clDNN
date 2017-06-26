@@ -38,6 +38,6 @@ namespace KernelSelector
 
     KernelsData FullyConnected_fb_oi_ref::GetKernelsData(const Params& params, const OptionalParams& optParams) const
     {
-        return GetCommonKernelsData(params, optParams, DataLayout::fb, WeightsLayout::oi);
+        return GetCommonKernelsData(params, optParams, DataLayout::fb, { WeightsLayout::oi });
     }
 }

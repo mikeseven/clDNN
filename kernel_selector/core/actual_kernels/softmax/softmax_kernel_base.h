@@ -16,16 +16,16 @@
 
 #pragma once
 
-#include "igk_kernel_base.h"
+#include "common_kernel_base.h"
 #include "kernel_selector_params.h"
 
 namespace KernelSelector 
 {
-    class IGKSoftmaxKernelBase : public IGKKernelBase
+    class SoftmaxKernelBase : public CommonKernelBase
     {
     public:
-        using IGKKernelBase::IGKKernelBase;
-        virtual ~IGKSoftmaxKernelBase() {}
+        using CommonKernelBase::CommonKernelBase;
+        virtual ~SoftmaxKernelBase() {}
 
         struct DispatchData : public CommonDispatchData
         {

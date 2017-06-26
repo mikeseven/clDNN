@@ -16,14 +16,14 @@
 
 #pragma once
 
-#include "igk_reorder_kernel_base.h"
+#include "reorder_kernel_base.h"
  
 namespace KernelSelector 
 {    
-    class ReorderWeightsKernel : public IGKReorderKernelBase
+    class ReorderWeightsKernel : public ReorderKernelBase
     {
     public:
-        ReorderWeightsKernel() : IGKReorderKernelBase("reorder_weights") {}
+        ReorderWeightsKernel() : ReorderKernelBase("reorder_weights") {}
         virtual ~ReorderWeightsKernel() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;

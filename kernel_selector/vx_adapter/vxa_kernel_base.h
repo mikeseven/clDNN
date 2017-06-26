@@ -19,6 +19,7 @@
 #include <cmath>
 #include <assert.h>
 #include <sstream>
+#include "ks_ocl_toolkit.h"
 #include "api/vx_cldnn_adapter.h"
 #include "vxa_common.h"
 #include "kernel_selector_common.h"
