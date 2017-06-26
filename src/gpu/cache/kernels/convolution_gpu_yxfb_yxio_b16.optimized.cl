@@ -79,7 +79,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
 
                     if(!zero)
                     {
-                        int input_idx = ((INPUT_PADDING_LOWER_SIZE_X + input_offset_x) + ((INPUT_PADDING_LOWER_SIZE_Y + input_offset_y) * input_buffer_size_x)) * input_buffer_feature_num * input_buffer_batch_num;
+                        uint input_idx = ((INPUT_PADDING_LOWER_SIZE_X + input_offset_x) + ((INPUT_PADDING_LOWER_SIZE_Y + input_offset_y) * input_buffer_size_x)) * input_buffer_feature_num * input_buffer_batch_num;
                         input_idx += (INPUT_PADDING_LOWER_FEATURE_NUM + split_idx * FILTER_INPUT_FEATURE_NUM) * input_buffer_batch_num;
                         input_idx += INPUT_PADDING_LOWER_BATCH_NUM + out_batch_id;
 
@@ -101,7 +101,8 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
                                 _data[s] = mad(input[input_idx], _filter, _data[s]);
                                 input_idx += LOCAL_WORK_GROUP_SIZE;
                             }
-                            input_idx += input_bufer_batch_num - BATCHES_PER_WORK_ITEM * LOCAL_WORK_GROUP_SIZE;
+                            input_idx += input_bufer_batch_num;
+                            input_idx -= BATCHES_PER_WORK_ITEM * LOCAL_WORK_GROUP_SIZE;
 #endif
                             filter_idx += FILTER_OUTPUT_FEATURE_NUM;
                         }

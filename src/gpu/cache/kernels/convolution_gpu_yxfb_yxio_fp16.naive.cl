@@ -77,7 +77,7 @@ KERNEL(convolution_gpu_yxfb_yxio_fp16)(
 
                     if(!zero)
                     {
-                        int input_idx = ((INPUT_PADDING_LOWER_SIZE_X + input_offset_x) + ((INPUT_PADDING_LOWER_SIZE_Y + input_offset_y) * input_buffer_size_x)) * input_buffer_feature_num * input_buffer_batch_num;
+                        uint input_idx = ((INPUT_PADDING_LOWER_SIZE_X + input_offset_x) + ((INPUT_PADDING_LOWER_SIZE_Y + input_offset_y) * input_buffer_size_x)) * input_buffer_feature_num * input_buffer_batch_num;
                         input_idx += (INPUT_PADDING_LOWER_FEATURE_NUM + split_idx * FILTER_INPUT_FEATURE_NUM) * input_buffer_batch_num;
                         input_idx += INPUT_PADDING_LOWER_BATCH_NUM + batch_offset;
 
