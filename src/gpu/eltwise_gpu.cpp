@@ -21,7 +21,6 @@
 #include "kernel_selector_helper.h"
 
 using namespace cldnn;
-using namespace KernelSelector;
 
 namespace neural
 {
@@ -31,23 +30,23 @@ struct eltwise_gpu : typed_primitive_impl<eltwise>
     const eltwise_node& outer;
     gpu::kernel _kernel;
 
-    eltwise_gpu(const eltwise_node& arg, const KernelData& kd)
+    eltwise_gpu(const eltwise_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
         _ks_kernel_data = kd;
     }
 
-    static inline EltwiseMode convect_to_eltwise_mode(eltwise_mode mode)
+    static inline kernel_selector::eltwise_mode convect_to_eltwise_mode(eltwise_mode mode)
     {
         switch (mode)
         {
-        case eltwise_mode::sum:  return EltwiseMode::ADD;
-        case eltwise_mode::sub:  return EltwiseMode::SUB;
-        case eltwise_mode::max:  return EltwiseMode::MAX;
-        case eltwise_mode::prod: return EltwiseMode::MUL;
+        case eltwise_mode::sum:  return kernel_selector::eltwise_mode::ADD;
+        case eltwise_mode::sub:  return kernel_selector::eltwise_mode::SUB;
+        case eltwise_mode::max:  return kernel_selector::eltwise_mode::MAX;
+        case eltwise_mode::prod: return kernel_selector::eltwise_mode::MUL;
         default:
-            return EltwiseMode::ADD;
+            return kernel_selector::eltwise_mode::ADD;
         }
     }
 
@@ -62,19 +61,19 @@ struct eltwise_gpu : typed_primitive_impl<eltwise>
 
     static primitive_impl* create(const eltwise_node& arg) 
     { 
-        auto ew_params = GetDefaultParams<EltwiseParams>(arg);
-        auto ew_optional_params = GetDefaultOptionalParams<EltwiseOptionalParams>(arg.get_program());
+        auto ew_params = get_default_params<kernel_selector::eltwise_params>(arg);
+        auto ew_optional_params = get_default_optional_params<kernel_selector::eltwise_optional_params>(arg.get_program());
 
-        ew_params.inputs.push_back(ConvertDataTensor(arg.input2().get_output_layout()));
+        ew_params.inputs.push_back(convert_data_tensor(arg.input2().get_output_layout()));
         
         const auto& primitive = arg.get_primitive();
-        ConvertActivationFuncParams(primitive, ew_params);
+        convert_activation_func_params(primitive, ew_params);
 
         ew_params.eltwiseParams.operations.push_back({ 
-            { EltwiseParams::InputType::Buffer(0), EltwiseParams::InputType::Buffer(1) }, 
+            { kernel_selector::eltwise_params::InputType::Buffer(0), kernel_selector::eltwise_params::InputType::Buffer(1) },
             convect_to_eltwise_mode(primitive->mode) });
 
-        auto& kernel_selector = EltwiseKernelSelctor::Instance();
+        auto& kernel_selector = kernel_selector::eltwise_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(ew_params, ew_optional_params);
 
         if (best_kernels.empty())

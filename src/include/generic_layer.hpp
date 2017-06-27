@@ -19,7 +19,7 @@
 #include "generic_layer.h"
 #include "api/CPP/primitive.hpp"
 #include "api/CPP/memory.hpp"
-#include "kernel_selector_common.h"
+#include "kernel_selector_helper.h"
 
 namespace cldnn
 {
@@ -48,7 +48,7 @@ struct generic_layer : public primitive_base<generic_layer, CLDNN_PRIMITIVE_DESC
             const primitive_id& id,
             const primitive_id& input,
             const layout& output_layout,
-            const KernelSelector::GenericKernelParams& generic_params,
+            const kernel_selector::generic_kernel_params& generic_params,
             const padding& output_padding = padding()
         )
         : primitive_base(id, { input }, output_padding)
@@ -61,13 +61,13 @@ struct generic_layer : public primitive_base<generic_layer, CLDNN_PRIMITIVE_DESC
     generic_layer(const dto* dto)
         : primitive_base(dto)
         , output_layout(dto->output_layout)
-        , generic_params(*static_cast<const KernelSelector::GenericKernelParams* const>(dto->generic_params))
+        , generic_params(*static_cast<const kernel_selector::generic_kernel_params* const>(dto->generic_params))
     {
     }
 
     /// @brief Requested memory layout.
     layout output_layout;
-    const KernelSelector::GenericKernelParams generic_params;
+    const kernel_selector::generic_kernel_params generic_params;
 
 protected:
     std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override

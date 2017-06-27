@@ -21,7 +21,6 @@
 #include "kernel_selector_helper.h"
 
 using namespace cldnn;
-using namespace KernelSelector;
 
 namespace neural
 {
@@ -31,7 +30,7 @@ struct scale_gpu : typed_primitive_impl<scale>
     const scale_node& outer;
     gpu::kernel _kernel;
 
-    scale_gpu(const scale_node& arg, const KernelData& kd)
+    scale_gpu(const scale_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
@@ -54,26 +53,26 @@ struct scale_gpu : typed_primitive_impl<scale>
 
     static primitive_impl* create(const scale_node& arg) 
     { 
-        auto ew_params = GetDefaultParams<EltwiseParams>(arg);
-        auto ew_optional_params = GetDefaultOptionalParams<EltwiseOptionalParams>(arg.get_program());
+        auto ew_params = get_default_params<kernel_selector::eltwise_params>(arg);
+        auto ew_optional_params = get_default_optional_params<kernel_selector::eltwise_optional_params>(arg.get_program());
 
-        ew_params.inputs.push_back(ConvertDataTensor(arg.scale_in().get_output_layout()));
+        ew_params.inputs.push_back(convert_data_tensor(arg.scale_in().get_output_layout()));
 
         ew_params.eltwiseParams.operations.push_back({
-            { EltwiseParams::InputType::Buffer(0), EltwiseParams::InputType::Buffer(1) },
-            EltwiseMode::MUL });
+            { kernel_selector::eltwise_params::InputType::Buffer(0), kernel_selector::eltwise_params::InputType::Buffer(1) },
+            kernel_selector::eltwise_mode::MUL });
 
         if (arg.bias_term())
         {
-            ew_params.inputs.push_back(ConvertDataTensor(arg.bias().get_output_layout()));
+            ew_params.inputs.push_back(convert_data_tensor(arg.bias().get_output_layout()));
             ew_params.eltwiseParams.operations.push_back({
-                { EltwiseParams::InputType::Intermediate(0), EltwiseParams::InputType::Buffer(2) },
-                EltwiseMode::ADD });
+                { kernel_selector::eltwise_params::InputType::Intermediate(0), kernel_selector::eltwise_params::InputType::Buffer(2) },
+                kernel_selector::eltwise_mode::ADD });
         }
 
         ew_params.eltwiseParams.layoutBased = true;
 
-        auto& kernel_selector = EltwiseKernelSelctor::Instance();
+        auto& kernel_selector = kernel_selector::eltwise_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(ew_params, ew_optional_params);
 
         if (best_kernels.empty())

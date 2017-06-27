@@ -19,7 +19,6 @@
 #include "fully_connected_inst.h"
 #include "kernel.h"
 #include "implementation_map.h"
-#include "fully_connected/fully_connected_kernel_selector.h"
 #include "kernel_selector_helper.h"
 #include "network_impl.h"
 
@@ -37,7 +36,7 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
     std::vector<network_impl::ptr> _reorders;   // TODO: move this reorder to graph compiler
     gpu::kernel _kernel;
 
-    fully_connected_gpu(const fully_connected_node& arg, const KernelSelector::KernelData& kd, std::vector<network_impl::ptr> reorders)
+    fully_connected_gpu(const fully_connected_node& arg, const kernel_selector::kernel_data& kd, std::vector<network_impl::ptr> reorders)
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
@@ -69,17 +68,17 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
 
     static primitive_impl* create(const fully_connected_node& arg)
     {
-        auto fc_params = GetWeightsBiasDefaultParams<KernelSelector::FullyConnectedParams>(arg);
-        auto fc_optional_params = GetDefaultWeightsBiasOptionalParams<KernelSelector::FullyConnectedOptionalParams>(arg.get_program());
+        auto fc_params = get_weights_bias_default_params<kernel_selector::fully_connected_params>(arg);
+        auto fc_optional_params = get_default_weights_bias_optional_params<kernel_selector::fully_connected_optional_params>(arg.get_program());
         fc_optional_params.allowReorderInput = true;
 
-        ConvertActivationFuncParams(arg.get_primitive(), fc_params);
+        convert_activation_func_params(arg.get_primitive(), fc_params);
 
         fc_params.output = fc_params.output.FlattenFeatureAndSpatials();
 
         const auto primitive = arg.get_primitive();
 
-        auto& kernel_selector = KernelSelector::FullyConnectedKernelSelctor::Instance();
+        auto& kernel_selector = kernel_selector::fully_connected_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(fc_params, fc_optional_params);
 
         if (best_kernels.empty())
@@ -87,14 +86,14 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
             throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
         }
 
-        const auto& new_fc_params = *static_cast<KernelSelector::FullyConnectedParams*>(best_kernels[0].params.get());
+        const auto& new_fc_params = *static_cast<kernel_selector::fully_connected_params*>(best_kernels[0].params.get());
         std::vector<network_impl::ptr> reorders; 
         if (fc_params.inputs[0].GetLayout() != new_fc_params.inputs[0].GetLayout())
         {
             const auto& input_layout = arg.input().get_output_layout();
             cldnn::topology topology(
                 cldnn::input_layout("input", input_layout),
-                cldnn::reorder("reorder", "input", ToDataLayout(new_fc_params.inputs[0].GetLayout()), input_layout.data_type)
+                cldnn::reorder("reorder", "input", to_data_layout(new_fc_params.inputs[0].GetLayout()), input_layout.data_type)
             );
 
             reorders.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });

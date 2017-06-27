@@ -17,7 +17,7 @@
 #include "generic_layer_inst.h"
 #include "kernel.h"
 #include "implementation_map.h"
-#include "kernel_selector_common.h"
+#include "kernel_selector_helper.h"
 #include "network_impl.h"
 #include "engine_impl.h"
 
@@ -87,7 +87,7 @@ struct generic_layer_cpu : typed_primitive_impl<generic_layer>
 
 static primitive_impl* create(const generic_layer_node& arg)
 {
-    if (arg.get_primitive()->generic_params.engine == KernelSelector::GenericKernelParams::Engine::GPU)
+    if (arg.get_primitive()->generic_params.engine == kernel_selector::generic_kernel_params::Engine::GPU)
     {
         return new generic_layer_gpu(arg);
     }

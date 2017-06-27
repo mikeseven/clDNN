@@ -18,12 +18,10 @@
 #include "kernel.h"
 #include "implementation_map.h"
 #include "events_waiter.h"
-#include "concatenation/concatenation_kernel_selector.h"
 #include "kernel_selector_helper.h"
 #include <initializer_list>
 
 using namespace cldnn;
-using namespace KernelSelector;
 
 namespace neural
 {
@@ -35,9 +33,9 @@ struct concatenation_gpu : typed_primitive_impl<concatenation>
 
     gpu::engine_info_internal _engine_info;
 
-    std::vector<std::pair<gpu::kernel, KernelData>> _kernels;
+    std::vector<std::pair<gpu::kernel, kernel_selector::kernel_data>> _kernels;
 
-    concatenation_gpu(const concatenation_node& outer, const std::vector<KernelData>& kds)
+    concatenation_gpu(const concatenation_node& outer, const std::vector<kernel_selector::kernel_data>& kds)
         : outer(outer)
         , concat_axis(outer.get_primitive()->axis)
         , _engine_info(outer.get_program().get_engine()->get_context()->get_engine_info())
@@ -90,30 +88,30 @@ struct concatenation_gpu : typed_primitive_impl<concatenation>
         return tmp_events.at(0);
     }
 
-    static ConcatAxis convert_axis(concatenation::concatenation_axis axis)
+    static kernel_selector::concat_axis convert_axis(concatenation::concatenation_axis axis)
     {
         switch (axis)
         {
-        case concatenation::along_x: return ConcatAxis::X;
-        case concatenation::along_y: return ConcatAxis::Y;
-        case concatenation::along_f: return ConcatAxis::FEATURE;
-        case concatenation::along_b: return ConcatAxis::BATCH;
+        case concatenation::along_x: return kernel_selector::concat_axis::X;
+        case concatenation::along_y: return kernel_selector::concat_axis::Y;
+        case concatenation::along_f: return kernel_selector::concat_axis::FEATURE;
+        case concatenation::along_b: return kernel_selector::concat_axis::BATCH;
         default: 
-            return ConcatAxis::X;
+            return kernel_selector::concat_axis::X;
         }
     }
 
     static primitive_impl* create(const concatenation_node& arg) 
     { 
-        std::vector<KernelData> kds;
+        std::vector<kernel_selector::kernel_data> kds;
         if (!arg.can_be_optimized())
         {
-            auto concat_params = GetDefaultParams<ConcatenationParams>(arg);
-            auto concat_optional_params = GetDefaultOptionalParams<ConcatenationOptionalParams>(arg.get_program());
+            auto concat_params = get_default_params<kernel_selector::concatenation_params>(arg);
+            auto concat_optional_params = get_default_optional_params<kernel_selector::concatenation_optional_params>(arg.get_program());
             auto axis = arg.get_primitive()->axis;
             concat_params.concatParams.axis = convert_axis(axis);
 
-            auto& kernel_selector = ConcatenationKernelSelctor::Instance();
+            auto& kernel_selector = kernel_selector::concatenation_kernel_selector::Instance();
             
             int last_offset = 0;
 
@@ -126,8 +124,8 @@ struct concatenation_gpu : typed_primitive_impl<concatenation>
                 offest_vec[axis] = last_offset;
                 tensor offset{ std::move(offest_vec) };
 
-                concat_params.inputs[0] = ConvertDataTensor(input_layout);
-                concat_params.output    = ConvertDataTensor(arg.get_output_layout(), 1, offset);
+                concat_params.inputs[0] = convert_data_tensor(input_layout);
+                concat_params.output    = convert_data_tensor(arg.get_output_layout(), 1, offset);
 
                 auto best_kernels = kernel_selector.GetBestKernels(concat_params, concat_optional_params);
                 if (best_kernels.empty())

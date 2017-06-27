@@ -25,11 +25,10 @@
 
 #include "primitive_inst.h"
 #include "input_layout_inst.h"
-#include "kernel_selector_common.h"
+#include "kernel_selector_helper.h"
 #include "gpu/kernel.h"
 
 #include <algorithm>
-using namespace KernelSelector;
 
 namespace cldnn
 {
@@ -40,8 +39,8 @@ network_impl::network_impl(program_impl::cptr program)
     for (auto const& node : _program->get_nodes())
         allocate_primitive_instance(*node);
     
-    clKernelData cl_kernel;
-    cl_kernel.kernelString = std::make_shared<KernelString>();
+    kernel_selector::cl_kernel_data cl_kernel;
+    cl_kernel.kernelString = std::make_shared<kernel_selector::kernel_string>();
     cl_kernel.kernelString->str = R"(
         __kernel void warm_up_gpu(int c, int a, int b, __global int* out)
         {
@@ -56,10 +55,10 @@ network_impl::network_impl(program_impl::cptr program)
     cl_kernel.kernelString->entry_point = "warm_up_gpu";
     cl_kernel.workGroups.global = { 1024, 8 };
     cl_kernel.argsDesc.data = {
-        { ArgumentDescpirtor::Types::INT32, 0 },
-        { ArgumentDescpirtor::Types::INT32, 111 },
-        { ArgumentDescpirtor::Types::INT32, 7 },
-        { ArgumentDescpirtor::Types::OUTPUT, 0 },
+        { kernel_selector::argument_descpirtor_types::INT32, 0 },
+        { kernel_selector::argument_descpirtor_types::INT32, 111 },
+        { kernel_selector::argument_descpirtor_types::INT32, 7 },
+        { kernel_selector::argument_descpirtor_types::OUTPUT, 0 },
     };
 
     auto eimpl      = _program->get_engine().get();

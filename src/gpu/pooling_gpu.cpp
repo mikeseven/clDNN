@@ -17,7 +17,6 @@
 #include "pooling_inst.h"
 #include "kernel.h"
 #include "implementation_map.h"
-#include "pooling/pooling_kernel_selector.h"
 #include "kernel_selector_helper.h"
 
 using namespace cldnn;
@@ -31,7 +30,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
     gpu::engine_info_internal _engine_info;
     gpu::kernel _kernel;
 
-    pooling_gpu(const pooling_node &arg, const KernelSelector::KernelData& kd)
+    pooling_gpu(const pooling_node &arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
         , _engine_info(arg.get_program().get_engine()->get_context()->get_engine_info())
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
@@ -49,20 +48,6 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         args.output = output_mem;
 
         return _kernel.run(_ks_kernel_data.kernels[0], events, args);
-    }
-
-    static KernelSelector::PoolType cldnn_2_pool_type(cldnn::pooling_mode mode)
-    {
-        switch (mode)
-        {
-        case cldnn::pooling_mode::max:
-            return KernelSelector::PoolType::MAX;
-        case cldnn::pooling_mode::average:
-            return KernelSelector::PoolType::AVG;
-        default:
-            assert(0);
-            return KernelSelector::PoolType::MAX;
-        }
     }
 
     static void validate(const pooling_node& arg)
@@ -91,12 +76,26 @@ struct pooling_gpu : typed_primitive_impl<pooling>
             throw std::invalid_argument("Pooling input/output data format does not match.");
     }
 
+    static kernel_selector::pool_type cldnn_2_pool_type(cldnn::pooling_mode mode)
+    {
+        switch (mode)
+        {
+        case cldnn::pooling_mode::max:
+            return kernel_selector::pool_type::MAX;
+        case cldnn::pooling_mode::average:
+            return kernel_selector::pool_type::AVG;
+        default:
+            assert(0);
+            return kernel_selector::pool_type::MAX;
+        }
+    }
+
     static primitive_impl* create(const pooling_node& arg)
     {
         validate(arg);
 
-        auto pool_params            = GetDefaultParams<KernelSelector::PoolingParams>(arg);
-        auto pool_optional_params   = GetDefaultOptionalParams<KernelSelector::PoolingOptionalParams>(arg.get_program());
+        auto pool_params            = get_default_params<kernel_selector::pooling_params>(arg);
+        auto pool_optional_params   = get_default_optional_params<kernel_selector::pooling_optional_params>(arg.get_program());
 
         const auto primitive        = arg.get_primitive();
         const auto& stride          = primitive->stride;
@@ -105,8 +104,8 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         auto& pp                    = pool_params.poolParams;
 
         pp.poolType                 = cldnn_2_pool_type(primitive->mode);
-        pp.remainderAction          = KernelSelector::PoolRemainder::CEIL;
-        pp.divMode                  = KernelSelector::KernelDividerMode::DONT_CARE;
+        pp.remainderAction          = kernel_selector::pool_remainder::CEIL;
+        pp.divMode                  = kernel_selector::kernel_divider_mode::DONT_CARE;
         
         pp.poolSize = {
             (uint32_t)primitive->size.spatial[0],
@@ -123,7 +122,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
             (uint32_t)stride.spatial[1]
         };
 
-        auto& kernel_selector   = KernelSelector::PoolingKernelSelctor::Instance();
+        auto& kernel_selector   = kernel_selector::pooling_kernel_selector::Instance();
         auto best_kernels       = kernel_selector.GetBestKernels(pool_params, pool_optional_params);
 
         if (best_kernels.empty())

@@ -23,12 +23,10 @@
 #include "kernels_cache.h"
 #include "event_impl.h"
 
-#include "kernel_selector.h"
+#include "kernel_selector_helper.h"
 #include <cmath>
 #include <iostream>
 #include <sstream>
-
-using namespace KernelSelector;
 
 namespace neural { namespace gpu {
 
@@ -37,7 +35,7 @@ class kernel : public context_holder
     kernels_cache::kernel_id _kernel_id;
 
 public:
-    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::shared_ptr<KernelString>& kernel_string)
+    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::shared_ptr<kernel_selector::kernel_string>& kernel_string)
         : context_holder(context)
         , _kernel_id(
             context->get_kernels_cache().set_kernel_source(
@@ -74,7 +72,7 @@ public:
     };
 
     cldnn::refcounted_obj_ptr<cldnn::event_impl> run(
-        const KernelSelector::clKernelData& kernel_data,
+        const kernel_selector::cl_kernel_data& kernel_data,
         const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& dependencies,
         const kernel_arguments_desc& args) const;
 };

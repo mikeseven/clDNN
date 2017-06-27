@@ -17,7 +17,6 @@
 #include "activation_inst.h"
 #include "kernel.h"
 #include "implementation_map.h"
-#include "activation/activation_kernel_selector.h"
 #include "kernel_selector_helper.h"
 
 using namespace cldnn;
@@ -30,7 +29,7 @@ struct activation_gpu : typed_primitive_impl<activation>
     const activation_node& outer;
     gpu::kernel _kernel;
 
-    activation_gpu(const activation_node& arg, const KernelSelector::KernelData& kd)
+    activation_gpu(const activation_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
@@ -52,20 +51,20 @@ struct activation_gpu : typed_primitive_impl<activation>
 
     static primitive_impl* create(const activation_node& arg) 
     { 
-        auto activation_params = GetDefaultParams<KernelSelector::ActivationParams>(arg);
-        auto activation_optional_params = GetDefaultOptionalParams<KernelSelector::ActivationOptionalParams>(arg.get_program());
+        auto activation_params = get_default_params<kernel_selector::activation_params>(arg);
+        auto activation_optional_params = get_default_optional_params<kernel_selector::activation_optional_params>(arg.get_program());
 
         if (arg.is_parameterized())
         {
-            activation_params.activationFunc = KernelSelector::ActivationFunction::PRELU;
+            activation_params.activationFunc = kernel_selector::activation_function::PRELU;
         }
         else
         {
             activation_params.nlParams.m = arg.get_primitive()->negative_slope;
-            activation_params.activationFunc = KernelSelector::ActivationFunction::RELU_NEGATIVE_SLOPE;
+            activation_params.activationFunc = kernel_selector::activation_function::RELU_NEGATIVE_SLOPE;
         }
 
-        auto& kernel_selector = KernelSelector::ActivationKernelSelctor::Instance();
+        auto& kernel_selector = kernel_selector::activation_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(activation_params, activation_optional_params);
         if (best_kernels.empty())
         {

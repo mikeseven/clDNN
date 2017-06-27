@@ -32,7 +32,7 @@ struct normalize_gpu : typed_primitive_impl<normalize>
     const normalize_node& outer;
     gpu::kernel _kernel;
 
-    normalize_gpu(const normalize_node& arg, const KernelSelector::KernelData& kd)
+    normalize_gpu(const normalize_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
@@ -52,19 +52,19 @@ struct normalize_gpu : typed_primitive_impl<normalize>
 
     static primitive_impl* create(const normalize_node& arg) 
     { 
-        auto norm_params = GetDefaultParams<KernelSelector::NormalizeParams>(arg);
-        auto norm_optional_params = GetDefaultOptionalParams<KernelSelector::NormalizeOptionalParams>(arg.get_program());
+        auto norm_params = get_default_params<kernel_selector::normalize_params>(arg);
+        auto norm_optional_params = get_default_optional_params<kernel_selector::normalize_optional_params>(arg.get_program());
 
         const auto& scale_layout  = arg.scale().get_output_layout();
 
         norm_params.normParams.normMode = 
             arg.get_primitive()->across_spatial ?
-            KernelSelector::NormalizeMode::ACROSS_SPATIAL :
-            KernelSelector::NormalizeMode::WITHIN_SPATIAL;
+            kernel_selector::normalize_mode::ACROSS_SPATIAL :
+            kernel_selector::normalize_mode::WITHIN_SPATIAL;
         norm_params.normParams.epsilon = arg.get_primitive()->epsilon;
-        norm_params.normParams.scaleTable = ConvertDataTensor(scale_layout).FlattenFeatureAndSpatials();
+        norm_params.normParams.scaleTable = convert_data_tensor(scale_layout).FlattenFeatureAndSpatials();
 
-        auto& kernel_selector = KernelSelector::NormalizeKernelSelctor::Instance();
+        auto& kernel_selector = kernel_selector::normalize_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(norm_params, norm_optional_params);
         if (best_kernels.empty())
         {

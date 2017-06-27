@@ -18,11 +18,9 @@
 #include "kernel.h"
 #include "network_impl.h"
 #include "implementation_map.h"
-#include "eltwise/eltwise_kernel_selector.h"
 #include "kernel_selector_helper.h"
 
 using namespace cldnn;
-using namespace KernelSelector;
 
 namespace neural
 {
@@ -32,7 +30,7 @@ struct batch_norm_gpu : typed_primitive_impl<batch_norm>
     const batch_norm_node& outer;
     gpu::kernel _kernel;
 
-    batch_norm_gpu(const batch_norm_node& arg, const KernelData& kd)
+    batch_norm_gpu(const batch_norm_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
@@ -55,15 +53,15 @@ struct batch_norm_gpu : typed_primitive_impl<batch_norm>
             throw std::runtime_error("no_global_stats is not supported - it's for training only.");
         }
 
-        auto ew_params = GetDefaultParams<EltwiseParams>(arg);
-        auto ew_optional_params = GetDefaultOptionalParams<EltwiseOptionalParams>(arg.get_program());
+        auto ew_params = get_default_params<kernel_selector::eltwise_params>(arg);
+        auto ew_optional_params = get_default_optional_params<kernel_selector::eltwise_optional_params>(arg.get_program());
 
-        ew_params.inputs.push_back(ConvertDataTensor(arg.mean().get_output_layout()));
-        ew_params.inputs.push_back(ConvertDataTensor(arg.variance().get_output_layout()));
+        ew_params.inputs.push_back(convert_data_tensor(arg.mean().get_output_layout()));
+        ew_params.inputs.push_back(convert_data_tensor(arg.variance().get_output_layout()));
 
         ew_params.eltwiseParams.operations.push_back({
-            { EltwiseParams::InputType::Buffer(0), EltwiseParams::InputType::Buffer(1) },
-            EltwiseMode::SUB });
+            { kernel_selector::eltwise_params::InputType::Buffer(0), kernel_selector::eltwise_params::InputType::Buffer(1) },
+            kernel_selector::eltwise_mode::SUB });
 
         const float epsilon =
             (arg.input().get_output_layout().data_type == data_types::f16) ?
@@ -71,20 +69,20 @@ struct batch_norm_gpu : typed_primitive_impl<batch_norm>
         
         // TODO: removing the ADD in case that EPSILON == 0 change the precision...
         ew_params.eltwiseParams.operations.push_back({
-            { EltwiseParams::InputType::Buffer(2), EltwiseParams::InputType::Scalar(epsilon) },
-            EltwiseMode::ADD });
+            { kernel_selector::eltwise_params::InputType::Buffer(2), kernel_selector::eltwise_params::InputType::Scalar(epsilon) },
+            kernel_selector::eltwise_mode::ADD });
 
         ew_params.eltwiseParams.operations.push_back({
-            { EltwiseParams::InputType::Intermediate(1) },
-            EltwiseMode::RSQRT });
+            { kernel_selector::eltwise_params::InputType::Intermediate(1) },
+            kernel_selector::eltwise_mode::RSQRT });
 
         ew_params.eltwiseParams.operations.push_back({
-            { EltwiseParams::InputType::Intermediate(0), EltwiseParams::InputType::Intermediate(2) },
-            EltwiseMode::MUL });
+            { kernel_selector::eltwise_params::InputType::Intermediate(0), kernel_selector::eltwise_params::InputType::Intermediate(2) },
+            kernel_selector::eltwise_mode::MUL });
 
         ew_params.eltwiseParams.layoutBased = true;
 
-        auto& kernel_selector = EltwiseKernelSelctor::Instance();
+        auto& kernel_selector = kernel_selector::eltwise_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(ew_params, ew_optional_params);
 
         if (best_kernels.empty())

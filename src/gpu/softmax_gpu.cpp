@@ -17,7 +17,6 @@
 #include "softmax_inst.h"
 #include "kernel.h"
 #include "implementation_map.h"
-#include "softmax/softmax_kernel_selector.h"
 #include "kernel_selector_helper.h"
 
 using namespace cldnn;
@@ -31,7 +30,7 @@ struct softmax_gpu : typed_primitive_impl<softmax>
     gpu::kernel _kernel;
 
 
-    softmax_gpu(const softmax_node& arg, const KernelSelector::KernelData& kd)
+    softmax_gpu(const softmax_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
@@ -50,8 +49,8 @@ struct softmax_gpu : typed_primitive_impl<softmax>
     
     static primitive_impl* create(const softmax_node& arg) 
     {
-        auto sm_params = GetDefaultParams<KernelSelector::SoftmaxParams>(arg);
-        auto sm_optional_params = GetDefaultOptionalParams<KernelSelector::SoftmaxOptionalParams>(arg.get_program());
+        auto sm_params = get_default_params<kernel_selector::softmax_params>(arg);
+        auto sm_optional_params = get_default_optional_params<kernel_selector::softmax_optional_params>(arg.get_program());
 
         auto& input = sm_params.inputs[0];
         auto& output = sm_params.output;
@@ -61,17 +60,17 @@ struct softmax_gpu : typed_primitive_impl<softmax>
         switch (primitive->dimension)
         {
         case softmax::normalize_x:
-            sm.dim = KernelSelector::SoftmaxDim::X;
+            sm.dim = kernel_selector::softmax_dim::X;
             break;
         case softmax::normalize_y:
-            sm.dim = KernelSelector::SoftmaxDim::Y;
+            sm.dim = kernel_selector::softmax_dim::Y;
             break;
         case softmax::normalize_fyx:
             // W/A for bf/bx issue of cldnn
             input = input.FlattenFeatureAndSpatials();
             output = output.FlattenFeatureAndSpatials();
         case softmax::normalize_f:
-            sm.dim = KernelSelector::SoftmaxDim::FEATURE;
+            sm.dim = kernel_selector::softmax_dim::FEATURE;
             break;
         case softmax::normalize_bfyx:
         case softmax::normalize_yx:
@@ -80,7 +79,7 @@ struct softmax_gpu : typed_primitive_impl<softmax>
             throw std::runtime_error("Wrong API - no such softmax");
         }
 
-        auto& kernel_selector = KernelSelector::SoftmaxKernelSelctor::Instance();
+        auto& kernel_selector = kernel_selector::softmax_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(sm_params, sm_optional_params);
 
         if (best_kernels.empty())

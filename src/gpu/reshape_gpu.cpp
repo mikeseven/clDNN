@@ -19,7 +19,6 @@
 #include "implementation_map.h"
 #include "events_waiter.h"
 #include "network_impl.h"
-#include "reshape/reshape_kernel_selector.h"
 #include "kernel_selector_helper.h"
 
 using namespace cldnn;
@@ -31,7 +30,7 @@ struct reshape_gpu : public typed_primitive_impl<reshape>
 {
     std::unique_ptr<gpu::kernel> _kernel;
 
-    reshape_gpu(reshape_node const& node, const KernelSelector::KernelData& kd)
+    reshape_gpu(reshape_node const& node, const kernel_selector::kernel_data& kd)
         : _kernel(std::make_unique<gpu::kernel>(node.get_program().get_engine()->get_context(), kd.kernels[0].kernelString))
     {
         _ks_kernel_data = kd;
@@ -64,10 +63,10 @@ struct reshape_gpu : public typed_primitive_impl<reshape>
             return new reshape_gpu(arg);
         }
 
-        auto reorder_params = GetDefaultParams<KernelSelector::ReorderBaseParams>(arg);
-        auto reorder_optional_params = GetDefaultOptionalParams<KernelSelector::ReorderOptionalParams>(arg.get_program());
+        auto reorder_params = get_default_params<kernel_selector::reorder_base_params>(arg);
+        auto reorder_optional_params = get_default_optional_params<kernel_selector::reorder_optional_params>(arg.get_program());
 
-        auto& kernel_selector = KernelSelector::ReshapeKernelSelctor::Instance();
+        auto& kernel_selector = kernel_selector::reshape_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(reorder_params, reorder_optional_params);
         if (best_kernels.empty())
         {

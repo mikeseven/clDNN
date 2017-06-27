@@ -115,7 +115,7 @@ private:
     create_reorder_if_needed(const layout& current_layout, const cldnn::primitive_id& memid, layout const& expected_layout);
 
     std::pair<std::shared_ptr<cldnn::generic_layer>, bool>
-    create_reorder_from_given_source(const cldnn::primitive_id& memid, layout const& expected_layout, const KernelSelector::WeightsReorderParams& reorder_params);
+    create_reorder_from_given_source(const cldnn::primitive_id& memid, layout const& expected_layout, const kernel_selector::weights_reorder_params& reorder_params);
 
 public:
     explicit layout_optimizer(engine_impl::ptr eng, bool enabled = true);
@@ -166,21 +166,21 @@ public:
     }
 
     auto get_generic_layer(
-        const KernelSelector::WeightsReorderParams& reorder_params,
+        const kernel_selector::weights_reorder_params& reorder_params,
         primitive_id input_id,
         const layout& old_layout,
         data_type type)
     {
         std::vector<std::pair<std::shared_ptr<primitive>, bool>> ret;
 
-        if (reorder_params.engine != KernelSelector::WeightsReorderParams::Engine::NONE &&
+        if (reorder_params.engine != kernel_selector::weights_reorder_params::Engine::NONE &&
             type == data_type::weights &&
             _enabled)
         {
-            if (reorder_params.engine == KernelSelector::WeightsReorderParams::Engine::CPU &&
+            if (reorder_params.engine == kernel_selector::weights_reorder_params::Engine::CPU &&
                 reorder_params.cpuKernel != nullptr)
             {
-                const auto intermediate_format = ToWeightsLayout(reorder_params.cpuKernel->GetInputLayout());
+                const auto intermediate_format = to_weights_layout(reorder_params.cpuKernel->GetInputLayout());
                 if (intermediate_format != old_layout.format)
                 {
                     const layout intermediate_layout = { old_layout.data_type, intermediate_format, old_layout.size.transform(intermediate_format, 1) };
@@ -234,7 +234,7 @@ public:
     }
 
     void add_weights_for_optimization(
-        const KernelSelector::WeightsReorderParams& reorder_params,
+        const kernel_selector::weights_reorder_params& reorder_params,
         const std::shared_ptr<data> data_prim,
         data_type type)
     {

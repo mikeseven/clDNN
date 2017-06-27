@@ -17,7 +17,6 @@
 #include "reorder_inst.h"
 #include "kernel.h"
 #include "implementation_map.h"
-#include "reorder/reorder_kernel_selector.h"
 #include "kernel_selector_helper.h"
 
 using namespace cldnn;
@@ -30,7 +29,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
     const reorder_node& outer;
     gpu::kernel _kernel;
 
-    reorder_gpu(const reorder_node& arg, const KernelSelector::KernelData& kd)
+    reorder_gpu(const reorder_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
@@ -52,8 +51,8 @@ struct reorder_gpu : typed_primitive_impl<reorder>
 
     static primitive_impl* create(const reorder_node& arg)
     {
-        auto reorder_params = GetDefaultParams<KernelSelector::ReorderParams>(arg);
-        auto reorder_optional_params = GetDefaultOptionalParams<KernelSelector::ReorderOptionalParams>(arg.get_program());
+        auto reorder_params = get_default_params<kernel_selector::reorder_params>(arg);
+        auto reorder_optional_params = get_default_optional_params<kernel_selector::reorder_optional_params>(arg.get_program());
 
         if (arg.has_mean())
         {
@@ -71,23 +70,23 @@ struct reorder_gpu : typed_primitive_impl<reorder>
 
             layout new_layout = { mean_layout.data_type, mean_layout.format, {b,f,x,y}, mean_layout.data_padding };
             
-            reorder_params.reorderParams.mean = ConvertDataTensor(new_layout);
+            reorder_params.reorderParams.mean = convert_data_tensor(new_layout);
 #else
-            reorder_params.reorderParams.mean = ConvertDataTensor(mean_layout);
+            reorder_params.reorderParams.mean = convert_data_tensor(mean_layout);
 #endif
-            reorder_params.reorderParams.mode = KernelSelector::MeanSubtructMode::IN_BUFFER;
+            reorder_params.reorderParams.mode = kernel_selector::mean_subtruct_mode::IN_BUFFER;
         }
         else if (arg.get_primitive()->subtract_per_feature.empty() == false)
         {
-            reorder_params.reorderParams.mode = KernelSelector::MeanSubtructMode::INSIDE_PARAMS;
+            reorder_params.reorderParams.mode = kernel_selector::mean_subtruct_mode::INSIDE_PARAMS;
             reorder_params.reorderParams.meanValues = arg.get_primitive()->subtract_per_feature;
         }
         else
         {
-            reorder_params.reorderParams.mode = KernelSelector::MeanSubtructMode::NONE;
+            reorder_params.reorderParams.mode = kernel_selector::mean_subtruct_mode::NONE;
         }
 
-        auto& kernel_selector = KernelSelector::ReorderKernelSelctor::Instance();
+        auto& kernel_selector = kernel_selector::reorder_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(reorder_params, reorder_optional_params);
         if (best_kernels.empty())
         {

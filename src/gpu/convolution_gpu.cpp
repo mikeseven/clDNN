@@ -18,7 +18,6 @@
 #include "kernel.h"
 #include "network_impl.h"
 #include "implementation_map.h"
-#include "convolution/convolution_kernel_selector.h"
 #include "kernel_selector_helper.h"
 #include <initializer_list>
 
@@ -32,7 +31,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
     gpu::engine_info_internal _engine_info;
     gpu::kernel _kernel;
 
-    convolution_gpu(const convolution_node &arg, const KernelSelector::KernelData& kd)
+    convolution_gpu(const convolution_node &arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
         , _engine_info(arg.get_program().get_engine()->get_context()->get_engine_info())
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
@@ -94,10 +93,10 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
 
         assert(arg.get_output_layout().size.feature[0] / primitive->split() == weights_layout.size.batch[0]);
 
-        auto conv_params = GetWeightsBiasDefaultParams<KernelSelector::ConvolutionParams>(arg, split);
-        auto conv_optional_params = GetDefaultWeightsBiasOptionalParams<KernelSelector::ConvolutionOptionalParams>(arg.get_program());
+        auto conv_params = get_weights_bias_default_params<kernel_selector::convolution_params>(arg, split);
+        auto conv_optional_params = get_default_weights_bias_optional_params<kernel_selector::convolution_optional_params>(arg.get_program());
 
-        ConvertActivationFuncParams(primitive, conv_params);
+        convert_activation_func_params(primitive, conv_params);
 
         conv_params.convParams.split = split;
         conv_params.convParams.filterSize = {
@@ -119,7 +118,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
             (uint32_t)std::min(dilation.spatial[1], input_size.spatial[1])
         };
 
-        auto& kernel_selector = KernelSelector::ConvolutionKernelSelctor::Instance();
+        auto& kernel_selector = kernel_selector::convolution_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(conv_params, conv_optional_params);
         if (best_kernels.empty())
         {

@@ -18,11 +18,9 @@
 #include "kernel.h"
 #include "events_waiter.h"
 #include "implementation_map.h"
-#include "eltwise/eltwise_kernel_selector.h"
 #include "kernel_selector_helper.h"
 
 using namespace cldnn;
-using namespace KernelSelector;
 
 namespace neural
 {
@@ -32,7 +30,7 @@ struct crop_gpu : typed_primitive_impl<crop>
     const crop_node& outer;
     gpu::kernel _kernel;
 
-    crop_gpu(const crop_node& arg, const KernelData& kd)
+    crop_gpu(const crop_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
@@ -58,15 +56,15 @@ struct crop_gpu : typed_primitive_impl<crop>
 
     static primitive_impl* create(const crop_node& arg) 
     { 
-        auto ew_params = GetDefaultParams<EltwiseParams>(arg, 1);
-        auto ew_optional_params = GetDefaultOptionalParams<EltwiseOptionalParams>(arg.get_program());
+        auto ew_params = get_default_params<kernel_selector::eltwise_params>(arg, 1);
+        auto ew_optional_params = get_default_optional_params<kernel_selector::eltwise_optional_params>(arg.get_program());
 
-        ew_params.eltwiseParams.operations.push_back({{ EltwiseParams::InputType::Buffer(0) }, EltwiseMode::ASSIGN });
+        ew_params.eltwiseParams.operations.push_back({{ kernel_selector::eltwise_params::InputType::Buffer(0) }, kernel_selector::eltwise_mode::ASSIGN });
 
         const auto& input_layout = arg.input().get_output_layout();
-        ew_params.inputs[0] = ConvertDataTensor(input_layout, 1, arg.get_primitive()->offsets);
+        ew_params.inputs[0] = convert_data_tensor(input_layout, 1, arg.get_primitive()->offsets);
 
-        auto& kernel_selector = EltwiseKernelSelctor::Instance();
+        auto& kernel_selector = kernel_selector::eltwise_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(ew_params, ew_optional_params);
 
         if (best_kernels.empty())

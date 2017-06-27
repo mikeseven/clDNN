@@ -126,22 +126,6 @@ namespace KernelSelector { namespace
 
         return jit;
     }
-#if 0
-    inline cl::NDRange toNDRange(const std::vector<size_t>& v)
-    {
-        switch (v.size())
-        {
-        case 1:
-            return cl::NDRange(v[0]);
-        case 2:
-            return cl::NDRange(v[0], v[1]);
-        case 3:
-            return cl::NDRange(v[0], v[1], v[2]);
-        default:
-            throw std::logic_error("Unacceptable NDRange dimension: " + std::to_string(v.size()));
-        }
-    }
-#endif
 
     inline std::vector<size_t> GetTensorFriendlyWorkGroups(const DataTensor& t)
     {
