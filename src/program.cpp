@@ -592,9 +592,12 @@ void program_impl::prepare_padding()
             if (!prim->with_output_size)
                 continue;
 
-            auto needed_padding = calc_sliding_window_needed_input_padding(
-                prim_node.input().get_output_layout(),
-                prim->output_size, prim->size, prim->input_offset, prim->stride, {1, 1, 1, 1}, false, 1);
+            // NOTE: Currently there is no pooling implementation/pooling mode which does not check input data range.
+            // There is no need to add padding requirements on pooling inputs.
+            //auto needed_padding = calc_sliding_window_needed_input_padding(
+            //    prim_node.input().get_output_layout(),
+            //    prim->output_size, prim->size, prim->input_offset, prim->stride, {1, 1, 1, 1}, false, 1);
+            auto needed_padding = prim_node.input().get_output_layout().data_padding;
 
             apply_needed_padding(prim_node, prim_node.input(), needed_padding);
         }
