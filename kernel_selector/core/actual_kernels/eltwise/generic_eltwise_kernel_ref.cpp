@@ -112,7 +112,7 @@ namespace KernelSelector {
 #if 1
             inputs_decls += "const __global UNIT_TYPE* input" + std::to_string(i) + ", ";
 #else
-            inputs_decls += "const __global " + ToCLType(params.inputs[i].GetDType()) + "* input" + std::to_string(i) + ", ";
+            inputs_decls += "const __global " + toCLType(params.inputs[i].GetDType()) + "* input" + std::to_string(i) + ", ";
 #endif
         }
 

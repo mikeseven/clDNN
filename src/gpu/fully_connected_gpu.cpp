@@ -40,7 +40,7 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _ks_kernel_data = kd;
+        _kernel_data = kd;
         _reorders = reorders;
     }
 
@@ -63,7 +63,7 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
         args.weights = &instance.weights_memory();
         args.bias = instance.bias_term() ? &instance.bias_memory() : nullptr;;
 
-        return _kernel.run(_ks_kernel_data.kernels[0], events, args);
+        return _kernel.run(_kernel_data.kernels[0], events, args);
     }
 
     static primitive_impl* create(const fully_connected_node& arg)

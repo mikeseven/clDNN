@@ -54,10 +54,6 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         expected_format = cldnn::format::bfyx;
         break;
 
-    case data_type::weights: //convolution weights
-        // uses original weights - weights will be reorder after this phase
-        break;
-
     case data_type::input: //convolution input
         if (current_layout.format.dimension() != 4)
             throw std::runtime_error("Convolution input not 4-dimensional?");
@@ -102,10 +98,6 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         expected_format = cldnn::format::bfyx;
         break;
 
-    case data_type::weights: //fc weights
-        // uses original weights - weights will be reorder after this phase
-        break;
-
     default:
         throw std::runtime_error("Unsupported data type in layout_optimizer::get_expected_layout for fully-connected primitive");
     }
@@ -130,11 +122,6 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     {
     case data_type::bias: //convolution bias
         expected_tensor = cldnn::tensor(1, 1, static_cast<tensor::value_type>(current_layout.count()), 1);
-        expected_format = cldnn::format::bfyx;
-        break;
-
-    case data_type::weights: //convolution weights
-        expected_tensor = current_layout.size;
         expected_format = cldnn::format::bfyx;
         break;
 

@@ -55,9 +55,9 @@ network_impl::network_impl(program_impl::cptr program)
     cl_kernel.kernelString->entry_point = "warm_up_gpu";
     cl_kernel.workGroups.global = { 1024, 8 };
     cl_kernel.argsDesc.data = {
-        { kernel_selector::argument_descpirtor_types::INT32, 0 },
-        { kernel_selector::argument_descpirtor_types::INT32, 111 },
-        { kernel_selector::argument_descpirtor_types::INT32, 7 },
+        { kernel_selector::argument_descpirtor_types::INT32, (int32_t)0 },
+        { kernel_selector::argument_descpirtor_types::INT32, (int32_t)111 },
+        { kernel_selector::argument_descpirtor_types::INT32, (int32_t)7 },
         { kernel_selector::argument_descpirtor_types::OUTPUT, 0 },
     };
 

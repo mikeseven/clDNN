@@ -41,7 +41,7 @@ std::string generic_layer_inst::to_string(generic_layer_node const& node)
     auto input = node.input();
     auto output_layout_data = desc->output_layout.data_type == data_types::f16 ? "f16" : "f32";
 
-    primitive_description << "id: " << desc->id << ", type: reorder"
+    primitive_description << "id: " << desc->id << ", type: generic_layer"
         "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
         "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
         "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<

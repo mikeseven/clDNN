@@ -194,9 +194,10 @@ public:
                 }
             }
 
-            const auto bpp = data_type_traits::size_of(old_layout.data_type);
+            auto new_dtype = from_weights_type(reorder_params.dtype);
+            const auto bpp = data_type_traits::size_of(new_dtype);
             layout expected_layout = {
-                old_layout.data_type, format::bfyx, // simple linear format (flatten to x channel)
+                new_dtype, format::bfyx, // simple linear format (flatten to x channel)
                 { 1,1,1,(tensor::value_type)(reorder_params.newBufferSize / bpp) }
             };
             auto reorder = create_reorder_from_given_source(input_id, expected_layout, reorder_params);

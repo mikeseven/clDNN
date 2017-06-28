@@ -44,7 +44,7 @@ namespace KernelSelector
         return k;
     }
 
-    KernelsData DeconvolutionKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData DeconvolutionKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::DECONVOLUTION);
 
@@ -52,19 +52,31 @@ namespace KernelSelector
 
         const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
 
-        const bool bSupportedWeightsLayout =
-            orgParams.weights.GetLayout() == WeightsLayout::yxio ||
-            orgParams.weights.GetLayout() == WeightsLayout::iyxo ||
-            orgParams.weights.GetLayout() == WeightsLayout::oyxi ||
-            orgParams.weights.GetLayout() == WeightsLayout::oiyx;
+        const std::vector<WeightsLayout> weightsLayouts = {
+            WeightsLayout::yxio,
+            WeightsLayout::iyxo,
+            WeightsLayout::oyxi,
+            WeightsLayout::oiyx };
         
-        if (!bSupportedActivation || !bSupportedWeightsLayout)
+        if (!bSupportedActivation)
         {
             return{};
         }
 
         DispatchData runInfo = SetDefault(orgParams);
         KernelData kd = KernelData::Default<DeconvolutionParams>(params, 1);
+        DeconvolutionParams& newParams = *static_cast<DeconvolutionParams*>(kd.params.get());
+
+        bool succeed = UpdateWeightsParams(
+            newParams,
+            options,
+            weightsLayouts,
+            kd.weightsReorderParams);
+
+        if (!succeed)
+        {
+            return{};
+        }
 
         auto cldnn_jit = GetJitConstants(orgParams);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);

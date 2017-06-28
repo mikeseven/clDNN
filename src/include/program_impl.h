@@ -298,7 +298,7 @@ private:
     */
     void trim_to_outputs();
     void reorder_inputs(layout_optimizer& lo);
-    void pre_optimize_weights(layout_optimizer& lo);
+    void pre_optimize_bias(layout_optimizer& lo);
     void post_optimize_weights(layout_optimizer& lo);
     void prepare_padding();
     void prepare_buffer_fusing();

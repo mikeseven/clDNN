@@ -35,6 +35,8 @@
 #include "detection_output_inst.h"
 #include "crop_inst.h"
 
+#include "kernel_selector_helper.h"
+
 namespace cldnn
 {
 
@@ -255,7 +257,8 @@ void program_impl::pre_optimize_graph()
     {
         layout_optimizer lo(engine);
         reorder_inputs(lo);
-        pre_optimize_weights(lo);
+        // this code should move to post compilation after kernel selector will support handling reorder bias
+        pre_optimize_bias(lo);
     }
 
     prepare_padding();
@@ -458,30 +461,31 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
     }
 }
 
-void program_impl::pre_optimize_weights(layout_optimizer& lo)
+void program_impl::pre_optimize_bias(layout_optimizer& lo)
 {
     std::list<program_node*> outputs_to_recalc;
 
     //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
     //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
     //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
-    const auto add_weights = [this, &lo, &outputs_to_recalc](program_node& weights, layout_optimizer::data_type weights_type, auto& node, layout const& output_layout, size_t dep_idx)
+    const auto add_bias = [this, &lo, &outputs_to_recalc](program_node& bias, auto& node, layout const& output_layout, size_t dep_idx)
     {
-        if (weights.type() == data::type_id())
+        const auto bias_type = layout_optimizer::data_type::bias;
+        if (bias.type() == data::type_id())
         {
             lo.add_weights_for_optimization(
-                weights.as<data>().typed_desc(),
-                weights_type,
+                bias.as<data>().typed_desc(),
+                bias_type,
                 node.get_primitive(),
                 output_layout);
-            outputs_to_recalc.push_back(&weights);
+            outputs_to_recalc.push_back(&bias);
         }
-        else if (weights.type() == input_layout::type_id())
+        else if (bias.type() == input_layout::type_id())
         {
             auto reorder = lo.get_reorder(
-                weights.as<input_layout>().typed_desc()->layout,
-                weights.id(),
-                weights_type,
+                bias.as<input_layout>().typed_desc()->layout,
+                bias.id(),
+                bias_type,
                 node.get_primitive(),
                 output_layout);
 
@@ -498,18 +502,19 @@ void program_impl::pre_optimize_weights(layout_optimizer& lo)
     //argument should match few requirements:
     // - it should be of a form 'typed_program_node<T>&'
     // - both 'T.weights' and 'T.bias' should be either of type 'primitive_id' or 'std::vector<primitive_id>'
-    const auto prep_opt = [this, &add_weights, &outputs_to_recalc](auto& node) -> void
+    const auto prep_opt = [this, &add_bias, &outputs_to_recalc](auto& node) -> void
     {
         auto output_layout = node.get_output_layout();
 
         auto weights_offset = node.get_primitive()->input.size();
         auto bias_offset = weights_offset + wrap_if_single(node.get_primitive()->weights).size();
-        auto i = weights_offset;
-        while (i < node.get_dependencies().size())
+        for (auto i = weights_offset; i < bias_offset; ++i)
         {
-            auto data_type = i < bias_offset ? layout_optimizer::data_type::weights : layout_optimizer::data_type::bias;
-            add_weights(node.get_dependency(i), data_type, node, output_layout, i);
-            ++i;
+            outputs_to_recalc.push_back(&node.get_dependency(i));
+        }
+        for (auto i = bias_offset; i < node.get_dependencies().size(); ++i)
+        {
+            add_bias(node.get_dependency(i), node, output_layout, i);
         }
     };
 
@@ -543,23 +548,23 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
     //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
     //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
     //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
-    const auto add_weights = [this, &lo](program_node const& weights, layout_optimizer::data_type weights_type, auto& node, size_t dep_idx)
+    const auto add_weights = [this, &lo](program_node const& weights, auto& node, size_t dep_idx)
     {
         auto wtype = weights.type();
         auto* impl = node.get_selected_impl().get();
         auto output_layout = node.get_output_layout();
-
+        const auto weights_type = layout_optimizer::data_type::weights;
         if (wtype == data::type_id())
         {
             lo.add_weights_for_optimization(
-                impl->_ks_kernel_data.weightsReorderParams,
+                impl->_kernel_data.weightsReorderParams,
                 weights.as<data>().typed_desc(),
                 weights_type);
         }
         else if (wtype == input_layout::type_id())
         {
             auto reorders = lo.get_generic_layer(
-                impl->_ks_kernel_data.weightsReorderParams,
+                impl->_kernel_data.weightsReorderParams,
                 weights.as<input_layout>().typed_desc()->id,
                 output_layout,
                 weights_type);
@@ -573,18 +578,17 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
 
     //generic lambda function which prepares given primitive for weights optimization
     //it deduces the type of weights from the type of the argument and calls 'add_weights' for all
-    //weights and biases used by given primitive.
+    //weights used by given primitive.
     //argument should match few requirements:
     // - it should be of a form 'typed_program_node<T>&'
-    // - both 'T.weights' and 'T.bias' should be either of type 'primitive_id' or 'std::vector<primitive_id>'
+    // - 'T.weights' should be either of type 'primitive_id' or 'std::vector<primitive_id>'
     const auto prep_opt = [this, &add_weights](auto& node) -> void
     {
         auto weights_offset = node.get_primitive()->input.size();
         auto bias_offset = weights_offset + wrap_if_single(node.get_primitive()->weights).size();
-        for (auto i = weights_offset; i < node.get_dependencies().size(); i++)
+        for (auto i = weights_offset; i < bias_offset; i++)
         {
-            auto data_type = i < bias_offset ? layout_optimizer::data_type::weights : layout_optimizer::data_type::bias;
-            add_weights(node.get_dependency(i), data_type, node, i);
+            add_weights(node.get_dependency(i), node, i);
         }
     };
 
@@ -594,6 +598,10 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
         if (prim.type() == convolution::type_id())
         {
             prep_opt(prim.as<convolution>());
+        }
+        else if (prim.type() == deconvolution::type_id())
+        {
+            prep_opt(prim.as<deconvolution>());
         }
         else if (prim.type() == fully_connected::type_id())
         {

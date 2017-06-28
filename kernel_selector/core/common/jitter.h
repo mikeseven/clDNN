@@ -31,23 +31,25 @@ using JitDefinitions = std::vector<std::pair<std::string, std::string>>;
 // Helpers
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename T>
-inline std::string get_type_name() { throw std::runtime_error("Implement me"); }
+inline std::string GetTypeName() { throw std::runtime_error("Implement me"); }
 template <>
-inline std::string get_type_name<double>() { return "double"; }
+inline std::string GetTypeName<size_t>() { return "size_t"; }
 template <>
-inline std::string get_type_name<float>() { return "float"; }
+inline std::string GetTypeName<double>() { return "double"; }
 template <>
-inline std::string get_type_name<int>() { return "int"; }
+inline std::string GetTypeName<float>() { return "float"; }
 template <>
-inline std::string get_type_name<unsigned>() { return "unsigned"; }
+inline std::string GetTypeName<int>() { return "int"; }
 template <>
-inline std::string get_type_name<char>() { return "char"; }
+inline std::string GetTypeName<unsigned>() { return "unsigned"; }
 template <>
-inline std::string get_type_name<short>() { return "short"; }
+inline std::string GetTypeName<char>() { return "char"; }
 template <>
-inline std::string get_type_name<uint16_t>() { return "unsigned short"; }
+inline std::string GetTypeName<short>() { return "short"; }
+template <>
+inline std::string GetTypeName<uint16_t>() { return "unsigned short"; }
 
-inline std::string ToCLType(WeightsType wType)
+inline std::string toCLType(WeightsType wType)
 {
     switch (wType)
     {
@@ -58,7 +60,7 @@ inline std::string ToCLType(WeightsType wType)
     }
 }
 
-inline std::string ToCLType(Datatype wType)
+inline std::string toCLType(Datatype wType)
 {
     switch (wType)
     {
@@ -125,7 +127,8 @@ inline std::string toVectorString(const VecT& vec, const std::string& vertorType
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // JitConstant
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-class JitConstant {
+class JitConstant 
+{
 protected:
     const std::string _name;
     JitConstant(const std::string& name):_name(name){}
@@ -135,20 +138,23 @@ public:
     virtual ~JitConstant() {}
 };
 
-class simple_jit_constant : public JitConstant {
+class simple_jit_constant : public JitConstant 
+{
     const std::string _value;
 
 public:
     simple_jit_constant(const std::string& name, const std::string& value)
-        :JitConstant(name), _value(value) {}
+        : JitConstant(name), _value(value) {}
 
-    JitDefinitions GetDefinitions() const override {
+    JitDefinitions GetDefinitions() const override 
+    {
         return JitDefinitions{ {_name, _value} };
     }
 };
 
 template<typename T>
-std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, T value) {
+std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, T value) 
+{
     return std::static_pointer_cast<JitConstant>(std::make_shared<simple_jit_constant>(name, toCodeString(value)));
 }
 
@@ -165,7 +171,7 @@ public:
     JitDefinitions GetDefinitions() const override 
     {
         JitDefinitions definitions{
-            { _name + "_TYPE",          ToCLType(_tensor.GetDType()) },
+            { _name + "_TYPE",          toCLType(_tensor.GetDType()) },
             { _name + "_OFFSET",        std::to_string(_tensor.GetOffset()) },
             { _name + "_LIMIT",         std::to_string(_tensor.LengthWithPadding()) },
             { _name + "_LENGTH",        std::to_string(_tensor.Length()) },
@@ -181,7 +187,7 @@ public:
             { _name + "_ROI_PITCH",     std::to_string(_tensor.ROI().pitch) },
             { _name + "_BATCH_PITCH",   std::to_string(_tensor.Batch().pitch) },
             { _name + "_SIMPLE",        std::to_string(_tensor.SimpleLayout()) },
-            { "TO_" + _name + "_TYPE",  "convert_" + ToCLType(_tensor.GetDType()) },
+            { "TO_" + _name + "_TYPE",  "convert_" + toCLType(_tensor.GetDType()) },
             { _name + "_LAYOUT_" + toString(_tensor.GetLayout()), "1" },
         };
 
@@ -193,7 +199,8 @@ public:
     }
 };
 
-inline std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const DataTensor& value) {
+inline std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const DataTensor& value) 
+{
     return std::static_pointer_cast<JitConstant>(std::make_shared<DataTensorJitConstant>(name, value));
 }
 
@@ -210,7 +217,7 @@ public:
     JitDefinitions GetDefinitions() const override 
     {
         JitDefinitions definitions{
-            { _name + "_TYPE",          ToCLType(_tensor.GetDType()) },
+            { _name + "_TYPE",          toCLType(_tensor.GetDType()) },
             { _name + "_OFFSET",        std::to_string(_tensor.GetOffset()) },
             { _name + "_LIMIT",         std::to_string(_tensor.LengthWithPadding()) },
             { _name + "_DIMS",          std::to_string(_tensor.GetDims().size()) },
@@ -223,7 +230,7 @@ public:
             { _name + "_IFM_PITCH",     std::to_string(_tensor.IFM().pitch) },
             { _name + "_OFM_PITCH",     std::to_string(_tensor.OFM().pitch) },
             { _name + "_SIMPLE",        std::to_string(_tensor.SimpleLayout()) },
-            { "TO_" + _name + "_TYPE",  "convert_" + ToCLType(_tensor.GetDType()) },
+            { "TO_" + _name + "_TYPE",  "convert_" + toCLType(_tensor.GetDType()) },
             { _name + "_LAYOUT_" + toString(_tensor.GetLayout()), "1" },
         };
 
@@ -237,7 +244,8 @@ public:
     }
 };
 
-inline std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const WeightsTensor& value) {
+inline std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const WeightsTensor& value) 
+{
     return std::static_pointer_cast<JitConstant>(std::make_shared<WeightTensorJitConstant>(name, value));
 }
 
@@ -256,14 +264,15 @@ public:
     {
         JitDefinitions result{
             { _name + "_SIZE", std::to_string(_data.size()) },
-            { _name, toVectorString(_data, get_type_name<T>(), _data.size(), 1, [](const T& v) {return v; } ) },
+            { _name, toVectorString(_data, GetTypeName<T>(), _data.size(), 1, [](const T& v) {return v; } ) },
         };
         return result;
     }
 };
 
 template <typename T>
-inline  std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const std::vector<T>& value) {
+inline  std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const std::vector<T>& value) 
+{
     return std::static_pointer_cast<JitConstant>(std::make_shared<VectorDataJitConstant<T>>(name, value));
 }
 
@@ -289,7 +298,8 @@ public:
 };
 
 template <typename T>
-inline std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const Size<T>& value) {
+inline std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const Size<T>& value)
+{
     return std::static_pointer_cast<JitConstant>(std::make_shared<SizeJitConstant<T>>(name, value));
 }
 
@@ -613,8 +623,8 @@ inline JitConstants MakeReorderJitConstants(const ReorderParams& params)
 
     Datatype calc_type = params.inputs[0].GetDType();
     jit.AddConstants({
-        MakeJitConstant("CALC_TYPE",                      ToCLType(calc_type)),
-        MakeJitConstant("TO_CALC_TYPE",      "convert_" + ToCLType(calc_type)),
+        MakeJitConstant("CALC_TYPE",                      toCLType(calc_type)),
+        MakeJitConstant("TO_CALC_TYPE",      "convert_" + toCLType(calc_type)),
     });
 
     return jit;

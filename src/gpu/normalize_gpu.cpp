@@ -36,7 +36,7 @@ struct normalize_gpu : typed_primitive_impl<normalize>
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _ks_kernel_data = kd;
+        _kernel_data = kd;
     }
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, normalize_inst& instance) override
@@ -46,7 +46,7 @@ struct normalize_gpu : typed_primitive_impl<normalize>
         args.output         = &instance.output_memory();
         args.scale_table    = &instance.scale_memory();
 
-        return _kernel.run(_ks_kernel_data.kernels[0], events, args);
+        return _kernel.run(_kernel_data.kernels[0], events, args);
     }
 
 

@@ -58,19 +58,20 @@ namespace KernelSelector
         return kd;
     }
 
-    KernelsData FullyConnectedKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& optParams, DataLayout dl, std::vector<WeightsLayout> wl, float estimated_time) const
+    KernelsData FullyConnectedKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, DataLayout dl, std::vector<WeightsLayout> wl, float estimated_time) const
     {
-        if (!Validate(params, optParams) ||
+        if (!Validate(params, options) ||
             wl.empty())
         {
             return KernelsData();
         }
 
         const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
-        const auto& orgOptParams = static_cast<const FullyConnectedOptionalParams&>(optParams);
+        const auto& orgOptParams = static_cast<const FullyConnectedOptionalParams&>(options);
 
         const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
-        
+        const auto expectedWeightType = DataTypeToWeightsType(orgParams.inputs[0].GetDType());
+
         bool bProperInput = orgParams.inputs[0].GetLayout() == dl;
         if (!bProperInput && orgParams.inputs[0].PaddingExists() == false)
         {
@@ -79,20 +80,10 @@ namespace KernelSelector
                 (dl == DataLayout::bf && orgParams.inputs[0].GetLayout() == DataLayout::bfyx);
         }
 
-        bool bProperWeights = std::find(wl.begin(), wl.end(), orgParams.weights.GetLayout()) != wl.end();
-        if (!bProperWeights && orgParams.weights.PaddingExists() == false)
-        {
-            bProperWeights =
-                (std::find(wl.begin(), wl.end(), WeightsLayout::io) != wl.end() && orgParams.weights.GetLayout() == WeightsLayout::iyxo) ||
-                (std::find(wl.begin(), wl.end(), WeightsLayout::oi) != wl.end() && orgParams.weights.GetLayout() == WeightsLayout::oiyx);
-        }
-
-        const bool bSupportedLayout = orgOptParams.allowReorderInput || bProperInput;
-        const bool bSupportedWeightsLayout = orgOptParams.allowWeightsReorder || bProperWeights;
+        const bool bSupportedInput = orgOptParams.allowReorderInput || bProperInput;
 
         if (!bSupportedActivation || 
-            !bSupportedLayout || 
-            !bSupportedWeightsLayout)
+            !bSupportedInput)
         {
             return KernelsData();
         }
@@ -106,9 +97,15 @@ namespace KernelSelector
             kd.reorderInput = true;
         }
 
-        if (!bProperWeights)
+        bool succeed = UpdateWeightsParams(
+            newParams,
+            options,
+            wl,
+            kd.weightsReorderParams);
+
+        if (!succeed)
         {
-            newParams.weights = newParams.weights.Transform(wl[0]);
+            return{};
         }
 
         kd.kernels.resize(1);
@@ -121,16 +118,6 @@ namespace KernelSelector
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, true, !orgParams.bias.empty());
-
-        if (!bProperWeights)
-        {
-            bool succeed = SetWeightsReorderParams(orgParams, wl[0], kd.weightsReorderParams);
-
-            if (!succeed)
-            {
-                return{};
-            }
-        }
 
         kd.estimatedTime = estimated_time;
 

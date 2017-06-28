@@ -144,8 +144,6 @@ namespace KernelSelector
             return{};
         }
 
-        const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
-
         KernelData kd = KernelData::Default<ConvolutionParams>(params);
         ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
 
@@ -157,9 +155,15 @@ namespace KernelSelector
             return{};
         }
 
-        if (newParams.weights.GetLayout() != WeightsLayout::yxio)
+        bool succeed = UpdateWeightsParams(
+            newParams,
+            options,
+            { WeightsLayout::yxio },
+            kd.weightsReorderParams);
+
+        if (!succeed)
         {
-            newParams.weights = newParams.weights.Transform(WeightsLayout::yxio);
+            return{};
         }
 
         auto cldnn_jit = GetJitConstants(newParams, runInfo);
@@ -197,13 +201,6 @@ namespace KernelSelector
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName + kernel_name_postfix, jit, entry_point, true, !newParams.bias.empty());
         kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
-
-        bool succeed = SetWeightsReorderParams(orgParams, WeightsLayout::yxio, kd.weightsReorderParams);
-
-        if (!succeed)
-        {
-            return{};
-        }
 
         kd.estimatedTime = runInfo.effiency;
 

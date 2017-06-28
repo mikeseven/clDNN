@@ -36,7 +36,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _ks_kernel_data = kd;
+        _kernel_data = kd;
     }
 
 
@@ -69,7 +69,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
             args.bias = bias_mem;
             args.split = i;
 
-            auto event = _kernel.run(_ks_kernel_data.kernels[0], tmp_events, args);
+            auto event = _kernel.run(_kernel_data.kernels[0], tmp_events, args);
             tmp_events.clear();
             tmp_events.emplace_back(event);
         }

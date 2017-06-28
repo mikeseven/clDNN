@@ -125,5 +125,5 @@ KERNEL (reorder_weights)(const __global INPUT_TYPE* input, __global OUTPUT_TYPE*
     const unsigned x = get_global_id(2) % INPUT_SIZE_X;
 #endif
     uint4 ir = FUNC_CALL(reshape)(o,i,y,x);
-    output[FUNC_CALL(get_output_index)(o, i, y, x)] = input[FUNC_CALL(get_input_index)(ir[0],ir[1],ir[2],ir[3])];
+    output[FUNC_CALL(get_output_index)(o, i, y, x)] = TO_OUTPUT_TYPE(input[FUNC_CALL(get_input_index)(ir[0],ir[1],ir[2],ir[3])]);
 }

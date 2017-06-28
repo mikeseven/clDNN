@@ -51,15 +51,13 @@ namespace KernelSelector {
 
         const DataTensor newInput = GetConvolutionPaddedTensorDesc(orgParams);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, newInput);
-        const bool bSupportedWeightsLayout = orgParams.weights.GetLayout() == WeightsLayout::oiyx;
-        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
         const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
         const bool bStrideOK = (cp.stride.x == 1 && cp.stride.y == 1);
         const bool bFilter3x3 = (cp.filterSize.x == 3 && cp.filterSize.y == 3);
         const bool bFilter5x5 = (cp.filterSize.x == 5 && cp.filterSize.y == 5);
         const bool bFilterOK = bFilter3x3 || bFilter5x5;
 
-        if (!bInputPadded || !bFilterOK || !bStrideOK || !bWeightsOK)
+        if (!bInputPadded || !bFilterOK || !bStrideOK)
         {
             return KernelsData();
         }
@@ -78,13 +76,21 @@ namespace KernelSelector {
         // for KW only
         kd.reorderInput = false;
 
-        if (optParams.allowPadding)
+        if (!bProperInputDesc)
         {
-            if (!bProperInputDesc)
-            {
-                newParams.inputs[0] = newInput;
-                kd.reorderInput = true;
-            }
+            newParams.inputs[0] = newInput;
+            kd.reorderInput = true;
+        }
+
+        bool succeed = UpdateWeightsParams(
+            newParams,
+            options,
+            { WeightsLayout::i_yxs_os_yxsv2_osv16 },
+            kd.weightsReorderParams);
+
+        if (!succeed)
+        {
+            return{};
         }
 
         jit << "#define INPUT_BUFFER_WIDTH_PADDED" << "\n"
@@ -120,13 +126,6 @@ namespace KernelSelector {
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id, AGE_BASED);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
         kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
-
-        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::i_yxs_os_yxsv2_osv16, kd.weightsReorderParams);
-
-        if (!succeed)
-        {
-            return{};
-        }
 
         kd.estimatedTime = FORCE_PRIORITY_4;
 

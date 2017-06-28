@@ -34,7 +34,7 @@ struct eltwise_gpu : typed_primitive_impl<eltwise>
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _ks_kernel_data = kd;
+        _kernel_data = kd;
     }
 
     static inline kernel_selector::eltwise_mode convect_to_eltwise_mode(eltwise_mode mode)
@@ -56,7 +56,7 @@ struct eltwise_gpu : typed_primitive_impl<eltwise>
         args.inputs = { &instance.input_memory(), &instance.input2_memory() };
         args.output = &instance.output_memory();
 
-        return _kernel.run(_ks_kernel_data.kernels[0], events, args);
+        return _kernel.run(_kernel_data.kernels[0], events, args);
     }
 
     static primitive_impl* create(const eltwise_node& arg) 

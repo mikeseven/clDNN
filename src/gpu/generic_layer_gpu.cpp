@@ -40,7 +40,6 @@ struct generic_layer_gpu : typed_primitive_impl<generic_layer>
     {
         gpu::kernel::kernel_arguments_desc args;
 
-        std::vector<const memory*> inputs(instance.inputs_memory_count());
         for (size_t i = 0; i < instance.inputs_memory_count(); i++)
         {
             args.inputs.push_back(&instance.input_memory(i));

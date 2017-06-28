@@ -16,11 +16,11 @@
 #include "include/common.cl"
 
 KERNEL(convolution_gpu_yxfb_yxio_b16)(
-    const __global UNIT_TYPE* input,
+    const __global float* input,
     __global UNIT_TYPE* output,
-    const __global UNIT_TYPE* filter,
+    const __global float* filter,
 #if BIAS_TERM
-    const __global UNIT_TYPE* bias,
+    const __global float* bias,
 #endif
     uint split_idx)
 {

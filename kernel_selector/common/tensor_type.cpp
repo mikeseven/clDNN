@@ -99,7 +99,7 @@ namespace KernelSelector
                 assert(0);
             }
 
-            return{ dtype, l, PADDED_VAL::UNDEFINED, 0, vec };
+            return{ dtype, l, PaddedVal::UNDEFINED, 0, vec };
         }
 
         DataTensor DataTensor::FlattenFeatureAndSpatials() const
@@ -217,7 +217,7 @@ namespace KernelSelector
             return ret;
         }
 
-        WeightsTensor WeightsTensor::Transform(WeightsLayout l) const
+        WeightsTensor WeightsTensor::Transform(WeightsLayout l, WeightsType t) const
         {
             const uint32_t src_channels = ChannelsCount(layout);
             const uint32_t dst_channels = ChannelsCount(l);
@@ -260,7 +260,7 @@ namespace KernelSelector
                 assert(0);
             }
 
-            return{ dtype, l, PADDED_VAL::UNDEFINED, 0, vec };
+            return{ t, l, PaddedVal::UNDEFINED, 0, vec };
         }
     }
 }

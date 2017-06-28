@@ -49,7 +49,7 @@ struct primitive_impl
 
     virtual event_impl::ptr execute(const std::vector<event_impl::ptr>& events, primitive_inst& instance) = 0;
 
-    kernel_selector::kernel_data _ks_kernel_data; // TODO: is it the right place to locate this member?
+    kernel_selector::kernel_data _kernel_data;
 };
 
 /*

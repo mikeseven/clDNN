@@ -45,20 +45,20 @@ namespace KernelSelector {
     {
         assert(params.GetType() == KernelType::CONVOLUTION && options.GetType() == KernelType::CONVOLUTION);
 
-        const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
-        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
+        KernelData kd = KernelData::Default<ConvolutionParams>(params);
+        ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
+        
+        bool succeed = UpdateWeightsParams(
+            newParams,
+            options,
+            { WeightsLayout::oiyx },
+            kd.weightsReorderParams);
 
-        const bool bSupportedWeightsLayout = orgParams.weights.GetLayout() == WeightsLayout::oiyx;
-        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
-
-        if (!bWeightsOK)
+        if (!succeed)
         {
             return{};
         }
 
-        KernelData kd = KernelData::Default<ConvolutionParams>(params, 1);
-
-        ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
         const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         SubGroupInfo runInfo;
@@ -73,13 +73,6 @@ namespace KernelSelector {
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
         kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
-
-        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::oiyx, kd.weightsReorderParams);
-
-        if (!succeed)
-        {
-            return{};
-        }
 
         kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 

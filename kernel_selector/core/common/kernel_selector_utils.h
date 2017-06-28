@@ -35,7 +35,7 @@ namespace KernelSelector { namespace
             reqDesc.Batch().pitch <= params.inputs[0].Batch().pitch;
 
         const auto& cp = params.convParams;
-        proper_desc &= ((cp.padding.x == 0 && cp.padding.y == 0) || params.inputs[0].GetPaddedVal() == Tensor::PADDED_VAL::ZERO);
+        proper_desc &= ((cp.padding.x == 0 && cp.padding.y == 0) || params.inputs[0].GetPaddedVal() == Tensor::PaddedVal::ZERO);
 
         return proper_desc;
     }
@@ -75,16 +75,57 @@ namespace KernelSelector { namespace
         return{t.GetDType(), t.GetLayout(), t.GetPaddedVal(), offest, dims};
     }
 
-    inline bool SetWeightsReorderParams(const WeightBiasParams& params, WeightsLayout layout, WeightsReorderParams& weightsReorderParams)
+    inline WeightsType DataTypeToWeightsType(Datatype t)
     {
-        if (layout != params.weights.GetLayout())
+        switch (t)
         {
+        case Datatype::F16: return WeightsType::F16;
+        case Datatype::F32: return WeightsType::F32;
+        default:
+            return WeightsType::UNSUPPORTED;
+        }
+    }
+
+    inline bool CheckWeights(const WeightsTensor& tensor, WeightsType reqType, std::vector<WeightsLayout> reqLayouts)
+    {
+        if (reqType != tensor.GetDType())
+        {
+            return false;
+        }
+
+        bool bProperWeightsLayout = std::find(reqLayouts.begin(), reqLayouts.end(), tensor.GetLayout()) != reqLayouts.end();
+        if (!bProperWeightsLayout && tensor.PaddingExists() == false)
+        {
+            bProperWeightsLayout =
+                (std::find(reqLayouts.begin(), reqLayouts.end(), WeightsLayout::io) != reqLayouts.end() && tensor.GetLayout() == WeightsLayout::iyxo) ||
+                (std::find(reqLayouts.begin(), reqLayouts.end(), WeightsLayout::oi) != reqLayouts.end() && tensor.GetLayout() == WeightsLayout::oiyx);
+        }
+
+        return bProperWeightsLayout;
+    }
+
+    inline bool UpdateWeightsParams(WeightBiasParams& newParams, const OptionalParams& options, std::vector<WeightsLayout> layouts, WeightsReorderParams& weightsReorderParams)
+    {
+        // TODO: handle padding per in x/y (for openvx)
+
+        const WeightsBiasOptionalParams& optParams = static_cast<const WeightsBiasOptionalParams&>(options);
+
+        const auto dtype = DataTypeToWeightsType(newParams.inputs[0].GetDType());
+        bool bProperWeights = CheckWeights(newParams.weights, dtype, layouts);
+
+        if (!bProperWeights)
+        {
+            if (!optParams.allowWeightsReorder)
+            {
+                return false;
+            }
+
             auto& reorderKS = ReorderWeightsKernelSelctor::Instance();
             ReorderWeightsParams r_params;
 
-            r_params.layerID = params.layerID + "_reorder_";
-            r_params.reorderParams.input = params.weights;
-            r_params.reorderParams.output = params.weights.Transform(layout);
+            r_params.layerID = newParams.layerID + "_reorder_";
+            r_params.reorderParams.input = newParams.weights;
+            r_params.reorderParams.output = newParams.weights.Transform(layouts[0], dtype);
 
             ReorderOptionalParams op;
             KernelsData kernels_data = reorderKS.GetBestKernels(r_params, op);
@@ -97,6 +138,9 @@ namespace KernelSelector { namespace
             weightsReorderParams.engine = WeightsReorderParams::Engine::GPU;
             weightsReorderParams.clKernel = std::make_shared<clKernelData>(kernels_data[0].kernels[0]);
             weightsReorderParams.newBufferSize = r_params.reorderParams.output.PhysicalSize();
+            weightsReorderParams.dtype = dtype;
+
+            newParams.weights = r_params.reorderParams.output;
         }
 
         return true;

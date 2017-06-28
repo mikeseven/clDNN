@@ -38,7 +38,7 @@ namespace KernelSelector
         return k;
     }
 
-    KernelsData FullyConnectedKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData FullyConnectedKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::FULLY_CONNECTED);
 
@@ -46,6 +46,17 @@ namespace KernelSelector
 
         FullyConnectedParams& newParams = *static_cast<FullyConnectedParams*>(kd.params.get());
         const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+
+        bool succeed = UpdateWeightsParams(
+            newParams,
+            options,
+            { WeightsLayout::oiyx },
+            kd.weightsReorderParams);
+
+        if (!succeed)
+        {
+            return{};
+        }
 
         std::stringstream jit;
         jit << GetBaseJit(newParams, kernel_id)
@@ -57,13 +68,6 @@ namespace KernelSelector
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
-
-        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::oiyx, kd.weightsReorderParams);
-
-        if (!succeed)
-        {
-            return{};
-        }
 
         kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 

@@ -41,7 +41,7 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _ks_kernel_data = kd;
+        _kernel_data = kd;
     }
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, roi_pooling_inst& instance) override
@@ -50,7 +50,7 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
         args.inputs = { &instance.input_memory(), &instance.rois_memory() };
         args.output = &instance.output_memory();
 
-        return _kernel.run(_ks_kernel_data.kernels[0], events, args);
+        return _kernel.run(_kernel_data.kernels[0], events, args);
     }
 
     static primitive_impl* create(const roi_pooling_node& arg)

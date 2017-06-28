@@ -35,7 +35,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         , _engine_info(arg.get_program().get_engine()->get_context()->get_engine_info())
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _ks_kernel_data = kd;
+        _kernel_data = kd;
     }
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, pooling_inst& instance) override
@@ -47,7 +47,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         args.inputs = { input_mem };
         args.output = output_mem;
 
-        return _kernel.run(_ks_kernel_data.kernels[0], events, args);
+        return _kernel.run(_kernel_data.kernels[0], events, args);
     }
 
     static void validate(const pooling_node& arg)

@@ -27,7 +27,7 @@ namespace KernelSelector
     using WeightsTensor = Tensor::WeightsTensor;
     using DataLayout = Tensor::DataLayout;
     using WeightsLayout = Tensor::WeightsLayout;
-    using PADDED_VAL = Tensor::PADDED_VAL;
+    using PaddedVal = Tensor::PaddedVal;
     using MultiDataTensor = std::vector<DataTensor>;
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ParamsKey

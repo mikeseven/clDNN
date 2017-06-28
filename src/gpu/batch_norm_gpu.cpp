@@ -34,7 +34,7 @@ struct batch_norm_gpu : typed_primitive_impl<batch_norm>
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _ks_kernel_data = kd;
+        _kernel_data = kd;
     }
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, batch_norm_inst& instance) override
@@ -43,7 +43,7 @@ struct batch_norm_gpu : typed_primitive_impl<batch_norm>
         args.inputs = { &instance.input_memory(), &instance.mean_memory(), &instance.variance_memory() };
         args.output = &instance.output_memory();
 
-        return _kernel.run(_ks_kernel_data.kernels[0], events, args);
+        return _kernel.run(_kernel_data.kernels[0], events, args);
     }
 
     static primitive_impl* create(const batch_norm_node &arg) 

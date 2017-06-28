@@ -193,7 +193,6 @@ namespace KernelSelector
         }
 
         const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
-        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
         const auto req_input = GetConvolutionPaddedTensorDesc(orgParams);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, req_input);
 
@@ -202,10 +201,21 @@ namespace KernelSelector
         
         DispatchData runInfo = SetDefault(newParams);
         
-        if (optParams.allowPadding && !bProperInputDesc)
+        if (!bProperInputDesc)
         {
             newParams.inputs[0] = req_input;
             kd.reorderInput = true;
+        }
+
+        bool succeed = UpdateWeightsParams(
+            newParams,
+            options,
+            { WeightsLayout::os_iyx_osv16 },
+            kd.weightsReorderParams);
+
+        if (!succeed)
+        {
+            return{};
         }
 
         auto cldnn_jit = GetJitConstants(newParams, runInfo);
@@ -227,13 +237,6 @@ namespace KernelSelector
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, true, !orgParams.bias.empty());
         kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
-
-        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::os_iyx_osv16, kd.weightsReorderParams);
-
-        if (!succeed)
-        {
-            return{};
-        }
 
         kd.estimatedTime = runInfo.effiency;
 

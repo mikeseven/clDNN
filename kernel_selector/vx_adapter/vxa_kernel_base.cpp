@@ -38,7 +38,7 @@ namespace clDNN
         const KernelSelector::BaseParams* pParams = static_cast<const KernelSelector::BaseParams*>(m_cldnnKernelData.params.get());
         TensorDesc ret;
         ret.offset = pParams->inputs[0].GetOffset();
-        ret.zeroPadded = (pParams->inputs[0].GetPaddedVal() == KernelSelector::Tensor::PADDED_VAL::ZERO);
+        ret.zeroPadded = (pParams->inputs[0].GetPaddedVal() == KernelSelector::Tensor::PaddedVal::ZERO);
         ret.pitches.x = (uint32_t)((pParams->inputs[0].GetDims().size() >= 2) ? pParams->inputs[0].GetDims()[1].pitch : 1);
         ret.pitches.y = (uint32_t)((pParams->inputs[0].GetDims().size() >= 3) ? pParams->inputs[0].GetDims()[2].pitch : ret.pitches.x);
         ret.pitches.z = (uint32_t)((pParams->inputs[0].GetDims().size() >= 4) ? pParams->inputs[0].GetDims()[3].pitch : ret.pitches.y);
@@ -110,7 +110,7 @@ namespace clDNN
             dst = {
                 dt,
                 KernelSelector::DataLayout::bf,
-                srcDesc.zeroPadded ? KernelSelector::Tensor::PADDED_VAL::ZERO : KernelSelector::Tensor::PADDED_VAL::UNDEFINED,
+                srcDesc.zeroPadded ? KernelSelector::Tensor::PaddedVal::ZERO : KernelSelector::Tensor::PaddedVal::UNDEFINED,
                 srcDesc.offset,
                 {
                     { srcDims.x, 1 },
@@ -124,7 +124,7 @@ namespace clDNN
             dst = {
                 dt,
                 KernelSelector::DataLayout::bfyx,
-                srcDesc.zeroPadded ? KernelSelector::Tensor::PADDED_VAL::ZERO : KernelSelector::Tensor::PADDED_VAL::UNDEFINED,
+                srcDesc.zeroPadded ? KernelSelector::Tensor::PaddedVal::ZERO : KernelSelector::Tensor::PaddedVal::UNDEFINED,
                 srcDesc.offset,
                 {
                     { srcDims.x, 1 },

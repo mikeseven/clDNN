@@ -167,6 +167,7 @@ namespace KernelSelector {
     struct WeightsReorderParams : public GenericKernelParams
     {
         size_t newBufferSize = 0;
+        WeightsType dtype = WeightsType::F16;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

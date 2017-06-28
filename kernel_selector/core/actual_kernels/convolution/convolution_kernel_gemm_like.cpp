@@ -53,12 +53,10 @@ namespace KernelSelector
 
         const DataTensor newInput = GetConvolutionPaddedTensorDesc(orgParams);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, newInput);
-        const bool bSupportedWeightsLayout = orgParams.weights.GetLayout() == WeightsLayout::oiyx;
-        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
         // TODO: enable non padding path again
         const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
 
-        if (!bInputPadded || !bWeightsOK)
+        if (!bInputPadded)
         {
             return KernelsData();
         }
@@ -121,6 +119,17 @@ namespace KernelSelector
             kd.estimatedTime = FORCE_PRIORITY_8;
         }
 
+        bool succeed = UpdateWeightsParams(
+            newParams,
+            options,
+            { wLayout },
+            kd.weightsReorderParams);
+
+        if (!succeed)
+        {
+            return{};
+        }
+
         const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         jit << GetBaseJit(newParams, kernel_id)
@@ -143,13 +152,6 @@ namespace KernelSelector
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id, AGE_BASED);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
         kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
-
-        bool succeed = SetWeightsReorderParams(newParams, wLayout, kd.weightsReorderParams);
-
-        if (!succeed)
-        {
-            return{};
-        }
 
         return{ kd };
     }

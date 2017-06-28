@@ -36,7 +36,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
         , _engine_info(arg.get_program().get_engine()->get_context()->get_engine_info())
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _ks_kernel_data = kd;
+        _kernel_data = kd;
     }
 
     event_impl::ptr execute_impl(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events, convolution_inst& instance) override
@@ -68,7 +68,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
             args.bias = bias_mem;
             args.split = i;
 
-            auto event = _kernel.run(_ks_kernel_data.kernels[0], tmp_events, args);
+            auto event = _kernel.run(_kernel_data.kernels[0], tmp_events, args);
 
             tmp_events.clear();
             tmp_events.emplace_back(event);

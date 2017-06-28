@@ -37,7 +37,7 @@ namespace clDNN
             ksParams.bias[0] = {
                 ksParams.output.GetDType(),
                 ksParams.output.GetLayout(),
-                KernelSelector::PADDED_VAL::UNDEFINED,
+                KernelSelector::PaddedVal::UNDEFINED,
                 0,
                 ksParams.output.LogicalDims()
             };
@@ -48,7 +48,7 @@ namespace clDNN
             ksParams.bias[0] = {
                 ksParams.output.GetDType(),
                 KernelSelector::DataLayout::bf,
-                KernelSelector::PADDED_VAL::UNDEFINED,
+                KernelSelector::PaddedVal::UNDEFINED,
                 0,
                 std::vector<size_t>{ ksParams.output.Feature().v }
             };

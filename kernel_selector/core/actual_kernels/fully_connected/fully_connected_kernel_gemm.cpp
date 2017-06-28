@@ -38,13 +38,25 @@ namespace KernelSelector {
         return k;
     }
 
-    KernelsData FullyConnectedKernelGEMM::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData FullyConnectedKernelGEMM::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::FULLY_CONNECTED);
 
         KernelData kd = KernelData::Default<FullyConnectedParams>(params, 1);
 
         FullyConnectedParams& newParams = *static_cast<FullyConnectedParams*>(kd.params.get());
+
+        // TODO: handle padding per in x/y (for openvx)
+        bool succeed = UpdateWeightsParams(
+            newParams,
+            options,
+            { WeightsLayout::oiyx },
+            kd.weightsReorderParams);
+
+        if (!succeed)
+        {
+            return{};
+        }
 
         std::string entry_point;
         std::stringstream jit;
@@ -73,14 +85,6 @@ namespace KernelSelector {
         kernel.workGroups.local = { localWorkSizeX, 1, 1 };
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
-
-        // TODO: handle padding per in x/y (for openvx)
-        bool succeed = SetWeightsReorderParams(newParams, WeightsLayout::oiyx, kd.weightsReorderParams);
-
-        if (!succeed)
-        {
-            return{};
-        }
 
         kd.estimatedTime = FORCE_PRIORITY_6;
 

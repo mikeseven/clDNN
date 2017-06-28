@@ -67,7 +67,7 @@ namespace kernel_selector
     using weights_tensor                    = KernelSelector::WeightsTensor;
     using data_layout                       = KernelSelector::DataLayout;
     using weights_layout                    = KernelSelector::WeightsLayout;
-    using padded_val                        = KernelSelector::PADDED_VAL;
+    using padded_val                        = KernelSelector::PaddedVal;
     using multi_data_tensor                 = KernelSelector::MultiDataTensor;
 
     using params                            = KernelSelector::Params;
@@ -122,7 +122,7 @@ namespace kernel_selector
     using concatenation_kernel_selector     = KernelSelector::ConcatenationKernelSelctor;
 }
 
-inline kernel_selector::data_type convert_data_type(data_types dt)
+inline kernel_selector::data_type to_data_type(data_types dt)
 {
     switch (dt)
     {
@@ -134,7 +134,7 @@ inline kernel_selector::data_type convert_data_type(data_types dt)
     }
 }
 
-inline kernel_selector::weights_type convert_weights_type(data_types dt)
+inline kernel_selector::weights_type to_weights_type(data_types dt)
 {
     switch (dt)
     {
@@ -144,6 +144,19 @@ inline kernel_selector::weights_type convert_weights_type(data_types dt)
     default:
         assert(0);
         return kernel_selector::weights_type::F16;
+    }
+}
+
+inline data_types from_weights_type(kernel_selector::weights_type dt)
+{
+    switch (dt)
+    {
+    case kernel_selector::weights_type::INT8:       return data_types::i8;
+    case kernel_selector::weights_type::F16: return data_types::f16;
+    case kernel_selector::weights_type::F32: return data_types::f32;
+    default:
+        assert(0);
+        return data_types::f16;;
     }
 }
 
@@ -250,7 +263,7 @@ inline kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_
     vec[feature_index].v /= split;
 
     return kernel_selector::data_tensor(
-        convert_data_type(l.data_type),
+        to_data_type(l.data_type),
         ks_layout,
         kernel_selector::padded_val::ZERO,
         offset,
@@ -262,7 +275,7 @@ inline kernel_selector::weights_tensor convert_weights_tensor(const layout& l)
     assert(l.format.dimension() == 4);
     const auto& t = l.size.sizes(format::bfyx);
     const auto base_layout = kernel_selector::weights_layout::oiyx;
-    const auto ks_type = convert_weights_type(l.data_type);
+    const auto ks_type = to_weights_type(l.data_type);
     const auto ks_layout = from_weights_layout(l.format);
     std::vector<size_t> vec(KernelSelector::Tensor::ChannelsCount(base_layout));
 

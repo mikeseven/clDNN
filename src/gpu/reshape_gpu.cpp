@@ -33,7 +33,7 @@ struct reshape_gpu : public typed_primitive_impl<reshape>
     reshape_gpu(reshape_node const& node, const kernel_selector::kernel_data& kd)
         : _kernel(std::make_unique<gpu::kernel>(node.get_program().get_engine()->get_context(), kd.kernels[0].kernelString))
     {
-        _ks_kernel_data = kd;
+        _kernel_data = kd;
     }
 
     reshape_gpu(reshape_node const&){}
@@ -53,7 +53,7 @@ struct reshape_gpu : public typed_primitive_impl<reshape>
         args.inputs = { &instance.input_memory() };
         args.output = &instance.output_memory();
 
-        return _kernel->run(_ks_kernel_data.kernels[0], events, args);
+        return _kernel->run(_kernel_data.kernels[0], events, args);
     }
 
     static primitive_impl* create(reshape_node const& arg) 

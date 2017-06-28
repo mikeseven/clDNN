@@ -33,7 +33,7 @@ struct activation_gpu : typed_primitive_impl<activation>
         : outer(arg)
         , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
     {
-        _ks_kernel_data = kd;
+        _kernel_data = kd;
     }
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, activation_inst& instance) override
@@ -46,7 +46,7 @@ struct activation_gpu : typed_primitive_impl<activation>
             args.slope = &instance.slope_memory();
         }
 
-        return _kernel.run(_ks_kernel_data.kernels[0], events, args);
+        return _kernel.run(_kernel_data.kernels[0], events, args);
     }
 
     static primitive_impl* create(const activation_node& arg) 
