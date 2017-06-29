@@ -32,8 +32,10 @@ using JitDefinitions = std::vector<std::pair<std::string, std::string>>;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename T>
 inline std::string GetTypeName() { throw std::runtime_error("Implement me"); }
+#ifdef _WIN64
 template <>
-inline std::string GetTypeName<size_t>() { return "size_t"; }
+inline std::string GetTypeName<size_t>() { return "size_t"; } 
+#endif
 template <>
 inline std::string GetTypeName<double>() { return "double"; }
 template <>
