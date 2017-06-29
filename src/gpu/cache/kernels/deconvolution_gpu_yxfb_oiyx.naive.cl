@@ -36,6 +36,10 @@ KERNEL(deconvolution_gpu_yxfb_oiyx)(
 #endif
     uint split_idx)
 {
+    // constexpr:
+    const uint input_buffer_size_x = INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X + INPUT_PADDING_UPPER_SIZE_X;
+    const uint input_buffer_size_y = INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y + INPUT_PADDING_UPPER_SIZE_Y;
+
     const int batch_num = INPUT_BATCH_NUM;
 
     const uint linear_id = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
@@ -80,9 +84,10 @@ KERNEL(deconvolution_gpu_yxfb_oiyx)(
 
                     if(!zero)
                     {
-                        int input_idx = (input_offset_x / STRIDE_SIZE_X + (input_offset_y * INPUT_SIZE_X / STRIDE_SIZE_Y)) * INPUT_FEATURE_NUM * batch_num;
+                        int input_idx = (input_offset_x / STRIDE_SIZE_X + (input_offset_y * input_buffer_size_x / STRIDE_SIZE_Y)) * INPUT_FEATURE_NUM * batch_num;
                         input_idx += split_idx * FILTER_INPUT_FEATURE_NUM * batch_num;
                         input_idx += batch_offset;
+                        input_idx += (INPUT_PADDING_LOWER_SIZE_X + INPUT_PADDING_LOWER_SIZE_Y * input_buffer_size_x) * INPUT_FEATURE_NUM * batch_num;
 
                         uint filter_idx = ((FILTER_SIZE_X * FILTER_SIZE_Y - 1) - (i * FILTER_SIZE_X + j)) + f_ofm_offset;
 

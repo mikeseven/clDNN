@@ -14,14 +14,14 @@
 
 
 #if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
 
-    #if RELU
-        #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
-        input : -convert_half(NEGATIVE_SLOPE)) : (max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h));
-    #else
-        #define ACTIVATION(output, input) output = input;
-    #endif
+#if RELU
+    #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
+    input : -convert_half(NEGATIVE_SLOPE)) : (max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h));
+#else
+    #define ACTIVATION(output, input) output = input;
+#endif
 
 KERNEL(convolution_gpu_yxfb_yxio_fp16)(
     const __global half* input,
@@ -32,6 +32,12 @@ KERNEL(convolution_gpu_yxfb_yxio_fp16)(
 #endif
     uint split_idx)
 {
+    //constexpr:
+    const uint input_buffer_size_x = INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X + INPUT_PADDING_UPPER_SIZE_X;
+    const uint input_buffer_size_y = INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y + INPUT_PADDING_UPPER_SIZE_Y;
+    const uint input_buffer_feature_num = INPUT_PADDING_LOWER_FEATURE_NUM + INPUT_FEATURE_NUM + INPUT_PADDING_UPPER_FEATURE_NUM;
+    const uint input_buffer_batch_num = INPUT_PADDING_LOWER_BATCH_NUM + INPUT_BATCH_NUM + INPUT_PADDING_UPPER_BATCH_NUM;
+
     const int batch_num = INPUT_BATCH_NUM;
 
     const uint linear_id = get_global_id(0) + get_global_size(0) * (get_global_id(1) + get_global_size(1) * get_global_id(2));
@@ -71,9 +77,9 @@ KERNEL(convolution_gpu_yxfb_yxio_fp16)(
 
                     if(!zero)
                     {
-                        int input_idx = (input_offset_x + (input_offset_y * INPUT_SIZE_X)) * INPUT_FEATURE_NUM * batch_num;
-                        input_idx += split_idx * FILTER_INPUT_FEATURE_NUM * batch_num;
-                        input_idx += batch_offset;
+                        uint input_idx = ((INPUT_PADDING_LOWER_SIZE_X + input_offset_x) + ((INPUT_PADDING_LOWER_SIZE_Y + input_offset_y) * input_buffer_size_x)) * input_buffer_feature_num * input_buffer_batch_num;
+                        input_idx += (INPUT_PADDING_LOWER_FEATURE_NUM + split_idx * FILTER_INPUT_FEATURE_NUM) * input_buffer_batch_num;
+                        input_idx += INPUT_PADDING_LOWER_BATCH_NUM + batch_offset;
 
                         uint filter_idx = ofm_offset + FILTER_INPUT_FEATURE_NUM * FILTER_OUTPUT_FEATURE_NUM * (i * FILTER_SIZE_X + j);
 
@@ -81,7 +87,7 @@ KERNEL(convolution_gpu_yxfb_yxio_fp16)(
                         {
                             result = fma(input[input_idx], filter[filter_idx], result);
                             filter_idx += FILTER_OUTPUT_FEATURE_NUM;
-                            input_idx += batch_num;
+                            input_idx += input_buffer_batch_num;
                         }
                     }
                 }
@@ -94,5 +100,5 @@ KERNEL(convolution_gpu_yxfb_yxio_fp16)(
     ACTIVATION(output[global_id], result);
 }
 
-    #undef ACTIVATION
+#undef ACTIVATION
 #endif // FP16_SUPPORTED

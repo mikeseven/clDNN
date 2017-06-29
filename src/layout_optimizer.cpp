@@ -31,7 +31,7 @@ layout_optimizer::layout_optimizer(refcounted_obj_ptr<engine_impl> eng, bool ena
 {
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution>, boost::optional<layout> const& output_layout)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, boost::optional<layout> const& output_layout)
 {
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
@@ -54,7 +54,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         break;
 
     case data_type::weights: //convolution weights
-        if (batch < 32 || expected_data_type != data_types::f16 || !_optimization_attributes.splitted_convolution)
+        if (batch < 32 || expected_data_type != data_types::f16 || !_optimization_attributes.splitted_convolution || prim->with_output_size)
         {
             expected_tensor = current_layout.size;
             expected_format = cldnn::format::os_iyx_osv16;
@@ -71,7 +71,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         if (current_layout.format.dimension() != 4)
             throw std::runtime_error("Convolution input not 4-dimensional?");
 
-        if (expected_data_type != data_types::f16 || batch < 32 || !_optimization_attributes.splitted_convolution)
+        if (expected_data_type != data_types::f16 || batch < 32 || !_optimization_attributes.splitted_convolution || prim->with_output_size)
         {
             expected_tensor = current_layout.size;
             expected_format = cldnn::format::bfyx;
@@ -97,7 +97,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     auto expected_data_type = current_layout.data_type;
     auto expected_format = current_layout.format;
     auto batch = current_layout.size.batch[0];
-
+    
     if (output_layout)
     {
         expected_data_type = output_layout.get().data_type;
@@ -115,14 +115,17 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
 
     case data_type::weights: //fc weights
     {
-        if (batch > 1 && !(expected_data_type == data_types::f16 && batch >= 16) && batch % 8 == 0)
+        auto supports_subgroups_short = _engine->get_engine_info().supports_subgroups_short;
+        if (batch > 1 && !(expected_data_type == data_types::f16 && batch >= 16) && batch % 8 == 0
+            && !(expected_data_type == data_types::f16 && !supports_subgroups_short))
         {
             expected_tensor = cldnn::tensor(
                 current_layout.size.batch[0], 1, current_layout.size.feature[0] * current_layout.size.spatial[0] * current_layout.size.spatial[1], 1
             );
             expected_format = cldnn::format::bs_xs_xsv8_bsv8;
         }
-        else if (expected_data_type == data_types::f16 && batch == 16)
+        else if (expected_data_type == data_types::f16 && batch == 16
+            && !(expected_data_type == data_types::f16 && !supports_subgroups_short))
         {
             expected_tensor = cldnn::tensor(
                 current_layout.size.batch[0], 1, current_layout.size.feature[0] * current_layout.size.spatial[0] * current_layout.size.spatial[1], 1

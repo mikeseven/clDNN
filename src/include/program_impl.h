@@ -297,6 +297,7 @@ private:
     void trim_to_outputs();
     void reorder_inputs(layout_optimizer& lo);
     void optimize_weights(layout_optimizer& lo);
+    void apply_needed_padding(program_node& node, program_node& prev_node, const padding& needed_padding);
     void prepare_padding();
     void prepare_buffer_fusing();
 

@@ -133,6 +133,7 @@ typedef struct
     // Flags (for layout compatibility fixed size types are used).
     uint8_t supports_fp16;             ///< Does engine support FP16.
     uint8_t supports_fp16_denorms;     ///< Does engine support denormalized FP16.
+    uint8_t supports_subgroups_short;  ///< Does engine support cl_intel_subgroups_short.
 }  cldnn_engine_info;
 /// @}
 
