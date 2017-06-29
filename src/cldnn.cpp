@@ -180,7 +180,8 @@ cldnn_engine_info cldnn_get_engine_info(cldnn_engine engine, cldnn_status* statu
             info.max_work_group_size,
             info.max_local_mem_size,
             info.supports_fp16,
-            info.supports_fp16_denorms
+            info.supports_fp16_denorms,
+            info.supports_subgroups_short
        };
     });
 }
