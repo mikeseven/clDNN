@@ -33,6 +33,25 @@ namespace cldnn
 struct primitive_impl;
 class layout_optimizer;
 
+    //replaces idx-th dependency of 'this' with 'new_dep', calls program::remove_if_dangling(old_dep, detach_whole_branch)
+    void replace_dependency(size_t idx, program_node& new_dep, bool detach_whole_branch = false);
+    //searches for 'old_dep' in dependecies list of 'this' and replaces it with 'new_dep', calls program::remove_if_dangling(old_dep, detach_whole_branch)
+    void replace_dependency(program_node const& old_dep, program_node& new_dep, bool detach_whole_branch = false);
+
+    void remove_dependency(program_node* node)
+    {
+        auto itr = dependencies.begin();
+        while (itr != dependencies.end())
+        {
+            if (*itr == node)
+            {
+                dependencies.erase(itr);
+                return;
+            }
+
+            ++itr;
+        }
+    }
 /*
     cldnn_program implementation
 */
@@ -126,6 +145,7 @@ private:
     void post_optimize_weights(layout_optimizer& lo);
     void apply_needed_padding(program_node& node, program_node& prev_node, const padding& needed_padding);
     void prepare_padding();
+    void propagate_constants();
     void prepare_buffer_fusing();
     void prepare_primitive_fusing();
     void prepare_depthwise_sep_opt();

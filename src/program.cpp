@@ -19,6 +19,7 @@
 #include "program_impl.h"
 #include "primitive_inst.h"
 #include "layout_optimizer.h"
+#include "network_impl.h"
 
 #include "primitive_type.h"
 #include "api/CPP/activation.hpp"
@@ -407,6 +408,8 @@ void program_impl::pre_optimize_graph()
     remove_redundant_reorders();
     prepare_padding();
     prepare_depthwise_sep_opt();
+
+    propagate_constants();
 
     //try to fuse buffers (i.e. depth_concat in bfyx format) after padding calculations
     if (options.get<build_option_type::optimize_data>()->enabled())
@@ -1114,23 +1117,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
 
         std::shared_ptr<reorder> new_input = nullptr;
 
-        if (input_node.type() == data::type_id())
-        {
-            new_input = lo.add_weights_for_optimization(input_node.as<data>().typed_desc(),
-                layout_optimizer::data_type::input,
-                conv_prim,
-                weights_layout).first;
-        }
-        else if (input_node.type() == input_layout::type_id())
-        {
-            new_input = lo.get_reorder(
-                input_node.as<input_layout>().get_primitive()->layout,
-                input_node.id(),
-                layout_optimizer::data_type::input,
-                conv_prim,
-                weights_layout).first;
-        }
-        else if (input_node.type() == reorder::type_id()) //convolution's input is a reorder
+        if (input_node.type() == reorder::type_id()) //convolution's input is a reorder
         {
             auto reorder_prim = input_node.as<reorder>().typed_desc();
             auto& reorder_input = input_node.get_dependency(0);
@@ -1231,28 +1218,15 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
     const auto add_bias = [this, &lo](program_node& bias, auto& node, layout const& output_layout, size_t dep_idx)
     {
         const auto bias_type = layout_optimizer::data_type::bias;
-        if (bias.type() == data::type_id())
-        {
-            lo.add_weights_for_optimization(
-                bias.as<data>().typed_desc(),
-                bias_type,
-                node.get_primitive(),
-                output_layout);
-        }
-        else if (bias.type() == input_layout::type_id())
-        {
-            auto reorder = lo.get_reorder(
-                bias.as<input_layout>().typed_desc()->layout,
-                bias.id(),
-                bias_type,
-                node.get_primitive(),
-                output_layout);
+        auto reorder = lo.get_reorder(
+            bias.get_output_layout(),
+            bias.id(),
+            bias_type,
+            node.get_primitive(),
+            output_layout);
 
-            if (reorder.first)
-                this->add_intermediate(reorder.first, node, dep_idx);
-        }
-        else
-            throw std::logic_error("Optimization of weights which are neither of type cldnn::data nor cldnn::input_layout!");
+        if (reorder.first)
+            this->add_intermediate(reorder.first, node, dep_idx);
     };
 
     //generic lambda function which prepares given primitive for weights optimization
@@ -1577,6 +1551,110 @@ void program_impl::prepare_padding()
         needed_padding = padding::max(prev_prim_output_layout.data_padding, needed_padding);
 
         apply_needed_padding(node, conv_input_node, needed_padding);
+    }
+}
+
+void program_impl::propagate_constants()
+{
+    std::list<typed_program_node<data>*> const_inputs;
+    std::list<primitive_id> prims_to_replace;
+    topology_impl tpl;
+    bool has_non_trivial_constants = false;
+
+    for (auto& node : processing_order)
+    {
+        if (node->is_type<input_layout>())
+            continue;
+
+        if (node->is_type<data>())
+        {
+            node->mark();
+        }
+        else
+        {
+            bool is_constant = true;
+            for (auto& dep : node->get_dependencies())
+                if (!dep->is_marked())
+                    is_constant = false;
+
+            if (!is_constant)
+            {
+                for (auto& dep : node->get_dependencies())
+                    if (dep->is_marked())
+                    {
+                        if (!dep->is_type<data>())
+                            prims_to_replace.push_back(dep->id());
+
+                        auto dep_users_itr = dep->users.begin();
+                        while (dep_users_itr != dep->users.end())
+                        {
+                            auto dep_user = *dep_users_itr;
+                            if (dep_user->is_marked())
+                            {
+                                dep_user->remove_dependency(dep);
+                                dep_users_itr = dep->users.erase(dep_users_itr);
+                            }
+                            else
+                                ++dep_users_itr;
+                        }
+                    }
+            }
+            else
+            {
+                node->mark();
+                tpl.add(node->desc);
+                has_non_trivial_constants = true;
+
+                for (auto& dep : node->get_dependencies())
+                {
+                    if (dep->is_type<data>()) //if a data is an input for a non-trivial constant primitive, add it as an input for our helper network
+                    {
+                        tpl.add(std::make_shared<input_layout>(dep->id(), dep->as<data>().get_primitive()->mem.get_layout()));
+                        const_inputs.push_back(&dep->as<data>());
+                    }
+                }
+            }
+        }
+    }
+
+    for (auto& node : processing_order)
+        node->unmark();
+
+    if (!has_non_trivial_constants)
+        return;
+
+    build_options bo;
+    bo.set_option(build_option::optimize_data(false));
+    network_impl::ptr net = engine->build_network(tpl, bo);
+    for (auto& cin : const_inputs)
+        net->set_input_data(cin->id(), api_cast(cin->get_primitive()->mem.get()));
+
+    net->execute({});
+    net->reset_execution(true); //wait for computations to complete
+    auto const_outputs = net->get_outputs();
+    assert(const_outputs.size() == prims_to_replace.size() && "Mismatching count of constant endpoints and helper network outputs");
+    for (auto& cout : const_outputs)
+    {
+        assert(std::find(prims_to_replace.begin(), prims_to_replace.end(), cout->id()) != prims_to_replace.end());
+
+        auto id_to_replace = cout->id();
+        auto const_data = std::make_shared<data>(data("_cldnn_const_prop_" + cout->id(), cout->output_memory()));
+        auto& new_node = get_or_create(const_data);
+        auto curr_node = nodes_map.at(id_to_replace);
+
+        if (curr_node->is_output())
+        {
+            new_node.set_output(true);
+            for (auto& output : outputs)
+                if (output == curr_node.get())
+                    output = &new_node;
+
+            curr_node->set_output(false);
+        }
+
+        new_node.processing_itr = processing_order.insert(curr_node->processing_itr, &new_node);
+        replace_all_usages(*curr_node, new_node, true);
+        rename(new_node, id_to_replace);
     }
 }
 
