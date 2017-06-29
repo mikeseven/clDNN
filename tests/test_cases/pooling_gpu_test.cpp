@@ -896,6 +896,9 @@ public:
             }
         }
 
+        // This case tests the pooling_gpu_bfyx_average_opt kernel.
+        all_layer_params.push_back(new pooling("pooling", "input0", pooling_mode::average, tensor(1, 1, 3, 3), tensor(1, 1, 1, 1), tensor(1, 1, -1, -1)));
+
         return all_layer_params;
     }
 

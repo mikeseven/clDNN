@@ -16,26 +16,19 @@
 
 #pragma once
 
-#include "common_kernel_base.h"
-#include "kernel_selector_params.h"
-
+#include "pooling_kernel_base.h"
+ 
 namespace KernelSelector 
-{
-    class PoolingKernelBase : public CommonKernelBase
+{    
+    class PoolingKernelGPUAverageOpt : public PoolingKernelBase
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
-        virtual ~PoolingKernelBase() {}
+        PoolingKernelGPUAverageOpt() : PoolingKernelBase("pooling_gpu_average_opt") {}
+        virtual ~PoolingKernelGPUAverageOpt() {}
 
-        struct DispatchData : public CommonDispatchData
-        {
-            bool needsBoundary;
-            size_t tileHeight;
-            size_t tileWidth;
-        };
-
+        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual ParamsKey GetSupportedKey() const override;
     protected:
-        JitConstants GetJitConstants(const PoolingParams& params, DispatchData kd) const;
-        virtual DispatchData SetDefault(const PoolingParams& params) const;
+        DispatchData SetDefault(const PoolingParams& params) const override;
     };
 }
