@@ -32,16 +32,53 @@ namespace KernelSelector
         return k;
     }
 
+    bool PoolingKernelGPUAverageOpt::Validate(const Params& p, const OptionalParams& o) const
+    {
+        if (!PoolingKernelBase::Validate(p, o))
+        {
+            return false;
+        }
+
+        const PoolingParams& params = static_cast<const PoolingParams&>(p);
+
+        if (params.activationFunc != ActivationFunction::NONE)
+        {
+            return{};
+        }
+
+        if ((params.poolParams.poolSize.x != 3) ||
+            (params.poolParams.poolSize.y != 3) ||
+            (params.poolParams.poolStride.x != 1) ||
+            (params.poolParams.poolStride.y != 1) ||
+            (params.poolParams.poolPad.x != 1) ||
+            (params.poolParams.poolPad.y != 1) ||
+            !(params.inputs[0] == params.output) ||
+            params.inputs[0].PaddingExists() ||
+            params.output.PaddingExists())
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    static uSize GetTileDimentions()
+    {
+        constexpr int simdSize = 16;
+
+        return{ simdSize - 2, 7 };
+    }
+
     PoolingKernelBase::DispatchData PoolingKernelGPUAverageOpt::SetDefault(const PoolingParams& params) const
     {
+        constexpr int simdSize = 16;
+
         DispatchData runInfo = PoolingKernelBase::SetDefault(params);
 
-        const int simdSize = 16;
-        runInfo.tileWidth = simdSize - 2;
-        runInfo.tileHeight = 7;
+        auto tileDims = GetTileDimentions();
 
-        const int numTilesX = static_cast<int>(std::ceil(static_cast<float>(params.inputs[0].X().v) / static_cast<float>(runInfo.tileWidth)));
-        const int numTilesY = static_cast<int>(std::ceil(static_cast<float>(params.inputs[0].Y().v) / static_cast<float>(runInfo.tileHeight)));
+        const int numTilesX = static_cast<int>(std::ceil(static_cast<float>(params.inputs[0].X().v) / static_cast<float>(tileDims.x)));
+        const int numTilesY = static_cast<int>(std::ceil(static_cast<float>(params.inputs[0].Y().v) / static_cast<float>(tileDims.y)));
 
         runInfo.gws0 = numTilesX * simdSize;
         runInfo.gws1 = numTilesY;
@@ -53,29 +90,30 @@ namespace KernelSelector
         return runInfo;
     }
 
-    KernelsData PoolingKernelGPUAverageOpt::GetKernelsData(const Params& params, const OptionalParams&) const
+    JitConstants PoolingKernelGPUAverageOpt::GetJitConstants(const PoolingParams& params, DispatchData kd) const
     {
-        assert(params.GetType() == KernelType::POOLING);
+        auto tileDims = GetTileDimentions();
+        auto mem_consts = PoolingKernelBase::GetJitConstants(params, kd);
+
+        if (tileDims.y != 0 && tileDims.x != 0)
+        {
+            mem_consts.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", kd.lws0));
+            mem_consts.AddConstant(MakeJitConstant("TILE_HEIGHT", tileDims.y));
+            mem_consts.AddConstant(MakeJitConstant("TILE_WIDTH", tileDims.x));
+            mem_consts.AddConstant(MakeJitConstant("ONE_OVER_POOL_SIZE", 1.f / (params.poolParams.poolSize.x * params.poolParams.poolSize.y)));
+        }
+
+        return mem_consts;
+    }
+
+    KernelsData PoolingKernelGPUAverageOpt::GetKernelsData(const Params& params, const OptionalParams& options) const
+    {
+        if (!Validate(params, options))
+        {
+            return{};
+        }
 
         const PoolingParams& orgParams = static_cast<const PoolingParams&>(params);
-
-        if (orgParams.activationFunc != ActivationFunction::NONE)
-        {
-            return{};
-        }
-
-        if ((orgParams.poolParams.poolSize.x != 3) ||
-            (orgParams.poolParams.poolSize.y != 3) ||
-            (orgParams.poolParams.poolStride.x != 1) ||
-            (orgParams.poolParams.poolStride.y != 1) ||
-            (orgParams.poolParams.poolPad.x != 1) || 
-            (orgParams.poolParams.poolPad.y != 1) ||
-            !(orgParams.inputs[0] == orgParams.output) ||
-            orgParams.inputs[0].PaddingExists() ||
-            orgParams.output.PaddingExists())
-        {
-            return{};
-        }
         
         DispatchData runInfo = SetDefault(orgParams);
 

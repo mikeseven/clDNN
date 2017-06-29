@@ -18,6 +18,17 @@
 
 namespace KernelSelector 
 {
+    bool PoolingKernelBase::Validate(const Params& p, const OptionalParams& o) const
+    {
+        if (p.GetType() != KernelType::POOLING ||
+            o.GetType() != KernelType::POOLING)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
     JitConstants PoolingKernelBase::GetJitConstants(const PoolingParams& params, PoolingKernelBase::DispatchData kd) const
     {
         JitConstants mem_consts = MakePoolingJitConstants(params);
@@ -25,14 +36,6 @@ namespace KernelSelector
         if (kd.needsBoundary)
         {
             mem_consts.AddConstant(MakeJitConstant("CHECK_BOUNDRY", 1));
-        }
-
-        if (kd.tileHeight != 0 && kd.tileWidth != 0)
-        {
-            mem_consts.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", kd.lws0));
-            mem_consts.AddConstant(MakeJitConstant("TILE_HEIGHT", kd.tileHeight));
-            mem_consts.AddConstant(MakeJitConstant("TILE_WIDTH", kd.tileWidth));
-            mem_consts.AddConstant(MakeJitConstant("ONE_OVER_POOL_SIZE", 1.f / (params.poolParams.poolSize.x * params.poolParams.poolSize.y)));
         }
 
         return mem_consts;
@@ -98,9 +101,6 @@ namespace KernelSelector
         }
 
         kd.needsBoundary = NeedsBoundaryCheck(params);
-
-        kd.tileHeight = 0;
-        kd.tileWidth = 0;
 
         return kd;
     }

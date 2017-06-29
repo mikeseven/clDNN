@@ -29,6 +29,8 @@ namespace KernelSelector
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     protected:
+        bool Validate(const Params&, const OptionalParams&) const override;
+        JitConstants GetJitConstants(const PoolingParams& params, DispatchData kd) const override;
         DispatchData SetDefault(const PoolingParams& params) const override;
     };
 }

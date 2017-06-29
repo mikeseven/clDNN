@@ -30,12 +30,11 @@ namespace KernelSelector
         struct DispatchData : public CommonDispatchData
         {
             bool needsBoundary;
-            size_t tileHeight;
-            size_t tileWidth;
         };
 
     protected:
-        JitConstants GetJitConstants(const PoolingParams& params, DispatchData kd) const;
+        virtual bool Validate(const Params&, const OptionalParams&) const override;
+        virtual JitConstants GetJitConstants(const PoolingParams& params, DispatchData kd) const;
         virtual DispatchData SetDefault(const PoolingParams& params) const;
     };
 }
