@@ -24,12 +24,12 @@ namespace clDNN
         BaseKernelBinary(KernelType::ACTIVATION),
         m_Params(params)
     {
-        KernelSelctor::ActivationParams ksParams;
+        KernelSelector::ActivationParams ksParams;
 
         InitBaseParams(params, ksParams);
 
-        KernelSelctor::ActivationOptionalParams ksOptParams;
+        KernelSelector::ActivationOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelctor::ActivationKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::ActivationKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

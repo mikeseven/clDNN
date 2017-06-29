@@ -15,19 +15,22 @@
 */
 
 #include "locally_connected_kernel_ref.h"
- 
-namespace KernelSelctor {
+#include "kernel_selector_utils.h" 
+
+namespace KernelSelector {
 
     ParamsKey LocallyConnectedKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetOutputLayout(bfyx);
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableBatching();
         return k;
     }
 
@@ -38,10 +41,11 @@ namespace KernelSelctor {
         KernelData kd = KernelData::Default<LocallyConnectedParams>(params, 1);
 
         LocallyConnectedParams& newParams = *static_cast<LocallyConnectedParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
+
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         std::stringstream jit;
-        jit << GetBaseJit(newParams)
+        jit << GetBaseJit(newParams, kernel_id)
             << "#define KERNEL_WIDTH " << newParams.lcParams.filterSize.x << "\n"
             << "#define KERNEL_HEIGHT (" << newParams.lcParams.filterSize.y << ")\n"
             << "#define STRIDE_X (" << newParams.lcParams.stride.x << ")\n"
@@ -49,13 +53,14 @@ namespace KernelSelctor {
             << "#define INPUT_PADDING_X (" << newParams.lcParams.padding.x << ")\n"
             << "#define INPUT_PADDING_Y (" << newParams.lcParams.padding.y << ")\n";
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "locally_connected");
-        kernel.args_desc = GetArgumentDesc(1, true, true);
+        kernel.workGroups.global = { out.X().v, out.Y().v, out.Feature().v*out.Batch().v };
+        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
+        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
+        kernel.argsDesc = GetArgumentDesc(1, true, true);
 
-        kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         return{ kd };
     }

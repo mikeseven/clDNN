@@ -18,12 +18,12 @@
 
 #include "kernel_selector.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     class PoolingKernelSelctor : public KernelSelctorBase
     {
     public:
-        static PoolingKernelSelctor &instance() {
+        static PoolingKernelSelctor &Instance() {
             static PoolingKernelSelctor instance_;
             return instance_;
         }

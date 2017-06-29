@@ -16,20 +16,32 @@
 
 #include "include/cnn_common.cl"
 
-__kernel void activation(__global DATA_TYPE* input, __global DATA_TYPE* output)
+// TODO: move it from layout based to memory based
+KERNEL(activation)(
+    __global DATA_TYPE* input, 
+    __global DATA_TYPE* output
+#ifdef ACTIVATION_FUNCTION_PRELU 
+    , __global DATA_TYPE* slope
+#endif
+    )
 {
     const unsigned x = get_global_id(0);
     const unsigned y = get_global_id(1);
-#if OUT_BATCH == 1
-    const unsigned z = get_global_id(2);
-    const unsigned w = 0;
+#if OUTPUT_BATCH_NUM == 1
+    const unsigned feature = get_global_id(2);
+    const unsigned batch = 0;
 #else
-    const unsigned z = get_global_id(2) % OUT_DEPTH;
-    const unsigned w = get_global_id(2) / OUT_DEPTH;
+    const unsigned feature = get_global_id(2) % OUTPUT_FEATURE_NUM;
+    const unsigned batch = get_global_id(2) / OUTPUT_FEATURE_NUM;
 #endif
 
-    const unsigned src_index = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;
-    const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
+    const unsigned src_index = batch*INPUT_BATCH_PITCH + feature*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x*INPUT_X_PITCH + INPUT_OFFSET;
+    const unsigned dst_index = batch*OUTPUT_BATCH_PITCH + feature*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH + OUTPUT_OFFSET;
 
-    output[dst_index] = activation_function(input[src_index], NL_M, NL_N);
+#ifdef ACTIVATION_FUNCTION_PRELU 
+    float nl_m = (float)slope[feature];
+#else
+    float nl_m = (float)NL_M;
+#endif
+    output[dst_index] = FUNC_CALL(activation_function)(input[src_index], nl_m, NL_N);
 }

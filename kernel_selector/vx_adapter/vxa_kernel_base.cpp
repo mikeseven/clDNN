@@ -30,21 +30,28 @@ namespace clDNN
 
     bool BaseKernelBinary::ShouldChangeInputTensor() const 
     {
-        return m_cldnnKernelData.reorder_input;
+        return m_cldnnKernelData.reorderInput;
     }
 
     TensorDesc BaseKernelBinary::GetNewInputTensorDesc() const
     {
-        const KernelSelctor::BaseParams* pParams = static_cast<const KernelSelctor::BaseParams*>(m_cldnnKernelData.params.get());
-        return pParams->inDesc;
+        const KernelSelector::BaseParams* pParams = static_cast<const KernelSelector::BaseParams*>(m_cldnnKernelData.params.get());
+        TensorDesc ret;
+        ret.offset = pParams->inputs[0].GetOffset();
+        ret.zeroPadded = (pParams->inputs[0].GetPaddedVal() == KernelSelector::Tensor::PaddedVal::ZERO);
+        ret.pitches.x = (uint32_t)((pParams->inputs[0].GetDims().size() >= 2) ? pParams->inputs[0].GetDims()[1].pitch : 1);
+        ret.pitches.y = (uint32_t)((pParams->inputs[0].GetDims().size() >= 3) ? pParams->inputs[0].GetDims()[2].pitch : ret.pitches.x);
+        ret.pitches.z = (uint32_t)((pParams->inputs[0].GetDims().size() >= 4) ? pParams->inputs[0].GetDims()[3].pitch : ret.pitches.y);
+        ret.pitches.w = (uint32_t)(pParams->inputs[0].LengthWithPadding());
+        return ret;
     }
 
-    WorkGroups BaseKernelBinary::GetWorkGroups(const KernelSelctor::WorkGroupSizes& work_groups) const
+    WorkGroups BaseKernelBinary::GetWorkGroups(const KernelSelector::WorkGroupSizes& work_groups) const
     {
         WorkGroups res;
         
-        cl::NDRange gws = work_groups.global;
-        cl::NDRange lws = work_groups.local;
+        auto gws = work_groups.global;
+        auto lws = work_groups.local;
 
         if (gws.size() != 0)
         {
@@ -69,14 +76,14 @@ namespace clDNN
 
     bool BaseKernelBinary::ShouldReorderWeights() const
     {
-        return m_cldnnKernelData.weights_reorder_params.engine != KernelSelctor::WeightsReorderParams::Engine::NONE;
+        return m_cldnnKernelData.weightsReorderParams.engine != KernelSelector::WeightsReorderParams::Engine::NONE;
     }
 
-    std::size_t BaseKernelBinary::GetNewWeightBufferSizeInBytes() const
+    size_t BaseKernelBinary::GetNewWeightBufferSizeInBytes() const
     {
         if (ShouldReorderWeights())
         {
-            return m_cldnnKernelData.weights_reorder_params.new_buffer_size;
+            return m_cldnnKernelData.weightsReorderParams.newBufferSize;
         }
 
         return 0;
@@ -84,42 +91,63 @@ namespace clDNN
 
     bool BaseKernelBinary::ReorderWeightsWithKernel() const
     {
-        return m_cldnnKernelData.weights_reorder_params.engine == KernelSelctor::WeightsReorderParams::Engine::GPU;
+        return m_cldnnKernelData.weightsReorderParams.engine == KernelSelector::WeightsReorderParams::Engine::GPU;
     }
 
-    void BaseKernelBinary::ReorderWeights(void* org, std::size_t orgBufSize, void* newBuf, std::size_t newBufSize) const
+    void BaseKernelBinary::ReorderWeights(void* org, size_t orgBufSize, void* newBuf, size_t newBufSize) const
     {
         if (ShouldReorderWeights() &&
-            m_cldnnKernelData.weights_reorder_params.cpu_kernel)
+            m_cldnnKernelData.weightsReorderParams.cpuKernel)
         {
-            m_cldnnKernelData.weights_reorder_params.cpu_kernel->Execute(org, orgBufSize, newBuf, newBufSize);
+            m_cldnnKernelData.weightsReorderParams.cpuKernel->Execute(org, orgBufSize, newBuf, newBufSize);
         }
     }
 
-    void BaseKernelBinary::InitBaseParams(const BaseParams& vxParams, KernelSelctor::BaseParams& ksParams)
+    void BaseKernelBinary::UpdateTensor(Datatype dt, DataLayout layout, const uDims& srcDims, const TensorDesc& srcDesc, KernelSelector::DataTensor& dst) const
     {
-        ksParams.inputType = vxParams.inputType;
-
-        if (vxParams.inputLayout == DataLayout::bx)
+        if (layout == DataLayout::bf)
         {
-            ksParams.inputLayout = KernelSelctor::DataLayout::bx;
-            ksParams.outputLayout = KernelSelctor::DataLayout::bx;
+            dst = {
+                dt,
+                KernelSelector::DataLayout::bf,
+                srcDesc.zeroPadded ? KernelSelector::Tensor::PaddedVal::ZERO : KernelSelector::Tensor::PaddedVal::UNDEFINED,
+                srcDesc.offset,
+                {
+                    { srcDims.x, 1 },
+                    { srcDims.y, srcDesc.pitches.x },
+                }
+
+            };
         }
         else
         {
-            ksParams.inputLayout = KernelSelctor::DataLayout::bfyx;
-            ksParams.outputLayout = KernelSelctor::DataLayout::bfyx;
+            dst = {
+                dt,
+                KernelSelector::DataLayout::bfyx,
+                srcDesc.zeroPadded ? KernelSelector::Tensor::PaddedVal::ZERO : KernelSelector::Tensor::PaddedVal::UNDEFINED,
+                srcDesc.offset,
+                {
+                    { srcDims.x, 1 },
+                    { srcDims.y, srcDesc.pitches.x },
+                    { srcDims.z, srcDesc.pitches.y },
+                    { srcDims.w, srcDesc.pitches.z },
+                }
+            };
         }
-
-        ksParams.activationFunc = vxParams.activationFunc;
-        ksParams.nlParams = vxParams.nlParams;
-        ksParams.inDims = vxParams.inDims;
-        ksParams.inDesc = vxParams.inDesc;
-        ksParams.outDims = vxParams.outDims;
-        ksParams.outDesc = vxParams.outDesc;
     }
 
-    std::shared_ptr<ArgumentsInfoBase> BaseKernelBinary::SetupArguments(const KernelSelctor::ArgumentDescpirtor& cldnn_args)
+    void BaseKernelBinary::InitBaseParams(const BaseParams& vxParams, KernelSelector::BaseParams& ksParams)
+    {
+        ksParams.activationFunc = vxParams.activationFunc;
+        ksParams.nlParams = vxParams.nlParams;
+
+        ksParams.inputs.resize(1);
+
+        UpdateTensor(vxParams.inputType, vxParams.inputLayout, vxParams.inDims, vxParams.inDesc, ksParams.inputs[0]);
+        UpdateTensor(vxParams.inputType, vxParams.inputLayout, vxParams.outDims, vxParams.outDesc, ksParams.output);
+    }
+
+    std::shared_ptr<ArgumentsInfoBase> BaseKernelBinary::SetupArguments(const KernelSelector::ArgumentDescpirtor& cldnn_args)
     {
         //m_ArgInfo = std::make_shared<ArgumentsInfo>();
         auto args_ptr = std::shared_ptr<ArgumentsInfoBase>(new ArgumentsInfo());
@@ -132,58 +160,58 @@ namespace clDNN
         {
             switch (cldnn_data[i].t)
             {
-            case KernelSelctor::ArgumentDescpirtor::Types::INPUT:
+            case KernelSelector::ArgumentDescpirtor::Types::INPUT:
                 args->data[i].t = ArgumentsInfoBase::Types::INPUT;
                 break;
-            case KernelSelctor::ArgumentDescpirtor::Types::OUTPUT:
+            case KernelSelector::ArgumentDescpirtor::Types::OUTPUT:
                 args->data[i].t = ArgumentsInfoBase::Types::OUTPUT;
                 break;
-            case KernelSelctor::ArgumentDescpirtor::Types::WEIGHTS:
+            case KernelSelector::ArgumentDescpirtor::Types::WEIGHTS:
                 args->data[i].t = ArgumentsInfoBase::Types::WEIGHTS;
                 break;
-            case KernelSelctor::ArgumentDescpirtor::Types::BIAS:
+            case KernelSelector::ArgumentDescpirtor::Types::BIAS:
                 args->data[i].t = ArgumentsInfoBase::Types::BIAS;
                 break;
-            case KernelSelctor::ArgumentDescpirtor::Types::LOOKUP_TABLE:
+            case KernelSelector::ArgumentDescpirtor::Types::LOOKUP_TABLE:
                 args->data[i].t = ArgumentsInfoBase::Types::LOOKUP_TABLE;
                 break;
-            case KernelSelctor::ArgumentDescpirtor::Types::UINT8:
+            case KernelSelector::ArgumentDescpirtor::Types::UINT8:
                 args->data[i].t = ArgumentsInfoBase::Types::UINT8;
                 args->data[i].v.u8 = cldnn_data[i].v.u8;
                 break;
-            case KernelSelctor::ArgumentDescpirtor::Types::UINT16:
+            case KernelSelector::ArgumentDescpirtor::Types::UINT16:
                 args->data[i].t = ArgumentsInfoBase::Types::UINT16;
                 args->data[i].v.u16 = cldnn_data[i].v.u16;
                 break;
-            case KernelSelctor::ArgumentDescpirtor::Types::UINT32:
+            case KernelSelector::ArgumentDescpirtor::Types::UINT32:
                 args->data[i].t = ArgumentsInfoBase::Types::UINT32;
                 args->data[i].v.u32 = cldnn_data[i].v.u32;
                 break;
-            case KernelSelctor::ArgumentDescpirtor::Types::UINT64:
+            case KernelSelector::ArgumentDescpirtor::Types::UINT64:
                 args->data[i].t = ArgumentsInfoBase::Types::UINT64;
                 args->data[i].v.u64 = cldnn_data[i].v.u64;
                 break;
-            case KernelSelctor::ArgumentDescpirtor::Types::INT8:
+            case KernelSelector::ArgumentDescpirtor::Types::INT8:
                 args->data[i].t = ArgumentsInfoBase::Types::INT8;
                 args->data[i].v.s8 = cldnn_data[i].v.s8;
                 break;
-            case KernelSelctor::ArgumentDescpirtor::Types::INT16:
+            case KernelSelector::ArgumentDescpirtor::Types::INT16:
                 args->data[i].t = ArgumentsInfoBase::Types::INT16;
                 args->data[i].v.s16 = cldnn_data[i].v.s16;
                 break;
-            case KernelSelctor::ArgumentDescpirtor::Types::INT32:
+            case KernelSelector::ArgumentDescpirtor::Types::INT32:
                 args->data[i].t = ArgumentsInfoBase::Types::INT32;
                 args->data[i].v.s32 = cldnn_data[i].v.s32;
                 break;
-            case KernelSelctor::ArgumentDescpirtor::Types::INT64:
+            case KernelSelector::ArgumentDescpirtor::Types::INT64:
                 args->data[i].t = ArgumentsInfoBase::Types::INT64;
                 args->data[i].v.s64 = cldnn_data[i].v.s64;
                 break;
-            case KernelSelctor::ArgumentDescpirtor::Types::FLOAT32:
+            case KernelSelector::ArgumentDescpirtor::Types::FLOAT32:
                 args->data[i].t = ArgumentsInfoBase::Types::FLOAT32;
                 args->data[i].v.f32 = cldnn_data[i].v.f32;
                 break;
-            case KernelSelctor::ArgumentDescpirtor::Types::FLOAT64:
+            case KernelSelector::ArgumentDescpirtor::Types::FLOAT64:
                 args->data[i].t = ArgumentsInfoBase::Types::FLOAT64;
                 args->data[i].v.f64 = cldnn_data[i].v.f64;
                 break;
@@ -195,24 +223,24 @@ namespace clDNN
         return args_ptr;
     }
 
-    void BaseKernelBinary::UpdateBinary(const KernelSelctor::clKernelData& cldnn_data, CLKernelData& data, binary_data& binary, std::shared_ptr<ArgumentsInfoBase>& args)
+    void BaseKernelBinary::UpdateBinary(const KernelSelector::clKernelData& cldnn_data, CLKernelData& data, binary_data& binary, std::shared_ptr<ArgumentsInfoBase>& args)
     {
-        binary = cldnn_data.GetBinary(context().get(), *GetKernelCache());
-        args = SetupArguments(cldnn_data.args_desc);
+        binary = GetKernelCache()->get({ context()->context(), context()->device() }, cldnn_data.kernelString->jit + cldnn_data.kernelString->str, cldnn_data.kernelString->options);
+        args = SetupArguments(cldnn_data.argsDesc);
 
         if (binary.size() > 0 && args != nullptr)
         {
             data.desc.binary = binary.data();
             data.desc.size = binary.size();
-            data.entry_point = cldnn_data.kernel_string.entry_point.c_str();
+            data.entry_point = cldnn_data.kernelString->entry_point.c_str();
             data.args = args.get();
-            data.workGroup = GetWorkGroups(cldnn_data.work_groups);
+            data.workGroup = GetWorkGroups(cldnn_data.workGroups);
         }
     }
 
-    void BaseKernelBinary::HandleBestKernels(const KernelSelctor::KernelSelctorBase& ks, const KernelSelctor::Params& params, const KernelSelctor::OptionalParams& options)
+    void BaseKernelBinary::HandleBestKernels(const KernelSelector::KernelSelctorBase& ks, const KernelSelector::Params& params, const KernelSelector::OptionalParams& options)
     {
-        const KernelSelctor::KernelsData& kds = ks.GetBestKernels(params, options);
+        const KernelSelector::KernelsData& kds = ks.GetBestKernels(params, options);
 
         if (kds.size() && kds[0].kernels.size())
         {
@@ -224,10 +252,10 @@ namespace clDNN
                 m_Binary, 
                 m_ArgInfo);
 
-            if (m_cldnnKernelData.weights_reorder_params.engine == KernelSelctor::WeightsReorderParams::Engine::GPU)
+            if (m_cldnnKernelData.weightsReorderParams.engine == KernelSelector::WeightsReorderParams::Engine::GPU)
             {
                 UpdateBinary(
-                    m_cldnnKernelData.weights_reorder_params.cl_kernel, 
+                    *m_cldnnKernelData.weightsReorderParams.clKernel.get(),
                     m_WeightsKernelData, 
                     m_WeightsReorderBinary, 
                     m_WeightsReorderArgInfo);

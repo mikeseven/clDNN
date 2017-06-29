@@ -24,7 +24,7 @@ namespace clDNN
         BaseKernelBinary(KernelType::POOLING),
         m_Params(params)
     {
-        KernelSelctor::PoolingParams ksParams;
+        KernelSelector::PoolingParams ksParams;
 
         InitBaseParams(params, ksParams);
         ksParams.poolParams.poolPad = params.poolParams.poolPad;
@@ -32,8 +32,8 @@ namespace clDNN
         ksParams.poolParams.poolStride = params.poolParams.poolStride;
         ksParams.poolParams.poolType = params.poolParams.poolType;
 
-        KernelSelctor::PoolingOptionalParams ksOptParams;
+        KernelSelector::PoolingOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelctor::PoolingKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::PoolingKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

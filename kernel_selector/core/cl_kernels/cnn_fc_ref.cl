@@ -19,7 +19,7 @@
 
 #include "include/cnn_common.cl"
 
-__kernel void fc(
+KERNEL(fc)(
     __global DATA_TYPE* input, 
     __global DATA_TYPE* output, 
     __global DATA_TYPE* weights, 
@@ -27,31 +27,31 @@ __kernel void fc(
 {
     const unsigned x = get_global_id(0);
     const unsigned y = get_global_id(1);
-#if OUT_BATCH == 1
+#if OUTPUT_BATCH_NUM == 1
     const unsigned z = get_global_id(2);
     const unsigned w = 0;
 #else
-    const unsigned z = get_global_id(2) % OUT_DEPTH;
-    const unsigned w = get_global_id(2) / OUT_DEPTH;
+    const unsigned z = get_global_id(2) % OUTPUT_FEATURE_NUM;
+    const unsigned w = get_global_id(2) / OUTPUT_FEATURE_NUM;
 #endif
     
-    const unsigned int input_size = INPUT_WIDTH * INPUT_HEIGHT * INPUT_DEPTH;
+    const unsigned int input_size = INPUT_SIZE_X * INPUT_SIZE_Y * INPUT_FEATURE_NUM;
 
-    unsigned int output_idx = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y * OUT_ROW_PITCH + x + OUT_OFFSET;
-    unsigned offset = z*OUT_WIDTH * OUT_HEIGHT + y*OUT_WIDTH + x;
+    unsigned int output_idx = w*OUTPUT_BATCH_PITCH + z*OUTPUT_FEATURE_PITCH + y * OUTPUT_Y_PITCH + x + OUTPUT_OFFSET;
+    unsigned offset = z*OUTPUT_SIZE_X * OUTPUT_SIZE_Y + y*OUTPUT_SIZE_X + x;
     COUNTER_TYPE dotProd = (COUNTER_TYPE)(biases[offset]);
 
     __global DATA_TYPE* processed_neuron_weights = weights + offset * input_size;
     __global DATA_TYPE* processed_input_batch =  input;
     unsigned int weight_idx =0;
 
-    for (unsigned int plane = 0; plane < INPUT_DEPTH; ++plane)
+    for (unsigned int plane = 0; plane < INPUT_FEATURE_NUM; ++plane)
     {
-       for (unsigned int height = 0; height < INPUT_HEIGHT; ++height)
+       for (unsigned int height = 0; height < INPUT_SIZE_Y; ++height)
        {
-           for(unsigned int width = 0; width < INPUT_WIDTH; ++width )
+           for(unsigned int width = 0; width < INPUT_SIZE_X; ++width )
            {
-               unsigned int input_idx = w*INPUT_BATCH_PITCH + plane*INPUT_SLICE_PITCH + height*INPUT_ROW_PITCH + width + INPUT_OFFSET;
+               unsigned int input_idx = w*INPUT_BATCH_PITCH + plane*INPUT_FEATURE_PITCH + height*INPUT_Y_PITCH + width + INPUT_OFFSET;
 
                dotProd += (COUNTER_TYPE)(processed_input_batch[input_idx] * processed_neuron_weights[weight_idx]);
 
@@ -59,5 +59,5 @@ __kernel void fc(
           }
        }
     }
-    output[output_idx] = activation_function((DATA_TYPE)dotProd, NL_M, NL_N);
+    output[output_idx] = FUNC_CALL(activation_function)((DATA_TYPE)dotProd, NL_M, NL_N);
 }

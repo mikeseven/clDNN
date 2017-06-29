@@ -15,19 +15,22 @@
 */
 
 #include "activation_kernel_opt.h"
- 
-namespace KernelSelctor {
+#include "kernel_selector_utils.h" 
+
+namespace KernelSelector {
 
     ParamsKey ActivationKernelOpt::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetNumDims(3);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableBatching();
         return k;
     }
 
@@ -38,31 +41,32 @@ namespace KernelSelctor {
         KernelData kd = KernelData::Default<ActivationParams>(params, 1);
 
         ActivationParams& newParams = *static_cast<ActivationParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
 
         static const int NUM_ROWS_WI = 1;
         static const int NUM_COLS_WI = 4;
-        const uint nonWidthDim = newParams.inDims.Length() / newParams.inDims.x;
+        const size_t nonWidthDim = newParams.inputs[0].Length() / newParams.inputs[0].X().v;
+
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         std::stringstream jit;
-        jit << GetBaseJit(newParams);
+        jit << GetBaseJit(newParams, kernel_id);
 
         jit << "#define NUM_ROWS_WI (" << NUM_ROWS_WI << ")\n"
             << "#define NUM_COLS_WI (" << NUM_COLS_WI << ")\n"
-            << "#define INPUT_WIDTH (" << newParams.inDims.x << ")\n"
             << "#define INPUT_ROWS (" << nonWidthDim << ")\n"
             << "#define INPUT_ROWS_MOD_ROWS_WI " << nonWidthDim % NUM_ROWS_WI << "\n"
-            << "#define INPUT_WIDTH_MOD_COLS_WI " << newParams.inDims.x % NUM_COLS_WI << "\n";
+            << "#define INPUT_WIDTH_MOD_COLS_WI " << newParams.inputs[0].X().v % NUM_COLS_WI << "\n";
 
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(
-            (newParams.inDims.x + NUM_COLS_WI - 1) / NUM_COLS_WI,
+        kernel.workGroups.global = {
+            (newParams.inputs[0].X().v + NUM_COLS_WI - 1) / NUM_COLS_WI,
             (nonWidthDim + NUM_ROWS_WI - 1) / NUM_ROWS_WI,
-            newParams.outDims.w);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "activation");
-        kernel.args_desc = GetArgumentDesc(1, false, false);
+            newParams.output.Batch().v };
+        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
+        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
+        kernel.argsDesc = GetArgumentDesc(1, false, false);
 
-        kd.estimated_time = FORCE_PRIORITY_6;
+        kd.estimatedTime = FORCE_PRIORITY_6;
 
         return{ kd };
     }

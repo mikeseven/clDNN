@@ -15,19 +15,22 @@
 */
 
 #include "eltwise_kernel_ref.h"
- 
-namespace KernelSelctor {
+#include "kernel_selector_utils.h" 
+
+namespace KernelSelector {
 
     ParamsKey EltwiseKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableBatching();
         return k;
     }
 
@@ -38,24 +41,26 @@ namespace KernelSelctor {
         KernelData kd = KernelData::Default<EltwiseParams>(params, 1);
 
         EltwiseParams& newParams = *static_cast<EltwiseParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         std::stringstream jit;
-        jit << GetBaseJit(newParams)
-            << "#define INPUT_OFFSET1 (" << newParams.eltwiseParams.inDesc1.offset << ")\n"
-            << "#define INPUT_ROW_PITCH1 (" << newParams.eltwiseParams.inDesc1.pitches.x << ")\n"
-            << "#define INPUT_SLICE_PITCH1 (" << newParams.eltwiseParams.inDesc1.pitches.y << ")\n"
-            << "#define INPUT_BATCH_PITCH1 (" << newParams.eltwiseParams.inDesc1.pitches.z << ")\n"
-            << "#define ELTWISE_MODE_" << toString(newParams.eltwiseParams.mode) << "\n"
-            << "#define SCALAR (" << newParams.eltwiseParams.scalar << ")\n";
+        jit << GetBaseJit(newParams, kernel_id)
+            << "#define INPUT_OFFSET1 (" << newParams.inputs[1].GetOffset() << ")\n"
+            << "#define INPUT_ROW_PITCH1 (" << newParams.inputs[1].Y().pitch << ")\n"
+            << "#define INPUT_SLICE_PITCH1 (" << newParams.inputs[1].Feature().pitch << ")\n"
+            << "#define INPUT_BATCH_PITCH1 (" << newParams.inputs[1].Batch().pitch << ")\n"
+            //<< "#define ELTWISE_MODE_" << toString(newParams.eltwiseParams.mode) << "\n"
+            //<< "#define SCALAR (" << newParams.eltwiseParams.scalar << ")\n"
+            ;
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "eltwise");
-        kernel.args_desc = GetArgumentDesc(2, false, false);
+        kernel.workGroups.global = { out.X().v, out.Y().v, out.Feature().v*out.Batch().v };
+        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
+        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
+        kernel.argsDesc = GetArgumentDesc(2, false, false);
 
-        kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         return{ kd };
     }

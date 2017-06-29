@@ -19,7 +19,7 @@
 #include "vxa_convolution_kernel.h"
 #include "vxa_fully_connected_kernel.h"
 #include "vxa_locally_connected_kernel.h"
-#include "vxa_normalization_kernel.h"
+#include "vxa_lrn_kernel.h"
 #include "vxa_pooling_kernel.h"
 #include "vxa_roi_pooling_kernel.h"
 #include "vxa_softmax_kernel.h"
@@ -71,8 +71,8 @@ namespace clDNN
             case KernelType::CONVOLUTION:
                 pKernelBinary = CreateKernelBinaryT<ConvolutionKernelBinary, ConvolutionParams>(params);
                 break;
-            case KernelType::NORMALIZATION:
-                pKernelBinary = CreateKernelBinaryT<NormalizationKernelBinary, NormalizationParams>(params);
+            case KernelType::LRN:
+                pKernelBinary = CreateKernelBinaryT<LRNKernelBinary, LRNParams>(params);
                 break;
             case KernelType::POOLING:
                 pKernelBinary = CreateKernelBinaryT<PoolingKernelBinary, PoolingParams>(params);

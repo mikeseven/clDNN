@@ -16,17 +16,19 @@
 
 #include "softmax_kernel_opt_1_dim.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     ParamsKey SoftmaxKernelOpt1Dim::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bx);
-        k.SetOutputLayout(bx);
-        k.SetOffsetSupport();
-        k.SetNumDims(1);
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputLayout(DataLayout::bf);
+        k.EnableOutputLayout(DataLayout::bf);
+        k.EnableSoftmaxDim(SoftmaxDim::FEATURE);
+        k.EnableTensorOffset();
         return k;
     }
 
@@ -34,27 +36,27 @@ namespace KernelSelctor
     {
         assert(params.GetType() == KernelType::SOFT_MAX);
 
-        KernelData kd = KernelData::Default<SoftMaxParams>(params, 1);
+        KernelData kd = KernelData::Default<SoftmaxParams>(params, 1);
 
-        SoftMaxParams& newParams = *static_cast<SoftMaxParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bx;
+        SoftmaxParams& newParams = *static_cast<SoftmaxParams*>(kd.params.get());
 
-        const uint maxLocalWorkGroup    = 32;
-        const uint dst_size             = newParams.outDims.Length();
-        const uint localWorkGroup       = std::min(std::max(dst_size, 1U), maxLocalWorkGroup);
-        const uint leftovers            = dst_size % localWorkGroup;
-        const uint globalWorkGroup      = dst_size - leftovers;
-        const uint itemsNum             = globalWorkGroup / localWorkGroup;
+        const size_t maxLocalWorkGroup    = 32;
+        const size_t dst_size             = newParams.output.Length();
+        const size_t localWorkGroup       = std::min(std::max(dst_size, (size_t)1U), maxLocalWorkGroup);
+        const size_t leftovers            = dst_size % localWorkGroup;
+        const size_t globalWorkGroup      = dst_size - leftovers;
+        const size_t itemsNum             = globalWorkGroup / localWorkGroup;
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         std::stringstream jit;
-        jit << GetBaseJit(newParams);
+        jit << GetBaseJit(newParams, kernel_id);
         jit << "#define ITEMS_NUM (" << itemsNum << ")\n"
             << "#define LWS (" << localWorkGroup << ")\n"
             << "#define GWS (" << globalWorkGroup << ")\n"
             << "#define LEFTOVERS (" << leftovers << ")\n"
             ;
 
-        if (newParams.inputType == Datatype::F16)
+        if (newParams.inputs[0].GetDType() == Datatype::F16)
         {
             jit << "#define FP16_SUPPORTED (1)\n"
                 << "#define FP16_UNIT_USED (1)\n";
@@ -66,12 +68,12 @@ namespace KernelSelctor
         }
 
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(globalWorkGroup, 1, 1);
-        kernel.work_groups.local = cl::NDRange(localWorkGroup, 1, 1);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "softmax");
-        kernel.args_desc = GetArgumentDesc(1, false, false);
+        kernel.workGroups.global = { globalWorkGroup, 1, 1 };
+        kernel.workGroups.local = { localWorkGroup, 1, 1 };
+        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
+        kernel.argsDesc = GetArgumentDesc(1, false, false);
 
-        kd.estimated_time = FORCE_PRIORITY_1;
+        kd.estimatedTime = FORCE_PRIORITY_8;
 
         return{ kd };
     }

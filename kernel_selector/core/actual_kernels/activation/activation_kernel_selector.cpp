@@ -18,12 +18,12 @@
 #include "activation_kernel_opt.h"
 #include "activation_kernel_ref.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     ActivationKernelSelctor::ActivationKernelSelctor()
     {
         Attach<ActivationKernelRef>();
-        Attach<ActivationKernelOpt>();
+        //Attach<ActivationKernelOpt>(); we need to evaluate it when we will have some better tests
     }
 
     KernelsData ActivationKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const

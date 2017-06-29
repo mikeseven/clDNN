@@ -18,7 +18,7 @@
 
 #include "cnn_convolution_kernel_base.h"
 
-namespace KernelSelctor {
+namespace KernelSelector {
 
     class ConvolutionKernelGEMMLike : public CNNConvolutionKernelBase
     {

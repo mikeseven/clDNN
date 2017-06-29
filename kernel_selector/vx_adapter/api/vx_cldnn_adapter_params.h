@@ -61,7 +61,7 @@ namespace clDNN
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct ConvolutionParams : public BaseParams
     {
-        ConvolutionParams() : BaseParams(KernelType::CONVOLUTION) {}
+        ConvolutionParams() : BaseParams(KernelType::CONVOLUTION), convParams() {}
     
         struct DedicatedParams
         {
@@ -75,18 +75,18 @@ namespace clDNN
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // NormalizationParams
+    // LRNParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct NormalizationParams : public BaseParams
+    struct LRNParams : public BaseParams
     {
-        NormalizationParams() : BaseParams(KernelType::NORMALIZATION) {}
+        LRNParams() : BaseParams(KernelType::LRN), normParams() {}
 
         struct DedicatedParams
         {
-            NormalizationMode normMode = NormalizationMode::ACROSS_CHANNELS;
+            LRNMode           normMode = LRNMode::ACROSS_CHANNEL;
             float             alpha = 0.f;
             float             beta = 0.f;
-            uint              localSize = 0;
+            uint32_t          localSize = 0;
         };
 
         DedicatedParams normParams;
@@ -97,7 +97,7 @@ namespace clDNN
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct PoolingParams : public BaseParams
     {
-        PoolingParams() : BaseParams(KernelType::POOLING) {}
+        PoolingParams() : BaseParams(KernelType::POOLING), poolParams() {}
 
         struct DedicatedParams
         {
@@ -137,7 +137,7 @@ namespace clDNN
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct LocallyConnectedParams : public BaseParams
     {
-        LocallyConnectedParams() : BaseParams(KernelType::LOCALLY_CONNECTED) {}
+        LocallyConnectedParams() : BaseParams(KernelType::LOCALLY_CONNECTED), lcParams() {}
 
         struct DedicatedParams
         {
@@ -170,7 +170,7 @@ namespace clDNN
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct EltwiseParams : public BaseParams
     {
-        EltwiseParams() : BaseParams(KernelType::ELTWISE) {}
+        EltwiseParams() : BaseParams(KernelType::ELTWISE), eltwiseParams() {}
 
         struct DedicatedParams
         {
@@ -187,12 +187,12 @@ namespace clDNN
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct TableLookupParams : public BaseParams
     {
-        TableLookupParams() : BaseParams(KernelType::TABLE_LOOKUP) {}
+        TableLookupParams() : BaseParams(KernelType::TABLE_LOOKUP), lookupParams() {}
 
         struct DedicatedParams
         {
             Datatype tableFormat = Datatype::F16;
-            std::size_t tableSize = 0;
+            size_t tableSize = 0;
         };
 
         DedicatedParams lookupParams;
@@ -203,7 +203,7 @@ namespace clDNN
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct ReorderParams : public BaseParams
     {
-        ReorderParams() : BaseParams(KernelType::REORDER) {}
+        ReorderParams() : BaseParams(KernelType::REORDER), reorderParams() {}
 
         struct DedicatedParams
         {
@@ -218,7 +218,7 @@ namespace clDNN
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct ConvertParams : public BaseParams
     {
-        ConvertParams() : BaseParams(KernelType::CONVERT) {}
+        ConvertParams() : BaseParams(KernelType::CONVERT), convertParams() {}
 
         struct DedicatedParams
         {

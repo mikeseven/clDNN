@@ -16,20 +16,22 @@
 
 #pragma once
 
-#include "igk_convolution_kernel_base.h"
+#include "convolution_kernel_base.h"
 
-namespace KernelSelctor {
+namespace KernelSelector {
 
-    class ConvolutionKernel_bfyx_os_iyx_osv16 : public IGKConvolutionKernelBase
+    class ConvolutionKernel_bfyx_os_iyx_osv16 : public ConvolutionKernelBase
     {
     public:
-        ConvolutionKernel_bfyx_os_iyx_osv16() : IGKConvolutionKernelBase("convolution_gpu_bfyx_os_iyx_osv16") {}
+        ConvolutionKernel_bfyx_os_iyx_osv16() : ConvolutionKernelBase("convolution_gpu_bfyx_os_iyx_osv16") {}
         virtual ~ConvolutionKernel_bfyx_os_iyx_osv16() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     
     protected:
-        DispatchData default_bfyx_os_iyx_osv16(const ConvolutionParams& arg) const;
+        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts()  const override { return{ WeightsLayout::os_i_osv16 }; }
+        bool Validate(const Params& p, const OptionalParams& o) const override;
+        DispatchData SetDefault(const ConvolutionParams& arg) const override;
     };
 }

@@ -17,28 +17,18 @@
 #pragma once
 
 #include <cstddef>
-#include "ocl_toolkit.h"
+#include "api/CPP/cldnn_defs.h"
 #include "common_types.h"
+#include "tensor_type.h"
 
-namespace KernelSelctor
+namespace KernelSelector
 {
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // DataLayout
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    enum DataLayout
-    {
-        x = 0,
-        xb,                 // 1D+batch
-        bx,                 // 1D+batch
-        yxfn,               // 3D + number of neurons - used in fully connected weights
-        yxfb,               // 3D+batch
-        byxf,               // for convolution_cpu_jit_batch1
-        bfyx,               // used in Caffe
-        fyxb,               // used in Caffe
-        bs_xs_xsv8_bsv8,    // format used only for Fully connected: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice, xsv - 8 values of single slice 
-        data_layoyt_count
-    };
-
+    using DataTensor = Tensor::DataTensor;
+    using WeightsTensor = Tensor::WeightsTensor;
+    using DataLayout = Tensor::DataLayout;
+    using WeightsLayout = Tensor::WeightsLayout;
+    using PaddedVal = Tensor::PaddedVal;
+    using MultiDataTensor = std::vector<DataTensor>;
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ParamsKey
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -48,10 +38,10 @@ namespace KernelSelctor
         ParamsKey()
         {
             key.restrict.raw = 0;
-            key.machine_info.raw = 0;
-            key.input_layout = 0;
-            key.output_layout = 0;
-            key.num_of_dims = 0;
+            key.machineInfo.raw = 0;
+            key.inputLayout = 0;
+            key.outputLayout = 0;
+            key.weightsLayout = 0;
         }
 
         struct Key
@@ -60,33 +50,63 @@ namespace KernelSelctor
             {
                 struct val_t
                 {
-                    uint F16 : 1;
-                    uint F32 : 1;
-                    uint offset : 1;
-                    uint pitches : 1;
+                    uint32_t inputF16 : 1;
+                    uint32_t inputF32 : 1;
+                    uint32_t outputF16 : 1;
+                    uint32_t outputF32 : 1;
+                    uint32_t inputWeightsF16 : 1;
+                    uint32_t inputWeightsF32 : 1;
+                    uint32_t inputWeightsINT8 : 1;
+                    uint32_t outputWeightsF16 : 1;
+                    uint32_t outputWeightsF32 : 1;
+                    uint32_t outputWeightsINT8 : 1;
+                    uint32_t different_types : 1;
+                    uint32_t offset : 1;
+                    uint32_t pitches : 1;
+                    uint32_t batching : 1;
+                    uint32_t biasPerFeatureMap : 1;
+                    uint32_t biasPerOutput : 1;
+                    uint32_t nonBias : 1;
+                    uint32_t prelu : 1;
 
                     union dedicated_t
                     {
                         struct norm_t
                         {
-                            uint across : 1;
-                            uint within : 1;
+                            uint32_t across : 1;
+                            uint32_t within : 1;
+                            uint32_t fixedKenrelDivider : 1;
+                            uint32_t dynamicKenrelDivider : 1;
                         } norm;
                         struct pooling_t
                         {
-                            uint max : 1;
-                            uint avg : 1;
-                            uint floor : 1;
-                            uint ceil : 1;
+                            uint32_t max : 1;
+                            uint32_t avg : 1;
+                            uint32_t floor : 1;
+                            uint32_t ceil : 1;
+                            uint32_t fixedKenrelDivider : 1;
+                            uint32_t dynamicKenrelDivider : 1;
                         } pooling;
                         struct conv_t 
                         {
-                            uint biasPerFeatureMap : 1;
-                            uint biasPerOutput : 1;
+                            uint32_t split : 1;
+                            uint32_t dilation : 1;
                         } conv;
                         struct fc_t {} fc;
                         struct lc_t {} lc;
-                        struct softmax_t {} softmax;
+                        struct softmax_t 
+                        {
+                            uint32_t dimX : 1;
+                            uint32_t dimY : 1;
+                            uint32_t dimFeature : 1;
+                        } softmax;
+                        struct concat_t
+                        {
+                            uint32_t axisX : 1;
+                            uint32_t axisY : 1;
+                            uint32_t axisFeature : 1;
+                            uint32_t axisBatch : 1;
+                        } concat;
                     } dedicated;
                 } val;
                 uint64_t raw;
@@ -96,81 +116,167 @@ namespace KernelSelctor
             {
                 struct val_t
                 {
-                    uint subgroup : 1;
+                    uint32_t subgroup : 1;
                 } val;
                 uint32_t raw;
-            } machine_info;
+            } machineInfo;
 
             static_assert(sizeof(restrict_t) == sizeof(uint64_t), "problem with union");
 
-            uint input_layout;
-            uint output_layout;
-            uint num_of_dims;
+            uint32_t inputLayout;
+            uint32_t outputLayout;
+            uint32_t weightsLayout;
         };
 
-        void SetDataType(Datatype dt)
+        void EnableInputDataType(Datatype dt)
         {
             switch (dt)
             {
             case Datatype::F16:
-                key.restrict.val.F16 = 1;
+                key.restrict.val.inputF16 = 1;
                 break;
             case Datatype::F32:
-                key.restrict.val.F32 = 1;
+                key.restrict.val.inputF32 = 1;
                 break;
             default:
                 break;
             }
         }
 
-        void SetInputLayout(DataLayout l)
+        void EnableOutputDataType(Datatype dt)
         {
-            key.input_layout |= (1 << l);
+            switch (dt)
+            {
+            case Datatype::F16:
+                key.restrict.val.outputF16 = 1;
+                break;
+            case Datatype::F32:
+                key.restrict.val.outputF32 = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
+        void EnableInputWeightsType(WeightsType wt)
+        {
+            switch (wt)
+            {
+            case WeightsType::F16:
+                key.restrict.val.inputWeightsF16 = 1;
+                break;
+            case WeightsType::F32:
+                key.restrict.val.inputWeightsF32 = 1;
+                break;
+            case WeightsType::INT8:
+                key.restrict.val.inputWeightsINT8 = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
+        void EnableOutputWeightsType(WeightsType wt)
+        {
+            switch (wt)
+            {
+            case WeightsType::F16:
+                key.restrict.val.outputWeightsF16 = 1;
+                break;
+            case WeightsType::F32:
+                key.restrict.val.outputWeightsF32 = 1;
+                break;
+            case WeightsType::INT8:
+                key.restrict.val.outputWeightsINT8 = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
+        void EnableDifferentTypes()
+        {
+            key.restrict.val.different_types = 1;
+        }
+
+        void EnableInputLayout(DataLayout l)
+        {
+            key.inputLayout |= (1 << l);
         }
 
         void EnableAllInputLayout()
         {
-            key.input_layout = 0xffffffff;
+            key.inputLayout = 0xffffffff;
         }
 
-        void SetOutputLayout(DataLayout l)
+        void EnableOutputLayout(DataLayout l)
         {
-            key.output_layout |= (1 << l);
+            key.outputLayout |= (1 << l);
         }
 
         void EnableAllOutputLayout()
         {
-            key.output_layout = 0xffffffff;
+            key.outputLayout = 0xffffffff;
         }
 
-        void SetOffsetSupport()
+        void EnableWeightsLayout(WeightsLayout l)
+        {
+            key.weightsLayout |= (1 << l);
+        }
+
+        void EnableAllWeightsLayout()
+        {
+            key.weightsLayout = 0xffffffff;
+        }
+
+        void EnableTensorOffset()
         {
             key.restrict.val.offset = 1;
         }
 
-        void SetPitchesSupport()
+        void EnableTensorPitches()
         {
             key.restrict.val.pitches = 1;
         }
 
-        void SetSubGroupSupport()
+        void EnableBatching()
         {
-            key.machine_info.val.subgroup = 1;
+            key.restrict.val.batching = 1;
         }
 
-        void SetNumDims(uint n)
+        void EnableSubGroup()
         {
-            key.num_of_dims = n;
+            key.machineInfo.val.subgroup = 1;
         }
 
-        void SetNormalizationMode(NormalizationMode m)
+        void EnableNonBiasTerm()
+        {
+            key.restrict.val.nonBias = 1;
+        }
+
+        void EnableBiasPerFeature()
+        {
+            key.restrict.val.biasPerFeatureMap = 1;
+        }
+
+        void EnableBiasPerOutput()
+        {
+            key.restrict.val.biasPerOutput = 1;
+        }
+
+        void EnablePRelu()
+        {
+            key.restrict.val.prelu = 1;
+        }
+
+        void EnableLRNMode(LRNMode m)
         {
             switch (m)
             {
-            case NormalizationMode::ACROSS_CHANNELS:
+            case LRNMode::ACROSS_CHANNEL:
                 key.restrict.val.dedicated.norm.across = 1;
                 break;
-            case NormalizationMode::WITHIN_CHANNEL:
+            case LRNMode::WITHIN_CHANNEL:
                 key.restrict.val.dedicated.norm.within = 1;
                 break;
             default:
@@ -178,7 +284,52 @@ namespace KernelSelctor
             }
         }
 
-        void SetPoolType(PoolType t)
+        void EnableNormalizeMode(NormalizeMode m)
+        {
+            switch (m)
+            {
+            case NormalizeMode::ACROSS_SPATIAL:
+                key.restrict.val.dedicated.norm.across = 1;
+                break;
+            case NormalizeMode::WITHIN_SPATIAL:
+                key.restrict.val.dedicated.norm.within = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
+        void EnableLRNKernelDividerMode(KernelDividerMode m)
+        {
+            switch (m)
+            {
+            case KernelDividerMode::FIXED:
+                key.restrict.val.dedicated.norm.fixedKenrelDivider = 1;
+                break;
+            case KernelDividerMode::DYNAMIC:
+                key.restrict.val.dedicated.norm.dynamicKenrelDivider = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
+        void EnablePoolKernelDividerMode(KernelDividerMode m)
+        {
+            switch (m)
+            {
+            case KernelDividerMode::FIXED:
+                key.restrict.val.dedicated.pooling.fixedKenrelDivider = 1;
+                break;
+            case KernelDividerMode::DYNAMIC:
+                key.restrict.val.dedicated.pooling.dynamicKenrelDivider = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
+        void EnablePoolType(PoolType t)
         {
             switch (t)
             {
@@ -193,7 +344,7 @@ namespace KernelSelctor
             }
         }
 
-        void SetPoolRemainder(PoolRemainder r)
+        void EnablePoolRemainder(PoolRemainder r)
         {
             switch (r)
             {
@@ -208,34 +359,73 @@ namespace KernelSelctor
             }
         }
 
-        void SetBiasPerFeatureMap()
+        void EnableSplitSupport()
         {
-            key.restrict.val.dedicated.conv.biasPerFeatureMap = 1;
+            key.restrict.val.dedicated.conv.split = 1;
         }
 
-        void SetBiasPerOutput()
+        void EnableDilation()
         {
-            key.restrict.val.dedicated.conv.biasPerOutput = 1;
+            key.restrict.val.dedicated.conv.dilation = 1;
+        }
+
+        void EnableSoftmaxDim(SoftmaxDim d)
+        {
+            switch (d)
+            {
+            case SoftmaxDim::X:
+                key.restrict.val.dedicated.softmax.dimX = 1;
+                break;
+            case SoftmaxDim::Y:
+                key.restrict.val.dedicated.softmax.dimY = 1;
+                break;
+            case SoftmaxDim::FEATURE:
+                key.restrict.val.dedicated.softmax.dimFeature = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
+        void EnableConcatAxis(ConcatAxis a)
+        {
+            switch (a)
+            {
+            case ConcatAxis::X:
+                key.restrict.val.dedicated.concat.axisX = 1;
+                break;
+            case ConcatAxis::Y:
+                key.restrict.val.dedicated.concat.axisY = 1;
+                break;
+            case ConcatAxis::FEATURE:
+                key.restrict.val.dedicated.concat.axisFeature = 1;
+                break;
+            case ConcatAxis::BATCH:
+                key.restrict.val.dedicated.concat.axisBatch = 1;
+                break;
+            default:
+                break;
+            }
         }
 
         bool Support(const ParamsKey& k) const
         {
             return 
                 ((key.restrict.raw & k.key.restrict.raw) == k.key.restrict.raw) && // check if this kernel supports this params
-                ((key.machine_info.raw & k.key.machine_info.raw) == key.machine_info.raw) && // check if machine supports this kernel
-                ((key.input_layout & k.key.input_layout) != 0) &&
-                ((key.output_layout & k.key.output_layout) != 0) &&
-                (key.num_of_dims >= k.key.num_of_dims);
+                ((key.machineInfo.raw & k.key.machineInfo.raw) == key.machineInfo.raw) && // check if machine supports this kernel
+                ((key.inputLayout & k.key.inputLayout) != 0 || key.inputLayout == k.key.inputLayout) &&
+                ((key.outputLayout & k.key.outputLayout) != 0 || key.outputLayout == k.key.outputLayout) &&
+                ((key.weightsLayout & k.key.weightsLayout) != 0 || key.weightsLayout == k.key.weightsLayout);
         }
 
         ParamsKey Merge(const ParamsKey& k) const
         {
             ParamsKey ret;
             ret.key.restrict.raw = key.restrict.raw | k.key.restrict.raw;
-            ret.key.machine_info.raw = key.machine_info.raw | k.key.machine_info.raw;
-            ret.key.input_layout = key.input_layout | k.key.input_layout;
-            ret.key.output_layout = key.output_layout | k.key.output_layout;
-            ret.key.num_of_dims = std::max(key.num_of_dims, k.key.num_of_dims);
+            ret.key.machineInfo.raw = key.machineInfo.raw | k.key.machineInfo.raw;
+            ret.key.inputLayout = key.inputLayout | k.key.inputLayout;
+            ret.key.outputLayout = key.outputLayout | k.key.outputLayout;
+            ret.key.weightsLayout = key.weightsLayout | k.key.weightsLayout;
             return ret;
         }
 
@@ -254,8 +444,11 @@ namespace KernelSelctor
         virtual ParamsKey GetParamsKey() const = 0;
 
     protected:
-        Params(KernelType kt) : kType(kt) {}
+        Params(KernelType kt, const std::string& id) : kType(kt), layerID(id) {}
         KernelType kType;
+
+    public:
+        std::string layerID;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -265,15 +458,10 @@ namespace KernelSelctor
     {
         virtual ~BaseParams() {}
 
-        Datatype            inputType = Datatype::F16;
-        DataLayout          inputLayout = DataLayout::bfyx;
-        DataLayout          outputLayout = DataLayout::bfyx;
         ActivationFunction  activationFunc = ActivationFunction::NONE;
         NonLinearParams     nlParams;
-        uDims               inDims;
-        TensorDesc          inDesc;
-        uDims               outDims;
-        TensorDesc          outDesc;
+        MultiDataTensor     inputs;
+        DataTensor          output;
 
         virtual std::string to_string() const;
 
@@ -281,38 +469,50 @@ namespace KernelSelctor
         {
             ParamsKey k;
 
-            k.SetDataType(inputType);
-            k.SetInputLayout(inputLayout);
-            k.SetOutputLayout(outputLayout);
+            bool bBatching = false;
+            bool bPitches = false;
+            bool bOffests = false;
+            bool bDifferentTypes = false;
 
-            uint num_of_dims =
-                inDims.w != 1 ? 4 :
-                inDims.z != 1 ? 3 :
-                inDims.y != 1 ? 2 : 1;
-            k.SetNumDims(num_of_dims);
-
-            if (num_of_dims > 1)
+            for (const auto& i : inputs)
             {
-                if (inDims.x != inDesc.pitches.x ||
-                    inDims.y != inDesc.pitches.y ||
-                    inDims.z != inDesc.pitches.z ||
-                    outDims.x != outDesc.pitches.x ||
-                    outDims.y != outDesc.pitches.y ||
-                    outDims.z != outDesc.pitches.z)
-                {
-                    k.SetPitchesSupport();
-                }
+                k.EnableInputDataType(i.GetDType());
+                k.EnableInputLayout(i.GetLayout());
+
+                bBatching       |= (i.Batch().v > 1);
+                bPitches        |= (i.PaddingExists());
+                bOffests        |= (i.GetOffset() != 0);
+                bDifferentTypes |= (i.GetDType() != output.GetDType());
             }
 
-            if (inDesc.offset != 0 || outDesc.offset != 0)
+            k.EnableOutputDataType(output.GetDType());
+            k.EnableOutputLayout(output.GetLayout());
+
+            if (bBatching)
             {
-                k.SetOffsetSupport();
+                k.EnableBatching();
             }
 
-            // TODO: moved to engine
-            if (neural::gpu::gpu_toolkit::get()->extension_supported("cl_intel_subgroups_short"))
+            if (bPitches ||
+                output.PaddingExists())
             {
-                k.SetSubGroupSupport();
+                k.EnableTensorPitches();
+            }
+
+            if (bDifferentTypes)
+            {
+                k.EnableDifferentTypes();
+            }
+
+            if (bOffests ||
+                output.GetOffset() != 0)
+            {
+                k.EnableTensorOffset();
+            }
+
+            if (activationFunc == ActivationFunction::PRELU)
+            {
+                k.EnablePRelu();
             }
 
             return k;
@@ -320,22 +520,62 @@ namespace KernelSelctor
 
     protected:
 
-        BaseParams(KernelType kt) : Params(kt) {}
+        BaseParams(KernelType kt) : Params(kt, ""), inputs(1){}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ConvolutionParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutionParams : public BaseParams
+    struct WeightBiasParams : public BaseParams
     {
-        ConvolutionParams() : BaseParams(KernelType::CONVOLUTION) {}
+        WeightBiasParams(KernelType kt) : BaseParams(kt) {}
+
+        WeightsTensor weights;
+        MultiDataTensor bias;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            ParamsKey k = BaseParams::GetParamsKey();
+
+            k.EnableInputWeightsType(weights.GetDType());
+            
+            // not needed - can be changed by reorder params
+            //k.EnableWeightsLayout(weights.layout);
+
+            assert(bias.size() <= 1);
+
+            if (bias.empty())
+            {
+                k.EnableNonBiasTerm();
+            }
+            else if (bias[0].GetLayout() == DataLayout::bf ||
+                     bias[0].GetLayout() == DataLayout::fb)
+            {
+                k.EnableBiasPerFeature();
+            }
+            else if (bias[0].GetLayout() == output.GetLayout())
+            {
+                k.EnableBiasPerOutput();
+            }
+
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ConvolutionParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ConvolutionParams : public WeightBiasParams
+    {
+        ConvolutionParams() : WeightBiasParams(KernelType::CONVOLUTION), convParams() {}
     
         struct DedicatedParams
         {
-            uSize filterSize;
-            uSize stride;
-            uSize padding;
-            bool  biasPerOutputResult = false;
+            uSize    filterSize;
+            uSize    stride;
+            uSize    dilation;
+            uSize    padding;
+            uint32_t split = 1;
         };
 
         DedicatedParams convParams;
@@ -344,14 +584,17 @@ namespace KernelSelctor
 
         virtual ParamsKey GetParamsKey() const
         {
-            ParamsKey k = BaseParams::GetParamsKey();
-            if (convParams.biasPerOutputResult)
+            ParamsKey k = WeightBiasParams::GetParamsKey();
+
+            if (convParams.split > 1)
             {
-                k.SetBiasPerOutput();
+                k.EnableSplitSupport();
             }
-            else
+
+            if (convParams.dilation.x != 1 ||
+                convParams.dilation.y != 1)
             {
-                k.SetBiasPerFeatureMap();
+                k.EnableDilation();
             }
 
             return k;
@@ -359,18 +602,86 @@ namespace KernelSelctor
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // NormalizationParams
+    // DeconvolutionParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct NormalizationParams : public BaseParams
+    struct DeconvolutionParams : public WeightBiasParams
     {
-        NormalizationParams() : BaseParams(KernelType::NORMALIZATION) {}
+        DeconvolutionParams() : WeightBiasParams(KernelType::DECONVOLUTION), deconvParams() {}
 
         struct DedicatedParams
         {
-            NormalizationMode normMode = NormalizationMode::ACROSS_CHANNELS;
-            float             alpha = 0.f;
-            float             beta = 0.f;
-            uint              localSize = 0;
+            uSize    filterSize;
+            uSize    stride;
+            uSize    dilation;
+            uSize    padding;
+            uint32_t split = 1;
+        };
+
+        DedicatedParams deconvParams;
+
+        virtual std::string to_string() const override;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            ParamsKey k = WeightBiasParams::GetParamsKey();
+
+            if (deconvParams.split > 1)
+            {
+                k.EnableSplitSupport();
+            }
+
+            if (deconvParams.dilation.x != 1 ||
+                deconvParams.dilation.y != 1)
+            {
+                k.EnableDilation();
+            }
+
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // LRNParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct LRNParams : public BaseParams
+    {
+        LRNParams() : BaseParams(KernelType::LRN), lrnParams() {}
+
+        struct DedicatedParams
+        {
+            LRNMode             normMode    = LRNMode::ACROSS_CHANNEL;
+            KernelDividerMode   divMode     = KernelDividerMode::DONT_CARE;
+            float               alpha       = 0.f;
+            float               beta        = 0.f;
+            float               k           = 0.f;
+            uint32_t            localSize   = 0;
+        };
+
+        DedicatedParams lrnParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            ParamsKey k = BaseParams::GetParamsKey();
+
+            k.EnableLRNMode(lrnParams.normMode);
+            k.EnableLRNKernelDividerMode(lrnParams.divMode);
+
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // NormalizeParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct NormalizeParams : public BaseParams
+    {
+        NormalizeParams() : BaseParams(KernelType::NORMALIZE), normParams() {}
+
+        struct DedicatedParams
+        {
+            NormalizeMode normMode = NormalizeMode::ACROSS_SPATIAL;
+            float         epsilon  = 1e-10f;
+            DataTensor    scaleTable;
         };
 
         DedicatedParams normParams;
@@ -379,7 +690,7 @@ namespace KernelSelctor
         {
             ParamsKey k = BaseParams::GetParamsKey();
 
-            k.SetNormalizationMode(normParams.normMode);
+            k.EnableNormalizeMode(normParams.normMode);
 
             return k;
         }
@@ -390,15 +701,16 @@ namespace KernelSelctor
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct PoolingParams : public BaseParams
     {
-        PoolingParams() : BaseParams(KernelType::POOLING) {}
+        PoolingParams() : BaseParams(KernelType::POOLING), poolParams() {}
 
         struct DedicatedParams
         {
-            PoolType      poolType = PoolType::MAX;
-            uSize         poolSize;
-            uSize         poolStride;
-            uSize         poolPad;
-            PoolRemainder remainderAction = PoolRemainder::FLOOR;
+            PoolType            poolType        = PoolType::MAX;
+            PoolRemainder       remainderAction = PoolRemainder::FLOOR;
+            KernelDividerMode   divMode         = KernelDividerMode::DONT_CARE;
+            uSize               poolSize;
+            uSize               poolStride;
+            uSize               poolPad;
         };
 
         DedicatedParams poolParams;
@@ -407,8 +719,9 @@ namespace KernelSelctor
         {
             ParamsKey k = BaseParams::GetParamsKey();
 
-            k.SetPoolType(poolParams.poolType);
-            k.SetPoolRemainder(poolParams.remainderAction);
+            k.EnablePoolType(poolParams.poolType);
+            k.EnablePoolRemainder(poolParams.remainderAction);
+            k.EnablePoolKernelDividerMode(poolParams.divMode);
 
             return k;
         }
@@ -422,8 +735,32 @@ namespace KernelSelctor
         ROIPoolingParams() : BaseParams(KernelType::ROI_POOLING) {}
 
         size_t rois = 0;
-        size_t pitch_rois_r = 0;
-        size_t pitch_rois_b = 0;
+        size_t pitchRoisR = 0;
+        size_t pitchRoisB = 0;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            return BaseParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ROIPoolingV1Params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ROIPoolingV1Params : public BaseParams
+    {
+        ROIPoolingV1Params() : BaseParams(KernelType::ROI_POOLING) {}
+
+        struct DedicatedParams
+        {
+            PoolType    mode         = PoolType::MAX;
+            size_t      pooledWidth  = 0;
+            size_t      pooledHeight = 0;
+            size_t      groupSize    = 0;
+            float       spatialScale = 1.f;
+        };
+
+        DedicatedParams roiParams;
 
         virtual ParamsKey GetParamsKey() const
         {
@@ -434,13 +771,13 @@ namespace KernelSelctor
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // FullyConnectedParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedParams : public BaseParams
+    struct FullyConnectedParams : public WeightBiasParams
     {
-        FullyConnectedParams() : BaseParams(KernelType::FULLY_CONNECTED) {}
+        FullyConnectedParams() : WeightBiasParams(KernelType::FULLY_CONNECTED) {}
 
         virtual ParamsKey GetParamsKey() const
         {
-            return BaseParams::GetParamsKey();
+            return WeightBiasParams::GetParamsKey();
         }
     };
 
@@ -449,7 +786,7 @@ namespace KernelSelctor
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct LocallyConnectedParams : public BaseParams
     {
-        LocallyConnectedParams() : BaseParams(KernelType::LOCALLY_CONNECTED) {}
+        LocallyConnectedParams() : BaseParams(KernelType::LOCALLY_CONNECTED), lcParams() {}
 
         struct DedicatedParams
         {
@@ -482,13 +819,22 @@ namespace KernelSelctor
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // SoftMaxParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct SoftMaxParams : public BaseParams
+    struct SoftmaxParams : public BaseParams
     {
-        SoftMaxParams() : BaseParams(KernelType::SOFT_MAX) {}
+        SoftmaxParams() : BaseParams(KernelType::SOFT_MAX) {}
+
+        struct DedicatedParams
+        {
+            SoftmaxDim dim = SoftmaxDim::FEATURE;
+        };
+
+        DedicatedParams smParams;
 
         virtual ParamsKey GetParamsKey() const
         {
-            return BaseParams::GetParamsKey();
+            auto k = BaseParams::GetParamsKey();
+            k.EnableSoftmaxDim(smParams.dim);
+            return k;
         }
     };
 
@@ -497,13 +843,49 @@ namespace KernelSelctor
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct EltwiseParams : public BaseParams
     {
-        EltwiseParams() : BaseParams(KernelType::ELTWISE) {}
+        EltwiseParams() : BaseParams(KernelType::ELTWISE), eltwiseParams() {}
+
+        struct InputType
+        {
+            EltwiseInputMode mode   = EltwiseInputMode::INPUT_BUFFER;
+            uint32_t         index  = 0; // for inputs/temp results;
+            float            scalar = 0.f;
+
+            static InputType Buffer(uint32_t index) 
+            {
+                EltwiseParams::InputType input;
+                input.mode = EltwiseInputMode::INPUT_BUFFER;
+                input.index = index;
+                return input;
+            }
+
+            static InputType Intermediate(uint32_t index)
+            {
+                EltwiseParams::InputType input;
+                input.mode = EltwiseInputMode::INTERMEDIATE_RESULTS_INDEX;
+                input.index = index;
+                return input;
+            }
+
+            static InputType Scalar(float s)
+            {
+                EltwiseParams::InputType input;
+                input.mode = EltwiseInputMode::SCALAR;
+                input.scalar = s;
+                return input;
+            }
+        };
+
+        struct Node
+        {
+            std::vector<InputType> inputs;
+            EltwiseMode mode;
+        };
 
         struct DedicatedParams
         {
-            TensorDesc  inDesc1; // TODO: Support multi Inputs
-            EltwiseMode mode = EltwiseMode::ADD;
-            float scalar = 0;
+            std::vector<EltwiseParams::Node> operations;
+            bool layoutBased = false;
         };
 
         DedicatedParams eltwiseParams;
@@ -515,11 +897,44 @@ namespace KernelSelctor
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // SoftMaxParams
+    // ReorderParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ReorderVxParams : public BaseParams
+    struct ReorderBaseParams : public BaseParams
     {
-        ReorderVxParams() : BaseParams(KernelType::REORDER) {}
+        ReorderBaseParams() : BaseParams(KernelType::REORDER) {}
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            return BaseParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // PermuteParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct PermuteParams : public ReorderBaseParams
+    {
+        PermuteParams() {}
+        
+        struct DedicatedParams
+        {
+            std::vector<uint16_t> order;
+        };
+
+        DedicatedParams permuteParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            return BaseParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ReorderVxParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ReorderVxParams : public ReorderBaseParams
+    {
+        ReorderVxParams() : reorderParams() {}
 
         struct DedicatedParams
         {
@@ -530,7 +945,68 @@ namespace KernelSelctor
 
         virtual ParamsKey GetParamsKey() const
         {
-            return BaseParams::GetParamsKey();
+            return ReorderBaseParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ReorderParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ReorderParams : public ReorderBaseParams
+    {
+        ReorderParams() : reorderParams() {}
+
+        struct DedicatedParams
+        {
+            MeanSubtructMode    mode = MeanSubtructMode::NONE;
+            std::vector<float>  meanValues;
+            DataTensor          mean;
+        };
+
+        DedicatedParams reorderParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            return ReorderBaseParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ReorderWeightsParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ReorderWeightsParams : public Params
+    {
+        ReorderWeightsParams() : Params(KernelType::REORDER, ""), reorderParams() {}
+
+        struct DedicatedParams
+        {
+            WeightsTensor input;
+            WeightsTensor output;
+        };
+
+        DedicatedParams reorderParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            ParamsKey k;
+            const auto& input = reorderParams.input;
+            const auto& output = reorderParams.output;
+            k.EnableWeightsLayout(input.GetLayout());
+            k.EnableWeightsLayout(output.GetLayout());
+            k.EnableInputWeightsType(input.GetDType());
+            k.EnableOutputWeightsType(output.GetDType());
+
+            if (input.PaddingExists() ||
+                output.PaddingExists())
+            {
+                k.EnableTensorPitches();
+            }
+
+            if (input.GetOffset() != 0 || output.GetOffset() != 0)
+            {
+                k.EnableTensorOffset();
+            }
+            return k;
         }
     };
 
@@ -539,7 +1015,7 @@ namespace KernelSelctor
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct ConvertParams : public BaseParams
     {
-        ConvertParams() : BaseParams(KernelType::CONVERT) {}
+        ConvertParams() : BaseParams(KernelType::CONVERT), convertParams() {}
 
         struct DedicatedParams
         {
@@ -559,12 +1035,12 @@ namespace KernelSelctor
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct TableLookupParams : public BaseParams
     {
-        TableLookupParams() : BaseParams(KernelType::TABLE_LOOKUP) {}
+        TableLookupParams() : BaseParams(KernelType::TABLE_LOOKUP), lookupParams() {}
 
         struct DedicatedParams
         {
             Datatype tableFormat = Datatype::F16;
-            std::size_t tableSize = 0;
+            size_t tableSize = 0;
         };
 
         DedicatedParams lookupParams;
@@ -572,6 +1048,28 @@ namespace KernelSelctor
         virtual ParamsKey GetParamsKey() const
         {
             return BaseParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ConcatenationParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ConcatenationParams : public BaseParams
+    {
+        ConcatenationParams() : BaseParams(KernelType::CONCATENATION), concatParams() {}
+
+        struct DedicatedParams
+        {
+            ConcatAxis axis = ConcatAxis::FEATURE;
+        };
+
+        DedicatedParams concatParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            auto k =  BaseParams::GetParamsKey();
+            k.EnableConcatAxis(concatParams.axis);
+            return k;
         }
     };
 
@@ -584,21 +1082,29 @@ namespace KernelSelctor
 
         KernelType GetType() const { return kType; }
 
-        std::vector<DataLayout> input_layouts;
-        std::vector<DataLayout> output_layouts;
+        std::vector<DataLayout> inputLayouts;
+        std::vector<DataLayout> outputLayouts;
+        bool bSupportSubGroupExt = false;
+        uint64_t maxWorkGroupSize = 1;
+        uint64_t maxLocalMemSize = 16*1024*1024;
 
         virtual ParamsKey GetSupportedKey() const
         {
             ParamsKey k;
 
-            for (auto l : input_layouts)
+            for (auto l : inputLayouts)
             {
-                k.SetInputLayout(l);
+                k.EnableInputLayout(l);
             }
 
-            for (auto l : output_layouts)
+            for (auto l : outputLayouts)
             {
-                k.SetOutputLayout(l);
+                k.EnableOutputLayout(l);
+            }
+
+            if (bSupportSubGroupExt)
+            {
+                k.EnableSubGroup();
             }
 
             return k;
@@ -610,20 +1116,46 @@ namespace KernelSelctor
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutionOptionalParams
+    // WeightsBiasOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutionOptionalParams : OptionalParams
+    struct WeightsBiasOptionalParams : OptionalParams
     {
-        ConvolutionOptionalParams() : OptionalParams(KernelType::CONVOLUTION) {}
-        bool allow_padding = false;
+        bool allowWeightsReorder = true;
+    protected:
+        WeightsBiasOptionalParams(KernelType kt) : OptionalParams(kt) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // NormalizationOptionalParams
+    // ConvolutionOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct NormalizationOptionalParams : OptionalParams
+    struct ConvolutionOptionalParams : WeightsBiasOptionalParams
     {
-        NormalizationOptionalParams() : OptionalParams(KernelType::NORMALIZATION) {}
+        ConvolutionOptionalParams() : WeightsBiasOptionalParams(KernelType::CONVOLUTION) {}
+        bool allowPadding = false;
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // DeconvolutionOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct DeconvolutionOptionalParams : WeightsBiasOptionalParams
+    {
+        DeconvolutionOptionalParams() : WeightsBiasOptionalParams(KernelType::DECONVOLUTION) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // LRNOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct LRNOptionalParams : OptionalParams
+    {
+        LRNOptionalParams() : OptionalParams(KernelType::LRN) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // NormalizeOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct NormalizeOptionalParams : OptionalParams
+    {
+        NormalizeOptionalParams() : OptionalParams(KernelType::NORMALIZE) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -645,9 +1177,10 @@ namespace KernelSelctor
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // FullyConnectedOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedOptionalParams : OptionalParams
+    struct FullyConnectedOptionalParams : WeightsBiasOptionalParams
     {
-        FullyConnectedOptionalParams() : OptionalParams(KernelType::FULLY_CONNECTED) {}
+        FullyConnectedOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED) {}
+        bool allowReorderInput = false;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -699,10 +1232,26 @@ namespace KernelSelctor
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ReorderVxOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ReorderOptionalParams : OptionalParams
+    {
+        ReorderOptionalParams() : OptionalParams(KernelType::REORDER) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ConvertOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct ConvertOptionalParams : OptionalParams
     {
         ConvertOptionalParams() : OptionalParams(KernelType::CONVERT) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ConcatenationOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ConcatenationOptionalParams : OptionalParams
+    {
+        ConcatenationOptionalParams() : OptionalParams(KernelType::CONCATENATION) {}
     };
 }

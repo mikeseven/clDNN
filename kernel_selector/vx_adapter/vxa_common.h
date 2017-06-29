@@ -21,13 +21,13 @@
 #include <mutex>
 #include "api/vx_cldnn_adapter.h"
 #include "api/vx_cldnn_adapter_types.h"
-#include "cache/kernel_cache.h"
+#include "cache/program_cache.h"
 #include "cache/cache_types.h"
 
 namespace clDNN
 {
-    using kernel_cache = neural::gpu::cache::kernel_cache;
-    using binary_data = neural::gpu::cache::binary_data;
+    using kernel_cache = KernelSelector::gpu::cache::program_cache;
+    using binary_data = KernelSelector::gpu::cache::binary_data;
 
     bool IsSupported(const Params& params);
 

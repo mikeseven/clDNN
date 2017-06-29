@@ -30,13 +30,13 @@
 #endif // ENABLE_ENV_PRINT
 
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
 #ifdef ENABLE_ENV
     std::string strip(const std::string str)
     {
-        std::size_t start = str.find_first_not_of(' ');
-        std::size_t end = str.find_last_not_of(' ');
+        size_t start = str.find_first_not_of(' ');
+        size_t end = str.find_last_not_of(' ');
         if (start == std::string::npos ||
             end == std::string::npos)
         {
@@ -68,14 +68,15 @@ namespace KernelSelctor {
     KernelSelctorBase::KernelSelctorBase()
     {
 #ifdef ENABLE_ENV
-        AddToForceMap(force_kernels, true, "CL_DNN_FORCE_KERNELS");
-        AddToForceMap(force_kernels, false, "CL_DNN_DENY_KERNELS");
+        AddToForceMap(forceKernels, true, "CL_DNN_FORCE_KERNELS");
+        AddToForceMap(forceKernels, false, "CL_DNN_DENY_KERNELS");
 #endif
     }
 
     KernelsData KernelSelctorBase::GetNaiveBestKernel(const Params& params, const OptionalParams& options, KernelType kType) const
     {
         KernelsData kernelsData;
+        std::string kernelName;
 
         if (params.GetType() == kType &&
             options.GetType() == kType)
@@ -86,36 +87,52 @@ namespace KernelSelctor {
                 const ParamsKey implKey = implementation->GetSupportedKey();
                 if (implKey.Support(requireKey))
                 {
-                    KernelsData kds = implementation->GetKernelsData(params, options);
-
-                    if (kds.size())
+                    try
                     {
-#ifdef ENABLE_ENV
-                        const auto& it = force_kernels.find(implementation->GetName());
-                        if (it != force_kernels.end())
+                        KernelsData kds = implementation->GetKernelsData(params, options);
+
+                        if (kds.size() && kds[0].kernels.size())
                         {
-                            if (it->second == true)
+#ifdef ENABLE_ENV
+                            const auto& it = forceKernels.find(implementation->GetName());
+                            if (it != forceKernels.end())
                             {
-                                ENV_PRINTF("Force: %s\n", it->first.c_str());
-                                return kds;
+                                if (it->second == true)
+                                {
+                                    ENV_PRINTF("Force: %s\n", it->first.c_str());
+                                    return kds;
+                                }
+                                else
+                                {
+                                    ENV_PRINTF("Deny: %s\n", it->first.c_str());
+                                }
                             }
                             else
-                            {
-                                ENV_PRINTF("Deny: %s\n", it->first.c_str());
-                            }
-                        }
-                        else
 #endif
-                        {
-                            if (kernelsData.size() == 0 ||
-                                kds[0].estimated_time < kernelsData[0].estimated_time)
                             {
-                                kernelsData = kds;
+                                if (kernelsData.size() == 0 ||
+                                    kds[0].estimatedTime < kernelsData[0].estimatedTime)
+                                {
+                                    kernelsData = kds;
+                                    kernelName = implementation->GetName();
+                                }
                             }
                         }
                     }
+                    catch (std::runtime_error&)
+                    {
+                        // we have to handle it in order to avoid exception in KernelSelector as much we can
+                    }
                 }
             }
+        }
+
+        // TODO: find a better place to located this assignment 
+        if (kernelsData.size())
+        {
+            //printf("%s\n", kernelName.c_str());
+            kernelsData[0].kernelName = kernelName;
+            kernelsData[0].kernels[0].layerID = params.layerID;
         }
 
         return kernelsData;

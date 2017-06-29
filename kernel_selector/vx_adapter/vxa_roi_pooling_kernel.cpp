@@ -24,15 +24,18 @@ namespace clDNN
         BaseKernelBinary(KernelType::ROI_POOLING),
         m_Params(params)
     {
-        KernelSelctor::ROIPoolingParams ksParams;
+        KernelSelector::ROIPoolingParams ksParams;
 
         InitBaseParams(params, ksParams);
+
+        // TODO port to new tensor
+
         ksParams.rois = params.rois;
-        ksParams.pitch_rois_r = params.pitch_rois_r;
-        ksParams.pitch_rois_b = params.pitch_rois_b;
+        ksParams.pitchRoisR = params.pitch_rois_r;
+        ksParams.pitchRoisB = params.pitch_rois_b;
 
-        KernelSelctor::ROIPoolingOptionalParams ksOptParams;
+        KernelSelector::ROIPoolingOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelctor::ROIPoolingKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::ROIPoolingKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 } // clDNN namespace

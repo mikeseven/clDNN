@@ -17,22 +17,21 @@
 
 #include <string>
 
-namespace neural 
+namespace KernelSelector 
 {
     namespace gpu 
     {
-        class gpu_toolkit;
+        struct context_device;
     }
 }
 
-namespace neural 
+namespace KernelSelector 
 {
     namespace gpu 
     {
         namespace cache 
         {
-            using context = gpu_toolkit;
-            using jit = std::string;
+            using context = context_device;
             using code = std::string;
             using compile_options = std::string;
             using primitive_id = std::string;

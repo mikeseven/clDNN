@@ -15,45 +15,66 @@
 */
 
 #include "convolution_kernel_ref.h"
- 
-namespace KernelSelctor {
+#include "kernel_selector_utils.h"
+
+namespace KernelSelector {
     
     ParamsKey ConvolutionKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetOutputLayout(bfyx);
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetBiasPerFeatureMap();
-        k.SetBiasPerOutput();
-        k.SetNumDims(4);
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputWeightsType(WeightsType::F16);
+        k.EnableInputWeightsType(WeightsType::F32);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableDilation();
+        k.EnableBiasPerFeature();
+        k.EnableBiasPerOutput();
+        k.EnableNonBiasTerm();
+        k.EnableBatching();
+        k.EnableSplitSupport();
         return k;
     }
 
-    KernelsData ConvolutionKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData ConvolutionKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        assert(params.GetType() == KernelType::CONVOLUTION);
+        assert(params.GetType() == KernelType::CONVOLUTION && options.GetType() == KernelType::CONVOLUTION);
 
-        KernelData kd = KernelData::Default<ConvolutionParams>(params, 1);
-
+        KernelData kd = KernelData::Default<ConvolutionParams>(params);
         ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
+        
+        bool succeed = UpdateWeightsParams(
+            newParams,
+            options,
+            { WeightsLayout::oiyx },
+            kd.weightsReorderParams);
 
-        SubGroupInfo run_info;
+        if (!succeed)
+        {
+            return{};
+        }
+
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+
+        SubGroupInfo runInfo;
         std::stringstream jit;
-        jit << GetBaseJit(newParams)
-            << GetConvolutionJit(newParams, run_info);
+        jit << GetBaseJit(newParams, kernel_id)
+            << GetConvolutionJit(newParams, runInfo);
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "convolution");
-        kernel.args_desc = GetArgumentDesc(1, true, true);
+        kernel.workGroups.global = { out.X().v, out.Y().v, out.Feature().v*out.Batch().v };
+        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
+        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
+        kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
+        kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
-        kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         return{ kd };
     }

@@ -23,6 +23,7 @@
 #include "kernels_cache.h"
 #include "event_impl.h"
 
+#include "kernel_selector_helper.h"
 #include <cmath>
 #include <iostream>
 #include <sstream>
@@ -409,15 +410,42 @@ public:
         : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(template_id, definitions, kernel_name)) {}
     explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::string& template_id, const jit_constants& constants, const std::string& kernel_name = std::string())
         : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(template_id, constants.get_definitions(), kernel_name)) {}
+    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::shared_ptr<kernel_selector::kernel_string>& kernel_string)
+        : context_holder(context)
+        , _kernel_id(
+            context->get_kernels_cache().set_kernel_source(
+                { kernel_string->jit,kernel_string->str }, 
+                kernel_string->options, 
+                kernel_string->entry_point, 
+                kernel_string->batch_compilation)) 
+    {}
 
     kernel(const kernel& other) : context_holder(other.context()), _kernel_id(other._kernel_id) {}
 
-    kernel& operator=(const kernel& other) {
+    kernel& operator=(const kernel& other) 
+    {
         if (this == &other)
+        {
             return *this;
+        }
+
         _kernel_id = other._kernel_id;
+
         return *this;
     }
+
+    struct kernel_arguments_desc
+    {
+        std::vector<const cldnn::memory*> inputs;
+        const cldnn::memory* output = nullptr;
+        const cldnn::memory* weights = nullptr;
+        const cldnn::memory* bias = nullptr;
+        const cldnn::memory* lookup_table = nullptr;
+        const cldnn::memory* scale_table = nullptr;
+        const cldnn::memory* slope = nullptr;
+        uint32_t split = 0;
+        bool use_input_index_as_order = false;
+    };
 
     template<typename... Args>
     cldnn::refcounted_obj_ptr<cldnn::event_impl> run(
@@ -452,6 +480,11 @@ public:
 
         return{ new cldnn::event_impl(end_event), false };
     }
+
+    cldnn::refcounted_obj_ptr<cldnn::event_impl> run_custom_kernel(
+        const kernel_selector::cl_kernel_data& kernel_data,
+        const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& dependencies,
+        const kernel_arguments_desc& args) const;
 };
 
 } }

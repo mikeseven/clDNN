@@ -14,71 +14,61 @@
 // limitations under the License.
 */
 
+#include <memory>
 #include "cnn_kernel_base.h"
 
-namespace KernelSelctor {
+namespace KernelSelector {
 
-    std::string CNNKernelBase::GetBaseJit(const BaseParams& params) const
+    std::string CNNKernelBase::GetBaseJit(const BaseParams& params, const std::string& kernel_id) const
     {
         std::stringstream jit;
 
+        if (kernel_id.empty())
+        {
+            jit << "#define KERNEL(name) __kernel void name\n"
+                << "#define FUNC(name) name\n"
+                << "#define FUNC_CALL(name) name\n";
+        }
+        else
+        {
+            jit << "#define KERNEL(name) __kernel void " << kernel_id << "\n"
+                << "#define FUNC(name) name##_" << kernel_id << "\n"
+                << "#define FUNC_CALL(name) name##_" << kernel_id << "\n";
+        }
+
         jit << "#define ACTIVATION_FUNCTION_" << toString(params.activationFunc) << "\n"
-            << "#define TYPE_" << toString(params.inputType) << "\n"
+            << "#define TYPE_" << toString(params.inputs[0].GetDType()) << "\n"
             << "#define NL_M (" << Float2Str(params.nlParams.m) << ")\n"
             << "#define NL_N (" << Float2Str(params.nlParams.n) << ")\n"
-            << "#define INPUT_OFFSET (" << params.inDesc.offset << ")\n"
-            << "#define OUT_OFFSET (" << params.outDesc.offset << ")\n";
+            << "#define INPUT_OFFSET (" << params.inputs[0].GetOffset() << ")\n"
+            << "#define OUTPUT_OFFSET (" << params.output.GetOffset() << ")\n";
 
-        if (params.inputLayout == bx)
-        {
-            jit << "#define INPUT_WIDTH (1)\n"
-                << "#define INPUT_HEIGHT (1)\n"
-                << "#define INPUT_DEPTH (" << params.inDims.x << ")\n"
-                << "#define INPUT_BATCH (" << params.inDims.y << ")\n"
-                << "#define INPUT_ROW_PITCH (1)\n"
-                << "#define INPUT_SLICE_PITCH (1)\n"
-                << "#define INPUT_BATCH_PITCH (" << params.inDesc.pitches.x << ")\n";
-        }
-        else
-        {
-            jit << "#define INPUT_WIDTH (" << params.inDims.x << ")\n"
-                << "#define INPUT_HEIGHT (" << params.inDims.y << ")\n"
-                << "#define INPUT_DEPTH (" << params.inDims.z << ")\n"
-                << "#define INPUT_BATCH (" << params.inDims.w << ")\n"
-                << "#define INPUT_ROW_PITCH (" << params.inDesc.pitches.x << ")\n"
-                << "#define INPUT_SLICE_PITCH (" << params.inDesc.pitches.y << ")\n"
-                << "#define INPUT_BATCH_PITCH (" << params.inDesc.pitches.z << ")\n";
-        }
+        jit << "#define INPUT_SIZE_X (" << params.inputs[0].X().v << ")\n"
+            << "#define INPUT_SIZE_Y (" << params.inputs[0].Y().v << ")\n"
+            << "#define INPUT_FEATURE_NUM (" << params.inputs[0].Feature().v << ")\n"
+            << "#define INPUT_BATCH (" << params.inputs[0].Batch().v << ")\n"
+            << "#define INPUT_X_PITCH (" << params.inputs[0].X().pitch << ")\n"
+            << "#define INPUT_Y_PITCH (" << params.inputs[0].Y().pitch << ")\n"
+            << "#define INPUT_FEATURE_PITCH (" << params.inputs[0].Feature().pitch << ")\n"
+            << "#define INPUT_BATCH_PITCH (" << params.inputs[0].Batch().pitch << ")\n";
 
-        if (params.outputLayout == bx)
-        {
-            jit << "#define OUT_WIDTH (1)\n"
-                << "#define OUT_HEIGHT (1)\n"
-                << "#define OUT_DEPTH (" << params.outDims.x << ")\n"
-                << "#define OUT_BATCH (" << params.outDims.y << ")\n"
-                << "#define OUT_ROW_PITCH (1)\n"
-                << "#define OUT_SLICE_PITCH (1)\n"
-                << "#define OUT_BATCH_PITCH (" << params.outDesc.pitches.x << ")\n";
-        }
-        else
-        {
-            jit << "#define OUT_WIDTH (" << params.outDims.x << ")\n"
-                << "#define OUT_HEIGHT (" << params.outDims.y << ")\n"
-                << "#define OUT_DEPTH (" << params.outDims.z << ")\n"
-                << "#define OUT_BATCH (" << params.outDims.w << ")\n"
-                << "#define OUT_ROW_PITCH (" << params.outDesc.pitches.x << ")\n"
-                << "#define OUT_SLICE_PITCH (" << params.outDesc.pitches.y << ")\n"
-                << "#define OUT_BATCH_PITCH (" << params.outDesc.pitches.z << ")\n";
-        }
+        jit << "#define OUTPUT_SIZE_X (" << params.output.X().v << ")\n"
+            << "#define OUTPUT_SIZE_Y (" << params.output.Y().v << ")\n"
+            << "#define OUTPUT_FEATURE_NUM (" << params.output.Feature().v << ")\n"
+            << "#define OUTPUT_BATCH_NUM (" << params.output.Batch().v << ")\n"
+            << "#define OUTPUT_X_PITCH (" << params.output.X().pitch << ")\n"
+            << "#define OUTPUT_Y_PITCH (" << params.output.Y().pitch << ")\n"
+            << "#define OUTPUT_FEATURE_PITCH (" << params.output.Feature().pitch << ")\n"
+            << "#define OUTPUT_BATCH_PITCH (" << params.output.Batch().pitch << ")\n";
 
         return jit.str();
     }
 
-    ArgumentDescpirtor CNNKernelBase::GetArgumentDesc(uint num_of_input, bool use_weights, bool use_bias) const
+    ArgumentDescpirtor CNNKernelBase::GetArgumentDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const
     {
         ArgumentDescpirtor desc;
 
-        for (uint i = 0; i < num_of_input; i++)
+        for (uint32_t i = 0; i < num_of_input; i++)
         {
             desc.data.push_back({ ArgumentDescpirtor::Types::INPUT, 0 });
         }
@@ -98,19 +88,19 @@ namespace KernelSelctor {
         return desc;
     }
 
-    KernelString CNNKernelBase::GetKernelString(std::string name, std::string jit, std::string entry_point, std::string exe_mode) const
+    std::shared_ptr<KernelString> CNNKernelBase::GetKernelString(std::string name, std::string jit, std::string entry_point, std::string exe_mode, std::string default_build_flags) const
     {
-        KernelString kernel_string;
+        std::shared_ptr<KernelString> kernel_string = std::make_shared<KernelString>();
 
         auto codes = db.get(name);
 
         if (codes.size())
         {
-            kernel_string.str = codes[0];
-            kernel_string.jit = jit;
-            //kernel_string.options = " -cl-no-subgroup-ifp  -cl-unsafe-math-optimizations";
-            kernel_string.options = exe_mode + " -cl-unsafe-math-optimizations";
-            kernel_string.entry_point = entry_point;
+            kernel_string->str = codes[0];
+            kernel_string->jit = jit;
+            kernel_string->options = exe_mode + " " + default_build_flags;
+            kernel_string->entry_point = entry_point;
+            kernel_string->batch_compilation = true;
         }
 
         return kernel_string;

@@ -15,19 +15,22 @@
 */
 
 #include "reorder_vx_kernel_ref.h"
+#include "kernel_selector_utils.h" 
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     ParamsKey ReorderVxKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableBatching();
         return k;
     }
 
@@ -38,19 +41,20 @@ namespace KernelSelctor
         KernelData kd = KernelData::Default<ReorderVxParams>(params, 1);
 
         ReorderVxParams& newParams = *static_cast<ReorderVxParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
         std::stringstream jit;
-        jit << GetBaseJit(newParams);
-        jit << "REORDER_MODE_" << toString(newParams.reorderParams.mode);
+        jit << GetBaseJit(newParams, kernel_id);
+        jit << "#define REORDER_MODE_" << toString(newParams.reorderParams.mode);
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "reorder");
-        kernel.args_desc = GetArgumentDesc(1, false, false);
+        kernel.workGroups.global = { out.X().v, out.Y().v, out.Feature().v*out.Batch().v };
+        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
+        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
+        kernel.argsDesc = GetArgumentDesc(1, false, false);
 
-        kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         return{ kd };
     }

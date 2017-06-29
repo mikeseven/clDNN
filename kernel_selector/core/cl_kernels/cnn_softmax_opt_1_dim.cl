@@ -24,14 +24,14 @@
 #endif
 
 
-DATA_TYPE find_max_value(__local DATA_TYPE* partial_max, const int idx, const __global DATA_TYPE* input)
+DATA_TYPE FUNC(find_max_value)(__local DATA_TYPE* partial_max, const int idx, const __global DATA_TYPE* input)
 {
     DATA_TYPE value = -DATA_TYPE_MAX;
     for(int i = 0; i < ITEMS_NUM; i++)
     {
-        value = max(value, input[LWS * i + idx]);
+        value = fmax(value, input[LWS * i + idx]);
     }
-    value = max(value, idx < LEFTOVERS? input[LWS * ITEMS_NUM + idx] : -DATA_TYPE_MAX);
+    value = fmax(value, idx < LEFTOVERS? input[LWS * ITEMS_NUM + idx] : -DATA_TYPE_MAX);
     partial_max[idx] = value;
 
     barrier(CLK_LOCAL_MEM_FENCE);
@@ -39,19 +39,19 @@ DATA_TYPE find_max_value(__local DATA_TYPE* partial_max, const int idx, const __
     {
         for(int i = 1; i < LWS; i++)
         {
-            partial_max[0] = max(partial_max[0], partial_max[i]);
+            partial_max[0] = fmax(partial_max[0], partial_max[i]);
         };
     }
     barrier(CLK_LOCAL_MEM_FENCE);
     return partial_max[0];
 }
 
-__kernel void softmax(const __global DATA_TYPE* input, __global DATA_TYPE* output)
+KERNEL(softmax)(const __global DATA_TYPE* input, __global DATA_TYPE* output)
 {
     const int idx = get_local_id(0);
 
     __local DATA_TYPE partial_max[LWS];
-    const DATA_TYPE max_value = find_max_value(partial_max, idx, input);
+    const DATA_TYPE max_value = FUNC_CALL(find_max_value)(partial_max, idx, input);
     
     DATA_TYPE tmp_vals[ITEMS_NUM + 1];
     for(int i = 0; i < ITEMS_NUM; i++)

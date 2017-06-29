@@ -24,17 +24,39 @@ namespace clDNN
         BaseKernelBinary(KernelType::CONVOLUTION),
         m_Params(params) 
     {
-        KernelSelctor::ConvolutionParams ksParams;
+        KernelSelector::ConvolutionParams ksParams;
         
         InitBaseParams(params, ksParams);
         ksParams.convParams.filterSize = params.convParams.filterSize;
         ksParams.convParams.padding = params.convParams.padding;
         ksParams.convParams.stride = params.convParams.stride;
-        ksParams.convParams.biasPerOutputResult = params.convParams.biasPerOutputResult;
+        ksParams.convParams.dilation = { 1,1 }; // TODO
+        if (params.convParams.biasPerOutputResult)
+        {
+            ksParams.bias.resize(1);
+            ksParams.bias[0] = {
+                ksParams.output.GetDType(),
+                ksParams.output.GetLayout(),
+                KernelSelector::PaddedVal::UNDEFINED,
+                0,
+                ksParams.output.LogicalDims()
+            };
+        }
+        else
+        {
+            ksParams.bias.resize(1);
+            ksParams.bias[0] = {
+                ksParams.output.GetDType(),
+                KernelSelector::DataLayout::bf,
+                KernelSelector::PaddedVal::UNDEFINED,
+                0,
+                std::vector<size_t>{ ksParams.output.Feature().v }
+            };
+        }
 
-        KernelSelctor::ConvolutionOptionalParams ksOptParams;
-        ksOptParams.allow_padding = params.bAllowChangeInputTensor;
+        KernelSelector::ConvolutionOptionalParams ksOptParams;
+        ksOptParams.allowPadding = params.bAllowChangeInputTensor;
         
-        HandleBestKernels(KernelSelctor::ConvolutionKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::ConvolutionKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

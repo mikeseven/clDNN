@@ -16,11 +16,9 @@
 
 
 
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
+#include "include/cnn_common.cl"
 
-__kernel void roi_pooling_gpu
+KERNEL(roi_pooling_gpu)
 (
     const __global UNIT_TYPE * src_data,
     const __global UNIT_TYPE * src_rois,
@@ -29,11 +27,11 @@ __kernel void roi_pooling_gpu
 {
     const size_t i = get_global_id(0);
 
-    const int x = i % DST_W;
-    const int y = i / DST_W % DST_H;
-    const int c = i / DST_W / DST_H % CHAN_NUM;
-    const int r = i / DST_W / DST_H / CHAN_NUM % ROIS_NUM;
-    const int b = i / DST_W / DST_H / CHAN_NUM / ROIS_NUM;
+    const uint x = i % DST_W;
+    const uint y = i / DST_W % DST_H;
+    const uint c = i / DST_W / DST_H % CHAN_NUM;
+    const uint r = i / DST_W / DST_H / CHAN_NUM % ROIS_NUM;
+    const uint b = i / DST_W / DST_H / CHAN_NUM / ROIS_NUM;
 
     const __global UNIT_TYPE * roi_ptr = &src_rois[PITCH_ROI_R * r + PITCH_ROI_B * b];
     const int roi_x  = (int)round(roi_ptr[0]);
@@ -42,11 +40,11 @@ __kernel void roi_pooling_gpu
     const int roi_y1 = (int)round(roi_ptr[3]);
 
     // The final coordinate is within the ROI and malformed dimensions are treated as 1
-    const int roi_w = max(roi_x1 - roi_x, 0) + 1;
-    const int roi_h = max(roi_y1 - roi_y, 0) + 1;
+    const uint roi_w = max(roi_x1 - roi_x, 0) + 1;
+    const uint roi_h = max(roi_y1 - roi_y, 0) + 1;
 
     // Note that when the "after" is rounded rounded up else we get the last cell,
-    // instead of the cell beyond.
+    // instead of the cell beyond (For "symmetry").
     //
     // For ex. with src being a 6 cell row and dest being a 4 cell one:
     // >>> [((x + 0) * 6) // 4 for x in [0, 1, 2, 3]]   # "begin" values
@@ -70,7 +68,7 @@ __kernel void roi_pooling_gpu
 
     for (int yy = y_begin; yy < y_after; ++yy)
     for (int xx = x_begin; xx < x_after; ++xx)
-        res = max(res, data[xx + PITCH_SRC_H * yy]);
+        res = fmax(res, data[xx + PITCH_SRC_H * yy]);
 
-    dst_data[x + PITCH_DST_H * y + PITCH_DST_C * c + PITCH_DST_R * r + PITCH_DST_B * b] = res;
+    dst_data[x + PITCH_DST_H * y + PITCH_DST_C * c + PITCH_DST_R * r + PITCH_DST_B * b] = FUNC_CALL(activation_function)(res, NL_M, NL_N);
 }

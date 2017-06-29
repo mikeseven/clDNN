@@ -56,17 +56,18 @@ class OpenCL2CHeaders(object):
     def cl_file_to_str(self, filename):
         name = ntpath.basename(filename)
         self.include_files[filename] = {}
-        #res = '{{"{}",\nR"__krnl(\n{}\n)__krnl"}},\n\n'.format(name[:name.find('.')] ,self.append_file_content(filename, filename))
-        res = '{{"{}",\nR"__krnl(\n'.format(name[:name.find('.')])
+        #kernel_name = name[:name.find('.')]
+        kernel_name = name[:name.find('.cl')]
+        res = '{{"{}",\nR"__krnl(\n'.format(kernel_name)
         content = self.append_file_content(filename, filename)
-        max_lines = 300
+        max_lines = 200
 
         for i, line in enumerate(content.split('\n')):
             if i % max_lines == 0:
                 res += ')__krnl"\nR"__krnl('
             res += line + '\n'
 
-        res += ')__krnl"}},\n\n'.format(name[:name.find('.')] ,self.append_file_content(filename, filename))
+        res += ')__krnl"}},\n\n'.format(kernel_name, self.append_file_content(filename, filename))
 
         return res
 

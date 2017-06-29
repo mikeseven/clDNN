@@ -25,7 +25,7 @@
 
 #include "primitive_inst.h"
 #include "input_layout_inst.h"
-
+#include "kernel_selector_helper.h"
 #include "gpu/kernel.h"
 
 #include <algorithm>

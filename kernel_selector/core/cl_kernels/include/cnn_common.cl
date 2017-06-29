@@ -25,6 +25,12 @@
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
 
+#define __CAT_FUNC(x, y) FUNC(x##y)
+#define CAT_FUNC(x, y) __CAT_FUNC(x, y)
+
+#define __CAT_FUNC_CALL(x, y) FUNC_CALL(x##y)
+#define CAT_FUNC_CALL(x, y) __CAT_FUNC_CALL(x, y)
+
 #define LOOP0(VAR, STMT) 
 #define LOOP1(VAR, STMT) (STMT); (VAR)++;
 #define LOOP2(VAR, STMT) LOOP1(VAR, STMT); (STMT); (VAR)++;
@@ -43,168 +49,6 @@
 #define LOOP15(VAR, STMT) LOOP14(VAR, STMT); (STMT); (VAR)++;
 #define LOOP16(VAR, STMT) LOOP15(VAR, STMT); (STMT); (VAR)++;
 #define LOOP(N, VAR, STMT) CAT(LOOP, N)((VAR), (STMT))
-
-
-typedef struct half1  { half s0; }                                                               half1;
-typedef struct half5  { half s0; half s1; half s2; half s3; half s4; }                           half5;
-typedef struct half6  { half s0; half s1; half s2; half s3; half s4; half s5; }                  half6;
-typedef struct half7  { half s0; half s1; half s2; half s3; half s4; half s5; half s6; }         half7;
-typedef struct half9  { half s0; half s1; half s2; half s3; half s4; half s5; half s6; half s7; 
-                        half s8; }                                                               half9;
-typedef struct half10 { half s0; half s1; half s2; half s3; half s4; half s5; half s6; half s7; 
-                        half s8; half s9; }                                                      half10;
-typedef struct half11 { half s0; half s1; half s2; half s3; half s4; half s5; half s6; half s7; 
-                        half s8; half s9; half sa; }                                             half11;
-typedef struct half12 { half s0; half s1; half s2; half s3; half s4; half s5; half s6; half s7; 
-                        half s8;  half s9; half sa; half sb;}                                    half12;
-typedef struct half13 { half s0; half s1; half s2; half s3; half s4; half s5; half s6; half s7; 
-                        half s8;  half s9; half sa; half sb; half sc;}                           half13;
-typedef struct half14 { half s0; half s1; half s2; half s3; half s4; half s5; half s6; half s7; 
-                        half s8;  half s9; half sa; half sb; half sc; half se;}                  half14;
-typedef struct half15 { half s0; half s1; half s2; half s3; half s4; half s5; half s6; half s7; 
-                       half s8;  half s9; half sa; half sb; half sc; half se; half sf;}          half15;
-typedef struct half0  { half s0; } half0; //never used but makes compiler happy.
-
-typedef struct short1  { short s0; }                                                                      short1;
-typedef struct short5  { short s0; short s1; short s2; short s3; short s4; }                              short5;
-typedef struct short6  { short s0; short s1; short s2; short s3; short s4; short s5; }                    short6;
-typedef struct short7  { short s0; short s1; short s2; short s3; short s4; short s5; short s6; }          short7;
-typedef struct short9  { short s0; short s1; short s2; short s3; short s4; short s5; short s6; short s7; 
-                         short s8; }                                                                      short9;
-typedef struct short10 { short s0; short s1; short s2; short s3; short s4; short s5; short s6; short s7; 
-                         short s8; short s9; }                                                            short10;
-typedef struct short11 { short s0; short s1; short s2; short s3; short s4; short s5; short s6; short s7; 
-                         short s8;  short s9; short sa; }                                                 short11;
-typedef struct short12 { short s0; short s1; short s2; short s3; short s4; short s5; short s6; short s7; 
-                         short s8;  short s9; short sa; short sb;}                                        short12;
-typedef struct short13 { short s0; short s1; short s2; short s3; short s4; short s5; short s6; short s7; 
-                         short s8;  short s9; short sa; short sb; short sc;}                              short13;
-typedef struct short14 { short s0; short s1; short s2; short s3; short s4; short s5; short s6; short s7; 
-                         short s8;  short s9; short sa; short sb; short sc; short se;}                    short14;
-typedef struct short15 { short s0; short s1; short s2; short s3; short s4; short s5; short s6; short s7; 
-                         short s8;  short s9; short sa; short sb; short sc; short se; short sf;}          short15;
-typedef struct short0 { short s0; } short0; //never used but makes compiler happy.
-
-typedef struct float1 { float s0; } float1;
-typedef struct float5 { float s0; float s1; float s2; float s3; float s4; } float5;
-typedef struct float6 { float s0; float s1; float s2; float s3; float s4; float s5; } float6;
-typedef struct float7 { float s0; float s1; float s2; float s3; float s4; float s5; float s6; } float7;
-typedef struct float9 { float s0; float s1; float s2; float s3; float s4; float s5; float s6; float s7; float s8; } float9;
-typedef struct float10 { float s0; float s1; float s2; float s3; float s4; float s5;
-                         float s6; float s7; float s8; float s9;} float10;
-typedef struct float11 { float s0; float s1; float s2; float s3; float s4; float s5;
-                         float s6; float s7; float s8; float s9; float sa;} float11;
-typedef struct float12 { float s0; float s1; float s2; float s3; float s4; float s5;
-                         float s6; float s7; float s8; float s9; float sa; float sb; } float12;
-typedef struct float13 { float s0; float s1; float s2; float s3; float s4; float s5;
-                         float s6; float s7; float s8; float s9; float sa; float sb; float sc;} float13;
-typedef struct float14 { float s0; float s1; float s2; float s3; float s4; float s5;
-                         float s6; float s7; float s8; float s9; float sa; float sb; float sc; float sd; } float14;
-typedef struct float15 { float s0; float s1; float s2; float s3; float s4; float s5;
-                         float s6; float s7; float s8; float s9; float sa; float sb; float sc; float sd; float se; } float15;
-typedef struct float0 { float s0; } float0; //never used but makes compiler happy.
-
-#if (KERNEL_WIDTH == 1)
-__constant half1 half_zeros= (half1){0};
-#elif (KERNEL_WIDTH == 2)
-    __constant half2 half_zeros = (half2)(0);
-#elif (KERNEL_WIDTH == 3)
-    __constant half3 half_zeros = (half3)(0);
-#elif (KERNEL_WIDTH == 4)
-    __constant half4 half_zeros = (half4)(0);
-#elif (KERNEL_WIDTH == 5)
-    __constant half5 half_zeros = (half5){0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 6)
-    __constant half6 half_zeros = (half6){0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 7)
-    __constant half7 half_zeros = (half7){0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 8)
-    __constant half8 half_zeros = (half8)(0);
-#elif (KERNEL_WIDTH == 9)
-    __constant half9 half_zeros = (half9){0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 10)
-    __constant half10 half_zeros = (half10){0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 11)
-    __constant half11 half_zeros = (half11){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 12)
-    __constant half12 half_zeros = (half12){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 13)
-    __constant half13 half_zeros = (half13){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 14)
-    __constant half14 half_zeros = (half14){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 15)
-    __constant half15 half_zeros = (half15){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 16)
-    __constant half16 half_zeros = (half16)(0);
-#endif
-
-#if (KERNEL_WIDTH == 1)
-__constant short1 short_zeros     = (short1){0};
-#elif (KERNEL_WIDTH == 2)
-    __constant short2 short_zeros = (short2)(0);
-#elif (KERNEL_WIDTH == 3)
-    __constant short3 short_zeros = (short3)(0);
-#elif (KERNEL_WIDTH == 4)
-    __constant short4 short_zeros = (short4)(0);
-#elif (KERNEL_WIDTH == 5)
-    __constant short5 short_zeros = (short5){0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 6)
-    __constant short6 short_zeros = (short6){0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 7)
-    __constant short7 short_zeros = (short7){0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 8)
-    __constant short8 short_zeros = (short8)(0);
-#elif (KERNEL_WIDTH == 9)
-    __constant short9 short_zeros = (short9){0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 10)
-    __constant short10 short_zeros = (short10){0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 11)
-    __constant short11 short_zeros = (short11){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 12)
-    __constant short12 short_zeros = (short12){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 13)
-    __constant short13 short_zeros = (short13){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 14)
-    __constant short14 short_zeros = (short14){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 15)
-    __constant short15 short_zeros = (short15){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 16)
-    __constant short16 short_zeros = (short16)(0);
-#endif
-
-#if (KERNEL_WIDTH == 1)
-__constant float1 float_zeros     = (float1){0};
-#elif (KERNEL_WIDTH == 2)
-    __constant float2 float_zeros = (float2)(0);
-#elif (KERNEL_WIDTH == 3)
-    __constant float3 float_zeros = (float3)(0);
-#elif (KERNEL_WIDTH == 4)
-    __constant float4 float_zeros = (float4)(0);
-#elif (KERNEL_WIDTH == 5)
-    __constant float5 float_zeros = (float5){0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 6)
-    __constant float6 float_zeros = (float6){0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 7)
-    __constant float7 float_zeros = (float7){0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 8)
-    __constant float8 float_zeros = (float8)(0);
-#elif (KERNEL_WIDTH == 9)
-    __constant float9 float_zeros = (float9){0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 10)
-    __constant float10 float_zeros = (float10){0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 11)
-    __constant float11 float_zeros = (float11){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 12)
-    __constant float12 float_zeros = (float12){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 13)
-    __constant float13 float_zeros = (float13){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 14)
-    __constant float14 float_zeros = (float14){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 15)
-    __constant float15 float_zeros = (float15){0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
-#elif (KERNEL_WIDTH == 16)
-    __constant float16 float_zeros = (float16)(0);
-#endif
 
 #undef COUNTER_TYPE
 
@@ -239,326 +83,98 @@ __constant float1 float_zeros     = (float1){0};
     #define DATA_TYPE_ZERO 0.0f
 #endif
 
-// This macro variable indicates whether activation function requires float or half data 
-#if (defined(ACTIVATION_FUNCTION_LOGISTIC) || defined(ACTIVATION_FUNCTION_HYPERBOLIC_TAN) || \
-     defined(ACTIVATION_FUNCTION_SOFTRELU) || defined(ACTIVATION_FUNCTION_ABS) || defined(ACTIVATION_FUNCTION_SQRT))
-     #define ACTIVATION_REQUIRES_FLOAT_DATA
-#endif
-
-
-inline DATA_TYPE activation_function(DATA_TYPE in_f, float m, float n)
-{
 #if defined ACTIVATION_FUNCTION_LOGISTIC
-    DATA_TYPE res = (DATA_TYPE)1.0 / ((DATA_TYPE)1.0 + exp(-in_f));
-    return isinf(res) ? (DATA_TYPE)0 : res;
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return (TYPE_T)(1.0) / ((TYPE_T)(1.0) + exp(-value)); }
 
 #elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(in_f);
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return tanh(value); }
 
 #elif defined ACTIVATION_FUNCTION_RELU
-    return (in_f > (DATA_TYPE)0 ? in_f : (DATA_TYPE)0);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return min((DATA_TYPE)m, max((DATA_TYPE)0, in_f));
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return fmax(value, (TYPE_T)(0)); }
 
 #elif defined ACTIVATION_FUNCTION_SOFTRELU
-    DATA_TYPE res = log(1 + exp(in_f));
-    return isinf(res) ? (DATA_TYPE)0 : res;
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return log( (TYPE_T)(1) + exp(value)); }
+    
+#elif defined ACTIVATION_FUNCTION_RELU_NEGATIVE_SLOPE || defined ACTIVATION_FUNCTION_PRELU
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return isinf((TYPE_T)m) ? ((value >= (TYPE_T)0) ? value : -(TYPE_T)m) : (fmax(value, (TYPE_T)0) + (TYPE_T)m * fmin(value, (TYPE_T)0)); }
 
 #elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(in_f);
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return fabs(value); }
 
 #elif defined ACTIVATION_FUNCTION_SQUARE
-    return in_f * in_f;
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return value * value; }
 
 #elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(in_f);
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return sqrt(value); }
+
+#elif defined ACTIVATION_FUNCTION_BRELU
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return fmin((TYPE_T)(m), fmax((TYPE_T)(0), value)); }
 
 #elif defined ACTIVATION_FUNCTION_LINEAR
-    return (DATA_TYPE)m * in_f + (DATA_TYPE)n;
-#else
-    return in_f;
-#endif
-}
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return (TYPE_T)(m) * value + (TYPE_T)(n); }
 
-inline half2 activation_function_half2(half2 value, float m, float n)
+#else
+#define ACTIVATION_FUNCTION(TYPE_T) \
+inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
+    { return value; }
+
+#endif
+
+ACTIVATION_FUNCTION(half)
+ACTIVATION_FUNCTION(half2)
+ACTIVATION_FUNCTION(half3)
+ACTIVATION_FUNCTION(half4)
+//ACTIVATION_FUNCTION(half5)
+//ACTIVATION_FUNCTION(half6)
+//ACTIVATION_FUNCTION(half7)
+//ACTIVATION_FUNCTION(half8)
+//ACTIVATION_FUNCTION(half9)
+//ACTIVATION_FUNCTION(half10)
+//ACTIVATION_FUNCTION(half11)
+//ACTIVATION_FUNCTION(half12)
+//ACTIVATION_FUNCTION(half13)
+//ACTIVATION_FUNCTION(half14)
+//ACTIVATION_FUNCTION(half15)
+ACTIVATION_FUNCTION(half16)
+
+ACTIVATION_FUNCTION(float)
+ACTIVATION_FUNCTION(float2)
+ACTIVATION_FUNCTION(float3)
+ACTIVATION_FUNCTION(float4)
+//ACTIVATION_FUNCTION(float5)
+//ACTIVATION_FUNCTION(float6)
+//ACTIVATION_FUNCTION(float7)
+ACTIVATION_FUNCTION(float8)
+//ACTIVATION_FUNCTION(float9)
+//ACTIVATION_FUNCTION(float10)
+//ACTIVATION_FUNCTION(float11)
+//ACTIVATION_FUNCTION(float12)
+//ACTIVATION_FUNCTION(float13)
+//ACTIVATION_FUNCTION(float14)
+//ACTIVATION_FUNCTION(float15)
+//ACTIVATION_FUNCTION(float16)
+
+inline DATA_TYPE FUNC(activation_function)(DATA_TYPE in_f, float m, float n)
 {
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (half2)(1.0) / ((half2)(1.0) + exp(-value));
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return max(value, (half2)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (half2)(1) + exp(value));
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return min((half2)(m), max((half2)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (half2)(m) * value + (half2)(n);
-
-#else
-    return value;
-
-#endif
-}
-
-inline half3 activation_function_half3(half3 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (half3)(1.0) / ((half3)(1.0) + exp(-value));
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return max(value, (half3)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (half3)(1) + exp(value));
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return min((half3)(m), max((half3)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (half3)(m) * value + (half3)(n);
-
-#else
-    return value;
-
-#endif
-}
-
-inline half4 activation_function_half4(half4 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (half4)(1.0) / ((half4)(1.0) + exp(-value));
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return max(value, (half4)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (half4)(1) + exp(value));
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return min((half4)(m), max((half4)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (half4)(m) * value + (half4)(n);
-
-#else
-    return value;
-
-#endif
-}
-
-
-inline half16 activation_function_half16(half16 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (half16)(1.0) / ((half16)(1.0) + exp(-value));
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return fmax(value, (half16)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (half16)(1) + exp(value));
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return fmin((half16)(m), fmax((half16)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (half16)(m) * value + (half16)(n);
-
-#else
-    return value;
-
-#endif
-}
-
-inline float2 activation_function_float2(float2 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (float2)(1.0) / ((float2)(1.0) + exp(-value));
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return max(value, (float2)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (float2)(1) + exp(value));
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return min((float2)(m), max((float2)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (float2)(m) * value + (float2)(n);
-
-#else
-    return value;
-
-#endif
-}
-
-inline float3 activation_function_float3(float3 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (float3)(1.0) / ((float3)(1.0) + exp(-value));
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return max(value, (float3)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (float3)(1) + exp(value));
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return min((float3)(m), max((float3)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (float3)(m) * value + (float3)(n);
-
-#else
-    return value;
-
-#endif
-}
-
-inline float4 activation_function_float4(float4 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (float4)(1.0) / ((float4)(1.0) + exp(-value));
-
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return max(value, (float4)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (float4)(1) + exp(value));
-
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return min((float4)(m), max((float4)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (float4)(m) * value + (float4)(n);
-
-#else
-    return value;
-
-#endif
-}
-
-
-inline float8 activation_function_float8(float8 value, float m, float n)
-{
-#if defined ACTIVATION_FUNCTION_LOGISTIC
-    return (float8)(1.0) / ((float8)(1.0) + exp(-value));
- 
-#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
-    return tanh(value);
-
-#elif defined ACTIVATION_FUNCTION_RELU
-    return fmax(value, (float8)(0));
-
-#elif defined ACTIVATION_FUNCTION_SOFTRELU
-    return log( (float8)(1) + exp(value));
- 
-#elif defined ACTIVATION_FUNCTION_ABS
-    return fabs(value);
-
-#elif defined ACTIVATION_FUNCTION_SQUARE
-    return value * value;
-
-#elif defined ACTIVATION_FUNCTION_SQRT
-    return sqrt(value);
-
-#elif defined ACTIVATION_FUNCTION_BRELU
-    return fmin((float8)(m), fmax((float8)(0), value));
-
-#elif defined ACTIVATION_FUNCTION_LINEAR
-    return (float8)(m) * value + (float8)(n);
-
-#else
-    return value;
-
-#endif
+    return CAT_FUNC_CALL(activation_function_, DATA_TYPE)(in_f, m ,n);
 }

@@ -1,5 +1,4 @@
-/*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2016-2017 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,62 +11,74 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-*/
 
 #include "include/cnn_common.cl"
 
-__kernel void convolution(__global DATA_TYPE* input, __global DATA_TYPE* output, __global DATA_TYPE* weights, __global DATA_TYPE* biases)
+KERNEL(convolution)(
+    __global DATA_TYPE* input, 
+    __global DATA_TYPE* output, 
+    __global DATA_TYPE* weights, 
+#ifdef OUTPUT_BIASED
+    __global DATA_TYPE* biases,
+#endif
+    uint split_idx)
 {
-    const unsigned x = get_global_id(0);
-    const unsigned y = get_global_id(1);
-#if OUT_BATCH == 1
-    const unsigned z = get_global_id(2);
-    const unsigned w = 0;
+    const uint x = get_global_id(0);
+    const uint y = get_global_id(1);
+#if OUTPUT_BATCH_NUM == 1
+    const uint z = get_global_id(2);
+    const uint w = 0;
 #else
-    const unsigned z = get_global_id(2) % OUT_DEPTH;
-    const unsigned w = get_global_id(2) / OUT_DEPTH;
+    const uint z = get_global_id(2) % OUTPUT_FEATURE_NUM;
+    const uint w = get_global_id(2) / OUTPUT_FEATURE_NUM;
 #endif
 
-    const unsigned filter_size = INPUT_DEPTH * KERNEL_HEIGHT * KERNEL_WIDTH;
+    const uint filter_size = INPUT_FEATURE_NUM * KERNEL_HEIGHT * KERNEL_WIDTH;
     
-#ifdef BIAS_PER_OUTPUT
-    const unsigned bias_index = z*OUT_WIDTH*OUT_HEIGHT + y*OUT_WIDTH + x;
-#else
-    const unsigned bias_index = z;
+#if   defined BIAS_PER_OUTPUT
+    const uint bias_index = z*OUTPUT_SIZE_X*OUTPUT_SIZE_Y + y*OUTPUT_SIZE_X + x;
+#elif defined BIAS_PER_OFM
+    const uint bias_index = z;
 #endif
 
-    DATA_TYPE dotProd  =  biases[bias_index];
+    DATA_TYPE dotProd = (DATA_TYPE)0.0f;
+#ifdef OUTPUT_BIASED
+    dotProd = biases[bias_index];
+#endif
 
-    int xk_start = max((int)(INPUT_PADDING_X - x * STRIDE_X), 0);
-    int yk_start = max((int)(INPUT_PADDING_Y - y * STRIDE_Y), 0);
-    int xk_end = min((int)(INPUT_WIDTH - x * STRIDE_X + INPUT_PADDING_X), KERNEL_WIDTH);
-    int yk_end = min((int)(INPUT_HEIGHT - y * STRIDE_Y + INPUT_PADDING_Y), KERNEL_HEIGHT);
+    const int input_x = x * STRIDE_X - INPUT_PADDING_X;
+    const int input_y = y * STRIDE_Y - INPUT_PADDING_Y;
 
-    int input_x = max((int)(x * STRIDE_X - INPUT_PADDING_X),0);
-    int input_y = max((int)(y * STRIDE_Y - INPUT_PADDING_Y),0);
+    const uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * INPUT_FEATURE_NUM;
+    const uint filter_offset = z*filter_size;
+    const uint input_offset = w*INPUT_BATCH_PITCH + INPUT_OFFSET + in_split_offset;
 
-    unsigned int filter_offset = z * filter_size + yk_start * KERNEL_WIDTH + xk_start;
-    unsigned int input_offset = w*INPUT_BATCH_PITCH + input_y * INPUT_ROW_PITCH + input_x + INPUT_OFFSET;
-
-    int xk_steps = xk_end - xk_start;
-    int yk_steps = yk_end - yk_start;
-    for (unsigned k = 0; k < INPUT_DEPTH; ++k)
+    for (uint k = 0; k < INPUT_FEATURE_NUM; ++k)
     {
-        for (unsigned j = yk_start; j < yk_end ; ++j)
+        for (uint j = 0; j < KERNEL_HEIGHT ; ++j)
         {
-            for (unsigned i = xk_start; i < xk_end ; ++i)
+            const int input_offset_y = input_y + j * DILATION_Y;
+            const bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
+
+            if(!zero_y)
             {
-                dotProd += input[input_offset] * weights[filter_offset];
-                ++input_offset;
-                ++filter_offset;
+                for (uint i = 0; i < KERNEL_WIDTH ; ++i)
+                {
+                    const int input_offset_x = input_x + i * DILATION_X;
+                    const bool zero_x = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
+
+                    if(!zero_x)
+                    {
+                        uint input_idx = input_offset + (uint)input_offset_x*INPUT_X_PITCH + (uint)input_offset_y*INPUT_Y_PITCH + k*INPUT_FEATURE_PITCH;
+                        uint filter_idx = filter_offset + k*KERNEL_WIDTH*KERNEL_HEIGHT + j*KERNEL_WIDTH + i;
+                        dotProd += input[input_idx]*weights[filter_idx];
+                    }
+                }
             }
-            input_offset +=  INPUT_ROW_PITCH - xk_steps;
-            filter_offset += KERNEL_WIDTH - xk_steps;
         }
-        input_offset += (INPUT_SLICE_PITCH/INPUT_ROW_PITCH - yk_steps) * INPUT_ROW_PITCH;
-        filter_offset += (KERNEL_HEIGHT - yk_steps) * KERNEL_WIDTH;
     }
     
-    const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
-    output[dst_index] = activation_function(dotProd, NL_M, NL_N);
+    const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * OUTPUT_FEATURE_NUM;
+    const uint dst_index = w*OUTPUT_BATCH_PITCH + z*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x + OUTPUT_OFFSET + out_split_offset;
+    output[dst_index] = FUNC_CALL(activation_function)(dotProd, NL_M, NL_N);
 }

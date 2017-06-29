@@ -15,21 +15,31 @@
 */
 
 #include "softmax_kernel_ref.h"
+#include "kernel_selector_utils.h" 
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     ParamsKey SoftmaxKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetInputLayout(bx);
-        k.SetOutputLayout(bfyx);
-        k.SetOutputLayout(bx);
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableInputLayout(DataLayout::yxfb);
+        k.EnableInputLayout(DataLayout::bf);
+        k.EnableInputLayout(DataLayout::fb);
+        k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::yxfb);
+        k.EnableOutputLayout(DataLayout::bf);
+        k.EnableOutputLayout(DataLayout::fb);
+        k.EnableSoftmaxDim(SoftmaxDim::X);
+        k.EnableSoftmaxDim(SoftmaxDim::Y);
+        k.EnableSoftmaxDim(SoftmaxDim::FEATURE);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableBatching();
         return k;
     }
 
@@ -37,27 +47,63 @@ namespace KernelSelctor
     {
         assert(params.GetType() == KernelType::SOFT_MAX);
 
-        KernelData kd = KernelData::Default<SoftMaxParams>(params, 1);
+        KernelData kd = KernelData::Default<SoftmaxParams>(params, 1);
 
-        SoftMaxParams& newParams = *static_cast<SoftMaxParams*>(kd.params.get());
-        const auto& out = newParams.outDims;
+        SoftmaxParams& newParams = *static_cast<SoftmaxParams*>(kd.params.get());
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-
-        if (newParams.inputLayout == bx)
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        auto jit = GetBaseJit(newParams, kernel_id);
+        switch (newParams.smParams.dim)
         {
-            const auto numBatch = out.y;
-            kernel.work_groups.global = cl::NDRange(1, 1, numBatch);
+        case SoftmaxDim::X:
+            jit +=
+                "#define INPUT_OTHER0_PITCH     INPUT_Y_PITCH\n"
+                "#define INPUT_OTHER1_PITCH     INPUT_FEATURE_PITCH\n"
+                "#define INPUT_CLASS_PITCH      INPUT_X_PITCH\n"
+                "#define INPUT_CLASS_NUM        INPUT_SIZE_X\n"
+                "#define OUTPUT_OTHER0_PITCH    OUTPUT_Y_PITCH\n"
+                "#define OUTPUT_OTHER1_PITCH    OUTPUT_FEATURE_PITCH\n"
+                "#define OUTPUT_CLASS_PITCH     OUTPUT_X_PITCH\n";
+            kernel.workGroups.global = { out.Y().v, out.Feature().v, out.Batch().v };
+            break;
+        case SoftmaxDim::Y:
+            jit +=
+                "#define INPUT_OTHER0_PITCH     INPUT_X_PITCH\n"
+                "#define INPUT_OTHER1_PITCH     INPUT_FEATURE_PITCH\n"
+                "#define INPUT_CLASS_PITCH      INPUT_Y_PITCH\n"
+                "#define INPUT_CLASS_NUM        INPUT_SIZE_Y\n"
+                "#define OUTPUT_OTHER0_PITCH    OUTPUT_X_PITCH\n"
+                "#define OUTPUT_OTHER1_PITCH    OUTPUT_FEATURE_PITCH\n"
+                "#define OUTPUT_CLASS_PITCH     OUTPUT_Y_PITCH\n";
+            kernel.workGroups.global = { out.X().v, out.Feature().v, out.Batch().v };
+            break;
+        case SoftmaxDim::FEATURE:
+            jit +=
+                "#define INPUT_OTHER0_PITCH     INPUT_X_PITCH\n"
+                "#define INPUT_OTHER1_PITCH     INPUT_Y_PITCH\n"
+                "#define INPUT_CLASS_PITCH      INPUT_FEATURE_PITCH\n"
+                "#define INPUT_CLASS_NUM        INPUT_FEATURE_NUM\n"
+                "#define OUTPUT_OTHER0_PITCH    OUTPUT_X_PITCH\n"
+                "#define OUTPUT_OTHER1_PITCH    OUTPUT_Y_PITCH\n"
+                "#define OUTPUT_CLASS_PITCH     OUTPUT_FEATURE_PITCH\n";
+            kernel.workGroups.global = { out.X().v, out.Y().v, out.Batch().v };
+            break;
+        default:
+            break;
         }
-        else
-        {
-            const auto numBatch = out.w;
-            kernel.work_groups.global = cl::NDRange(out.x, out.y, numBatch);
-        }
-        
-        kernel.kernel_string = GetKernelString(kernel_name, GetBaseJit(newParams), "softmax");
-        kernel.args_desc = GetArgumentDesc(1, false, false);
 
-        kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        // TODO: W/A - currently using low precision accumulator type. (for testing only)
+        if (newParams.output.GetDType() == Datatype::F16)
+        {
+            jit += "#define COUNTER_TYPE_F16\n";
+        }
+
+        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
+        kernel.kernelString = GetKernelString(kernelName, jit, kernel_id);
+        kernel.argsDesc = GetArgumentDesc(1, false, false);
+
+        kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         return{ kd };
     }

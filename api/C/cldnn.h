@@ -116,6 +116,7 @@ typedef struct
 {
     uint32_t enable_profiling;         ///< Enable per-primitive profiling.
     uint32_t meaningful_kernels_names; ///< Generate meaniful names fo OpenCL kernels.
+    uint32_t dump_program;             ///< dump the generated program to files 
     const char* compiler_options;      ///< OpenCL compiler options string.
     const char* single_kernel_name;    ///< If provided, runs specific layer.
 }  cldnn_engine_configuration;
@@ -282,6 +283,54 @@ typedef struct
     const cldnn_primitive_id* data; ///< Pointer to ids array.
     size_t size;                    ///< Number of ids in the array.
 } cldnn_primitive_id_arr;
+
+/// @brief Unique @p id of a primitive within a topology.
+typedef const char*  cldnn_kernel_code;
+typedef const char** cldnn_kernels_code;
+typedef const char*  cldnn_kernel_entry_point;
+typedef const char*  cldnn_kernel_build_options;
+typedef const size_t*  cldnn_work_group_sizes;
+
+typedef union cldnn_arg_value_t
+{
+    uint8_t  u8;
+    uint16_t u16;
+    uint32_t u32;
+    uint64_t u64;
+    int8_t   s8;
+    int16_t  s16;
+    int32_t  s32;
+    int64_t  s64;
+    float    f32;
+    double   f64;
+} cldnn_arg_value;
+
+typedef enum cldnn_arg_type_t
+{
+    ARG_INPUT,
+    ARG_OUTPUT,
+    ARG_WEIGHTS,
+    ARG_BIAS,
+    ARG_LOOKUP_TABLE,
+    ARG_UINT8,
+    ARG_UINT16,
+    ARG_UINT32,
+    ARG_UINT64,
+    ARG_INT8,
+    ARG_INT16,
+    ARG_INT32,
+    ARG_INT64,
+    ARG_FLOAT32,
+    ARG_FLOAT64,
+} cldnn_arg_type;
+
+typedef struct cldnn_arg_t
+{
+    cldnn_arg_type t;
+    cldnn_arg_value v;
+} cldnn_arg;
+
+typedef const cldnn_arg* cldnn_kernel_arguments;
 
 /// @brief Begin primitive description definition
 /// @details Defines @p 'cldnn_primitive_type_desc' structure with first 5 fields

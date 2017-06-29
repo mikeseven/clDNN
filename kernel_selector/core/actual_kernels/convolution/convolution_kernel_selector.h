@@ -18,12 +18,12 @@
 
 #include "kernel_selector.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     class ConvolutionKernelSelctor : public KernelSelctorBase
     {
     public:
-        static ConvolutionKernelSelctor &instance() {
+        static ConvolutionKernelSelctor &Instance() {
             static ConvolutionKernelSelctor instance_;
             return instance_;
         }

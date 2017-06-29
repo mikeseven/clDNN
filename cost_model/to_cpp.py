@@ -23,52 +23,62 @@ def main():
             param_num += 1
 
             line_list = line.strip().split('_')
+            types = [
+                'input_type',
+                'input_layout',
+                'output_layout',
+                'activation_func',
+                'nl_m',
+                'nl_n',
+                'input_x',
+                'input_y',
+                'input_feature',
+                'input_batch',
+                'output_x',
+                'output_y',
+                'output_feature',
+                'output_batch',
+                'weights_layout',
+                'bias_layout',
+                'filter_x',
+                'filter_y',
+                'pad_x',
+                'pad_y',
+                'stride_x',
+                'stride_y',
+                'dilation_x',
+                'dilation_y',
+            ]
+
+            vals = dict()
+            for i,v in enumerate(types):
+                vals[v] = line_list[i]
 
             print ''
-            print 'KernelSelctor::ConvolutionParams %s;' % params_str
-            print '%s.inputType = Datatype::%s;' % (params_str, line_list[0])
-            print '%s.inputLayout = KernelSelctor::DataLayout::%s;' % (params_str, line_list[1])
-            print '%s.outputLayout = KernelSelctor::DataLayout::%s;' % (params_str, line_list[2])
-            print '%s.activationFunc = ActivationFunction::%s;' % (params_str, line_list[3])
-            print '%s.nlParams = {%s, %s};' % (params_str, line_list[4], line_list[5])
-            print '%s.inDims = {%s, %s, %s, %s};' % (params_str, line_list[6], line_list[7], line_list[8], line_list[9])
-            print '%s.inDesc = {%s, {%s, %s, %s, %s}, false};' % (params_str, line_list[10], line_list[11], line_list[12], line_list[13], line_list[14])
-            print '%s.outDims = {%s, %s, %s, %s};' % (params_str, line_list[15], line_list[16], line_list[17], line_list[18])
-            print '%s.outDesc = {%s, {%s, %s, %s, %s}, false};' % (params_str, line_list[19], line_list[20], line_list[21], line_list[22], line_list[23])
-            print '%s.convParams.filterSize = {%s, %s};' % (params_str, line_list[24], line_list[25])
-            print '%s.convParams.padding = {%s, %s};' % (params_str, line_list[26], line_list[27])
-            print '%s.convParams.stride = {%s, %s};' % (params_str, line_list[28], line_list[29])
+            print 'ConvolutionParams %s;' % params_str
+            print '%s.inputs.resize(1);' % params_str
+            print '%s.layerID = "%s";' % (params_str, params_str)
 
-            '''
-            if line == '------------':
-                params_str = 'params%d' % param_num
-                print ''
-                print 'KernelSelctor::ConvolutionParams %s;' % params_str
-                print '%s.inputLayout = KernelSelctor::DataLayout::bfyx;' % params_str
-                print '%s.outputLayout = KernelSelctor::DataLayout::bfyx;' % params_str
-                print '%s.activationFunc = ActivationFunction::NONE;' % params_str
-                param_num += 1
-            if line.startswith('type:'):
-                val = line.split(':')[1]
-                print '%s.inputType = Datatype::%s;' % (params_str, val)
-            if line.startswith('inDims:'):
-                val = line.split(':')[1]
-                print '%s.inDims = {%s};' % (params_str, val)
-                print params_str + '.inDesc = {0, {%d, %d, %d, %d}};' % get_pitches(val)
-            if line.startswith('outDims:'):
-                val = line.split(':')[1]
-                print '%s.outDims = {%s};' % (params_str, val)
-                print params_str + '.outDesc = {0, {%d, %d, %d, %d}};' % get_pitches(val)
-            if line.startswith('filterSize:'):
-                val = line.split(':')[1]
-                print '%s.convParams.filterSize = {%s};' % (params_str, val)
-            if line.startswith('padding:'):
-                val = line.split(':')[1]
-                print '%s.convParams.padding = {%s};' % (params_str, val)
-            if line.startswith('stride:'):
-                val = line.split(':')[1]
-                print '%s.convParams.stride = {%s};' % (params_str, val)
-            '''
+            print '%s.inputs[0] = { Datatype::%s, DataLayout::%s, PADDED_VAL::ZERO, 0, { %s, %s, %s, %s } };' % \
+                  (params_str, vals['input_type'], vals['input_layout'].lower(), vals['input_x'], vals['input_y'], vals['input_feature'], vals['input_batch'])
+            print '%s.output    = { Datatype::%s, DataLayout::%s, PADDED_VAL::ZERO, 0, { %s, %s, %s, %s } };' % \
+                  (params_str, vals['input_type'], vals['output_layout'].lower(), vals['output_x'], vals['output_y'], vals['output_feature'], vals['output_batch'])
+            print '%s.weights   = { WeightsType::%s, WeightsLayout::%s, PADDED_VAL::ZERO, 0, { %s, %s, %s, %s } };' % \
+                  (params_str, vals['input_type'], vals['weights_layout'].lower(), vals['filter_x'], vals['filter_y'], vals['input_feature'], vals['output_feature'])
+
+            if vals['bias_layout'] != 'nobias':
+                print '%s.bias.resize(1);' % params_str
+                print '%s.bias[0]   = { Datatype::%s, DataLayout::%s, PADDED_VAL::ZERO, 0, { %s, 1 } };' % \
+                      (params_str, vals['input_type'], vals['bias_layout'].lower(), vals['output_feature'])
+
+
+            print '%s.activationFunc = ActivationFunction::%s;' % (params_str, vals['activation_func'])
+            print '%s.nlParams = {%s, %s};' % (params_str, vals['nl_m'], vals['nl_n'])
+            print '%s.convParams.filterSize = {%s, %s};' % (params_str, vals['filter_x'], vals['filter_y'])
+            print '%s.convParams.padding = {%s, %s};' % (params_str, vals['pad_x'], vals['pad_y'])
+            print '%s.convParams.stride = {%s, %s};' % (params_str, vals['stride_x'], vals['stride_y'])
+            print '%s.convParams.dilation = {%s, %s};' % (params_str, vals['dilation_x'], vals['dilation_y'])
+            print '%s.convParams.split = 1;' % params_str
 
         print ''
         print 'params_vec = {'

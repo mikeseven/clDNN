@@ -23,13 +23,12 @@ namespace clDNN
         BaseKernelBinary(KernelType::FULLY_CONNECTED),
         m_Params(params)
     {
-        KernelSelctor::FullyConnectedParams ksParams;
+        KernelSelector::FullyConnectedParams ksParams;
 
         InitBaseParams(params, ksParams);
-        ksParams.outputLayout = KernelSelctor::DataLayout::bx;
 
-        KernelSelctor::FullyConnectedOptionalParams ksOptParams;
+        KernelSelector::FullyConnectedOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelctor::FullyConnectedKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::FullyConnectedKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

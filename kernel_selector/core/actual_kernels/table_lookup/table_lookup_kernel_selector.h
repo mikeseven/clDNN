@@ -18,12 +18,12 @@
 
 #include "kernel_selector.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     class TableLookupKernelSelctor : public KernelSelctorBase
     {
     public:
-        static TableLookupKernelSelctor &instance() {
+        static TableLookupKernelSelctor &Instance() {
             static TableLookupKernelSelctor instance_;
             return instance_;
         }

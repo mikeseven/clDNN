@@ -21,30 +21,101 @@
 
 namespace clDNN
 {
-    using KernelType = KernelSelctor::KernelType;
-    using Datatype = KernelSelctor::Datatype;
-    using ConvertTypes = KernelSelctor::ConvertTypes;
-    using ActivationFunction = KernelSelctor::ActivationFunction;
-    using PoolType = KernelSelctor::PoolType;
-    using PoolRemainder = KernelSelctor::PoolRemainder;
-    using NormalizationMode = KernelSelctor::NormalizationMode;
-    using EltwiseMode = KernelSelctor::EltwiseMode;
-    using ReorderMode = KernelSelctor::ReorderMode;
-    using NonLinearParams = KernelSelctor::NonLinearParams;
-    using TensorDesc = KernelSelctor::TensorDesc;
-    typedef unsigned int uint;
+    using KernelType = KernelSelector::KernelType;
+    using Datatype = KernelSelector::Datatype;
+    using ConvertTypes = KernelSelector::ConvertTypes;
+    using ActivationFunction = KernelSelector::ActivationFunction;
+    using PoolType = KernelSelector::PoolType;
+    using PoolRemainder = KernelSelector::PoolRemainder;
+    using LRNMode = KernelSelector::LRNMode;
+    using EltwiseMode = KernelSelector::EltwiseMode;
+    using ReorderMode = KernelSelector::ReorderMode;
+    using NonLinearParams = KernelSelector::NonLinearParams;
+    using uSize = KernelSelector::Size<uint32_t>;
 
-    using uSize = KernelSelctor::Size<uint>;
-    using uDims = KernelSelctor::Dims<uint>;
-    using stDims = KernelSelctor::Dims<std::size_t>;
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Dims
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    template <typename T>
+    struct Dims
+    {
+        T x = 0;
+        T y = 0;
+        T z = 0;
+        T w = 0;
+
+        Dims() = default;
+        Dims(const Dims& dim) = default;
+        Dims& operator=(const Dims&) = default;
+
+        Dims(T x) : x(x) {}
+        Dims(T x, T y) : x(x), y(y) {}
+        Dims(T x, T y, T z) : x(x), y(y), z(z) {}
+        Dims(T x, T y, T z, T w) : x(x), y(y), z(z), w(w) {}
+
+        inline T Length() const { return x*y*z*w; }
+
+        inline Dims& operator+=(const Dims& v)
+        {
+            x += v.x;
+            y += v.y;
+            z += v.z;
+            w += v.w;
+            return *this;
+        }
+
+        inline Dims& operator-=(const Dims& v)
+        {
+            x -= v.x;
+            y -= v.y;
+            z -= v.z;
+            w -= v.w;
+            return *this;
+        }
+
+        inline friend Dims operator+(Dims v1, const Dims& v2)
+        {
+            v1 += v2;
+            return v1;
+        }
+
+        inline friend Dims operator-(Dims v1, const Dims& v2)
+        {
+            v1 -= v2;
+            return v1;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // typedefs
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    typedef Dims<uint32_t> uDims;
+    typedef Dims<size_t> stSize;
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // TensorDesc
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct TensorDesc
+    {
+        size_t offset = 0;
+        uDims pitches;
+        bool zeroPadded = false;
+
+        TensorDesc() = default;
+        TensorDesc(size_t of, const uDims& p, bool zp) : offset(of), pitches(p), zeroPadded(zp) {}
+        TensorDesc(const TensorDesc&) = default;
+        TensorDesc& operator=(const TensorDesc&) = default;
+        size_t Size() { return offset + pitches.w; }
+    };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // DataLayout
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     enum class DataLayout
     {
-        bx,
+        bf,
         bfyx,
+        brfyx,
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -52,15 +123,15 @@ namespace clDNN
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct WorkGroup
     {
-        std::size_t x = 0;
-        std::size_t y = 0;
-        std::size_t z = 0;
+        size_t x = 0;
+        size_t y = 0;
+        size_t z = 0;
         bool NullRange = true;
 
         WorkGroup() = default;
         WorkGroup(const WorkGroup&) = default;
         WorkGroup& operator=(const WorkGroup&) = default;
-        WorkGroup(std::size_t x, std::size_t y, std::size_t z) : x(x), y(y), z(z), NullRange(false) {}
+        WorkGroup(size_t x, size_t y, size_t z) : x(x), y(y), z(z), NullRange(false) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -77,9 +148,9 @@ namespace clDNN
     struct BinaryDesc
     {
         BinaryDesc() = default;
-        BinaryDesc(const unsigned char* b, const std::size_t s) : binary(b), size(s) {}
+        BinaryDesc(const unsigned char* b, const size_t s) : binary(b), size(s) {}
         const unsigned char* binary = nullptr;
-        std::size_t size = 0;
+        size_t size = 0;
     };
 
     class ArgumentsInfoBase

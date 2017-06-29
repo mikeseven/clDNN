@@ -16,33 +16,48 @@
 
 #include "include/cnn_common.cl"
 
-__kernel void eltwise(
+// TODO: move it from layout based to memory based
+KERNEL(eltwise)(
     __global DATA_TYPE* input0,
     __global DATA_TYPE* input1,
     __global DATA_TYPE* output)
 {
     const unsigned x = get_global_id(0);
     const unsigned y = get_global_id(1);
-#if OUT_BATCH == 1
-    const unsigned z = get_global_id(2);
-    const unsigned w = 0;
+#if OUTPUT_BATCH_NUM == 1
+    const unsigned feature = get_global_id(2);
+    const unsigned batch = 0;
 #else
-    const unsigned z = get_global_id(2) % OUT_DEPTH;
-    const unsigned w = get_global_id(2) / OUT_DEPTH;
+    const unsigned feature = get_global_id(2) % OUTPUT_FEATURE_NUM;
+    const unsigned batch = get_global_id(2) / OUTPUT_FEATURE_NUM;
 #endif
 
-    const unsigned src_index0 = w*INPUT_BATCH_PITCH + z*INPUT_SLICE_PITCH + y*INPUT_ROW_PITCH + x + INPUT_OFFSET;
-    const unsigned src_index1 = w*INPUT_BATCH_PITCH1 + z*INPUT_SLICE_PITCH1 + y*INPUT_ROW_PITCH1 + x + INPUT_OFFSET1;
-    const unsigned dst_index = w*OUT_BATCH_PITCH + z*OUT_SLICE_PITCH + y*OUT_ROW_PITCH + x + OUT_OFFSET;
+    const unsigned src_index0 = batch*INPUT_BATCH_PITCH + feature*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x*INPUT_X_PITCH + INPUT_OFFSET;
+    const unsigned src_index1 = batch*INPUT_BATCH_PITCH1 + feature*INPUT_SLICE_PITCH1 + y*INPUT_ROW_PITCH1 + x*INPUT_X_PITCH1 + INPUT_OFFSET1;
+    const unsigned dst_index = batch*OUTPUT_BATCH_PITCH + feature*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x + OUTPUT_OFFSET;
 
-#ifdef ELTWISE_MODE_ADD
-    DATA_TYPE res = input0[src_index0] + input1[src_index1] + (DATA_TYPE)SCALAR;
+#if   defined ELTWISE_MODE_ADD
+    DATA_TYPE res = input0[src_index0] + input1[src_index1];
 #elif defined ELTWISE_MODE_SUB
-    DATA_TYPE res = input0[src_index0] - input1[src_index1] + (DATA_TYPE)SCALAR;
+    DATA_TYPE res = input0[src_index0] - input1[src_index1];
 #elif defined ELTWISE_MODE_MUL
-    DATA_TYPE res = input0[src_index0] * input1[src_index1] + (DATA_TYPE)SCALAR;
+    DATA_TYPE res = input0[src_index0] * input1[src_index1];
 #elif defined ELTWISE_MODE_DIV
-    DATA_TYPE res = input0[src_index0] / input1[src_index1] + (DATA_TYPE)SCALAR;
+    DATA_TYPE res = input0[src_index0] / input1[src_index1];
+#elif defined ELTWISE_MODE_MAX
+    DATA_TYPE res = fmax(input0[src_index0], input1[src_index1]);
 #endif
-    output[dst_index] = activation_function(res, NL_M, NL_N);
+
+#if   defined ELTWISE_SCALAR_MODE_ADD
+    res = res + (DATA_TYPE)SCALAR;
+#elif defined ELTWISE_SCALAR_MODE_SUB
+    res = res - (DATA_TYPE)SCALAR;
+#elif defined ELTWISE_SCALAR_MODE_MUL
+    res = res * (DATA_TYPE)SCALAR;
+#elif defined ELTWISE_SCALAR_MODE_DIV
+    res = res / (DATA_TYPE)SCALAR;
+#elif defined ELTWISE_SCALAR_MODE_MAX
+    res = fmax(res, (DATA_TYPE)SCALAR);
+#endif
+    output[dst_index] = FUNC_CALL(activation_function)(res, NL_M, NL_N);
 }

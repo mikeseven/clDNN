@@ -18,12 +18,12 @@
 
 #include "kernel_selector.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     class ActivationKernelSelctor : public KernelSelctorBase
     {
     public:
-        static ActivationKernelSelctor &instance() {
+        static ActivationKernelSelctor &Instance() {
             static ActivationKernelSelctor instance_;
             return instance_;
         }

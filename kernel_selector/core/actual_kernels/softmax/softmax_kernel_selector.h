@@ -18,12 +18,12 @@
 
 #include "kernel_selector.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     class SoftmaxKernelSelctor : public KernelSelctorBase
     {
     public:
-        static SoftmaxKernelSelctor &instance() {
+        static SoftmaxKernelSelctor &Instance() {
             static SoftmaxKernelSelctor instance_;
             return instance_;
         }

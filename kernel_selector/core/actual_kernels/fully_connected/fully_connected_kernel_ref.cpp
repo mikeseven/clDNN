@@ -15,42 +15,61 @@
 */
 
 #include "fully_connected_kernel_ref.h"
+#include "kernel_selector_utils.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     ParamsKey FullyConnectedKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetInputLayout(bx);
-        k.SetOutputLayout(bx);
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetNumDims(4);
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputWeightsType(WeightsType::F16);
+        k.EnableInputWeightsType(WeightsType::F32);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableInputLayout(DataLayout::bf);
+        k.EnableOutputLayout(DataLayout::bf);
+        k.EnableBiasPerFeature();
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableBatching();
         return k;
     }
 
-    KernelsData FullyConnectedKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData FullyConnectedKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::FULLY_CONNECTED);
 
         KernelData kd = KernelData::Default<FullyConnectedParams>(params, 1);
 
         FullyConnectedParams& newParams = *static_cast<FullyConnectedParams*>(kd.params.get());
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+
+        bool succeed = UpdateWeightsParams(
+            newParams,
+            options,
+            { WeightsLayout::oiyx },
+            kd.weightsReorderParams);
+
+        if (!succeed)
+        {
+            return{};
+        }
 
         std::stringstream jit;
-        jit << GetBaseJit(newParams)
+        jit << GetBaseJit(newParams, kernel_id)
             << GetFullyConnectedJit(newParams);
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "fc");
-        kernel.args_desc = GetArgumentDesc(1, true, true);
+        kernel.workGroups.global = { out.Feature().v, out.Batch().v };
+        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
+        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
+        kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
 
-        kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         return{ kd };
     }

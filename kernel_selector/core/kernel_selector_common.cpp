@@ -16,109 +16,14 @@
 
 #include "kernel_selector_common.h"
  
-namespace KernelSelctor {
-
-    bool ArgumentDescpirtor::SetArguments(
-        cl::Kernel& kernel,
-        std::vector<cl::Buffer*> inputs,
-        cl::Buffer* output,
-        cl::Buffer* weights,
-        cl::Buffer* bias,
-        cl::Buffer* lookup_table) const
-    {
-        size_t inputIndex = 0;
-        for (uint i = 0; i < static_cast<uint>(data.size()); i++)
-        {
-            cl_int status = CL_INVALID_ARG_VALUE;
-
-            switch (data[i].t)
-            {
-            case ArgumentDescpirtor::Types::INPUT:
-                if (inputIndex < inputs.size() && inputs[inputIndex])
-                {
-                    status = kernel.setArg(i, *inputs[inputIndex]);
-                    inputIndex++;
-                }
-                break;
-            case ArgumentDescpirtor::Types::OUTPUT:
-                if (output)
-                {
-                    status = kernel.setArg(i, *output);
-                }
-                break;
-            case ArgumentDescpirtor::Types::WEIGHTS:
-                if (weights)
-                {
-                    status = kernel.setArg(i, *weights);
-                }
-                break;
-            case ArgumentDescpirtor::Types::BIAS:
-                if (bias)
-                {
-                    status = kernel.setArg(i, *bias);
-                }
-                break;
-            case ArgumentDescpirtor::Types::LOOKUP_TABLE:
-                if (lookup_table)
-                {
-                    status = kernel.setArg(i, *lookup_table);
-                }
-                break;
-            case ArgumentDescpirtor::Types::UINT8:
-                status = kernel.setArg(i, data[i].v.u8);
-                break;
-            case ArgumentDescpirtor::Types::UINT16:
-                status = kernel.setArg(i, data[i].v.u16);
-                break;
-            case ArgumentDescpirtor::Types::UINT32:
-                status = kernel.setArg(i, data[i].v.u32);
-                break;
-            case ArgumentDescpirtor::Types::UINT64:
-                status = kernel.setArg(i, data[i].v.u64);
-                break;
-            case ArgumentDescpirtor::Types::INT8:
-                status = kernel.setArg(i, data[i].v.s8);
-                break;
-            case ArgumentDescpirtor::Types::INT16:
-                status = kernel.setArg(i, data[i].v.s16);
-                break;
-            case ArgumentDescpirtor::Types::INT32:
-                status = kernel.setArg(i, data[i].v.s32);
-                break;
-            case ArgumentDescpirtor::Types::INT64:
-                status = kernel.setArg(i, data[i].v.s64);
-                break;
-            case ArgumentDescpirtor::Types::FLOAT32:
-                status = kernel.setArg(i, data[i].v.f32);
-                break;
-            case ArgumentDescpirtor::Types::FLOAT64:
-                status = kernel.setArg(i, data[i].v.f64);
-                break;
-            default:
-                break;
-            }
-
-            if (status != CL_SUCCESS)
-            {
-                printf("Error set args\n");
-                return false;
-            }
-        }
-
-        return true;
-    }
-
-    binary_data clKernelData::GetBinary(gpu_toolkit* cl_context, kernel_cache& compiler) const
-    {
-        return compiler.get(cl_context, kernel_string.jit, kernel_string.str, kernel_string.options);
-    }
-
+namespace KernelSelector 
+{
     std::string GetStringEnv(const char* varName)
     {
         std::string str;
 #ifdef WIN32
         char* env = nullptr;
-        std::size_t len = 0;
+        size_t len = 0;
         errno_t err = _dupenv_s(&env, &len, varName);
         if (err == 0)
         {

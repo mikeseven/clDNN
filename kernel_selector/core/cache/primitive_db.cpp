@@ -17,7 +17,7 @@
 #include <assert.h>
 #include <algorithm>
 
-namespace neural { namespace gpu { namespace cache {
+namespace KernelSelector { namespace gpu { namespace cache {
 
 primitive_db::primitive_db() : primitives({
     #include "ks_primitive_db.inc"

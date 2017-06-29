@@ -15,22 +15,28 @@
 */
 
 #include "convolution_kernel_direct_10_12_16.h"
+#include "kernel_selector_utils.h"
+#include "api/CPP/cldnn_defs.h"
 #include <map>
 
-namespace KernelSelctor {
+namespace KernelSelector {
 
     ParamsKey ConvolutionKernelDirect_10_10_12::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetInputLayout(bfyx);
-        k.SetOutputLayout(bfyx);
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetSubGroupSupport();
-        k.SetBiasPerFeatureMap();
-        k.SetBiasPerOutput();
-        k.SetNumDims(4);
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableInputWeightsType(WeightsType::F16);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableSubGroup();
+        k.EnableBiasPerFeature();
+        k.EnableBiasPerOutput();
+        k.EnableNonBiasTerm();
+        k.EnableBatching();
+        k.EnableSplitSupport();
         return k;
     }
 
@@ -43,9 +49,9 @@ namespace KernelSelctor {
 
         const auto& cp = orgParams.convParams;
 
-        const TensorDesc newDesc = GetConvolutionPaddedTensorDesc(orgParams);
-        const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, newDesc);
-        const bool bInputPadded = optParams.allow_padding || bProperInputDesc;
+        const DataTensor newInput = GetConvolutionPaddedTensorDesc(orgParams);
+        const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, newInput);
+        const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
         const bool bStrideOK = (cp.stride.x == 1 && cp.stride.y == 1);
         const bool bFilter3x3 = (cp.filterSize.x == 3 && cp.filterSize.y == 3);
         const bool bFilter5x5 = (cp.filterSize.x == 5 && cp.filterSize.y == 5);
@@ -65,55 +71,63 @@ namespace KernelSelctor {
         ConvolutionParams& newParams = *params_ptr.get();
         kd.kernels.resize(1);
 
-        SubGroupInfo run_info;
+        SubGroupInfo runInfo;
 
         // for KW only
-        kd.reorder_input = false;
+        kd.reorderInput = false;
 
-        if (optParams.allow_padding)
+        if (!bProperInputDesc)
         {
-            if (!bProperInputDesc)
-            {
-                newParams.inDesc = newDesc;
-                kd.reorder_input = true;
-            }
+            newParams.inputs[0] = newInput;
+            kd.reorderInput = true;
+        }
+
+        bool succeed = UpdateWeightsParams(
+            newParams,
+            options,
+            { WeightsLayout::i_yxs_os_yxsv2_osv16 },
+            kd.weightsReorderParams);
+
+        if (!succeed)
+        {
+            return{};
         }
 
         jit << "#define INPUT_BUFFER_WIDTH_PADDED" << "\n"
             << "#define INPUT_BUFFER_HEIGHT_PADDED" << "\n";
 
+        constexpr uint32_t TILE_N = 16;
+
         if (bFilter5x5)
         {
-            run_info = SubGroupInfo(1, 1, 16, 1, 1, 16, /*GWS DX*/ 4, /*GWS DY*/ 4, 1);
+            runInfo = SubGroupInfo(1, 1, TILE_N, 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 4, 1);
         }
         else if (bFilter3x3)
         {
-            run_info = SubGroupInfo(1, 1, 16, 1, 1, 16, /*GWS DX*/ 4, /*GWS DY*/ 3, 1);
+            runInfo = SubGroupInfo(1, 1, TILE_N, 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 3, 1);
         }
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 
-        jit << "#define RIGHT_PARTIAL_TILE_K " << orgParams.outDims.x % run_info.globalWorkSizeDX << "\n"
-            << GetBaseJit(newParams)
-            << GetConvolutionJit(newParams, run_info, true);
+        jit << "#define RIGHT_PARTIAL_TILE_K " << orgParams.output.X().v % runInfo.globalWorkSizeDX << "\n"
+            << GetBaseJit(newParams, kernel_id)
+            << GetConvolutionJit(newParams, runInfo, true);
 
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(
-            CLDNN_ALIGN(orgParams.outDims.x, run_info.globalWorkSizeDX) / run_info.globalWorkSizeDX,
-            CLDNN_ALIGN(orgParams.outDims.y, run_info.globalWorkSizeDY) / run_info.globalWorkSizeDY,
-            CLDNN_ALIGN(orgParams.outDims.z, 16) * orgParams.outDims.w);
+        kernel.workGroups.global = {
+            cldnn::round_up_to(orgParams.output.X().v, runInfo.globalWorkSizeDX) / runInfo.globalWorkSizeDX,
+            cldnn::round_up_to(orgParams.output.Y().v, runInfo.globalWorkSizeDY) / runInfo.globalWorkSizeDY,
+            cldnn::round_up_to(orgParams.output.Feature().v, TILE_N) * orgParams.output.Batch().v };
 
-        kernel.work_groups.local = cl::NDRange(
-            run_info.localWorkSizeX,
-            run_info.localWorkSizeY,
-            run_info.localWorkSizeZ);
+        kernel.workGroups.local = {
+            runInfo.localWorkSizeX,
+            runInfo.localWorkSizeY,
+            runInfo.localWorkSizeZ };
 
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "convolution_f16_10x12x16", AGE_BASED);
-        kernel.args_desc = GetArgumentDesc(1, true, true);
+        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id, AGE_BASED);
+        kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
+        kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
 
-        auto cpu_kernel = CPUCNNConvolutionReorder(CPUCNNConvolutionReorder::WeightsReorderMode::CONVOLUTION_DIRECT, params_ptr, run_info);
-        kd.weights_reorder_params.engine = WeightsReorderParams::Engine::CPU;
-        kd.weights_reorder_params.cpu_kernel = std::make_shared<CPUCNNConvolutionReorder>(cpu_kernel);
-        kd.weights_reorder_params.new_buffer_size = cpu_kernel.GetNewWeightBufferSizeInBytes();
-        kd.estimated_time = FORCE_PRIORITY_4;
+        kd.estimatedTime = FORCE_PRIORITY_4;
 
         return{ kd };
     }

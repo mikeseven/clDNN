@@ -17,13 +17,17 @@
 #include "softmax_kernel_selector.h"
 #include "softmax_kernel_ref.h"
 #include "softmax_kernel_opt_1_dim.h"
+#include "softmax_kernel_bf.h"
+#include "softmax_kernel_fb.h"
  
-namespace KernelSelctor {
+namespace KernelSelector {
 
     SoftmaxKernelSelctor::SoftmaxKernelSelctor()
     {
         Attach<SoftmaxKernelRef>();
         Attach<SoftmaxKernelOpt1Dim>();
+        Attach<SoftmaxKernel_bf>();
+        Attach<SoftmaxKernel_fb>();
     }
 
     KernelsData SoftmaxKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const

@@ -1,5 +1,4 @@
-/*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2016-2017 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,12 +11,9 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-*/
 
-// Extensions and additional capabilities.
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
-#endif
+
+#include "include/common.cl"
 
 // ---------------------------------------------------------------------------------------------------------------------
 // Just-in-time macro definitions:
@@ -31,8 +27,6 @@
 //                           (step 1 in in X or Y dimension of output) is computed.
 //  - INPUT_OFFSET         - [tensor] Offset between input and output (only spatial). Non-positive values that describe
 //                           initial offset input position of application of convolution filter and output position.
-//  - OUTPUT_OFFSET        - [tensor] Offset of ouput writes (only spatial). Non-negative values that describe
-//                           shift (in X and Y) of output writes for output position.
 //  - FP16_SUPPORTED       - [0/1] Value indicating whether device supports FP16 OpenCL extension (cl_khr_fp16).
 //  - FP16_UNIT_USED       - [0/1] Value indicating that current kernel should use FP16.
 //  - UNIT_TYPE            - Type of unit of input/output/weight/bias.
@@ -46,33 +40,18 @@
 
 /*
 gpu::make_jit_constant("OUTPUT_LIMIT",              output_size),
-gpu::make_jit_constant("INPUT_PADDING",             input_padding.size()),
-gpu::make_jit_constant("OUTPUT_PADDING",            outer.argument.output_padding().size()),
 gpu::make_jit_constant("FILTER",                    filter_mem.argument().size),
 gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
 gpu::make_jit_constant("FILTER_OUTPUT_FEATURE_NUM", "FILTER_FEATURE_NUM_0"),
 gpu::make_jit_constant("FILTER_INPUT_FEATURE_NUM",  "FILTER_FEATURE_NUM_1"),
-gpu::make_jit_constant("OUT_BLOCK_WIDTH",           _kernel_data.block_width));
-gpu::make_jit_constant("OUT_BLOCK_HEIGHT",          _kernel_data.block_height));
+gpu::make_jit_constant("OUTPUT_BLOCK_WIDTH",           _kernel_data.block_width));
+gpu::make_jit_constant("OUTPUT_BLOCK_HEIGHT",          _kernel_data.block_height));
 gpu::make_jit_constant("IN_BLOCK_ARRAY_SIZE",       _kernel_data.input_block_array_size));
 gpu::make_jit_constant("IN_BLOCK_WIDTH",            _kernel_data.input_block_width));
 gpu::make_jit_constant("PREFETCH",                  _kernel_data.prefetch));
 if (_kernel_data.leftovers)
     gpu::make_jit_constant("LEFTOVERS",             _kernel_data.leftovers));
 */
-
-// ---------------------------------------------------------------------------------------------------------------------
-// Activation mecro function:
-// ---------------------------------------------------------------------------------------------------------------------
-
-// Activation function used in ReLU.
-#if RELU && FP16_UNIT_USED
-    #define ACTIVATION(output, input) output = max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h);
-#elif RELU
-    #define ACTIVATION(output, input) output = max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f);
-#else
-    #define ACTIVATION(output, input) output = input;
-#endif
 
 // FEATURES_THREADS_PER_BATCH defines how many threads in z-dimension are processing single batch.
 // ideally, z-dimension of value n should indicate processing of n-th output feature. however, since
@@ -91,31 +70,33 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
     const __global UNIT_TYPE* input,
     __global UNIT_TYPE* output,
     const __global UNIT_TYPE* weights,
+#if BIAS_TERM
     const __global UNIT_TYPE* bias,
+#endif   
     uint split_idx) // TODO: removing this parameter cause a performance degradation... :)
 {
-    const uint oc  = get_global_id(0) * OUT_BLOCK_WIDTH;  // oc = Output Column 
-    const uint or  = get_global_id(1) * OUT_BLOCK_HEIGHT; // or = Output Row
-    const uint fm  = get_global_id(2);                    // fm = Feature Map = od = Output Depth 
+    const uint oc  = (uint)get_global_id(0) * OUTPUT_BLOCK_WIDTH;  // oc = Output Column
+    const uint or  = (uint)get_global_id(1) * OUTPUT_BLOCK_HEIGHT; // or = Output Row
+    const uint fm  = get_global_id(2);                    // fm = Feature Map = od = Output Depth
     const uint lid = get_sub_group_local_id();
-    
+
     uint batch_idx = fm / FEATURES_THREADS_PER_BATCH;
     uint feature_idx = fm % FEATURES_THREADS_PER_BATCH;
     uint fmg = feature_idx / SUB_GROUP_SIZE;
 
     UNIT_TYPE in[IN_BLOCK_ARRAY_SIZE];
-    UNIT_TYPE out[OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT];
+    UNIT_TYPE out[OUTPUT_BLOCK_WIDTH * OUTPUT_BLOCK_HEIGHT];
     UNIT_TYPE w[PREFETCH];
     uint in_addr;
     uint weight_addr = fmg * FILTER_INPUT_FEATURE_NUM * FILTER_SIZE_X * FILTER_SIZE_Y * SUB_GROUP_SIZE + lid;
-    
-    for(int i = 0; i < (OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT); i++) { 
+
+    for(int i = 0; i < (OUTPUT_BLOCK_WIDTH * OUTPUT_BLOCK_HEIGHT); i++) {
         out[i] = UNIT_VAL_ZERO;
     }
 
-    uint in_split_offset = split_idx * INPUT_SLICE_PITCH * FILTER_INPUT_FEATURE_NUM;
+    uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * FILTER_INPUT_FEATURE_NUM;
     in_addr = batch_idx * INPUT_BATCH_PITCH;
-    in_addr += in_split_offset + INPUT_OFFSET_WITH_PADDING + or * STRIDE_SIZE_Y * INPUT_ROW_PITCH + oc * STRIDE_SIZE_X + lid;
+    in_addr += in_split_offset + INPUT_OFFSET_WITH_PADDING + or * STRIDE_SIZE_Y * INPUT_Y_PITCH + oc * STRIDE_SIZE_X + lid;
 
     for(int kd = 0; kd < FILTER_INPUT_FEATURE_NUM; kd++)  // _ID = 3, RGB
     {
@@ -131,7 +112,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
 
             // If we have row break, move to the next row.
             if (in_block_next_x_pos == IN_BLOCK_WIDTH)
-                tmp_in_addr += INPUT_ROW_PITCH;
+                tmp_in_addr += INPUT_Y_PITCH;
         }
 #elif (2 * IN_BLOCK_WIDTH) % SUB_GROUP_SIZE == 0
         __attribute__((opencl_unroll_hint(IN_BLOCK_ARRAY_SIZE)))
@@ -144,7 +125,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
 
                 // If we have row break, move to the next row.
                 if (in_block_next_x_pos == IN_BLOCK_WIDTH)
-                    tmp_in_addr += INPUT_ROW_PITCH;
+                    tmp_in_addr += INPUT_Y_PITCH;
             }
             else {
                 // TODO: Generalize this step to relax IN_BLOCK_WIDTH restrictions.
@@ -154,13 +135,13 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
                 if (lid < sg_br_pos)
                     in[in_block_pos / SUB_GROUP_SIZE] = input[tmp_in_addr + in_block_pos % IN_BLOCK_WIDTH];
                 // We have row break inside sub-group. Need to move to next line.
-                tmp_in_addr += INPUT_ROW_PITCH;
+                tmp_in_addr += INPUT_Y_PITCH;
                 if (lid >= sg_br_pos)
                     in[in_block_pos / SUB_GROUP_SIZE] = input[tmp_in_addr - sg_br_pos];
 
                 // If we have another row break, move to the next row.
                 if (in_block_next_x_pos == 2 * IN_BLOCK_WIDTH)
-                    tmp_in_addr += INPUT_ROW_PITCH;
+                    tmp_in_addr += INPUT_Y_PITCH;
             }
         }
 #else
@@ -168,7 +149,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
 #endif
 
         //move to next filter
-        in_addr += INPUT_SLICE_PITCH;
+        in_addr += INPUT_FEATURE_PITCH;
 
         for(int pf=0; pf<PREFETCH; pf++) {
             w[pf] = weights[weight_addr]; weight_addr += SUB_GROUP_SIZE;
@@ -181,19 +162,19 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
             uint kc = 0; // kc = Kernel Column
             LOOP(FILTER_SIZE_X, kc,
             {
-                //w = weights[weight_addr];	
-                for(uint br=0; br<OUT_BLOCK_HEIGHT; br++) {
-                    for(uint bc=0; bc<OUT_BLOCK_WIDTH; bc++) {
+                //w = weights[weight_addr];
+                for(uint br=0; br<OUTPUT_BLOCK_HEIGHT; br++) {
+                    for(uint bc=0; bc<OUTPUT_BLOCK_WIDTH; bc++) {
 
 #if IN_BLOCK_WIDTH != SUB_GROUP_SIZE
-                        //if we fix the programming model, then we could use a nice simple 2d array: val = in[br * STRIDE_SIZE_Y + kr][bc * STRIDE_SIZE_X + kc]; 
-                        UNIT_TYPE val = intel_sub_group_shuffle( in[(((br * STRIDE_SIZE_Y + kr) * IN_BLOCK_WIDTH) + (bc * STRIDE_SIZE_X + kc)) / SUB_GROUP_SIZE],
-                                                                    (((br * STRIDE_SIZE_Y + kr) * IN_BLOCK_WIDTH) + (bc * STRIDE_SIZE_X + kc)) % SUB_GROUP_SIZE);
+                        //if we fix the programming model, then we could use a nice simple 2d array: val = in[br * STRIDE_SIZE_Y + kr][bc * STRIDE_SIZE_X + kc];
+                        UNIT_TYPE val = intel_sub_group_shuffle( in[(((br * STRIDE_SIZE_Y + kr * DILATION_SIZE_Y) * IN_BLOCK_WIDTH) + (bc * STRIDE_SIZE_X + kc * DILATION_SIZE_X)) / SUB_GROUP_SIZE],
+                                                                    (((br * STRIDE_SIZE_Y + kr * DILATION_SIZE_Y) * IN_BLOCK_WIDTH) + (bc * STRIDE_SIZE_X + kc * DILATION_SIZE_X)) % SUB_GROUP_SIZE);
 #else
-                        UNIT_TYPE val = intel_sub_group_shuffle( in[br * STRIDE_SIZE_X + kr], bc * STRIDE_SIZE_X + kc);	
+                        UNIT_TYPE val = intel_sub_group_shuffle( in[br * STRIDE_SIZE_Y + kr * DILATION_SIZE_Y], bc * STRIDE_SIZE_X + kc * DILATION_SIZE_X);
 #endif
 
-                        out[br * OUT_BLOCK_WIDTH + bc] = mad(w[wi % PREFETCH], val, out[br * OUT_BLOCK_WIDTH + bc]);
+                        out[br * OUTPUT_BLOCK_WIDTH + bc] = mad(w[wi % PREFETCH], val, out[br * OUTPUT_BLOCK_WIDTH + bc]);
                     }
                 }
                 w[wi % PREFETCH] = weights[weight_addr];
@@ -204,40 +185,43 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
         // addr went beyond due to prefetch so move it back to correct location.
         weight_addr -= PREFETCH * SUB_GROUP_SIZE;
     }
-    
-    uint out_split_offset = split_idx * OUT_SLICE_PITCH * FILTER_OUTPUT_FEATURE_NUM;
-    uint out_addr = OUTPUT_OFFSET;
-    out_addr += batch_idx * OUT_BATCH_PITCH;
-    out_addr += out_split_offset + feature_idx * OUT_SLICE_PITCH; // out_addr indices into start of 16 feature maps.
-    out_addr += or * OUT_ROW_PITCH + oc;  // offset for the 4x3 block that this workitem is working on;
 
-    for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
-        for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
+    uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * FILTER_OUTPUT_FEATURE_NUM;
+    uint out_addr = OUTPUT_OFFSET;
+    out_addr += batch_idx * OUTPUT_BATCH_PITCH;
+    out_addr += out_split_offset + feature_idx * OUTPUT_FEATURE_PITCH; // out_addr indices into start of 16 feature maps.
+    out_addr += or * OUTPUT_Y_PITCH + oc;  // offset for the 4x3 block that this workitem is working on;
+
+#if BIAS_TERM
+    for(uint r = 0; r < OUTPUT_BLOCK_HEIGHT; r++) {
+        for(uint c = 0; c < OUTPUT_BLOCK_WIDTH; c++) {
 #ifdef BIAS_PER_OUTPUT
             const unsigned bias_index = feature_idx*OUTPUT_SIZE_X*OUTPUT_SIZE_Y + or*OUTPUT_SIZE_X + oc;
 #else
             const unsigned bias_index = feature_idx;
 #endif
-            out[r * OUT_BLOCK_WIDTH + c] += bias[bias_index];
+            out[r * OUTPUT_BLOCK_WIDTH + c] += bias[bias_index];
         }
     }
+#endif
 
-    for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
-        for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
-            ACTIVATION(out[r * OUT_BLOCK_WIDTH + c], out[r * OUT_BLOCK_WIDTH + c]);
+
+    for(uint r = 0; r < OUTPUT_BLOCK_HEIGHT; r++) {
+        for(uint c = 0; c < OUTPUT_BLOCK_WIDTH; c++) {
+            ACTIVATION(out[r * OUTPUT_BLOCK_WIDTH + c], out[r * OUTPUT_BLOCK_WIDTH + c]);
         }
     }
 
 #ifdef LEFTOVERS
     if (feature_idx < OUTPUT_FEATURE_NUM)
 #endif
-    for(uint r = 0; r < OUT_BLOCK_HEIGHT; r++) {
+    for(uint r = 0; r < OUTPUT_BLOCK_HEIGHT; r++) {
         if(!(or + r >= OUTPUT_SIZE_Y))
         {
-            for(uint c = 0; c < OUT_BLOCK_WIDTH; c++) {
+            for(uint c = 0; c < OUTPUT_BLOCK_WIDTH; c++) {
                 // this does a scattered write to 16 different feature maps, so that data within one map is contiguous, thus ready for input to next layer.
                 if(!(oc + c >= OUTPUT_SIZE_X))
-                    output[out_addr + r * OUT_ROW_PITCH + c] = out[r * OUT_BLOCK_WIDTH + c];
+                    output[out_addr + r * OUTPUT_Y_PITCH + c] = out[r * OUTPUT_BLOCK_WIDTH + c];
             }
         }
     }

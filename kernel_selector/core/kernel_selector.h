@@ -20,7 +20,7 @@
 #include "kernel_selector_common.h"
 #include "kernel_selector_params.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     using KernelList = std::vector<std::shared_ptr<KernelBase>>;
     using ForceList = std::map<std::string, bool>;
@@ -43,6 +43,6 @@ namespace KernelSelctor
         virtual KernelsData GetNaiveBestKernel(const Params& params, const OptionalParams& options, KernelType kType) const;
 
         KernelList implementations;
-        ForceList force_kernels;
+        ForceList forceKernels;
     };
 }

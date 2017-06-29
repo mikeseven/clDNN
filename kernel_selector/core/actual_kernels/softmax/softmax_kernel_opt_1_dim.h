@@ -18,7 +18,7 @@
 
 #include "cnn_kernel_base.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {    
     class SoftmaxKernelOpt1Dim : public CNNKernelBase
     {

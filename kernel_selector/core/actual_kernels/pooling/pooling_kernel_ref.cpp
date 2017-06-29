@@ -15,23 +15,28 @@
 */
 
 #include "pooling_kernel_ref.h"
- 
-namespace KernelSelctor 
+#include "kernel_selector_utils.h" 
+
+namespace KernelSelector 
 {
     ParamsKey PoolingKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.SetDataType(Datatype::F16);
-        k.SetDataType(Datatype::F32);
-        k.SetInputLayout(bfyx);
-        k.SetOutputLayout(bfyx);
-        k.SetOffsetSupport();
-        k.SetPitchesSupport();
-        k.SetNumDims(4);
-        k.SetPoolType(PoolType::MAX);
-        k.SetPoolType(PoolType::AVG);
-        k.SetPoolRemainder(PoolRemainder::FLOOR);
-        k.SetPoolRemainder(PoolRemainder::CEIL);
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableTensorOffset();
+        k.EnableTensorPitches();
+        k.EnableBatching();
+        k.EnablePoolType(PoolType::MAX);
+        k.EnablePoolType(PoolType::AVG);
+        k.EnablePoolRemainder(PoolRemainder::FLOOR);
+        k.EnablePoolRemainder(PoolRemainder::CEIL);
+        k.EnablePoolKernelDividerMode(KernelDividerMode::FIXED);
+        k.EnablePoolKernelDividerMode(KernelDividerMode::DYNAMIC);
         return k;
     }
 
@@ -42,29 +47,29 @@ namespace KernelSelctor
         KernelData kd = KernelData::Default<PoolingParams>(params, 1);
 
         PoolingParams& newParams = *static_cast<PoolingParams*>(kd.params.get());
-        newParams.inputLayout = newParams.outputLayout = bfyx;
-
+        const auto& pp = newParams.poolParams;
+        
+        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
         std::stringstream jit;
-        jit << GetBaseJit(newParams)
-            << "#define POOL_SIZE_X (" << newParams.poolParams.poolSize.x << ")\n"
-            << "#define POOL_SIZE_Y (" << newParams.poolParams.poolSize.y << ")\n"
-            << "#define POOL_PAD_X (" << newParams.poolParams.poolPad.x << ")\n"
-            << "#define POOL_PAD_Y (" << newParams.poolParams.poolPad.y << ")\n"
-            << "#define POOL_STRIDE_X (" << newParams.poolParams.poolStride.x << ")\n"
-            << "#define POOL_STRIDE_Y (" << newParams.poolParams.poolStride.y << ")\n";
+        jit << GetBaseJit(newParams, kernel_id)
+            << "#define POOL_SIZE_X (" << pp.poolSize.x << ")\n"
+            << "#define POOL_SIZE_Y (" << pp.poolSize.y << ")\n"
+            << "#define POOL_PAD_X (" << pp.poolPad.x << ")\n"
+            << "#define POOL_PAD_Y (" << pp.poolPad.y << ")\n"
+            << "#define POOL_STRIDE_X (" << pp.poolStride.x << ")\n"
+            << "#define POOL_STRIDE_Y (" << pp.poolStride.y << ")\n";
 
-        if (newParams.poolParams.poolType == PoolType::MAX)
-        {
-            jit << "#define MAX_POOLING\n";
-        }
+        jit << "#define " << toString(pp.poolType) << "_POOLING\n";
+        jit << "#define " << toString(pp.divMode) << "_KERNEL_DIVIDER\n";
 
-        const auto& out = newParams.outDims;
+        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.work_groups.global = cl::NDRange(out.x, out.y, out.z*out.w);
-        kernel.kernel_string = GetKernelString(kernel_name, jit.str(), "pooling");
-        kernel.args_desc = GetArgumentDesc(1, false, false);
+        kernel.workGroups.global = { out.X().v, out.Y().v, out.Feature().v*out.Batch().v };
+        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
+        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
+        kernel.argsDesc = GetArgumentDesc(1, false, false);
 
-        kd.estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         return{ kd };
     }

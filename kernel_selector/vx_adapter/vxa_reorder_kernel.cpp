@@ -24,13 +24,13 @@ namespace clDNN
         BaseKernelBinary(KernelType::REORDER),
         m_Params(params)
     {
-        KernelSelctor::ReorderVxParams ksParams;
+        KernelSelector::ReorderVxParams ksParams;
 
         InitBaseParams(params, ksParams);
         ksParams.reorderParams.mode = params.reorderParams.mode;
 
-        KernelSelctor::ReorderVxOptionalParams ksOptParams;
+        KernelSelector::ReorderVxOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelctor::ReorderVxKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::ReorderVxKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

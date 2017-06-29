@@ -24,13 +24,13 @@ namespace clDNN
         BaseKernelBinary(KernelType::CONVERT),
         m_Params(params)
     {
-        KernelSelctor::ConvertParams ksParams;
+        KernelSelector::ConvertParams ksParams;
 
         InitBaseParams(params, ksParams);
         ksParams.convertParams.covertType = params.convertParams.covertType;
 
-        KernelSelctor::ConvertOptionalParams ksOptParams;
+        KernelSelector::ConvertOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelctor::ConvertKernelSelctor::instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::ConvertKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

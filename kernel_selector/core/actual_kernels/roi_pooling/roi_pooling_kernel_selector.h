@@ -18,12 +18,12 @@
 
 #include "kernel_selector.h"
  
-namespace KernelSelctor 
+namespace KernelSelector 
 {
     class ROIPoolingKernelSelctor : public KernelSelctorBase
     {
     public:
-        static ROIPoolingKernelSelctor &instance() {
+        static ROIPoolingKernelSelctor &Instance() {
             static ROIPoolingKernelSelctor instance_;
             return instance_;
         }
