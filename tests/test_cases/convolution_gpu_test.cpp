@@ -213,7 +213,7 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
             { 1,1,dilation_x, dilation_y },
             false,
             0,
-            { { 0,0,output_padding_x, output_padding_y }, 0 })
+            padding{ { 0,0,output_padding_x, output_padding_y }, 0 })
     );
 
     for (int s = 0; s < split; ++s) {
@@ -628,7 +628,7 @@ TEST(convolution_f32_fw_gpu, basic_convolution_input_padding) {
             { 1, 1, 1, 1 },
             false,
             0,
-            { { 0,0,0,0 }, 0 })
+            padding{ { 0,0,0,0 }, 0 })
     );
 
     network network(engine, topology);
@@ -734,7 +734,7 @@ TEST(convolution_f32_fw_gpu, basic_convolution_input_and_output_padding) {
             { 1, 1, 1, 1 },
             false,
             0,
-            { { 0,0,-2,-1 }, 0 })
+            padding{ { 0,0,-2,-1 }, 0 })
     );
 
     network network(engine, topology);
@@ -1299,7 +1299,7 @@ TEST(convolution_f32_fw_gpu, offsets_wsiz3x3_wstr2x2_in2x2x1x1_zeropad) {
             { 1, 1, 1, 1 },
             false,
             0,
-            { { 0,0,1,1 }, 0 })
+            padding{ { 0,0,1,1 }, 0 })
     );
 
     network network(engine, topology);

@@ -34,6 +34,12 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
 #endif
     uint split_idx)
 {
+    //constexpr:
+    const uint input_buffer_size_x = INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X + INPUT_PADDING_UPPER_SIZE_X;
+    const uint input_buffer_size_y = INPUT_PADDING_LOWER_SIZE_Y + INPUT_SIZE_Y + INPUT_PADDING_UPPER_SIZE_Y;
+    const uint input_buffer_feature_num = INPUT_PADDING_LOWER_FEATURE_NUM + INPUT_FEATURE_NUM + INPUT_PADDING_UPPER_FEATURE_NUM;
+    const uint input_buffer_batch_num = INPUT_PADDING_LOWER_BATCH_NUM + INPUT_BATCH_NUM + INPUT_PADDING_UPPER_BATCH_NUM;
+
     // get_global_size(0) -> Number of work items needed to compute all features and all batches for single output spatial position
     //                       (single (x, y) point in output).
     // get_global_size(1) -> Output size in X-dimension.
@@ -98,9 +104,9 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
 
                     if(!zero)
                     {
-                        uint input_idx = (input_offset_x + (input_offset_y * INPUT_SIZE_X)) * INPUT_FEATURE_NUM * INPUT_BATCH_NUM;
-                        input_idx += split_idx * FILTER_INPUT_FEATURE_NUM * INPUT_BATCH_NUM;
-                        input_idx += out_batch_id;
+                        uint input_idx = ((INPUT_PADDING_LOWER_SIZE_X + input_offset_x) + ((INPUT_PADDING_LOWER_SIZE_Y + input_offset_y) * input_buffer_size_x)) * input_buffer_feature_num * input_buffer_batch_num;
+                        input_idx += (INPUT_PADDING_LOWER_FEATURE_NUM + split_idx * FILTER_INPUT_FEATURE_NUM) * input_buffer_batch_num;
+                        input_idx += INPUT_PADDING_LOWER_BATCH_NUM + out_batch_id;
 
                         //sub_group_id used as offset to make each workitem load different filter, and then shuffle it
                         // 2 * sub_group_id is used because we group 2 halfs as one uint element.
@@ -116,14 +122,14 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
                             _data[1] = fma(_input.s1, filter_transp, _data[1]);
                             _data[2] = fma(_input.s2, filter_transp, _data[2]);
                             _data[3] = fma(_input.s3, filter_transp, _data[3]);
-                            input_idx += INPUT_BATCH_NUM;
+                            input_idx += input_buffer_batch_num;
 #elif defined(USE_BLOCK_READ_1)
                             half2 _input = as_half2(intel_sub_group_block_read((const __global uint*)(input + input_idx)));
                             uint filter_val_pair = *(const __global uint*)(filter + filter_idx);
                             half16 filter_transp = TRANSPOSE_BLOCK_16_FP16(filter_val_pair);
                             _data[0] = fma(_input.s0, filter_transp, _data[0]);
                             _data[1] = fma(_input.s1, filter_transp, _data[1]);
-                            input_idx += INPUT_BATCH_NUM;
+                            input_idx += input_buffer_batch_num;
 #else
                             uint filter_val_pair = *(const __global uint*)(filter + filter_idx);
                             half16 filter_transp = TRANSPOSE_BLOCK_16_FP16(filter_val_pair);
@@ -132,7 +138,8 @@ KERNEL(convolution_gpu_yxfb_yxio_b16_fp16)(
                                 _data[s] = fma(input[input_idx], filter_transp, _data[s]);
                                 input_idx += LOCAL_WORK_GROUP_SIZE;
                             }
-                            input_idx += INPUT_BATCH_NUM - BATCHES_PER_WORK_ITEM * LOCAL_WORK_GROUP_SIZE;
+                            input_idx += input_buffer_batch_num;
+                            input_idx -= BATCHES_PER_WORK_ITEM * LOCAL_WORK_GROUP_SIZE;
 #endif
                             filter_idx += FILTER_OUTPUT_FEATURE_NUM;
                         }
