@@ -38,6 +38,10 @@ KERNEL(pooling_gpu_average_offset)(const __global UNIT_TYPE* input, __global UNI
 
     UNIT_TYPE result = UNIT_INIT_VAL_AVG;
 
+#if DYNAMIC_AVERAGE
+    uint elements = 0;
+#endif
+
     const int batch_and_feature_offset = get_global_id(0);
     for(uint j = 0; j < WINDOW_SIZE_Y; j++)
     {
@@ -51,11 +55,19 @@ KERNEL(pooling_gpu_average_offset)(const __global UNIT_TYPE* input, __global UNI
                 bool zero = (input_offset_x >= INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X) || (input_offset_x < INPUT_PADDING_LOWER_SIZE_X);
                 if(!zero)
                 {
+#if DYNAMIC_AVERAGE
+                    ++elements;
+#endif
                     int input_idx = batch_and_feature_offset + INPUT_BATCH_NUM * INPUT_FEATURE_NUM * (input_offset_x + input_offset_y * input_buffer_size_x);
                     result += input[input_idx];
                 }
             }
         }
     }
+
+#if DYNAMIC_AVERAGE
+    output[linear_id_xyz] = result / (UNIT_TYPE)(elements);
+#else
     output[linear_id_xyz] = result / (UNIT_TYPE)(WINDOW_SIZE_Y * WINDOW_SIZE_X);
+#endif
 }

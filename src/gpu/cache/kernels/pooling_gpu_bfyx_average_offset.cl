@@ -39,6 +39,9 @@ KERNEL(pooling_gpu_bfyx_average_offset)(const __global UNIT_TYPE* input, __globa
     const int offset_y = INPUT_PADDING_LOWER_SIZE_Y + y * STRIDE_SIZE_Y + INPUT_OFFSET_SIZE_Y;
 
     UNIT_TYPE result = UNIT_INIT_VAL_AVG;
+#if DYNAMIC_AVERAGE
+    uint elements = 0;
+#endif
 
     const int batch_and_feature_offset = get_global_id(2);
     const uint b = batch_and_feature_offset / INPUT_FEATURE_NUM;
@@ -59,6 +62,9 @@ KERNEL(pooling_gpu_bfyx_average_offset)(const __global UNIT_TYPE* input, __globa
                 bool zero = (input_offset_x >= INPUT_PADDING_LOWER_SIZE_X + INPUT_SIZE_X) || (input_offset_x < INPUT_PADDING_LOWER_SIZE_X);
                 if(!zero)
                 {
+#if DYNAMIC_AVERAGE
+                    ++elements;
+#endif
                     int input_idx = window_offset;
                     input_idx += input_offset_y * input_buffer_size_x + input_offset_x;
                     result += input[input_idx];
@@ -71,5 +77,9 @@ KERNEL(pooling_gpu_bfyx_average_offset)(const __global UNIT_TYPE* input, __globa
     output_pos += (OUTPUT_PADDING_LOWER_FEATURE_NUM + f) * output_buffer_size_x * output_buffer_size_y;
     output_pos += (OUTPUT_PADDING_LOWER_SIZE_Y + y) * output_buffer_size_x + OUTPUT_PADDING_LOWER_SIZE_X + x;
 
+#if DYNAMIC_AVERAGE
+    output[output_pos] = result / (UNIT_TYPE)(elements);
+#else
     output[output_pos] = result / (UNIT_TYPE)(WINDOW_SIZE_Y * WINDOW_SIZE_X);
+#endif
 }

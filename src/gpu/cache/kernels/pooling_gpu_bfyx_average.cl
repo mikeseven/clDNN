@@ -63,5 +63,13 @@ KERNEL(pooling_gpu_bfyx_average)(const __global UNIT_TYPE* input, __global UNIT_
     output_pos += (OUTPUT_PADDING_LOWER_FEATURE_NUM + f) * output_buffer_size_x * output_buffer_size_y;
     output_pos += (OUTPUT_PADDING_LOWER_SIZE_Y + y) * output_buffer_size_x + OUTPUT_PADDING_LOWER_SIZE_X + x;
 
+#if DYNAMIC_AVERAGE
+    const uint last_x = x * STRIDE_SIZE_X + WINDOW_SIZE_X;
+    const uint items_x = (last_x <= INPUT_SIZE_X ? WINDOW_SIZE_X : WINDOW_SIZE_X - last_x + INPUT_SIZE_X);
+    const uint last_y = y * STRIDE_SIZE_Y + WINDOW_SIZE_Y;
+    const uint items_y = (last_y <= INPUT_SIZE_Y ? WINDOW_SIZE_Y : WINDOW_SIZE_Y - last_y + INPUT_SIZE_Y);
+    output[output_pos] = result / (UNIT_TYPE)(items_x * items_y);
+#else
     output[output_pos] = result / (UNIT_TYPE)(WINDOW_SIZE_Y * WINDOW_SIZE_X);
+#endif
 }

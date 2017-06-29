@@ -34,6 +34,7 @@ static const std::string kernel_name_bfyx_max       = "pooling_gpu_bfyx_max";
 static const std::string kernel_name_bfyx_max_offset = "pooling_gpu_bfyx_max_offset";
 static const std::string kernel_name_bfyx_average   = "pooling_gpu_bfyx_average";
 static const std::string kernel_name_bfyx_average_offset = "pooling_gpu_bfyx_average_offset";
+static const std::string kernel_name_bfyx_average_opt    = "pooling_gpu_bfyx_average_opt";
 
 template <>
 struct kd_default_value_selector<neural::gpu::engine_info_internal::architectures>
@@ -58,6 +59,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         size_t lws0, lws1, lws2; ///< Global work sizes (3D).
         std::string kernel_name;
         bool fp16_unit_used;
+        size_t tile_height, tile_width;
     } _kernel_data;
     gpu::kernel _kernel;
 
@@ -107,12 +109,16 @@ struct pooling_gpu : typed_primitive_impl<pooling>
             kd.kernel_name = needs_boundary ? kernel_name_max_offset : kernel_name_max;
             break;
         case cldnn::pooling_mode::average:
+        case cldnn::pooling_mode::average_no_padding:
             kd.kernel_name = needs_boundary ? kernel_name_average_offset : kernel_name_average;
             break;
 
         default:
             throw std::runtime_error("Unknown pooling mode.");
         }
+
+        kd.tile_height = 0;
+        kd.tile_width = 0;
 
         return kd;
     }
@@ -167,8 +173,18 @@ struct pooling_gpu : typed_primitive_impl<pooling>
             gpu::make_jit_constant("UNIT_INIT_VAL_MAX", data.fp16_unit_used ? "-HALF_MAX" : "-FLT_MAX"),
             gpu::make_jit_constant("UNIT_INIT_VAL_AVG", data.fp16_unit_used ? "0.0h" : "0.0f"),
             gpu::make_jit_constant("INPUT_PADDING",     input_padding),
-            gpu::make_jit_constant("OUTPUT_PADDING",    output_padding)
+            gpu::make_jit_constant("OUTPUT_PADDING",    output_padding),
+            gpu::make_jit_constant("DYNAMIC_AVERAGE",   outer.get_primitive()->mode == pooling_mode::average_no_padding ? 1 : 0)
         };
+
+        if (data.kernel_name == kernel_name_bfyx_average_opt)
+        {
+            mem_consts.add_constant(gpu::make_jit_constant("SUB_GROUP_SIZE", data.lws0));
+            mem_consts.add_constant(gpu::make_jit_constant("TILE_HEIGHT", data.tile_height));
+            mem_consts.add_constant(gpu::make_jit_constant("TILE_WIDTH", data.tile_width));
+            mem_consts.add_constant(gpu::make_jit_constant("ONE_OVER_POOL_SIZE", 1.f / (outer.get_primitive()->size.spatial[0] * outer.get_primitive()->size.spatial[1])));
+        }
+
         return mem_consts;
     }
 
@@ -222,6 +238,44 @@ pooling_gpu::kernel_data defauly_bfyx(const pooling_node& arg)
 {
     pooling_gpu::kernel_data kd = pooling_gpu::set_default(arg);
 
+    auto const& prim = arg.get_primitive();
+    auto const& input_layout = arg.input().get_output_layout();
+    auto const& output_layout = arg.get_output_layout();
+
+    // Optimized sub-groups kernel for specific use-case:
+    // AVG pooling with 3x3 kernel, 1x1 stride, -1x-1 input offset, no input/output padding, input size = output size, batch=1, FP32.
+    if ((prim->mode == cldnn::pooling_mode::average) &&
+        !kd.fp16_unit_used &&
+        (prim->size.spatial[0] == 3) &&
+        (prim->size.spatial[1] == 3) &&
+        (prim->stride.spatial[0] == 1) &&
+        (prim->stride.spatial[1] == 1) &&
+        (prim->input_offset.spatial[0] == -1) &&
+        (prim->input_offset.spatial[1] == -1) &&
+        !input_layout.data_padding &&
+        !output_layout.data_padding &&
+        (input_layout.size == output_layout.size) &&
+        (input_layout.size.batch[0] == 1))
+    {
+        kd.kernel_name = kernel_name_bfyx_average_opt;
+    
+        const int simd_size = 16;     
+        kd.tile_height = 7;
+        kd.tile_width = simd_size - 2;
+        
+        const int num_tiles_x = static_cast<int>(std::ceil(static_cast<float>(input_layout.size.spatial[0]) / static_cast<float>(kd.tile_width)));
+        const int num_tiles_y = static_cast<int>(std::ceil(static_cast<float>(input_layout.size.spatial[1]) / static_cast<float>(kd.tile_height)));
+        
+        kd.gws0 = num_tiles_x * simd_size;
+        kd.gws1 = num_tiles_y;
+        kd.gws2 = input_layout.size.feature[0];
+        kd.lws0 = simd_size;
+        kd.lws1 = 1;
+        kd.lws2 = 1;
+    
+        return kd;
+    }
+
     // Select kernel name.
     auto needs_boundary = pooling_gpu::needs_boundary_check(arg);
     //if (kd.gws0 > 256)
@@ -234,14 +288,14 @@ pooling_gpu::kernel_data defauly_bfyx(const pooling_node& arg)
 
     if (needs_boundary)
     {
-        kd.kernel_name = cldnn::pooling_mode::average == arg.get_primitive()->mode ? kernel_name_bfyx_average_offset : kernel_name_bfyx_max_offset;
+        kd.kernel_name = cldnn::pooling_mode::max == arg.get_primitive()->mode ? kernel_name_bfyx_max_offset : kernel_name_bfyx_average_offset;
     }
     else
     {
-        kd.kernel_name = cldnn::pooling_mode::average == arg.get_primitive()->mode ? kernel_name_bfyx_average : kernel_name_bfyx_max;
+        kd.kernel_name = cldnn::pooling_mode::max == arg.get_primitive()->mode ? kernel_name_bfyx_max : kernel_name_bfyx_average;
     }
 
-    auto output_size = arg.get_output_layout().size;
+    auto const& output_size = output_layout.size;
     // Determine global work sizes.
     kd.gws2 = output_size.batch[0] * output_size.feature[0];
     kd.gws0 = cldnn::align_to(output_size.spatial[0], 32);

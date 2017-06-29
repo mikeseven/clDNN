@@ -847,6 +847,124 @@ TEST(pooling_forward_gpu, max_yxfb_bfyx_f32_wsiz2x2_wstr2x2_i3x3x1x1_inpad2x1_ou
     }
 }
 
+template <class DataType>
+static void generic_average_wo_padding_test(format fmt, tensor output, tensor input, tensor window, tensor stride, tensor offset)
+{
+    constexpr auto dt = std::is_same<DataType, float>::value ? data_types::f32 : data_types::f16;
+
+    engine eng;
+
+    auto input_mem = memory::allocate(eng, layout{ dt, fmt, input });
+    set_values(input_mem, std::vector<DataType>(input.count(), DataType(1)));
+    std::vector<DataType> expected_output(output.count(), DataType(1));
+
+    topology tpl;
+    tpl.add(input_layout("in", input_mem.get_layout()));
+
+    auto pool_in = "in";
+    if (offset != tensor())
+    {
+        tpl.add(reorder("reorder", "in", input_mem.get_layout().with_padding(offset.negate().sizes())));
+        pool_in = "reorder";
+    }
+    tpl.add(pooling("pool", pool_in, pooling_mode::average_no_padding, window, stride, offset));
+
+    network net(eng, tpl);
+    net.set_input_data("in", input_mem);
+    auto output_mem = net.execute().at("pool").get_memory();
+
+    ASSERT_TRUE(output_mem.count() == expected_output.size());
+    EXPECT_TRUE(output_mem.get_layout().size == output);
+    auto out_ptr = output_mem.pointer<DataType>();
+
+    for (size_t i = 0; i < expected_output.size(); ++i)
+        EXPECT_FLOAT_EQ(out_ptr[i], expected_output[i]);
+}
+
+//bfyx fp32
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i3x3_w2x2_s2x2)
+{
+    generic_average_wo_padding_test<float>(format::bfyx, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{});
+}
+
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i3x3_w2x2_s2x2_o1x1)
+{
+    generic_average_wo_padding_test<float>(format::bfyx, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i3x3_w2x2_s3x3_o1x1)
+{
+    generic_average_wo_padding_test<float>(format::bfyx, spatial(2, 2), spatial(3, 3), spatial(3, 3), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i1x1_w3x3_s1x1_o1x1)
+{
+    generic_average_wo_padding_test<float>(format::bfyx, spatial(1, 1), spatial(1, 1), spatial(3, 3), tensor{ 0,0,1,1 }, tensor{ 0,0,-1,-1 });
+}
+
+//bfyx fp16
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i3x3_w2x2_s2x2_fp16)
+{
+    generic_average_wo_padding_test<FLOAT16>(format::bfyx, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{});
+}
+
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i3x3_w2x2_s2x2_o1x1_fp16)
+{
+    generic_average_wo_padding_test<FLOAT16>(format::bfyx, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i3x3_w2x2_s3x3_o1x1_fp16)
+{
+    generic_average_wo_padding_test<FLOAT16>(format::bfyx, spatial(2, 2), spatial(3, 3), spatial(3, 3), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, bfyx_average_without_padding_i1x1_w3x3_s1x1_o1x1_fp16)
+{
+    generic_average_wo_padding_test<FLOAT16>(format::bfyx, spatial(1, 1), spatial(1, 1), spatial(3, 3), tensor{ 0,0,1,1 }, tensor{ 0,0,-1,-1 });
+}
+
+//yxfb fp32
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i3x3_w2x2_s2x2)
+{
+    generic_average_wo_padding_test<float>(format::yxfb, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{});
+}
+
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i3x3_w2x2_s2x2_o1x1)
+{
+    generic_average_wo_padding_test<float>(format::yxfb, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i3x3_w2x2_s3x3_o1x1)
+{
+    generic_average_wo_padding_test<float>(format::yxfb, spatial(2, 2), spatial(3, 3), spatial(3, 3), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i1x1_w3x3_s1x1_o1x1)
+{
+    generic_average_wo_padding_test<float>(format::yxfb, spatial(1, 1), spatial(1, 1), spatial(3, 3), tensor{ 0,0,1,1 }, tensor{ 0,0,-1,-1 });
+}
+
+//yxfb fp16
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i3x3_w2x2_s2x2_fp16)
+{
+    generic_average_wo_padding_test<FLOAT16>(format::yxfb, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{});
+}
+
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i3x3_w2x2_s2x2_o1x1_fp16)
+{
+    generic_average_wo_padding_test<FLOAT16>(format::yxfb, spatial(2, 2), spatial(3, 3), spatial(2, 2), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i3x3_w2x2_s3x3_o1x1_fp16)
+{
+    generic_average_wo_padding_test<FLOAT16>(format::yxfb, spatial(2, 2), spatial(3, 3), spatial(3, 3), tensor{ 0,0,2,2 }, tensor{ 0,0,-1,-1 });
+}
+
+TEST(pooling_forward_gpu, yxfb_average_without_padding_i1x1_w3x3_s1x1_o1x1_fp16)
+{
+    generic_average_wo_padding_test<FLOAT16>(format::yxfb, spatial(1, 1), spatial(1, 1), spatial(3, 3), tensor{ 0,0,1,1 }, tensor{ 0,0,-1,-1 });
+}
+
 
 class pooling_test : public tests::generic_test
 {
@@ -868,7 +986,7 @@ public:
 
     static std::vector<cldnn::primitive*> generate_specific_test_params()
     {
-        std::vector<pooling_mode> pooling_modes = { pooling_mode::max, pooling_mode::average };
+        std::vector<pooling_mode> pooling_modes = { pooling_mode::max, pooling_mode::average, pooling_mode::average_no_padding };
 
         std::vector<tensor> sizes = { tensor(1, 1, 2, 2 ), tensor(1, 1, 3, 3), tensor(1, 1, 7, 4) };
 
@@ -895,6 +1013,9 @@ public:
                 }
             }
         }
+
+        // This case tests the pooling_gpu_bfyx_average_opt kernel.
+        all_layer_params.push_back(new pooling("pooling", "input0", pooling_mode::average, tensor(1, 1, 3, 3), tensor(1, 1, 1, 1), tensor(1, 1, -1, -1)));
 
         return all_layer_params;
     }
@@ -1052,8 +1173,9 @@ public:
                 break;
             }
             case cldnn::pooling_mode::average:
+            case cldnn::pooling_mode::average_no_padding:
             {
-                int pool_window_size = kernel_width * kernel_height; // The pool size is fixed for all elements.
+                int fixed_pool_window_size = kernel_width * kernel_height;
                 for (int i = 0; i < (int)output.get_layout().get_buffer_size().count(); i++)
                 {
                     output_mem[i] = 0;
@@ -1078,6 +1200,7 @@ public:
                                 tensor lower_padding = pooling->output_padding.lower_size();
                                 output_index += (lower_padding.spatial[1] + h) * output_width + lower_padding.spatial[0] + w;
 
+                                int num_of_elements = 0;
                                 for (int y = input_offset_y_start; y < input_offset_y_end; y++) 
                                 {
                                     for (int x = input_offset_x_start; x < input_offset_x_end; x++) 
@@ -1085,10 +1208,20 @@ public:
                                         const size_t input_index = get_linear_index(inputs[0].get_layout(), b, f, y, x);
 
                                         output_mem[output_index] += input_mem[input_index];
+                                        num_of_elements++;
                                     }
                                 }
 
-                                output_mem[output_index] /= (Type)pool_window_size;
+                                if (pooling_mode == cldnn::pooling_mode::average)
+                                {
+                                    // The pool size is fixed for all elements in pooling_mode::average.
+                                    output_mem[output_index] /= (Type)fixed_pool_window_size;
+                                }
+                                else
+                                {
+                                    // The pool size is dynamic in pooling_mode::average_no_padding.
+                                    output_mem[output_index] /= (Type)num_of_elements;
+                                }            
                             }
                         }
                     }
