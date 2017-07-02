@@ -161,11 +161,15 @@ TEST(roi_pooling_forward_gpu, basic_test2_max) {
     int pooled_height = 6;
     float spatial_scale = 0.0625f;
 
-    std::vector<float> data(roi_pooling_data_size);
-    std::copy_n(&data[0], roi_pooling_data_size, roi_pooling_data);
+    std::vector<float> data;
+    for (size_t i = 0; i < roi_pooling_data_size; i++) {
+        data.push_back(roi_pooling_data[i]);
+    }
 
-    std::vector<float> rois(rois_input_size);
-    std::copy_n(&rois[0], rois_input_size, rois_input);
+    std::vector<float> rois;
+    for (size_t i = 0; i < rois_input_size; i++) {
+        rois.push_back(rois_input[i]);
+    }
 
     int num_rois = (int) rois_input_size / CLDNN_ROI_VECTOR_SIZE;
 
