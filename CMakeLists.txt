@@ -441,7 +441,7 @@ mark_as_advanced(CLDNN__INCLUDE_CORE)
 # ======================================================================================================
 
 # Include and build: Examples of usage of clDNN framework.
-set(CLDNN__INCLUDE_KERNEL_SELECTOR ON CACHE BOOL "Include and build: clDNN kernel selector.")
+set(CLDNN__INCLUDE_KERNEL_SELECTOR OFF CACHE BOOL "Include and build: clDNN kernel selector.")
 mark_as_advanced(CLDNN__INCLUDE_KERNEL_SELECTOR)
 
 # ======================================================================================================
@@ -453,7 +453,7 @@ mark_as_advanced(CLDNN__INCLUDE_TESTS)
 # ======================================================================================================
 
 # Include and build: Tests (unit tests and small acceptance tests) for clDNN framework.
-set(CLDNN__INCLUDE_COST_MODEL ON CACHE BOOL "Include and build: clDNN cost model.")
+set(CLDNN__INCLUDE_COST_MODEL OFF CACHE BOOL "Include and build: clDNN cost model.")
 mark_as_advanced(CLDNN__INCLUDE_COST_MODEL)
 
 # ======================================================================================================
