@@ -1220,7 +1220,9 @@ public:
                                 else
                                 {
                                     // The pool size is dynamic in pooling_mode::average_no_padding.
-                                    output_mem[output_index] /= (Type)num_of_elements ? (Type)num_of_elements : (Type)1;
+                                    if (num_of_elements != 0) {
+                                        output_mem[output_index] /= (Type)num_of_elements;
+                                    }
                                 }            
                             }
                         }
