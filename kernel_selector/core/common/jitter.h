@@ -90,24 +90,32 @@ inline std::string toCodeString<char*>(char* val) { return val; }
 
 template<>
 inline std::string toCodeString<float>(float val) {
-    // 64 chars should be enought to store: "-0x0.123456p-123f /*-0.123456e-123*/"
-    char buffer[64] = "";
     if (std::isinf(val))
-        std::snprintf(buffer, sizeof(buffer), "%sINFINITY", std::signbit(val) ? "-" : "");
-    else
-        std::snprintf(buffer, sizeof(buffer), "%.6af /*%.4g*/", double(val), double(val));
-    return buffer;
+        return std::signbit(val) ? "-INFINITY" : "INFINITY";
+    std::stringstream ss;
+#ifdef __GNUC__
+    // Workaround GCC compiler/STL bug
+    ss << "as_float(0x" << std::hex << *reinterpret_cast<uint32_t*>(&val) << ")";
+#else
+    ss << std::hexfloat << val << "f";
+#endif
+    ss << " /*" << std::scientific << val << "*/";
+    return ss.str();
 }
 
 template<>
 inline std::string toCodeString<double>(double val) {
-    // 64 chars should be enought to store: "-0x0.1234567890123p-1234 /*-0.1234567890123e-1074*/"
-    char buffer[64] = "";
     if (std::isinf(val))
-        std::snprintf(buffer, sizeof(buffer), "%sINFINITY", std::signbit(val) ? "-" : "");
-    else
-        std::snprintf(buffer, sizeof(buffer), "%.13a /*%.4g*/", val, val);
-    return buffer;
+        return std::signbit(val) ? "-INFINITY" : "INFINITY";
+    std::stringstream ss;
+#ifdef __GNUC__
+    // Workaround GCC compiler/STL bug
+    ss << "as_double(0x" << std::hex << *reinterpret_cast<uint64_t*>(&val) << ")";
+#else
+    ss << std::hexfloat << val;
+#endif
+    ss << " /*" << std::scientific << val << "*/";
+    return ss.str();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

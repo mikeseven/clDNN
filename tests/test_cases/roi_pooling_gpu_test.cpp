@@ -26,6 +26,7 @@
 #include "test_utils/test_utils.h"
 #include "test_utils/float16.h"
 #include <api/CPP/compounds.h>
+#include <algorithm>
 namespace cldnn
 {
 template<> struct type_to_data_type<FLOAT16> { static const data_types value = data_types::f16; };
@@ -161,10 +162,10 @@ TEST(roi_pooling_forward_gpu, basic_test2_max) {
     float spatial_scale = 0.0625f;
 
     std::vector<float> data(roi_pooling_data_size);
-    memcpy(&data[0], roi_pooling_data, roi_pooling_data_size * sizeof (float));
+    std::copy_n(&data[0], roi_pooling_data_size * sizeof(float), roi_pooling_data);
 
     std::vector<float> rois(rois_input_size);
-    memcpy(&rois[0], rois_input, rois_input_size * sizeof (float));
+    std::copy_n(&rois[0], rois_input_size * sizeof(float), rois_input);
 
     int num_rois = (int) rois_input_size / CLDNN_ROI_VECTOR_SIZE;
 
