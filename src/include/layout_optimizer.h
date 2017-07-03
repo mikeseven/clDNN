@@ -18,7 +18,6 @@
 
 #include "memory_impl.h"
 #include "engine_impl.h"
-#include "topology_impl.h"
 #include "meta_utils.h"
 
 #include "api/CPP/data.hpp"
@@ -76,7 +75,6 @@ public:
 
 private:
     bool _enabled;
-    topology_impl _topology;
     engine_impl::ptr _engine;
     optimization_attributes _optimization_attributes;
     // TODO: Remove once we will get full support for input/output padding in all primitive implementations.
@@ -231,29 +229,6 @@ public:
         }
     }
 
-    template <class T>
-    auto add_weights_for_optimization(const std::shared_ptr<data> data_prim,
-                                      data_type type,
-                                      std::shared_ptr<const T> user,
-                                      boost::optional<layout> user_layout = boost::optional<layout>())
-    {
-        auto reorder = get_reorder(data_prim->mem.get_layout(), data_prim->id, type, user, user_layout);
-        add_reoder_to_topology(reorder, data_prim);
-        return reorder;
-    }
-
-    void add_weights_for_optimization(
-        const kernel_selector::weights_reorder_params& reorder_params,
-        const std::shared_ptr<data> data_prim,
-        data_type type)
-    {
-        auto reorders = get_generic_layer(reorder_params, data_prim->id, data_prim->mem.get_layout(), type);
-        for (auto& reorder : reorders)
-        {
-            add_reoder_to_topology(reorder, data_prim);
-        }
-    }
-
     void set_optimization_attribute(optimization_attributes_type attribute, int32_t val)
     {
         switch (attribute)
@@ -268,7 +243,6 @@ public:
         }
     }
 
-    std::map<primitive_id, memory_impl::ptr> optimize() const;
     auto get_engine() { return _engine; }
 };
 }

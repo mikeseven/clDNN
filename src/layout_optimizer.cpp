@@ -29,7 +29,7 @@
 using namespace cldnn;
 
 layout_optimizer::layout_optimizer(refcounted_obj_ptr<engine_impl> eng, bool enabled, bool output_size_handling_enabled)
-    : _enabled(enabled), _topology(), _engine(eng), _optimization_attributes(),
+    : _enabled(enabled), _engine(eng), _optimization_attributes()
       _output_size_handling_enabled(output_size_handling_enabled)
 {
 }
@@ -211,30 +211,4 @@ layout_optimizer::create_reorder_from_given_source(const cldnn::primitive_id& me
     return std::make_pair(reorder, false);
 }
 
-std::map<primitive_id, memory_impl::ptr> layout_optimizer::optimize() const
-{
-    if (!_enabled || _topology.get_primitives().empty())
-    {
-        return{};
-    }
-
-    std::map<primitive_id, memory_impl::ptr> results;
-
-    network_impl net(*_engine, _topology);
-    net.execute({});
     net.reset_execution(true);
-
-    for (auto const& output : net.get_outputs())
-    {
-        // in order to handle list of reorders
-        std::shared_ptr<const primitive_inst> input = output;
-        while (input->dependencies().empty() == false)
-        {
-            input = input->dependencies().at(0);
-        }
-        
-        results.emplace(input->id(), &output->output_memory());
-    }
-
-    return results;
-}

@@ -19,7 +19,7 @@
 #include "program_impl.h"
 #include "primitive_inst.h"
 #include "layout_optimizer.h"
-#include "network_impl.h"
+#include "constants_propagator.h"
 
 #include "primitive_type.h"
 #include "api/CPP/activation.hpp"
@@ -1263,12 +1263,7 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
             prep_opt(prim.as<fully_connected>());
         }
     }
-
-    //all optimizing primitives has been added and inputs for all primitives has been updated.
-    //run reorders and attach new buffer to all data_nodes
-    replace_data_with_optimized(lo.optimize());
 }
-
 void program_impl::prepare_depthwise_sep_opt()
 {
     const auto prepare_depthwise_sep_opt = [this](auto& node) -> void
@@ -1373,10 +1368,6 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
             prep_opt(prim.as<fully_connected>());
         }
     }
-
-    //all optimizing primitives has been added and inputs for all primitives has been updated.
-    //run reorders now
-    replace_data_with_optimized(lo.optimize());
 
     const auto prep_opt_depthwise_sep = [this](auto& node) -> void
     {
@@ -1556,91 +1547,22 @@ void program_impl::prepare_padding()
 
 void program_impl::propagate_constants()
 {
-    std::list<typed_program_node<data>*> const_inputs;
-    std::list<primitive_id> prims_to_replace;
-    topology_impl tpl;
-    bool has_non_trivial_constants = false;
+    constants_propagator prop(this);
 
     for (auto& node : processing_order)
-    {
-        if (node->is_type<input_layout>())
-            continue;
-
-        if (node->is_type<data>())
-        {
-            node->mark();
-        }
-        else
-        {
-            bool is_constant = true;
-            for (auto& dep : node->get_dependencies())
-                if (!dep->is_marked())
-                    is_constant = false;
-
-            if (!is_constant)
-            {
-                for (auto& dep : node->get_dependencies())
-                    if (dep->is_marked())
-                    {
-                        if (!dep->is_type<data>())
-                            prims_to_replace.push_back(dep->id());
-
-                        auto dep_users_itr = dep->users.begin();
-                        while (dep_users_itr != dep->users.end())
-                        {
-                            auto dep_user = *dep_users_itr;
-                            if (dep_user->is_marked())
-                            {
-                                dep_user->remove_dependency(dep);
-                                dep_users_itr = dep->users.erase(dep_users_itr);
-                            }
-                            else
-                                ++dep_users_itr;
-                        }
-                    }
-            }
-            else
-            {
-                node->mark();
-                tpl.add(node->desc);
-                has_non_trivial_constants = true;
-
-                for (auto& dep : node->get_dependencies())
-                {
-                    if (dep->is_type<data>()) //if a data is an input for a non-trivial constant primitive, add it as an input for our helper network
-                    {
-                        tpl.add(std::make_shared<input_layout>(dep->id(), dep->as<data>().get_primitive()->mem.get_layout()));
-                        const_inputs.push_back(&dep->as<data>());
-                    }
-                }
-            }
-        }
-    }
+        prop.visit_node(*node);
 
     for (auto& node : processing_order)
         node->unmark();
 
-    if (!has_non_trivial_constants)
-        return;
-
-    build_options bo;
-    bo.set_option(build_option::optimize_data(false));
-    network_impl::ptr net = engine->build_network(tpl, bo);
-    for (auto& cin : const_inputs)
-        net->set_input_data(cin->id(), api_cast(cin->get_primitive()->mem.get()));
-
-    net->execute({});
-    net->reset_execution(true); //wait for computations to complete
-    auto const_outputs = net->get_outputs();
-    assert(const_outputs.size() == prims_to_replace.size() && "Mismatching count of constant endpoints and helper network outputs");
-    for (auto& cout : const_outputs)
+    auto&& to_replace = prop.calculate();
+    for (auto& cout : to_replace)
     {
-        assert(std::find(prims_to_replace.begin(), prims_to_replace.end(), cout->id()) != prims_to_replace.end());
-
-        auto id_to_replace = cout->id();
-        auto const_data = std::make_shared<data>(data("_cldnn_const_prop_" + cout->id(), cout->output_memory()));
+        auto& id_to_replace = cout.first;
+        auto const_data = std::make_shared<data>(data("_cldnn_const_prop_" + id_to_replace, cout.second));
         auto& new_node = get_or_create(const_data);
         auto curr_node = nodes_map.at(id_to_replace);
+        new_node.processing_itr = processing_order.insert(curr_node->processing_itr, &new_node);
 
         if (curr_node->is_output())
         {
@@ -1652,9 +1574,15 @@ void program_impl::propagate_constants()
             curr_node->set_output(false);
         }
 
-        new_node.processing_itr = processing_order.insert(curr_node->processing_itr, &new_node);
-        replace_all_usages(*curr_node, new_node, true);
+        if (!curr_node->is_endpoint())
+            replace_all_usages(*curr_node, new_node, true);
+        else
+            remove_if_dangling(*curr_node, true);
+
         rename(new_node, id_to_replace);
+
+        //a data node is always an input (since it does not have any dependencies) so add it to a list of inputs
+        inputs.push_back(&new_node);
     }
 }
 
