@@ -30,7 +30,7 @@ namespace KernelSelector
 
             mem_consts.AddConstant(MakeJitConstant("NEURONS_PER_WORK_ITEM", GetNeuronsPerWorkItem(params))); // how many neurons for a single batch will a single work item produce
             mem_consts.AddConstant(MakeJitConstant("BATCHES_PER_WORK_ITEM", batches_per_work_item));             // how many batches will a single work item compute
-            mem_consts.AddConstant(MakeJitConstant("OUTPUT_ELEMENTS_COUNT", params.output.Length() / params.output.Batch().v));
+            mem_consts.AddConstant(MakeJitConstant("OUTPUT_ELEMENTS_COUNT", params.output.LogicalSize() / params.output.Batch().v));
         }
 
         return mem_consts;
@@ -43,7 +43,7 @@ namespace KernelSelector
         kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 
         // Determine global work sizes.
-        kd.gws0 = params.output.Length();
+        kd.gws0 = params.output.LogicalSize();
         kd.gws1 = kd.gws2 = 1;
 
         // Find largest positive local work size that is divider for global work size.

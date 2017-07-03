@@ -93,7 +93,7 @@ public:
 
     bool SetArguments(
         cl::Kernel& kernel,
-        const ArgumentDescpirtor& argDesc,
+        const ArgumentDescriptor& argDesc,
         const SetArgumentParams& params) const
     {
         const auto& data = argDesc.data;
@@ -105,80 +105,80 @@ public:
 
             switch (data[i].t)
             {
-            case ArgumentDescpirtor::Types::INPUT:
+            case ArgumentDescriptor::Types::INPUT:
                 if (inputIndex < params.inputs.size() && params.inputs[inputIndex])
                 {
                     status = kernel.setArg(i, *params.inputs[inputIndex]);
                     inputIndex++;
                 }
                 break;
-            case ArgumentDescpirtor::Types::OUTPUT:
+            case ArgumentDescriptor::Types::OUTPUT:
                 if (params.output)
                 {
                     status = kernel.setArg(i, *params.output);
                 }
                 break;
-            case ArgumentDescpirtor::Types::WEIGHTS:
+            case ArgumentDescriptor::Types::WEIGHTS:
                 if (params.weights)
                 {
                     status = kernel.setArg(i, *params.weights);
                 }
                 break;
-            case ArgumentDescpirtor::Types::BIAS:
+            case ArgumentDescriptor::Types::BIAS:
                 if (params.bias)
                 {
                     status = kernel.setArg(i, *params.bias);
                 }
                 break;
-            case ArgumentDescpirtor::Types::LOOKUP_TABLE:
+            case ArgumentDescriptor::Types::LOOKUP_TABLE:
                 if (params.lookupTable)
                 {
                     status = kernel.setArg(i, *params.lookupTable);
                 }
                 break;
-            case ArgumentDescpirtor::Types::SCALE_TABLE:
+            case ArgumentDescriptor::Types::SCALE_TABLE:
                 if (params.scaleTable)
                 {
                     status = kernel.setArg(i, *params.scaleTable);
                 }
                 break;
-            case ArgumentDescpirtor::Types::SLOPE:
+            case ArgumentDescriptor::Types::SLOPE:
                 if (params.slope)
                 {
                     status = kernel.setArg(i, *params.slope);
                 }
                 break;
-            case ArgumentDescpirtor::Types::SPLIT:
+            case ArgumentDescriptor::Types::SPLIT:
                 status = kernel.setArg(i, params.split);
                 break;
-            case ArgumentDescpirtor::Types::UINT8:
+            case ArgumentDescriptor::Types::UINT8:
                 status = kernel.setArg(i, data[i].v.u8);
                 break;
-            case ArgumentDescpirtor::Types::UINT16:
+            case ArgumentDescriptor::Types::UINT16:
                 status = kernel.setArg(i, data[i].v.u16);
                 break;
-            case ArgumentDescpirtor::Types::UINT32:
+            case ArgumentDescriptor::Types::UINT32:
                 status = kernel.setArg(i, data[i].v.u32);
                 break;
-            case ArgumentDescpirtor::Types::UINT64:
+            case ArgumentDescriptor::Types::UINT64:
                 status = kernel.setArg(i, data[i].v.u64);
                 break;
-            case ArgumentDescpirtor::Types::INT8:
+            case ArgumentDescriptor::Types::INT8:
                 status = kernel.setArg(i, data[i].v.s8);
                 break;
-            case ArgumentDescpirtor::Types::INT16:
+            case ArgumentDescriptor::Types::INT16:
                 status = kernel.setArg(i, data[i].v.s16);
                 break;
-            case ArgumentDescpirtor::Types::INT32:
+            case ArgumentDescriptor::Types::INT32:
                 status = kernel.setArg(i, data[i].v.s32);
                 break;
-            case ArgumentDescpirtor::Types::INT64:
+            case ArgumentDescriptor::Types::INT64:
                 status = kernel.setArg(i, data[i].v.s64);
                 break;
-            case ArgumentDescpirtor::Types::FLOAT32:
+            case ArgumentDescriptor::Types::FLOAT32:
                 status = kernel.setArg(i, data[i].v.f32);
                 break;
-            case ArgumentDescpirtor::Types::FLOAT64:
+            case ArgumentDescriptor::Types::FLOAT64:
                 status = kernel.setArg(i, data[i].v.f64);
                 break;
             default:

@@ -42,7 +42,7 @@ namespace clDNN
         ret.pitches.x = (uint32_t)((pParams->inputs[0].GetDims().size() >= 2) ? pParams->inputs[0].GetDims()[1].pitch : 1);
         ret.pitches.y = (uint32_t)((pParams->inputs[0].GetDims().size() >= 3) ? pParams->inputs[0].GetDims()[2].pitch : ret.pitches.x);
         ret.pitches.z = (uint32_t)((pParams->inputs[0].GetDims().size() >= 4) ? pParams->inputs[0].GetDims()[3].pitch : ret.pitches.y);
-        ret.pitches.w = (uint32_t)(pParams->inputs[0].LengthWithPadding());
+        ret.pitches.w = (uint32_t)(pParams->inputs[0].LogicalSizeWithPadding());
         return ret;
     }
 
@@ -147,7 +147,7 @@ namespace clDNN
         UpdateTensor(vxParams.inputType, vxParams.inputLayout, vxParams.outDims, vxParams.outDesc, ksParams.output);
     }
 
-    std::shared_ptr<ArgumentsInfoBase> BaseKernelBinary::SetupArguments(const KernelSelector::ArgumentDescpirtor& cldnn_args)
+    std::shared_ptr<ArgumentsInfoBase> BaseKernelBinary::SetupArguments(const KernelSelector::ArgumentDescriptor& cldnn_args)
     {
         //m_ArgInfo = std::make_shared<ArgumentsInfo>();
         auto args_ptr = std::shared_ptr<ArgumentsInfoBase>(new ArgumentsInfo());
@@ -160,58 +160,58 @@ namespace clDNN
         {
             switch (cldnn_data[i].t)
             {
-            case KernelSelector::ArgumentDescpirtor::Types::INPUT:
+            case KernelSelector::ArgumentDescriptor::Types::INPUT:
                 args->data[i].t = ArgumentsInfoBase::Types::INPUT;
                 break;
-            case KernelSelector::ArgumentDescpirtor::Types::OUTPUT:
+            case KernelSelector::ArgumentDescriptor::Types::OUTPUT:
                 args->data[i].t = ArgumentsInfoBase::Types::OUTPUT;
                 break;
-            case KernelSelector::ArgumentDescpirtor::Types::WEIGHTS:
+            case KernelSelector::ArgumentDescriptor::Types::WEIGHTS:
                 args->data[i].t = ArgumentsInfoBase::Types::WEIGHTS;
                 break;
-            case KernelSelector::ArgumentDescpirtor::Types::BIAS:
+            case KernelSelector::ArgumentDescriptor::Types::BIAS:
                 args->data[i].t = ArgumentsInfoBase::Types::BIAS;
                 break;
-            case KernelSelector::ArgumentDescpirtor::Types::LOOKUP_TABLE:
+            case KernelSelector::ArgumentDescriptor::Types::LOOKUP_TABLE:
                 args->data[i].t = ArgumentsInfoBase::Types::LOOKUP_TABLE;
                 break;
-            case KernelSelector::ArgumentDescpirtor::Types::UINT8:
+            case KernelSelector::ArgumentDescriptor::Types::UINT8:
                 args->data[i].t = ArgumentsInfoBase::Types::UINT8;
                 args->data[i].v.u8 = cldnn_data[i].v.u8;
                 break;
-            case KernelSelector::ArgumentDescpirtor::Types::UINT16:
+            case KernelSelector::ArgumentDescriptor::Types::UINT16:
                 args->data[i].t = ArgumentsInfoBase::Types::UINT16;
                 args->data[i].v.u16 = cldnn_data[i].v.u16;
                 break;
-            case KernelSelector::ArgumentDescpirtor::Types::UINT32:
+            case KernelSelector::ArgumentDescriptor::Types::UINT32:
                 args->data[i].t = ArgumentsInfoBase::Types::UINT32;
                 args->data[i].v.u32 = cldnn_data[i].v.u32;
                 break;
-            case KernelSelector::ArgumentDescpirtor::Types::UINT64:
+            case KernelSelector::ArgumentDescriptor::Types::UINT64:
                 args->data[i].t = ArgumentsInfoBase::Types::UINT64;
                 args->data[i].v.u64 = cldnn_data[i].v.u64;
                 break;
-            case KernelSelector::ArgumentDescpirtor::Types::INT8:
+            case KernelSelector::ArgumentDescriptor::Types::INT8:
                 args->data[i].t = ArgumentsInfoBase::Types::INT8;
                 args->data[i].v.s8 = cldnn_data[i].v.s8;
                 break;
-            case KernelSelector::ArgumentDescpirtor::Types::INT16:
+            case KernelSelector::ArgumentDescriptor::Types::INT16:
                 args->data[i].t = ArgumentsInfoBase::Types::INT16;
                 args->data[i].v.s16 = cldnn_data[i].v.s16;
                 break;
-            case KernelSelector::ArgumentDescpirtor::Types::INT32:
+            case KernelSelector::ArgumentDescriptor::Types::INT32:
                 args->data[i].t = ArgumentsInfoBase::Types::INT32;
                 args->data[i].v.s32 = cldnn_data[i].v.s32;
                 break;
-            case KernelSelector::ArgumentDescpirtor::Types::INT64:
+            case KernelSelector::ArgumentDescriptor::Types::INT64:
                 args->data[i].t = ArgumentsInfoBase::Types::INT64;
                 args->data[i].v.s64 = cldnn_data[i].v.s64;
                 break;
-            case KernelSelector::ArgumentDescpirtor::Types::FLOAT32:
+            case KernelSelector::ArgumentDescriptor::Types::FLOAT32:
                 args->data[i].t = ArgumentsInfoBase::Types::FLOAT32;
                 args->data[i].v.f32 = cldnn_data[i].v.f32;
                 break;
-            case KernelSelector::ArgumentDescpirtor::Types::FLOAT64:
+            case KernelSelector::ArgumentDescriptor::Types::FLOAT64:
                 args->data[i].t = ArgumentsInfoBase::Types::FLOAT64;
                 args->data[i].v.f64 = cldnn_data[i].v.f64;
                 break;

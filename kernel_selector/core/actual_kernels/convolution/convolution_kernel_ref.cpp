@@ -72,7 +72,7 @@ namespace KernelSelector {
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
-        kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
+        kernel.argsDesc.data.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
 
         kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 

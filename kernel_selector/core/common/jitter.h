@@ -183,8 +183,8 @@ public:
         JitDefinitions definitions{
             { _name + "_TYPE",          toCLType(_tensor.GetDType()) },
             { _name + "_OFFSET",        std::to_string(_tensor.GetOffset()) },
-            { _name + "_LIMIT",         std::to_string(_tensor.LengthWithPadding()) },
-            { _name + "_LENGTH",        std::to_string(_tensor.Length()) },
+            { _name + "_LIMIT",         std::to_string(_tensor.LogicalSizeWithPadding()) },
+            { _name + "_LENGTH",        std::to_string(_tensor.LogicalSize()) },
             { _name + "_DIMS",          std::to_string(_tensor.GetDims().size()) },
             { _name + "_SIZE_X",        std::to_string(_tensor.X().v) },
             { _name + "_SIZE_Y",        std::to_string(_tensor.Y().v) },
@@ -229,7 +229,7 @@ public:
         JitDefinitions definitions{
             { _name + "_TYPE",          toCLType(_tensor.GetDType()) },
             { _name + "_OFFSET",        std::to_string(_tensor.GetOffset()) },
-            { _name + "_LIMIT",         std::to_string(_tensor.LengthWithPadding()) },
+            { _name + "_LIMIT",         std::to_string(_tensor.LogicalSizeWithPadding()) },
             { _name + "_DIMS",          std::to_string(_tensor.GetDims().size()) },
             { _name + "_SIZE_X",        std::to_string(_tensor.X().v) },
             { _name + "_SIZE_Y",        std::to_string(_tensor.Y().v) },
@@ -454,7 +454,7 @@ inline JitConstants MakeFullyConnectedJitConstants(const FullyConnectedParams& p
 {
     JitConstants jit = MakeWeightBiasParamsJitConstants(params);
     const auto& input = params.inputs[0];
-    const auto x_size = input.Length() / input.Batch().v;
+    const auto x_size = input.LogicalSize() / input.Batch().v;
 
     jit.AddConstants({
         MakeJitConstant("INPUT_ELEMENTS_COUNT",      x_size),

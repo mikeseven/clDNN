@@ -200,7 +200,7 @@ namespace KernelSelector
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName + kernel_name_postfix, jit, entry_point, true, !newParams.bias.empty());
-        kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SPLIT, 0 });
+        kernel.argsDesc.data.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
 
         kd.estimatedTime = runInfo.effiency;
 

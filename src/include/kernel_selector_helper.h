@@ -44,8 +44,8 @@ namespace kernel_selector
     using kernel_data                       = KernelSelector::KernelData;
     using kernel_string                     = KernelSelector::KernelString;
     using cl_kernel_data                    = KernelSelector::clKernelData;
-    using argument_descpirtor               = KernelSelector::ArgumentDescpirtor;
-    using argument_descpirtor_types         = KernelSelector::ArgumentDescpirtor::Types;
+    using argument_descpirtor               = KernelSelector::ArgumentDescriptor;
+    using argument_descpirtor_types         = KernelSelector::ArgumentDescriptor::Types;
 
     using data_type                         = KernelSelector::Datatype;
     using kernel_type                       = KernelSelector::KernelType;

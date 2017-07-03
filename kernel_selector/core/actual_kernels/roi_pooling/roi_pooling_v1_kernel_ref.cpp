@@ -40,7 +40,7 @@ namespace KernelSelector {
         kd.fp16UnitUsed = (params.inputs[0].GetDType() == Datatype::F16);
 
         // Determine global work sizes.
-        kd.gws0 = params.output.Length();
+        kd.gws0 = params.output.LogicalSize();
         kd.gws1 = 1;
         kd.gws2 = 1;
 
@@ -87,7 +87,7 @@ namespace KernelSelector {
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point);
-        kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::INPUT, 0 });
+        kernel.argsDesc.data.push_back({ ArgumentDescriptor::Types::INPUT, 0 });
 
         kd.estimatedTime = FORCE_PRIORITY_9;
 

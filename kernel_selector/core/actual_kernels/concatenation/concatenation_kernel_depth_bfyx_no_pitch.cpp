@@ -41,7 +41,7 @@ namespace KernelSelector
         const auto& input = params.inputs[0];
         const auto batch = input.Batch().v;
         runInfo.gws0 = batch;
-        runInfo.gws1 = Align(std::max((size_t)1, input.Length() / batch / 8), 16);
+        runInfo.gws1 = Align(std::max((size_t)1, input.LogicalSize() / batch / 8), 16);
         runInfo.gws2 = 1;
 
         runInfo.lws0 = 1;

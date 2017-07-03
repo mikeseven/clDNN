@@ -40,7 +40,7 @@ namespace KernelSelector
 
         const auto& output = arg.output;
         kd.gws0 = output.Batch().v;
-        kd.gws1 = output.Length() / kd.gws0;
+        kd.gws1 = output.LogicalSize() / kd.gws0;
         kd.lws0 = 8;
         kd.lws1 = 1;
 

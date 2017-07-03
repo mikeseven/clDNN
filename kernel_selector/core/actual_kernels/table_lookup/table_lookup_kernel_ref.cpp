@@ -64,7 +64,7 @@ namespace KernelSelector {
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
         kernel.argsDesc = GetArgumentDesc(1, false, false);
-        kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::LOOKUP_TABLE, 0 });
+        kernel.argsDesc.data.push_back({ ArgumentDescriptor::Types::LOOKUP_TABLE, 0 });
 
         return{ kd };
     }

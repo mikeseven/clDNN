@@ -109,25 +109,25 @@ namespace KernelSelector
         return jit;
     }
 
-    ArgumentDescpirtor CommonKernelBase::GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const
+    ArgumentDescriptor CommonKernelBase::GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const
     {
-        ArgumentDescpirtor desc;
+        ArgumentDescriptor desc;
 
         for (uint32_t i = 0; i < num_of_input; i++)
         {
-            desc.data.push_back({ ArgumentDescpirtor::Types::INPUT, 0 });
+            desc.data.push_back({ ArgumentDescriptor::Types::INPUT, 0 });
         }
 
-        desc.data.push_back({ ArgumentDescpirtor::Types::OUTPUT, 0 });
+        desc.data.push_back({ ArgumentDescriptor::Types::OUTPUT, 0 });
 
         if (use_weights)
         {
-            desc.data.push_back({ ArgumentDescpirtor::Types::WEIGHTS, 0 });
+            desc.data.push_back({ ArgumentDescriptor::Types::WEIGHTS, 0 });
         }
 
         if (use_bias)
         {
-            desc.data.push_back({ ArgumentDescpirtor::Types::BIAS, 0 });
+            desc.data.push_back({ ArgumentDescriptor::Types::BIAS, 0 });
         }
 
         return desc;

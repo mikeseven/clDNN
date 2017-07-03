@@ -103,7 +103,7 @@ namespace KernelSelector
         const auto& output = params.output;
         const auto responseSize = output.Feature().v;
         const auto batches = output.Batch().v;
-        const auto xSize = output.Length() / batches;
+        const auto xSize = output.LogicalSize() / batches;
 
         constexpr uint32_t subGroupSize         = 16;
         constexpr uint32_t bytesPerElement      = sizeof(short);

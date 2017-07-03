@@ -58,7 +58,7 @@ protected:
         void InitBaseParams(const BaseParams& vxParams, KernelSelector::BaseParams& clDNNParams);
         void HandleBestKernels(const KernelSelector::KernelSelctorBase& ks, const KernelSelector::Params& params, const KernelSelector::OptionalParams& options);
         void UpdateBinary(const KernelSelector::clKernelData& cldnn_data, CLKernelData& data, binary_data& binary, std::shared_ptr<ArgumentsInfoBase>& args);
-        std::shared_ptr<ArgumentsInfoBase> SetupArguments(const KernelSelector::ArgumentDescpirtor& cldnn_args);
+        std::shared_ptr<ArgumentsInfoBase> SetupArguments(const KernelSelector::ArgumentDescriptor& cldnn_args);
 
         void UpdateTensor(Datatype dt, DataLayout layout, const uDims& srcDims, const TensorDesc& srcDesc, KernelSelector::DataTensor& dst) const;
 

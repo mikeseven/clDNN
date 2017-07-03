@@ -65,7 +65,7 @@ namespace KernelSelector {
             << "#define PITCH_DST_B (" << newParams.output.Batch().pitch << ")\n";
 
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = { newParams.output.Length(), 1, 1 };
+        kernel.workGroups.global = { newParams.output.LogicalSize(), 1, 1 };
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
         kernel.argsDesc = GetArgumentDesc(2, false, false);

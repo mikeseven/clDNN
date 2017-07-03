@@ -52,7 +52,7 @@ namespace KernelSelector {
         kernel.argsDesc = GetArgumentDesc(1, false, false);
         if (newParams.activationFunc == ActivationFunction::PRELU)
         {
-            kernel.argsDesc.data.push_back({ ArgumentDescpirtor::Types::SLOPE, 0 });
+            kernel.argsDesc.data.push_back({ ArgumentDescriptor::Types::SLOPE, 0 });
         }
 
         kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;

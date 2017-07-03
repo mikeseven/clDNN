@@ -44,7 +44,7 @@ namespace KernelSelector {
 
         static const int NUM_ROWS_WI = 1;
         static const int NUM_COLS_WI = 4;
-        const size_t nonWidthDim = newParams.inputs[0].Length() / newParams.inputs[0].X().v;
+        const size_t nonWidthDim = newParams.inputs[0].LogicalSize() / newParams.inputs[0].X().v;
 
         const std::string kernel_id = params.layerID + std::to_string(UniqeID());
 

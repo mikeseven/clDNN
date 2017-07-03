@@ -208,7 +208,7 @@ namespace KernelSelector {
         }
         else if (CheckInputsOutputNoPitchSameDims(newParams))
         {
-            kernel.workGroups.global = { newParams.inputs[0].Length(), 1, 1 };
+            kernel.workGroups.global = { newParams.inputs[0].LogicalSize(), 1, 1 };
         }
         else
         {

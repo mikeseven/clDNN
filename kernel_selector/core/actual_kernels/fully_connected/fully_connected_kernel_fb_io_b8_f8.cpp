@@ -44,7 +44,7 @@ namespace KernelSelector
         const auto& output = arg.output;
         
         size_t groups_per_batches = GetLocalGroupsSize(arg);
-        kd.gws0 = output.Length() / (GetNeuronsPerWorkItem(arg) * GetBatchesPerWorkItem(arg) * groups_per_batches);
+        kd.gws0 = output.LogicalSize() / (GetNeuronsPerWorkItem(arg) * GetBatchesPerWorkItem(arg) * groups_per_batches);
         kd.gws1 = groups_per_batches;
         kd.lws0 = 8;
         kd.lws1 = 1;
@@ -65,7 +65,7 @@ namespace KernelSelector
 
         const auto& output = params.output;
         const auto batches = output.Batch().v;
-        const auto x_size = output.Length() / batches;
+        const auto x_size = output.LogicalSize() / batches;
 
         const bool bSupportedBatch = (batches % 8) == 0;
         const bool bSupportedFeature = (x_size % 8) == 0;

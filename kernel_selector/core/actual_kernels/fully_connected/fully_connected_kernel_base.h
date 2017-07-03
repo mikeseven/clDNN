@@ -90,7 +90,7 @@ namespace KernelSelector
         static size_t GetNeuronsPerWorkItem(const FullyConnectedParams& params)
         {
             auto batchSize = params.output.Batch().v;
-            auto out_elements_count_per_batch = params.output.Length() / batchSize;
+            auto out_elements_count_per_batch = params.output.LogicalSize() / batchSize;
             if (out_elements_count_per_batch % 16 == 0)
                 return 2;
             else

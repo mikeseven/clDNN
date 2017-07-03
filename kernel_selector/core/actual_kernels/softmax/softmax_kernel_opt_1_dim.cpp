@@ -41,7 +41,7 @@ namespace KernelSelector
         SoftmaxParams& newParams = *static_cast<SoftmaxParams*>(kd.params.get());
 
         const size_t maxLocalWorkGroup    = 32;
-        const size_t dst_size             = newParams.output.Length();
+        const size_t dst_size             = newParams.output.LogicalSize();
         const size_t localWorkGroup       = std::min(std::max(dst_size, (size_t)1U), maxLocalWorkGroup);
         const size_t leftovers            = dst_size % localWorkGroup;
         const size_t globalWorkGroup      = dst_size - leftovers;

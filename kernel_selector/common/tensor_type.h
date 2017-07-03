@@ -255,24 +255,24 @@ namespace KernelSelector
 
             virtual uint32_t    ElementSize() const = 0;
 
-            size_t Length() const
+            size_t LogicalSize() const
             {
                 return std::accumulate(dims.cbegin(), dims.cend(), (size_t)1, [](size_t val, const Dim& d) {return val*d.v; });
             }
 
-            size_t LengthWithPadding() const
+            size_t LogicalSizeWithPadding() const
             {
                 return std::accumulate(dims.cbegin(), dims.cend(), (size_t)1, [](size_t val, const Dim& d) {return std::max(val, d.pitch*d.v); });
             }
 
             size_t PhysicalSize() const
             {
-                return (offset + LengthWithPadding()) * ElementSize();
+                return (offset + LogicalSizeWithPadding()) * ElementSize();
             }
 
             bool PaddingExists() const
             {
-                return (Length() != LengthWithPadding());
+                return (LogicalSize() != LogicalSizeWithPadding());
             }
 
             std::vector<size_t> LogicalDims() const
