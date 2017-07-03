@@ -76,7 +76,7 @@ namespace KernelSelector
         {
             // Determine global work sizes.
             kd.gws2 = output.Batch().v * output.Feature().v;    // B, F
-            kd.gws0 = cldnn::align_to(output.X().v, 32);        // X
+            kd.gws0 = Align(output.X().v, 32);        // X
             kd.gws1 = output.Y().v;                             // Y
 
             // Find largest positive local work size that is divider for global work size.

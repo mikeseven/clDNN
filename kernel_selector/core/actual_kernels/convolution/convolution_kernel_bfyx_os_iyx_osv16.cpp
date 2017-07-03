@@ -16,8 +16,7 @@
 
 #include "convolution_kernel_bfyx_os_iyx_osv16.h"
 #include "kernel_selector_utils.h"
-#include "api/CPP/cldnn_defs.h"
-#include "api/CPP/cldnn_defs.h"
+#include "common_tools.h"
 
 namespace KernelSelector 
 {
@@ -65,9 +64,9 @@ namespace KernelSelector
         size_t input_block_req_height = (output_block_height - 1) * stride.y + (filter_size.y - 1)*dilation.y + 1;
 
         // Required number of elements in X dimension rounded to nearest >= read chunk size.
-        size_t input_block_read_width = std::max(cldnn::round_up_to(input_block_req_width, read_chunk_size), min_read_size);
+        size_t input_block_read_width = std::max(RoundUp(input_block_req_width, read_chunk_size), min_read_size);
         // Number of sub-group-sized vectors of unit type needed to store input block.
-        size_t input_block_array_size = cldnn::ceil_div(input_block_req_height * input_block_read_width, sub_group_size);
+        size_t input_block_array_size = CeilDiv(input_block_req_height * input_block_read_width, sub_group_size);
 
         return std::make_pair(input_block_array_size, input_block_read_width);
     }
@@ -80,7 +79,7 @@ namespace KernelSelector
         constexpr size_t sub_group_size = 16;
 
         const auto of_maps = arg.output.Feature().v;
-        const size_t of_threads_per_batch = cldnn::round_up_to(of_maps, sub_group_size);
+        const size_t of_threads_per_batch = RoundUp(of_maps, sub_group_size);
         runInfo.leftovers = of_threads_per_batch - of_maps;
 
         const auto cp = arg.convParams;
@@ -143,8 +142,8 @@ namespace KernelSelector
         runInfo.inputBlockArraySize = input_block_dims.first;
         runInfo.inputBlockWidth = input_block_dims.second;
 
-        runInfo.gws0 = cldnn::ceil_div(arg.output.X().v, runInfo.blockWidth);
-        runInfo.gws1 = cldnn::ceil_div(arg.output.Y().v, runInfo.blockHeight);
+        runInfo.gws0 = CeilDiv(arg.output.X().v, runInfo.blockWidth);
+        runInfo.gws1 = CeilDiv(arg.output.Y().v, runInfo.blockHeight);
         runInfo.gws2 = of_threads_per_batch * arg.output.Batch().v;
 
         runInfo.lws0 = 1;

@@ -44,7 +44,7 @@ namespace KernelSelector
         if (params.inputs[0].GetLayout() == DataLayout::bfyx)
         {
             const auto& out = params.output;
-            runInfo.gws0 = cldnn::align_to(out.X().v, 32);
+            runInfo.gws0 = Align(out.X().v, 32);
             runInfo.gws1 = out.Y().v;
             runInfo.gws2 = out.Feature().v * out.Batch().v;
 

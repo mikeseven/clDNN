@@ -17,7 +17,7 @@
 #include <cmath>
 #include "convolution_kernel_gemm_like.h"
 #include "kernel_selector_utils.h"
-#include "api/CPP/cldnn_defs.h"
+#include "common_tools.h"
 
 namespace KernelSelector 
 {
@@ -135,13 +135,13 @@ namespace KernelSelector
         jit << GetBaseJit(newParams, kernel_id)
             << GetConvolutionJit(newParams, runInfo, true);
 
-        size_t sgemm_m = cldnn::round_up_to(newParams.output.X().v * newParams.output.Y().v, (size_t)runInfo.subBlockDimM);
-        size_t sgemm_n = cldnn::round_up_to(newParams.output.Feature().v, (size_t)runInfo.subBlockDimN);
+        size_t sgemm_m = RoundUp(newParams.output.X().v * newParams.output.Y().v, (size_t)runInfo.subBlockDimM);
+        size_t sgemm_n = RoundUp(newParams.output.Feature().v, (size_t)runInfo.subBlockDimN);
 
         auto& kernel = kd.kernels[0];
         kernel.workGroups.global = {
-            cldnn::round_up_to(int(std::ceil((float)sgemm_n / (float)runInfo.globalWorkSizeDX)), runInfo.localWorkSizeX),
-            cldnn::round_up_to(int(std::ceil((float)sgemm_m / (float)runInfo.globalWorkSizeDY)), runInfo.localWorkSizeY),
+            RoundUp(int(std::ceil((float)sgemm_n / (float)runInfo.globalWorkSizeDX)), runInfo.localWorkSizeX),
+            RoundUp(int(std::ceil((float)sgemm_m / (float)runInfo.globalWorkSizeDY)), runInfo.localWorkSizeY),
             newParams.output.Batch().v };
         
         kernel.workGroups.local = {

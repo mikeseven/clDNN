@@ -53,7 +53,7 @@ namespace KernelSelector
         
         // Number of response groups. Each group (except last) writes units_per_sg_read responses
         // for at least one input data set from batch.
-        auto rg_count = cldnn::ceil_div(response_size, units_per_sg_read);
+        auto rg_count = CeilDiv(response_size, units_per_sg_read);
 
         kd.lws0 = sub_group_size;
         // Number of work items needed to process all response groups.

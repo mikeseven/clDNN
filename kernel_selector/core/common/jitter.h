@@ -202,8 +202,8 @@ public:
         };
 
         definitions.push_back({ _name + "_SIZE", std::to_string(_tensor.GetDims().size()) });
-        definitions.push_back({ _name + "_SIZES", toVectorString(_tensor.GetDims(), "size_t", CLDNN_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.v; }) });
-        definitions.push_back({ _name + "_PITCHES", toVectorString(_tensor.GetDims(), "size_t", CLDNN_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.pitch; }) });
+        definitions.push_back({ _name + "_SIZES", toVectorString(_tensor.GetDims(), "size_t", KERNEL_SELECTOR_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.v; }) });
+        definitions.push_back({ _name + "_PITCHES", toVectorString(_tensor.GetDims(), "size_t", KERNEL_SELECTOR_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.pitch; }) });
 
         return definitions;
     }
@@ -247,8 +247,8 @@ public:
         // TODO: refactor it
         
         definitions.push_back({ _name + "_SIZE", std::to_string(_tensor.GetDims().size()) });
-        definitions.push_back({ _name + "_SIZES", toVectorString(_tensor.GetDims(), "size_t", CLDNN_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.v; }) });
-        definitions.push_back({ _name + "_PITCHES", toVectorString(_tensor.GetDims(), "size_t", CLDNN_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.pitch; }) });
+        definitions.push_back({ _name + "_SIZES", toVectorString(_tensor.GetDims(), "size_t", KERNEL_SELECTOR_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.v; }) });
+        definitions.push_back({ _name + "_PITCHES", toVectorString(_tensor.GetDims(), "size_t", KERNEL_SELECTOR_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.pitch; }) });
 
         return definitions;
     }

@@ -16,7 +16,7 @@
 
 #include "kernel_selector_common.h"
 #include "reorder_kernel_base.h"
-#include "api/CPP/cldnn_defs.h"
+#include "common_tools.h"
 
 namespace KernelSelector 
 {

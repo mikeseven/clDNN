@@ -250,42 +250,4 @@ namespace KernelSelector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     typedef Size<uint32_t> uSize;
     typedef Size<size_t>   stSize;
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // BytesPerElement
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    inline uint32_t BytesPerElement(Datatype dt)
-    {
-        switch (dt)
-        {
-        case Datatype::F16:
-            return 2;
-            break;
-        case Datatype::F32:
-            return 4;
-            break;
-        default:
-            return 0;
-            break;
-        }
-    }
-
-    inline uint32_t BytesPerElement(WeightsType wt)
-    {
-        switch (wt)
-        {
-        case WeightsType::INT8:
-            return 1;
-            break;
-        case WeightsType::F16:
-            return 2;
-            break;
-        case WeightsType::F32:
-            return 4;
-            break;
-        default:
-            return 0;
-            break;
-        }
-    }
 }

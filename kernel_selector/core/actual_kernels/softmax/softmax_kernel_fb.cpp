@@ -47,7 +47,7 @@ namespace KernelSelector
         kd.normIndex = 1;
 
         // We have two units of data per work item in current implementation.
-        auto local_mem_per_wi = 2 * (kd.fp16UnitUsed ? sizeof(half_t) : sizeof(float));
+        auto local_mem_per_wi = 2 * (kd.fp16UnitUsed ? sizeof(short) : sizeof(float));
         // Combining device execution and local memory restrictions to compute maximum possible LWS.
         auto max_lws = std::min(optParams.maxWorkGroupSize, optParams.maxLocalMemSize / local_mem_per_wi);
 

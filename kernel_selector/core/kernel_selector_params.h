@@ -17,8 +17,8 @@
 #pragma once
 
 #include <cstddef>
-#include "api/CPP/cldnn_defs.h"
 #include "common_types.h"
+#include "common_tools.h"
 #include "tensor_type.h"
 
 namespace KernelSelector

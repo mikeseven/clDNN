@@ -16,7 +16,7 @@
 
 #include "fully_connected_kernel_base.h"
 #include "kernel_selector_utils.h"
-#include "api/CPP/cldnn_defs.h"
+#include "common_tools.h"
 
 namespace KernelSelector 
 {

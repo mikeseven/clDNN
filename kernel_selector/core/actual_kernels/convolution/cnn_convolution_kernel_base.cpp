@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 #include "cnn_convolution_kernel_base.h"
-#include "api/CPP/cldnn_defs.h"
+#include "common_tools.h"
 #include <algorithm>
 
 namespace KernelSelector 
@@ -43,7 +43,7 @@ namespace KernelSelector
             << "#define DILATION_Y ("       << cp.dilation.y << ")\n"
             << "#define INPUT_PADDING_X ("  << cp.padding.x << ")\n"
             << "#define INPUT_PADDING_Y ("  << cp.padding.y << ")\n"
-            << "#define ALIGNED_OFM ("      << cldnn::round_up_to(params.output.Feature().v, runInfo.subBlockDimN) << ")\n"
+            << "#define ALIGNED_OFM ("      << RoundUp(params.output.Feature().v, runInfo.subBlockDimN) << ")\n"
             << "#define DY "                << runInfo.globalWorkSizeDY << "\n"
             << "#define DX "                << runInfo.globalWorkSizeDX << "\n"
             << "#define KERNEL_WIDTH_DIV2 " << cp.filterSize.x / 2 << "\n"

@@ -16,7 +16,7 @@
 
 #include "convolution_kernel_direct_10_12_16.h"
 #include "kernel_selector_utils.h"
-#include "api/CPP/cldnn_defs.h"
+#include "common_tools.h"
 #include <map>
 
 namespace KernelSelector {
@@ -114,9 +114,9 @@ namespace KernelSelector {
 
         auto& kernel = kd.kernels[0];
         kernel.workGroups.global = {
-            cldnn::round_up_to(orgParams.output.X().v, runInfo.globalWorkSizeDX) / runInfo.globalWorkSizeDX,
-            cldnn::round_up_to(orgParams.output.Y().v, runInfo.globalWorkSizeDY) / runInfo.globalWorkSizeDY,
-            cldnn::round_up_to(orgParams.output.Feature().v, TILE_N) * orgParams.output.Batch().v };
+            RoundUp(orgParams.output.X().v, runInfo.globalWorkSizeDX) / runInfo.globalWorkSizeDX,
+            RoundUp(orgParams.output.Y().v, runInfo.globalWorkSizeDY) / runInfo.globalWorkSizeDY,
+            RoundUp(orgParams.output.Feature().v, TILE_N) * orgParams.output.Batch().v };
 
         kernel.workGroups.local = {
             runInfo.localWorkSizeX,

@@ -73,7 +73,7 @@ namespace KernelSelector
                                                        // Number of response groups. Each group (except last) writes responses_per_sg_exec responses
                                                        // for at least one input data set from batch.
         const auto response_size = arg.output.Feature().v;
-        auto rg_count = cldnn::ceil_div(response_size, responses_per_sg_exec);
+        auto rg_count = CeilDiv(response_size, responses_per_sg_exec);
 
         run_info.lws0 = sub_group_size;
         // Number of work items needed to process all response groups.

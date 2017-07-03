@@ -16,7 +16,7 @@
 
 #include <cstddef>
 #include "tensor_type.h"
-#include "api/CPP/cldnn_defs.h"
+#include "common_tools.h"
 
 namespace KernelSelector
 {
@@ -31,13 +31,13 @@ namespace KernelSelector
             {
             case bs_f_bsv8__af8:
                 assert(newDims.size() == 2);
-                newDims[0] = cldnn::round_up_to(newDims[0], 8);
-                newDims[1] = cldnn::round_up_to(newDims[1], 8);
+                newDims[0] = RoundUp(newDims[0], 8);
+                newDims[1] = RoundUp(newDims[1], 8);
                 break;
             case bs_f_bsv16__af8:
                 assert(newDims.size() == 2);
-                newDims[0] = cldnn::round_up_to(newDims[0], 8);
-                newDims[1] = cldnn::round_up_to(newDims[1], 16);
+                newDims[0] = RoundUp(newDims[0], 8);
+                newDims[1] = RoundUp(newDims[1], 16);
                 break;
             default:
                 break;
@@ -165,30 +165,30 @@ namespace KernelSelector
             {
             case os_iyx_osv16:
                 assert(newDims.size() == 4);
-                newDims[3] = cldnn::round_up_to(newDims[3], 16);
+                newDims[3] = RoundUp(newDims[3], 16);
                 break;
             case os_i_osv8__ai8:
                 assert(newDims.size() == 2);
-                newDims[0] = cldnn::round_up_to(newDims[0], 8);
-                newDims[1] = cldnn::round_up_to(newDims[1], 8);
+                newDims[0] = RoundUp(newDims[0], 8);
+                newDims[1] = RoundUp(newDims[1], 8);
                 break;
             case os_i_osv16__ai8:
                 assert(newDims.size() == 2);
-                newDims[0] = cldnn::round_up_to(newDims[0], 8);
-                newDims[1] = cldnn::round_up_to(newDims[1], 16);
+                newDims[0] = RoundUp(newDims[0], 8);
+                newDims[1] = RoundUp(newDims[1], 16);
                 break;
             case os_i_osv16:
                 assert(newDims.size() == 2);
-                newDims[1] = cldnn::round_up_to(newDims[1], 16);
+                newDims[1] = RoundUp(newDims[1], 16);
                 break;
             case i_yxs_os_yxsv2_osv16:
                 assert(newDims.size() == 4);
-                newDims[0] = cldnn::round_up_to(newDims[0], 16);
+                newDims[0] = RoundUp(newDims[0], 16);
                 break;
             case iy_xs_os_xsv2_osv16__ao32:
             case iy_xs_os_xsv2_osv8__ao32:
                 assert(newDims.size() == 4);
-                newDims[0] = cldnn::round_up_to(newDims[0], 32);
+                newDims[0] = RoundUp(newDims[0], 32);
                 break;
             default:
                 break;
@@ -205,12 +205,12 @@ namespace KernelSelector
 
             if (l == i_yxs_os_yxsv2_osv16)
             {
-                ret[3].pitch = cldnn::round_up_to(newDims[1] * newDims[2], 2) * newDims[0];
+                ret[3].pitch = RoundUp(newDims[1] * newDims[2], 2) * newDims[0];
             }
             else if (l == iy_xs_os_xsv2_osv16__ao32 ||
                 l == iy_xs_os_xsv2_osv8__ao32)
             {
-                ret[2].pitch = cldnn::round_up_to(newDims[1], 2) * newDims[0];
+                ret[2].pitch = RoundUp(newDims[1], 2) * newDims[0];
                 ret[3].pitch = newDims[2] * ret[2].pitch;
             }
 

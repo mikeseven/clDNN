@@ -43,7 +43,7 @@ namespace KernelSelector
         DispatchData kd = FullyConnectedKernelBase::SetDefault(arg);
 
         size_t groups_per_batches = GetLocalGroupsSize(arg);
-        kd.gws0 = cldnn::align_to(arg.output.Length() / (GetNeuronsPerWorkItem(arg) * GetBatchesPerWorkItem(arg) * groups_per_batches), 8);
+        kd.gws0 = Align(arg.output.Length() / (GetNeuronsPerWorkItem(arg) * GetBatchesPerWorkItem(arg) * groups_per_batches), 8);
         kd.gws1 = groups_per_batches;
         kd.lws0 = 8;
         kd.lws1 = 1;
