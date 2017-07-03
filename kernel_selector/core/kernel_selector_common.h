@@ -17,7 +17,7 @@
 #pragma once
 #include <string>
 #include <memory>
-#include "cache/primitive_db.h"
+#include "primitive_db.h"
 #include "kernel_selector_params.h"
 #include <float.h>
  

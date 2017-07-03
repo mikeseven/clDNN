@@ -93,14 +93,6 @@ file(GLOB_RECURSE __CLDNN_Sources__actual_kernels
     "${__CLDNN_Directory__actual_kernels}/*.cpp"
   )
   
-set(__CLDNN_Directory__cache           "${__CLDNN_Directory__core}/cache")
-set(__CLDNN_Label__cache               "${__CLDNN_Label__core}\\cache")
-file(GLOB __CLDNN_Sources__cache
-    "${__CLDNN_Directory__cache}/*.h"
-    "${__CLDNN_Directory__cache}/*.hpp"
-    "${__CLDNN_Directory__cache}/*.cpp"
-  )
-  
 set(__CLDNN_Directory__vx_adapter   "${CMAKE_CURRENT_SOURCE_DIR}/vx_adapter")
 set(__CLDNN_Label__vx_adapter       "vx_adapter")
 file(GLOB __CLDNN_Sources__vx_adapter 
@@ -108,6 +100,14 @@ file(GLOB __CLDNN_Sources__vx_adapter
     "${__CLDNN_Directory__vx_adapter}/*.h"
     "${__CLDNN_Directory__vx_adapter}/*.hpp"
     "${__CLDNN_Directory__vx_adapter}/*.cpp"
+  )
+
+set(__CLDNN_Directory__cache           "${__CLDNN_Directory__vx_adapter}/cache")
+set(__CLDNN_Label__cache               "${__CLDNN_Label__vx_adapter}\\cache")
+file(GLOB __CLDNN_Sources__cache
+    "${__CLDNN_Directory__cache}/*.h"
+    "${__CLDNN_Directory__cache}/*.hpp"
+    "${__CLDNN_Directory__cache}/*.cpp"
   )
 
 set(__CLDNN_Directory__ch_kernels      "${__CLDNN_Directory__core}/cl_kernels")
@@ -199,13 +199,13 @@ endif()
 
 add_custom_command(OUTPUT "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${__CLDNN_CGDirectory__cg_cache}"
-    COMMAND "${PYTHON_EXECUTABLE}" "${__CLDNN_Directory__cache}/primitive_db_gen.py" -out_path "${__CLDNN_CGDirectory__cg_cache}" -out_file_name "${__CLDNN_File__cg_cache__prim_db}" -kernels "${__CLDNN_Directory__ch_kernels}"
-    DEPENDS ${__CLDNN_Sources__ch_kernels} "${__CLDNN_Directory__cache}/primitive_db_gen.py"
+    COMMAND "${PYTHON_EXECUTABLE}" "${__CLDNN_Directory__core_common}/primitive_db_gen.py" -out_path "${__CLDNN_CGDirectory__cg_cache}" -out_file_name "${__CLDNN_File__cg_cache__prim_db}" -kernels "${__CLDNN_Directory__ch_kernels}"
+    DEPENDS ${__CLDNN_Sources__ch_kernels} "${__CLDNN_Directory__core_common}/primitive_db_gen.py"
     COMMENT "Generating ${__CLDNN_File__cg_cache__prim_db} ..."
   )
 add_custom_command(OUTPUT "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}" "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
-    DEPENDS "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}" ${__CLDNN_Sources__ch_kernels} "${__CLDNN_Directory__cache}/primitive_db_gen.py"
+    DEPENDS "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}" ${__CLDNN_Sources__ch_kernels} "${__CLDNN_Directory__core_common}/primitive_db_gen.py"
     COMMENT "Updating file if the file changed (${__CLDNN_File__cg_cache__prim_db}) ..."
   )
 

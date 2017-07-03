@@ -26,8 +26,8 @@
 
 namespace clDNN
 {
-    using kernel_cache = KernelSelector::gpu::cache::program_cache;
-    using binary_data = KernelSelector::gpu::cache::binary_data;
+    using kernel_cache = clDNN::gpu::cache::program_cache;
+    using binary_data = clDNN::gpu::cache::binary_data;
 
     bool IsSupported(const Params& params);
 

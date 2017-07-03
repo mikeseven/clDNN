@@ -17,11 +17,14 @@
 
 #include <map>
 #include <vector>
-#include "cache_common_types.h"
+#include <cctype>
 
 /// \brief Class providing interface to retrieve a list of primitive implementations per primitive id
 ///
 namespace KernelSelector { namespace gpu { namespace cache {
+
+using code = std::string;
+using primitive_id = std::string;
 
 struct primitive_db
 {

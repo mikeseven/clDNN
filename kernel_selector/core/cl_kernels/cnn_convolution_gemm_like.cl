@@ -372,6 +372,7 @@ KERNEL(convolution_f32)(
 #endif
     uint split_idx)
 {
+#include "include/cnn_common_data_types.cl"
     const unsigned group_x = get_group_id(0);
     const unsigned group_y = get_group_id(1);
     const unsigned global_x = get_global_id(0);

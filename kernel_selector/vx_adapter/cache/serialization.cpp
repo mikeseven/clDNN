@@ -15,7 +15,7 @@
 */
 #include "serialization.h"
 
-namespace KernelSelector { namespace gpu { namespace cache {
+namespace clDNN { namespace gpu { namespace cache {
 
 namespace {
 #ifdef _WIN32

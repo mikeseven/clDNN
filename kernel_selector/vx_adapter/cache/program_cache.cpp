@@ -15,11 +15,11 @@
 */
 
 #include "program_cache.h"
-#include "ks_ocl_toolkit.h"
+#include "vxa_ocl_toolkit.h"
 
-namespace KernelSelector { namespace gpu { namespace cache {
+namespace clDNN { namespace gpu { namespace cache {
 
-using context_device = KernelSelector::gpu::context_device;
+using context_device = clDNN::gpu::context_device;
 
 static const char* cache_file_name = "cl_dnn_cache.intel"; //TODO building name
 

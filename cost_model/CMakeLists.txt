@@ -58,7 +58,7 @@ file(GLOB __CLDNN_Sources__common
     "${__CLDNN_Directory__common}/*.hpp"
   )
 
-set(__CLDNN_Directory__cache           "${CLDNN__KERNEL_SELECTOR_DIR}/cache")
+set(__CLDNN_Directory__cache           "${CLDNN__KERNEL_SELECTOR_DIR}/vx_adapter/cache")
 set(__CLDNN_Label__cache               "cache")
 file(GLOB __CLDNN_Sources__cache
     "${__CLDNN_Directory__cache}/*.h"
@@ -94,6 +94,7 @@ include_directories(
     "${__CLDNN_Directory__core}"
     "${__CLDNN_Directory__core}/common"
     "${__CLDNN_Directory__common}"
+    "${__CLDNN_Directory__cache}"
   )
 
 # =================================== Link targets and dependencies ====================================

@@ -17,11 +17,11 @@
 #include <stdio.h>
 #include <iostream>
 #include <sstream>
-#include "ks_ocl_toolkit.h"
+#include "vxa_ocl_toolkit.h"
 #include "kernel_base.h"
 #include "kernel_selector.h"
 #include "kernel_selector_params.h"
-#include "cache/program_cache.h"
+#include "program_cache.h"
 #include "actual_kernels/convolution/convolution_kernel_selector.h"
 
 inline cl::NDRange toNDRange(const std::vector<size_t>& v)
@@ -40,9 +40,9 @@ inline cl::NDRange toNDRange(const std::vector<size_t>& v)
 }
 
 using namespace KernelSelector;
-using gpu_toolkit = KernelSelector::gpu::gpu_toolkit;
-using program_cache = KernelSelector::gpu::cache::program_cache;
-using binary_data = KernelSelector::gpu::cache::binary_data;
+using gpu_toolkit = clDNN::gpu::GPUToolkit;
+using program_cache = clDNN::gpu::cache::program_cache;
+using binary_data = clDNN::gpu::cache::binary_data;
 
 #define  RUN_MODE 1
 
@@ -76,9 +76,7 @@ public:
 
     CLRunner()
     {
-        KernelSelector::gpu::configuration cfg;
-        cfg.enable_profiling = true;
-        gpu_context = std::make_shared<gpu_toolkit>(cfg);
+        gpu_context = std::make_shared<gpu_toolkit>();
     }
 
     struct SetArgumentParams

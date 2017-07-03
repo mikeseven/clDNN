@@ -15,16 +15,31 @@
 */
 #pragma once
 
-#include <string>
-#include <unordered_map>
-#include <vector>
-#include "cache_common_types.h"
+#include "cache_types.h"
 
-namespace KernelSelector { namespace gpu { namespace cache {
+namespace clDNN { namespace gpu { namespace cache {
 
-using binary_data = std::vector<unsigned char>;
-static_assert(sizeof(binary_data::value_type) == 1, "Binary data has to represent byte array");
+/// \brief Class providing persistent cache (in file) functionality for our kernel binary base
+///
+class persistent_cache
+{
+public:
+    persistent_cache(const char * cache_file_name);
+    ~persistent_cache() = default;
 
-using binary_cache = std::unordered_map<size_t, binary_data>;
+    binary_data get();
+    void set(binary_data);
+
+private:
+    struct cache_file
+    {
+        cache_file(const char* file_name);
+        ~cache_file() = default;
+        binary_data read();
+        void write(const binary_data&);
+    private:
+        const char* cache_file_name;
+    } file;
+};
 
 } } }

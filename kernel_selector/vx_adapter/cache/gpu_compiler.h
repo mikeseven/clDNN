@@ -16,30 +16,15 @@
 #pragma once
 
 #include "cache_types.h"
+#include "cache_common_types.h"
 
-namespace KernelSelector { namespace gpu { namespace cache {
+namespace clDNN { namespace gpu { namespace cache {
 
-/// \brief Class providing persistent cache (in file) functionality for our kernel binary base
-///
-class persistent_cache
+/// \brief Class wrapping compile feature of kernel device compiler
+/// 
+struct gpu_compiler
 {
-public:
-    persistent_cache(const char * cache_file_name);
-    ~persistent_cache() = default;
-
-    binary_data get();
-    void set(binary_data);
-
-private:
-    struct cache_file
-    {
-        cache_file(const char* file_name);
-        ~cache_file() = default;
-        binary_data read();
-        void write(const binary_data&);
-    private:
-        const char* cache_file_name;
-    } file;
+    static binary_data compile(context_device& context, const code& program_str, const compile_options& options);
 };
 
 } } }

@@ -19,7 +19,7 @@
 #include <cmath>
 #include <assert.h>
 #include <sstream>
-#include "ks_ocl_toolkit.h"
+#include "cache/vxa_ocl_toolkit.h"
 #include "api/vx_cldnn_adapter.h"
 #include "vxa_common.h"
 #include "kernel_selector_common.h"
@@ -35,7 +35,7 @@ namespace clDNN
         std::vector<Args> data;
     };
 
-    using context_holder = KernelSelector::gpu::context_holder;
+    using context_holder = clDNN::gpu::context_holder;
     class BaseKernelBinary : public KernelBinary, public context_holder
     {
     public:

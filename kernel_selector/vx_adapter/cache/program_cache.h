@@ -13,28 +13,33 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
+
 #pragma once
 
 #include <string>
+#include <utility>
+#include <unordered_map>
+#include "serialization.h"
+#include "persistent_cache.h"
+#include "gpu_compiler.h"
+#include "cache_types.h"
 
-namespace KernelSelector 
+namespace clDNN { namespace gpu { namespace cache
 {
-    namespace gpu 
-    {
-        struct context_device;
-    }
-}
+/// \brief Class that provides transparent cache/compiler interface for collecting compilation results 
+///
+class program_cache
+{
+public:
+    program_cache();
+    ~program_cache();
 
-namespace KernelSelector 
-{
-    namespace gpu 
-    {
-        namespace cache 
-        {
-            using context = context_device;
-            using code = std::string;
-            using compile_options = std::string;
-            using primitive_id = std::string;
-        }
-    }
-}
+    binary_data get(context_device context, const code& program_str, const compile_options& options);
+
+private:
+    persistent_cache file_cache;
+    binary_cache program_binaries;
+    bool dirty = false;
+};
+
+} } }

@@ -14,14 +14,14 @@
 // limitations under the License.
 */
 #include "gpu_compiler.h"
-#include "ks_ocl_toolkit.h"
+#include "vxa_ocl_toolkit.h"
 #include <iostream>
 #include <sstream>
 #include <assert.h>
 
-namespace KernelSelector { namespace gpu { namespace cache {
+namespace clDNN { namespace gpu { namespace cache {
 
-binary_data gpu_compiler::compile(context& context, const code& program_str, const compile_options& options) // throws cl::BuildError
+binary_data gpu_compiler::compile(context_device& context, const code& program_str, const compile_options& options) // throws cl::BuildError
 {
     auto& clContext = context.context;
     auto& clDevice = context.device;

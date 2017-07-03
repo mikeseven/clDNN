@@ -15,15 +15,16 @@
 */
 #pragma once
 
-#include "cache_types.h"
+#include <string>
+#include <unordered_map>
+#include <vector>
+#include "cache_common_types.h"
 
-namespace KernelSelector { namespace gpu { namespace cache {
+namespace clDNN { namespace gpu { namespace cache {
 
-/// \brief Class wrapping compile feature of kernel device compiler
-/// 
-struct gpu_compiler
-{
-    static binary_data compile(context& context, const code& program_str, const compile_options& options);
-};
+using binary_data = std::vector<unsigned char>;
+static_assert(sizeof(binary_data::value_type) == 1, "Binary data has to represent byte array");
+
+using binary_cache = std::unordered_map<size_t, binary_data>;
 
 } } }
