@@ -13,7 +13,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-#define _SCL_SECURE_NO_WARNINGS
 #include "cnn_convolution_kernel_base.h"
 #include "api/CPP/cldnn_defs.h"
 #include <algorithm>

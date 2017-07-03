@@ -70,7 +70,6 @@ namespace KernelSelector
         const auto& orgOptParams = static_cast<const FullyConnectedOptionalParams&>(options);
 
         const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
-        const auto expectedWeightType = DataTypeToWeightsType(orgParams.inputs[0].GetDType());
 
         bool bProperInput = orgParams.inputs[0].GetLayout() == dl;
         if (!bProperInput && orgParams.inputs[0].PaddingExists() == false)
