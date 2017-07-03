@@ -26,8 +26,9 @@
 
 using namespace cldnn;
 
-layout_optimizer::layout_optimizer(refcounted_obj_ptr<engine_impl> eng, bool enabled)
-    : _enabled(enabled), _topology(), _engine(eng), _optimization_attributes()
+layout_optimizer::layout_optimizer(refcounted_obj_ptr<engine_impl> eng, bool enabled, bool output_size_handling_enabled)
+    : _enabled(enabled), _topology(), _engine(eng), _optimization_attributes(),
+      _output_size_handling_enabled(output_size_handling_enabled)
 {
 }
 
@@ -54,7 +55,8 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         break;
 
     case data_type::weights: //convolution weights
-        if (batch < 32 || expected_data_type != data_types::f16 || !_optimization_attributes.splitted_convolution || prim->with_output_size)
+        if (batch < 32 || expected_data_type != data_types::f16 || !_optimization_attributes.splitted_convolution
+            || (_output_size_handling_enabled && prim->with_output_size))
         {
             expected_tensor = current_layout.size;
             expected_format = cldnn::format::os_iyx_osv16;
@@ -71,7 +73,8 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         if (current_layout.format.dimension() != 4)
             throw std::runtime_error("Convolution input not 4-dimensional?");
 
-        if (expected_data_type != data_types::f16 || batch < 32 || !_optimization_attributes.splitted_convolution || prim->with_output_size)
+        if (expected_data_type != data_types::f16 || batch < 32 || !_optimization_attributes.splitted_convolution
+            || (_output_size_handling_enabled && prim->with_output_size))
         {
             expected_tensor = current_layout.size;
             expected_format = cldnn::format::bfyx;
