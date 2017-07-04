@@ -35,7 +35,7 @@ struct configuration {
 
     bool enable_profiling;
     bool meaningful_kernels_names;
-    bool dump_program;
+    bool dump_custom_program;
     device_types device_type;
     uint32_t device_vendor;
     std::string compiler_options;

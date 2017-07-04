@@ -252,6 +252,7 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
         std::string         options             = code.second.options;
         bool                batch_compilation   = code.second.batch_compilation;
         bool                inject_header       = code.second.inject_header;
+        bool                dump_custom_program = code.second.dump_custom_program;
 
         batch_compilation &= does_options_support_batch_compilation(options);
 
@@ -272,7 +273,13 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
             key += " __PROGRAM_INJECT_HEADER__";
         }
 
+        if (dump_custom_program)
+        {
+            key += " __dump_custom_program__";
+        }
+
         auto& current_bucket = scode[key];
+        current_bucket.dump_custom_program = dump_custom_program;
 
         if (current_bucket.source.empty())
         {
@@ -393,10 +400,10 @@ kernels_cache::kernel_id kernels_cache::create_kernel_from_template(const std::s
     return kernel_name;
 }
 
-kernels_cache::kernel_id kernels_cache::set_kernel_source(const source_code& source, const std::string& options, const std::string& entry_point, bool batch_compilation)
+kernels_cache::kernel_id kernels_cache::set_kernel_source(const source_code& source, const std::string& options, const std::string& entry_point, bool batch_compilation, bool dump_custom_program)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    _kernels_code[entry_point] = { source, options, batch_compilation, false };
+    _kernels_code[entry_point] = { source, options, batch_compilation, false, dump_custom_program };
     return entry_point;
 }
 
@@ -404,14 +411,14 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
 {
     static uint32_t current_file_index = 0;
     const std::string current_program_dump_file_name = program_dump_file_name + std::to_string(current_file_index) + ".cl";
-    current_file_index++;
 
     try 
     {
 #ifdef NDEBUG
-        if (_context.get_configuration().dump_program)
+        if (program_source.dump_custom_program)
 #endif
         {
+            current_file_index++;
             std::ofstream os(current_program_dump_file_name);
             for (auto& s : program_source.source)
                 os << s;
@@ -421,7 +428,7 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
         program.build({ _context.device() }, program_source.options.c_str());
 
 #ifdef NDEBUG
-        if (_context.get_configuration().dump_program)
+        if (program_source.dump_custom_program)
 #endif
         {
             std::ofstream os(current_program_dump_file_name, std::ios_base::app);
@@ -450,7 +457,7 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
         build_log += err.what();
 
 #ifdef NDEBUG
-        if (_context.get_configuration().dump_program)
+        if (program_source.dump_custom_program)
 #endif
         {
             std::ofstream os(current_program_dump_file_name, std::ios_base::app);

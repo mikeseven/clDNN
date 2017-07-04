@@ -418,14 +418,15 @@ public:
         : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(template_id, definitions, kernel_name)) {}
     explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::string& template_id, const jit_constants& constants, const std::string& kernel_name = std::string())
         : context_holder(context), _kernel_id(context->get_kernels_cache().create_kernel_from_template(template_id, constants.get_definitions(), kernel_name)) {}
-    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::shared_ptr<kernel_selector::kernel_string>& kernel_string)
+    explicit kernel(std::shared_ptr<gpu_toolkit> context, const std::shared_ptr<kernel_selector::kernel_string>& kernel_string, bool dump_custom_program = false)
         : context_holder(context)
         , _kernel_id(
             context->get_kernels_cache().set_kernel_source(
                 { kernel_string->jit,kernel_string->str }, 
                 kernel_string->options, 
                 kernel_string->entry_point, 
-                kernel_string->batch_compilation)) 
+                kernel_string->batch_compilation,
+                dump_custom_program)) 
     {}
 
     kernel(const kernel& other) : context_holder(other.context()), _kernel_id(other._kernel_id) {}
