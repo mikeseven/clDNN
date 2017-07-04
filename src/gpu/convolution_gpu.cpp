@@ -21,15 +21,12 @@
 #include "kernel_selector_helper.h"
 #include <initializer_list>
 
-using namespace cldnn;
-
-namespace neural 
-{
+namespace cldnn { namespace gpu {
 
 struct convolution_gpu : typed_primitive_impl<convolution> {
     const convolution_node& outer;
-    gpu::engine_info_internal _engine_info;
-    gpu::kernel _kernel;
+    engine_info_internal _engine_info;
+    kernel _kernel;
 
     convolution_gpu(const convolution_node &arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
@@ -39,7 +36,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
         _kernel_data = kd;
     }
 
-    event_impl::ptr execute_impl(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events, convolution_inst& instance) override
+    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, convolution_inst& instance) override
     {
         auto split = outer.get_primitive()->split();
 
@@ -135,13 +132,13 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
 namespace{
     struct attach {
         attach() {
-            implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), convolution_gpu::create);
-            implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), convolution_gpu::create);
-            implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), convolution_gpu::create);
-            implementation_map<convolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), convolution_gpu::create);
+            implementation_map<convolution>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), convolution_gpu::create);
+            implementation_map<convolution>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), convolution_gpu::create);
+            implementation_map<convolution>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), convolution_gpu::create);
+            implementation_map<convolution>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), convolution_gpu::create);
         }
         ~attach() {}
     };
     attach attach_impl;
 }
-}
+} }

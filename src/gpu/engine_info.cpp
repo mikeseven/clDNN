@@ -29,7 +29,7 @@
 #include <fstream>
 #endif
 
-namespace neural { namespace gpu{
+namespace cldnn { namespace gpu{
 
 namespace {
 

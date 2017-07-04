@@ -28,16 +28,21 @@
 #include "api/CPP/eltwise.hpp"
 #include "api/CPP/input_layout.hpp"
 #include "api/CPP/pooling.hpp"
+#include "api/CPP/proposal.hpp"
+#include "api/CPP/prior_box.hpp"
 #include "api/CPP/reorder.hpp"
 #include "api/CPP/detection_output.hpp"
 #include "api/CPP/proposal.hpp"
 #include "api/CPP/roi_pooling.hpp"
 
+#include "internal_primitive.h"
+#include "internal_primitive_type_base.h"
 #include "convolution_inst.h"
 #include "concatenation_inst.h"
+#include "crop_inst.h"
 #include "deconvolution_inst.h"
 #include "detection_output_inst.h"
-#include "crop_inst.h"
+#include "prior_box_inst.h"
 #include "reorder_inst.h"
 
 #include "kernel_selector_helper.h"
@@ -45,6 +50,9 @@
 
 namespace cldnn
 {
+
+CLDNN_DEFINE_INTERNAL_PRIM(connector)
+CLDNN_DEFINE_SIMPLE_PRIM_INST(connector)
 
 namespace {
 
@@ -152,50 +160,6 @@ namespace {
     }
 }
 
-
-void program_node::replace_dependency(size_t idx, program_node& new_dep)
-{
-    if (idx >= dependencies.size())
-        return;
-    if (dependencies[idx] == &new_dep)
-        return;
-
-    dependencies[idx]->users.remove(this);
-    myprog.remove_if_dangling(*dependencies[idx]);
-
-    dependencies[idx] = &new_dep;
-    desc->dependecies()[idx].get() = new_dep.id();
-    new_dep.users.push_back(this);
-}
-
-void program_node::replace_dependency(program_node const& old_dep, program_node& new_dep)
-{
-    for (size_t i = 0; i < dependencies.size(); ++i)
-        if (dependencies[i] == &old_dep)
-            return replace_dependency(i, new_dep);
-}
-
-layout program_node::get_output_layout()
-{
-    if (valid_output_layout)
-        return output_layout;
-
-    for (auto dep : dependencies)
-        dep->get_output_layout();
-
-    auto new_layout = desc->type->calc_output_layout(*this);
-    //TODO: after merging padding into layout, calc_output_layout can now return padding as well
-    // for now just ignore it and preserve already set padding value - in future we should probably take care of this
-    // situation however.
-    new_layout.data_padding = output_layout.data_padding;
-    if (new_layout != output_layout) //output_layout has changed! invalidate users
-        invalidate_users();
-
-    output_layout = new_layout;
-    valid_output_layout = true;
-    return std::move(new_layout);
-}
-
 program_impl::program_impl(engine_impl::ptr engine, topology_impl const& topology, build_options const& options)
     : engine(engine), options(options), output_size_handling_enabled(true)
 {
@@ -278,9 +242,12 @@ std::list<std::shared_ptr<program_node>> program_impl::get_nodes() const
 {
     std::list<std::shared_ptr<program_node>> ret;
 
-    forward_bfs([&ret, this](program_node& node) {
-        ret.push_back(nodes_map.at(node.id()));
-    });
+    for (auto& node : processing_order)
+        ret.push_back(nodes_map.at(node->id()));
+
+    //does not expose connector at the end of a graph
+    if (!ret.empty() && ret.back()->is_type<connector>())
+        ret.pop_back();
 
     return ret;
 }
@@ -322,11 +289,17 @@ void program_impl::init_graph(topology_impl const& topology)
 
     set_outputs();
     calc_processing_order();
+    mark_constants();
+    mark_data_flow();
+    calc_dominators();
 }
 
 void program_impl::pre_optimize_graph()
 {
     trim_to_outputs();
+
+    if (get_engine()->configuration().enable_parallelisation)
+        reorder_nodes_for_parallel_execution();
 
     analyze_output_size_handling_need();
 
@@ -358,9 +331,14 @@ void program_impl::compile_graph()
 {
     for (auto& node : processing_order)
     {
-        node->get_output_layout();
-        node->selected_impl = node->type()->choose_impl(*engine, *node);
+        if (!node->is_type<internal_primitive>())
+        {
+            node->get_output_layout();
+            node->selected_impl = node->type()->choose_impl(*engine, *node);
+        }
     }
+
+    engine->compile_program(*this);
 }
 
 void program_impl::set_outputs()
@@ -403,10 +381,295 @@ void program_impl::set_outputs()
     }
 }
 
+void program_impl::calc_processing_order()
+{
+    processing_order.clear();
+
+    //run dfs to sort nodes topologically
+    for (auto input : inputs)
+    {
+        if (input->is_marked())
+            continue;
+
+        input->mark();
+        std::list<std::pair<program_node*, std::list<program_node*>::const_iterator>> stack = { std::make_pair(input, input->users.begin()) };
+
+        while (!stack.empty()) //imitate call stack
+        {
+        new_frame:
+            auto& frame = stack.back();
+
+            while (frame.second != frame.first->users.end())
+            {
+                auto successor = *frame.second;
+                ++frame.second;
+
+                if (!successor->is_marked())
+                {
+                    successor->mark();
+
+                    //recurrence call
+                    stack.push_back(std::make_pair(successor, successor->users.begin()));
+                    goto new_frame;
+                }
+            }
+
+            //we have finished processing one node so add it to the processing queue
+            processing_order.push_front(frame.first);
+            frame.first->processing_itr = processing_order.begin();
+
+            //return from call
+            stack.pop_back();
+        }
+    }
+
+    uint32_t idx = 0;
+    for (auto& node : processing_order)
+    {
+        node->processing_num = ++idx;
+        node->unmark();
+    }
+}
+
+void program_impl::mark_constants()
+{
+    for (auto& node : processing_order)
+    {
+        if (node->is_type<data>() || node->is_type<prior_box>())
+        {
+            node->constant = true;
+            continue;
+        }
+        else if (node->dependencies.empty())
+            continue;
+
+        node->constant = true;
+        for (auto& dep : node->get_dependencies())
+            if (!dep->constant)
+                node->constant = false;
+    }
+}
+
+void program_impl::mark_data_flow()
+{
+    std::list<program_node*> stack;
+    for (auto const& node : processing_order)
+    {
+        if (node->is_endpoint() && !node->constant)
+        {
+            stack.push_back(node);
+            node->data_flow = true;
+            node->mark();
+        }
+    }
+
+    while (!stack.empty())
+    {
+        auto node = stack.front();
+        stack.pop_front();
+
+        size_t dep_idx = 0;
+        size_t inputs_count = (node->is_type<internal_primitive>() ? node->get_dependencies().size() : node->get_primitive()->input.size());
+        //TODO: remove this hack after addition of constants propagation pass
+        if (node->is_type<detection_output>() || node->is_type<proposal>())
+            inputs_count = 2; //ignore third input as it is related to prior boxes (i.e. concat of prior-boxes)
+
+        for (auto dep : node->get_dependencies())
+        {
+            bool data_flow = (dep_idx++ < inputs_count && !dep->constant);
+            if (!data_flow)
+                continue;
+
+            dep->data_flow = data_flow;
+
+            if (dep->is_marked())
+                continue;
+
+            stack.push_back(dep);
+            dep->mark();
+        }
+    }
+
+    for (auto& node : processing_order)
+    {
+        node->main_branch = node->data_flow;
+        assert(!node->constant || !node->data_flow); //node which is constant cannot be marked as data flow
+        node->unmark();
+    }
+}
+
+void program_impl::calc_dominators()
+{
+    if (nodes_map.empty())
+        return;
+
+    //Algorithm per: Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy "A Simple, Fast Dominance Algorithm"
+    //url: http://www.hipersoft.rice.edu/grads/publications/dom14.pdf
+
+    //Please note that in our representation we only care for immidiate dominators which are not direct predecessors.
+
+    //Althought we don't know the input node (since we cannot distinguish image input from weights/biases), we can simply trim our graph
+    //for this analysis so it'd start with the first primitive which is used by more than one user. There are few assumptions here, though:
+    // 1. weights and biases cannot be shared (they have to have unique user)
+    // 2. the network should have exactly one input (OOO execution will not be enabled for independent paths, at the beginning, if more at than one input is provided)
+    //please note that it could be also possible to create dummy super-source so we could guarantee that the graph will have only one input,
+    //however such approach would also require us to analys all weights and biases which is not really what we want to do, hence the simplification described above.
+
+    //When it comes to the multiple endpoints, we can create dummy node to gather all of them. Super-sink is not a problem since the number of endpoints
+    //is much less than inputs, due to weights and biases. Also unique endpoint is handy when dealing with dominators frontier and determinating
+    //if the node lies within a 'main' branch of the network.
+
+    //...so firstly create super-sink, find all endpoints
+    {
+        std::list<program_node*> endpoints;
+        for (auto const& node : processing_order)
+            if (node->is_endpoint())
+                endpoints.push_back(node);
+
+        assert(endpoints.size() > 0 && "Network without endpoints?");
+
+        //if more than one endpoint, create sink
+        if (endpoints.size() > 1)
+        {
+            std::shared_ptr<program_node> node = std::make_shared<connector_node>(*this);
+            node->data_flow = true;
+            nodes_map.insert(std::make_pair(node->id(), node));
+
+            for (auto const& endpoint : endpoints)
+            {
+                endpoint->users.push_back(node.get());
+                node->dependencies.push_back(endpoint);
+            }
+
+            node->processing_itr = processing_order.insert(processing_order.end(), node.get());
+            node->processing_num = static_cast<uint32_t>(processing_order.size()) + 1;
+        }
+    }
+
+    //As mentioned, we want to find 'first' node with at least two users, where by 'first' we meant such node that every other can be reached from it (except for w/b),
+    //the first one from the set of topologically sorted nodes should have this property.
+    //Also, we take iterator to it rather than a node itself since, accoring to the algorithm, we will need to process nodes in reversed-postorder, which is equivalent for ordering produced by
+    //topological sorting.
+    auto root_itr = processing_order.begin();
+    while (root_itr != processing_order.end())
+    {
+        if ((*root_itr)->get_users().size() > 1)
+            break;
+
+        ++root_itr;
+    }
+
+    //there are no splits so simply end (for each n, idom(n) e { dpred(n) })
+    if (root_itr == processing_order.end())
+        return;
+
+    auto root = *root_itr;
+    root->dominator = root; //its not valid accordingly to the definition of 'program_node::dominator' field, but it's required by the algorithm - at the end this field should be reverted to nullptr
+    bool changed = true;
+
+    const auto intersects = [](program_node* n1, program_node* n2) -> program_node*
+    {
+        assert(n1 != nullptr);
+        assert(n2 != nullptr);
+        while (n1->processing_num != n2->processing_num)
+        {
+            //please note: we use reverse-postorder numbering so conditions are swapped in regard to the original algorithm (which uses postorder here)
+            while (n1->processing_num > n2->processing_num)
+            {
+                n1 = n1->dominator;
+                assert(n1 != nullptr);
+            }
+            while (n1->processing_num < n2->processing_num)
+            {
+                n2 = n2->dominator;
+                assert(n2 != nullptr);
+            }
+        }
+
+        return n1;
+    };
+
+    while (changed)
+    {
+        changed = false;
+
+        //for all nodes, in reverse postorder (except root)
+        auto itr = root_itr;
+        ++itr;
+        while (itr != processing_order.end())
+        {
+            auto node = *(itr++);
+            if (!node->is_in_data_flow()) //eliminate helper nodes
+                continue;
+
+            //pick first (processed) predecessor
+            auto pred_itr = node->get_dependencies().begin();
+            while (pred_itr != node->get_dependencies().end() && (*pred_itr)->dominator == nullptr)
+                ++pred_itr;
+            assert(pred_itr != node->get_dependencies().end()); //we are processing nodes in reverse postorder, so at least one our predecessor should have been processed at this point
+
+            auto new_idom = *pred_itr;
+
+            //new_idom <- first predecessor
+            //for all other predecessors of node (note: it's not clear if authors mean DIRECT predecessors but I've assumed so, I makes more sense when looking at the examples)
+            pred_itr = node->get_dependencies().begin();
+            while (pred_itr != node->get_dependencies().end())
+            {
+                auto pred = *(pred_itr++);
+                if (pred->dominator != nullptr) //doms[pred] already calculated
+                    new_idom = intersects(pred, new_idom);
+            }
+
+            if (node->dominator != new_idom)
+            {
+                node->dominator = new_idom;
+                changed = true;
+            }
+        }
+    }
+
+    //change meaningless idoms to nullptr (i.e. idom(node) == node or idom(node) e { dpred(node) })
+    //process items in reverse order to guarantee not-null dominators when checking node's predecessors (needed for dominance frontier)
+    auto ritr = processing_order.rbegin();
+    while (ritr != processing_order.rend())
+    {
+        auto node = *(ritr++);
+        if (!node->is_in_data_flow())
+            continue;
+        else if (node->dominator == node)
+            node->dominator = nullptr;
+        else if (node->get_dependencies().size() == 1)
+            node->dominator = nullptr;
+        else if (std::find(node->get_dependencies().begin(), node->get_dependencies().end(), node->dominator) != node->get_dependencies().end())
+            node->dominator = nullptr;
+        else //if dominator's not trivial, check its frontier to determinate if it lies on a 'main' branch
+        {
+            if (!node->dominator->joint)
+                node->dominator->joint = node;
+
+            for (auto dep : node->get_dependencies())
+            {
+                while (dep != node->dominator)
+                {
+                    if (!dep->data_flow)
+                        break;
+
+                    dep->main_branch = false;
+                    dep = dep->dominator;
+                    assert(dep != nullptr);
+                }
+            }
+        }
+
+        if (node == root)
+            break;
+    }
+}
+
 void program_impl::trim_to_outputs()
 {
     backward_bfs(nullptr, [this](program_node& node) {
-        if (!node.is_marked())
+        if (!node.is_marked() && !node.is_type<internal_primitive>())
         {
             processing_order.erase(node.processing_itr);
             optimized_out.push_back(node.id());
@@ -421,6 +684,85 @@ void program_impl::trim_to_outputs()
     for (auto const& opt : optimized_out)
     {
         nodes_map.erase(opt);
+    }
+}
+
+void program_impl::reorder_nodes_for_parallel_execution()
+{
+    if (processing_order.empty())
+        return;
+
+    //note: during computations perfomed by this function, both program_node::processing_itr and program_node::processing_num might be invalidated
+
+    //firstly, move all helpers at the beginning of processing queue to prevent them from being parallelised
+    std::list<program_node*> old_order;
+    std::swap(old_order, processing_order);
+    assert(processing_order.empty() && !old_order.empty());
+
+    const auto push_back = [this](program_node* node)
+    {
+        processing_order.push_back(node);
+        node->processing_itr = --processing_order.end();
+        node->processing_num = static_cast<uint32_t>(processing_order.size());
+    };
+
+    auto itr = old_order.begin();
+    while (itr != old_order.end())
+    {
+        auto* node = (*itr);
+        node->processing_num = 0;
+        if (!node->is_in_data_flow())
+        {
+            push_back(node);
+            itr = old_order.erase(itr);
+        }
+        else
+            ++itr;
+    }
+
+    //now identify all splits and try to reorder nodes
+    itr = old_order.begin();
+    while (itr != old_order.end())
+    {
+        auto* split = (*itr);
+        if (!split->is_split_point())
+        {
+            push_back(split);
+            ++itr;
+            continue;
+        }
+
+        //the node is a split point, reorder all nodes between node and node->get_joint() in queue so they can be run in a parallel way
+        auto joint = split->get_joint();
+
+        //a nice thing: we can use already topologically sorted nodes to calculated maximum distance from the source for each node in a range (split, joint)
+        //then we can simply sort them so nodes which are in the same distance will be next to each other in the resulting list
+        auto sub_itr = itr;
+        while (*sub_itr != joint)
+        {
+            auto node = (*sub_itr++);
+            for (auto& user : node->get_users())
+                user->processing_num = std::max(user->processing_num, node->processing_num + 1);
+        }
+
+        //bucket sort nodes basing on their distance from source
+        std::vector<std::list<program_node*>> dist_map;
+        dist_map.resize(joint->processing_num);
+        sub_itr = itr;
+        while (*sub_itr != joint)
+        {
+            auto node = (*sub_itr++);
+            dist_map[node->processing_num].push_back(node);
+        }
+
+        //insert sorted nodes to a resulting list in order of their distance
+        for (auto& dist : dist_map)
+            for (auto& node : dist)
+                push_back(node);
+
+        itr = sub_itr;
+        assert(*itr == joint);
+        joint->processing_num = 0;
     }
 }
 
@@ -792,11 +1134,10 @@ void program_impl::prepare_padding()
         }
     }
 
-
     // Prepare optimized padding for bfyx convolution.
     for (auto& pair : nodes_map)
     {
-        if (pair.second->get_primitive()->type != convolution::type_id())
+        if (pair.second->type() != convolution::type_id())
             continue;
 
         auto& node = pair.second->as<convolution>();
@@ -850,16 +1191,20 @@ void program_impl::prepare_padding()
 
 void program_impl::prepare_buffer_fusing()
 {
+    bool is_debug = options.get<build_option_type::debug>()->enabled();
     for (auto& node : processing_order)
     {
-        do_for_types<concatenation>(*node, [this](concatenation_node& node)
+        do_for_types<concatenation>(*node, [this, is_debug](concatenation_node& node)
         {
-            //if any of this node's inputs is used by more than one primitive do not fuse buffers
+            //if any of this node's inputs is used by more than one primitive do not fuse buffers,
+            //also, if an input is marked as network output, prevent optimizations which would affect a form of its output (unless debug flag is set)
             // todo: in future, if this case is problem, it can be optimized further to enable buffer fusing
             //       per single input rather than all/none
             // + restrict input types to pooling, convolution and activation only due to problems with output padding on b and f
             for (auto const& input : node.get_dependencies())
-                if (input->get_users().size() > 1 || (!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>()))
+                if (input->get_users().size() > 1 
+                    || (!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>())
+                    || (input->is_output() && !is_debug))
                     return;
 
             // buffer fusing should not be performed if one of inputs produces padded output since
@@ -908,8 +1253,16 @@ void program_impl::prepare_buffer_fusing()
         });
 
         // zero copy 
-        do_for_types<crop>(*node, [this](crop_node& node)
+        do_for_types<crop>(*node, [this, is_debug](crop_node& node)
         {
+            //if the node is marked as network output, prevent optimizations which would affect a form of its output, unless debug flag is set
+            if (node.is_output() && !is_debug)
+                return;
+
+            //connector mights have been added at the end of the network, if that is a case ignore it
+            if (node.get_users().size() == 1 && node.get_users().front()->is_type<connector>())
+                return;
+
             if (node.get_dependencies().size() == 1 &&
                 node.get_users().size() > 0)
             {
@@ -997,52 +1350,6 @@ void program_impl::remove_if_dangling(program_node& node)
     processing_order.erase(node.processing_itr);
     optimized_out.push_back(node.id());
     nodes_map.erase(node.id());
-}
-
-void program_impl::calc_processing_order()
-{
-    processing_order.clear();
-
-    //run dfs to sort nodes topologically
-    for (auto input : inputs)
-    {
-        if (input->is_marked())
-            continue;
-
-        input->mark();
-        std::list<std::pair<program_node*, std::list<program_node*>::const_iterator>> stack = { std::make_pair(input, input->users.begin()) };
-
-        while (!stack.empty()) //imitate call stack
-        {
-        new_frame:
-            auto& frame = stack.back();
-
-            while (frame.second != frame.first->users.end())
-            {
-                auto successor = *frame.second;
-                ++frame.second;
-
-                if (!successor->is_marked())
-                {
-                    successor->mark();
-
-                    //recurrence call
-                    stack.push_back(std::make_pair(successor, successor->users.begin()));
-                    goto new_frame;
-                }
-            }
-
-            //we have finished processing one node so add it to the processing queue
-            processing_order.push_front(frame.first);
-            frame.first->processing_itr = processing_order.begin();
-
-            //return from call
-            stack.pop_back();
-        }
-    }
-
-    for (auto& node : nodes_map)
-        node.second->unmark();
 }
 
 void program_impl::forward_bfs(std::function<void(program_node&)> const& mark_func, std::function<void(program_node&)> const& unmark_func) const

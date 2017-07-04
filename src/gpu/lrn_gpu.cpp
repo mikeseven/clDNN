@@ -19,16 +19,14 @@
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
 
-using namespace cldnn;
+namespace cldnn { namespace gpu {
 
-namespace neural
-{
     
 struct lrn_gpu : typed_primitive_impl<lrn>
 {
     const lrn_node& outer;
-    gpu::engine_info_internal _engine_info;
-    gpu::kernel _kernel;
+    engine_info_internal _engine_info;
+    kernel _kernel;
 
     lrn_gpu(const lrn_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
@@ -82,13 +80,13 @@ struct lrn_gpu : typed_primitive_impl<lrn>
 namespace {
     struct attach {
         attach() {
-            implementation_map<lrn>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), lrn_gpu::create);
-            implementation_map<lrn>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), lrn_gpu::create);
-            implementation_map<lrn>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), lrn_gpu::create);
-            implementation_map<lrn>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), lrn_gpu::create);
+            implementation_map<lrn>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), lrn_gpu::create);
+            implementation_map<lrn>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), lrn_gpu::create);
+            implementation_map<lrn>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), lrn_gpu::create);
+            implementation_map<lrn>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), lrn_gpu::create);
         }
         ~attach() {}
     };
     attach attach_impl;
 }
-}
+} }

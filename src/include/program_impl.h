@@ -21,8 +21,7 @@
 #include "refcounted_obj.h"
 #include "topology_impl.h"
 #include "engine_impl.h"
-#include "primitive_type.h"
-#include "meta_utils.h"
+#include "program_node.h"
 
 #include <list>
 #include <algorithm>
@@ -30,85 +29,8 @@
 namespace cldnn
 {
 
-struct program_impl;
 struct primitive_impl;
-struct engine_impl;
 class layout_optimizer;
-
-template <class T>
-struct typed_program_node;
-
-/*
-    Base class for all primitives which wraps API class and extends it to be used
-    in graph context.
-
-    Besides primitive description provided by user, this class includes functionality to
-    ask for direct predecessors and succesors as well as takes care of changes to primitive
-    which would affect other graph's nodes (the most commont case is probably calculating output layout).
-
-    At graph level, all connections between nodes are directly stored inside program_nodes - in oposite
-    to API level where all primitives store only ids of related ones.
-*/
-struct program_node
-{
-    friend struct program_impl;
-
-    program_node(std::shared_ptr<primitive> prim, program_impl& prog) : desc(prim), myprog(prog)
-    {
-        output_layout.data_padding = prim->output_padding;
-    }
-
-public:
-    auto id() const { return desc->id; }
-    auto type() const { return desc->type; }
-
-    template <class PType>
-    bool is_type() const
-    {
-        static_assert(meta::is_primitive_v<PType>, "Type argument for program_node::is_type should be a non-const, non-volatile type derived from primitive");
-        return type() == PType::type_id();
-    }
-
-    auto& get_program() { return myprog; }
-    auto const& get_program() const { return myprog; }
-
-    auto get_selected_impl() const { return selected_impl; }
-
-    auto const& get_dependencies() const { return dependencies; }
-    auto& get_dependency(size_t idx) const { return *dependencies.at(idx); }
-
-    void replace_dependency(size_t idx, program_node& new_dep);
-    void replace_dependency(program_node const& old_dep, program_node& new_dep);
-
-    auto const& get_users() { return users; }
-    // for const method, add const to stored successors/predecessors
-    auto const& get_users() const { return reinterpret_cast<const std::list<const program_node*>&>(users); }
-
-    //do not modify primitive directly to keep synchronisation wit graph
-    std::shared_ptr<const primitive> get_primitive() const { return desc; }
-
-    //primitive modification functions
-    void set_output_padding(padding const& padd)
-    {
-        //changing output padding shouldn't cause any changes to other primitives
-        //so just change it
-        output_layout.data_padding = padd;
-    }
-
-    void merge_output_padding(padding const& padd)
-    {
-        set_output_padding(padding::max(padd, output_layout.data_padding));
-    }
-
-    layout get_output_layout();
-
-    layout get_output_layout() const
-    {
-        if (!valid_output_layout)
-            throw std::runtime_error("Output layout not calculated");
-
-        return output_layout;
-    }
 
     void set_output_layout(layout layout)
     {
@@ -120,134 +42,11 @@ public:
         valid_output_layout = true;
     }
 
-    void recalc_output_layout()
-    {
-        valid_output_layout = false;
-        get_output_layout();
-    }
-
-    bool is_padded() { return static_cast<bool>(get_output_layout().data_padding); }
-    bool is_padded() const { return static_cast<bool>(get_output_layout().data_padding); }
-
-    bool has_padded_dependency() const
-    {
-        return std::any_of(get_dependencies().begin(), get_dependencies().end(), [](const program_node* node) { return node->is_padded(); });
     }
 
     bool has_padded_dependency()
     {
         return std::any_of(get_dependencies().begin(), get_dependencies().end(), [](program_node* node) { return node->is_padded(); });
-    }
-
-    auto is_input() const { return dependencies.empty(); }
-    auto is_endpoint() const { return users.empty(); }
-    auto set_output(bool out) { output = out; }
-    auto is_output() const { return output; }
-
-    auto mark() { user_mark = true; }
-    auto unmark() { user_mark = false; }
-    auto is_marked() const { return user_mark; }
-
-    //conversion from generic to specific
-    template <class To, class..., class = std::enable_if_t<!std::is_same<To, primitive>::value>>
-    typed_program_node<To>& as()
-    {
-        if (get_primitive()->type != To::type_id())
-            throw std::invalid_argument("program_node: mismatching primitive's type");
-
-        return reinterpret_cast<typed_program_node<To>&>(*this);
-    }
-
-    template <class To, class..., class = std::enable_if_t<!std::is_same<To, primitive>::value>>
-    typed_program_node<To> const& as() const
-    {
-        if (get_primitive()->type != To::type_id())
-            throw std::invalid_argument("program_node: mismatching primitive's type");
-
-        return reinterpret_cast<typed_program_node<To> const&>(*this);
-    }
-
-    template <class To>
-    operator typed_program_node<To>& ()
-    {
-        return as<To>();
-    }
-
-    template <class To>
-    operator typed_program_node<To> const& () const
-    {
-        return as<To>();
-    }
-
-protected:
-    std::shared_ptr<primitive> desc;
-    program_impl& myprog;
-
-    std::shared_ptr<primitive_impl> selected_impl;
-
-    bool valid_output_layout = false;
-    layout output_layout = layout(data_types::f32, format::bfyx, tensor());
-
-    std::vector<program_node*> dependencies;
-    std::list<program_node*> users;
-
-    std::list<program_node*>::const_iterator processing_itr;
-
-    bool output = false;
-    bool user_mark = false;
-
-    void invalidate_users() const
-    {
-        for (auto& user : users)
-        {
-            if (user->valid_output_layout)
-            {
-                user->valid_output_layout = false;
-                user->invalidate_users();
-            }
-        }
-    }
-};
-
-/*
-    Template class used to indicate that usage context requires 'program_node' to wrap primitive
-    of type 'PType'. Successful conversion from 'program_node' to 'typed_program_node<PType>' means
-    that this restriction in fact holds and functions/method/etc. may saftly use uderlaying primitive.
-
-    This class shadows 'get_primitive' method from base class which now returns pointer to more specific
-    type.
-*/
-template <class PType>
-struct typed_program_node_base : public program_node
-{
-    static_assert(meta::is_primitive_v<PType>, "PType should be a non-const, non-volatile class derived from primitive");
-
-    friend struct program_impl;
-
-public:
-    using program_node::program_node;
-
-    std::shared_ptr<const PType> get_primitive() const { return std::static_pointer_cast<const PType>(program_node::get_primitive()); }
-
-protected:
-    std::shared_ptr<PType> typed_desc() const { return std::static_pointer_cast<PType>(desc); }
-};
-
-/*
-    Actual template class used in context which requires 'program_node' to wrap
-    primitive of type 'PType'. This class is introduced to provide possibility of explicit specialization.
-    In most cases such specializations would add accessors to make access to PType-specific fields easier.
-
-    It's not required to specialize this class for new primitives types.
-*/
-template <class PType>
-struct typed_program_node : public typed_program_node_base<PType>
-{
-    using typed_program_node_base<PType>::typed_program_node_base;
-
-    auto& input() const { return program_node::get_dependency(0); }
-};
-
 /*
     cldnn_program implementation
 */
@@ -309,7 +108,14 @@ private:
     void post_optimize_graph();
     void compile_graph();
 
+    /*
+    ** Initialization functions
+    */
     void set_outputs();
+    void calc_processing_order();
+    void mark_constants();
+    void mark_data_flow();
+    void calc_dominators();
 
     /*
     ** Analysis functions
@@ -321,6 +127,7 @@ private:
     ** Optimization functions
     */
     void trim_to_outputs();
+    void reorder_nodes_for_parallel_execution();
     void reorder_inputs(layout_optimizer& lo);
     void pre_optimize_bias(layout_optimizer& lo);
     void post_optimize_weights(layout_optimizer& lo);
@@ -355,7 +162,6 @@ private:
 
     void remove_if_dangling(program_node& node);
 
-    void calc_processing_order();
 
     void forward_bfs(std::function<void(program_node&)> const& mark_func = nullptr, std::function<void(program_node&)> const& unmark_func = nullptr) const;
     void backward_bfs(std::function<void(program_node&)> const& mark_func = nullptr, std::function<void(program_node&)> const& unmark_func = nullptr) const;

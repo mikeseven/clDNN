@@ -19,15 +19,13 @@
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
 
-using namespace cldnn;
+namespace cldnn { namespace gpu {
 
-namespace neural 
-{
 
 struct activation_gpu : typed_primitive_impl<activation>
 {
     const activation_node& outer;
-    gpu::kernel _kernel;
+    kernel _kernel;
 
     activation_gpu(const activation_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
@@ -92,14 +90,14 @@ namespace {
             auto val_fw = activation_gpu::create;
     
             implementation_map<activation>::add({
-                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), val_fw},
-                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), val_fw},
-                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), val_fw },
-                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), val_fw },
+                { std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), val_fw},
+                { std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), val_fw},
+                { std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), val_fw },
+                { std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), val_fw },
             });
         }
         ~attach() {}
     };
     attach attach_impl;
 }
-}
+} }

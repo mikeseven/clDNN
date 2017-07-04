@@ -21,17 +21,14 @@
 #include "kernel_selector_helper.h"
 #include <initializer_list>
 
-using namespace cldnn;
-
-namespace neural
-{
+namespace cldnn { namespace gpu {
 
 struct concatenation_gpu : typed_primitive_impl<concatenation>
 {
     const concatenation_node& outer;
     const concatenation::concatenation_axis concat_axis;
 
-    gpu::engine_info_internal _engine_info;
+    engine_info_internal _engine_info;
 
     std::vector<std::pair<gpu::kernel, kernel_selector::kernel_data>> _kernels;
 
@@ -67,7 +64,7 @@ struct concatenation_gpu : typed_primitive_impl<concatenation>
             if (events.size() == 1)
                 return events[0];
 
-            return neural::gpu::events_waiter(outer.get_program().get_engine()->get_context()).run(events, instance);
+            return events_waiter(outer.get_program().get_engine()->get_context()).run(events);
         }
 
         assert(outer.inputs_count() == _kernels.size());
@@ -150,10 +147,10 @@ namespace {
     struct attach {
         attach() {
             implementation_map<concatenation>::add({
-                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), concatenation_gpu::create },
-                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), concatenation_gpu::create },
-                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), concatenation_gpu::create },
-                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), concatenation_gpu::create }
+                { std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), concatenation_gpu::create },
+                { std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), concatenation_gpu::create },
+                { std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), concatenation_gpu::create },
+                { std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), concatenation_gpu::create }
             });
         }
         ~attach() {}
@@ -162,4 +159,4 @@ namespace {
 
 attach attach_impl;
 
-} // namespace neural
+} }

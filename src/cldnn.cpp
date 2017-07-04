@@ -204,6 +204,15 @@ cldnn_event cldnn_create_user_event(cldnn_engine engine, cldnn_status* status)
     });
 }
 
+CLDNN_API int32_t cldnn_is_user_event(cldnn_event event, cldnn_status * status)
+{
+    return exception_handler<int32_t>(CLDNN_ERROR, status, 0, [&]()
+    {
+        SHOULD_NOT_BE_NULL(event, "Event");
+        return api_cast(event)->is_user_event();
+    });
+}
+
 void cldnn_retain_event(cldnn_event event, cldnn_status* status)
 {
 
@@ -237,7 +246,10 @@ void cldnn_set_event(cldnn_event event, cldnn_status* status)
     exception_handler(CLDNN_ERROR, status, [&]()
     {
         SHOULD_NOT_BE_NULL(event, "Event");
-        api_cast(event)->set();
+        if (!api_cast(event)->is_user_event())
+            throw std::invalid_argument("Event passed to cldnn_set_event should be a user event");
+
+        api_cast(event)->as_user_event()->set();
     });
 }
 
@@ -265,10 +277,13 @@ void cldnn_get_event_profiling_info(cldnn_event event, cldnn_profiling_interval*
             if(status) *status = CLDNN_INVALID_ARG;
             return;
         }
-        for(decltype(profiling_info.size()) i = 0; i < profiling_info.size(); i++)
+
+        size_t i = 0;
+        for(auto& info : profiling_info)
         {
-            profiling[i].name = profiling_info[i].name;
-            profiling[i].nanoseconds = profiling_info[i].nanoseconds;
+            profiling[i].name = info.name;
+            profiling[i].nanoseconds = info.nanoseconds;
+            ++i;
         }
     });
 }

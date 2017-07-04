@@ -75,7 +75,7 @@ std::string permute_inst::to_string(permute_node const& node)
 {
     std::stringstream           primitive_description;
     auto desc                   = node.get_primitive();
-    auto input                  = node.input();
+    auto& input                 = node.input();
     auto permute_order          = desc->permute_order;
     std::stringstream           ss_permute_order;
     for (size_t i = 0; i < permute_order.size(); ++i)

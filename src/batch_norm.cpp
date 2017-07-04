@@ -34,9 +34,9 @@ std::string batch_norm_inst::to_string(batch_norm_node const& node)
 {
     std::stringstream               primitive_description;
     auto desc                       = node.get_primitive();
-    auto input                      = node.input();
-    auto mean                       = node.mean();
-    auto variance                   = node.variance();
+    auto& input                     = node.input();
+    auto& mean                      = node.mean();
+    auto& variance                  = node.variance();
     auto global_stats               = desc->use_global_stats ? " true" : "false";
 
     primitive_description << "id: " << desc->id << ", type: batch_norm" << 

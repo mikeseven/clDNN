@@ -53,8 +53,6 @@ std::string roi_pooling_inst::to_string(roi_pooling_node const& node)
 {
     std::stringstream primitive_description;
     auto desc           = node.get_primitive();
-    auto input          = node.input();
-    auto input_rois     = node.rois();
     auto mode           = desc->mode == pooling_mode::max ? "max" : "average";
 
     primitive_description

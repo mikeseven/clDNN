@@ -25,16 +25,14 @@
 #include "api/CPP/reorder.hpp"
 #include "api/CPP/input_layout.hpp"
 
-using namespace cldnn;
+namespace cldnn { namespace gpu {
 
-namespace neural
-{
 
 struct fully_connected_gpu : typed_primitive_impl<fully_connected>
 {
     const fully_connected_node& outer;
     std::vector<network_impl::ptr> _reorders;   // TODO: move this reorder to graph compiler
-    gpu::kernel _kernel;
+    kernel _kernel;
 
     fully_connected_gpu(const fully_connected_node& arg, const kernel_selector::kernel_data& kd, std::vector<network_impl::ptr> reorders)
         : outer(arg)
@@ -113,14 +111,14 @@ namespace {
             auto val_fw = fully_connected_gpu::create;
 
             implementation_map<fully_connected>::add({
-                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), val_fw },
-                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), val_fw },
-                { std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), val_fw },
-                { std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), val_fw },
+                { std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), val_fw },
+                { std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), val_fw },
+                { std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), val_fw },
+                { std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), val_fw },
             });
         }
         ~attach() {}
     };
     attach attach_impl;
 }
-}
+} }

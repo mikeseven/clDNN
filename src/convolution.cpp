@@ -79,7 +79,7 @@ std::string convolution_inst::to_string(convolution_node const& node)
     auto strd                   = desc->stride;
     auto weights_count          = node.weights(0).get_output_layout().count();
     auto bias_count             = node.bias_term() ? node.bias(0).get_output_layout().count() : 0;
-    auto input                  = node.input();
+    auto& input                 = node.input();
     auto activation             = desc->with_activation ? " true" : "false";
     auto ud_out_size            = desc->with_output_size ? " true" : "false";
 

@@ -65,7 +65,7 @@ std::string deconvolution_inst::to_string(deconvolution_node const& node)
 {
     std::stringstream           primitive_description;
     auto desc                   = node.get_primitive();
-    auto input                  = node.input();
+    auto& input                 = node.input();
     auto strd                   = desc->stride;
     auto activation             = desc->with_activation ? " true" : "false";
     auto ud_out_size            = desc->with_output_size ? " true" : "false";

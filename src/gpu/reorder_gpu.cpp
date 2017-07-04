@@ -20,15 +20,12 @@
 #include "kernel_selector_helper.h"
 #include "events_waiter.h"
 
-using namespace cldnn;
-
-namespace neural
-{
+namespace cldnn { namespace gpu {
 
 struct reorder_gpu : typed_primitive_impl<reorder>
 {
     const reorder_node& outer;
-    gpu::kernel _kernel;
+    kernel _kernel;
 
     reorder_gpu(const reorder_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
@@ -97,11 +94,11 @@ namespace {
     struct attach {
         attach() {
             implementation_map<reorder>::add({
-                { cldnn::engine_types::ocl, reorder_gpu::create }
+                { engine_types::ocl, reorder_gpu::create }
             });
         }
         ~attach() {}
     };
     attach attach_impl;
 }
-}
+} }

@@ -21,10 +21,11 @@
 #include "network_impl.h"
 #include "gpu/ocl_toolkit.h"
 #include "gpu/memory_gpu.h"
+#include "gpu/ocl_user_event.h"
 
 namespace cldnn
 {
-using gpu_toolkit_config = neural::gpu::configuration;
+using gpu_toolkit_config = gpu::configuration;
 
 gpu_toolkit_config convert_configuration(const engine_configuration conf)
 {
@@ -34,6 +35,7 @@ gpu_toolkit_config convert_configuration(const engine_configuration conf)
     result.meaningful_kernels_names = conf.meaningful_kernels_names != 0;
     result.dump_custom_program = conf.dump_custom_program != 0;
     result.single_kernel_name = conf.single_kernel_name;
+    result.host_out_of_order = false /*conf.enable_parallelisation != 0*/; //TODO: enable when barriers in driver will be fixed
     return result;
 }
 
@@ -45,7 +47,7 @@ engine_impl::engine_impl(const engine_configuration& conf)
 memory_impl* engine_impl::allocate_buffer(layout layout)
 {
     try {
-        return new neural::gpu::gpu_buffer(this, layout);
+        return new gpu::gpu_buffer(this, layout);
     }
     catch (const cl::Error& clErr)
     {
@@ -67,7 +69,7 @@ memory_impl* engine_impl::reinterpret_buffer(memory_impl* memory, layout new_lay
     if (memory->get_engine() != this)
         throw error("trying to reinterpret buffer allocated by a different engine", CLDNN_ERROR);
 
-    return new neural::gpu::gpu_buffer(this, new_layout, reinterpret_cast<neural::gpu::gpu_buffer*>(memory)->get_buffer());
+    return new gpu::gpu_buffer(this, new_layout, reinterpret_cast<gpu::gpu_buffer*>(memory)->get_buffer());
 }
 
 bool engine_impl::is_the_same_buffer(memory_impl* mem1, memory_impl* mem2)
@@ -77,12 +79,12 @@ bool engine_impl::is_the_same_buffer(memory_impl* mem1, memory_impl* mem2)
     if (mem1 == mem2)
         return true;
 
-    return (reinterpret_cast<neural::gpu::gpu_buffer*>(mem1)->get_buffer() == reinterpret_cast<neural::gpu::gpu_buffer*>(mem2)->get_buffer());
+    return (reinterpret_cast<gpu::gpu_buffer*>(mem1)->get_buffer() == reinterpret_cast<gpu::gpu_buffer*>(mem2)->get_buffer());
 }
 
-event_impl* engine_impl::create_user_event()
+event_impl* engine_impl::create_user_event(bool set)
 {
-    return new user_event_gpu(cl::UserEvent(get_context()->context()));
+    return new gpu::user_event(cl::UserEvent(get_context()->context()), set);
 }
 
 program_impl* engine_impl::build_program(const topology_impl& topology, const build_options& options)
@@ -101,9 +103,21 @@ network_impl* engine_impl::allocate_network(const program_impl* program)
     return new network_impl(program);
 }
 
-neural::gpu::engine_info_internal engine_impl::get_engine_info() const
+void engine_impl::wait_for_events(std::vector<event_impl::ptr> const & events)
+{
+    if (!events.empty())
+        _context->wait_for_events(events);
+}
+
+gpu::engine_info_internal engine_impl::get_engine_info() const
 {
     return _context->get_engine_info();
+}
+
+void engine_impl::compile_program(program_impl&)
+{
+    //TODO: better compilation logic instead of a simple 'compile all'?
+    _context->get_kernels_cache().build_all();
 }
 
 }

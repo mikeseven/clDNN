@@ -24,53 +24,52 @@
 #include <stdexcept>
 #include <string>
 
-using namespace cldnn;
+namespace cldnn { namespace gpu {
 
-namespace neural
-{
-
-struct bounding_box
-{
-    float xmin;
-    float ymin;
-    float xmax;
-    float ymax;
-
-    bounding_box() : xmin(0), ymin(0), xmax(0), ymax(0) {}
-
-    bounding_box(const float xmin, const float ymin, const float xmax, const float ymax) : 
-        xmin(xmin), ymin(ymin), xmax(xmax), ymax(ymax) {}
-
-    // Computes the area of a bounding box.
-    float area() const
+namespace {
+    struct bounding_box
     {
-        return (xmax - xmin) * (ymax - ymin);
-    }
+        float xmin;
+        float ymin;
+        float xmax;
+        float ymax;
 
-    // Computes the intersection between 2 bounding boxes.
-    bounding_box intersect(const bounding_box& other) const
-    {
-        return bounding_box(std::max(xmin, other.xmin), std::max(ymin, other.ymin), std::min(xmax, other.xmax), std::min(ymax, other.ymax));
-    }
+        bounding_box() : xmin(0), ymin(0), xmax(0), ymax(0) {}
 
-    // Computes the overlap between 2 bounding boxes.
-    float overlap(const bounding_box& other) const
-    {
-        const bounding_box& intersect_bbox = intersect(other);
-        const float intersect_width = intersect_bbox.xmax - intersect_bbox.xmin;
-        const float intersect_height = intersect_bbox.ymax - intersect_bbox.ymin;
-        if (intersect_width > 0 && intersect_height > 0)
+        bounding_box(const float xmin, const float ymin, const float xmax, const float ymax) : 
+            xmin(xmin), ymin(ymin), xmax(xmax), ymax(ymax) {}
+
+        // Computes the area of a bounding box.
+        float area() const
         {
-            const float intersect_size = intersect_width * intersect_height;
-            return intersect_size / (area() + other.area() - intersect_size);
+            return (xmax - xmin) * (ymax - ymin);
         }
-        else
+
+        // Computes the intersection between 2 bounding boxes.
+        bounding_box intersect(const bounding_box& other) const
         {
-            // There is no intersection.
-            return 0;
+            return bounding_box(std::max(xmin, other.xmin), std::max(ymin, other.ymin), std::min(xmax, other.xmax), std::min(ymax, other.ymax));
         }
-    }
-};
+
+        // Computes the overlap between 2 bounding boxes.
+        float overlap(const bounding_box& other) const
+        {
+            const bounding_box& intersect_bbox = intersect(other);
+            const float intersect_width = intersect_bbox.xmax - intersect_bbox.xmin;
+            const float intersect_height = intersect_bbox.ymax - intersect_bbox.ymin;
+            if (intersect_width > 0 && intersect_height > 0)
+            {
+                const float intersect_size = intersect_width * intersect_height;
+                return intersect_size / (area() + other.area() - intersect_size);
+            }
+            else
+            {
+                // There is no intersection.
+                return 0;
+            }
+        }
+    };
+}
 
 struct detection_output_gpu : typed_primitive_impl<detection_output>
 {
@@ -82,12 +81,12 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 
     static void decode_bounding_box(
         const bounding_box& prior_bbox, const std::array<float, PRIOR_BOX_SIZE>& prior_variance,
-        const cldnn::prior_box_code_type code_type, const bool variance_encoded_in_target,
+        const prior_box_code_type code_type, const bool variance_encoded_in_target,
         const bounding_box& bbox, bounding_box* decoded_bbox) 
     {
         switch (code_type)
         {
-            case cldnn::prior_box_code_type::corner:
+            case prior_box_code_type::corner:
             {
                 if (variance_encoded_in_target)
                 {
@@ -107,7 +106,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
                 }
                 break;
             }
-            case cldnn::prior_box_code_type::center_size:
+            case prior_box_code_type::center_size:
             {
                 const float prior_width = prior_bbox.xmax - prior_bbox.xmin;
                 assert(prior_width > 0);
@@ -139,7 +138,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
                 decoded_bbox->ymax = decode_bbox_center_y + decode_bbox_height;
                 break;
             }
-            case cldnn::prior_box_code_type::corner_size:
+            case prior_box_code_type::corner_size:
             {
                 const float prior_width = prior_bbox.xmax - prior_bbox.xmin;
                 assert(prior_width > 0);
@@ -236,7 +235,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
     template<typename dtype>
     void generate_detections(const detection_output_inst& instance, const int num_of_images, const std::vector<std::map<int, std::vector<bounding_box> >>& all_bboxes, const std::vector<std::map<int, std::vector<float> > >& confidences)
     {
-        cldnn::pointer<dtype> out_ptr = instance.output_memory().pointer<dtype>();
+        pointer<dtype> out_ptr = instance.output_memory().pointer<dtype>();
         const auto& args = instance.argument;
         std::vector<std::map<int, std::vector<int> > > all_indices;
         for (int image = 0; image < num_of_images; ++image)
@@ -571,10 +570,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
             generate_detections<data_type_to_type<data_types::f16>::type>(instance, num_of_images, bboxes, confidences);
         }
 
-        event_impl* ev = instance.get_network().get_engine().get()->create_user_event();
-        ev->set();
-
-        return ev;
+        return instance.get_network().get_engine().get()->create_user_event(true);
     }
 
     static primitive_impl* create(const detection_output_node& arg)
@@ -583,20 +579,16 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
     }
 };
 
-namespace
-{
-    struct attach
-    {
+namespace {
+    struct attach {
         attach()
         {
-            implementation_map<detection_output>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), detection_output_gpu::create);
-            implementation_map<detection_output>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), detection_output_gpu::create);
+            implementation_map<detection_output>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), detection_output_gpu::create);
+            implementation_map<detection_output>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), detection_output_gpu::create);
         }
 
-        ~attach()
-        {
-        }
+        ~attach() {}
     };
     attach attach_impl;
 }
-}
+}}

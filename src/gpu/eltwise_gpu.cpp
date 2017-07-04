@@ -20,15 +20,12 @@
 #include "eltwise/eltwise_kernel_selector.h"
 #include "kernel_selector_helper.h"
 
-using namespace cldnn;
-
-namespace neural
-{
+namespace cldnn { namespace gpu {
 
 struct eltwise_gpu : typed_primitive_impl<eltwise>
 {
     const eltwise_node& outer;
-    gpu::kernel _kernel;
+    kernel _kernel;
 
     eltwise_gpu(const eltwise_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
@@ -102,4 +99,4 @@ namespace {
     };
     attach attach_impl;
 }
-}
+} }

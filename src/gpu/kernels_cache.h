@@ -35,10 +35,12 @@ namespace kernel_selector
     using kernel_string = KernelSelector::KernelString;
 }
 
-namespace neural {namespace gpu {
+namespace cldnn { namespace gpu {
+
 class gpu_toolkit;
 
-class kernels_cache {
+class kernels_cache
+{
 public:
     using source_code = std::vector<std::string>;
 
@@ -77,6 +79,9 @@ private:
 public:
     kernel_id set_kernel_source(const std::shared_ptr<kernel_selector::kernel_string>& kernel_string, bool dump_custom_program);
     kernel_type get_kernel(kernel_id id);
+
+    //forces compilation of all pending kernels/programs
+    void build_all();
 };
 
 }}

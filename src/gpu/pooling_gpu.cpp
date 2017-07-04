@@ -19,16 +19,14 @@
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
 
-using namespace cldnn;
+namespace cldnn { namespace gpu {
 
-namespace neural
-{
 
 struct pooling_gpu : typed_primitive_impl<pooling>
 {
     const pooling_node& outer;
-    gpu::engine_info_internal _engine_info;
-    gpu::kernel _kernel;
+    engine_info_internal _engine_info;
+    kernel _kernel;
 
     pooling_gpu(const pooling_node &arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
@@ -150,20 +148,17 @@ struct pooling_gpu : typed_primitive_impl<pooling>
     }
 };
 
-namespace
-{
-
-    struct attach
-    {
+namespace {
+    struct attach {
         attach()
         {
-            implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), pooling_gpu::create);
-            implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), pooling_gpu::create);
-            implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), pooling_gpu::create);
-            implementation_map<pooling>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), pooling_gpu::create);
         }
         ~attach() {}
     };
     attach attach_impl;
 }
-}
+} }

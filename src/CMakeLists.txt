@@ -21,6 +21,16 @@ set(CLDNN_BUILD__PROJ_OUTPUT_NAME "${CLDNN_BUILD__PROJ_OUTPUT_NAME__clDNN}")
 
 # ================================== Compiler preprocessor definitions =================================
 
+intel_config_flag_apply_settings(
+    CompilerOptions
+    CMAKE_CXX_FLAGS
+    ALL_PATTERN ""
+    SET
+      RttiEnabled
+  )
+
+# ================================== Compiler preprocessor definitions =================================
+
 set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
     CLDNN_EXPORTS
     EXPORT_NEURAL_SYMBOLS

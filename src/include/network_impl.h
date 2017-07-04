@@ -61,6 +61,7 @@ public:
     std::string get_primitive_info(const primitive_id& id) const;
     const event_impl::ptr& get_primitive_event(const primitive_id& id) const { return _events.at(id); }
     std::vector<std::shared_ptr<primitive_inst>> get_primitives(const std::vector<primitive_id>& ids);
+    std::vector<std::shared_ptr<primitive_inst>> get_primitives(const std::vector<program_node*>& nodes);
     event_impl::ptr execute_primitive(const std::shared_ptr<primitive_inst>& primitive, const std::vector<event_impl::ptr>& events);
 
 private:
@@ -69,6 +70,7 @@ private:
     std::map<primitive_id, std::shared_ptr<primitive_inst>> _primitives;
     std::vector<std::shared_ptr<primitive_inst>> _inputs;
     std::vector<std::shared_ptr<primitive_inst>> _outputs;
+    std::list<std::shared_ptr<primitive_inst>> _exec_order;
 
     std::unordered_map<primitive_id, event_impl::ptr> _events;
 

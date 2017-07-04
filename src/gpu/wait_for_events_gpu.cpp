@@ -23,8 +23,8 @@
 #include "network_impl.h"
 #include "events_waiter.h"
 
-namespace cldnn
-{
+namespace cldnn { namespace gpu {
+
 class wait_for_events_gpu : public primitive_impl
 {
 public:
@@ -32,9 +32,8 @@ public:
 
     event_impl::ptr execute(const std::vector<event_impl::ptr>& events, primitive_inst& instance) override
     {
-        neural::gpu::events_waiter events_waiter(instance.get_network().get_engine()->get_context());
-        return events_waiter.run(events, instance);
-        
+        events_waiter events_waiter(instance.get_network().get_engine()->get_context());
+        return events_waiter.run(events);
     }
 
     static primitive_impl* create_data(const data_node& data)
@@ -74,4 +73,4 @@ namespace {
     attach attach_impl;
 }
 
-}
+}}

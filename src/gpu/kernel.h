@@ -28,7 +28,7 @@
 #include <iostream>
 #include <sstream>
 
-namespace neural { namespace gpu {
+namespace cldnn { namespace gpu {
 
 class kernel : public context_holder 
 {
@@ -67,9 +67,9 @@ public:
         const kernel_selector::kernel_scalar_arguments* scalars = nullptr;
     };
 
-    cldnn::refcounted_obj_ptr<cldnn::event_impl> run(
+    event_impl::ptr run(
         const kernel_selector::cl_kernel_data& kernel_data,
-        const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& dependencies,
+        const std::vector<event_impl::ptr>& dependencies,
         const kernel_arguments_data& args) const;
 };
 
