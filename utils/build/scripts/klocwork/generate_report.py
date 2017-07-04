@@ -164,8 +164,6 @@ def main(args):
 
                         # Only add the count to the total if it's > 0.  Count will be -1 if there was an error fetching the count.
                         if count > 0:
-                            if 'New Critical Issues' or 'Total Critical Issues' in issueType["name"]:
-                                status = -3
                             issueTypeTotals[architecture][issueType["name"]] += count
 
                             # Also log summary details
@@ -173,6 +171,7 @@ def main(args):
                                 # This means there are new critical issues for a component.  If this component
                                 # is not already in the list of components with new critical issues, then
                                 # add it to the list.
+                                status = -3
                                 if not component['display'] in summaryData[
                                             'new_critical_components_list_' + architecture]:
                                     summaryData['new_critical_components_list_' + architecture].append(
@@ -180,13 +179,14 @@ def main(args):
                             elif issueType["name"] == "Total Critical Issues":
                                 # Add up all the critical issues
                                 summaryData['total_critical_issues_' + architecture] += count
-
+                                status = -3
                                 # Also keep track of all the components which have critical issues.  If this component
                                 # is not already in the list of components with critical issues, then
                                 # add it to the list.
                                 if not component['display'] in summaryData['critical_components_list_' + architecture]:
                                     summaryData['critical_components_list_' + architecture].append(component['display'])
-
+                            elif issueType["name"] == "Banned Functions":
+                                status = -3
                         log.info("        " + issueType["name"] + ": " + str(count))
 
                         component["issues"].append(issueDetails)
@@ -292,7 +292,7 @@ if __name__ == "__main__":
 
     success = main(args)
     if success == -3:
-        print('\nExiting with status ' + str(success) + ' !!!CRITICALS FOUND!!!')
+        print('\nKlocwork scan probably failed, please check artifacts section')
     else:
         print('\nExiting with status ' + str(success))
     sys.exit(success)
