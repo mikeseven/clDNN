@@ -105,4 +105,21 @@ namespace KernelSelector {
 
         return kernel_string;
     }
+
+    std::string CNNKernelBase::GetEntryPoint(const std::string& templateName, const std::string& layerID, const OptionalParams& options) const
+    {
+        std::string kernelID = layerID;
+
+        if (kernelID.empty() || !options.meaningfulKernelsNames)
+        {
+            kernelID = templateName;
+        }
+
+        std::replace(kernelID.begin(), kernelID.end(), '.', '_');
+
+        kernelID += "_" + std::to_string(UniqeID());
+
+        return kernelID;
+    }
+
 }

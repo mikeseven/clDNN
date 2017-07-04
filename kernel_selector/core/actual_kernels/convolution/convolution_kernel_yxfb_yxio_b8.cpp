@@ -134,7 +134,7 @@ namespace KernelSelector
         }
 
         auto cldnn_jit = GetJitConstants(orgParams, runInfo);
-        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];

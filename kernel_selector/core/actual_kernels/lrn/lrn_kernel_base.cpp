@@ -96,7 +96,7 @@ namespace KernelSelector
         KernelData kd = KernelData::Default<LRNParams>(params);
 
         auto cldnnJit = GetJitConstants(orgParams, runInfo);
-        auto entryPoint = GetEntryPoint(kernelName, orgParams.layerID);
+        auto entryPoint = GetEntryPoint(kernelName, orgParams.layerID, options);
         auto jit = CreateJit(kernelName, cldnnJit, entryPoint);
 
         auto& kernel = kd.kernels[0];

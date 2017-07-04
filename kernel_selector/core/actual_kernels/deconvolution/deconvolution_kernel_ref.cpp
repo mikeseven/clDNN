@@ -64,7 +64,7 @@ namespace KernelSelector
         }
 
         DispatchData runInfo = SetDefault(orgParams);
-        KernelData kd = KernelData::Default<DeconvolutionParams>(params, 1);
+        KernelData kd = KernelData::Default<DeconvolutionParams>(params);
         DeconvolutionParams& newParams = *static_cast<DeconvolutionParams*>(kd.params.get());
 
         bool succeed = UpdateWeightsParams(
@@ -79,7 +79,7 @@ namespace KernelSelector
         }
 
         auto cldnn_jit = GetJitConstants(orgParams);
-        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];

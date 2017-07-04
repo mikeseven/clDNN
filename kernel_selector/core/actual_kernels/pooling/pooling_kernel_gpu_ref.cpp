@@ -41,7 +41,7 @@ namespace KernelSelector
         return k;
     }
 
-    KernelsData PoolingKernelGPURef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData PoolingKernelGPURef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::POOLING);
 
@@ -56,7 +56,7 @@ namespace KernelSelector
         KernelData kd = KernelData::Default<PoolingParams>(params);
 
         auto cldnn_jit = GetJitConstants(orgParams, runInfo);
-        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];

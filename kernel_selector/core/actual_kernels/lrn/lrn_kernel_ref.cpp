@@ -37,11 +37,11 @@ namespace KernelSelector
         return k;
     }
 
-    KernelsData LRNKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData LRNKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::LRN);
 
-        KernelData kd = KernelData::Default<LRNParams>(params, 1);
+        KernelData kd = KernelData::Default<LRNParams>(params);
 
         LRNParams& newParams = *static_cast<LRNParams*>(kd.params.get());
 
@@ -57,7 +57,7 @@ namespace KernelSelector
         }
 
         const float num_element_div = 1.f / numElement;
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         jit << GetBaseJit(newParams, kernel_id)
             << "#define ROUND_NORM_SIZE (" << round_norm_size << ")\n"

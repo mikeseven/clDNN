@@ -34,14 +34,14 @@ namespace KernelSelector {
         return k;
     }
 
-    KernelsData ConvertKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData ConvertKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::CONVERT);
 
-        KernelData kd = KernelData::Default<ConvertParams>(params, 1);
+        KernelData kd = KernelData::Default<ConvertParams>(params);
 
         ConvertParams& newParams = *static_cast<ConvertParams*>(kd.params.get());
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         std::stringstream jit;
         jit << GetBaseJit(newParams, kernel_id)

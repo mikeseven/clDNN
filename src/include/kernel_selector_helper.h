@@ -361,6 +361,7 @@ inline optional_params_t get_default_optional_params(const program_impl& program
     params.bSupportSubGroupExt = program.get_engine()->get_context()->extension_supported("cl_intel_subgroups_short");
     params.maxWorkGroupSize = engine_info.max_work_group_size;
     params.maxLocalMemSize = engine_info.max_local_mem_size;
+    params.meaningfulKernelsNames = context->get_configuration().meaningful_kernels_names;
     return params;
 }
 

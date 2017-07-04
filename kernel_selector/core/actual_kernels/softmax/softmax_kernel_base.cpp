@@ -87,7 +87,7 @@ namespace KernelSelector
         return kd;
     }
 
-    KernelsData SoftmaxKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& optParams, float estimated_time) const
+    KernelsData SoftmaxKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, float estimated_time) const
     {
         assert(params.GetType() == KernelType::SOFT_MAX);
 
@@ -98,21 +98,11 @@ namespace KernelSelector
             return{};
         }
 
-        DispatchData runInfo;
+        KernelData kd = KernelData::Default<SoftmaxParams>(params);
 
-        try
-        {
-            runInfo = SetDefault(orgParams, optParams);
-        }
-        catch (const std::runtime_error&)
-        {
-            return{};
-        }
-
-        KernelData kd = KernelData::Default<SoftmaxParams>(params, 1);
-
+        auto runInfo = SetDefault(orgParams, options);
         auto cldnn_jit = GetJitConstants(orgParams, runInfo);
-        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];

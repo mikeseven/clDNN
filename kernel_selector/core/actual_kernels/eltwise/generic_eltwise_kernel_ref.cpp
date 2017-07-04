@@ -186,9 +186,9 @@ namespace KernelSelector {
         return jit;
     }
 
-    KernelsData GenericEltwiseKernelRef::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData GenericEltwiseKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        if (!Validate(params, optParams))
+        if (!Validate(params, options))
         {
             return{};
         }
@@ -196,7 +196,7 @@ namespace KernelSelector {
         KernelData kd = KernelData::Default<EltwiseParams>(params);
         EltwiseParams& newParams = *static_cast<EltwiseParams*>(kd.params.get());
 
-        auto entry_point = GetEntryPoint(kernelName, newParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
         auto cldnn_jit = GetJitConstants(newParams);
         std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
 

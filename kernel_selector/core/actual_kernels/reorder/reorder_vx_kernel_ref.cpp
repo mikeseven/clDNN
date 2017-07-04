@@ -34,14 +34,14 @@ namespace KernelSelector
         return k;
     }
 
-    KernelsData ReorderVxKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData ReorderVxKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::REORDER);
 
-        KernelData kd = KernelData::Default<ReorderVxParams>(params, 1);
+        KernelData kd = KernelData::Default<ReorderVxParams>(params);
 
         ReorderVxParams& newParams = *static_cast<ReorderVxParams*>(kd.params.get());
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         std::stringstream jit;
         jit << GetBaseJit(newParams, kernel_id);

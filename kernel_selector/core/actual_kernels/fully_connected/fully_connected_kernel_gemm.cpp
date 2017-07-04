@@ -42,7 +42,7 @@ namespace KernelSelector {
     {
         assert(params.GetType() == KernelType::FULLY_CONNECTED);
 
-        KernelData kd = KernelData::Default<FullyConnectedParams>(params, 1);
+        KernelData kd = KernelData::Default<FullyConnectedParams>(params);
 
         FullyConnectedParams& newParams = *static_cast<FullyConnectedParams*>(kd.params.get());
 
@@ -73,7 +73,7 @@ namespace KernelSelector {
         const uint32_t globalWorkSizeX = localWorkSizeX;
         const uint32_t vecSize = 4;
         size_t matrixLineSize = newParams.inputs[0].Batch().pitch;
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         jit << GetBaseJit(newParams, kernel_id)
             << GetFullyConnectedJit(newParams)

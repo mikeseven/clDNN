@@ -34,15 +34,15 @@ namespace KernelSelector
         return k;
     }
 
-    KernelsData PermuteKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData PermuteKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::REORDER);
 
-        KernelData kd = KernelData::Default<PermuteParams>(params, 1);
+        KernelData kd = KernelData::Default<PermuteParams>(params);
         PermuteParams& newParams = *static_cast<PermuteParams*>(kd.params.get());
 
 
-        auto entry_point = GetEntryPoint(kernelName, newParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
         auto cldnn_jit = MakePermuteJitConstants(newParams);
         std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
 

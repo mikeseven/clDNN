@@ -34,14 +34,14 @@ namespace KernelSelector {
         return k;
     }
 
-    KernelsData ROIPoolingKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData ROIPoolingKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::ROI_POOLING);
 
-        KernelData kd = KernelData::Default<ROIPoolingParams>(params, 1);
+        KernelData kd = KernelData::Default<ROIPoolingParams>(params);
 
         ROIPoolingParams& newParams = *static_cast<ROIPoolingParams*>(kd.params.get());
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         std::stringstream jit;
         jit << GetBaseJit(newParams, kernel_id)

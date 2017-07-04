@@ -32,11 +32,11 @@ namespace KernelSelector
         return k;
     }
 
-    KernelsData SoftmaxKernelOpt1Dim::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData SoftmaxKernelOpt1Dim::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::SOFT_MAX);
 
-        KernelData kd = KernelData::Default<SoftmaxParams>(params, 1);
+        KernelData kd = KernelData::Default<SoftmaxParams>(params);
 
         SoftmaxParams& newParams = *static_cast<SoftmaxParams*>(kd.params.get());
 
@@ -46,7 +46,7 @@ namespace KernelSelector
         const size_t leftovers            = dst_size % localWorkGroup;
         const size_t globalWorkGroup      = dst_size - leftovers;
         const size_t itemsNum             = globalWorkGroup / localWorkGroup;
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         std::stringstream jit;
         jit << GetBaseJit(newParams, kernel_id);

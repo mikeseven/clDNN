@@ -34,14 +34,14 @@ namespace KernelSelector
         return k;
     }
 
-    KernelsData ReorderWeightsKernel::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData ReorderWeightsKernel::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::REORDER);
 
-        KernelData kd = KernelData::Default<ReorderWeightsParams>(params, 1);
+        KernelData kd = KernelData::Default<ReorderWeightsParams>(params);
         ReorderWeightsParams& newParams = *static_cast<ReorderWeightsParams*>(kd.params.get());
 
-        auto entry_point = GetEntryPoint(kernelName, newParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
         auto cldnn_jit = GetJitConstants(newParams);
         std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
 

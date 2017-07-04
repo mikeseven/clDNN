@@ -130,7 +130,7 @@ namespace KernelSelector
             return{};
         }
 
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         jit << GetBaseJit(newParams, kernel_id)
             << GetConvolutionJit(newParams, runInfo, true);

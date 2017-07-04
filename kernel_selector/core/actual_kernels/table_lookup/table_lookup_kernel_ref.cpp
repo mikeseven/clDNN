@@ -34,14 +34,14 @@ namespace KernelSelector {
         return k;
     }
 
-    KernelsData TableLookupKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData TableLookupKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::TABLE_LOOKUP);
 
-        KernelData kd = KernelData::Default<TableLookupParams>(params, 1);
+        KernelData kd = KernelData::Default<TableLookupParams>(params);
 
         TableLookupParams& newParams = *static_cast<TableLookupParams*>(kd.params.get());
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         std::stringstream jit;
         jit << GetBaseJit(newParams, kernel_id)

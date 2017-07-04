@@ -34,11 +34,11 @@ namespace KernelSelector {
         return k;
     }
 
-    KernelsData ActivationKernelOpt::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData ActivationKernelOpt::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::ACTIVATION);
 
-        KernelData kd = KernelData::Default<ActivationParams>(params, 1);
+        KernelData kd = KernelData::Default<ActivationParams>(params);
 
         ActivationParams& newParams = *static_cast<ActivationParams*>(kd.params.get());
 
@@ -46,7 +46,7 @@ namespace KernelSelector {
         static const int NUM_COLS_WI = 4;
         const size_t nonWidthDim = newParams.inputs[0].LogicalSize() / newParams.inputs[0].X().v;
 
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         std::stringstream jit;
         jit << GetBaseJit(newParams, kernel_id);

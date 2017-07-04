@@ -68,7 +68,7 @@ namespace KernelSelector {
         return jit;
     }
 
-    KernelsData ROIPoolingV1KernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData ROIPoolingV1KernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::ROI_POOLING);
         const ROIPoolingV1Params& orgParams = static_cast<const ROIPoolingV1Params&>(params);
@@ -79,10 +79,10 @@ namespace KernelSelector {
         }
 
         DispatchData runInfo = SetDefault(orgParams);
-        KernelData kd = KernelData::Default<ROIPoolingV1Params>(params, 1);
+        KernelData kd = KernelData::Default<ROIPoolingV1Params>(params);
 
         auto cldnn_jit = GetJitConstants(orgParams);
-        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];

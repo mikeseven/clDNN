@@ -43,16 +43,16 @@ namespace KernelSelector
         return k;
     }
 
-    KernelsData SoftmaxKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData SoftmaxKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::SOFT_MAX);
 
-        KernelData kd = KernelData::Default<SoftmaxParams>(params, 1);
+        KernelData kd = KernelData::Default<SoftmaxParams>(params);
 
         SoftmaxParams& newParams = *static_cast<SoftmaxParams*>(kd.params.get());
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
         auto jit = GetBaseJit(newParams, kernel_id);
         switch (newParams.smParams.dim)
         {

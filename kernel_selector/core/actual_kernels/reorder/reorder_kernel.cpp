@@ -42,14 +42,14 @@ namespace KernelSelector
         return jit;
     }
 
-    KernelsData ReorderKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData ReorderKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::REORDER);
 
-        KernelData kd = KernelData::Default<ReorderParams>(params, 1);
+        KernelData kd = KernelData::Default<ReorderParams>(params);
         ReorderParams& newParams = *static_cast<ReorderParams*>(kd.params.get());
 
-        auto entry_point = GetEntryPoint(kernelName, newParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
         auto cldnn_jit = GetJitConstants(newParams);
         std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
         

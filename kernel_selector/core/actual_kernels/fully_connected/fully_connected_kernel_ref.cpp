@@ -42,10 +42,10 @@ namespace KernelSelector
     {
         assert(params.GetType() == KernelType::FULLY_CONNECTED);
 
-        KernelData kd = KernelData::Default<FullyConnectedParams>(params, 1);
+        KernelData kd = KernelData::Default<FullyConnectedParams>(params);
 
         FullyConnectedParams& newParams = *static_cast<FullyConnectedParams*>(kd.params.get());
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         bool succeed = UpdateWeightsParams(
             newParams,

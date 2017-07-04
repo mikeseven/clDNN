@@ -87,7 +87,7 @@ namespace KernelSelector
             return KernelsData();
         }
 
-        KernelData kd = KernelData::Default<FullyConnectedParams>(params, 1);
+        KernelData kd = KernelData::Default<FullyConnectedParams>(params);
         FullyConnectedParams& newParams = *static_cast<FullyConnectedParams*>(kd.params.get());
 
         if (!bProperInput)
@@ -109,7 +109,7 @@ namespace KernelSelector
 
         kd.kernels.resize(1);
         
-        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);
 
         DispatchData runInfo = SetDefault(newParams);
         auto cldnn_jit = GetJitConstants(newParams, runInfo);

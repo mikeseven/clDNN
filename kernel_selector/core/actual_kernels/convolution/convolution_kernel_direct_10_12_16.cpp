@@ -106,7 +106,7 @@ namespace KernelSelector {
         {
             runInfo = SubGroupInfo(1, 1, TILE_N, 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 3, 1);
         }
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         jit << "#define RIGHT_PARTIAL_TILE_K " << orgParams.output.X().v % runInfo.globalWorkSizeDX << "\n"
             << GetBaseJit(newParams, kernel_id)

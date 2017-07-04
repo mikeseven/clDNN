@@ -34,14 +34,14 @@ namespace KernelSelector
         return k;
     }
 
-    KernelsData ReshapeKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData ReshapeKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::REORDER);
 
         KernelData kd = KernelData::Default<ReorderBaseParams>(params);
         ReorderBaseParams& newParams = *static_cast<ReorderBaseParams*>(kd.params.get());
 
-        auto entry_point = GetEntryPoint(kernelName, newParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
         auto cldnn_jit = MakeReorderBaseJitConstants(newParams);
         std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
 

@@ -34,15 +34,15 @@ namespace KernelSelector {
         return k;
     }
 
-    KernelsData LocallyConnectedKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData LocallyConnectedKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::LOCALLY_CONNECTED);
 
-        KernelData kd = KernelData::Default<LocallyConnectedParams>(params, 1);
+        KernelData kd = KernelData::Default<LocallyConnectedParams>(params);
 
         LocallyConnectedParams& newParams = *static_cast<LocallyConnectedParams*>(kd.params.get());
 
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         std::stringstream jit;
         jit << GetBaseJit(newParams, kernel_id)

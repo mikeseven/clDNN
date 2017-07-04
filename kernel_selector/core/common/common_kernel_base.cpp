@@ -73,20 +73,20 @@ namespace KernelSelector
         };
     }
 
-    std::string CommonKernelBase::GetEntryPoint(const std::string& template_name, const std::string& layer_id) const
+    std::string CommonKernelBase::GetEntryPoint(const std::string& templateName, const std::string& layerID, const OptionalParams& options) const
     {
-        std::string kernel_id = layer_id;
+        std::string kernelID = layerID;
 
-        std::replace(kernel_id.begin(), kernel_id.end(), '.', '_');
-
-        if (kernel_id.empty() /*|| !_context.get_configuration().meaningful_kernels_names*/)
+        if (kernelID.empty() || !options.meaningfulKernelsNames)
         {
-            kernel_id = template_name;
+            kernelID = templateName;
         }
 
-        kernel_id += std::to_string(UniqeID());
+        std::replace(kernelID.begin(), kernelID.end(), '.', '_');
 
-        return kernel_id;
+        kernelID += "_" + std::to_string(UniqeID());
+
+        return kernelID;
     }
 
     std::string CommonKernelBase::CreateJit(const std::string& template_name, JitConstants constants, std::string kernel_id) const

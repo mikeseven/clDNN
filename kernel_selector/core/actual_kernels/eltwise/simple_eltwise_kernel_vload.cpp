@@ -70,9 +70,9 @@ namespace KernelSelector {
         return true;
     }
 
-    KernelsData SimpleEltwiseKernel_vload::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData SimpleEltwiseKernel_vload::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        if (!Validate(params, optParams))
+        if (!Validate(params, options))
         {
             return{};
         }
@@ -82,7 +82,7 @@ namespace KernelSelector {
 
         std::string jit;
 
-        auto entry_point = GetEntryPoint(kernelName, newParams.layerID);
+        auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
 
         try
         {

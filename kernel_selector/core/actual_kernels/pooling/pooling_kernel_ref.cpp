@@ -40,16 +40,16 @@ namespace KernelSelector
         return k;
     }
 
-    KernelsData PoolingKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData PoolingKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::POOLING);
 
-        KernelData kd = KernelData::Default<PoolingParams>(params, 1);
+        KernelData kd = KernelData::Default<PoolingParams>(params);
 
         PoolingParams& newParams = *static_cast<PoolingParams*>(kd.params.get());
         const auto& pp = newParams.poolParams;
         
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
         std::stringstream jit;
         jit << GetBaseJit(newParams, kernel_id)
             << "#define POOL_SIZE_X (" << pp.poolSize.x << ")\n"

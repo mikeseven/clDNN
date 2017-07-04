@@ -35,14 +35,14 @@ namespace KernelSelector {
         return k;
     }
 
-    KernelsData ActivationKernelRef::GetKernelsData(const Params& params, const OptionalParams&) const
+    KernelsData ActivationKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::ACTIVATION);
 
-        KernelData kd = KernelData::Default<ActivationParams>(params, 1);
+        KernelData kd = KernelData::Default<ActivationParams>(params);
 
         ActivationParams& newParams = *static_cast<ActivationParams*>(kd.params.get());
-        const std::string kernel_id = params.layerID + std::to_string(UniqeID());
+        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];

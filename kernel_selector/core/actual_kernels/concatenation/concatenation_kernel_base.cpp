@@ -83,9 +83,9 @@ namespace KernelSelector
         return kd;
     }
 
-    KernelsData ConcatenationKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData ConcatenationKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options) const
     {
-        if (!Validate(params, optParams))
+        if (!Validate(params,  options))
         {
             return{};
         }
@@ -96,7 +96,7 @@ namespace KernelSelector
         KernelData kd = KernelData::Default<ConcatenationParams>(params);
 
         auto cldnnJit = GetJitConstants(orgParams);
-        auto entryPoint = GetEntryPoint(kernelName, orgParams.layerID);
+        auto entryPoint = GetEntryPoint(kernelName, orgParams.layerID,  options);
         auto jit = CreateJit(kernelName, cldnnJit, entryPoint);
 
         auto& kernel = kd.kernels[0];

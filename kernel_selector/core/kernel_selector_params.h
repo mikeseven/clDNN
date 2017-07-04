@@ -1087,6 +1087,7 @@ namespace KernelSelector
         bool bSupportSubGroupExt = false;
         uint64_t maxWorkGroupSize = 1;
         uint64_t maxLocalMemSize = 16*1024*1024;
+        bool meaningfulKernelsNames = false;
 
         virtual ParamsKey GetSupportedKey() const
         {
