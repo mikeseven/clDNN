@@ -93,10 +93,14 @@ public:
 
     bool SetArguments(
         cl::Kernel& kernel,
-        const ArgumentDescriptor& argDesc,
+        const Arguments& argDesc,
         const SetArgumentParams& params) const
     {
-        const auto& data = argDesc.data;
+        kernel;
+        argDesc;
+        params;
+#if 0
+        const auto& data = argDesc.args;
 
         size_t inputIndex = 0;
         for (uint32_t i = 0; i < static_cast<uint32_t>(data.size()); i++)
@@ -191,7 +195,7 @@ public:
                 return false;
             }
         }
-
+#endif
         return true;
     }
 
@@ -227,7 +231,7 @@ public:
         params.output = &output;
         params.weights = &weights;
         params.bias = &bias;
-        if (!SetArguments(clKernel, clData.argsDesc, params))
+        if (!SetArguments(clKernel, clData.arguments, params))
         {
             printf("Error: setting args\n");
             return 0.f;

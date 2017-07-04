@@ -49,10 +49,10 @@ namespace KernelSelector {
         kernel.workGroups.global = { out.X().v, out.Y().v, out.Feature().v*out.Batch().v };
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, GetBaseJit(newParams, kernel_id), kernel_id);
-        kernel.argsDesc = GetArgumentDesc(1, false, false);
+        kernel.arguments = GetArgumentDesc(1, false, false);
         if (newParams.activationFunc == ActivationFunction::PRELU)
         {
-            kernel.argsDesc.data.push_back({ ArgumentDescriptor::Types::SLOPE, 0 });
+            kernel.arguments.push_back({ ArgumentDescriptor::Types::SLOPE, 0 });
         }
 
         kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;

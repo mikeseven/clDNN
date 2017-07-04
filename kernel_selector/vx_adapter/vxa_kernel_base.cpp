@@ -147,12 +147,14 @@ namespace clDNN
         UpdateTensor(vxParams.inputType, vxParams.inputLayout, vxParams.outDims, vxParams.outDesc, ksParams.output);
     }
 
-    std::shared_ptr<ArgumentsInfoBase> BaseKernelBinary::SetupArguments(const KernelSelector::ArgumentDescriptor& cldnn_args)
+    std::shared_ptr<ArgumentsInfoBase> BaseKernelBinary::SetupArguments(const KernelSelector::Arguments& cldnn_args)
     {
         //m_ArgInfo = std::make_shared<ArgumentsInfo>();
         auto args_ptr = std::shared_ptr<ArgumentsInfoBase>(new ArgumentsInfo());
+        cldnn_args;
+#if 0
         ArgumentsInfo* args = static_cast<ArgumentsInfo*>(args_ptr.get());
-        const auto& cldnn_data = cldnn_args.data;
+        const auto& cldnn_data = cldnn_args.args;
 
         args->data.resize(cldnn_data.size());
 
@@ -219,6 +221,7 @@ namespace clDNN
                 break;
             }
         }
+#endif
 
         return args_ptr;
     }
@@ -226,7 +229,7 @@ namespace clDNN
     void BaseKernelBinary::UpdateBinary(const KernelSelector::clKernelData& cldnn_data, CLKernelData& data, binary_data& binary, std::shared_ptr<ArgumentsInfoBase>& args)
     {
         binary = GetKernelCache()->get({ context()->context(), context()->device() }, cldnn_data.kernelString->jit + cldnn_data.kernelString->str, cldnn_data.kernelString->options);
-        args = SetupArguments(cldnn_data.argsDesc);
+        args = SetupArguments(cldnn_data.arguments);
 
         if (binary.size() > 0 && args != nullptr)
         {

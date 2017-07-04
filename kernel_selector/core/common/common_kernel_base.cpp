@@ -109,28 +109,28 @@ namespace KernelSelector
         return jit;
     }
 
-    ArgumentDescriptor CommonKernelBase::GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const
+    Arguments CommonKernelBase::GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const
     {
-        ArgumentDescriptor desc;
+        Arguments args;
 
         for (uint32_t i = 0; i < num_of_input; i++)
         {
-            desc.data.push_back({ ArgumentDescriptor::Types::INPUT, 0 });
+            args.push_back({ ArgumentDescriptor::Types::INPUT, i });
         }
 
-        desc.data.push_back({ ArgumentDescriptor::Types::OUTPUT, 0 });
+        args.push_back({ ArgumentDescriptor::Types::OUTPUT, 0 });
 
         if (use_weights)
         {
-            desc.data.push_back({ ArgumentDescriptor::Types::WEIGHTS, 0 });
+            args.push_back({ ArgumentDescriptor::Types::WEIGHTS, 0 });
         }
 
         if (use_bias)
         {
-            desc.data.push_back({ ArgumentDescriptor::Types::BIAS, 0 });
+            args.push_back({ ArgumentDescriptor::Types::BIAS, 0 });
         }
 
-        return desc;
+        return args;
     }
 
     std::shared_ptr<KernelString> CommonKernelBase::GetKernelString(std::string name, std::string jit, std::string entry_point, std::string exe_mode) const
@@ -156,6 +156,6 @@ namespace KernelSelector
         kernel.workGroups.global = { runInfo.gws0, runInfo.gws1, runInfo.gws2 };
         kernel.workGroups.local = { runInfo.lws0, runInfo.lws1, runInfo.lws2 };
         kernel.kernelString = GetKernelString(kernel_map_name, jit, entry_point);
-        kernel.argsDesc = GetArgsDesc(1, weights, bias);
+        kernel.arguments = GetArgsDesc(1, weights, bias);
     }
 }

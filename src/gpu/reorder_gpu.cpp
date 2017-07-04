@@ -38,7 +38,8 @@ struct reorder_gpu : typed_primitive_impl<reorder>
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, reorder_inst& instance) override
     {
-        gpu::kernel::kernel_arguments_desc args;
+        gpu::kernel::kernel_arguments_data args;
+        args.scalars = &_kernel_data.kernels[0].scalars;
         args.inputs = { &instance.input_memory() };
         args.output = &instance.output_memory();
         if (outer.has_mean())

@@ -49,7 +49,8 @@ struct reshape_gpu : public typed_primitive_impl<reshape>
             return events_waiter.run(events);
         }
 
-        gpu::kernel::kernel_arguments_desc args;
+        gpu::kernel::kernel_arguments_data args;
+        args.scalars = &_kernel_data.kernels[0].scalars;
         args.inputs = { &instance.input_memory() };
         args.output = &instance.output_memory();
 

@@ -74,7 +74,7 @@ namespace KernelSelector
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point);
-        kernel.argsDesc.data.push_back({ ArgumentDescriptor::Types::SCALE_TABLE, 0 });
+        kernel.arguments.push_back({ ArgumentDescriptor::Types::SCALE_TABLE, 0 });
 
         kd.estimatedTime = estimated_time;
 

@@ -31,7 +31,7 @@ namespace KernelSelector {
 
     protected:
         std::string GetBaseJit(const BaseParams& params, const std::string& kernel_id) const;
-        ArgumentDescriptor GetArgumentDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const;
+        Arguments GetArgumentDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const;
         std::shared_ptr<KernelString> GetKernelString(std::string kernel_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN, std::string default_build_flags = "-cl-unsafe-math-optimizations") const;
         std::string GetEntryPoint(const std::string& templateName, const std::string& layerID, const OptionalParams& options) const;
         static std::string Float2Str(const float f)

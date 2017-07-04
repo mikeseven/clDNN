@@ -73,9 +73,9 @@ namespace KernelSelector {
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ArgumentDescpirtor
+    // Scalar
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ArgumentDescriptor
+    struct ScalarDescriptor
     {
         union ValueT
         {
@@ -93,14 +93,6 @@ namespace KernelSelector {
 
         enum class Types
         {
-            INPUT,
-            OUTPUT,
-            WEIGHTS,
-            BIAS,
-            LOOKUP_TABLE,
-            SCALE_TABLE,
-            SLOPE,
-            SPLIT,
             UINT8,
             UINT16,
             UINT32,
@@ -113,26 +105,60 @@ namespace KernelSelector {
             FLOAT64,
         };
 
-        struct Args
+        Types t;
+        ValueT v;
+    };
+
+    using Scalars = std::vector<ScalarDescriptor>;
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ArgumentDescpirtor
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ArgumentDescriptor
+    {
+        enum class Types
         {
-            Types t;
-            ValueT v;
+            INPUT,
+            OUTPUT,
+            WEIGHTS,
+            BIAS,
+            LOOKUP_TABLE,
+            SCALE_TABLE,
+            SLOPE,
+            SPLIT,
+            SCALAR,
         };
 
-        std::vector<Args> data;
+        enum class ScalarTypes
+        {
+            UINT8,
+            UINT16,
+            UINT32,
+            UINT64,
+            INT8,
+            INT16,
+            INT32,
+            INT64,
+            FLOAT32,
+            FLOAT64,
+        };
+
+        Types t;
+        uint32_t index;
     };
+
+    using Arguments = std::vector<ArgumentDescriptor>;
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // clKernelData
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct clKernelData
     {
-        std::shared_ptr<KernelString> kernelString;
-        WorkGroupSizes workGroups;
-        ArgumentDescriptor argsDesc;
-        std::string layerID;            // TODO: in order to support run single layer. think about more appropriate place
-        // TODO: maybe we want an estimated time per cl kernel
-        // float estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        std::shared_ptr<KernelString>   kernelString;
+        WorkGroupSizes                  workGroups;
+        Arguments                       arguments;
+        Scalars                         scalars;
+        std::string                     layerID;            // TODO: in order to support run single layer. think about more appropriate place
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

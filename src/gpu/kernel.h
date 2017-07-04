@@ -59,22 +59,23 @@ public:
         return *this;
     }
 
-    struct kernel_arguments_desc
+    struct kernel_arguments_data
     {
         std::vector<const cldnn::memory*> inputs;
-        const cldnn::memory* output = nullptr;
-        const cldnn::memory* weights = nullptr;
-        const cldnn::memory* bias = nullptr;
-        const cldnn::memory* lookup_table = nullptr;
-        const cldnn::memory* scale_table = nullptr;
-        const cldnn::memory* slope = nullptr;
-        uint32_t split = 0;
+        const cldnn::memory* output         = nullptr;
+        const cldnn::memory* weights        = nullptr;
+        const cldnn::memory* bias           = nullptr;
+        const cldnn::memory* lookup_table   = nullptr;
+        const cldnn::memory* scale_table    = nullptr;
+        const cldnn::memory* slope          = nullptr;
+        uint32_t             split          = 0;
+        const kernel_selector::kernel_scalar_arguments* scalars = nullptr;
     };
 
     cldnn::refcounted_obj_ptr<cldnn::event_impl> run(
         const kernel_selector::cl_kernel_data& kernel_data,
         const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& dependencies,
-        const kernel_arguments_desc& args) const;
+        const kernel_arguments_data& args) const;
 };
 
 } }

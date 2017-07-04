@@ -84,7 +84,7 @@ namespace KernelSelector {
         kernel.workGroups.global = { globalWorkSizeX, newParams.output.Feature().v, newParams.output.Batch().v };
         kernel.workGroups.local = { localWorkSizeX, 1, 1 };
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
-        kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
+        kernel.arguments = GetArgumentDesc(1, true, !newParams.bias.empty());
 
         kd.estimatedTime = FORCE_PRIORITY_6;
 

@@ -153,8 +153,8 @@ namespace KernelSelector
             runInfo.localWorkSizeZ };
 
         kernel.kernelString = GetKernelString(newKernelName, jit.str(), kernel_id, AGE_BASED);
-        kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
-        kernel.argsDesc.data.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
+        kernel.arguments = GetArgumentDesc(1, true, !newParams.bias.empty());
+        kernel.arguments.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
 
         return{ kd };
     }

@@ -74,95 +74,104 @@ namespace neural { namespace gpu {
 
         void set_arguments(
             cl::Kernel& kernel,
-            const kernel_selector::argument_descpirtor& args_desc,
-            const kernel::kernel_arguments_desc& args)
+            const kernel_selector::kernel_arguments& args,
+            const kernel::kernel_arguments_data& data)
         {
-            size_t input_index = 0;
-
-            const auto& data = args_desc.data;
-
-            for (uint32_t i = 0; i < static_cast<uint32_t>(data.size()); i++)
+            for (uint32_t i = 0; i < static_cast<uint32_t>(args.size()); i++)
             {
                 cl_int status = CL_INVALID_ARG_VALUE;
 
-                switch (data[i].t)
+                switch (args[i].t)
                 {
-                case kernel_selector::argument_descpirtor_types::INPUT:
-                    if (input_index < args.inputs.size() && args.inputs[input_index])
+                case kernel_selector::kernel_argument_types::INPUT:
+                    if (args[i].index < data.inputs.size() && data.inputs[args[i].index])
                     {
-                        status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*args.inputs[input_index]));
-                        input_index++;
+                        const auto& input_mem = data.inputs[args[i].index];
+                        if (input_mem)
+                        {
+                            status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*input_mem));
+                        }
                     }
                     break;
-                case kernel_selector::argument_descpirtor_types::OUTPUT:
-                    if (args.output)
+                case kernel_selector::kernel_argument_types::OUTPUT:
+                    if (data.output)
                     {
-                        status = kernel.setArg(i, kernel_arg_handler<gpu::output_mem>::get(*args.output));
+                        status = kernel.setArg(i, kernel_arg_handler<gpu::output_mem>::get(*data.output));
                     }
                     break;
-                case kernel_selector::argument_descpirtor_types::WEIGHTS:
-                    if (args.weights)
+                case kernel_selector::kernel_argument_types::WEIGHTS:
+                    if (data.weights)
                     {
-                        status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*args.weights));
+                        status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*data.weights));
                     }
                     break;
-                case kernel_selector::argument_descpirtor_types::BIAS:
-                    if (args.bias)
+                case kernel_selector::kernel_argument_types::BIAS:
+                    if (data.bias)
                     {
-                        status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*args.bias));
+                        status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*data.bias));
                     }
                     break;
-                case kernel_selector::argument_descpirtor_types::LOOKUP_TABLE:
-                    if (args.lookup_table)
+                case kernel_selector::kernel_argument_types::LOOKUP_TABLE:
+                    if (data.lookup_table)
                     {
-                        status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*args.lookup_table));
+                        status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*data.lookup_table));
                     }
                     break;
-                case kernel_selector::argument_descpirtor_types::SCALE_TABLE:
-                    if (args.scale_table)
+                case kernel_selector::kernel_argument_types::SCALE_TABLE:
+                    if (data.scale_table)
                     {
-                        status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*args.scale_table));
+                        status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*data.scale_table));
                     }
                     break;
-                case kernel_selector::argument_descpirtor_types::SLOPE:
-                    if (args.slope)
+                case kernel_selector::kernel_argument_types::SLOPE:
+                    if (data.slope)
                     {
-                        status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*args.slope));
+                        status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*data.slope));
                     }
                     break;
-                case kernel_selector::argument_descpirtor_types::SPLIT:
-                    status = kernel.setArg(i, args.split);
+                case kernel_selector::kernel_argument_types::SPLIT:
+                    status = kernel.setArg(i, data.split);
                     break;
-                case kernel_selector::argument_descpirtor_types::UINT8:
-                    status = kernel.setArg(i, data[i].v.u8);
-                    break;
-                case kernel_selector::argument_descpirtor_types::UINT16:
-                    status = kernel.setArg(i, data[i].v.u16);
-                    break;
-                case kernel_selector::argument_descpirtor_types::UINT32:
-                    status = kernel.setArg(i, data[i].v.u32);
-                    break;
-                case kernel_selector::argument_descpirtor_types::UINT64:
-                    status = kernel.setArg(i, data[i].v.u64);
-                    break;
-                case kernel_selector::argument_descpirtor_types::INT8:
-                    status = kernel.setArg(i, data[i].v.s8);
-                    break;
-                case kernel_selector::argument_descpirtor_types::INT16:
-                    status = kernel.setArg(i, data[i].v.s16);
-                    break;
-                case kernel_selector::argument_descpirtor_types::INT32:
-                    status = kernel.setArg(i, data[i].v.s32);
-                    break;
-                case kernel_selector::argument_descpirtor_types::INT64:
-                    status = kernel.setArg(i, data[i].v.s64);
-                    break;
-                case kernel_selector::argument_descpirtor_types::FLOAT32:
-                    status = kernel.setArg(i, data[i].v.f32);
-                    break;
-                case kernel_selector::argument_descpirtor_types::FLOAT64:
-                    status = kernel.setArg(i, data[i].v.f64);
-                    break;
+                case kernel_selector::kernel_argument_types::SCALAR:
+                    if (data.scalars && args[i].index < data.scalars->size())
+                    {
+                        const auto& scalar = (*data.scalars)[args[i].index];
+                        switch (scalar.t)
+                        {
+                        case kernel_selector::kernel_scalar_argument_types::UINT8:
+                            status = kernel.setArg(i, scalar.v.u8);
+                            break;
+                        case kernel_selector::kernel_scalar_argument_types::UINT16:
+                            status = kernel.setArg(i, scalar.v.u16);
+                            break;
+                        case kernel_selector::kernel_scalar_argument_types::UINT32:
+                            status = kernel.setArg(i, scalar.v.u32);
+                            break;
+                        case kernel_selector::kernel_scalar_argument_types::UINT64:
+                            status = kernel.setArg(i, scalar.v.u64);
+                            break;
+                        case kernel_selector::kernel_scalar_argument_types::INT8:
+                            status = kernel.setArg(i, scalar.v.s8);
+                            break;
+                        case kernel_selector::kernel_scalar_argument_types::INT16:
+                            status = kernel.setArg(i, scalar.v.s16);
+                            break;
+                        case kernel_selector::kernel_scalar_argument_types::INT32:
+                            status = kernel.setArg(i, scalar.v.s32);
+                            break;
+                        case kernel_selector::kernel_scalar_argument_types::INT64:
+                            status = kernel.setArg(i, scalar.v.s64);
+                            break;
+                        case kernel_selector::kernel_scalar_argument_types::FLOAT32:
+                            status = kernel.setArg(i, scalar.v.f32);
+                            break;
+                        case kernel_selector::kernel_scalar_argument_types::FLOAT64:
+                            status = kernel.setArg(i, scalar.v.f64);
+                            break;
+                        default:
+                            break;
+                        }
+                    }
                 default:
                     break;
                 }
@@ -178,7 +187,7 @@ namespace neural { namespace gpu {
     cldnn::refcounted_obj_ptr<cldnn::event_impl> kernel::run(
         const kernel_selector::cl_kernel_data& kernel_data,
         const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& dependencies,
-        const kernel_arguments_desc& args) const
+        const kernel_arguments_data& args) const
     {
         cl::Event end_event;
         std::vector<cl::Event> events;
@@ -207,7 +216,7 @@ namespace neural { namespace gpu {
         {
             auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
 
-            set_arguments(clkernel, kernel_data.argsDesc, args);
+            set_arguments(clkernel, kernel_data.arguments, args);
 
             context()->queue().enqueueNDRangeKernel(
                 clkernel,

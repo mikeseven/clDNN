@@ -57,7 +57,8 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
             input_mem = &network->get_primitive(output_id)->output_memory();
         }
 
-        gpu::kernel::kernel_arguments_desc args;
+        gpu::kernel::kernel_arguments_data args;
+        args.scalars = &_kernel_data.kernels[0].scalars;
         args.inputs = { input_mem };
         args.output = &instance.output_memory();
         args.weights = &instance.weights_memory();

@@ -64,7 +64,7 @@ namespace KernelSelector {
             newParams.output.Batch().v };
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
-        kernel.argsDesc = GetArgumentDesc(1, false, false);
+        kernel.arguments = GetArgumentDesc(1, false, false);
 
         kd.estimatedTime = FORCE_PRIORITY_6;
 

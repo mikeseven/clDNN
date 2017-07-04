@@ -101,7 +101,7 @@ namespace KernelSelector
 
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit, kernel_id);
-        kernel.argsDesc = GetArgumentDesc(1, false, false);
+        kernel.arguments = GetArgumentDesc(1, false, false);
 
         kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 

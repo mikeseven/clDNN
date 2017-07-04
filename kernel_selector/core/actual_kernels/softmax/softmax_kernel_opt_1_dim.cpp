@@ -71,7 +71,7 @@ namespace KernelSelector
         kernel.workGroups.global = { globalWorkGroup, 1, 1 };
         kernel.workGroups.local = { localWorkGroup, 1, 1 };
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
-        kernel.argsDesc = GetArgumentDesc(1, false, false);
+        kernel.arguments = GetArgumentDesc(1, false, false);
 
         kd.estimatedTime = FORCE_PRIORITY_8;
 

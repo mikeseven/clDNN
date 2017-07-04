@@ -43,7 +43,8 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         const auto* input_mem = &instance.input_memory();
         const auto* output_mem = &instance.output_memory();
 
-        gpu::kernel::kernel_arguments_desc args;
+        gpu::kernel::kernel_arguments_data args;
+        args.scalars = &_kernel_data.kernels[0].scalars;
         args.inputs = { input_mem };
         args.output = output_mem;
 

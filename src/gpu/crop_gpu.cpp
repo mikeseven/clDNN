@@ -47,7 +47,8 @@ struct crop_gpu : typed_primitive_impl<crop>
             return neural::gpu::events_waiter(outer.get_program().get_engine()->get_context()).run(events);
         }
 
-        gpu::kernel::kernel_arguments_desc args;
+        gpu::kernel::kernel_arguments_data args;
+        args.scalars = &_kernel_data.kernels[0].scalars;
         args.inputs = { &instance.input_memory() };
         args.output = &instance.output_memory();
 

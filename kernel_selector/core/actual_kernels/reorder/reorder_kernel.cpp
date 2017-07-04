@@ -59,10 +59,10 @@ namespace KernelSelector
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
 
         kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
-        kernel.argsDesc = GetArgsDesc(1, false, false);
+        kernel.arguments = GetArgsDesc(1, false, false);
         if (newParams.reorderParams.mode == MeanSubtructMode::IN_BUFFER)
         {
-            kernel.argsDesc.data.push_back({ ArgumentDescriptor::Types::BIAS, 0 });
+            kernel.arguments.push_back({ ArgumentDescriptor::Types::BIAS, 0 });
         }
 
         kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;

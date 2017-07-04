@@ -62,7 +62,8 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
             const auto* filter_mem = &instance.weights_memory(i);
             const auto* bias_mem = instance.bias_term() ? &instance.bias_memory(i) : nullptr;
             
-            gpu::kernel::kernel_arguments_desc args;
+            gpu::kernel::kernel_arguments_data args;
+            args.scalars = &_kernel_data.kernels[0].scalars;
             args.inputs = { input_mem };
             args.output = output_mem;
             args.weights = filter_mem;

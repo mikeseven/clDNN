@@ -227,7 +227,7 @@ namespace KernelSelector {
         }
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
-        kernel.argsDesc = GetArgsDesc((uint32_t)newParams.inputs.size(), false, false);
+        kernel.arguments = GetArgsDesc((uint32_t)newParams.inputs.size(), false, false);
 
         kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 

@@ -72,13 +72,15 @@ struct concatenation_gpu : typed_primitive_impl<concatenation>
 
         assert(outer.inputs_count() == _kernels.size());
 
-        gpu::kernel::kernel_arguments_desc args;
+        gpu::kernel::kernel_arguments_data args;
+        args.scalars = &_kernel_data.kernels[0].scalars;
         args.output = &instance.output_memory();
 
         auto tmp_events = events;
         for (size_t i = 0; i < _kernels.size(); ++i)
         {
             args.inputs = { &instance.input_memory(i) };
+            args.scalars = &_kernels[i].second.kernels[0].scalars;
 
             auto event = _kernels[i].first.run(_kernels[i].second.kernels[0], events, args);
 

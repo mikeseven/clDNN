@@ -54,11 +54,16 @@ network_impl::network_impl(program_impl::cptr program)
 
     cl_kernel.kernelString->entry_point = "warm_up_gpu";
     cl_kernel.workGroups.global = { 1024, 8 };
-    cl_kernel.argsDesc.data = {
-        { kernel_selector::argument_descpirtor_types::INT32, (int32_t)0 },
-        { kernel_selector::argument_descpirtor_types::INT32, (int32_t)111 },
-        { kernel_selector::argument_descpirtor_types::INT32, (int32_t)7 },
-        { kernel_selector::argument_descpirtor_types::OUTPUT, 0 },
+    cl_kernel.scalars = {
+        { kernel_selector::kernel_scalar_argument_types::INT32, (int32_t)0 },
+        { kernel_selector::kernel_scalar_argument_types::INT32, (int32_t)111 },
+        { kernel_selector::kernel_scalar_argument_types::INT32, (int32_t)7 }
+    };
+    cl_kernel.arguments = {
+        { kernel_selector::kernel_argument_types::SCALAR, 0 },
+        { kernel_selector::kernel_argument_types::SCALAR, 1 },
+        { kernel_selector::kernel_argument_types::SCALAR, 2 },
+        { kernel_selector::kernel_argument_types::OUTPUT, 0 },
     };
 
     auto eimpl      = _program->get_engine().get();
@@ -68,8 +73,9 @@ network_impl::network_impl(program_impl::cptr program)
 
     //pre-compile program and warm-up
     neural::gpu::kernel warmup_kernel(context, cl_kernel.kernelString);
-    neural::gpu::kernel::kernel_arguments_desc args;
+    neural::gpu::kernel::kernel_arguments_data args;
     args.output = &out;
+    args.scalars = &cl_kernel.scalars;
 
     warmup_kernel.run(cl_kernel, {}, args);
 

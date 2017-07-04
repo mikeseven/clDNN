@@ -64,28 +64,28 @@ namespace KernelSelector {
         return jit.str();
     }
 
-    ArgumentDescriptor CNNKernelBase::GetArgumentDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const
+    Arguments CNNKernelBase::GetArgumentDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const
     {
-        ArgumentDescriptor desc;
+        Arguments args;
 
         for (uint32_t i = 0; i < num_of_input; i++)
         {
-            desc.data.push_back({ ArgumentDescriptor::Types::INPUT, 0 });
+            args.push_back({ ArgumentDescriptor::Types::INPUT, i });
         }
 
-        desc.data.push_back({ ArgumentDescriptor::Types::OUTPUT, 0 });
+        args.push_back({ ArgumentDescriptor::Types::OUTPUT, 0 });
 
         if (use_weights)
         {
-            desc.data.push_back({ ArgumentDescriptor::Types::WEIGHTS, 0 });
+            args.push_back({ ArgumentDescriptor::Types::WEIGHTS, 0 });
         }
 
         if (use_bias)
         {
-            desc.data.push_back({ ArgumentDescriptor::Types::BIAS, 0 });
+            args.push_back({ ArgumentDescriptor::Types::BIAS, 0 });
         }
 
-        return desc;
+        return args;
     }
 
     std::shared_ptr<KernelString> CNNKernelBase::GetKernelString(std::string name, std::string jit, std::string entry_point, std::string exe_mode, std::string default_build_flags) const

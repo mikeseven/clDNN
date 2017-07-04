@@ -71,8 +71,8 @@ namespace KernelSelector {
         kernel.workGroups.global = { out.X().v, out.Y().v, out.Feature().v*out.Batch().v };
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
-        kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
-        kernel.argsDesc.data.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
+        kernel.arguments = GetArgumentDesc(1, true, !newParams.bias.empty());
+        kernel.arguments.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
 
         kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 

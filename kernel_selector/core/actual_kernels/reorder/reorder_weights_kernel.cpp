@@ -50,7 +50,7 @@ namespace KernelSelector
         kernel.workGroups.global = { out.OFM().v, out.IFM().v, out.X().v*out.Y().v };
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
-        kernel.argsDesc = GetArgsDesc(1, false, false);
+        kernel.arguments = GetArgsDesc(1, false, false);
 
         kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 

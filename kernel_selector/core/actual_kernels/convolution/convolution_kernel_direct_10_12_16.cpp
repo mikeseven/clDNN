@@ -124,8 +124,8 @@ namespace KernelSelector {
             runInfo.localWorkSizeZ };
 
         kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id, AGE_BASED);
-        kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
-        kernel.argsDesc.data.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
+        kernel.arguments = GetArgumentDesc(1, true, !newParams.bias.empty());
+        kernel.arguments.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
 
         kd.estimatedTime = FORCE_PRIORITY_4;
 
