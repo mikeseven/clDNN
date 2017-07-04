@@ -25,11 +25,12 @@ namespace KernelSelector
     ParamsKey ConvolutionKernelGEMMLike::GetSupportedKey() const
     {
         ParamsKey k;
-        k.EnableInputDataType(Datatype::F16);
+        // TODO: fixed bug with google-net cat1 clasification
+        //k.EnableInputDataType(Datatype::F16);
         k.EnableInputDataType(Datatype::F32);
-        k.EnableInputWeightsType(WeightsType::F16);
+        //k.EnableInputWeightsType(WeightsType::F16);
         k.EnableInputWeightsType(WeightsType::F32);
-        k.EnableOutputDataType(Datatype::F16);
+        //k.EnableOutputDataType(Datatype::F16);
         k.EnableOutputDataType(Datatype::F32);
         k.EnableInputLayout(DataLayout::bfyx);
         k.EnableOutputLayout(DataLayout::bfyx);
@@ -103,17 +104,19 @@ namespace KernelSelector
         }
 
         WeightsLayout wLayout;
+
+        std::string newKernelName = kernelName;
         
         if (newParams.inputs[0].GetDType() == Datatype::F16)
         {
-            jit << "#define __convolution_f16" << "\n";
+            newKernelName += "_fp16";
             runInfo = SubGroupInfo(1, cp.filterSize.x, 32, 1, 16, 1, 32, 1, 1);
             wLayout = WeightsLayout::iy_xs_os_xsv2_osv16__ao32;
             kd.estimatedTime = FORCE_PRIORITY_6;
         }
         else
         {
-            jit << "#define __convolution_f32" << "\n";
+            newKernelName += "_fp32";
             runInfo = SubGroupInfo(2, cp.filterSize.x, 32, 1, 8, 1, 32, 2, 1);
             wLayout = WeightsLayout::iy_xs_os_xsv2_osv8__ao32;
             kd.estimatedTime = FORCE_PRIORITY_8;
@@ -149,7 +152,7 @@ namespace KernelSelector
             runInfo.localWorkSizeY,
             runInfo.localWorkSizeZ };
 
-        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id, AGE_BASED);
+        kernel.kernelString = GetKernelString(newKernelName, jit.str(), kernel_id, AGE_BASED);
         kernel.argsDesc = GetArgumentDesc(1, true, !newParams.bias.empty());
         kernel.argsDesc.data.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
 

@@ -199,7 +199,7 @@ namespace KernelSelector
 
             for (size_t i = 0; i < newDims.size(); i++)
             {
-                ret[i] = { newDims[i], pitch };
+                ret[i] = { d[i], pitch };
                 pitch *= newDims[i];
             }
 

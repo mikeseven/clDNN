@@ -34,34 +34,15 @@ endif ()
 
 # ========================================= Source/Header files ========================================
 
-set(__CLDNN_Label__api                 "api")
-file(GLOB __CLDNN_Headers__api
-    "${CLDNN__API_DIR}/*.h"
-    "${CLDNN__API_DIR}/*.hpp"
-  )
-
-set(__CLDNN_Directory__api__cpp "${CLDNN__API_DIR}/CPP")
-set(__CLDNN_Label__api__primitives     "${__CLDNN_Label__api}\\CPP")
-file(GLOB __CLDNN_Headers__api__cpp
-    "${__CLDNN_Directory__api__cpp}/*.h"
-    "${__CLDNN_Directory__api__cpp}/*.hpp"
-  )
-
-set(__CLDNN_Directory__api__c "${CLDNN__API_DIR}/C")
-set(__CLDNN_Label__api__c     "${__CLDNN_Label__api}\\C")
-file(GLOB __CLDNN_Headers__api__c
-    "${__CLDNN_Directory__api__c}/*.h"
-    "${__CLDNN_Directory__api__c}/*.hpp"
-  )
-
+set(__CLDNN_Directory__main           "${CMAKE_CURRENT_SOURCE_DIR}")
 set(__CLDNN_Label__main                "")
 file(GLOB __CLDNN_Sources__main
-    "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
-    "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
-    "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
+    "${__CLDNN_Directory__main}/*.h"
+    "${__CLDNN_Directory__main}/*.hpp"
+    "${__CLDNN_Directory__main}/*.cpp"
   )
   
-set(__CLDNN_Directory__core           "${CMAKE_CURRENT_SOURCE_DIR}/core")
+set(__CLDNN_Directory__core           "${__CLDNN_Directory__main}/core")
 set(__CLDNN_Label__core               "core")
 file(GLOB __CLDNN_Sources__core
     "${__CLDNN_Directory__core}/*.h"
@@ -69,7 +50,7 @@ file(GLOB __CLDNN_Sources__core
     "${__CLDNN_Directory__core}/*.cpp"
   )
 
-set(__CLDNN_Directory__common          "${CMAKE_CURRENT_SOURCE_DIR}/common")
+set(__CLDNN_Directory__common          "${__CLDNN_Directory__main}/common")
 set(__CLDNN_Label__common              "common")
 file(GLOB __CLDNN_Sources__common
     "${__CLDNN_Directory__common}/*.h"
@@ -93,7 +74,7 @@ file(GLOB_RECURSE __CLDNN_Sources__actual_kernels
     "${__CLDNN_Directory__actual_kernels}/*.cpp"
   )
   
-set(__CLDNN_Directory__vx_adapter   "${CMAKE_CURRENT_SOURCE_DIR}/vx_adapter")
+set(__CLDNN_Directory__vx_adapter   "${__CLDNN_Directory__main}/vx_adapter")
 set(__CLDNN_Label__vx_adapter       "vx_adapter")
 file(GLOB __CLDNN_Sources__vx_adapter 
     "${__CLDNN_Directory__vx_adapter}/api/*.h"
@@ -110,10 +91,10 @@ file(GLOB __CLDNN_Sources__cache
     "${__CLDNN_Directory__cache}/*.cpp"
   )
 
-set(__CLDNN_Directory__ch_kernels      "${__CLDNN_Directory__core}/cl_kernels")
-set(__CLDNN_Label__ch_kernels          "${__CLDNN_Label__core}\\cl_kernels")
-file(GLOB_RECURSE __CLDNN_Sources__ch_kernels
-    "${__CLDNN_Directory__ch_kernels}/*.cl"
+set(__CLDNN_Directory__cl_kernels      "${__CLDNN_Directory__core}/cl_kernels")
+set(__CLDNN_Label__cl_kernels          "${__CLDNN_Label__core}\\cl_kernels")
+file(GLOB_RECURSE __CLDNN_Sources__cl_kernels
+    "${__CLDNN_Directory__cl_kernels}/*.cl"
   )
 
 set(__CLDNN_Directory__cg_cache        "${CLDNN__CODEGEN_INCDIR}")
@@ -126,16 +107,13 @@ set(__CLDNN_Sources__cg_cache
 
 
 set(__CLDNN_AllSources
-    ${__CLDNN_Headers__api}
-    ${__CLDNN_Headers__api__cpp}
-    ${__CLDNN_Headers__api__c}
     ${__CLDNN_Sources__main}
     ${__CLDNN_Sources__core}
     ${__CLDNN_Sources__common}
     ${__CLDNN_Sources__core_common}
     ${__CLDNN_Sources__actual_kernels}
     ${__CLDNN_Sources__cache}
-    ${__CLDNN_Sources__ch_kernels}
+    ${__CLDNN_Sources__cl_kernels}
     ${__CLDNN_Sources__cg_cache}
     ${__CLDNN_Sources__vx_adapter}
   )
@@ -144,24 +122,20 @@ set_property(SOURCE ${__CLDNN_Sources__cg_cache} PROPERTY GENERATED TRUE)
 
 # =============================================== Filters ==============================================
 
-source_group("${__CLDNN_Label__api}"             FILES ${__CLDNN_Headers__api})
-source_group("${__CLDNN_Label__api__cpp}" FILES ${__CLDNN_Headers__api__cpp})
-source_group("${__CLDNN_Label__api__c}" FILES ${__CLDNN_Headers__api__c})
 source_group("${__CLDNN_Label__main}"            FILES ${__CLDNN_Sources__main})
 source_group("${__CLDNN_Label__core}"            FILES ${__CLDNN_Sources__core})
 source_group("${__CLDNN_Label__common}"          FILES ${__CLDNN_Sources__common})
 source_group("${__CLDNN_Label__core_common}"     FILES ${__CLDNN_Sources__core_common})
 source_group("${__CLDNN_Label__actual_kernels}"  FILES ${__CLDNN_Sources__actual_kernels})
 source_group("${__CLDNN_Label__cache}"           FILES ${__CLDNN_Sources__cache})
-source_group("${__CLDNN_Label__ch_kernels}"      FILES ${__CLDNN_Sources__ch_kernels})
+source_group("${__CLDNN_Label__cl_kernels}"      FILES ${__CLDNN_Sources__cl_kernels})
 source_group("${__CLDNN_Label__cg_cache}"        FILES ${__CLDNN_Sources__cg_cache})
-source_group("${__CLDNN_Label__vx_adapter}"   FILES ${__CLDNN_Sources__vx_adapter})
+source_group("${__CLDNN_Label__vx_adapter}"      FILES ${__CLDNN_Sources__vx_adapter})
 
 # ===================================== Include/Link directories =======================================
 
 include_directories(
-    "${CLDNN__MAIN_DIR}"
-    "${CMAKE_CURRENT_SOURCE_DIR}"
+    "${__CLDNN_Directory__main}"
     "${__CLDNN_Directory__core}"
     "${__CLDNN_Directory__core}/common"
     "${__CLDNN_Directory__actual_kernels}"
@@ -199,13 +173,13 @@ endif()
 
 add_custom_command(OUTPUT "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${__CLDNN_CGDirectory__cg_cache}"
-    COMMAND "${PYTHON_EXECUTABLE}" "${__CLDNN_Directory__core_common}/primitive_db_gen.py" -out_path "${__CLDNN_CGDirectory__cg_cache}" -out_file_name "${__CLDNN_File__cg_cache__prim_db}" -kernels "${__CLDNN_Directory__ch_kernels}"
-    DEPENDS ${__CLDNN_Sources__ch_kernels} "${__CLDNN_Directory__core_common}/primitive_db_gen.py"
+    COMMAND "${PYTHON_EXECUTABLE}" "${__CLDNN_Directory__core_common}/primitive_db_gen.py" -out_path "${__CLDNN_CGDirectory__cg_cache}" -out_file_name "${__CLDNN_File__cg_cache__prim_db}" -kernels "${__CLDNN_Directory__cl_kernels}"
+    DEPENDS ${__CLDNN_Sources__cl_kernels} "${__CLDNN_Directory__core_common}/primitive_db_gen.py"
     COMMENT "Generating ${__CLDNN_File__cg_cache__prim_db} ..."
   )
 add_custom_command(OUTPUT "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
     COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}" "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
-    DEPENDS "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}" ${__CLDNN_Sources__ch_kernels} "${__CLDNN_Directory__core_common}/primitive_db_gen.py"
+    DEPENDS "${__CLDNN_CGDirectory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}" ${__CLDNN_Sources__cl_kernels} "${__CLDNN_Directory__core_common}/primitive_db_gen.py"
     COMMENT "Updating file if the file changed (${__CLDNN_File__cg_cache__prim_db}) ..."
   )
 
