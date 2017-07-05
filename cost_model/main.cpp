@@ -92,13 +92,10 @@ public:
     };
 
     bool SetArguments(
-        cl::Kernel& kernel,
-        const Arguments& argDesc,
-        const SetArgumentParams& params) const
+        cl::Kernel&,
+        const Arguments&,
+        const SetArgumentParams&) const
     {
-        kernel;
-        argDesc;
-        params;
 #if 0
         const auto& data = argDesc.args;
 

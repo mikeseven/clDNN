@@ -148,12 +148,11 @@ namespace clDNN
         UpdateTensor(vxParams.inputType, vxParams.inputLayout, vxParams.outDims, vxParams.outDesc, ksParams.output);
     }
 
-    std::shared_ptr<ArgumentsInfoBase> BaseKernelBinary::SetupArguments(const KernelSelector::Arguments& cldnn_args)
+    std::shared_ptr<ArgumentsInfoBase> BaseKernelBinary::SetupArguments(const KernelSelector::Arguments&)
     {
         //m_ArgInfo = std::make_shared<ArgumentsInfo>();
         auto args_ptr = std::shared_ptr<ArgumentsInfoBase>(new ArgumentsInfo());
-        cldnn_args;
-#if 0
+#if 0 // TODO Fix that
         ArgumentsInfo* args = static_cast<ArgumentsInfo*>(args_ptr.get());
         const auto& cldnn_data = cldnn_args.args;
 
