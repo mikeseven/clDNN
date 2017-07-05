@@ -209,17 +209,17 @@ namespace KernelSelector
 
             if (l == i_yxs_os_yxsv2_osv16)
             {
-                ret[3].pitch = RoundUp(newDims[1] * newDims[2], 2) * newDims[0];
-                ret[3].pad.after = ret[3].pitch - ret[3].v;
+                ret[3].pitch = RoundUp(ret[1].v * ret[2].v, 2) * ret[1].pitch;
+                ret[2].pad.after = newDims[2] - ret[2].v;
             }
             else if (l == iy_xs_os_xsv2_osv16__ao32 ||
                      l == iy_xs_os_xsv2_osv8__ao32)
             {
-                ret[2].pitch = RoundUp(newDims[1], 2) * newDims[0];
-                ret[2].pad.after = ret[2].pitch - ret[2].v;
+                ret[2].pitch     = RoundUp(ret[1].v, 2) * ret[1].pitch;
+                ret[1].pad.after = newDims[1] - ret[1].v;
                 
-                ret[3].pitch = newDims[2] * ret[2].pitch;
-                ret[3].pad.after = ret[3].pitch - ret[3].v;
+                ret[3].pitch     = ret[2].v * ret[2].pitch;
+                ret[2].pad.after = newDims[2] - ret[2].v;
             }
 
             return ret;
