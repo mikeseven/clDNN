@@ -299,11 +299,11 @@ namespace KernelSelector
             {
                 bool differ = false;
 
-                size_t last_dims = 1;
+                size_t calc_pitch = 1;
                 for (const auto& d : dims)
                 {
-                    differ |= (d.pitch != last_dims);
-                    last_dims = d.v;
+                    differ |= (d.pitch != calc_pitch);
+                    calc_pitch *= d.v;
                 }
                 
                 return differ;

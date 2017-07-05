@@ -25,6 +25,7 @@ namespace KernelSelector
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F32);
+        k.EnableInputWeightsType(WeightsType::F16);
         k.EnableInputWeightsType(WeightsType::F32);
         k.EnableOutputDataType(Datatype::F32);
         k.EnableInputLayout(DataLayout::yxfb);

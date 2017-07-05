@@ -27,6 +27,7 @@ namespace KernelSelector {
         k.EnableInputDataType(Datatype::F16);
         k.EnableOutputDataType(Datatype::F16);
         k.EnableInputWeightsType(WeightsType::F16);
+        k.EnableInputWeightsType(WeightsType::F32);
         k.EnableInputLayout(DataLayout::bfyx);
         k.EnableOutputLayout(DataLayout::bfyx);
         k.EnableTensorOffset();
