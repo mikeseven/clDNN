@@ -27,13 +27,11 @@ namespace KernelSelector { namespace
     {
         assert(params.inputs.size() == 1);
 
-        // TODO: handle offset to according to the cp.padding values, and support "<=" on the before part
-        //       currently we use "INPUT_VIEW_OFFSET".
         bool properPadding =
-            reqDesc.X().pad.before          == params.inputs[0].X().pad.before &&
-            reqDesc.Y().pad.before          == params.inputs[0].Y().pad.before &&
-            reqDesc.Feature().pad.before    == params.inputs[0].Feature().pad.before &&
-            reqDesc.Batch().pad.before      == params.inputs[0].Batch().pad.before;
+            reqDesc.X().pad.before          <= params.inputs[0].X().pad.before &&
+            reqDesc.Y().pad.before          <= params.inputs[0].Y().pad.before &&
+            reqDesc.Feature().pad.before    <= params.inputs[0].Feature().pad.before &&
+            reqDesc.Batch().pad.before      <= params.inputs[0].Batch().pad.before;
 
         properPadding &=
             reqDesc.X().pad.after           <= params.inputs[0].X().pad.after &&

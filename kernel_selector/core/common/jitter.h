@@ -447,12 +447,18 @@ inline JitConstants MakeWeightBiasParamsJitConstants(const WeightBiasParams& par
 inline JitConstants MakeConvolutionParamsJitConstants(const ConvolutionParams& params)
 {
     JitConstants jit = MakeWeightBiasParamsJitConstants(params);
+    const auto& padding = params.convParams.padding;
+    const auto& input = params.inputs[0];
+    
+    int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - padding.x*input.X().pitch - input.Y().pitch*padding.y;
+    input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);
 
     jit.AddConstants({
-        MakeJitConstant("STRIDE",               params.convParams.stride),
-        MakeJitConstant("PADDING",              params.convParams.padding),
-        MakeJitConstant("DILATION",             params.convParams.dilation),
-        MakeJitConstant("FILTER_ARRAY_NUM",     params.convParams.split),
+        MakeJitConstant("STRIDE",                       params.convParams.stride),
+        MakeJitConstant("PADDING",                      params.convParams.padding),
+        MakeJitConstant("DILATION",                     params.convParams.dilation),
+        MakeJitConstant("FILTER_ARRAY_NUM",             params.convParams.split),
+        MakeJitConstant("INPUT_OFFSET_WITH_PADDING",    input_offset_with_padding),
     });
 
     return jit;
@@ -572,12 +578,18 @@ inline JitConstants MakeDeconvolutionJitConstants(const DeconvolutionParams& par
 {
     JitConstants jit = MakeWeightBiasParamsJitConstants(params);
     const auto& dp = params.deconvParams;
+    const auto& padding = dp.padding;
+    const auto& input = params.inputs[0];
+
+    int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - padding.x*input.X().pitch - input.Y().pitch*padding.y;
+    input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);
 
     jit.AddConstants({
-        MakeJitConstant("STRIDE",           dp.stride),
-        MakeJitConstant("PADDING",          dp.padding),
-        MakeJitConstant("DILATION",         dp.dilation),
-        MakeJitConstant("FILTER_ARRAY_NUM", dp.split),
+        MakeJitConstant("STRIDE",                       dp.stride),
+        MakeJitConstant("PADDING",                      dp.padding),
+        MakeJitConstant("DILATION",                     dp.dilation),
+        MakeJitConstant("FILTER_ARRAY_NUM",             dp.split),
+        MakeJitConstant("INPUT_OFFSET_WITH_PADDING",    input_offset_with_padding),
     });
 
     return jit;

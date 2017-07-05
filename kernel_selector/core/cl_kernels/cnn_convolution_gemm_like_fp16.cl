@@ -53,7 +53,7 @@ KERNEL(convolution_f16)(
     // Each work item points to the start of a different patch.
     // atile is M rows x K columns.
 #if defined(INPUT_BUFFER_WIDTH_PADDED) && defined(INPUT_BUFFER_HEIGHT_PADDED)
-    uint src0_read_offset = INPUT_VIEW_OFFSET + in_split_offset
+    uint src0_read_offset = INPUT_OFFEST_FOR_PADDED_PART + in_split_offset
      + INPUT_BATCH_PITCH * global_z                                   // batch offset
      + ( ( global_y / OUTPUT_SIZE_X ) * STRIDE_Y * INPUT_Y_PITCH )      // y offset
      + ( ( global_y % OUTPUT_SIZE_X ) * STRIDE_X );                 // x offset

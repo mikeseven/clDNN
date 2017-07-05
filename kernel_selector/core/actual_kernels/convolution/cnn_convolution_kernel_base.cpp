@@ -24,6 +24,14 @@ namespace KernelSelector
         std::stringstream jit;
         const auto& cp = params.convParams;
 
+        const size_t paddedSize =
+            params.convParams.padding.x +
+            params.convParams.padding.y*params.inputs[0].Y().pitch;
+
+        int64_t inputOffsetForPaddedPart = (int64_t)params.inputs[0].GetFirstElementOffset() - (int64_t)paddedSize;
+        inputOffsetForPaddedPart = std::max(inputOffsetForPaddedPart, (int64_t)0);
+
+
         jit << "#define KERNEL_WIDTH "      << cp.filterSize.x << "\n"
             << "#define KERNEL_HEIGHT "     << cp.filterSize.y << "\n"
             << "#define STRIDE_X ("         << cp.stride.x << ")\n"
@@ -36,7 +44,8 @@ namespace KernelSelector
             << "#define DY "                << runInfo.globalWorkSizeDY << "\n"
             << "#define DX "                << runInfo.globalWorkSizeDX << "\n"
             << "#define KERNEL_WIDTH_DIV2 " << cp.filterSize.x / 2 << "\n"
-            << "#define KERNEL_SLICE_DIV2 " << (cp.filterSize.x * cp.filterSize.y) / 2 << "\n";
+            << "#define KERNEL_SLICE_DIV2 " << (cp.filterSize.x * cp.filterSize.y) / 2 << "\n"
+            << "#define INPUT_OFFEST_FOR_PADDED_PART " << inputOffsetForPaddedPart << "\n";
         
         if (!params.bias.empty())
         {
