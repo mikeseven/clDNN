@@ -27,52 +27,56 @@ namespace KernelSelector { namespace
     {
         assert(params.inputs.size() == 1);
 
-        bool proper_desc =
-            reqDesc.GetOffset() <= params.inputs[0].GetOffset() &&
-            reqDesc.X().pitch <= params.inputs[0].X().pitch &&
-            reqDesc.Y().pitch <= params.inputs[0].Y().pitch &&
-            reqDesc.Feature().pitch <= params.inputs[0].Feature().pitch &&
-            reqDesc.Batch().pitch <= params.inputs[0].Batch().pitch;
+        // TODO: handle offset to according to the cp.padding values, and support "<=" on the before part
+        //       currently we use "INPUT_VIEW_OFFSET".
+        bool properPadding =
+            reqDesc.X().pad.before          == params.inputs[0].X().pad.before &&
+            reqDesc.Y().pad.before          == params.inputs[0].Y().pad.before &&
+            reqDesc.Feature().pad.before    == params.inputs[0].Feature().pad.before &&
+            reqDesc.Batch().pad.before      == params.inputs[0].Batch().pad.before;
+
+        properPadding &=
+            reqDesc.X().pad.after           <= params.inputs[0].X().pad.after &&
+            reqDesc.Y().pad.after           <= params.inputs[0].Y().pad.after &&
+            reqDesc.Feature().pad.after     <= params.inputs[0].Feature().pad.after &&
+            reqDesc.Batch().pad.after       <= params.inputs[0].Batch().pad.after;
 
         const auto& cp = params.convParams;
-        proper_desc &= ((cp.padding.x == 0 && cp.padding.y == 0) || params.inputs[0].GetPaddedVal() == Tensor::PaddedVal::ZERO);
+        properPadding &= ((cp.padding.x == 0 && cp.padding.y == 0) || params.inputs[0].GetPaddedVal() == 0.f);
 
-        return proper_desc;
+        return properPadding;
     }
 
-    inline DataTensor GetConvolutionPaddedTensorDesc(const ConvolutionParams& params)
+    inline DataTensor GetConvolutionBFYXPaddedTensor(const ConvolutionParams& params)
     {
         assert(params.inputs.size() == 1);
+        assert(params.inputs[0].GetDims().size() == 4U);
 
         DataTensor t = params.inputs[0];
+        std::vector<Tensor::Pad> pad{ { 0,0 },{ 0,0 },{ 0,0 },{ 0,0 } };
 
         const auto& cp = params.convParams;
 
-        const auto left_padding = cp.padding.x;
-        const auto top_padding = cp.padding.y;
+        pad[0].before = cp.padding.x;
+        pad[1].before = cp.padding.y;
 
         const auto inputLimitX = (params.output.X().v - 1) * cp.stride.x + (cp.filterSize.x - 1) * cp.dilation.x + 1;
         const auto inputLimitY = (params.output.Y().v - 1) * cp.stride.y + (cp.filterSize.y - 1) * cp.dilation.y + 1;
 
-        const size_t rightPadding = (size_t)std::max((int)inputLimitX - (int)t.X().v - (int)left_padding, (int)0);
-        const size_t bottomPadding = (size_t)std::max((int)inputLimitY - (int)t.Y().v - (int)top_padding, (int)0);
+        pad[0].after = (size_t)std::max((int)inputLimitX - (int)t.X().v - (int)pad[0].before, (int)0);
+        pad[1].after = (size_t)std::max((int)inputLimitY - (int)t.Y().v - (int)pad[1].before, (int)0);
 
-        const size_t paddedInputWidth = t.X().v + left_padding + rightPadding;
-        const size_t paddedInputHeight = t.Y().v + top_padding + bottomPadding;
-        const size_t offest = paddedInputWidth*params.convParams.padding.y + params.convParams.padding.x;
-        
-        Tensor::NDims dims(t.GetDims().size());
+        Tensor::NDims dims(4);
+        const Tensor::NDims& orgDims = params.inputs[0].GetDims();
 
-        assert(dims.size() >=3U);
-        dims[0].pitch = 1;
-        dims[1].pitch = paddedInputWidth;
-        dims[2].pitch = dims[1].pitch * paddedInputHeight;
-        if (dims.size() >= 4)
+        for (size_t i = 0; i < dims.size(); i++)
         {
-            dims[3].pitch = dims[2].pitch * t.Feature().v;
+            dims[i].pad = pad[i];
+            dims[i].v = orgDims[i].v;
+            dims[i].pitch = dims[i].pad.before + dims[i].v + dims[i].pad.after;
         }
 
-        return{t.GetDType(), t.GetLayout(), t.GetPaddedVal(), offest, dims};
+        return{dims, t.GetDType(), t.GetLayout()};
     }
 
     inline WeightsType DataTypeToWeightsType(Datatype t)
@@ -94,7 +98,7 @@ namespace KernelSelector { namespace
         }
 
         bool bProperWeightsLayout = std::find(reqLayouts.begin(), reqLayouts.end(), tensor.GetLayout()) != reqLayouts.end();
-        if (!bProperWeightsLayout && tensor.PaddingExists() == false)
+        if (!bProperWeightsLayout && tensor.PitchesDifferFromLogicalDims() == false)
         {
             bProperWeightsLayout =
                 (std::find(reqLayouts.begin(), reqLayouts.end(), WeightsLayout::io) != reqLayouts.end() && tensor.GetLayout() == WeightsLayout::iyxo) ||
@@ -125,7 +129,7 @@ namespace KernelSelector { namespace
 
             r_params.layerID = newParams.layerID + "_reorder_";
             r_params.reorderParams.input = newParams.weights;
-            r_params.reorderParams.output = newParams.weights.Transform(layouts[0], dtype);
+            r_params.reorderParams.output = newParams.weights.TransformIgnorePadding(layouts[0], dtype);
 
             ReorderOptionalParams op;
             KernelsData kernels_data = reorderKS.GetBestKernels(r_params, op);
@@ -137,7 +141,7 @@ namespace KernelSelector { namespace
 
             weightsReorderParams.engine = WeightsReorderParams::Engine::GPU;
             weightsReorderParams.clKernel = std::make_shared<clKernelData>(kernels_data[0].kernels[0]);
-            weightsReorderParams.newBufferSize = r_params.reorderParams.output.PhysicalSize();
+            weightsReorderParams.newBufferSize = r_params.reorderParams.output.PhysicalSizeInBytes();
             weightsReorderParams.dtype = dtype;
 
             newParams.weights = r_params.reorderParams.output;
@@ -223,7 +227,7 @@ namespace KernelSelector { namespace
 
         if (params.inputs.size())
         {
-            no_pitch_same_dims = !params.inputs[0].PaddingExists();
+            no_pitch_same_dims = !params.inputs[0].PitchesDifferFromLogicalDims();
 
             for (size_t i = 1; i < params.inputs.size(); i++)
             {

@@ -99,7 +99,7 @@ namespace KernelSelector
     {
         bool CheckTensorForSplit(const DataTensor& t, uint32_t split)
         {
-            if (t.PaddingExists())
+            if (t.PitchesDifferFromLogicalDims())
             {
                 auto feature = t.Feature();
                 auto featureIndex = Tensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::FEATURE);
@@ -110,9 +110,9 @@ namespace KernelSelector
                         Tensor::NDims newDims = t.GetDims();
                         newDims[featureIndex].v = feature.v*split;
                         
-                        DataTensor newTensor{t.GetDType(), t.GetLayout(), t.GetPaddedVal(), t.GetOffset(), newDims};
+                        DataTensor newTensor{ newDims, t.GetDType(), t.GetLayout(), t.GetViewOffset(), t.PhysicalSize(), t.GetPaddedVal()};
 
-                        if (newTensor.PaddingExists() == false)
+                        if (newTensor.PitchesDifferFromLogicalDims() == false)
                         {
                             return true;
                         }

@@ -27,7 +27,6 @@ namespace KernelSelector
     using WeightsTensor = Tensor::WeightsTensor;
     using DataLayout = Tensor::DataLayout;
     using WeightsLayout = Tensor::WeightsLayout;
-    using PaddedVal = Tensor::PaddedVal;
     using MultiDataTensor = std::vector<DataTensor>;
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ParamsKey
@@ -480,8 +479,8 @@ namespace KernelSelector
                 k.EnableInputLayout(i.GetLayout());
 
                 bBatching       |= (i.Batch().v > 1);
-                bPitches        |= (i.PaddingExists());
-                bOffests        |= (i.GetOffset() != 0);
+                bPitches        |= (i.PitchesDifferFromLogicalDims());
+                bOffests        |= (i.GetFirstElementOffset() != 0);
                 bDifferentTypes |= (i.GetDType() != output.GetDType());
             }
 
@@ -494,7 +493,7 @@ namespace KernelSelector
             }
 
             if (bPitches ||
-                output.PaddingExists())
+                output.PitchesDifferFromLogicalDims())
             {
                 k.EnableTensorPitches();
             }
@@ -505,7 +504,7 @@ namespace KernelSelector
             }
 
             if (bOffests ||
-                output.GetOffset() != 0)
+                output.GetFirstElementOffset() != 0)
             {
                 k.EnableTensorOffset();
             }
@@ -996,13 +995,13 @@ namespace KernelSelector
             k.EnableInputWeightsType(input.GetDType());
             k.EnableOutputWeightsType(output.GetDType());
 
-            if (input.PaddingExists() ||
-                output.PaddingExists())
+            if (input.PitchesDifferFromLogicalDims() ||
+                output.PitchesDifferFromLogicalDims())
             {
                 k.EnableTensorPitches();
             }
 
-            if (input.GetOffset() != 0 || output.GetOffset() != 0)
+            if (input.GetFirstElementOffset() != 0 || output.GetFirstElementOffset() != 0)
             {
                 k.EnableTensorOffset();
             }

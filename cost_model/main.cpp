@@ -221,8 +221,8 @@ public:
             kernelData.weightsReorderParams.engine != WeightsReorderParams::Engine::NONE ?
             kernelData.weightsReorderParams.newBufferSize :
             newParams.convParams.filterSize.x * newParams.convParams.filterSize.y * newParams.inputs[0].Feature().v * newParams.output.Feature().v;
-        cl::Buffer input(clContext, CL_MEM_READ_WRITE, newParams.inputs[0].PhysicalSize(), nullptr, &status);
-        cl::Buffer output(clContext, CL_MEM_READ_WRITE, newParams.output.PhysicalSize(), nullptr, &status);
+        cl::Buffer input(clContext, CL_MEM_READ_WRITE, newParams.inputs[0].PhysicalSizeInBytes(), nullptr, &status);
+        cl::Buffer output(clContext, CL_MEM_READ_WRITE, newParams.output.PhysicalSizeInBytes(), nullptr, &status);
         cl::Buffer weights(clContext, CL_MEM_READ_WRITE, weightsSize, nullptr, &status);
         cl::Buffer bias(clContext, CL_MEM_READ_WRITE, newParams.output.Feature().v, nullptr, &status);
 
@@ -402,7 +402,7 @@ int main( int, char**  )
 
 void InitConvParams()
 {
-
+#if 0
     ConvolutionParams params0;
     params0.inputs.resize(1);
     params0.layerID = "params0";
@@ -1680,4 +1680,5 @@ void InitConvParams()
         params73,
         params74,
     };
+#endif
 }

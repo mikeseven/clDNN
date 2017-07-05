@@ -69,7 +69,6 @@ namespace kernel_selector
     using weights_tensor                    = KernelSelector::WeightsTensor;
     using data_layout                       = KernelSelector::DataLayout;
     using weights_layout                    = KernelSelector::WeightsLayout;
-    using padded_val                        = KernelSelector::PaddedVal;
     using multi_data_tensor                 = KernelSelector::MultiDataTensor;
 
     using params                            = KernelSelector::Params;
@@ -234,11 +233,11 @@ static inline cldnn::format to_weights_layout(kernel_selector::weights_layout l)
     }
 }
 
-inline kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_t split = 1, const tensor additional_offest = {})
+inline kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_t split = 1, const tensor view_offset = {})
 {
     const auto& pad = l.data_padding;
     const auto& vals = l.size.sizes(l.format);
-    const auto& add_offsets = additional_offest.sizes(l.format);
+    const auto& add_offsets = view_offset.sizes(l.format);
     const auto& lower_pad = pad.lower_size().sizes(l.format);
     const auto& upper_pad = pad.upper_size().sizes(l.format);
     const auto ks_layout = from_data_layout(l.format);
@@ -246,6 +245,7 @@ inline kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_
 
     size_t pitch = 1;
     size_t offset = 0;
+
     for (size_t i = 0; i < vec.size(); i++)
     {
         const size_t tensor_index = vec.size() - 1 - i;
@@ -256,8 +256,10 @@ inline kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_
         auto& elm = vec[i];
         elm.v = static_cast<size_t>(d);
         elm.pitch = pitch;
+        elm.pad.before = lp;
+        elm.pad.after = up;
 
-        offset += pitch*(lp + add_offsets[tensor_index]);
+        offset += pitch*(add_offsets[tensor_index]);
         pitch *= (d + lp + up);
     }
 
@@ -265,11 +267,10 @@ inline kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_
     vec[feature_index].v /= split;
 
     return kernel_selector::data_tensor(
+        vec,
         to_data_type(l.data_type),
         ks_layout,
-        kernel_selector::padded_val::ZERO,
-        offset,
-        vec);
+        offset);
 }
 
 inline kernel_selector::weights_tensor convert_weights_tensor(const layout& l)
@@ -289,11 +290,9 @@ inline kernel_selector::weights_tensor convert_weights_tensor(const layout& l)
     }
 
     return kernel_selector::weights_tensor(
+        vec,
         ks_type,
-        base_layout,
-        kernel_selector::padded_val::UNDEFINED,
-        0,
-        vec).Transform(ks_layout);
+        base_layout).TransformIgnorePadding(ks_layout);
 }
 
 template <typename p_type>

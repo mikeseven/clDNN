@@ -35,22 +35,18 @@ namespace clDNN
         {
             ksParams.bias.resize(1);
             ksParams.bias[0] = {
+                ksParams.output.LogicalDims(),
                 ksParams.output.GetDType(),
-                ksParams.output.GetLayout(),
-                KernelSelector::PaddedVal::UNDEFINED,
-                0,
-                ksParams.output.LogicalDims()
+                ksParams.output.GetLayout()
             };
         }
         else
         {
             ksParams.bias.resize(1);
             ksParams.bias[0] = {
+                std::vector<size_t>{ ksParams.output.Feature().v },
                 ksParams.output.GetDType(),
-                KernelSelector::DataLayout::bf,
-                KernelSelector::PaddedVal::UNDEFINED,
-                0,
-                std::vector<size_t>{ ksParams.output.Feature().v }
+                KernelSelector::DataLayout::bf
             };
         }
 

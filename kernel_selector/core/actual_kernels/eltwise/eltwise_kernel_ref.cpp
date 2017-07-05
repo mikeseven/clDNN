@@ -45,7 +45,7 @@ namespace KernelSelector {
 
         std::stringstream jit;
         jit << GetBaseJit(newParams, kernel_id)
-            << "#define INPUT_OFFSET1 (" << newParams.inputs[1].GetOffset() << ")\n"
+            << "#define INPUT_OFFSET1 (" << newParams.inputs[1].GetFirstElementOffset() << ")\n"
             << "#define INPUT_ROW_PITCH1 (" << newParams.inputs[1].Y().pitch << ")\n"
             << "#define INPUT_SLICE_PITCH1 (" << newParams.inputs[1].Feature().pitch << ")\n"
             << "#define INPUT_BATCH_PITCH1 (" << newParams.inputs[1].Batch().pitch << ")\n"

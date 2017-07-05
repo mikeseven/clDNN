@@ -37,12 +37,12 @@ namespace clDNN
     {
         const KernelSelector::BaseParams* pParams = static_cast<const KernelSelector::BaseParams*>(m_cldnnKernelData.params.get());
         TensorDesc ret;
-        ret.offset = pParams->inputs[0].GetOffset();
-        ret.zeroPadded = (pParams->inputs[0].GetPaddedVal() == KernelSelector::Tensor::PaddedVal::ZERO);
+        ret.offset = pParams->inputs[0].GetFirstElementOffset();
+        ret.zeroPadded = (pParams->inputs[0].GetPaddedVal() == 0.f);
         ret.pitches.x = (uint32_t)((pParams->inputs[0].GetDims().size() >= 2) ? pParams->inputs[0].GetDims()[1].pitch : 1);
         ret.pitches.y = (uint32_t)((pParams->inputs[0].GetDims().size() >= 3) ? pParams->inputs[0].GetDims()[2].pitch : ret.pitches.x);
         ret.pitches.z = (uint32_t)((pParams->inputs[0].GetDims().size() >= 4) ? pParams->inputs[0].GetDims()[3].pitch : ret.pitches.y);
-        ret.pitches.w = (uint32_t)(pParams->inputs[0].LogicalSizeWithPadding());
+        ret.pitches.w = (uint32_t)(pParams->inputs[0].PhysicalSize());
         return ret;
     }
 
@@ -108,30 +108,31 @@ namespace clDNN
         if (layout == DataLayout::bf)
         {
             dst = {
+                {
+                    { srcDims.x, 1, {0,0} },
+                    { srcDims.y, srcDesc.pitches.x, { 0,0 } },
+                },
                 dt,
                 KernelSelector::DataLayout::bf,
-                srcDesc.zeroPadded ? KernelSelector::Tensor::PaddedVal::ZERO : KernelSelector::Tensor::PaddedVal::UNDEFINED,
                 srcDesc.offset,
-                {
-                    { srcDims.x, 1 },
-                    { srcDims.y, srcDesc.pitches.x },
-                }
-
+                0,
+                srcDesc.zeroPadded ? 0.f : FLT_MAX,
             };
         }
         else
         {
             dst = {
+                {
+                    { srcDims.x, 1,{ 0,0 } },
+                    { srcDims.y, srcDesc.pitches.x,{ 0,0 } },
+                    { srcDims.z, srcDesc.pitches.y,{ 0,0 } },
+                    { srcDims.w, srcDesc.pitches.z,{ 0,0 } },
+                },
                 dt,
                 KernelSelector::DataLayout::bfyx,
-                srcDesc.zeroPadded ? KernelSelector::Tensor::PaddedVal::ZERO : KernelSelector::Tensor::PaddedVal::UNDEFINED,
                 srcDesc.offset,
-                {
-                    { srcDims.x, 1 },
-                    { srcDims.y, srcDesc.pitches.x },
-                    { srcDims.z, srcDesc.pitches.y },
-                    { srcDims.w, srcDesc.pitches.z },
-                }
+                0,
+                srcDesc.zeroPadded ? 0.f : FLT_MAX,
             };
         }
     }

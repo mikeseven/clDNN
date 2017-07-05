@@ -52,7 +52,7 @@ KERNEL(convolution_f16_10x12x16)(
     half blockC[TILE_M * TILE_K] = { 0 };
 
     const uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * INPUT_FEATURE_NUM;
-    uint src0_offset_tile = INPUT_OFFEST_FOR_PADDED_PART    // data offset
+    uint src0_offset_tile = INPUT_VIEW_OFFSET    // data offset
      + in_split_offset
      + batch_id * INPUT_BATCH_PITCH                         // batch offset
      + ( global_y * TILE_M * STRIDE_Y ) * INPUT_Y_PITCH   // y offset

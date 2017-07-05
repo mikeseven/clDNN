@@ -162,7 +162,7 @@ namespace KernelSelector
         const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
         const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(o);
         
-        const auto req_input = GetConvolutionPaddedTensorDesc(params);
+        const auto req_input = GetConvolutionBFYXPaddedTensor(params);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(params, req_input);
         const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
         const bool bSupportedActivation = CheckActivationSupport(params.activationFunc);
@@ -192,7 +192,7 @@ namespace KernelSelector
         }
 
         const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
-        const auto req_input = GetConvolutionPaddedTensorDesc(orgParams);
+        const auto req_input = GetConvolutionBFYXPaddedTensor(orgParams);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, req_input);
 
         KernelData kd = KernelData::Default<ConvolutionParams>(params);

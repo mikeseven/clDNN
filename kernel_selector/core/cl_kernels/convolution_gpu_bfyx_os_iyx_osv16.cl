@@ -96,7 +96,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
 
     uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * FILTER_INPUT_FEATURE_NUM;
     in_addr = batch_idx * INPUT_BATCH_PITCH;
-    in_addr += in_split_offset + INPUT_OFFSET_WITH_PADDING + or * STRIDE_SIZE_Y * INPUT_Y_PITCH + oc * STRIDE_SIZE_X + lid;
+    in_addr += in_split_offset + INPUT_VIEW_OFFSET + or * STRIDE_SIZE_Y * INPUT_Y_PITCH + oc * STRIDE_SIZE_X + lid;
 
     for(int kd = 0; kd < FILTER_INPUT_FEATURE_NUM; kd++)  // _ID = 3, RGB
     {

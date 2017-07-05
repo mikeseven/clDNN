@@ -53,8 +53,8 @@ namespace KernelSelector
             (params.poolParams.poolPad.x != 1) ||
             (params.poolParams.poolPad.y != 1) ||
             !(params.inputs[0] == params.output) ||
-            params.inputs[0].PaddingExists() ||
-            params.output.PaddingExists())
+            params.inputs[0].PitchesDifferFromLogicalDims() ||
+            params.output.PitchesDifferFromLogicalDims())
         {
             return false;
         }

@@ -18,8 +18,8 @@
 ///////////////////////// Input Index /////////////////////////
 #if INPUT_SIMPLE
 inline uint FUNC(get_input_index)(uint o, uint i, uint y, uint x)
-{ 
-   return INPUT_OFFSET + o*INPUT_OFM_PITCH + i*INPUT_IFM_PITCH + y*INPUT_Y_PITCH + x*INPUT_X_PITCH;
+{
+    return INPUT_OFFSET + o*INPUT_OFM_PITCH + i*INPUT_IFM_PITCH + y*INPUT_Y_PITCH + x*INPUT_X_PITCH;
 }
 #else
 #error - not supported

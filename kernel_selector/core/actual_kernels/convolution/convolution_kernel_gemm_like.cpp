@@ -52,7 +52,7 @@ namespace KernelSelector
         const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
         const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(options);
 
-        const DataTensor newInput = GetConvolutionPaddedTensorDesc(orgParams);
+        const DataTensor newInput = GetConvolutionBFYXPaddedTensor(orgParams);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, newInput);
         // TODO: enable non padding path again
         const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
@@ -136,7 +136,7 @@ namespace KernelSelector
         const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         jit << GetBaseJit(newParams, kernel_id)
-            << GetConvolutionJit(newParams, runInfo, true);
+            << GetConvolutionJit(newParams, runInfo);
 
         size_t sgemm_m = RoundUp(newParams.output.X().v * newParams.output.Y().v, (size_t)runInfo.subBlockDimM);
         size_t sgemm_n = RoundUp(newParams.output.Feature().v, (size_t)runInfo.subBlockDimN);

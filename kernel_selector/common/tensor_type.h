@@ -68,12 +68,22 @@ namespace KernelSelector
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Pad
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        struct Pad
+        {
+            size_t before;
+            size_t after;
+        };
+
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // Dim
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         struct Dim
         {
             size_t v;
             size_t pitch;
+            Pad    pad;
         };
 
         using NDims = std::vector<Dim>;
@@ -146,7 +156,7 @@ namespace KernelSelector
             inline Dim Extract(MapT channelMap, Layout l, ChannelName channelName, const NDims& dims)
             {
                 const int i = Channelndex(channelMap, l, channelName);
-                return ((i < 0) || (i >= (int)dims.size())) ? Dim{1, 1} : dims[i];
+                return ((i < 0) || (i >= (int)dims.size())) ? Dim{ 1, 1, {0,0} } : dims[i];
             }
 
             template <typename MapT, typename Layout>
@@ -220,38 +230,46 @@ namespace KernelSelector
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        // PADDED_VAL
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        enum class PaddedVal
-        {
-            UNDEFINED,
-            ZERO,
-            ONE,
-            HIGHEST_VAL,
-            LOWEST_VAL,
-        };
-
-        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // TensorBase
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         struct TensorBase
         {
         protected:
-            PaddedVal    paddedVal = PaddedVal::UNDEFINED;
-            size_t        offset = 0;
-            NDims         dims;
+            NDims   dims;
+            size_t  viewOffset          = 0;    // in elements
+            size_t  firstElementOffset  = 0;
+            size_t  totalSize           = 0;    // in elements
+            float   paddedVal           = 0.f;
 
         public:
             TensorBase() = default;
             TensorBase(const TensorBase&) = default;
             TensorBase& operator=(const TensorBase&) = default;
 
-            TensorBase(PaddedVal pv, size_t of, const NDims& nd) :
-                paddedVal(pv), offset(of), dims(nd) {}
+            TensorBase(const NDims& nd, size_t viewOf, size_t sz, float pv)
+                : dims(nd)
+                , viewOffset(viewOf)
+                , firstElementOffset(std::accumulate(nd.cbegin(), nd.cend(), viewOf, [](size_t val, const Dim& d) { return val + d.pitch*d.pad.before; }))
+                , totalSize(sz)
+                , paddedVal(pv)
+            {
+                // TODO: make sure tensor is valid
 
-            PaddedVal   GetPaddedVal()  const { return paddedVal; }
-            size_t       GetOffset()     const { return offset; }
-            const NDims& GetDims()       const { return dims; }
+                if (totalSize == 0)
+                {
+                    for (const auto& d : dims)
+                    {
+                        totalSize = std::max(totalSize, d.pitch*(d.v + d.pad.before + d.pad.after));
+                    }
+
+                    totalSize += viewOffset;
+                }
+            }
+
+            float           GetPaddedVal()          const { return paddedVal; }
+            size_t          GetFirstElementOffset() const { return firstElementOffset; }
+            size_t          GetViewOffset()         const { return viewOffset; }
+            const NDims&    GetDims()               const { return dims; }
 
             virtual uint32_t    ElementSize() const = 0;
 
@@ -260,26 +278,35 @@ namespace KernelSelector
                 return std::accumulate(dims.cbegin(), dims.cend(), (size_t)1, [](size_t val, const Dim& d) {return val*d.v; });
             }
 
-            size_t LogicalSizeWithPadding() const
-            {
-                return std::accumulate(dims.cbegin(), dims.cend(), (size_t)1, [](size_t val, const Dim& d) {return std::max(val, d.pitch*d.v); });
-            }
-
-            size_t PhysicalSize() const
-            {
-                return (offset + LogicalSizeWithPadding()) * ElementSize();
-            }
-
-            bool PaddingExists() const
-            {
-                return (LogicalSize() != LogicalSizeWithPadding());
-            }
-
             std::vector<size_t> LogicalDims() const
             {
                 std::vector<size_t> res(dims.size());
                 std::transform(dims.begin(), dims.end(), res.begin(), [](const Dim& d) { return d.v; });
                 return res;
+            }
+
+            size_t PhysicalSize() const
+            {
+                return totalSize;
+            }
+
+            size_t PhysicalSizeInBytes() const
+            {
+                return totalSize * ElementSize();
+            }
+
+            bool PitchesDifferFromLogicalDims() const
+            {
+                bool differ = false;
+
+                size_t last_dims = 1;
+                for (const auto& d : dims)
+                {
+                    differ |= (d.pitch != last_dims);
+                    last_dims = d.v;
+                }
+                
+                return differ;
             }
         };
 
@@ -298,13 +325,13 @@ namespace KernelSelector
             TensorBaseT(const TensorBaseT&) = default;
             TensorBaseT& operator=(const TensorBaseT&) = default;
 
-            TensorBaseT(DType dt, Layout l, PaddedVal pv, size_t of, const NDims& nd) :
-                TensorBase(pv, of, nd), dtype(dt), layout(l) {}
+            TensorBaseT(const NDims& nd, DType dt, Layout l, size_t of = 0, size_t sz = 0, float pv = 0.f) :
+                TensorBase(nd, of, sz, pv), dtype(dt), layout(l) {}
 
             DType       GetDType()      const           { return dtype; }
             Layout      GetLayout()     const           { return layout; }
             uint32_t    ElementSize()   const override  { return BytesPerElement(dtype); }
-            size_t      Dimentions()    const           { return ChannelsCount(layout); }
+            size_t      Dimentions()    const           { return dims.size(); }
             bool        SimpleLayout()  const           { return Tensor::SimpleLayout(layout); }
 
             bool operator==(const TensorBaseT& t) const
@@ -313,7 +340,7 @@ namespace KernelSelector
                     dtype == t.dtype      &&
                     layout == t.layout     &&
                     paddedVal == t.paddedVal  &&
-                    offset == t.offset     &&
+                    viewOffset == t.viewOffset     &&
                     dims.size() == t.dims.size();
                 if (same)
                 {
@@ -321,7 +348,9 @@ namespace KernelSelector
                     {
                         same &=
                             dims[i].v == t.dims[i].v &&
-                            dims[i].pitch == t.dims[i].pitch; // TODO: do we need it
+                            dims[i].pad.before == t.dims[i].pad.before &&
+                            dims[i].pad.after == t.dims[i].pad.after &&
+                            dims[i].pitch == t.dims[i].pitch;
                     }
                 }
 
@@ -355,11 +384,11 @@ namespace KernelSelector
             DataTensor(const DataTensor&) = default;
             DataTensor& operator=(const DataTensor&) = default;
 
-            DataTensor(Datatype dt, DataLayout l, PaddedVal pv, size_t of, const NDims& nd) :
-                TensorBaseT(dt, l, pv, of, nd) {}
+            DataTensor(const NDims& nd, Datatype dt, DataLayout l, size_t of = 0, size_t sz = 0, float pv = 0.f) :
+                TensorBaseT(nd, dt, l, of, sz, pv) {}
 
-            DataTensor(Datatype dt, DataLayout l, PaddedVal pv, size_t of, const std::vector<size_t>& d) :
-                TensorBaseT<Datatype, DataLayout>(dt, l, pv, of, CalcPitches(d, l)) {}
+            DataTensor(const std::vector<size_t>& d, Datatype dt, DataLayout l) :
+                TensorBaseT<Datatype, DataLayout>(GetSimpleDims(d, l), dt, l) {}
 
             Dim X()         const { return Extract(layout, DataChannelName::X, dims); }
             Dim Y()         const { return Extract(layout, DataChannelName::Y, dims); }
@@ -367,11 +396,11 @@ namespace KernelSelector
             Dim ROI()       const { return Extract(layout, DataChannelName::ROI, dims); }
             Dim Batch()     const { return Extract(layout, DataChannelName::BATCH, dims); }
 
-            DataTensor  Transform(DataLayout l) const;
+            DataTensor  TransformIgnorePadding(DataLayout l) const;
             DataTensor  FlattenFeatureAndSpatials() const;
         
         private:
-            static NDims CalcPitches(const std::vector<size_t>& d, DataLayout l);
+            static NDims GetSimpleDims(const std::vector<size_t>& d, DataLayout l);
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -383,14 +412,14 @@ namespace KernelSelector
             WeightsTensor(const WeightsTensor&) = default;
             WeightsTensor& operator=(const WeightsTensor&) = default;
 
-            WeightsTensor(WeightsType dt, WeightsLayout l, PaddedVal pv, size_t of, const NDims& nd) :
-                TensorBaseT(dt, l, pv, of, nd) {}
+            WeightsTensor(const NDims& nd, WeightsType dt, WeightsLayout l, size_t of = 0, size_t sz = 0, float pv = 0.f) :
+                TensorBaseT(nd, dt, l, of, sz, pv) {}
 
-            WeightsTensor(WeightsType wt, WeightsLayout l, PaddedVal pv, size_t of, const std::vector<size_t>& d) :
-                TensorBaseT<WeightsType, WeightsLayout>(wt, l, pv, of, CalcPitches(d, l)) {}
+            WeightsTensor(const std::vector<size_t>& d, WeightsType dt, WeightsLayout l) :
+                TensorBaseT<WeightsType, WeightsLayout>(GetSimpleDims(d, l), dt, l) {}
 
-            WeightsTensor Transform(WeightsLayout l) const { return Transform(l, dtype); }
-            WeightsTensor Transform(WeightsLayout l, WeightsType t) const;
+            WeightsTensor TransformIgnorePadding(WeightsLayout l) const { return TransformIgnorePadding(l, dtype); }
+            WeightsTensor TransformIgnorePadding(WeightsLayout l, WeightsType t) const;
 
             Dim X()   const { return Extract(layout, WeightsChannelName::X, dims); }
             Dim Y()   const { return Extract(layout, WeightsChannelName::Y, dims); }
@@ -398,7 +427,7 @@ namespace KernelSelector
             Dim OFM() const { return Extract(layout, WeightsChannelName::OFM, dims); }
 
         private:
-            static NDims CalcPitches(const std::vector<size_t>& d, WeightsLayout l);
+            static NDims GetSimpleDims(const std::vector<size_t>& d, WeightsLayout l);
         };
     }
 }

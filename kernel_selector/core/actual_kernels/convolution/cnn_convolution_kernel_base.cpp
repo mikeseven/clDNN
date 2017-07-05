@@ -19,22 +19,11 @@
 
 namespace KernelSelector 
 {
-    std::string CNNConvolutionKernelBase::GetConvolutionJit(const ConvolutionParams& params, SubGroupInfo& runInfo, bool bPad) const
+    std::string CNNConvolutionKernelBase::GetConvolutionJit(const ConvolutionParams& params, SubGroupInfo& runInfo) const
     {
         std::stringstream jit;
         const auto& cp = params.convParams;
 
-        if (bPad)
-        {
-            const size_t paddedSize =
-                params.convParams.padding.x +
-                params.convParams.padding.y*params.inputs[0].Y().pitch;
-
-            assert(params.inputs[0].GetOffset() >= paddedSize);
-            const size_t inputOffsetForPaddedPart = params.inputs[0].GetOffset() - paddedSize;
-
-            jit << "#define INPUT_OFFEST_FOR_PADDED_PART " << inputOffsetForPaddedPart << "\n";
-        }
         jit << "#define KERNEL_WIDTH "      << cp.filterSize.x << "\n"
             << "#define KERNEL_HEIGHT "     << cp.filterSize.y << "\n"
             << "#define STRIDE_X ("         << cp.stride.x << ")\n"

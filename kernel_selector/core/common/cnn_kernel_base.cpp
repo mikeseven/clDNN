@@ -40,8 +40,10 @@ namespace KernelSelector {
             << "#define TYPE_" << toString(params.inputs[0].GetDType()) << "\n"
             << "#define NL_M (" << Float2Str(params.nlParams.m) << ")\n"
             << "#define NL_N (" << Float2Str(params.nlParams.n) << ")\n"
-            << "#define INPUT_OFFSET (" << params.inputs[0].GetOffset() << ")\n"
-            << "#define OUTPUT_OFFSET (" << params.output.GetOffset() << ")\n";
+            << "#define INPUT_OFFSET (" << params.inputs[0].GetFirstElementOffset() << ")\n"
+            << "#define INPUT_VIEW_OFFSET (" << params.inputs[0].GetViewOffset() << ")\n"
+            << "#define OUTPUT_OFFSET (" << params.output.GetFirstElementOffset() << ")\n"
+            << "#define OUTPUT_VIEW_OFFSET (" << params.output.GetViewOffset() << ")\n";
 
         jit << "#define INPUT_SIZE_X (" << params.inputs[0].X().v << ")\n"
             << "#define INPUT_SIZE_Y (" << params.inputs[0].Y().v << ")\n"

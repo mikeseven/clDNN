@@ -22,7 +22,7 @@ namespace KernelSelector
 {
     namespace Tensor
     {
-        NDims DataTensor::CalcPitches(const std::vector<size_t>& d, DataLayout l)
+        NDims DataTensor::GetSimpleDims(const std::vector<size_t>& d, DataLayout l)
         {
             std::vector<size_t> newDims = d;
 
@@ -48,14 +48,15 @@ namespace KernelSelector
 
             for (size_t i = 0; i < newDims.size(); i++)
             {
-                ret[i] = { newDims[i], pitch };
+                Pad p = { 0, newDims[i] - d[i] };
+                ret[i] = { d[i], pitch, p };
                 pitch *= newDims[i];
             }
 
             return ret;
         }
 
-        DataTensor DataTensor::Transform(DataLayout l) const
+        DataTensor DataTensor::TransformIgnorePadding(DataLayout l) const
         {
             const uint32_t src_channels = ChannelsCount(layout);
             const uint32_t dst_channels = ChannelsCount(l);
@@ -99,9 +100,10 @@ namespace KernelSelector
                 assert(0);
             }
 
-            return{ dtype, l, PaddedVal::UNDEFINED, 0, vec };
+            return{ vec, dtype, l };
         }
 
+        // todo handle padding
         DataTensor DataTensor::FlattenFeatureAndSpatials() const
         {
             DataLayout l;
@@ -141,22 +143,23 @@ namespace KernelSelector
                 break;
             }
 
-            DataTensor res = Transform(l);
+            DataTensor res = TransformIgnorePadding(l);
 
             if (l == DataLayout::bf)
             {
                 res.dims[Channelndex(l, DataChannelName::BATCH)].pitch = b.pitch;
+                res.dims[Channelndex(l, DataChannelName::BATCH)].pad   = b.pad;
             }
             else
             {
-                res.dims[Channelndex(l, DataChannelName::FEATURE)].pitch =
-                    dims[Channelndex(l, DataChannelName::BATCH) + 1].pitch;
+                res.dims[Channelndex(l, DataChannelName::FEATURE)].pitch = dims[Channelndex(l, DataChannelName::BATCH) + 1].pitch;
+                res.dims[Channelndex(l, DataChannelName::FEATURE)].pad   = dims[Channelndex(l, DataChannelName::BATCH) + 1].pad;
             }
 
             return res;
         }
 
-        NDims WeightsTensor::CalcPitches(const std::vector<size_t>& d, WeightsLayout l)
+        NDims WeightsTensor::GetSimpleDims(const std::vector<size_t>& d, WeightsLayout l)
         {
             std::vector<size_t> newDims = d;
 
@@ -199,25 +202,30 @@ namespace KernelSelector
 
             for (size_t i = 0; i < newDims.size(); i++)
             {
-                ret[i] = { d[i], pitch };
+                Pad p = { 0, newDims[i] - d[i] };
+                ret[i] = { d[i], pitch, p };
                 pitch *= newDims[i];
             }
 
             if (l == i_yxs_os_yxsv2_osv16)
             {
                 ret[3].pitch = RoundUp(newDims[1] * newDims[2], 2) * newDims[0];
+                ret[3].pad.after = ret[3].pitch - ret[3].v;
             }
             else if (l == iy_xs_os_xsv2_osv16__ao32 ||
-                l == iy_xs_os_xsv2_osv8__ao32)
+                     l == iy_xs_os_xsv2_osv8__ao32)
             {
                 ret[2].pitch = RoundUp(newDims[1], 2) * newDims[0];
+                ret[2].pad.after = ret[2].pitch - ret[2].v;
+                
                 ret[3].pitch = newDims[2] * ret[2].pitch;
+                ret[3].pad.after = ret[3].pitch - ret[3].v;
             }
 
             return ret;
         }
 
-        WeightsTensor WeightsTensor::Transform(WeightsLayout l, WeightsType t) const
+        WeightsTensor WeightsTensor::TransformIgnorePadding(WeightsLayout l, WeightsType t) const
         {
             const uint32_t src_channels = ChannelsCount(layout);
             const uint32_t dst_channels = ChannelsCount(l);
@@ -260,7 +268,7 @@ namespace KernelSelector
                 assert(0);
             }
 
-            return{ t, l, PaddedVal::UNDEFINED, 0, vec };
+            return{ vec, t, l };
         }
     }
 }

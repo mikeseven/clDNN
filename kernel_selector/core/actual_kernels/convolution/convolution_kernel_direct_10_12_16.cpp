@@ -49,7 +49,7 @@ namespace KernelSelector {
 
         const auto& cp = orgParams.convParams;
 
-        const DataTensor newInput = GetConvolutionPaddedTensorDesc(orgParams);
+        const DataTensor newInput = GetConvolutionBFYXPaddedTensor(orgParams);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, newInput);
         const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
         const bool bStrideOK = (cp.stride.x == 1 && cp.stride.y == 1);
@@ -110,7 +110,7 @@ namespace KernelSelector {
 
         jit << "#define RIGHT_PARTIAL_TILE_K " << orgParams.output.X().v % runInfo.globalWorkSizeDX << "\n"
             << GetBaseJit(newParams, kernel_id)
-            << GetConvolutionJit(newParams, runInfo, true);
+            << GetConvolutionJit(newParams, runInfo);
 
         auto& kernel = kd.kernels[0];
         kernel.workGroups.global = {

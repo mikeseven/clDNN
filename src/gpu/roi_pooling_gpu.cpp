@@ -91,7 +91,7 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
         const auto roi_bfyx = convert_data_tensor(rois_layout);
         const auto roi_bf = roi_bfyx.FlattenFeatureAndSpatials();
         roi_params.inputs.push_back(roi_bf);
-        roi_params.output = { out.GetDType(), kernel_selector::data_layout::brfyx, out.GetPaddedVal(), out.GetOffset(), out.GetDims() }; // TOOD: it's an hack - cldnn doesn't support roi pooling with batching
+        roi_params.output = { out.GetDims(), out.GetDType(), kernel_selector::data_layout::brfyx, out.GetViewOffset(), out.PhysicalSize(), out.GetPaddedVal() }; // TOOD: it's an hack - cldnn doesn't support roi pooling with batching
         roi_params.roiParams.mode         = primitive->mode == pooling_mode::max ? kernel_selector::pool_type::MAX : kernel_selector::pool_type::AVG;
         roi_params.roiParams.pooledWidth  = primitive->pooled_width;
         roi_params.roiParams.pooledHeight = primitive->pooled_height;

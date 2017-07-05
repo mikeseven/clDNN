@@ -72,7 +72,7 @@ namespace KernelSelector
         const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
 
         bool bProperInput = orgParams.inputs[0].GetLayout() == dl;
-        if (!bProperInput && orgParams.inputs[0].PaddingExists() == false)
+        if (!bProperInput && !orgParams.inputs[0].PitchesDifferFromLogicalDims())
         {
             bProperInput =
                 (dl == DataLayout::fb && orgParams.inputs[0].GetLayout() == DataLayout::fyxb) ||
@@ -92,7 +92,7 @@ namespace KernelSelector
 
         if (!bProperInput)
         {
-            newParams.inputs[0] = newParams.inputs[0].Transform(dl);
+            newParams.inputs[0] = newParams.inputs[0].TransformIgnorePadding(dl);
             kd.reorderInput = true;
         }
 
