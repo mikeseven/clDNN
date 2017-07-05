@@ -275,7 +275,7 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
 
         if (dump_custom_program)
         {
-            key += " __dump_custom_program__";
+            key += " __DUMP_CUSTOM_PROGRAM__"; // Adding label to key so it would be separated from other programs
         }
 
         auto& current_bucket = scode[key];
