@@ -29,27 +29,27 @@ namespace neural
 struct generic_layer_gpu : typed_primitive_impl<generic_layer>
 {
     const generic_layer_node& outer;
+    const kernel_selector::cl_kernel_data& _cl_kernel_data;
     gpu::kernel _kernel;
 
     generic_layer_gpu(const generic_layer_node& arg)
     : outer(arg)
+    , _cl_kernel_data(*outer.get_primitive()->generic_params.clKernel.get())
     , _kernel(arg.get_program().get_engine()->get_context(), outer.get_primitive()->generic_params.clKernel->kernelString)
     {}
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, generic_layer_inst& instance) override
     {
         gpu::kernel::kernel_arguments_data args;
-        args.scalars = &_kernel_data.kernels[0].scalars;
+        args.scalars = &_cl_kernel_data.scalars;
 
         for (size_t i = 0; i < instance.inputs_memory_count(); i++)
         {
             args.inputs.push_back(&instance.input_memory(i));
         }
         args.output = &instance.output_memory();
-
-        const auto& kernel_data = *outer.get_primitive()->generic_params.clKernel.get();
         
-        return _kernel.run(kernel_data, events, args);
+        return _kernel.run(_cl_kernel_data, events, args);
     }
 };
 

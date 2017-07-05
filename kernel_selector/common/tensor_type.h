@@ -74,6 +74,8 @@ namespace KernelSelector
         {
             size_t before;
             size_t after;
+
+            size_t Total() const { return before + after; }
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -84,6 +86,8 @@ namespace KernelSelector
             size_t v;
             size_t pitch;
             Pad    pad;
+
+            size_t LogicalDimPadded() const { return v + pad.Total(); }
         };
 
         using NDims = std::vector<Dim>;
@@ -230,6 +234,57 @@ namespace KernelSelector
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // Tensor Exaplnation
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        //
+        // resource     - 80x80
+        //      totalSize   - 6400
+        //      x pitch     - 1
+        //      y pitch     - 80
+        //
+        // view         - 60x60
+        // viewOffset   - (20,20) => 20*80+20 = 1620
+        //
+        // padding (contains "paddedVal"):
+        //      before  - x=20, y=20
+        //      after   - x=20, y=20.
+        //
+        // logical data - 40x40 (contains the actual data).
+        //
+        // firstElementOffset: 
+        //      (viewOffset_x + padBefore_x) + (viewOffset_y + padBefore_y)*y_pitch =
+        //      viewOffset + padBefore_x + padBefore_y*y_pitch = 
+        //      1620 + 20 + 20*80 = 3240
+        //
+        //
+        //                                      whole resource (80x80)
+        // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        // +                                                                                               +
+        // +                                                                                               +
+        // +                                view inside resource (60x60)                                   +
+        // +       +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++       +
+        // +       + start of padded part(20,20) = viewOffset                                      +       +
+        // +       +                                                                               +       +
+        // +       +                             logical data (40x40)                              +       +
+        // +       +       +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++       +       +
+        // +       +       + first element (40,40)                                         +       +       +
+        // +       +       +                                                               +       +       +
+        // +       +       +                                                               +       +       +
+        // +       +       +                                                               +       +       +
+        // +       +       +                                                               +       +       +
+        // +       +       +                                                               +       +       +
+        // +       +       +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++       +       +
+        // +       +                                                                               +       +
+        // +       +                                                                               +       +
+        // +       +                                                                               +       +
+        // +       +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++       +
+        // +                                                                                               +
+        // +                                                                                               +
+        // +                                                                                               +
+        // +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+        //
+        //
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // TensorBase
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         struct TensorBase
@@ -253,16 +308,31 @@ namespace KernelSelector
                 , totalSize(sz)
                 , paddedVal(pv)
             {
-                // TODO: make sure tensor is valid
-
                 if (totalSize == 0)
                 {
                     for (const auto& d : dims)
                     {
-                        totalSize = std::max(totalSize, d.pitch*(d.v + d.pad.before + d.pad.after));
+                        totalSize = std::max(totalSize, d.pitch*(d.LogicalDimPadded()));
                     }
 
                     totalSize += viewOffset;
+                }
+
+                size_t minimalPitch = 1;
+
+                for (const auto& d : dims)
+                {
+                    if (d.pitch < minimalPitch)
+                    {
+                        throw std::runtime_error("Tensor pitches didn't set correctly");
+                    }
+
+                    minimalPitch *= d.LogicalDimPadded();
+                }
+
+                if (totalSize < (minimalPitch + viewOffset))
+                {
+                    throw std::runtime_error("Tensor total Size didn't set correctly");
                 }
             }
 
@@ -273,11 +343,13 @@ namespace KernelSelector
 
             virtual uint32_t    ElementSize() const = 0;
 
+            // Size of the actual data (without padded part)
             size_t LogicalSize() const
             {
                 return std::accumulate(dims.cbegin(), dims.cend(), (size_t)1, [](size_t val, const Dim& d) {return val*d.v; });
             }
 
+            // Dimensions of the actual data (without padded part)
             std::vector<size_t> LogicalDims() const
             {
                 std::vector<size_t> res(dims.size());
@@ -285,16 +357,20 @@ namespace KernelSelector
                 return res;
             }
 
+            // Whole buffer size (in elements)
             size_t PhysicalSize() const
             {
                 return totalSize;
             }
 
+            // Whole buffer size (in bytes)
             size_t PhysicalSizeInBytes() const
             {
                 return totalSize * ElementSize();
             }
 
+            // if padded/view exists between logical dimensions.
+            // in other words, if we can consider the data as a 1Dim resource.
             bool PitchesDifferFromLogicalDims() const
             {
                 bool differ = false;

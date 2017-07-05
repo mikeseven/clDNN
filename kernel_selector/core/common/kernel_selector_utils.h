@@ -66,12 +66,13 @@ namespace KernelSelector { namespace
 
         Tensor::NDims dims(4);
         const Tensor::NDims& orgDims = params.inputs[0].GetDims();
-
+        size_t pitch = 1;
         for (size_t i = 0; i < dims.size(); i++)
         {
             dims[i].pad = pad[i];
             dims[i].v = orgDims[i].v;
-            dims[i].pitch = dims[i].pad.before + dims[i].v + dims[i].pad.after;
+            dims[i].pitch = pitch;
+            pitch *= dims[i].LogicalDimPadded();
         }
 
         return{dims, t.GetDType(), t.GetLayout()};

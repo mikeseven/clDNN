@@ -103,7 +103,6 @@ namespace KernelSelector
             return{ vec, dtype, l };
         }
 
-        // todo handle padding
         DataTensor DataTensor::FlattenFeatureAndSpatials() const
         {
             DataLayout l;
