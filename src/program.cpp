@@ -32,6 +32,7 @@
 
 #include "convolution_inst.h"
 #include "concatenation_inst.h"
+#include "deconvolution_inst.h"
 #include "detection_output_inst.h"
 #include "crop_inst.h"
 

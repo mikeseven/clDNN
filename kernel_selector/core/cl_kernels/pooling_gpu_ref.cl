@@ -105,11 +105,15 @@ KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
         }
         input_idx += (INPUT_Y_PITCH - WINDOW_SIZE_X*INPUT_X_PITCH);
     }
+    
+#ifdef DYNAMIC_KERNEL_DIVIDER
+    const uint num_elementes = WINDOW_SIZE_X*WINDOW_SIZE_Y;
+#endif
 #endif
 
 #if defined AVG_POOLING
     #ifdef DYNAMIC_KERNEL_DIVIDER
-        result /= (UNIT_TYPE)max(num_elementes, 1);
+        result /= (UNIT_TYPE)max(num_elementes, (uint)1);
     #else
         result /= (UNIT_TYPE)(WINDOW_SIZE_Y * WINDOW_SIZE_X);
     #endif

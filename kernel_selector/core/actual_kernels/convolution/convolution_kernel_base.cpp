@@ -129,9 +129,7 @@ namespace KernelSelector
     bool ConvolutionKernelBase::CheckPitchForSplitOnly(const ConvolutionParams& params) const
     {
         // TODO: it's better to add pitch+offset support than handle this case
-        return
-            CheckTensorForSplit(params.output, params.convParams.split) &&
-            CheckTensorForSplit(params.inputs[0], params.convParams.split);
+        return CheckTensorForSplit(params.inputs[0], params.convParams.split);
     }
 
     ConvolutionKernelBase::DispatchData ConvolutionKernelBase::SetDefault(const ConvolutionParams& params) const

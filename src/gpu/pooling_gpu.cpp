@@ -85,9 +85,27 @@ struct pooling_gpu : typed_primitive_impl<pooling>
             return kernel_selector::pool_type::MAX;
         case cldnn::pooling_mode::average:
             return kernel_selector::pool_type::AVG;
+        case cldnn::pooling_mode::average_no_padding:
+            return kernel_selector::pool_type::AVG;
         default:
             assert(0);
             return kernel_selector::pool_type::MAX;
+        }
+    }
+
+    static kernel_selector::kernel_divider_mode cldnn_2_kernel_divider_mode(cldnn::pooling_mode mode)
+    {
+        switch (mode)
+        {
+        case cldnn::pooling_mode::max:
+            return kernel_selector::kernel_divider_mode::DONT_CARE;
+        case cldnn::pooling_mode::average:
+            return kernel_selector::kernel_divider_mode::FIXED;
+        case cldnn::pooling_mode::average_no_padding:
+            return kernel_selector::kernel_divider_mode::DYNAMIC;
+        default:
+            assert(0);
+            return kernel_selector::kernel_divider_mode::DONT_CARE;
         }
     }
 
@@ -106,7 +124,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
 
         pp.poolType                 = cldnn_2_pool_type(primitive->mode);
         pp.remainderAction          = kernel_selector::pool_remainder::CEIL;
-        pp.divMode                  = kernel_selector::kernel_divider_mode::DONT_CARE;
+        pp.divMode                  = cldnn_2_kernel_divider_mode(primitive->mode);
         
         pp.poolSize = {
             (uint32_t)primitive->size.spatial[0],

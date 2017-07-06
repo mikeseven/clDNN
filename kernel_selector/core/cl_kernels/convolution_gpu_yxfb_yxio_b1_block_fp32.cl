@@ -52,94 +52,88 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block)(
 
     const uint ofm_offset = (global_id * (OFM_PER_WORK_ITEM / batch_num)) % FILTER_OUTPUT_FEATURE_NUM;
 
-    bool finish = false;
-
-    finish = out_x >= OUTPUT_SIZE_X;
-    finish = out_y >= OUTPUT_SIZE_Y ? true : finish;
-
     const uint sub_group_id = (uint)get_local_id(0) % INPUT_BATCH_NUM;
 
     VECTOR_FLOAT _data0 = 0.f;
 
-    if(!finish)
+    const int x = (int)out_x * STRIDE_SIZE_X - PADDING_SIZE_X;
+    const int y = (int)out_y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
+
+    for (uint i = 0; i < FILTER_SIZE_Y; i++)
     {
-        const int x = (int)out_x * STRIDE_SIZE_X - PADDING_SIZE_X;
-        const int y = (int)out_y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
+        const int input_offset_y = y + i * DILATION_SIZE_Y;
+        const bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
 
-        for (uint i = 0; i < FILTER_SIZE_Y; i++)
+        if(!zero_y)
         {
-            const int input_offset_y = y + i * DILATION_SIZE_Y;
-            const bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
-
-            if(!zero_y)
+            for (uint j = 0; j < FILTER_SIZE_X; j++)
             {
-                for (uint j = 0; j < FILTER_SIZE_X; j++)
+                const int input_offset_x = x + j * DILATION_SIZE_X;
+                const bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
+
+                if(!zero)
                 {
-                    const int input_offset_x = x + j * DILATION_SIZE_X;
-                    const bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
+                    uint input_idx = input_offset_x*INPUT_X_PITCH + input_offset_y*INPUT_Y_PITCH;
+                    input_idx += INPUT_OFFSET + split_idx * FILTER_INPUT_FEATURE_NUM * INPUT_FEATURE_PITCH;
+                    input_idx += out_batch_id;
 
-                    if(!zero)
-                    {
-                        uint input_idx = input_offset_x*INPUT_X_PITCH + input_offset_y*INPUT_Y_PITCH;
-                        input_idx += split_idx * FILTER_INPUT_FEATURE_NUM * INPUT_FEATURE_PITCH;
-                        input_idx += out_batch_id;
-
-                        uint filter_idx = ofm_offset + sub_group_id + i*FILTER_Y_PITCH + j*FILTER_X_PITCH;
+                    uint filter_idx = ofm_offset + sub_group_id + i*FILTER_Y_PITCH + j*FILTER_X_PITCH;
 
 #if INPUT_BATCH_NUM == 1
-                        for(uint h = 0; h < FILTER_INPUT_FEATURE_NUM / 8; h++)
-                        {
-                            float _in = as_float(intel_sub_group_block_read((const __global uint*)input + input_idx));
-                            float8 _input = TRANSPOSE_BLOCK_8(_in);
+                    for(uint h = 0; h < FILTER_INPUT_FEATURE_NUM / 8; h++)
+                    {
+                        float _in = as_float(intel_sub_group_block_read((const __global uint*)input + input_idx));
+                        float8 _input = TRANSPOSE_BLOCK_8(_in);
 
-                            VECTOR_FLOAT _filter;
-                            _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
-                            _data0 = mad(_input.s0, _filter, _data0);
+                        VECTOR_FLOAT _filter;
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _data0 = mad(_input.s0, _filter, _data0);
 
-                            _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
-                            _data0 = mad(_input.s1, _filter, _data0);
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _data0 = mad(_input.s1, _filter, _data0);
 
-                            _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
-                            _data0 = mad(_input.s2, _filter, _data0);
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _data0 = mad(_input.s2, _filter, _data0);
 
-                            _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
-                            _data0 = mad(_input.s3, _filter, _data0);
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _data0 = mad(_input.s3, _filter, _data0);
 
-                            _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
-                            _data0 = mad(_input.s4, _filter, _data0);
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _data0 = mad(_input.s4, _filter, _data0);
 
-                            _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
-                            _data0 = mad(_input.s5, _filter, _data0);
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _data0 = mad(_input.s5, _filter, _data0);
 
-                            _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
-                            _data0 = mad(_input.s6, _filter, _data0);
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _data0 = mad(_input.s6, _filter, _data0);
 
-                            _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
-                            _data0 = mad(_input.s7, _filter, _data0);
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _data0 = mad(_input.s7, _filter, _data0);
 
-                            input_idx += 8 * INPUT_FEATURE_PITCH;
-                        }
-                        for (uint h = FILTER_INPUT_FEATURE_NUM - (FILTER_INPUT_FEATURE_NUM % 8); h < FILTER_INPUT_FEATURE_NUM; h++)
+                        input_idx += 8 * INPUT_FEATURE_PITCH;
+                    }
+                    for (uint h = FILTER_INPUT_FEATURE_NUM - (FILTER_INPUT_FEATURE_NUM % 8); h < FILTER_INPUT_FEATURE_NUM; h++)
 #else
-                        for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
+                    for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
 #endif
-                        {
-                            VECTOR_FLOAT _filter = BLOCK_READ(filter + filter_idx);
-                            _data0 = mad(input[input_idx], _filter, _data0);
-                            filter_idx += FILTER_IFM_PITCH;
-                            input_idx += INPUT_FEATURE_PITCH;
-                        }
+                    {
+                        VECTOR_FLOAT _filter = BLOCK_READ(filter + filter_idx);
+                        _data0 = mad(input[input_idx], _filter, _data0);
+                        filter_idx += FILTER_IFM_PITCH;
+                        input_idx += INPUT_FEATURE_PITCH;
                     }
                 }
             }
         }
     }
+
 #if BIAS_TERM
     _data0 += BLOCK_READ(bias + ofm_offset);
 #endif
     ACTIVATION(_data0, _data0);
 
-    BLOCK_WRITE(output + out_id, _data0);
+    uint _out_id = OUTPUT_OFFSET + out_id;
+    BLOCK_WRITE(output + _out_id, _data0);
 #if defined(USE_VECTOR_8) || defined(USE_VECTOR_4) || defined(USE_VECTOR_2)
     #undef VECTOR_FLOAT
     #undef BLOCK_READ

@@ -518,6 +518,7 @@ inline JitConstants MakePoolingJitConstants(const PoolingParams& params)
         MakeJitConstant("STRIDE",   pp.poolStride),
         MakeJitConstant("PADDING",  pp.poolPad),
         MakeJitConstant(toString(pp.poolType) + "_POOLING", 1),
+        MakeJitConstant(toString(pp.divMode) + "_KERNEL_DIVIDER", 1),
     });
 
     return jit;

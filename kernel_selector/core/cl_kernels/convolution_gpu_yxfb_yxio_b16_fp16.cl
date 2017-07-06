@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
 #include "include/common.cl"
 
 __attribute__((intel_reqd_sub_group_size(16)))
@@ -57,80 +58,73 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
 
     const uint ofm_offset = ((global_id * OFM_PER_WORK_ITEM) / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) % FILTER_OUTPUT_FEATURE_NUM;
 
-    bool finish = false;
-
-    finish = out_x >= OUTPUT_SIZE_X;
-    finish = out_y >= OUTPUT_SIZE_Y ? true : finish;
-
-
     // Each component of vector element contains computation for separate output feature.
     half16 _data[BATCHES_PER_WORK_ITEM];
     for(uint i = 0; i < BATCHES_PER_WORK_ITEM; i++)
     {
         _data[i] = UNIT_VAL_ZERO;
     }
-    if(!finish)
+
+    const int x = (int)out_x * STRIDE_SIZE_X - PADDING_SIZE_X;
+    const int y = (int)out_y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
+
+    for (uint i = 0; i < FILTER_SIZE_Y; i++)
     {
-        const int x = (int)out_x * STRIDE_SIZE_X - PADDING_SIZE_X;
-        const int y = (int)out_y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
+        const int input_offset_y = y + i * DILATION_SIZE_Y;
+        const bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
 
-        for (uint i = 0; i < FILTER_SIZE_Y; i++)
+        if(!zero_y)
         {
-            const int input_offset_y = y + i * DILATION_SIZE_Y;
-            const bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
-
-            if(!zero_y)
+            for (uint j = 0; j < FILTER_SIZE_X; j++)
             {
-                for (uint j = 0; j < FILTER_SIZE_X; j++)
+                const int input_offset_x = x + j * DILATION_SIZE_X;
+                const bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
+
+                if(!zero)
                 {
-                    const int input_offset_x = x + j * DILATION_SIZE_X;
-                    const bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
+                    uint input_idx = input_offset_x*INPUT_X_PITCH + input_offset_y*INPUT_Y_PITCH;
+                    input_idx += INPUT_OFFSET + split_idx * FILTER_INPUT_FEATURE_NUM * INPUT_FEATURE_PITCH;
+                    input_idx += out_batch_id;
 
-                    if(!zero)
+                    //sub_group_id used as offset to make each workitem load different filter, and then shuffle it
+                    // 2 * sub_group_id is used because we group 2 halfs as one uint element.
+                    uint filter_idx = ofm_offset + 2*sub_group_id + i*FILTER_Y_PITCH + j*FILTER_X_PITCH;
+
+                    for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
                     {
-                        uint input_idx = input_offset_x*INPUT_X_PITCH + input_offset_y*INPUT_Y_PITCH;
-                        input_idx += split_idx * FILTER_INPUT_FEATURE_NUM * INPUT_FEATURE_PITCH;
-                        input_idx += out_batch_id;
-
-                        //sub_group_id used as offset to make each workitem load different filter, and then shuffle it
-                        // 2 * sub_group_id is used because we group 2 halfs as one uint element.
-                        uint filter_idx = ofm_offset + 2*sub_group_id + i*FILTER_Y_PITCH + j*FILTER_X_PITCH;
-
-                        for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
-                        {
 #if defined(USE_BLOCK_READ_2)
-                            half4 _input = as_half4(intel_sub_group_block_read2((const __global uint*)(input + input_idx)));
-                            uint filter_val_pair = *(const __global uint*)(filter + filter_idx);
-                            half16 filter_transp = TRANSPOSE_BLOCK_16_FP16(filter_val_pair);
-                            _data[0] = fma(_input.s0, filter_transp, _data[0]);
-                            _data[1] = fma(_input.s1, filter_transp, _data[1]);
-                            _data[2] = fma(_input.s2, filter_transp, _data[2]);
-                            _data[3] = fma(_input.s3, filter_transp, _data[3]);
-                            input_idx += INPUT_FEATURE_PITCH;
+                        half4 _input = as_half4(intel_sub_group_block_read2((const __global uint*)(input + input_idx)));
+                        uint filter_val_pair = *(const __global uint*)(filter + filter_idx);
+                        half16 filter_transp = TRANSPOSE_BLOCK_16_FP16(filter_val_pair);
+                        _data[0] = fma(_input.s0, filter_transp, _data[0]);
+                        _data[1] = fma(_input.s1, filter_transp, _data[1]);
+                        _data[2] = fma(_input.s2, filter_transp, _data[2]);
+                        _data[3] = fma(_input.s3, filter_transp, _data[3]);
+                        input_idx += INPUT_FEATURE_PITCH;
 #elif defined(USE_BLOCK_READ_1)
-                            half2 _input = as_half2(intel_sub_group_block_read((const __global uint*)(input + input_idx)));
-                            uint filter_val_pair = *(const __global uint*)(filter + filter_idx);
-                            half16 filter_transp = TRANSPOSE_BLOCK_16_FP16(filter_val_pair);
-                            _data[0] = fma(_input.s0, filter_transp, _data[0]);
-                            _data[1] = fma(_input.s1, filter_transp, _data[1]);
-                            input_idx += INPUT_FEATURE_PITCH;
+                        half2 _input = as_half2(intel_sub_group_block_read((const __global uint*)(input + input_idx)));
+                        uint filter_val_pair = *(const __global uint*)(filter + filter_idx);
+                        half16 filter_transp = TRANSPOSE_BLOCK_16_FP16(filter_val_pair);
+                        _data[0] = fma(_input.s0, filter_transp, _data[0]);
+                        _data[1] = fma(_input.s1, filter_transp, _data[1]);
+                        input_idx += INPUT_FEATURE_PITCH;
 #else
-                            uint filter_val_pair = *(const __global uint*)(filter + filter_idx);
-                            half16 filter_transp = TRANSPOSE_BLOCK_16_FP16(filter_val_pair);
-                            for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
-                            {
-                                _data[s] = fma(input[input_idx], filter_transp, _data[s]);
-                                input_idx += LOCAL_WORK_GROUP_SIZE;
-                            }
-                            input_idx += INPUT_FEATURE_PITCH - BATCHES_PER_WORK_ITEM * LOCAL_WORK_GROUP_SIZE;
-#endif
-                            filter_idx += FILTER_IFM_PITCH;
+                        uint filter_val_pair = *(const __global uint*)(filter + filter_idx);
+                        half16 filter_transp = TRANSPOSE_BLOCK_16_FP16(filter_val_pair);
+                        for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
+                        {
+                            _data[s] = fma(input[input_idx], filter_transp, _data[s]);
+                            input_idx += LOCAL_WORK_GROUP_SIZE;
                         }
+                        input_idx += INPUT_FEATURE_PITCH - BATCHES_PER_WORK_ITEM * LOCAL_WORK_GROUP_SIZE;
+#endif
+                        filter_idx += FILTER_IFM_PITCH;
                     }
                 }
             }
         }
     }
+
 #if BIAS_TERM
     uint bias_val_pair = *(const __global uint*)(bias + (ofm_offset + 2 * sub_group_id));
     for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
@@ -146,7 +140,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
 #if defined(USE_BLOCK_READ_2) || defined(USE_BLOCK_READ_1)
     for(uint s = 0; s < BATCHES_PER_WORK_ITEM / 2; s++)
     {
-        uint _out_id = out_id + chunk_size * s * LOCAL_WORK_GROUP_SIZE;
+        uint _out_id = OUTPUT_OFFSET + out_id + chunk_size * s * LOCAL_WORK_GROUP_SIZE;
         *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s0, _data[chunk_size * s + 1].s0)); _out_id += OUTPUT_FEATURE_PITCH;
         *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s1, _data[chunk_size * s + 1].s1)); _out_id += OUTPUT_FEATURE_PITCH;
         *(__global uint*)(output + _out_id) = as_uint((half2)(_data[chunk_size * s].s2, _data[chunk_size * s + 1].s2)); _out_id += OUTPUT_FEATURE_PITCH;
@@ -167,7 +161,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
 #else
     for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
     {
-        int _out_id = out_id + s * LOCAL_WORK_GROUP_SIZE;
+        uint _out_id = OUTPUT_OFFSET + out_id + s * LOCAL_WORK_GROUP_SIZE;
         output[_out_id] = _data[s].s0; _out_id += OUTPUT_FEATURE_PITCH;
         output[_out_id] = _data[s].s1; _out_id += OUTPUT_FEATURE_PITCH;
         output[_out_id] = _data[s].s2; _out_id += OUTPUT_FEATURE_PITCH;

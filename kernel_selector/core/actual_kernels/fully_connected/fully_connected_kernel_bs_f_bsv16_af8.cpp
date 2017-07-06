@@ -32,7 +32,7 @@ namespace KernelSelector
         k.EnableBatching();
         k.EnableBiasPerFeature();
         k.EnableNonBiasTerm();
-        k.EnableSubGroup();
+        //k.EnableSubGroup();       // manually check for FP32 only
         return k;
     }
 
@@ -68,6 +68,12 @@ namespace KernelSelector
 
         const auto& params = static_cast<const FullyConnectedParams&>(p);
         const auto& optParams = static_cast<const FullyConnectedOptionalParams&>(o);
+
+        if (!o.bSupportSubGroupExt && params.inputs[0].GetDType() == Datatype::F16)
+        {
+            // FP32 path is not using subgroup short extension
+            return false;
+        }
 
         const bool bProperBatch = params.inputs[0].Batch().v == 16;
         const bool bProperInput = check_input_layout(params.inputs[0]);
