@@ -36,6 +36,7 @@
 #include "crop_inst.h"
 
 #include "kernel_selector_helper.h"
+#include "sliding_window_utils.h"
 
 namespace cldnn
 {
@@ -191,12 +192,81 @@ layout program_node::get_output_layout()
 }
 
 program_impl::program_impl(engine_impl::ptr engine, topology_impl const& topology, build_options const& options)
-    : engine(engine), options(options)
+    : engine(engine), options(options), output_size_handling_enabled(true)
 {
     init_graph(topology);
     pre_optimize_graph();
     compile_graph();
     post_optimize_graph();
+}
+
+// TODO: Remove once we will get full support for input/output padding in all primitive implementations.
+void program_impl::analyze_output_size_handling_need()
+{
+    bool handling_needed = false;
+
+    // Calculate output size and compare with specified.
+    for (const auto& node : processing_order)
+    {
+        if (node->is_type<convolution>())
+        {
+            auto& prim_node = node->as<convolution>();
+            const auto& prim = prim_node.get_primitive();
+
+            if (!prim->with_output_size)
+                continue;
+
+            tensor specified_output_range({0, 0, prim->output_size.spatial[0], prim->output_size.spatial[1]}, 1);
+
+            auto filter_size = prim_node.weights(0).get_output_layout().size;
+
+            auto calc_output_range = calc_sliding_window_output_range<swor_mode::all>(
+                prim_node.input().get_output_layout().size,
+                filter_size, prim->input_offset, prim->stride, prim->dilation, true, 1);
+
+            if (specified_output_range != calc_output_range)
+                handling_needed = true;
+        }
+        else if (node->is_type<deconvolution>())
+        {
+            auto& prim_node = node->as<deconvolution>();
+            const auto& prim = prim_node.get_primitive();
+
+            if (!prim->with_output_size)
+                continue;
+
+            tensor specified_output_range({0, 0, prim->output_size.spatial[0], prim->output_size.spatial[1]}, 1);
+
+            auto filter_size = prim_node.weights(0).get_output_layout().size;
+
+            auto calc_output_range = calc_sliding_window_needed_input_range(
+                prim_node.input().get_output_layout().size,
+                filter_size, prim->input_offset, prim->stride, {1, 1, 1, 1}, true, 1);
+
+            if (specified_output_range != calc_output_range)
+                handling_needed = true;
+        }
+        else if (node->is_type<pooling>())
+        {
+            auto& prim_node = node->as<pooling>();
+            const auto& prim = prim_node.get_primitive();
+
+            if (!prim->with_output_size)
+                continue;
+
+            tensor specified_output_range({0, 0, prim->output_size.spatial[0], prim->output_size.spatial[1]}, 1);
+
+            // TODO: Check compatibility of output size calculation (with caffe).
+            auto calc_output_range = calc_sliding_window_output_range<swor_mode::exceed_once_data>(
+                prim_node.input().get_output_layout().size,
+                prim->size, prim->input_offset, prim->stride, {1, 1, 1, 1}, true, 1);
+
+            if (specified_output_range != calc_output_range)
+                handling_needed = true;
+        }
+    }
+
+    output_size_handling_enabled = handling_needed;
 }
 
 std::list<std::shared_ptr<program_node>> program_impl::get_nodes() const
@@ -253,9 +323,11 @@ void program_impl::pre_optimize_graph()
 {
     trim_to_outputs();
 
+    analyze_output_size_handling_need();
+
     if (options.get<build_option_type::optimize_data>()->enabled())
     {
-        layout_optimizer lo(engine);
+        layout_optimizer lo(engine, true, output_size_handling_enabled);
         reorder_inputs(lo);
         // this code should move to post compilation after kernel selector will support handling reorder bias
         pre_optimize_bias(lo);
@@ -421,6 +493,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                     new_input = nullptr;
                 }
             }
+
+            input_node.recalc_output_layout();
         }
 
         if (new_input)
@@ -614,8 +688,89 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
     lo.optimize();
 }
 
+void program_impl::apply_needed_padding(program_node& node, program_node& prev_node,
+                                                const padding& needed_padding)
+{
+    auto target_layout = prev_node.get_output_layout();
+
+    // Short circuit if padding did not change.
+    if (target_layout.data_padding == needed_padding)
+        return;
+
+    // Special handling for input nodes.
+    if (prev_node.is_type<input_layout>())
+    {
+        target_layout.data_padding = needed_padding;
+
+        auto r_prim = std::make_shared<reorder>("reorder_" + prev_node.id(), prev_node.id(), target_layout);
+        add_intermediate(r_prim, node, 0);
+        return;
+    }
+
+    prev_node.merge_output_padding(needed_padding);
+}
+
 void program_impl::prepare_padding()
 {
+    if (output_size_handling_enabled)
+    {
+        // Prepare upper padding for primitives that support output_size parameter.
+        for (const auto& node : processing_order)
+        {
+            if (node->is_type<convolution>())
+            {
+                auto& prim_node = node->as<convolution>();
+                const auto& prim = prim_node.get_primitive();
+
+                if (!prim->with_output_size)
+                    continue;
+
+                auto filter_size = prim_node.weights(0).get_output_layout().size;
+
+                auto needed_padding = calc_sliding_window_needed_input_padding(
+                    prim_node.input().get_output_layout(),
+                    prim->output_size, filter_size, prim->input_offset, prim->stride, prim->dilation, false, 1);
+
+                apply_needed_padding(prim_node, prim_node.input(), needed_padding);
+            }
+            else if (node->is_type<deconvolution>())
+            {
+                auto& prim_node = node->as<deconvolution>();
+                const auto& prim = prim_node.get_primitive();
+
+                if (!prim->with_output_size)
+                    continue;
+
+                auto filter_size = prim_node.weights(0).get_output_layout().size;
+
+                auto needed_padding = calc_sliding_window_needed_input_padding(
+                    prim_node.input().get_output_layout(),
+                    prim->output_size, filter_size, prim->input_offset, prim->stride, {1, 1, 1, 1}, true, 1);
+
+                apply_needed_padding(prim_node, prim_node.input(), needed_padding);
+            }
+            else if (node->is_type<pooling>())
+            {
+                auto& prim_node = node->as<pooling>();
+                const auto& prim = prim_node.get_primitive();
+
+                if (!prim->with_output_size)
+                    continue;
+
+                // NOTE: Currently there is no pooling implementation/pooling mode which does not check input data range.
+                // There is no need to add padding requirements on pooling inputs.
+                //auto needed_padding = calc_sliding_window_needed_input_padding(
+                //    prim_node.input().get_output_layout(),
+                //    prim->output_size, prim->size, prim->input_offset, prim->stride, {1, 1, 1, 1}, false, 1);
+                auto needed_padding = prim_node.input().get_output_layout().data_padding;
+
+                apply_needed_padding(prim_node, prim_node.input(), needed_padding);
+            }
+        }
+    }
+
+
+    // Prepare optimized padding for bfyx convolution.
     for (auto& pair : nodes_map)
     {
         if (pair.second->get_primitive()->type != convolution::type_id())
@@ -664,8 +819,9 @@ void program_impl::prepare_padding()
         //right_padding = needed_buffer_size_x - left_padding - prev_prim_output_layout.size.spatial[0];
 
         cldnn::padding needed_padding({ 0, 0, left_padding, top_padding }, { 0, 0, right_padding, bottom_padding }, 0);
+        needed_padding = padding::max(prev_prim_output_layout.data_padding, needed_padding);
 
-        conv_input_node.merge_output_padding(needed_padding);
+        apply_needed_padding(node, conv_input_node, needed_padding);
     }
 }
 

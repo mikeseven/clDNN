@@ -77,6 +77,8 @@ private:
     topology_impl _topology;
     engine_impl::ptr _engine;
     optimization_attributes _optimization_attributes;
+    // TODO: Remove once we will get full support for input/output padding in all primitive implementations.
+    bool _output_size_handling_enabled;
 
     struct cache_key
     {
@@ -118,7 +120,7 @@ private:
     create_reorder_from_given_source(const cldnn::primitive_id& memid, layout const& expected_layout, const kernel_selector::weights_reorder_params& reorder_params);
 
 public:
-    explicit layout_optimizer(engine_impl::ptr eng, bool enabled = true);
+    explicit layout_optimizer(engine_impl::ptr eng, bool enabled = true, bool output_size_handling_enabled = true);
 
     //this method creates reorder for data, which is currently in 'data_layout' format, to best format in context of 'user' primitive.
     //data is used by 'user' in a way described by 'type' (i.e. weights/bias/input).

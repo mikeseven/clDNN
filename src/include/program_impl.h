@@ -283,6 +283,9 @@ private:
 
     std::list<primitive_id> optimized_out;
 
+    // TODO: Remove once we will get full support for input/output padding in all primitive implementations.
+    bool output_size_handling_enabled;
+
     /*
     ** High-level functions, in order of usage
     */
@@ -294,12 +297,19 @@ private:
     void set_outputs();
 
     /*
+    ** Analysis functions
+    */
+    // TODO: Remove once we will get full support for input/output padding in all primitive implementations.
+    void analyze_output_size_handling_need();
+
+    /*
     ** Optimization functions
     */
     void trim_to_outputs();
     void reorder_inputs(layout_optimizer& lo);
     void pre_optimize_bias(layout_optimizer& lo);
     void post_optimize_weights(layout_optimizer& lo);
+    void apply_needed_padding(program_node& node, program_node& prev_node, const padding& needed_padding);
     void prepare_padding();
     void prepare_buffer_fusing();
 
