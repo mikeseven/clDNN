@@ -17,6 +17,7 @@
 #include "activation_inst.h"
 #include "kernel.h"
 #include "implementation_map.h"
+#include "error_handler.h"
 #include "kernel_selector_helper.h"
 
 namespace cldnn { namespace gpu {
@@ -62,20 +63,14 @@ struct activation_gpu : typed_primitive_impl<activation>
 
             const auto params_num = KernelSelector::GetActivationAdditionalParamsNumber(activation_params.activationFunc);
 
-            if (slope_layout.size.count() < static_cast<size_t>(output_layout.size.feature[0] * params_num))
-            {
-                throw std::runtime_error("Error - not enough data inside additional params buffer");
-            }
-
+            CLDNN_ERROR_LESS_THAN(arg.id(), "Slope layout size count", slope_layout.size.count(), "output_layout.size.feature[0] * params_num", static_cast<size_t>(output_layout.size.feature[0] * params_num), "Error - not enough data inside additional params buffer");
+            
             activation_params.actParams.inputNlParams.push_back(convert_data_tensor(slope_layout));
         }
 
         auto& kernel_selector = kernel_selector::activation_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(activation_params, activation_optional_params);
-        if (best_kernels.empty())
-        {
-            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
-        }
+        CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 
         auto activation = new activation_gpu(arg, best_kernels[0]);
 

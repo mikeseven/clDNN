@@ -18,6 +18,7 @@
 #include "kernel.h"
 #include "implementation_map.h"
 #include "roi_pooling/roi_pooling_kernel_selector.h"
+#include "error_handler.h"
 #include "kernel_selector_helper.h"
 
 namespace cldnn { namespace gpu {
@@ -63,26 +64,19 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
 
         const auto padding_filling_value = output_layout.data_padding.filling_value();
 
-        if (padding_filling_value != 0.0f) {
-            throw std::logic_error("ROI pooling supports only zero padding.");
-        }
-
-        if (input_layout.format != output_layout.format) {
-            throw std::invalid_argument("ROI pooling input/output data format does not match.");
-        }
+        CLDNN_ERROR_NOT_EQUAL(arg.id(), "roi_pooling padding filling value", padding_filling_value, "padding mode", 0.0f, "Unknown padding mode in roi_pooling.");
+        CLDNN_ERROR_NOT_PROPER_FORMAT(arg.id(), "Input_layout.format", input_layout.format.value, "output_layout.format", output_layout.format);
 
         auto group_sz = primitive->group_sz;
         auto in_feat = input_layout.get_buffer_size().feature[0];
         auto out_feat = output_layout.get_buffer_size().feature[0];
 
-        if (group_sz < 0 || (group_sz && in_feat != group_sz * group_sz * out_feat)) {
-            throw std::invalid_argument("group_sz must be either 0 (For RoIPooling) or satisfy ifm == ofm * group_sz * group_sz (For PSRoIPooling)");
+        CLDNN_ERROR_LESS_THAN(arg.id(), "Group size", group_sz, "value", 0, "");
+        if (group_sz) {
+            CLDNN_ERROR_NOT_EQUAL(arg.id(), "input feture map", in_feat, "group_sz * group_sz * out_feat", group_sz * group_sz * out_feat, "");
         }
+        CLDNN_ERROR_BOOL(arg.id(), "Batching", !hasSingleBatchOutput(arg.input()), "PS/ RoI Pooling doesn't support batching.");
 
-        if (!hasSingleBatchOutput(arg.input())) {
-            throw std::invalid_argument("PS/ RoI Pooling doesn't support batching.");
-        }
-        
         auto roi_params = get_default_params<kernel_selector::roi_pooling_v1_params>(arg);
         auto roi_optional_params = get_default_optional_params<kernel_selector::roi_pooling_optional_params>(arg.get_program());
         
@@ -101,10 +95,7 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
         auto& kernel_selector = kernel_selector::roi_pooling_v1_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(roi_params, roi_optional_params);
 
-        if (best_kernels.empty())
-        {
-            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
-        }
+        CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 
         auto roi_pool = new roi_pooling_gpu(arg, best_kernels[0]);
 

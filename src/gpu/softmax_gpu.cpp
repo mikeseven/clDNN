@@ -18,6 +18,7 @@
 #include "kernel.h"
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
+#include "error_handler.h"
 
 namespace cldnn { namespace gpu {
 
@@ -81,10 +82,7 @@ struct softmax_gpu : typed_primitive_impl<softmax>
         auto& kernel_selector = kernel_selector::softmax_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(sm_params, sm_optional_params);
 
-        if (best_kernels.empty())
-        {
-            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
-        }
+        CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 
         auto softmax_node = new softmax_gpu(arg, best_kernels[0]);
 

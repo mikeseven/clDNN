@@ -19,14 +19,14 @@
 #include "network_impl.h"
 #include "engine_impl.h"
 #include "memory_impl.h"
+#include "error_handler.h"
 
 namespace cldnn
 {
 event_impl::ptr primitive_inst::execute(const std::vector<event_impl::ptr>& events)
 {
-    if (!_has_valid_input)
-        throw std::runtime_error("Cannot execute primitive " + id() + " with invalid/unset input");
- 
+    CLDNN_ERROR_BOOL(id(), "Invalid/unset input", !_has_valid_input, "Cannot execute primitive " + id() + " with invalid/unset input");
+
     on_execute();
 
     if (_deps.size() == 0)

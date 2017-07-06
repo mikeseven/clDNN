@@ -17,6 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "eltwise_inst.h"
 #include "primitive_type_base.h"
+#include "error_handler.h"
 
 namespace cldnn
 {
@@ -76,9 +77,6 @@ eltwise_inst::typed_primitive_inst(network_impl& network, eltwise_node const& no
     auto input_layout = input_memory().get_layout();
     auto input2_layout = input2_memory().get_layout();
 
-    if (input_layout != input2_layout)
-    {
-        throw std::runtime_error("Different layouts of eltwise's inputs");
-    }
+    CLDNN_ERROR_LAYOUT_MISMATCH(node.id(), "input layout", input_layout, "input_2 layout", input2_layout, "Different layouts of eltwise's inputs");
 }
 }

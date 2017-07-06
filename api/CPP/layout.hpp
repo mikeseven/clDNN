@@ -177,6 +177,11 @@ struct padding
             && lhs._filling_value == rhs._filling_value;
     }
 
+    friend bool operator !=(const padding& lhs, const padding& rhs)
+    {
+        return !(lhs == rhs);
+    }
+
     friend bool operator <(const padding& lhs, const padding& rhs)
     {
         if (lhs._filling_value != rhs._filling_value)

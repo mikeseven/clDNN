@@ -17,6 +17,7 @@
 #include "pooling_inst.h"
 #include "kernel.h"
 #include "implementation_map.h"
+#include "error_handler.h"
 #include "kernel_selector_helper.h"
 
 namespace cldnn { namespace gpu {
@@ -60,14 +61,9 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         auto& window = arg.get_primitive()->size;
         auto const& window_dimensions = window.batch.size() + window.feature.size() + window.spatial.size();
 
-        if (input_dimensions != output_dimensions)
-            throw std::invalid_argument("Pooling input/output number of dimension does not match.");
-
-        if (stride_dimensions != output_dimensions)
-            throw std::invalid_argument("Pooling stride/output number of dimension does not match.");
-
-        if (window_dimensions != output_dimensions)
-            throw std::invalid_argument("Pooling window_size/output number of dimension does not match.");
+        CLDNN_ERROR_NOT_EQUAL(arg.id(), "input dimensions", input_dimensions, "output dimensions", output_dimensions, "");
+        CLDNN_ERROR_NOT_EQUAL(arg.id(), "stride dimensions", stride_dimensions, "output dimensions", output_dimensions, "");
+        CLDNN_ERROR_NOT_EQUAL(arg.id(), "window dimensions", window_dimensions, "output dimensions", output_dimensions, "");
     }
 
     static kernel_selector::pool_type cldnn_2_pool_type(cldnn::pooling_mode mode)
@@ -137,10 +133,7 @@ struct pooling_gpu : typed_primitive_impl<pooling>
         auto& kernel_selector   = kernel_selector::pooling_kernel_selector::Instance();
         auto best_kernels       = kernel_selector.GetBestKernels(pool_params, pool_optional_params);
 
-        if (best_kernels.empty())
-        {
-            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
-        }
+        CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 
         auto pool = new pooling_gpu(arg, best_kernels[0]);
 

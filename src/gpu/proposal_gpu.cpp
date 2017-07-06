@@ -21,6 +21,7 @@
 #include "network_impl.h"
 #include "engine_impl.h"
 #include "math_utils.h"
+#include "error_handler.h"
 
 #include <algorithm>
 #include <string>
@@ -376,12 +377,10 @@ struct proposal_gpu : typed_primitive_impl<proposal>
         const size_t count = l.size.count();
 
         if ((size_t)l.size.spatial[0] != count || (count != 3 && count != 6)) {
-            throw std::invalid_argument("image_info must have either 3 or 6 items");
+            CLDNN_ERROR_MESSAGE(arg.id(), "image_info must have either 3 or 6 items");
         }
-
-        if (!hasSingleBatchOutput(arg.bbox_pred()) || !hasSingleBatchOutput(arg.cls_score())) {
-            throw std::invalid_argument("Proposal doesn't support batching.");
-        }
+        CLDNN_ERROR_BOOL(arg.id(), "Batching", !hasSingleBatchOutput(arg.bbox_pred()), "Proposal doesn't support batching.");
+        CLDNN_ERROR_BOOL(arg.id(), "Batching", !hasSingleBatchOutput(arg.cls_score()), "Proposal doesn't support batching.");
 
         return new proposal_gpu(arg);
     }

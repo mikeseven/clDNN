@@ -19,6 +19,7 @@
 #include "implementation_map.h"
 #include "eltwise/eltwise_kernel_selector.h"
 #include "kernel_selector_helper.h"
+#include "error_handler.h"
 
 using namespace cldnn;
 
@@ -76,10 +77,7 @@ struct scale_gpu : typed_primitive_impl<scale>
         auto& kernel_selector = kernel_selector::eltwise_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(ew_params, ew_optional_params);
 
-        if (best_kernels.empty())
-        {
-            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
-        }
+        CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 
         auto scale = new scale_gpu(arg, best_kernels[0]);
 

@@ -18,7 +18,10 @@
 #include "kernel.h"
 #include "implementation_map.h"
 #include "events_waiter.h"
+#include "error_handler.h"
 #include "kernel_selector_helper.h"
+#include "error_handler.h"
+
 #include <initializer_list>
 
 namespace cldnn { namespace gpu {
@@ -43,10 +46,7 @@ struct concatenation_gpu : typed_primitive_impl<concatenation>
 
         if (!outer.can_be_optimized())
         {
-            if (inputs_count != kds.size())
-            {
-                throw std::runtime_error("Error - not enough kernels for concatenation");
-            }
+            CLDNN_ERROR_NOT_EQUAL(outer.id(), "Input count", inputs_count, "kds size", kds.size(), "Error - not enough kernels for concatenation");
 
             _kernels.reserve(inputs_count);
             for (size_t i = 0; i < kds.size(); ++i)
@@ -126,10 +126,7 @@ struct concatenation_gpu : typed_primitive_impl<concatenation>
                 concat_params.output    = convert_data_tensor(arg.get_output_layout(), 1, offset);
 
                 auto best_kernels = kernel_selector.GetBestKernels(concat_params, concat_optional_params);
-                if (best_kernels.empty())
-                {
-                    throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
-                }
+                CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 
                 kds.push_back(best_kernels[0]);
 

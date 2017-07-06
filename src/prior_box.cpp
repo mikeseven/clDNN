@@ -16,6 +16,7 @@
 
 #include "prior_box_inst.h"
 #include "primitive_type_base.h"
+#include "error_handler.h"
 
 #include <cmath>
 
@@ -183,48 +184,34 @@ prior_box_inst::typed_primitive_inst(network_impl& network, prior_box_node const
     :parent(network, node)
 {
     //Check arguments
-    if (argument.min_sizes.size() == 0) {
-        throw std::runtime_error("Must provide at least one min size.");
-    }
+    CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(), "Argument min size", argument.min_sizes.size(), "not proper size", 0, "Must provide at least one min size.");
+
     for (size_t i = 0; i < argument.min_sizes.size(); i++) {
-        if (argument.min_sizes[i] <= 0) {
-            throw std::runtime_error("Min size must be positive.");
-        }
+        CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(), "Min size value at index: " + i, argument.min_sizes[i], "less or equal than 0", 0, "Min size must be positive.");
     }
-    if ( (argument.max_sizes.size() > 0) && (argument.min_sizes.size() != argument.max_sizes.size())) {
-        throw std::runtime_error("Number of min sizes must be equal to number of max sizes.");
+    if (argument.max_sizes.size() > 0) {
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "Argument min sizes", argument.min_sizes.size(), "argument max sizes", argument.max_sizes.size(), "Number of min sizes must be equal to number of max sizes.");
     }
     for (size_t i = 0; i < argument.max_sizes.size(); i++) {
-        if (argument.min_sizes[i] >= argument.max_sizes[i]) {
-            throw std::runtime_error("Max size must be greater than Min size.");
-        }
+        CLDNN_ERROR_GREATER_OR_EQUAL_THAN(node.id(), "Argument min size value", argument.min_sizes[i], "argument max sizes value", argument.max_sizes[i], "Max size must be greater than Min size.");
     }
     if (argument.variance.size() > 1) {
-        if (argument.variance.size() != 4) {
-            throw std::runtime_error("Must provide 4 variances.");
-        }
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "Argument variance size", argument.variance.size(), "not proper size", 4, "Must provide 4 variances.");
         for (size_t i = 0; i < argument.variance.size(); i++) {
-            if (argument.variance[i] <= 0) {
-                throw std::runtime_error("Variance must be positive.");
-            }
+            CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(), "Varaiance value at index: " + i, argument.variance[i], "value", 0, "Variance must be positive.");
         }
     }
     else if (argument.variance.size() == 1) {
-        if (argument.variance[0] <= 0) {
-            throw std::runtime_error("Variance must be positive.");
-        }
-    }
-    if ((argument.img_size.spatial[0] <= 0) || (argument.img_size.spatial[1] <= 0)) {
-        throw std::runtime_error("Image dimensions must be positive.");
-    }
-    if ((argument.step_height < 0) || (argument.step_width < 0)) {
-        throw std::runtime_error("Step dimensions must be positive.");
+        CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(), "Varaiance value at index 0", argument.variance[0], "value", 0, "Variance must be positive.");
     }
 
-    if (node.is_padded())
-    {
-        throw std::invalid_argument("Prior-box layer doesn't support output padding.");
-    }
+    CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(), "Image dimension spatial X", argument.img_size.spatial[0], "value", 0, "Image spatial X must be positive.");
+    CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(), "Image dimension spatial Y", argument.img_size.spatial[1], "value", 0, "Image spatial Y must be positive.");
+
+    CLDNN_ERROR_LESS_THAN(node.id(), "Step height", argument.step_height, "value", 0, "Step height must be positive.");
+    CLDNN_ERROR_LESS_THAN(node.id(), "Step width", argument.step_width, "value", 0, "Step width must be positive.");
+
+    CLDNN_ERROR_BOOL(node.id(), "Prior box padding", node.is_padded(), "Prior-box layer doesn't support output padding.");
 
     if (input_memory().get_layout().data_type == data_types::f32)
     {

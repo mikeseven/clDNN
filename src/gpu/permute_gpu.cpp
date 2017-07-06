@@ -17,6 +17,7 @@
 #include "permute_inst.h"
 #include "kernel.h"
 #include "implementation_map.h"
+#include "error_handler.h"
 #include "kernel_selector_helper.h"
 
 using namespace cldnn;
@@ -58,10 +59,8 @@ struct permute_gpu : typed_primitive_impl<permute>
         }
         auto& kernel_selector = kernel_selector::permute_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(reorder_params, reorder_optional_params);
-        if (best_kernels.empty())
-        {
-            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
-        }
+
+        CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 
         auto reorder = new permute_gpu(arg, best_kernels[0]);
 

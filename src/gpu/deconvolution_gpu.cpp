@@ -18,6 +18,8 @@
 #include "kernel.h"
 #include "kd_selector.h"
 #include "implementation_map.h"
+
+#include "error_handler.h"
 #include "deconvolution/deconvolution_kernel_selector.h"
 #include "kernel_selector_helper.h"
 #include <initializer_list>
@@ -44,11 +46,10 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
         const auto* output_mem = &instance.output_memory();
         const auto* filter_mem_0 = &instance.weights_memory(0);
 
+        CLDNN_ERROR_NOT_EQUAL(outer.id(), "deconvolution filling value", outer.get_output_layout().data_padding.filling_value(), "padding mode", 0.0f, "Unknown padding mode in deconvolution.");
         // Check whether all memory elements use the same unit type (FP16 or FP32).
-        if (input_mem->get_layout().data_type != output_mem->get_layout().data_type)
-            throw std::invalid_argument("Memory format of input is incompatible with memory format of output.");
-        if (input_mem->get_layout().data_type != filter_mem_0->get_layout().data_type)
-            throw std::invalid_argument("Memory format of input is incompatible with memory format of filter.");
+        CLDNN_ERROR_DATA_TYPES_MISMATCH(outer.id(), "Input memory", input_mem->get_layout().data_type, "output memory", output_mem->get_layout().data_type, "");
+        CLDNN_ERROR_DATA_TYPES_MISMATCH(outer.id(), "Input memory", input_mem->get_layout().data_type, "filter memory", filter_mem_0->get_layout().data_type, "");
 
         std::vector<event_impl::ptr> tmp_events(events);
 
@@ -138,10 +139,8 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
 
         auto& kernel_selector = kernel_selector::deconvolution_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(deconv_params, deconv_optional_params);
-        if (best_kernels.empty())
-        {
-            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
-        }
+
+        CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 
         auto deconv = new deconvolution_gpu(arg, best_kernels[0]);
 

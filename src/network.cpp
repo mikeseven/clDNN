@@ -23,6 +23,7 @@
 #include "api/CPP/data.hpp"
 #include "api/CPP/input_layout.hpp"
 
+#include "error_handler.h"
 #include "primitive_inst.h"
 #include "input_layout_inst.h"
 #include "kernel_selector_helper.h"
@@ -80,7 +81,9 @@ void network_impl::set_input_data(const primitive_id& id, memory_impl* data)
         throw std::runtime_error("topology doesn't contain prmitive:" + id);
     }
     if (primitive_inst->type() != input_layout::type_id())
-        throw std::invalid_argument("primitive " + id + " is not an input");
+    {
+        CLDNN_ERROR_MESSAGE(id, "primitive " + id + " is not an input");
+    }
 
     auto input = std::static_pointer_cast<input_layout_inst>(primitive_inst);
 

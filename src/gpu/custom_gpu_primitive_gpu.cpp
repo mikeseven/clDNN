@@ -21,6 +21,8 @@
 #include "network_impl.h"
 #include "engine_impl.h"
 #include "jitter.h"
+#include "error_handler.h"
+
 #include <map>
 #include <sstream>
 
@@ -98,7 +100,7 @@ static void add_layout_to_jit(kernel_selector::jit_constants& mem_consts, const 
 
     if (dataTypeToIndex.find(l.data_type) == dataTypeToIndex.end()) 
     {
-        throw std::runtime_error("Unhandled data type in layout");
+        CLDNN_ERROR_MESSAGE("add layout to jit", "Unhandled data type in layout");
     }
 
     mem_consts.AddConstant(KernelSelector::MakeJitConstant(name + "_TYPE", dataTypeToIndex.at(l.data_type)));

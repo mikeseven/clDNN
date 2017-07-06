@@ -18,6 +18,7 @@
 #include "input_layout_inst.h"
 #include "primitive_type_base.h"
 #include "memory_impl.h"
+#include "error_handler.h"
 
 namespace cldnn
 {
@@ -35,8 +36,7 @@ input_layout_inst::typed_primitive_inst(network_impl& network, input_layout_node
 
 void input_layout_inst::set_data(memory_impl* mem)
 {
-    if (mem->get_layout() != output_memory().get_layout())
-        throw std::invalid_argument("data layout does not match");
+    CLDNN_ERROR_LAYOUT_MISMATCH("input layout", "memory layout", mem->get_layout(), "output memory layout", output_memory().get_layout(), "");
 
     if (mem->is_allocated_by(get_network().get_engine()))
     {

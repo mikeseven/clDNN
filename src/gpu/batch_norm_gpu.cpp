@@ -18,6 +18,7 @@
 #include "kernel.h"
 #include "network_impl.h"
 #include "implementation_map.h"
+#include "error_handler.h"
 #include "kernel_selector_helper.h"
 
 namespace cldnn { namespace gpu {
@@ -46,11 +47,7 @@ struct batch_norm_gpu : typed_primitive_impl<batch_norm>
 
     static primitive_impl* create(const batch_norm_node &arg) 
     { 
-        if (arg.get_primitive()->use_global_stats == false)
-        {
-            throw std::runtime_error("no_global_stats is not supported - it's for training only.");
-        }
-
+        CLDNN_ERROR_BOOL(arg.id(), "!use_global_stats", !arg.get_primitive()->use_global_stats, "no_global_stats is not supported - it's for training only.");
         auto ew_params = get_default_params<kernel_selector::eltwise_params>(arg);
         auto ew_optional_params = get_default_optional_params<kernel_selector::eltwise_optional_params>(arg.get_program());
 
@@ -83,10 +80,7 @@ struct batch_norm_gpu : typed_primitive_impl<batch_norm>
         auto& kernel_selector = kernel_selector::eltwise_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(ew_params, ew_optional_params);
 
-        if (best_kernels.empty())
-        {
-            throw std::runtime_error("Cannot find a proper kernel for " + arg.id() +" with this arguments");
-        }
+        CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 
         auto norm = new batch_norm_gpu(arg, best_kernels[0]);
 

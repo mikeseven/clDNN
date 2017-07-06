@@ -17,6 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "fully_connected_inst.h"
 #include "primitive_type_base.h"
+#include "error_handler.h"
 
 namespace cldnn
 {
@@ -106,11 +107,8 @@ fully_connected_inst::typed_primitive_inst(network_impl& network, fully_connecte
     auto input_size = input_memory().get_layout();
     auto output_size = output_memory().get_layout();
 
-    if(input_size.format != format::yxfb
-        && input_size.format != format::bfyx //special batch1 case
-        && (input_size.size.raw.size() != output_size.size.raw.size()) )
-    {
-        throw std::invalid_argument("Fully connected input/output number of dimension does not match.");
-    }
+    CLDNN_ERROR_NOT_PROPER_FORMAT(node.id(), "input format", input_size.format.value, "expected format", format::yxfb, format::bfyx);
+    CLDNN_ERROR_NOT_EQUAL(node.id(), "Input size", input_size.size.raw.size(), "output size", output_size.size.raw.size(), "");
+
 }
 }
