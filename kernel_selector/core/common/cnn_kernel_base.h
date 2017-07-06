@@ -34,7 +34,10 @@ namespace KernelSelctor {
         KernelString GetKernelString(std::string kernel_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN, std::string default_build_flags = "-cl-unsafe-math-optimizations") const;
         static std::string Float2Str(const float f)
         {
-            return std::to_string(f) + "f";
+            std::stringstream ss;
+            ss << "as_float(0x" << std::hex << *reinterpret_cast<const unsigned*>(&f) << ")";
+            ss << " /*" << std::scientific << f << "*/";
+            return ss.str();
         }
     };
 }
