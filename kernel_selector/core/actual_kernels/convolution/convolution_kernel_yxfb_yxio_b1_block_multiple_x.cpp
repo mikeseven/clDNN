@@ -121,7 +121,8 @@ namespace KernelSelector
 
         const bool bInputValidated =
             (filter_ofm_num > 0) &&
-            (batch_size > 0) &&
+            (batch_size == 1) &&    // current implementation doesn't support batching 
+                                    // (subgorup is along batch*ofm and trying to block read filter/bias along batch and filter doesn't contain batching).
             (params.output.Feature().v == filter_ofm_num);
 
         if (!bInputValidated)

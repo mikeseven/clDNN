@@ -203,8 +203,10 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
     BLOCK_WRITE(output + out_id[0], _data[0]);
     for(uint a = 1; a < X_PER_WORK_ITEM; a++)
     {
-        if(!(out_x + a >= OUTPUT_SIZE_X || out_x + a < OUTPUT_PADDING_SIZE_X))
+        if(out_x + a < OUTPUT_SIZE_X)
+        {
             BLOCK_WRITE(output + out_id[a], _data[a]);
+        }
     }
 
 #if defined(USE_VECTOR)

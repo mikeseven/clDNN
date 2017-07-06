@@ -23,7 +23,7 @@ namespace KernelSelector {
     class ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x : public ConvolutionKernelBase
     {
     public:
-        ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x() : ConvolutionKernelBase("convolution_gpu_yxfb_yxio_b1_block_multiple_x") {}
+        ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x() : ConvolutionKernelBase("convolution_gpu_yxfb_yxio_b1_block_multiple_x_fp32") {}
         virtual ~ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
