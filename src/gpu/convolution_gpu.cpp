@@ -575,21 +575,11 @@ convolution_gpu::kernel_data default_bfyx_os_iyx_osv16(const convolution_node& a
     convolution_gpu::kernel_data kd = convolution_gpu::set_default(arg);
     kd.kernel_name = kernel_name_bfyx_os_iyx_osv16;
 
-    // Maximum supported size (in any dimension) of filter by "kernel_name_bfyx_os_iyx_osv16" kernel.
-    constexpr int max_supported_filter_size = 11;
     // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
     constexpr int sub_group_size = 16;
 
     const uint32_t of_threads_per_batch = round_up_to(filter_buffer_size.batch[0], sub_group_size);
     kd.leftovers = of_threads_per_batch - filter_buffer_size.batch[0];
-
-    if (filter_buffer_size.spatial[0] > max_supported_filter_size ||
-        filter_buffer_size.spatial[1] > max_supported_filter_size)
-    {
-        // TODO: Implement and use naive bfyx algorithm here.
-        // TODO: Implement naive bfyx algorithm here and add fall-back condition if abs(input_offset) >= filter_size.
-        throw std::runtime_error("Unsupported filter size (> 11) in bfyx convolution");
-    }
 
     if (stride.spatial[0] == 1 && stride.spatial[1] == 1)
     {
