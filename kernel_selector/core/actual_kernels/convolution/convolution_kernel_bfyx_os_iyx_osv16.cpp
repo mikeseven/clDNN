@@ -172,15 +172,6 @@ namespace KernelSelector
             return false;
         }
 
-        // Maximum supported size (in any dimension) of filter by "kernel_name_bfyx_os_iyx_osv16" kernel.
-        constexpr size_t max_supported_filter_size = 11;
-        const auto& cp = params.convParams;
-        if (cp.filterSize.x > max_supported_filter_size ||
-            cp.filterSize.y > max_supported_filter_size)
-        {
-            return false;
-        }
-
         return true;
     }
 

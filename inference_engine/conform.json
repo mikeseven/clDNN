@@ -1,86 +1,4 @@
  {
-  "Examples": {
-    "alexnet_bear1": "98.26% brown bear, bruin, Ursus arctos",
-    "alexnet_bear2": "91.75% brown bear, bruin, Ursus arctos",
-    "alexnet_car1": "23.99% harvester, reaper",
-    "alexnet_cat1": "60.61% jaguar, panther, Panthera onca, Felis onca",
-    "alexnet_cat2": "75.55% jaguar, panther, Panthera onca, Felis onca",
-    "alexnet_dog2": "61.04% Samoyed, Samoyede",
-    "alexnet_donkey": "16.20% Arabian camel, dromedary, Camelus dromedarius",
-    "alexnet_monkey": "38.02% mongoose",
-    "vgg16_bear1": "98.35% brown bear, bruin, Ursus arctos",
-    "vgg16_bear2": "99.97% brown bear, bruin, Ursus arctos",
-    "vgg16_car1": "8.06% mountain tent",
-    "vgg16_cat1": "89.64% leopard, Panthera pardus",
-    "vgg16_cat2": "90.25% jaguar, panther, Panthera onca, Felis onca",
-    "vgg16_dog2": "96.30% Samoyed, Samoyede",
-    "vgg16_donkey": "85.51% llama",
-    "vgg16_monkey": "75.14% macaque",
-    "googlenet_bear1": "99.96% brown bear, bruin, Ursus arctos",
-    "googlenet_bear2": "99.96% brown bear, bruin, Ursus arctos",
-    "googlenet_car1": "22.67% car wheel",
-    "googlenet_cat1": "55.48% leopard, Panthera pardus",
-    "googlenet_cat2": "97.05% jaguar, panther, Panthera onca, Felis onca",
-    "googlenet_dog2": "94.47% Samoyed, Samoyede",
-    "googlenet_donkey": "93.58% llama",
-    "googlenet_monkey": "49.16% titi, titi monkey",
-    "squeezenet_bear1": "99.42% brown bear, bruin, Ursus arctos",
-    "squeezenet_bear2": "96.94% brown bear, bruin, Ursus arctos",
-    "squeezenet_car1": "22.33% canoe",
-    "squeezenet_cat1": "71.53% leopard, Panthera pardus",
-    "squeezenet_cat2": "92.34% jaguar, panther, Panthera onca, Felis onca",
-    "squeezenet_dog2": "62.73% Pomeranian",
-    "squeezenet_donkey": "89.43% llama",
-    "squeezenet_monkey": "34.81% macaque",
-    "alexnet_bear1_fp16": "98.39% brown bear, bruin, Ursus arctos",
-    "alexnet_bear2_fp16": "91.50% brown bear, bruin, Ursus arctos",
-    "alexnet_car1_fp16": "23.68% harvester, reaper",
-    "alexnet_cat1_fp16": "60.11% jaguar, panther, Panthera onca, Felis onca",
-    "alexnet_cat2_fp16": "74.85% jaguar, panther, Panthera onca, Felis onca",
-    "alexnet_dog2_fp16": "62.50% Samoyed, Samoyede",
-    "alexnet_donkey_fp16": "16.75% Arabian camel, dromedary, Camelus dromedarius",
-    "alexnet_monkey_fp16": "34.91% mongoose",
-    "vgg16_bear1_fp16": "98.39% brown bear, bruin, Ursus arctos",
-    "vgg16_bear2_fp16": "100.00% brown bear, bruin, Ursus arctos",
-    "vgg16_car1_fp16": "7.97% mountain tent",
-    "vgg16_cat1_fp16": "90.92% leopard, Panthera pardus",
-    "vgg16_cat2_fp16": "88.87% jaguar, panther, Panthera onca, Felis onca",
-    "vgg16_dog2_fp16": "96.78% Samoyed, Samoyede",
-    "vgg16_donkey_fp16": "87.84% llama",
-    "vgg16_monkey_fp16": "75.34% macaque",
-    "googlenet_bear1_fp16": "100.00% brown bear, bruin, Ursus arctos",
-    "googlenet_bear2_fp16": "100.00% brown bear, bruin, Ursus arctos",
-    "googlenet_car1_fp16": "23.34% car wheel",
-    "googlenet_cat1_fp16": "54.00% leopard, Panthera pardus",
-    "googlenet_cat2_fp16": "97.31% jaguar, panther, Panthera onca, Felis onca",
-    "googlenet_dog2_fp16": "94.82% Samoyed, Samoyede",
-    "googlenet_donkey_fp16": "94.19% llama",
-    "googlenet_monkey_fp16": "49.27% titi, titi monkey",
-    "squeezenet_bear1_fp16": "99.51% brown bear, bruin, Ursus arctos",
-    "squeezenet_bear2_fp16": "97.07% brown bear, bruin, Ursus arctos",
-    "squeezenet_car1_fp16": "22.63% canoe",
-    "squeezenet_cat1_fp16": "72.71% leopard, Panthera pardus",
-    "squeezenet_cat2_fp16": "91.65% jaguar, panther, Panthera onca, Felis onca",
-    "squeezenet_dog2_fp16": "60.35% Pomeranian",
-    "squeezenet_donkey_fp16": "89.06% llama",
-    "squeezenet_monkey_fp16": "32.93% macaque",
-    "vgg16_face_arianda": "99.12% Nina_Arianda",
-    "vgg16_face_CristinRobinson": "99.98% Cristin_Milioti",
-    "vgg16_face_DobrevNina": "1.78% Snoop_Dogg",
-    "vgg16_face_DreyfusJulia": "6.21% Lena_Headey",
-    "vgg16_face_EmileHirsh": "26.71% Emile_Hirsch",
-    "vgg16_face_KeachStacy": "30.46% Stacy_Keach",
-    "vgg16_face_MessinaChris": "95.79% Chris_Messina",
-    "vgg16_face_VinsonSharon": "99.80% Sharni_Vinson",
-    "vgg16_face_arianda_fp16": "99.51% Nina_Arianda",
-    "vgg16_face_CristinRobinson_fp16": "100.00% Cristin_Milioti",
-    "vgg16_face_DobrevNina_fp16": "1.05% Olivia_Colman",
-    "vgg16_face_DreyfusJulia_fp16": "6.84% Lena_Headey",
-    "vgg16_face_EmileHirsh_fp16": "19.70% Emile_Hirsch",
-    "vgg16_face_KeachStacy_fp16": "22.04% Stacy_Keach",
-    "vgg16_face_MessinaChris_fp16": "97.01% Chris_Messina",
-    "vgg16_face_VinsonSharon_fp16": "99.80% Sharni_Vinson"
-  },
   "IE": {
 	"bvlc_alexnet_fp32_no_mean": {
 		"1": "0x86F26FACCE12970342BC0507770D77D8",
@@ -209,8 +127,8 @@
 		"8": "0xCB6249E7A75C2F9C56BE35549336B3FC",
 		"10": "0x776349469859AFA1CF8DAAB9517D401C",
 		"16": "0xEDD4FE4D7A9B37498C7F5C10BB087836",
-		"32": "0x242CBBBB19926DE24AE5E443E1AEB831",
-		"128": "0xF2B9E65692DE5B51E4485BCFDF64B02D"
+		"32": "0xF9D7C9613826F5CB3EA0E3D999E03DCB",
+		"128": "0xFC7DAFA950C39A51C9CFC3D196DB2415"
 		},
 	"GoogleNetV3_fp16": {
 		"1": "0xF4A827B80F11ACA803C9E39473DC55FB",
@@ -221,6 +139,26 @@
 		"16": "0x3B7432075EE4F137C43FC32D7882BA14",
 		"32": "0x9691FF53CC0AEAEC693190BF4447A09A",
 		"128": "0x75CE3B755B59F30C3AD3E5403BBAABEC"
+		},
+	"InceptionV3_fp32": {
+		"1": "0x4E4023EFFACBC78CADB51D042A0BDE36",
+		"2": "0xE6AD7FBB00284F2BD3EA1FAB9E80C126",
+		"4": "0x59D0EEA1B621E83E61AE7EEDC63058BA",
+		"8": "0x704F1EAEF9F5F78305D4FC2F04317D91",
+		"10": "0x8DEDD2E729F42A80EDB019D40F4C3084",
+		"16": "0x03B1BC2ECCFBF32C2640FC4E215A829B",
+		"32": "0xD679B26496177E31C02B8CE2CC33CD53",
+		"128": "0x7638CF0E8F9F7EF017FF5ACE672D81CA"
+		},
+	"inceptionV1_fp32": {
+		"1": "0x54AC724FE8AA57CE77B786004E80717D",
+		"2": "0xB6EF385425E3D4EC1FA8F31EC559ABE2",
+		"4": "0xED8DCF4BE62A0016EEEF848E762B6C63",
+		"8": "0x31C4FBD78D21F13A99C881E072FEB976",
+		"10": "0xA33A4ECCF065C901320B78F5F7FFFF15",
+		"16": "0x3599B873597CCA59E0865D26525AF7D0",
+		"32": "0x81B6CB111C6536C768604D8800EDF383",
+		"128": "0xBAF2A11D4253195E7F2771ED06BDE568"
 		},
 	"ResNet-50-no_scaleshift": {
 		"1": "0xE30CD164E462490178B814E5485317CA",
@@ -249,7 +187,7 @@
 		"8": "0xD8C57CB3CABC6A41A242AD010EE3D2A3",
 		"10": "0x4076A5668009BBCD8CFD6E1AFC37EB08",
 		"16": "0x9BF0F56434E8798C81F34D68B5FD8CB4",
-		"32": "0x95FA4B649DB94D8880916E6C330E0F79",
+		"32": "0x4072BA52BA38E5A799170A191A58B1F8 ",
 		"128": "xxxx"
 		},
 	"ResNet-152_fp16": {
@@ -269,8 +207,8 @@
 		"8": "0xC5E7A90D6DF4E330AE46C86F8A6734F7",
 		"10": "0xEC26A9D74392A9D1E69E0883CD4DDA8E",
 		"16": "0xFF0D032F687338072E36CCC500945453",
-		"32": "0xF0CF14C6F0474BEDED317557612A63A2",
-		"128": "0x1F38F652FE2137FE351D74AAD7989C6B"
+		"32": "0xA4D7976BB257369F2CADA52F0F493D81",
+		"128": "0xAA9CA6572A12E85A14E3D87D705790BC"
 		},
 	"ResNet-101_fp16": {
 		"1": "0x4526C36FFBB9710EE1DB6268D9A724C2",
@@ -289,8 +227,8 @@
 		"8": "0x6632579E17EA71D6D3DB9EF860C60E6B",
 		"10": "0xE032A50AEF8055B3FAEB99DA91EA58AD",
 		"16": "0x990402BDB020575518D264F608D25F78",
-		"32": "0xC2441969BD7EFD6A0520B45238E0ECA2",
-		"128": "0x323D26C813C0BE0124CF02BACAFCC7FE"
+		"32": "0x6E4D2A392863CD5A4EA64F460E320036",
+		"128": "0xC4DE796C31D4DDCD51057909E8DBBA4A"
 		},
 	"VGG_FACE_16_layers_fp16": {
 		"1": "0x734F1071033FB81F3CBBCAFDDC76E234",
@@ -309,8 +247,8 @@
 		"8": "0xD876E1662C1ECBB9FC6E1A73D530AC14",
 		"10": "0xB20ADD6609EC3C504D84BDE44B5AB344",
 		"16": "0x21AE74E973F48D1ACEB5D1D7BF2EBABA",
-		"32": "0x190434CED4AC17A914901DE12A5E6555",
-		"128": "0x15497EBB9F5C23C80AB23BC8D1A47586"
+		"32": "0x1B361F2A56A19DDA7BFD5039D88DBB39",
+		"128": "0x29E0FFA1FAD31E175A20DCC08B862A7C"
 		},
 	"VGG_ILSVRC_19_layers_fp16": {
 		"1": "0x135990A8FAC0D5B85D018973A6A82D58",
@@ -321,26 +259,6 @@
 		"16": "0xB3F5481E2E73887757C1DD6D25F05659",
 		"32": "0x0738EBE73215CAFCB2CA8BD32568D640",
 		"128": "0x47BC57ABAABF8C1CF058433193C613F4"
-		},
-	"InceptionV3_fp32": {
-		"1": "0x4E4023EFFACBC78CADB51D042A0BDE36",
-		"2": "0xE6AD7FBB00284F2BD3EA1FAB9E80C126",
-		"4": "0x59D0EEA1B621E83E61AE7EEDC63058BA",
-		"8": "0x704F1EAEF9F5F78305D4FC2F04317D91",
-		"10": "0x8DEDD2E729F42A80EDB019D40F4C3084",
-		"16": "0x03B1BC2ECCFBF32C2640FC4E215A829B",
-		"32": "0xD679B26496177E31C02B8CE2CC33CD53",
-		"128": "0x7638CF0E8F9F7EF017FF5ACE672D81CA"
-		},
-	"inceptionV1_fp32": {
-		"1": "0x54AC724FE8AA57CE77B786004E80717D",
-		"2": "0xB6EF385425E3D4EC1FA8F31EC559ABE2",
-		"4": "0xED8DCF4BE62A0016EEEF848E762B6C63",
-		"8": "0x31C4FBD78D21F13A99C881E072FEB976",
-		"10": "0xA33A4ECCF065C901320B78F5F7FFFF15",
-		"16": "0x3599B873597CCA59E0865D26525AF7D0",
-		"32": "0x81B6CB111C6536C768604D8800EDF383",
-		"128": "0xBAF2A11D4253195E7F2771ED06BDE568"
 		},
 	"Perc_ZF_fasterRCNN_fp32": {
 		"bbox_pred": "0xD072E13E79CAA17AEB152851FE752C6F",
@@ -389,7 +307,7 @@
 		"8": "0x6797A8C6B3F857E1BBC6E1A59220AA32",
 		"10": "0x16A19E64FD3E49ACE496A86A073321B1",
 		"16": "0x0B26C1108791BF1447BC514A5A8FC84D",
-		"32": "0xF79E512B51F290B72626246B5F720BED",
+		"32": "0x2BBE4C47868D20FFB6AFB2B2BC4595AF",
 		"128": "xxx"
 		},
 	"SSD_300x300_deploy_fp16": {
