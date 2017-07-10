@@ -116,6 +116,7 @@ typedef struct
 {
     uint32_t enable_profiling;         ///< Enable per-primitive profiling.
     uint32_t meaningful_kernels_names; ///< Generate meaniful names fo OpenCL kernels.
+    uint32_t dump_custom_program;      ///< dump the custom generated program to files 
     const char* compiler_options;      ///< OpenCL compiler options string.
     const char* single_kernel_name;    ///< If provided, runs specific layer.
 }  cldnn_engine_configuration;
@@ -283,6 +284,29 @@ typedef struct
     const cldnn_primitive_id* data; ///< Pointer to ids array.
     size_t size;                    ///< Number of ids in the array.
 } cldnn_primitive_id_arr;
+
+/// @brief Unique @p id of a primitive within a topology.
+typedef const char*  cldnn_kernel_code;
+typedef const char** cldnn_kernels_code;
+typedef const char*  cldnn_kernel_entry_point;
+typedef const char*  cldnn_kernel_build_options;
+typedef const size_t*  cldnn_work_group_sizes;
+
+typedef uint32_t cldnn_arg_index;
+
+typedef enum cldnn_arg_type_t
+{
+    ARG_INPUT,
+    ARG_OUTPUT,
+} cldnn_arg_type;
+
+typedef struct cldnn_arg_t
+{
+    cldnn_arg_type arg_type;
+    cldnn_arg_index index;
+} cldnn_arg;
+
+typedef const cldnn_arg* cldnn_kernel_arguments;
 
 /// @brief Begin primitive description definition
 /// @details Defines @p 'cldnn_primitive_type_desc' structure with first 5 fields

@@ -35,6 +35,7 @@ public:
     {
         source_code source;
         std::string options;
+        bool dump_custom_program;
     };
 
     struct kernel_code
@@ -42,6 +43,7 @@ public:
         source_code source;
         std::string options;
         bool batch_compilation;
+        bool dump_custom_program;
     };
 
     typedef std::string kernel_id;
@@ -64,7 +66,7 @@ private:
 
 public:
     kernel_id set_kernel_source(const std::string& template_name, jit_definitions definitions = jit_definitions(), std::string kernel_name = std::string());
-    kernel_id set_kernel_source(const source_code& source, const std::string& options, const std::string& entry_point, bool batch_compilation);
+    kernel_id set_kernel_source(const source_code& source, const std::string& options, const std::string& entry_point, bool batch_compilation, bool dump_custom_program);
     kernel_type get_kernel(kernel_id id);
 };
 

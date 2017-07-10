@@ -124,6 +124,7 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
         const source_code&  org_source_code     = code.second.source;
         std::string         options             = code.second.options;
         bool                batch_compilation   = code.second.batch_compilation;
+        bool                dump_custom_program = code.second.dump_custom_program;
 
         batch_compilation &= does_options_support_batch_compilation(options);
 
@@ -139,7 +140,13 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
             key += " __PROGRAM__" + std::to_string(scode.size());
         }
 
+        if (dump_custom_program)
+        {
+            key += " __DUMP_CUSTOM_PROGRAM__"; // Adding label to key so it would be separated from other programs
+        }
+
         auto& current_bucket = scode[key];
+        current_bucket.dump_custom_program = dump_custom_program;
 
         if (current_bucket.source.empty())
         {
@@ -164,35 +171,36 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
 
 kernels_cache::kernels_cache(gpu_toolkit& context): _context(context) {}
 
-kernels_cache::kernel_id kernels_cache::set_kernel_source(const source_code& source, const std::string& options, const std::string& entry_point, bool batch_compilation)
+kernels_cache::kernel_id kernels_cache::set_kernel_source(const source_code& source, const std::string& options, const std::string& entry_point, bool batch_compilation, bool dump_custom_program)
 {
     std::lock_guard<std::mutex> lock(_mutex);
-    _kernels_code[entry_point] = { source, options, batch_compilation };
+    _kernels_code[entry_point] = { source, options, batch_compilation, dump_custom_program };
     return entry_point;
 }
 
 kernels_cache::kernels_map kernels_cache::build_program(const program_code& program_source) const
 {
-#ifdef OUT_PORGRAM_TO_FILE
     static uint32_t current_file_index = 0;
     const std::string current_program_dump_file_name = program_dump_file_name + std::to_string(current_file_index) + ".cl";
-    current_file_index++;
-#endif
 
     try 
     {
-#ifdef OUT_PORGRAM_TO_FILE
+#ifndef OUT_PORGRAM_TO_FILE
+        if (program_source.dump_custom_program)
+#endif
         {
+            current_file_index++;
             std::ofstream os(current_program_dump_file_name);
             for (auto& s : program_source.source)
                 os << s;
         }
-#endif
 
         cl::Program program(_context.context(), program_source.source);
         program.build({ _context.device() }, program_source.options.c_str());
 
-#ifdef OUT_PORGRAM_TO_FILE
+#ifndef OUT_PORGRAM_TO_FILE
+        if (program_source.dump_custom_program)
+#endif
         {
             std::ofstream os(current_program_dump_file_name, std::ios_base::app);
             os << "\n/* Build Log:\n";
@@ -201,7 +209,6 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
             }
             os << "*/\n";
         }
-#endif
 
         cl::vector<cl::Kernel> kernels;
         program.createKernels(&kernels);
@@ -220,7 +227,9 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
         std::string build_log{"Build program error "};
         build_log += err.what();
 
-#ifdef OUT_PORGRAM_TO_FILE
+#ifndef OUT_PORGRAM_TO_FILE
+        if (program_source.dump_custom_program)
+#endif
         {
             std::ofstream os(current_program_dump_file_name, std::ios_base::app);
             os << "\n/* Build Log:\n";
@@ -230,7 +239,6 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
             }
             os << "*/\n";
         }
-#endif
 
         throw std::runtime_error(build_log);
     }
