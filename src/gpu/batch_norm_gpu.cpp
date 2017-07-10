@@ -68,7 +68,7 @@ struct batch_norm_gpu : typed_primitive_impl<batch_norm>
             (arg.input().get_output_layout().data_type == data_types::f16) ?
             0.f : arg.get_primitive()->epsilon;
         
-        // TODO: removing the ADD in case that EPSILON == 0 change the precision...
+        // TODO: why do we ignore epsilon in case of FP16?
         ew_params.eltwiseParams.operations.push_back({
             { kernel_selector::eltwise_params::InputType::Buffer(2), kernel_selector::eltwise_params::InputType::Scalar(epsilon) },
             kernel_selector::eltwise_mode::ADD });

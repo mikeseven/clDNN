@@ -108,12 +108,7 @@ namespace KernelSelector {
         std::string inputs_decls;
         for (size_t i = 0; i < params.inputs.size(); i++)
         {
-            // TODO: replace me: BUG. we need to read the data in the proper type. (in PVANET we have couple of inputs with FP32 in FP16 net)
-#if 1
-            inputs_decls += "const __global UNIT_TYPE* input" + std::to_string(i) + ", ";
-#else
             inputs_decls += "const __global " + toCLType(params.inputs[i].GetDType()) + "* input" + std::to_string(i) + ", ";
-#endif
         }
 
         jit.AddConstant(MakeJitConstant("INPUTS_DECLS", inputs_decls));
