@@ -98,6 +98,8 @@ namespace KernelSelector
                             uint32_t axisY : 1;
                             uint32_t axisFeature : 1;
                             uint32_t axisBatch : 1;
+                            uint32_t kernelPerInput : 1;
+                            uint32_t oneKernel : 1;
                         } concat;
                     } dedicated;
                 } val;
@@ -469,6 +471,16 @@ namespace KernelSelector
             default:
                 break;
             }
+        }
+
+        void EnableConcatKernelPerInput()
+        {
+            key.restrict.val.dedicated.concat.kernelPerInput = 1;
+        }
+
+        void EnableConcatOneKernel()
+        {
+            key.restrict.val.dedicated.concat.oneKernel = 1;
         }
 
         bool Support(const ParamsKey& k) const
@@ -1226,5 +1238,22 @@ namespace KernelSelector
     struct ConcatenationOptionalParams : OptionalParams
     {
         ConcatenationOptionalParams() : OptionalParams(KernelType::CONCATENATION) {}
+        bool kernelPerInput = true;
+
+        virtual ParamsKey GetSupportedKey() const
+        {
+            ParamsKey k = OptionalParams::GetSupportedKey();
+
+            if (kernelPerInput)
+            {
+                k.EnableConcatKernelPerInput();
+            }
+            else
+            {
+                k.EnableConcatOneKernel();
+            }
+
+            return k;
+        }
     };
 }

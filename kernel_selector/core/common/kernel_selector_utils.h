@@ -78,7 +78,7 @@ namespace KernelSelector { namespace
         return{dims, t.GetDType(), t.GetLayout()};
     }
 
-    bool CovolutionCheckInput(const Params& p, const OptionalParams& o)
+    inline bool CovolutionCheckInput(const Params& p, const OptionalParams& o)
     {
         const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
         const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(o);
@@ -95,7 +95,7 @@ namespace KernelSelector { namespace
         return true;
     }
 
-    bool CovolutionUpdateInputParams(ConvolutionParams& params)
+    inline bool CovolutionUpdateInputParams(ConvolutionParams& params)
     {
         const auto req_input = GetConvolutionBFYXPaddedTensor(params);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(params, req_input);

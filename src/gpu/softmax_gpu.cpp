@@ -15,7 +15,7 @@
 */
 
 #include "softmax_inst.h"
-#include "kernel.h"
+#include "primitive_gpu_base.h"
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
 #include "error_handler.h"
@@ -23,29 +23,10 @@
 namespace cldnn { namespace gpu {
 
 
-struct softmax_gpu : typed_primitive_impl<softmax>
+struct softmax_gpu : typed_primitive_gpu_impl<softmax>
 {
-    const softmax_node& outer;
-    kernel _kernel;
-
-
-    softmax_gpu(const softmax_node& arg, const kernel_selector::kernel_data& kd)
-        : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
-    {
-        _kernel_data = kd;
-    }
-
-    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, softmax_inst& instance) override
-    {
-        gpu::kernel::kernel_arguments_data args;
-        args.scalars = &_kernel_data.kernels[0].scalars;
-        args.inputs = { &instance.input_memory() };
-        args.output = &instance.output_memory();
-
-        return _kernel.run(_kernel_data.kernels[0], events, args);
-    }
-
+    using parent = typed_primitive_gpu_impl<softmax>;
+    using parent::parent;
     
     static primitive_impl* create(const softmax_node& arg) 
     {

@@ -15,27 +15,16 @@
 */
 
 #include "eltwise_inst.h"
-#include "kernel.h"
+#include "primitive_gpu_base.h"
 #include "implementation_map.h"
 #include "error_handler.h"
-#include "eltwise/eltwise_kernel_selector.h"
 #include "kernel_selector_helper.h"
 
 namespace cldnn { namespace gpu {
 
-struct eltwise_gpu : typed_primitive_impl<eltwise>
+namespace
 {
-    const eltwise_node& outer;
-    kernel _kernel;
-
-    eltwise_gpu(const eltwise_node& arg, const kernel_selector::kernel_data& kd)
-        : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
-    {
-        _kernel_data = kd;
-    }
-
-    static inline kernel_selector::eltwise_mode convect_to_eltwise_mode(eltwise_mode mode)
+    inline kernel_selector::eltwise_mode convect_to_eltwise_mode(eltwise_mode mode)
     {
         switch (mode)
         {
@@ -47,16 +36,26 @@ struct eltwise_gpu : typed_primitive_impl<eltwise>
             return kernel_selector::eltwise_mode::ADD;
         }
     }
+}
 
-    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, eltwise_inst& instance) override
+struct eltwise_gpu : typed_primitive_gpu_impl<eltwise>
+{
+    using parent = typed_primitive_gpu_impl<eltwise>;
+    using parent::parent;
+
+protected:
+
+    virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<eltwise>& instance, int32_t) const override
     {
         gpu::kernel::kernel_arguments_data args;
-        args.scalars = &_kernel_data.kernels[0].scalars;
+
         args.inputs = { &instance.input_memory(), &instance.input2_memory() };
         args.output = &instance.output_memory();
 
-        return _kernel.run(_kernel_data.kernels[0], events, args);
+        return args;
     }
+
+public:
 
     static primitive_impl* create(const eltwise_node& arg) 
     { 

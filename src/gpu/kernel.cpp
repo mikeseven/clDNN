@@ -97,6 +97,16 @@ namespace {
                     }
                 }
                 break;
+            case kernel_selector::kernel_argument_types::INTERNAL_BUFFER:
+                if (args[i].index < data.intermediates.size() && data.intermediates[args[i].index])
+                {
+                    const auto& input_mem = data.intermediates[args[i].index];
+                    if (input_mem)
+                    {
+                        status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*input_mem));
+                    }
+                }
+                break;
             case kernel_selector::kernel_argument_types::OUTPUT:
                 if (data.output)
                 {

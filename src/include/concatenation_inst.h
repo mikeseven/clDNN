@@ -55,7 +55,7 @@ public:
 public:
     typed_primitive_inst(network_impl& network, concatenation_node const& node);
 
-    const memory& input_memory(size_t idx) const { return dep_memory(idx); }
+    const memory& input_memory(size_t idx = 0) const { return dep_memory(idx); }
 };
 
 using concatenation_inst = typed_primitive_inst<concatenation>;

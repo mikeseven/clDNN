@@ -57,6 +57,7 @@ public:
     struct kernel_arguments_data
     {
         std::vector<const cldnn::memory*> inputs;
+        std::vector<const cldnn::memory*> intermediates;
         const cldnn::memory* output         = nullptr;
         const cldnn::memory* weights        = nullptr;
         const cldnn::memory* bias           = nullptr;

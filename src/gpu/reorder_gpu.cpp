@@ -15,47 +15,37 @@
 */
 
 #include "reorder_inst.h"
-#include "kernel.h"
+#include "primitive_gpu_base.h"
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
-#include "events_waiter.h"
 #include "error_handler.h"
 
 namespace cldnn { namespace gpu {
 
-struct reorder_gpu : typed_primitive_impl<reorder>
+struct reorder_gpu : typed_primitive_gpu_impl<reorder>
 {
-    const reorder_node& outer;
-    kernel _kernel;
+    using parent = typed_primitive_gpu_impl<reorder>;
+    using parent::parent;
 
-    reorder_gpu(const reorder_node& arg, const kernel_selector::kernel_data& kd)
-        : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
+protected:
+
+    virtual bool optimized_out(typed_primitive_inst<reorder>& instance) const override
     {
-        _kernel_data = kd;
+        return
+            parent::optimized_out(instance) || _outer.can_be_optimized();
     }
 
-    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, reorder_inst& instance) override
+    virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<reorder>& instance, int32_t split) const override
     {
-        if (outer.can_be_optimized())
-        {
-            if (events.size() == 1)
-                return events[0];
-
-            return events_waiter(outer.get_program().get_engine()->get_context()).run(events);
-        }
-
-        gpu::kernel::kernel_arguments_data args;
-        args.scalars = &_kernel_data.kernels[0].scalars;
-        args.inputs = { &instance.input_memory() };
-        args.output = &instance.output_memory();
-        if (outer.has_mean())
+        kernel::kernel_arguments_data args = parent::get_arguments(instance, split);
+        if (_outer.has_mean())
         {
             args.bias = &instance.mean_memory();
         }
-
-        return _kernel.run(_kernel_data.kernels[0], events, args);
+        return args;
     }
+
+public:
 
     static primitive_impl* create(const reorder_node& arg)
     {

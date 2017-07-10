@@ -15,65 +15,51 @@
 */
 
 #include "deconvolution_inst.h"
-#include "kernel.h"
-#include "kd_selector.h"
+#include "primitive_gpu_base.h"
 #include "implementation_map.h"
-
 #include "error_handler.h"
-#include "deconvolution/deconvolution_kernel_selector.h"
 #include "kernel_selector_helper.h"
-#include <initializer_list>
 
 namespace cldnn { namespace gpu {
 
-struct deconvolution_gpu : typed_primitive_impl<deconvolution> 
+struct deconvolution_gpu : typed_primitive_gpu_impl<deconvolution>
 {
-    const deconvolution_node& outer;
-    kernel _kernel;
+    using parent = typed_primitive_gpu_impl<deconvolution>;
+    using parent::parent;
 
-    deconvolution_gpu(const deconvolution_node &arg, const kernel_selector::kernel_data& kd)
-        : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
+protected:
+
+    // TODO: share it with convolution and fully connected
+    virtual bool validate(typed_primitive_inst<deconvolution>& instance) const override
     {
-        _kernel_data = kd;
-    }
+        bool res = parent::validate(instance);
 
-    event_impl::ptr execute_impl(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events, deconvolution_inst& instance) override
-    {
-        auto split = instance.node.get_split();
-
-        const auto* input_mem = &instance.input_memory();
-        const auto* output_mem = &instance.output_memory();
-        const auto* filter_mem_0 = &instance.weights_memory(0);
-
-        CLDNN_ERROR_NOT_EQUAL(outer.id(), "deconvolution filling value", outer.get_output_layout().data_padding.filling_value(), "padding mode", 0.0f, "Unknown padding mode in deconvolution.");
+        CLDNN_ERROR_NOT_EQUAL(_outer.id(), "deconvolution filling value", _outer.get_output_layout().data_padding.filling_value(), "padding mode", 0.0f, "Unknown padding mode in deconvolution.");
         // Check whether all memory elements use the same unit type (FP16 or FP32).
-        CLDNN_ERROR_DATA_TYPES_MISMATCH(outer.id(), "Input memory", input_mem->get_layout().data_type, "output memory", output_mem->get_layout().data_type, "");
-        CLDNN_ERROR_DATA_TYPES_MISMATCH(outer.id(), "Input memory", input_mem->get_layout().data_type, "filter memory", filter_mem_0->get_layout().data_type, "");
+        CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory().get_layout().data_type, "output memory", instance.output_memory().get_layout().data_type, "");
+        CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory().get_layout().data_type, "filter memory", instance.weights_memory(0).get_layout().data_type, "");
 
-        std::vector<event_impl::ptr> tmp_events(events);
-
-        // execute kernels
-        for (decltype(split) i = 0; i < split; i++)
-        {
-            const auto* filter_mem = &instance.weights_memory(i);
-            const auto* bias_mem = instance.bias_term() ? &instance.bias_memory(i) : nullptr;
-            
-            gpu::kernel::kernel_arguments_data args;
-            args.scalars = &_kernel_data.kernels[0].scalars;
-            args.inputs = { input_mem };
-            args.output = output_mem;
-            args.weights = filter_mem;
-            args.bias = bias_mem;
-            args.split = i;
-
-            auto event = _kernel.run(_kernel_data.kernels[0], tmp_events, args);
-            tmp_events.clear();
-            tmp_events.emplace_back(event);
-        }
-
-        return tmp_events.at(0);
+        return res;
     }
+
+    virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<deconvolution>& instance, int32_t split) const override
+    {
+        gpu::kernel::kernel_arguments_data args;
+
+        args.inputs     = { &instance.input_memory() };
+        args.output     = &instance.output_memory();
+        args.weights    = &instance.weights_memory(split);
+        args.bias       = instance.bias_term() ? &instance.bias_memory(split) : nullptr;
+
+        return args;
+    }
+
+    virtual int32_t get_split() const override
+    { 
+        return _outer.get_split(); 
+    }
+
+public:
 
     static primitive_impl* create(const deconvolution_node& arg)
     {

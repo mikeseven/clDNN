@@ -15,7 +15,7 @@
 */
 
 #include "activation_inst.h"
-#include "kernel.h"
+#include "primitive_gpu_base.h"
 #include "implementation_map.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
@@ -23,30 +23,21 @@
 namespace cldnn { namespace gpu {
 
 
-struct activation_gpu : typed_primitive_impl<activation>
+struct activation_gpu : typed_primitive_gpu_impl<activation>
 {
-    const activation_node& outer;
-    kernel _kernel;
+    using parent = typed_primitive_gpu_impl<activation>;
+    using parent::parent;
 
-    activation_gpu(const activation_node& arg, const kernel_selector::kernel_data& kd)
-        : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
+    virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<activation>& instance, int32_t split) const override
     {
-        _kernel_data = kd;
-    }
-
-    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, activation_inst& instance) override
-    {
-        gpu::kernel::kernel_arguments_data args;
-        args.scalars = &_kernel_data.kernels[0].scalars;
-        args.inputs = { &instance.input_memory() };
-        args.output = &instance.output_memory();
-        if (outer.is_parameterized())
+        kernel::kernel_arguments_data args = parent::get_arguments(instance, split);
+        
+        if (_outer.is_parameterized())
         {
             args.slope = &instance.slope_memory();
         }
 
-        return _kernel.run(_kernel_data.kernels[0], events, args);
+        return args;
     }
 
     static primitive_impl* create(const activation_node& arg) 

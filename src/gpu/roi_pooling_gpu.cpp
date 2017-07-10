@@ -15,9 +15,8 @@
 */
 
 #include "roi_pooling_inst.h"
-#include "kernel.h"
+#include "primitive_gpu_base.h"
 #include "implementation_map.h"
-#include "roi_pooling/roi_pooling_kernel_selector.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
 
@@ -33,27 +32,24 @@ namespace {
 }
 
 
-struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
+struct roi_pooling_gpu : typed_primitive_gpu_impl<roi_pooling>
 {
-    const roi_pooling_node& outer;
-    kernel _kernel;
+    using parent = typed_primitive_gpu_impl<roi_pooling>;
+    using parent::parent;
 
-    roi_pooling_gpu(const roi_pooling_node& arg, const kernel_selector::kernel_data& kd)
-        : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
-    {
-        _kernel_data = kd;
-    }
+protected:
 
-    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, roi_pooling_inst& instance) override
+    virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<roi_pooling>& instance, int32_t) const override
     {
-        gpu::kernel::kernel_arguments_data args;
-        args.scalars = &_kernel_data.kernels[0].scalars;
+        kernel::kernel_arguments_data args;
+
         args.inputs = { &instance.input_memory(), &instance.rois_memory() };
         args.output = &instance.output_memory();
 
-        return _kernel.run(_kernel_data.kernels[0], events, args);
+        return args;
     }
+
+public:
 
     static primitive_impl* create(const roi_pooling_node& arg)
     {

@@ -15,10 +15,9 @@
 */
 
 #include "normalize_inst.h"
-#include "kernel.h"
+#include "primitive_gpu_base.h"
 #include "implementation_map.h"
 #include "error_handler.h"
-#include "normalize/normalize_kernel_selector.h"
 #include "kernel_selector_helper.h"
 
 #include <algorithm>
@@ -28,28 +27,21 @@ using namespace cldnn;
 namespace cldnn { namespace gpu {
 
 
-struct normalize_gpu : typed_primitive_impl<normalize>
+struct normalize_gpu : typed_primitive_gpu_impl<normalize>
 {
-    const normalize_node& outer;
-    kernel _kernel;
+    using parent = typed_primitive_gpu_impl<normalize>;
+    using parent::parent;
 
-    normalize_gpu(const normalize_node& arg, const kernel_selector::kernel_data& kd)
-        : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
+protected:
+
+    virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<normalize>& instance, int32_t split) const override
     {
-        _kernel_data = kd;
+        kernel::kernel_arguments_data args = parent::get_arguments(instance, split);
+        args.scale_table = &instance.scale_memory();
+        return args;
     }
 
-    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, normalize_inst& instance) override
-    {
-        gpu::kernel::kernel_arguments_data args;
-        args.scalars        = &_kernel_data.kernels[0].scalars;
-        args.inputs         = { &instance.input_memory() };
-        args.output         = &instance.output_memory();
-        args.scale_table    = &instance.scale_memory();
-
-        return _kernel.run(_kernel_data.kernels[0], events, args);
-    }
+public:
 
     static primitive_impl* create(const normalize_node& arg) 
     { 

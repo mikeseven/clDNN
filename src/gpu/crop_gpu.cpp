@@ -15,43 +15,27 @@
 */
 
 #include "crop_inst.h"
-#include "kernel.h"
-#include "events_waiter.h"
+#include "primitive_gpu_base.h"
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
 #include "error_handler.h"
 
 namespace cldnn { namespace gpu {
 
-struct crop_gpu : typed_primitive_impl<crop>
+struct crop_gpu : typed_primitive_gpu_impl<crop>
 {
-    const crop_node& outer;
-    kernel _kernel;
+    using parent = typed_primitive_gpu_impl<crop>;
+    using parent::parent;
 
-    crop_gpu(const crop_node& arg, const kernel_selector::kernel_data& kd)
-        : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
+protected:
+
+    virtual bool optimized_out(typed_primitive_inst<crop>& instance) const override
     {
-        _kernel_data = kd;
+        return
+            parent::optimized_out(instance) || _outer.can_be_optimized();
     }
 
-    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, crop_inst& instance) override
-    {
-        if (outer.can_be_optimized())
-        {
-            if (events.size() == 1)
-                return events[0];
-
-            return events_waiter(outer.get_program().get_engine()->get_context()).run(events);
-        }
-
-        gpu::kernel::kernel_arguments_data args;
-        args.scalars = &_kernel_data.kernels[0].scalars;
-        args.inputs = { &instance.input_memory() };
-        args.output = &instance.output_memory();
-
-        return _kernel.run(_kernel_data.kernels[0], events, args);
-    }
+public:
 
     static primitive_impl* create(const crop_node& arg) 
     { 

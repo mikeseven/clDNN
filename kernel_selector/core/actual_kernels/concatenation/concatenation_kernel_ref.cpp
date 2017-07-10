@@ -36,6 +36,7 @@ namespace KernelSelector
         k.EnableConcatAxis(ConcatAxis::Y);
         k.EnableConcatAxis(ConcatAxis::FEATURE);
         k.EnableConcatAxis(ConcatAxis::BATCH);
+        k.EnableConcatKernelPerInput();
         return k;
     }
 

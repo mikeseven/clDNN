@@ -15,51 +15,33 @@
 */
 
 #include "reshape_inst.h"
-#include "kernel.h"
+#include "primitive_gpu_base.h"
 #include "implementation_map.h"
-#include "events_waiter.h"
-#include "network_impl.h"
 #include "kernel_selector_helper.h"
 #include "error_handler.h"
 
 namespace cldnn { namespace gpu {
 
-struct reshape_gpu : public typed_primitive_impl<reshape>
+struct reshape_gpu : public typed_primitive_gpu_impl<reshape>
 {
-    std::unique_ptr<kernel> _kernel;
+    using parent = typed_primitive_gpu_impl<reshape>;
+    using parent::parent;
 
-    reshape_gpu(reshape_node const& node, const kernel_selector::kernel_data& kd)
-        : _kernel(std::make_unique<gpu::kernel>(node.get_program().get_engine()->get_context(), kd.kernels[0].kernelString))
+protected:
+
+    virtual bool optimized_out(typed_primitive_inst<reshape>& instance) const override
     {
-        _kernel_data = kd;
+        return
+            parent::optimized_out(instance) || _outer.is_in_place();
     }
 
-    reshape_gpu(reshape_node const&){}
-
-    event_impl::ptr execute_impl(std::vector<event_impl::ptr> const& events, reshape_inst& instance)
-    {
-        if (!_kernel)
-        {
-            if (events.size() == 1)
-                return events[0];
-
-            events_waiter events_waiter(instance.get_network().get_engine()->get_context());
-            return events_waiter.run(events);
-        }
-
-        gpu::kernel::kernel_arguments_data args;
-        args.scalars = &_kernel_data.kernels[0].scalars;
-        args.inputs = { &instance.input_memory() };
-        args.output = &instance.output_memory();
-
-        return _kernel->run(_kernel_data.kernels[0], events, args);
-    }
+public:
 
     static primitive_impl* create(reshape_node const& arg) 
     { 
         if (arg.is_in_place())
         {
-            return new reshape_gpu(arg);
+            return new reshape_gpu(arg, {});
         }
 
         auto reorder_params = get_default_params<kernel_selector::reorder_base_params>(arg);

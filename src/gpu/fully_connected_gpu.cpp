@@ -17,7 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include "fully_connected_inst.h"
-#include "kernel.h"
+#include "primitive_gpu_base.h"
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
 #include "network_impl.h"
@@ -29,41 +29,54 @@
 namespace cldnn { namespace gpu {
 
 
-struct fully_connected_gpu : typed_primitive_impl<fully_connected>
+struct fully_connected_gpu : typed_primitive_gpu_impl<fully_connected>
 {
-    const fully_connected_node& outer;
+    using parent = typed_primitive_gpu_impl<fully_connected>;
+
     std::vector<network_impl::ptr> _reorders;   // TODO: move this reorder to graph compiler
-    kernel _kernel;
+    const memory* new_input_mem = nullptr;      // TODO: remove this hack
 
     fully_connected_gpu(const fully_connected_node& arg, const kernel_selector::kernel_data& kd, std::vector<network_impl::ptr> reorders)
-        : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
+        : parent(arg, kd)
+        , _reorders(reorders)
+    {}
+
+protected:
+
+    virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<fully_connected>& instance, int32_t) const
     {
-        _kernel_data = kd;
-        _reorders = reorders;
+        kernel::kernel_arguments_data args;
+
+        args.inputs     = { new_input_mem };
+        args.output     = &instance.output_memory();
+        args.weights    = &instance.weights_memory();
+        args.bias       = instance.bias_term() ? &instance.bias_memory() : nullptr;
+
+        return args;
     }
+
+public:
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, fully_connected_inst& instance) override
     {
-        const auto* input_mem = &instance.input_memory();
+        std::vector<event_impl::ptr> tmp_events(events);
 
-        if (_reorders.empty() == false)
+        if (_reorders.empty())
+        {
+            new_input_mem = &instance.input_memory();
+        }
+        else
         {
             auto network = _reorders[0];
-            network->set_input_data("input", api_cast(input_mem->get()));
-            network->execute(events);
+            network->set_input_data("input", api_cast(instance.input_memory().get()));
+            network->execute(tmp_events);
             auto output_id = network->get_output_ids()[0];
-            input_mem = &network->get_primitive(output_id)->output_memory();
+            new_input_mem = &network->get_primitive(output_id)->output_memory();
+            tmp_events.clear();
+            tmp_events.push_back(network->get_primitive_event(output_id));
         }
 
-        gpu::kernel::kernel_arguments_data args;
-        args.scalars = &_kernel_data.kernels[0].scalars;
-        args.inputs = { input_mem };
-        args.output = &instance.output_memory();
-        args.weights = &instance.weights_memory();
-        args.bias = instance.bias_term() ? &instance.bias_memory() : nullptr;;
-
-        return _kernel.run(_kernel_data.kernels[0], events, args);
+        return parent::execute_impl(tmp_events, instance);
     }
 
     static primitive_impl* create(const fully_connected_node& arg)

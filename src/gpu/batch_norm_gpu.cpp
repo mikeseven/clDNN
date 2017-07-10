@@ -15,35 +15,31 @@
 */
 
 #include "batch_norm_inst.h"
-#include "kernel.h"
-#include "network_impl.h"
+#include "primitive_gpu_base.h"
 #include "implementation_map.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
 
 namespace cldnn { namespace gpu {
 
-struct batch_norm_gpu : typed_primitive_impl<batch_norm>
+struct batch_norm_gpu : typed_primitive_gpu_impl<batch_norm>
 {
-    const batch_norm_node& outer;
-    kernel _kernel;
+    using parent = typed_primitive_gpu_impl<batch_norm>;
+    using parent::parent;
 
-    batch_norm_gpu(const batch_norm_node& arg, const kernel_selector::kernel_data& kd)
-        : outer(arg)
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
-    {
-        _kernel_data = kd;
-    }
+protected:
 
-    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, batch_norm_inst& instance) override
+    virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<batch_norm>& instance, int32_t) const override
     {
-        gpu::kernel::kernel_arguments_data args;
-        args.scalars = &_kernel_data.kernels[0].scalars;
+        kernel::kernel_arguments_data args;
+
         args.inputs = { &instance.input_memory(), &instance.mean_memory(), &instance.variance_memory() };
         args.output = &instance.output_memory();
 
-        return _kernel.run(_kernel_data.kernels[0], events, args);
+        return args;
     }
+
+public:
 
     static primitive_impl* create(const batch_norm_node &arg) 
     { 

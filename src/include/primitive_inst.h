@@ -43,11 +43,13 @@ class typed_primitive_inst;
 */
 struct primitive_impl
 {
+    primitive_impl() = default;
+    primitive_impl(const kernel_selector::weights_reorder_params& params) : _weights_reorder_params(params) {}
     virtual ~primitive_impl() = default;
 
     virtual event_impl::ptr execute(const std::vector<event_impl::ptr>& events, primitive_inst& instance) = 0;
 
-    kernel_selector::kernel_data _kernel_data;
+    const kernel_selector::weights_reorder_params _weights_reorder_params;
 };
 
 /*
@@ -118,6 +120,8 @@ template <class PType>
 struct typed_primitive_impl : public primitive_impl
 {
     static_assert(meta::is_primitive_v<PType>, "PType should be a non-const, non-volatile class derived from primitive");
+
+    using primitive_impl::primitive_impl;
 
 private:
     event_impl::ptr execute(const std::vector<refcounted_obj_ptr<event_impl>>& event, primitive_inst& instance) override

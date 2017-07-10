@@ -132,6 +132,7 @@ namespace KernelSelector {
             SCALE_TABLE,
             SLOPE,
             SPLIT,
+            INTERNAL_BUFFER,
             SCALAR,
         };
 
@@ -172,7 +173,8 @@ namespace KernelSelector {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct CPUKernel
     {
-        virtual WeightsLayout GetInputLayout() const { return WeightsLayout::oiyx; }
+        virtual WeightsType   GetExpectedInputType() = 0;
+        virtual WeightsLayout GetExpectedInputLayout() const { return WeightsLayout::oiyx; }
         virtual void Execute(void* input, size_t input_size, void* output, size_t output_size) const = 0;
     };
 
@@ -209,6 +211,7 @@ namespace KernelSelector {
     {
         std::shared_ptr<Params> params;
         std::vector<clKernelData> kernels;
+        std::vector<size_t> internalBufferSizes;
         float estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         bool reorderInput = false;

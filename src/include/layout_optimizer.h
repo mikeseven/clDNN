@@ -186,10 +186,12 @@ public:
             if (reorder_params.engine == kernel_selector::weights_reorder_params::Engine::CPU &&
                 reorder_params.cpuKernel != nullptr)
             {
-                const auto intermediate_format = from_weights_layout(reorder_params.cpuKernel->GetInputLayout());
-                if (intermediate_format != old_layout.format)
+                const auto intermediate_format = from_weights_layout(reorder_params.cpuKernel->GetExpectedInputLayout());
+                const auto intermediate_type   = from_weights_type(reorder_params.cpuKernel->GetExpectedInputType());
+                if (intermediate_format != old_layout.format ||
+                    intermediate_type   != old_layout.data_type)
                 {
-                    const layout intermediate_layout = { old_layout.data_type, intermediate_format, old_layout.size.transform(intermediate_format, 1) };
+                    const layout intermediate_layout = { intermediate_type, intermediate_format, old_layout.size.transform(intermediate_format, 1) };
 
                     auto reorder = create_reorder_if_needed(old_layout, input_id, intermediate_layout);
                     if (reorder.first)

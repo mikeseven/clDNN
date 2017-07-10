@@ -15,7 +15,7 @@
 */
 
 #include "lrn_inst.h"
-#include "kernel.h"
+#include "primitive_gpu_base.h"
 #include "implementation_map.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
@@ -23,29 +23,10 @@
 namespace cldnn { namespace gpu {
 
     
-struct lrn_gpu : typed_primitive_impl<lrn>
+struct lrn_gpu : typed_primitive_gpu_impl<lrn>
 {
-    const lrn_node& outer;
-    engine_info_internal _engine_info;
-    kernel _kernel;
-
-    lrn_gpu(const lrn_node& arg, const kernel_selector::kernel_data& kd)
-        : outer(arg)
-        , _engine_info(arg.get_program().get_engine()->get_context()->get_engine_info())
-        , _kernel(arg.get_program().get_engine()->get_context(), kd.kernels[0].kernelString)
-    {
-        _kernel_data = kd;
-    }
-
-    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, lrn_inst& instance) override
-    {
-        gpu::kernel::kernel_arguments_data args;
-        args.scalars = &_kernel_data.kernels[0].scalars;
-        args.inputs = { &instance.input_memory() };
-        args.output = &instance.output_memory();
-
-        return _kernel.run(_kernel_data.kernels[0], events, args);
-    }
+    using parent = typed_primitive_gpu_impl<lrn>;
+    using parent::parent;
 
     static primitive_impl* create(const lrn_node& arg) 
     {

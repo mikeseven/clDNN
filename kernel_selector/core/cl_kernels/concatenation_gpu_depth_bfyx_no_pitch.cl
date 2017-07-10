@@ -28,7 +28,7 @@
 
 __attribute__((reqd_work_group_size(1, WORK_GROUP_SIZE, 1)))
 __attribute__((intel_reqd_sub_group_size(WORK_GROUP_SIZE)))
-KERNEL (concatenation_gpu_depth_bfyx_no_padding)(__global float* input, __global float* output)
+KERNEL (concatenation_gpu_depth_bfyx_no_padding)(__global float* input, __global float* output, uint output_offset_in_concat_axis)
 {
     const uint batch_id = get_group_id(0);
 
@@ -40,7 +40,7 @@ KERNEL (concatenation_gpu_depth_bfyx_no_padding)(__global float* input, __global
 
     const uint input_offset = INPUT0_OFFSET + element_group_offset + batch_id * INPUT0_BATCH_PITCH;
     const uint output_batch_offset = batch_id * OUTPUT_BATCH_PITCH;
-    const uint output_offset = OUTPUT_OFFSET + element_group_offset + output_batch_offset;
+    const uint output_offset = OUTPUT_OFFSET + element_group_offset + output_batch_offset + output_offset_in_concat_axis*OUTPUT_PITCHES[CONCAT_AXIS_INDEX];
 
     //Check if current group in batch starts from 16-byte aligned pos. If not then move block read to 16-byte aligned position.
     //Requirement for intel_sub_group_block_write8.
