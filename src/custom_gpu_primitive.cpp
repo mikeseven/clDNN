@@ -17,8 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "custom_gpu_primitive_inst.h"
 #include "primitive_type_base.h"
-
-#include <algorithm>
+#include <sstream>
 
 namespace cldnn
 {
@@ -31,7 +30,7 @@ primitive_type_id custom_gpu_primitive_type_id()
 
 std::string custom_gpu_primitive_inst::to_string(custom_gpu_primitive_node const& node)
 {
-    std::stringstream           primitive_description;
+    std::stringstream primitive_description;
     auto desc = node.get_primitive();
 
     primitive_description << "id: " << desc->id << ", type: custom primitive" << 

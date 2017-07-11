@@ -73,7 +73,7 @@ TEST(custom_gpu_primitive_f32, add_basic_in2x2x2x2) {
             }
         )__krnl";
     std::string entry_point = "add_kernel";
-    std::vector<cldnn_arg> parameters = { {ARG_INPUT, 0}, {ARG_INPUT, (int8_t)1 }, {ARG_OUTPUT, 0 } };
+    std::vector<cldnn_arg> parameters = { {arg_input, 0}, {arg_input, 1 }, {arg_output, 0 } };
     layout output_layout = { data_types::f32, format::yxfb,{ 2, 2, 2, 2 } };
     std::vector<size_t> gws = { output_layout.count() };
     topology topology;
@@ -164,7 +164,7 @@ TEST(custom_gpu_primitive_f32, eltwise_add_basic_in2x2x2x2) {
             }
         )__krnl";
     std::string entry_point = "add_kernel";
-    std::vector<cldnn_arg> parameters = { { ARG_INPUT, 0 },{ ARG_OUTPUT, 0 } };
+    std::vector<cldnn_arg> parameters = { { arg_input, 0 },{ arg_output, 0 } };
     layout output_layout = { data_types::f32, format::yxfb,{ 2, 2, 2, 2 } };
     std::vector<size_t> gws = { output_layout.count() };
     topology topology;
@@ -257,7 +257,7 @@ TEST(custom_gpu_primitive_f32, add_eltwise_basic_in2x2x2x2) {
             }
         )__krnl";
     std::string entry_point = "add_kernel";
-    std::vector<cldnn_arg> parameters = { { ARG_INPUT, 0 },{ ARG_OUTPUT, 0 } };
+    std::vector<cldnn_arg> parameters = { { arg_input, 0 },{ arg_output, 0 } };
     layout output_layout = { data_types::f32, format::yxfb,{ 2, 2, 2, 2 } };
     std::vector<size_t> gws = { output_layout.count() };
     topology topology;

@@ -83,12 +83,19 @@ namespace cldnn
     {
     }
 
+    /// @brief Source code for the kernel
     fixed_size_vector_ref kernels_code;
+    /// @brief The name of the entry point function in the kernel
     const std::string kernel_entry_point;
+    /// @brief Argument bindings for the entry point function
     const std::vector<cldnn_arg> kernel_arguments;
+    /// @brief The kernel's build options
     const std::string build_options;
+    /// @brief The output layout declared by the primitive
     const layout output_layout;
+    /// @brief The global working sizes
     const std::vector<size_t> gws;
+    /// @brief The local working sizes
     const std::vector<size_t> lws;
     
 

@@ -288,7 +288,7 @@ typedef struct
 /// @brief Custom primitive kernel source code
 typedef const char*  cldnn_kernel_code;
 /// @brief Custom primitive kernel source code array
-typedef const char** cldnn_kernels_code;
+typedef cldnn_kernel_code* cldnn_kernels_code;
 /// @brief Custom primitive kernel entry point
 typedef const char*  cldnn_kernel_entry_point;
 /// @brief Custom primitive kernel build options
@@ -299,8 +299,8 @@ typedef const size_t*  cldnn_work_group_sizes;
 /// @brief Custom primitive kernel argument type
 typedef enum cldnn_arg_type_t
 {
-    ARG_INPUT,
-    ARG_OUTPUT,
+    arg_input,
+    arg_output,
 } cldnn_arg_type;
 
 /// @brief Custom primitive kernel argument index

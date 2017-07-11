@@ -60,10 +60,10 @@ static kernel_selector::kernel_argument_element get_arg(cldnn_arg arg)
     kernel_selector::kernel_argument_element ret;
     switch (arg.arg_type)
     {
-    case ARG_INPUT:
+    case arg_input:
         ret.t = kernel_selector::kernel_argument_types::INPUT;
         break;
-    case ARG_OUTPUT:
+    case arg_output:
         ret.t = kernel_selector::kernel_argument_types::OUTPUT;
         break;
     default:
