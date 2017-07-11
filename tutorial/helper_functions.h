@@ -22,9 +22,23 @@
 
 using namespace cldnn;
 template<typename T>
-void set_values(const cldnn::memory& mem, std::initializer_list<T> args) {
+void set_values(const cldnn::memory& mem, std::initializer_list<T> args) 
+{
     auto ptr = mem.pointer<T>();
     auto it = ptr.begin();
     for (auto x : args)
+    {
         *it++ = x;
+    }
+}
+
+template<typename T>
+void set_values(const cldnn::memory& mem, std::vector<T>&& args)
+{
+    auto ptr = mem.pointer<T>();
+    auto it = ptr.begin();
+    for (auto x : args)
+    {
+        *it++ = x;
+    }
 }

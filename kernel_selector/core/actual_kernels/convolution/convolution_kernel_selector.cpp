@@ -24,6 +24,7 @@
 #include "convolution_kernel_yxfb_yxio_b8.h"
 #include "convolution_kernel_yxfb_yxio_b1_block.h"
 #include "convolution_kernel_yxfb_yxio_b1_block_multiple_x.h"
+#include "convolution_kernel_tutorial1.h"
 #include <iostream>
  
 namespace KernelSelector 
@@ -39,6 +40,7 @@ namespace KernelSelector
         Attach<ConvolutionKernel_yxfb_yxio_b8>();
         //Attach<ConvolutionKernel_yxfb_yxio_b1_block>(); // TODO: need to finish integration
         Attach<ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x>();
+        Attach<ConvolutionKernel_Tutorial1>();
     }
 
     KernelsData ConvolutionKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const

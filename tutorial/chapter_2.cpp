@@ -75,7 +75,7 @@ topology chapter_2(engine& engine)
     // Now we are ready to create fc primitive.
     fully_connected fc(
         "fc",        // primitive identifier
-        "softmax",   // softmax will be input to softmax
+        "softmax",   // softmax will be input to fully connected
         "fc_weights",// weigths identifier
         "fc_bias"    // bias identifier
     );
