@@ -49,6 +49,7 @@ namespace kernel_selector
     using kernel_argument_types             = KernelSelector::ArgumentDescriptor::Types;
     using kernel_scalar_arguments           = KernelSelector::Scalars;
     using kernel_scalar_argument_types      = KernelSelector::ScalarDescriptor::Types;
+    using jit_constants                     = KernelSelector::JitConstants;
 
     using data_type                         = KernelSelector::Datatype;
     using kernel_type                       = KernelSelector::KernelType;

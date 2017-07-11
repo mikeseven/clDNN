@@ -88,7 +88,7 @@ std::string value_macro(const std::string& name, const std::string& value)
     return oss.str();
 }
 
-static void AddLayoutToJit(kernel_selector::jit_constants& mem_consts, const std::string& name, layout l) 
+static void add_layout_to_jit(kernel_selector::jit_constants& mem_consts, const std::string& name, layout l) 
 {
     // Size (in elements)
     // #define INPUT0_DIMS (uint[]) { b, f, y, x, }
@@ -178,10 +178,10 @@ static std::string get_jit_constant(const custom_gpu_primitive_node& outer)
 
     for (size_t i = 0; i < outer.get_dependencies().size(); i++) 
     {
-        AddLayoutToJit(mem_consts, "INPUT" + std::to_string(i), outer.input(i).get_output_layout());
+        add_layout_to_jit(mem_consts, "INPUT" + std::to_string(i), outer.input(i).get_output_layout());
     }
 
-    AddLayoutToJit(mem_consts, "OUTPUT0", outer.get_output_layout());
+    add_layout_to_jit(mem_consts, "OUTPUT0", outer.get_output_layout());
 
     std::ostringstream oss;
     oss << "// Custom Layer Built-ins\n\n";

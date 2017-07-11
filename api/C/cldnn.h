@@ -285,27 +285,35 @@ typedef struct
     size_t size;                    ///< Number of ids in the array.
 } cldnn_primitive_id_arr;
 
-/// @brief Unique @p id of a primitive within a topology.
+/// @brief Custom primitive kernel source code
 typedef const char*  cldnn_kernel_code;
+/// @brief Custom primitive kernel source code array
 typedef const char** cldnn_kernels_code;
+/// @brief Custom primitive kernel entry point
 typedef const char*  cldnn_kernel_entry_point;
+/// @brief Custom primitive kernel build options
 typedef const char*  cldnn_kernel_build_options;
+/// @brief Custom primitive kernel workgroup sizes
 typedef const size_t*  cldnn_work_group_sizes;
 
-typedef uint32_t cldnn_arg_index;
-
+/// @brief Custom primitive kernel argument type
 typedef enum cldnn_arg_type_t
 {
     ARG_INPUT,
     ARG_OUTPUT,
 } cldnn_arg_type;
 
+/// @brief Custom primitive kernel argument index
+typedef uint32_t cldnn_arg_index;
+
+/// @brief Custom primitive kernel argument type
 typedef struct cldnn_arg_t
 {
     cldnn_arg_type arg_type;
     cldnn_arg_index index;
 } cldnn_arg;
 
+/// @brief Custom primitive kernel argument array
 typedef const cldnn_arg* cldnn_kernel_arguments;
 
 /// @brief Begin primitive description definition
