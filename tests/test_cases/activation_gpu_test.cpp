@@ -90,7 +90,8 @@ void generic_relu_test(cldnn::format test_input_fmt, int input_b, int input_f, i
         activation(
             "relu",
             "reorder",
-            slope,
+            activation_relu_negative_slope,
+            { slope, 0.f },
             { { 0, 0, output_padding_x, output_padding_y }, 0 }));
     network network(engine, topology);
     network.set_input_data("input", input);
@@ -108,8 +109,8 @@ void generic_relu_test(cldnn::format test_input_fmt, int input_b, int input_f, i
     int x_size = output_tensor.spatial[0];
     int f_size = output_tensor.feature[0];
     int b_size = output_tensor.batch[0];
-    EXPECT_EQ(y_size, input_y + 2 * output_padding_y);
-    EXPECT_EQ(x_size, input_x + 2 * output_padding_x);
+    EXPECT_EQ(y_size, input_y);
+    EXPECT_EQ(x_size, input_x);
     EXPECT_EQ(f_size, input_f);
     EXPECT_EQ(b_size, input_b);
     
@@ -136,7 +137,7 @@ void generic_relu_test(cldnn::format test_input_fmt, int input_b, int input_f, i
         << "type = " << (sizeof(T) == 2 ? "float16" : "float32") << std::endl;
 }
 
-TEST(relu_f32_fw_gpu, basic_yxfb) {
+TEST(activation_f32_fw_gpu, relu_basic_yxfb) {
     //  Input:
     //  1 -2 -3  4  5
     //  2  2  3  4 -6
@@ -167,7 +168,7 @@ TEST(relu_f32_fw_gpu, basic_yxfb) {
 
     topology topology(
         input_layout("input", input.get_layout()),
-        activation( "relu", "input", 0.5, { { 0, 0, 0, 0 }, 0 }));
+        activation("relu", "input", activation_relu_negative_slope, { 0.5f, 0.f }, { { 0, 0, 0, 0 }, 0 }));
     network network(engine, topology);
     network.set_input_data("input", input);
     auto outputs = network.execute();
@@ -193,7 +194,114 @@ TEST(relu_f32_fw_gpu, basic_yxfb) {
     }
 }
 
-TEST(relu_f32_fw_gpu, basic_input_padding_yxfb) {
+TEST(activation_f32_fw_gpu, basic_yxfb_all_functions) 
+{
+    //  Input:
+    //  1 -2 -3  4  5
+    //  2  2  3  4 -6
+    //  3 -3  3  5  1
+    //  1  1  1 -1  1
+    //
+    //  a: 0.5, b: 2.5
+    //
+
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, 1, 5, 4 } });
+    set_values(input,
+    { 1.0f, -2.0f, -3.0f, 4.0f, 5.0f,
+        2.0f, 2.0f, 3.0f, 4.0f, -6.0f,
+        3.0f, -3.0f, 3.0f, 5.0f, 1.0f,
+        1.0f, 1.0f, 1.0f, -1.0f, 1.0f });
+
+    std::vector<cldnn_activation_func> funcs = {
+        activation_none,
+        activation_logistic,
+        activation_hyperbolic_tan,
+        activation_relu,
+        //activation_relu_negative_slope,
+        //activation_prelu,
+        activation_brelu,
+        activation_softrelu,
+        activation_abs,
+        activation_linear,
+        activation_square,
+        activation_sqrt,
+    };
+
+    cldnn_activation_additional_params params = { 0.5f, 2.5f };
+
+    for (auto func : funcs)
+    {
+        topology topology(
+            input_layout("input", input.get_layout()),
+            activation("activation", "input", func, params));
+        network network(engine, topology);
+        network.set_input_data("input", input);
+        auto outputs = network.execute();
+        EXPECT_EQ(outputs.size(), size_t(1));
+        EXPECT_EQ(outputs.begin()->first, "activation");
+
+        auto output_memory = outputs.at("activation").get_memory();
+        auto output_layout = output_memory.get_layout();
+        auto output_ptr = output_memory.pointer<float>();
+        auto input_ptr = input.pointer<float>();
+
+        int y_size = output_layout.size.spatial[1];
+        int x_size = output_layout.size.spatial[0];
+        int f_size = output_layout.size.feature[0];
+        int b_size = output_layout.size.batch[0];
+        EXPECT_EQ(output_layout.format, format::yxfb);
+        EXPECT_EQ(y_size, 4);
+        EXPECT_EQ(x_size, 5);
+        EXPECT_EQ(f_size, 1);
+        EXPECT_EQ(b_size, 1);
+
+        for (size_t i = 0; i < output_layout.get_linear_size(); ++i)
+        {
+            switch (func)
+            {
+            case activation_none:
+                EXPECT_FLOAT_EQ(input_ptr[i], output_ptr[i]);
+                break;
+            case activation_logistic:
+                EXPECT_FLOAT_EQ(1.f/(1.f + std::expf(-input_ptr[i])), output_ptr[i]);
+                break;
+            case activation_hyperbolic_tan:
+                EXPECT_FLOAT_EQ(std::tanhf(input_ptr[i]), output_ptr[i]);
+                break;
+            case activation_relu:
+                EXPECT_FLOAT_EQ(std::fmaxf(input_ptr[i], 0.f), output_ptr[i]);
+                break;
+            case activation_brelu:
+                EXPECT_FLOAT_EQ(std::fminf(std::fmaxf(input_ptr[i], 0), params.a), output_ptr[i]);
+                break;
+            case activation_softrelu:
+                EXPECT_FLOAT_EQ(std::logf(1+ std::expf(input_ptr[i])), output_ptr[i]);
+                break;
+            case activation_abs:
+                EXPECT_FLOAT_EQ(std::fabsf(input_ptr[i]), output_ptr[i]);
+                break;
+            case activation_linear:
+                EXPECT_FLOAT_EQ((params.a*input_ptr[i] + params.b), output_ptr[i]);
+                break;
+            case activation_square:
+                EXPECT_FLOAT_EQ((input_ptr[i]*input_ptr[i]), output_ptr[i]);
+                break;
+            case activation_sqrt:
+                if (input_ptr[i] >= 0)
+                {
+                    EXPECT_FLOAT_EQ(std::sqrtf(input_ptr[i]), output_ptr[i]);
+                }
+                break;
+            default:
+                break;
+            }
+        }
+    }
+}
+
+TEST(activation_f32_fw_gpu, relu_basic_input_padding_yxfb) {
     //  Input Padding: 2x1 (yx format) out of the reorder layer
     //  The expected size is the same as in put - the output padding is set to 0, 0
     //
@@ -233,7 +341,7 @@ TEST(relu_f32_fw_gpu, basic_input_padding_yxfb) {
     topology topology(
         input_layout("input", input.get_layout()),
         reorder("reorder", "input", input.get_layout().with_padding({ { 0, 0, 2, 1 }, 0 })),
-        activation("relu", "reorder", 0.5, { { 0, 0, 0, 0 }, 0 }));
+        activation("relu", "reorder", activation_relu_negative_slope, { 0.5f, 0.f }, { { 0, 0, 0, 0 }, 0 }));
     network network(engine, topology);
     network.set_input_data("input", input);
     auto outputs = network.execute();
@@ -258,7 +366,7 @@ TEST(relu_f32_fw_gpu, basic_input_padding_yxfb) {
     }
 }
 
-TEST(relu_f32_fw_gpu, basic_output_padding_yxfb) {
+TEST(activation_f32_fw_gpu, relu_basic_output_padding_yxfb) {
     //  Output Padding: 3x3 (yx format)
     //
     //  Input:
@@ -303,7 +411,7 @@ TEST(relu_f32_fw_gpu, basic_output_padding_yxfb) {
 
     topology topology(
         input_layout("input", input.get_layout()),
-        activation("relu", "input", 0.5, { { 0, 0, 3, 3 }, 0 }));
+        activation("relu", "input", activation_relu_negative_slope, { 0.5f, 0.f }, { { 0, 0, 3, 3 }, 0 }));
     network network(engine, topology);
     network.set_input_data("input", input);
     auto outputs = network.execute();
@@ -330,7 +438,7 @@ TEST(relu_f32_fw_gpu, basic_output_padding_yxfb) {
     }
 }
 
-TEST(DISABLED_relu_gpu, generic_random) {
+TEST(DISABLED_activation_gpu, relu_generic_random) {
     VF<cldnn::format> test_inputs_fmts = { cldnn::format::bfyx, cldnn::format::yxfb };
     VF<float> slopes = { 0.0f, -0.0f, -17.19f, 1028.8f, std::numeric_limits<float>::infinity(), -std::numeric_limits<float>::infinity() };
     std::vector<std::pair<int, int>> input_sizes = { { 100, 100 },{ 227, 227 },{ 400, 600 },{ 531, 777 },{ 4096, 1980 } };
@@ -365,7 +473,7 @@ TEST(DISABLED_relu_gpu, generic_random) {
 }
 
 #if 0 // no support yet
-TEST(relu_f32_fw_gpu, basic) {
+TEST(activation_f32_fw_gpu, relu_basic) {
     // FAIL now, because we don't support using the same buffer as input and output
     EXPECT_EQ(false, true);
     return;
@@ -398,7 +506,7 @@ TEST(relu_f32_fw_gpu, basic) {
 
 #if 0 
 - rewrite this
-TEST(relu_f32_fw_gpu, intrinsics_avx2) {
+TEST(activation_f32_fw_gpu, relu_intrinsics_avx2) {
     const uint32_t y = 8, x = 8, f = 3, b = 2;
 
     // Optimized data
@@ -432,7 +540,7 @@ TEST(relu_f32_fw_gpu, intrinsics_avx2) {
 
 
 
-class relu_test: public tests::generic_test
+class activation_relu_test: public tests::generic_test
 {
 
 public:
@@ -453,22 +561,22 @@ public:
     static std::vector<cldnn::primitive*> generate_specific_test_params()
     {
         // No padding
-        all_layer_params.push_back(new activation("relu", "input0", 0));
-        all_layer_params.push_back(new activation("relu", "input0", -17.19f));
-        all_layer_params.push_back(new activation("relu", "input0", 1028.8f));
-        all_layer_params.push_back(new activation("relu", "input0", std::numeric_limits<float>::infinity()));
+        all_layer_params.push_back(new activation("relu", "input0", activation_relu));
+        all_layer_params.push_back(new activation("relu", "input0", activation_relu_negative_slope, { -17.19f, 0.f }));
+        all_layer_params.push_back(new activation("relu", "input0", activation_relu_negative_slope, { 1028.8f, 0.f }));
+        all_layer_params.push_back(new activation("relu", "input0", activation_relu_negative_slope, { std::numeric_limits<float>::infinity(), 0.f }));
 
         // Output padding
-        all_layer_params.push_back(new activation("relu", "input0", -5.4f, { { 0, 0, 11, 5 },{ 0, 0, 3, 19 } }));
-        all_layer_params.push_back(new activation("relu", "input0", -1.f, { { 0, 0, 5, 13 },{ 0, 0, 1, 2 } }));
+        all_layer_params.push_back(new activation("relu", "input0", activation_relu_negative_slope, { -5.4f, 0.f }, { { 0, 0, 11, 5 },{ 0, 0, 3, 19 } }));
+        all_layer_params.push_back(new activation("relu", "input0", activation_relu_negative_slope, { -1.f, 0.f }, { { 0, 0, 5, 13 },{ 0, 0, 1, 2 } }));
 
         // Input padding (output of reorder layer)
-        all_layer_params.push_back(new activation("relu", "reorder0", -2.3f));
-        all_layer_params.push_back(new activation("relu", "reorder0", 23.4f));
+        all_layer_params.push_back(new activation("relu", "reorder0", activation_relu_negative_slope, { -2.3f, 0.f }));
+        all_layer_params.push_back(new activation("relu", "reorder0", activation_relu_negative_slope, { 23.4f, 0.f }));
 
         // Input padding (output of reorder layer) + Output padding
-        all_layer_params.push_back(new activation("relu", "reorder0", 1.003f, { { 0, 0, 1, 2 },{ 0, 0, 3, 4 } }));
-        all_layer_params.push_back(new activation("relu", "reorder0", -2.05f, { { 0, 0, 2, 0 },{ 0, 0, 5, 9 } }));
+        all_layer_params.push_back(new activation("relu", "reorder0", activation_relu_negative_slope, { 1.003f, 0.f }, { { 0, 0, 1, 2 },{ 0, 0, 3, 4 } }));
+        all_layer_params.push_back(new activation("relu", "reorder0", activation_relu_negative_slope, { -2.05f, 0.f }, { { 0, 0, 2, 0 },{ 0, 0, 5, 9 } }));
 
         return all_layer_params;
     }
@@ -492,7 +600,7 @@ public:
         data_types dt = inputs[0].get_layout().data_type;
         auto output = memory::allocate(engine, cldnn::layout(dt, cldnn::format::bfyx, inputs[0].get_layout().size, relu->output_padding));
 
-        float negative_slope = relu->negative_slope;
+        float negative_slope = relu->additional_params.a;
 
         auto input_mem = inputs[0].pointer<Type>();
         auto output_mem = output.pointer<Type>();
@@ -547,22 +655,22 @@ private:
 
 };
 
-std::vector<tests::test_params*> relu_test::all_generic_params = {};
-std::vector<cldnn::primitive*> relu_test::all_layer_params = {};
+std::vector<tests::test_params*> activation_relu_test::all_generic_params = {};
+std::vector<cldnn::primitive*> activation_relu_test::all_layer_params = {};
 
-TEST_P(relu_test, DISABLED_test_all)
+TEST_P(activation_relu_test, DISABLED_test_all)
 {
     run_single_test();
 }
 
 INSTANTIATE_TEST_CASE_P(RELU, 
-                        relu_test, 
-                        ::testing::Combine(::testing::ValuesIn(relu_test::generate_generic_test_params()),
-                                           ::testing::ValuesIn(relu_test::generate_specific_test_params())),
+                        activation_relu_test, 
+                        ::testing::Combine(::testing::ValuesIn(activation_relu_test::generate_generic_test_params()),
+                                           ::testing::ValuesIn(activation_relu_test::generate_specific_test_params())),
                         tests::generic_test::custom_param_name_functor());
 
 
-class prelu_test : public tests::generic_test
+class activation_prelu_test : public tests::generic_test
 {
 
 public:
@@ -694,16 +802,16 @@ private:
     
 };
 
-std::vector<tests::test_params*> prelu_test::all_generic_params = {};
-std::vector<cldnn::primitive*> prelu_test::all_layer_params = {};
-std::vector<std::tuple<tests::test_params*, cldnn::primitive*>> prelu_test::all_test_params = {};
+std::vector<tests::test_params*> activation_prelu_test::all_generic_params = {};
+std::vector<cldnn::primitive*> activation_prelu_test::all_layer_params = {};
+std::vector<std::tuple<tests::test_params*, cldnn::primitive*>> activation_prelu_test::all_test_params = {};
 
-TEST_P(prelu_test, DISABLED_test_all)
+TEST_P(activation_prelu_test, DISABLED_test_all)
 {
     run_single_test();
 }
 
 INSTANTIATE_TEST_CASE_P(PRELU, 
-                        prelu_test, 
-                        ::testing::ValuesIn(prelu_test::generate_all_test_params()),
+                        activation_prelu_test, 
+                        ::testing::ValuesIn(activation_prelu_test::generate_all_test_params()),
                         tests::generic_test::custom_param_name_functor());

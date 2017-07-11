@@ -36,6 +36,8 @@ namespace KernelSelector {
         std::string GetEntryPoint(const std::string& templateName, const std::string& layerID, const OptionalParams& options) const;
         static std::string Float2Str(const float f)
         {
+            if (std::isinf(f))
+                return std::signbit(f) ? "-INFINITY" : "INFINITY";
             return std::to_string(f) + "f";
         }
     };

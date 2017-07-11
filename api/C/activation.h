@@ -39,8 +39,10 @@ extern "C" {
 ///   @li in(i,x,y) : value at x, y from i-th feature map before activation.
 ///   @li slope(i) : the slope value of the i-th feature map (can be shared across channels or one slope per channel).
 CLDNN_BEGIN_PRIMITIVE_DESC(activation)
-/// @brief Activation negative slope.
-float negative_slope;
+/// @brief activation function.
+cldnn_activation_func activation_func;
+/// @brief Activation additional params.
+cldnn_activation_additional_params additional_params;
 /// @brief PRelu activation slope input primitive id.
 /// Input x dimension should be equal to input feature size (one slope per channel).
 /// All other dimensions should be 1.

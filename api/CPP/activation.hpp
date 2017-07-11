@@ -43,15 +43,18 @@ struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activ
     /// @brief Constructs Relu primitive.
     /// @param id This primitive id.
     /// @param input Input primitive id.
-    /// @param slope Relu activation slope.
+    /// @param activation_func activation function.
+    /// @param additional_params additional params (slope/max_val/linear a,b).
     activation(
         const primitive_id& id,
         const primitive_id& input,
-        float slope,
+        cldnn_activation_func activation_func,
+        cldnn_activation_additional_params additional_params = { 0.f,0.f },
         const padding& output_padding = padding()
         )
         : primitive_base(id, {input}, output_padding)
-        , negative_slope(slope)
+        , activation_func(activation_func)
+        , additional_params(additional_params)
         , negative_slope_input("")
     {
     }
@@ -69,7 +72,8 @@ struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activ
         const padding& output_padding = padding()
     )
         : primitive_base(id, { input }, output_padding)
-        , negative_slope(0)
+        , activation_func(activation_prelu)
+        , additional_params({ 0,0 })
         , negative_slope_input(slope_input)
     {
     }
@@ -77,13 +81,17 @@ struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activ
     /// @brief Constructs a copy from basic C API @CLDNN_PRIMITIVE_DESC{activation}
     activation(const dto* dto)
         : primitive_base(dto)
-        , negative_slope(dto->negative_slope)
+        , activation_func(dto->activation_func)
+        , additional_params(dto->additional_params)
         , negative_slope_input(dto->negative_slope_input)
     {
     }
 
-    /// @brief Relu activation slope.
-    float negative_slope;
+    /// @brief activation function.
+    cldnn_activation_func activation_func;
+
+    /// @brief activation additional params.
+    cldnn_activation_additional_params additional_params;
 
     /// @brief PRelu activation slope input primitive id.
     /// Input x dimension should be equal to input feature size (one slope per channel).
@@ -101,7 +109,8 @@ protected:
 
     void update_dto(dto& dto) const override
     {
-        dto.negative_slope = negative_slope;
+        dto.activation_func = activation_func;
+        dto.additional_params = additional_params;
         dto.negative_slope_input = negative_slope_input.c_str();
     }
 };

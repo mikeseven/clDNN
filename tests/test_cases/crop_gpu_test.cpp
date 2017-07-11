@@ -324,11 +324,11 @@ TEST(crop_gpu, basic_in1x4x1x1_split_w_relu) {
 
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
-    topology.add(activation("relu", "input", 0.0f));
+    topology.add(activation("relu", "input", activation_relu));
     topology.add(crop("crop1", "relu", tensor(batch(crop_batch_num), spatial(crop_x_size, crop_y_size), feature(crop_feature_num_1)), { tensor(feature(feature_offset_1), spatial(0,0),batch(0)) }));
     topology.add(crop("crop2", "relu", tensor(batch(crop_batch_num), spatial(crop_x_size, crop_y_size), feature(crop_feature_num_2)), { tensor(feature(feature_offset_2), spatial(0,0),batch(0)) }));
-    topology.add(activation("relu1", "crop1", 0.0f));
-    topology.add(activation("relu2", "crop2", 0.0f));
+    topology.add(activation("relu1", "crop1", activation_relu));
+    topology.add(activation("relu2", "crop2", activation_relu));
 
     std::vector<float> input_vec = { -1.f, 2.f, -3.f, 4.f };
     std::vector<float> out1 = { 0.f, 2.f,0.f };

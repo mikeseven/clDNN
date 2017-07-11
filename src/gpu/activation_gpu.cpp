@@ -55,15 +55,7 @@ struct activation_gpu : typed_primitive_impl<activation>
         auto activation_params = get_default_params<kernel_selector::activation_params>(arg);
         auto activation_optional_params = get_default_optional_params<kernel_selector::activation_optional_params>(arg.get_program());
 
-        if (arg.is_parameterized())
-        {
-            activation_params.activationFunc = kernel_selector::activation_function::PRELU;
-        }
-        else
-        {
-            activation_params.nlParams.m = arg.get_primitive()->negative_slope;
-            activation_params.activationFunc = kernel_selector::activation_function::RELU_NEGATIVE_SLOPE;
-        }
+        convert_new_activation_func(arg.get_primitive(), activation_params);
 
         auto& kernel_selector = kernel_selector::activation_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(activation_params, activation_optional_params);
