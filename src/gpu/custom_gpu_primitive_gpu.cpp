@@ -26,11 +26,6 @@
 
 using namespace cldnn;
 
-namespace kernel_selector
-{
-    using jit_constants = KernelSelector::JitConstants;
-}
-
 namespace neural
 {
 

@@ -35,6 +35,7 @@
 #include "permute/permute_kernel_selector.h"
 #include "reshape/reshape_kernel_selector.h"
 #include "concatenation/concatenation_kernel_selector.h"
+#include "jitter.h"
 
 using namespace cldnn;
 
