@@ -30,11 +30,12 @@
 #include <../api/CPP/topology.hpp>
 
 
-cldnn::engine   chapter_1(); // Engine, layout, tensor, memory, data and input
-cldnn::topology chapter_2(cldnn::engine&); // Primitives and topology
-void            chapter_3(cldnn::engine&, cldnn::topology&); // Network and execution
-void            chapter_4(cldnn::engine&, cldnn::topology&); // Hidden layers access
-void            chapter_5(cldnn::engine&, cldnn::topology&); // Other building options
+cldnn::engine   chapter_1();                                    // Engine, layout, tensor, memory, data and input
+cldnn::topology chapter_2(cldnn::engine&);                      // Primitives and topology
+void            chapter_3(cldnn::engine&, cldnn::topology&);    // Network and execution
+void            chapter_4(cldnn::engine&, cldnn::topology&);    // Hidden layers access
+void            chapter_5(cldnn::engine&, cldnn::topology&);    // Other building options
+void            chapter_6(cldnn::engine&);                      // How to add my own kernel implementation 
 
 int main()
 {
@@ -44,6 +45,7 @@ int main()
         chapter_3(eng, topology);
         chapter_4(eng, topology);
         chapter_5(eng, topology);
+        chapter_6(eng);
     }
     catch (const std::exception& ex)
     {
