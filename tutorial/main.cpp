@@ -24,6 +24,7 @@
 * @subpage c3 <br>
 * @subpage c4 <br>
 * @subpage c5 <br>
+* @subpage c6 <br>
 *
 */
 #include <../api/CPP/engine.hpp>
