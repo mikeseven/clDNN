@@ -29,10 +29,13 @@ primitive_type_id custom_gpu_primitive_type_id()
     return &instance;
 }
 
-std::string custom_gpu_primitive_inst::to_string(custom_gpu_primitive_node const&)
+std::string custom_gpu_primitive_inst::to_string(custom_gpu_primitive_node const& node)
 {
     std::stringstream           primitive_description;
-    // TODO
+    auto desc = node.get_primitive();
+
+    primitive_description << "id: " << desc->id << ", type: custom primitive" << 
+        "\n\tentry point: " << desc->kernel_entry_point << '\n';
     return primitive_description.str();
 }
 

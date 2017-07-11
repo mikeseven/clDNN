@@ -30,32 +30,29 @@
 extern "C" {
 #endif
 
-/// @brief Changes how data is ordered in memory. Value type is not changed & all information is preserved.
-/// @details Corresponding values are bitwise equal before/after custom_gpu_primitive.
-/// Also merged with subtraction layer, which can subtract values while doing reordering.
-/// NOTE THAT THIS WILL SUBTRACT THE SAME VALUES FROM EACH BATCH.
+/// @brief This primitive executes a custom kernel provided by the application
+/// @details The application is required to provide all relevant details for executing the custom kernel
+/// such as: sources, entry point, work sizes and parameter bindings.
 CLDNN_BEGIN_PRIMITIVE_DESC(custom_gpu_primitive)
-/// @brief Second input primitive id with values needed for eltwise computation.
-cldnn_primitive_id_arr inputs;
-
+/// @brief Source code for the kernel
 cldnn_primitive_id_arr kernels_code;
-
+/// @brief The name of the entry point function in the kernel
 cldnn_kernel_entry_point kernel_entry_point;
-
+/// @brief Argument bindings for the entry point function
 cldnn_kernel_arguments kernel_arguments;
-
+/// @brief The number of arguments used by the kernel
 int kernel_arguments_num;
-
+/// @brief The kernel's build options
 cldnn_kernel_build_options build_options;
-
+/// @brief The output layout declared by the primitive
 cldnn_layout output_layout;
-
+/// @brief The global working sizes
 cldnn_work_group_sizes gws;
-
+/// @brief The number of global work sizes
 int gws_num;
-
+/// @brief The local working sizes
 cldnn_work_group_sizes lws;
-
+/// @brief The number of local work sizes
 int lws_num;
 
 CLDNN_END_PRIMITIVE_DESC(custom_gpu_primitive)

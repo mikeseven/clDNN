@@ -210,7 +210,7 @@ static primitive_impl* create(const custom_gpu_primitive_node& arg)
     cl_kernel->workGroups.global = primitive->gws;
     cl_kernel->workGroups.local = primitive->lws;
 
-    for (const auto& p : primitive->parameters)
+    for (const auto& p : primitive->kernel_arguments)
     {
         cl_kernel->arguments.push_back(get_arg(p));
     }
