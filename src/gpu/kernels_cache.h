@@ -19,9 +19,20 @@
 #include <map>
 #include <mutex>
 #include <vector>
+#include <memory>
 
 namespace cl {
 class Kernel;
+}
+
+namespace KernelSelector
+{
+    struct KernelString;
+}
+
+namespace kernel_selector
+{
+    using kernel_string = KernelSelector::KernelString;
 }
 
 namespace neural {namespace gpu {
@@ -36,22 +47,21 @@ public:
         source_code source;
         std::string options;
         bool dump_custom_program;
+        std::map<std::string, std::string> entry_point_to_id;
     };
 
     struct kernel_code
     {
-        source_code source;
-        std::string options;
-        bool batch_compilation;
+        std::shared_ptr<kernel_selector::kernel_string> kernel_strings;
+        std::string id;
         bool dump_custom_program;
     };
 
     typedef std::string kernel_id;
-    typedef std::vector<std::pair<std::string, std::string>> jit_definitions;
     typedef cl::Kernel kernel_type;
     using sorted_code = std::map<std::string, program_code>;
     using kernels_map = std::map<std::string, kernel_type>;
-    using kernels_code = std::map<std::string, kernel_code>;
+    using kernels_code = std::map<void*, kernel_code>;
 
 private:
     gpu_toolkit& _context;
@@ -65,8 +75,7 @@ private:
     kernels_map build_program(const program_code& pcode) const;
 
 public:
-    kernel_id set_kernel_source(const std::string& template_name, jit_definitions definitions = jit_definitions(), std::string kernel_name = std::string());
-    kernel_id set_kernel_source(const source_code& source, const std::string& options, const std::string& entry_point, bool batch_compilation, bool dump_custom_program);
+    kernel_id set_kernel_source(const std::shared_ptr<kernel_selector::kernel_string>& kernel_string, bool dump_custom_program);
     kernel_type get_kernel(kernel_id id);
 };
 

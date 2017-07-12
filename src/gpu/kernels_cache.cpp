@@ -23,6 +23,8 @@
 #include <fstream>
 #include <set>
 
+#include "kernel_selector_helper.h"
+
 #ifndef NDEBUG
 #define OUT_PORGRAM_TO_FILE
 #endif
@@ -119,11 +121,12 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
 {
     sorted_code scode;
 
-    for (auto& code : kernels_source_code)
+    for (const auto& code : kernels_source_code)
     {
-        const source_code&  org_source_code     = code.second.source;
-        std::string         options             = code.second.options;
-        bool                batch_compilation   = code.second.batch_compilation;
+        const source_code   org_source_code     = { code.second.kernel_strings->jit, code.second.kernel_strings->str };
+        std::string         entry_point         = code.second.kernel_strings->entry_point;
+        std::string         options             = code.second.kernel_strings->options;
+        bool                batch_compilation   = code.second.kernel_strings->batch_compilation;
         bool                dump_custom_program = code.second.dump_custom_program;
 
         batch_compilation &= does_options_support_batch_compilation(options);
@@ -153,6 +156,8 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
             current_bucket.options = options;
         }
 
+        current_bucket.entry_point_to_id[entry_point] = code.second.id;
+
         source_code new_source_code = org_source_code;
 
         if (batch_compilation)
@@ -171,11 +176,32 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
 
 kernels_cache::kernels_cache(gpu_toolkit& context): _context(context) {}
 
-kernels_cache::kernel_id kernels_cache::set_kernel_source(const source_code& source, const std::string& options, const std::string& entry_point, bool batch_compilation, bool dump_custom_program)
+kernels_cache::kernel_id kernels_cache::set_kernel_source(const std::shared_ptr<kernel_selector::kernel_string>& kernel_string, bool dump_custom_program)
 {
+    kernels_cache::kernel_id id;
+    
+    // same kernel_string == same kernel
+    const auto key = kernel_string.get();
+
     std::lock_guard<std::mutex> lock(_mutex);
-    _kernels_code[entry_point] = { source, options, batch_compilation, dump_custom_program };
-    return entry_point;
+
+    const auto it = _kernels_code.find(key);
+
+    if (it == _kernels_code.end())
+    {
+        // we need unique id in order to avoid conflict across topologies.
+        const auto kernel_num = _kernels.size() + _kernels_code.size(); 
+        id = kernel_string->entry_point + "_" + std::to_string(kernel_num);
+        _kernels_code[key] = { kernel_string, id, dump_custom_program };
+    }
+    else
+    {
+        id = it->second.id;
+    }
+
+    assert(_kernels.find(id) == _kernels.end());
+
+    return id;
 }
 
 kernels_cache::kernels_map kernels_cache::build_program(const program_code& program_source) const
@@ -252,13 +278,19 @@ kernels_cache::kernel_type kernels_cache::get_kernel(kernel_id id)
     {
         auto sorted_program_code = get_program_source(_kernels_code);
 
-        _kernels_code.clear();
-
         for (auto& program : sorted_program_code)
         {
             auto kernels = build_program(program.second);
-            _kernels.insert(kernels.begin(), kernels.end());
+
+            for (auto& k : kernels)
+            {
+                const auto& entry_point = k.first;
+                const auto& k_id = program.second.entry_point_to_id[entry_point];
+                _kernels[k_id] = k.second;
+            }
         }
+
+        _kernels_code.clear();
     }
 
     return _kernels.at(id);

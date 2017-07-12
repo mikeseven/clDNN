@@ -70,7 +70,7 @@ KERNEL(deconvolution_gpu_yxfb_ref)(
     result += bias[ofm_offset];
 #endif
     const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * FILTER_OFM_NUM;
-    const uint dst_index = OUTPUT_OFFSET + batch_offset*OUTPUT_BATCH_PITCH + ofm_offset*OUTPUT_FEATURE_PITCH + out_y*OUTPUT_Y_PITCH + out_x*OUTPUT_X_PITCH + OUTPUT_OFFSET + out_split_offset;
+    const uint dst_index = OUTPUT_OFFSET + out_split_offset + batch_offset*OUTPUT_BATCH_PITCH + ofm_offset*OUTPUT_FEATURE_PITCH + out_y*OUTPUT_Y_PITCH + out_x*OUTPUT_X_PITCH;
     ACTIVATION(output[dst_index], result);
 }
 
