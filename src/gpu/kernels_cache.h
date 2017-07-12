@@ -19,10 +19,21 @@
 #include <map>
 #include <mutex>
 #include <vector>
+#include <memory>
 #include "cache/primitive_db.h"
 
 namespace cl {
 class Kernel;
+}
+
+namespace KernelSelector
+{
+    struct KernelString;
+}
+
+namespace kernel_selector
+{
+    using kernel_string = KernelSelector::KernelString;
 }
 
 namespace neural {namespace gpu {
@@ -37,13 +48,13 @@ public:
         source_code source;
         std::string options;
         bool dump_custom_program;
+        std::map<std::string, std::string> entry_point_to_id;
     };
 
     struct kernel_code
     {
-        source_code source;
-        std::string options;
-        bool batch_compilation;
+        std::shared_ptr<kernel_selector::kernel_string> kernel_strings;
+        std::string id;
         bool inject_header;
         bool dump_custom_program;
     };
@@ -70,8 +81,7 @@ private:
 
 public:
     kernel_id create_kernel_from_template(const std::string& template_name, jit_definitions definitions = jit_definitions(), std::string kernel_name = std::string());
-    kernel_id set_kernel_source(const std::string& template_name, jit_definitions definitions = jit_definitions(), std::string kernel_name = std::string());
-    kernel_id set_kernel_source(const source_code& source, const std::string& options, const std::string& entry_point, bool batch_compilation, bool dump_custom_program);
+    kernel_id set_kernel_source(const std::shared_ptr<kernel_selector::kernel_string>& kernel_string, bool dump_custom_program);
     kernel_type get_kernel(kernel_id id);
 };
 
