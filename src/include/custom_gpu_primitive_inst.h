@@ -49,9 +49,6 @@ public:
 
 public:
     typed_primitive_inst(network_impl& network, custom_gpu_primitive_node const& node);
-
-    size_t        inputs_memory_count() const { return dependencies().size(); }
-    const memory& input_memory(size_t idx = 0) const { return dep_memory(idx); }
 };
 
 using custom_gpu_primitive_inst = typed_primitive_inst<custom_gpu_primitive>;

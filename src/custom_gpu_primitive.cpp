@@ -35,6 +35,7 @@ std::string custom_gpu_primitive_inst::to_string(custom_gpu_primitive_node const
 
     primitive_description << "id: " << desc->id << ", type: custom primitive" << 
         "\n\tentry point: " << desc->kernel_entry_point << '\n';
+    // TODO: consider printing more information here
     return primitive_description.str();
 }
 

@@ -44,10 +44,9 @@ struct custom_gpu_primitive_gpu : typed_primitive_impl<custom_gpu_primitive>
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, custom_gpu_primitive_inst& instance) override
     {
         gpu::kernel::kernel_arguments_data args;
-
-        for (size_t i = 0; i < instance.inputs_memory_count(); i++)
+        for (auto& dep : instance.dependencies())
         {
-            args.inputs.push_back(&instance.input_memory(i));
+            args.inputs.push_back(&(dep->output_memory()));
         }
         args.output = &instance.output_memory();
         
