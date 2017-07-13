@@ -340,9 +340,6 @@ inline void convert_new_activation_func(const p_type primitive, kernel_selector:
     case activation_relu_negative_slope:
         params.activationFunc = kernel_selector::activation_function::RELU_NEGATIVE_SLOPE;
         break;
-    case activation_prelu:
-        params.activationFunc = kernel_selector::activation_function::PRELU;
-        break;
     case activation_brelu:
         params.activationFunc = kernel_selector::activation_function::BRELU;
         break;

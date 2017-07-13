@@ -24,6 +24,7 @@
 #include <api/CPP/topology.hpp>
 #include <api/CPP/network.hpp>
 #include <api/CPP/engine.hpp>
+#include <api/CPP/data.hpp>
 #include "test_utils/test_utils.h"
 #include "test_utils/float16.h"
 #include "api/CPP/reorder.hpp"
@@ -208,6 +209,7 @@ TEST(activation_f32_fw_gpu, basic_yxfb_all_functions)
     engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, 1, 5, 4 } });
+    auto input_params = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, 1, 2, 1 } });
     set_values(input,
     { 1.0f, -2.0f, -3.0f, 4.0f, 5.0f,
         2.0f, 2.0f, 3.0f, 4.0f, -6.0f,
@@ -219,8 +221,7 @@ TEST(activation_f32_fw_gpu, basic_yxfb_all_functions)
         activation_logistic,
         activation_hyperbolic_tan,
         activation_relu,
-        //activation_relu_negative_slope,
-        //activation_prelu,
+        activation_relu_negative_slope,
         activation_brelu,
         activation_softrelu,
         activation_abs,
@@ -230,72 +231,85 @@ TEST(activation_f32_fw_gpu, basic_yxfb_all_functions)
     };
 
     cldnn_activation_additional_params params = { 0.5f, 2.5f };
+    set_values(input_params, { params.a, params.b });
 
-    for (auto func : funcs)
+    for (uint8_t i = 0 ; i < 2 ; i++)
     {
-        topology topology(
-            input_layout("input", input.get_layout()),
-            activation("activation", "input", func, params));
-        network network(engine, topology);
-        network.set_input_data("input", input);
-        auto outputs = network.execute();
-        EXPECT_EQ(outputs.size(), size_t(1));
-        EXPECT_EQ(outputs.begin()->first, "activation");
-
-        auto output_memory = outputs.at("activation").get_memory();
-        auto output_layout = output_memory.get_layout();
-        auto output_ptr = output_memory.pointer<float>();
-        auto input_ptr = input.pointer<float>();
-
-        int y_size = output_layout.size.spatial[1];
-        int x_size = output_layout.size.spatial[0];
-        int f_size = output_layout.size.feature[0];
-        int b_size = output_layout.size.batch[0];
-        EXPECT_EQ(output_layout.format, format::yxfb);
-        EXPECT_EQ(y_size, 4);
-        EXPECT_EQ(x_size, 5);
-        EXPECT_EQ(f_size, 1);
-        EXPECT_EQ(b_size, 1);
-
-        for (size_t i = 0; i < output_layout.get_linear_size(); ++i)
+        for (auto func : funcs)
         {
-            switch (func)
+            topology topology(input_layout("input", input.get_layout()));
+
+            if (i == 0)
             {
-            case activation_none:
-                EXPECT_FLOAT_EQ(input_ptr[i], output_ptr[i]);
-                break;
-            case activation_logistic:
-                EXPECT_FLOAT_EQ(1.f/(1.f + std::expf(-input_ptr[i])), output_ptr[i]);
-                break;
-            case activation_hyperbolic_tan:
-                EXPECT_FLOAT_EQ(std::tanhf(input_ptr[i]), output_ptr[i]);
-                break;
-            case activation_relu:
-                EXPECT_FLOAT_EQ(std::fmaxf(input_ptr[i], 0.f), output_ptr[i]);
-                break;
-            case activation_brelu:
-                EXPECT_FLOAT_EQ(std::fminf(std::fmaxf(input_ptr[i], 0), params.a), output_ptr[i]);
-                break;
-            case activation_softrelu:
-                EXPECT_FLOAT_EQ(std::logf(1+ std::expf(input_ptr[i])), output_ptr[i]);
-                break;
-            case activation_abs:
-                EXPECT_FLOAT_EQ(std::fabsf(input_ptr[i]), output_ptr[i]);
-                break;
-            case activation_linear:
-                EXPECT_FLOAT_EQ((params.a*input_ptr[i] + params.b), output_ptr[i]);
-                break;
-            case activation_square:
-                EXPECT_FLOAT_EQ((input_ptr[i]*input_ptr[i]), output_ptr[i]);
-                break;
-            case activation_sqrt:
-                if (input_ptr[i] >= 0)
+                topology.add(activation("activation", "input", func, params));
+            }
+            else
+            {
+                topology.add(data("input_params", input_params));
+                topology.add(activation("activation", "input", "input_params", func));
+            }
+
+            network network(engine, topology);
+            network.set_input_data("input", input);
+            auto outputs = network.execute();
+            EXPECT_EQ(outputs.size(), size_t(1));
+            EXPECT_EQ(outputs.begin()->first, "activation");
+
+            auto output_memory = outputs.at("activation").get_memory();
+            auto output_layout = output_memory.get_layout();
+            auto output_ptr = output_memory.pointer<float>();
+            auto input_ptr = input.pointer<float>();
+
+            int y_size = output_layout.size.spatial[1];
+            int x_size = output_layout.size.spatial[0];
+            int f_size = output_layout.size.feature[0];
+            int b_size = output_layout.size.batch[0];
+            EXPECT_EQ(output_layout.format, format::yxfb);
+            EXPECT_EQ(y_size, 4);
+            EXPECT_EQ(x_size, 5);
+            EXPECT_EQ(f_size, 1);
+            EXPECT_EQ(b_size, 1);
+
+            for (size_t i = 0; i < output_layout.get_linear_size(); ++i)
+            {
+                switch (func)
                 {
-                    EXPECT_FLOAT_EQ(std::sqrtf(input_ptr[i]), output_ptr[i]);
+                case activation_none:
+                    EXPECT_FLOAT_EQ(input_ptr[i], output_ptr[i]);
+                    break;
+                case activation_logistic:
+                    EXPECT_FLOAT_EQ(1.f / (1.f + std::expf(-input_ptr[i])), output_ptr[i]);
+                    break;
+                case activation_hyperbolic_tan:
+                    EXPECT_FLOAT_EQ(std::tanhf(input_ptr[i]), output_ptr[i]);
+                    break;
+                case activation_relu:
+                    EXPECT_FLOAT_EQ(std::fmaxf(input_ptr[i], 0.f), output_ptr[i]);
+                    break;
+                case activation_brelu:
+                    EXPECT_FLOAT_EQ(std::fminf(std::fmaxf(input_ptr[i], 0), params.a), output_ptr[i]);
+                    break;
+                case activation_softrelu:
+                    EXPECT_FLOAT_EQ(std::logf(1 + std::expf(input_ptr[i])), output_ptr[i]);
+                    break;
+                case activation_abs:
+                    EXPECT_FLOAT_EQ(std::fabsf(input_ptr[i]), output_ptr[i]);
+                    break;
+                case activation_linear:
+                    EXPECT_FLOAT_EQ((params.a*input_ptr[i] + params.b), output_ptr[i]);
+                    break;
+                case activation_square:
+                    EXPECT_FLOAT_EQ((input_ptr[i] * input_ptr[i]), output_ptr[i]);
+                    break;
+                case activation_sqrt:
+                    if (input_ptr[i] >= 0)
+                    {
+                        EXPECT_FLOAT_EQ(std::sqrtf(input_ptr[i]), output_ptr[i]);
+                    }
+                    break;
+                default:
+                    break;
                 }
-                break;
-            default:
-                break;
             }
         }
     }
@@ -691,18 +705,18 @@ public:
     static std::vector<cldnn::primitive*> generate_specific_test_params()
     {
         // No padding
-        all_layer_params.push_back(new activation("relu", "input0", "input1"));
+        all_layer_params.push_back(new activation("relu", "input0", "input1", activation_relu_negative_slope));
 
         // Output padding
-        all_layer_params.push_back(new activation("relu", "input0", "input1", { { 0, 0, 11, 5 },{ 0, 0, 3, 19 } }));
-        all_layer_params.push_back(new activation("relu", "input0", "input1", { { 0, 0, 5, 13 },{ 0, 0, 1, 2 } }));
+        all_layer_params.push_back(new activation("relu", "input0", "input1", activation_relu_negative_slope, { { 0, 0, 11, 5 },{ 0, 0, 3, 19 } }));
+        all_layer_params.push_back(new activation("relu", "input0", "input1", activation_relu_negative_slope, { { 0, 0, 5, 13 },{ 0, 0, 1, 2 } }));
 
         // Input padding (output of reorder layer)
-        all_layer_params.push_back(new activation("relu", "reorder0", "input1"));
+        all_layer_params.push_back(new activation("relu", "reorder0", "input1", activation_relu_negative_slope));
 
         // Input padding (output of reorder layer) + Output padding
-        all_layer_params.push_back(new activation("relu", "reorder0", "input1", { { 0, 0, 1, 2 },{ 0, 0, 3, 4 } }));
-        all_layer_params.push_back(new activation("relu", "reorder0", "input1", { { 0, 0, 2, 0 },{ 0, 0, 5, 9 } }));
+        all_layer_params.push_back(new activation("relu", "reorder0", "input1", activation_relu_negative_slope, { { 0, 0, 1, 2 },{ 0, 0, 3, 4 } }));
+        all_layer_params.push_back(new activation("relu", "reorder0", "input1", activation_relu_negative_slope, { { 0, 0, 2, 0 },{ 0, 0, 5, 9 } }));
 
         return all_layer_params;
     }

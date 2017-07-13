@@ -55,7 +55,7 @@ struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activ
         : primitive_base(id, {input}, output_padding)
         , activation_func(activation_func)
         , additional_params(additional_params)
-        , negative_slope_input("")
+        , additional_params_input("")
     {
     }
 
@@ -69,12 +69,13 @@ struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activ
         const primitive_id& id,
         const primitive_id& input,
         const primitive_id& slope_input,
+        cldnn_activation_func activation_func,
         const padding& output_padding = padding()
     )
         : primitive_base(id, { input }, output_padding)
-        , activation_func(activation_prelu)
+        , activation_func(activation_func)
         , additional_params({ 0,0 })
-        , negative_slope_input(slope_input)
+        , additional_params_input(slope_input)
     {
     }
 
@@ -83,7 +84,7 @@ struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activ
         : primitive_base(dto)
         , activation_func(dto->activation_func)
         , additional_params(dto->additional_params)
-        , negative_slope_input(dto->negative_slope_input)
+        , additional_params_input(dto->additional_params_input)
     {
     }
 
@@ -96,22 +97,22 @@ struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activ
     /// @brief PRelu activation slope input primitive id.
     /// Input x dimension should be equal to input feature size (one slope per channel).
     /// All other dimensions should be 1.
-    primitive_id negative_slope_input;
+    primitive_id additional_params_input;
 
 protected:
 
     std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override
     {
-        if (negative_slope_input.empty())
+        if (additional_params_input.empty())
             return{};
-        return{ negative_slope_input };
+        return{ additional_params_input };
     }
 
     void update_dto(dto& dto) const override
     {
         dto.activation_func = activation_func;
         dto.additional_params = additional_params;
-        dto.negative_slope_input = negative_slope_input.c_str();
+        dto.additional_params_input = additional_params_input.c_str();
     }
 };
 /// @}

@@ -58,6 +58,26 @@ namespace KernelSelector
         }
     }
 
+    inline uint8_t GetActivationAdditionalParamsNumber(ActivationFunction func)
+    {
+        uint8_t paramsNum = 0;
+
+        switch (func)
+        {
+        case ActivationFunction::LINEAR:
+            paramsNum = 2;
+            break;
+        case ActivationFunction::RELU_NEGATIVE_SLOPE:
+        case ActivationFunction::BRELU:
+            paramsNum = 1;
+            break;
+        default:
+            break;
+        }
+
+        return paramsNum;
+    }
+
     template<typename T>
     typename std::enable_if<std::is_integral<T>::value, T>::type Align(T size, size_t align) {
         return static_cast<T>((size % align == 0) ? size : size - size % align + align);

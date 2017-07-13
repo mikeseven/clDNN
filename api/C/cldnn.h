@@ -324,7 +324,6 @@ typedef enum cldnn_activation_func_t
     activation_hyperbolic_tan,
     activation_relu,
     activation_relu_negative_slope,
-    activation_prelu,
     activation_brelu,
     activation_softrelu,
     activation_abs,

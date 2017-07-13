@@ -711,4 +711,28 @@ inline JitConstants MakeConcatenationJitConstants(const ConcatenationParams& par
     return jit;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MakeActivationJitConstants
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+inline JitConstants MakeActivationJitConstants(const ActivationParams& params)
+{
+    JitConstants jit = MakeBaseParamsJitConstants(params);
+    
+    const auto& inputNlParams = params.actParams.inputNlParams;
+
+    jit.AddConstants({
+        MakeJitConstant("PARAMS_NUM", GetActivationAdditionalParamsNumber(params.activationFunc)),
+    });
+
+    if (!inputNlParams.empty())
+    {
+        jit.AddConstants({
+            MakeJitConstant("ADDITIONAL_PARAMS", inputNlParams[0]),
+            MakeJitConstant("PARAMETERIZED", ""),
+        });
+    }
+
+    return jit;
+}
+
 }

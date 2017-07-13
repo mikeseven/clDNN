@@ -46,7 +46,7 @@ cldnn_activation_additional_params additional_params;
 /// @brief PRelu activation slope input primitive id.
 /// Input x dimension should be equal to input feature size (one slope per channel).
 /// All other dimensions should be 1.
-cldnn_primitive_id negative_slope_input;
+cldnn_primitive_id additional_params_input;
 CLDNN_END_PRIMITIVE_DESC(activation)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(activation);

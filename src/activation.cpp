@@ -41,7 +41,7 @@ std::string activation_inst::to_string(activation_node const& node)
         "\n\tactivation_func: " << desc->activation_func <<
         "\n\tadditional_params.a: " << desc->additional_params.a <<
         "\n\tadditional_params.b: " << desc->additional_params.b <<
-        "\n\tslope input: " << desc->negative_slope_input <<
+        "\n\tadditional_params input: " << desc->additional_params_input <<
         "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
         "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
         "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
@@ -60,16 +60,11 @@ activation_inst::typed_primitive_inst(network_impl& network, activation_node con
 
     if (is_parameterized())
     {
-        if (argument.activation_func != cldnn_activation_func::activation_prelu)
-        {
-            throw std::invalid_argument("prelu is the only activation function which support parameterization");
-        }
-
         /// Slope input x dimension should be equal to input feature size (one slope per channel).
         auto slope_input_size = slope_memory().get_layout().size;
         auto input_feature_size = input_memory().get_layout().size.feature[0];
 
-        if (slope_input_size.spatial[0] != input_feature_size)
+        if (slope_input_size.spatial[0] < input_feature_size)
         {
             throw std::invalid_argument("Dimensions mismatch between input and slope input in Activation layer (slope x size should be equal to input feature size)!");
         }
