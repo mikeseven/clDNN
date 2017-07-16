@@ -16,6 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+#include <cmath>
 #include <gtest/gtest.h>
 #include <algorithm>
 #include "api/CPP/memory.hpp"
@@ -278,22 +279,22 @@ TEST(activation_f32_fw_gpu, basic_yxfb_all_functions)
                     EXPECT_FLOAT_EQ(input_ptr[i], output_ptr[i]);
                     break;
                 case activation_logistic:
-                    EXPECT_FLOAT_EQ(1.f / (1.f + std::expf(-input_ptr[i])), output_ptr[i]);
+                    EXPECT_FLOAT_EQ(1.f / (1.f + std::exp((float)-input_ptr[i])), output_ptr[i]);
                     break;
                 case activation_hyperbolic_tan:
-                    EXPECT_FLOAT_EQ(std::tanhf(input_ptr[i]), output_ptr[i]);
+                    EXPECT_FLOAT_EQ(std::tanh((float)input_ptr[i]), output_ptr[i]);
                     break;
                 case activation_relu:
-                    EXPECT_FLOAT_EQ(std::fmaxf(input_ptr[i], 0.f), output_ptr[i]);
+                    EXPECT_FLOAT_EQ(std::fmax((float)input_ptr[i], 0.f), output_ptr[i]);
                     break;
                 case activation_brelu:
-                    EXPECT_FLOAT_EQ(std::fminf(std::fmaxf(input_ptr[i], 0), params.a), output_ptr[i]);
+                    EXPECT_FLOAT_EQ(std::fmin((float)std::fmax((float)input_ptr[i], 0), params.a), output_ptr[i]);
                     break;
                 case activation_softrelu:
-                    EXPECT_FLOAT_EQ(std::logf(1 + std::expf(input_ptr[i])), output_ptr[i]);
+                    EXPECT_FLOAT_EQ(std::log(1.f + std::exp((float)input_ptr[i])), output_ptr[i]);
                     break;
                 case activation_abs:
-                    EXPECT_FLOAT_EQ(std::fabsf(input_ptr[i]), output_ptr[i]);
+                    EXPECT_FLOAT_EQ(std::fabs(input_ptr[i]), output_ptr[i]);
                     break;
                 case activation_linear:
                     EXPECT_FLOAT_EQ((params.a*input_ptr[i] + params.b), output_ptr[i]);
@@ -304,7 +305,7 @@ TEST(activation_f32_fw_gpu, basic_yxfb_all_functions)
                 case activation_sqrt:
                     if (input_ptr[i] >= 0)
                     {
-                        EXPECT_FLOAT_EQ(std::sqrtf(input_ptr[i]), output_ptr[i]);
+                        EXPECT_FLOAT_EQ(std::sqrt((float)input_ptr[i]), output_ptr[i]);
                     }
                     break;
                 default:

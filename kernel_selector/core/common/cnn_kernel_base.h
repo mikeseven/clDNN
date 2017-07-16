@@ -20,6 +20,7 @@
 #include <memory>
 #include <sstream>
 #include <assert.h>
+#include <cmath>
 
 namespace KernelSelector {
 
