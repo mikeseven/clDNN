@@ -316,20 +316,20 @@ typedef struct cldnn_arg_t
 /// @brief Custom primitive kernel argument array
 typedef const cldnn_arg* cldnn_kernel_arguments;
 
-/// @brief activation function
+/// @brief activation functions
 typedef enum cldnn_activation_func_t
 {
-    activation_none,
-    activation_logistic,
-    activation_hyperbolic_tan,
-    activation_relu,
-    activation_relu_negative_slope,
-    activation_brelu,
-    activation_softrelu,
-    activation_abs,
-    activation_linear,
-    activation_square,
-    activation_sqrt,
+    activation_none,                    // val
+    activation_logistic,                // 1/(1 + exp(-val))
+    activation_hyperbolic_tan,          // tanh(val)
+    activation_relu,                    // max(0, val)
+    activation_relu_negative_slope,     // max(0, val) + a * min(0, val)    (a is additional param)
+    activation_brelu,                   // max(0, min(a, val)               (a is additional param)
+    activation_softrelu,                // log(1 + exp(val))
+    activation_abs,                     // abs(val)
+    activation_linear,                  // a*val + b                        (a,b are additional params) 
+    activation_square,                  // val*val
+    activation_sqrt,                    // sqrt(val)
 } cldnn_activation_func;
 
 /// @brief activation additional params

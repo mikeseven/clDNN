@@ -42,10 +42,14 @@ CLDNN_BEGIN_PRIMITIVE_DESC(activation)
 /// @brief activation function.
 cldnn_activation_func activation_func;
 /// @brief Activation additional params.
+/// activation_relu_negative_slope  - additional_params.a is a negative slope
+/// activation_brelu                - additional_params.a is a upper bound
+/// activation_linear               - additional_params.a/b uses as a*val + b
 cldnn_activation_additional_params additional_params;
-/// @brief PRelu activation slope input primitive id.
-/// Input x dimension should be equal to input feature size (one slope per channel).
-/// All other dimensions should be 1.
+/// @brief Activation additional params stored on a memory object
+/// activation_relu_negative_slope  - negative slope per feature map
+/// activation_brelu                - upper bound per feature map
+/// activation_linear               - a,b per feature map
 cldnn_primitive_id additional_params_input;
 CLDNN_END_PRIMITIVE_DESC(activation)
 

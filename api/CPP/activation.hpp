@@ -62,20 +62,20 @@ struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activ
     /// @brief Constructs Parameterized Relu primitive.
     /// @param id This primitive id.
     /// @param input Input primitive id.
-    /// @param slope_input  PRelu activation slopes input primitive id.
-    /// Input x dimension should be equal to input feature size (one slope per channel).
+    /// @param additional_params_input additional params stored on a memory.
+    /// Input x dimension should be equal to input feature size (one value per channel. in case of linear is one pair per channel).
     /// All other dimensions should be 1.
     activation(
         const primitive_id& id,
         const primitive_id& input,
-        const primitive_id& slope_input,
+        const primitive_id& additional_params_input,
         cldnn_activation_func activation_func,
         const padding& output_padding = padding()
     )
         : primitive_base(id, { input }, output_padding)
         , activation_func(activation_func)
         , additional_params({ 0,0 })
-        , additional_params_input(slope_input)
+        , additional_params_input(additional_params_input)
     {
     }
 
