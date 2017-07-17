@@ -73,7 +73,8 @@ file(GLOB_RECURSE __CLDNN_Sources__actual_kernels
     "${__CLDNN_Directory__actual_kernels}/*.hpp"
     "${__CLDNN_Directory__actual_kernels}/*.cpp"
   )
-  
+
+# ============================= OpenVX Adapter Start =============================
 set(__CLDNN_Directory__vx_adapter   "${__CLDNN_Directory__main}/vx_adapter")
 set(__CLDNN_Label__vx_adapter       "vx_adapter")
 file(GLOB __CLDNN_Sources__vx_adapter 
@@ -83,13 +84,14 @@ file(GLOB __CLDNN_Sources__vx_adapter
     "${__CLDNN_Directory__vx_adapter}/*.cpp"
   )
 
-set(__CLDNN_Directory__cache           "${__CLDNN_Directory__vx_adapter}/cache")
-set(__CLDNN_Label__cache               "${__CLDNN_Label__vx_adapter}\\cache")
-file(GLOB __CLDNN_Sources__cache
-    "${__CLDNN_Directory__cache}/*.h"
-    "${__CLDNN_Directory__cache}/*.hpp"
-    "${__CLDNN_Directory__cache}/*.cpp"
+set(__CLDNN_Directory__vx_adapter_cache           "${__CLDNN_Directory__vx_adapter}/cache")
+set(__CLDNN_Label__vx_adapter_cache               "${__CLDNN_Label__vx_adapter}\\cache")
+file(GLOB __CLDNN_Sources__vx_adapter_cache
+    "${__CLDNN_Directory__vx_adapter_cache}/*.h"
+    "${__CLDNN_Directory__vx_adapter_cache}/*.hpp"
+    "${__CLDNN_Directory__vx_adapter_cache}/*.cpp"
   )
+# =============================  OpenVX Adapter End  =============================
 
 set(__CLDNN_Directory__cl_kernels      "${__CLDNN_Directory__core}/cl_kernels")
 set(__CLDNN_Label__cl_kernels          "${__CLDNN_Label__core}\\cl_kernels")
@@ -99,7 +101,7 @@ file(GLOB_RECURSE __CLDNN_Sources__cl_kernels
 
 set(__CLDNN_Directory__cg_cache        "${CLDNN__CODEGEN_INCDIR}")
 set(__CLDNN_CGDirectory__cg_cache      "${CLDNN__CODEGEN_DIR}/cache")
-set(__CLDNN_Label__cg_cache            "${__CLDNN_Label__cache}\\codegen")
+set(__CLDNN_Label__cg_cache            "${__CLDNN_Label__core}\\codegen")
 set(__CLDNN_File__cg_cache__prim_db    "ks_primitive_db.inc")
 set(__CLDNN_Sources__cg_cache
     "${__CLDNN_Directory__cg_cache}/${__CLDNN_File__cg_cache__prim_db}"
@@ -112,25 +114,29 @@ set(__CLDNN_AllSources
     ${__CLDNN_Sources__common}
     ${__CLDNN_Sources__core_common}
     ${__CLDNN_Sources__actual_kernels}
-    ${__CLDNN_Sources__cache}
     ${__CLDNN_Sources__cl_kernels}
     ${__CLDNN_Sources__cg_cache}
+# ============================= OpenVX Adapter Start =============================
     ${__CLDNN_Sources__vx_adapter}
+    ${__CLDNN_Sources__vx_adapter_cache}
+# =============================  OpenVX Adapter End  =============================
   )
 # Helping with some generators.
 set_property(SOURCE ${__CLDNN_Sources__cg_cache} PROPERTY GENERATED TRUE)
 
 # =============================================== Filters ==============================================
 
-source_group("${__CLDNN_Label__main}"            FILES ${__CLDNN_Sources__main})
-source_group("${__CLDNN_Label__core}"            FILES ${__CLDNN_Sources__core})
-source_group("${__CLDNN_Label__common}"          FILES ${__CLDNN_Sources__common})
-source_group("${__CLDNN_Label__core_common}"     FILES ${__CLDNN_Sources__core_common})
-source_group("${__CLDNN_Label__actual_kernels}"  FILES ${__CLDNN_Sources__actual_kernels})
-source_group("${__CLDNN_Label__cache}"           FILES ${__CLDNN_Sources__cache})
-source_group("${__CLDNN_Label__cl_kernels}"      FILES ${__CLDNN_Sources__cl_kernels})
-source_group("${__CLDNN_Label__cg_cache}"        FILES ${__CLDNN_Sources__cg_cache})
+source_group("${__CLDNN_Label__main}"             FILES ${__CLDNN_Sources__main})
+source_group("${__CLDNN_Label__core}"             FILES ${__CLDNN_Sources__core})
+source_group("${__CLDNN_Label__common}"           FILES ${__CLDNN_Sources__common})
+source_group("${__CLDNN_Label__core_common}"      FILES ${__CLDNN_Sources__core_common})
+source_group("${__CLDNN_Label__actual_kernels}"   FILES ${__CLDNN_Sources__actual_kernels})
+source_group("${__CLDNN_Label__cl_kernels}"       FILES ${__CLDNN_Sources__cl_kernels})
+source_group("${__CLDNN_Label__cg_cache}"         FILES ${__CLDNN_Sources__cg_cache})
+# ============================= OpenVX Adapter Start =============================
 source_group("${__CLDNN_Label__vx_adapter}"      FILES ${__CLDNN_Sources__vx_adapter})
+source_group("${__CLDNN_Label__vx_adapter_cache}" FILES ${__CLDNN_Sources__vx_adapter_cache})
+# =============================  OpenVX Adapter End  =============================
 
 # ===================================== Include/Link directories =======================================
 
