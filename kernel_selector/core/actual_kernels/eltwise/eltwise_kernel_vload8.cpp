@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "simple_eltwise_kernel_vload.h"
+#include "eltwise_kernel_vload8.h"
 #include "kernel_selector_utils.h" 
 
 namespace KernelSelector {
 
-    ParamsKey SimpleEltwiseKernel_vload::GetSupportedKey() const
+    ParamsKey EltwiseKernel_vload8::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
@@ -32,26 +32,31 @@ namespace KernelSelector {
         return k;
     }
 
-    JitConstants SimpleEltwiseKernel_vload::get_jit_constants(const EltwiseParams& params) const
+    JitConstants EltwiseKernel_vload8::get_jit_constants(const EltwiseParams& params) const
     {
         auto jit = MakeEltwiseJitConstants(params);
         jit.AddConstant(MakeJitConstant(toString(params.eltwiseParams.operations[0].mode) + "_MODE_USED", 1));
         return jit;
     }
 
-    bool SimpleEltwiseKernel_vload::Validate(const Params& params, const OptionalParams&) const
+    bool EltwiseKernel_vload8::Validate(const Params& params, const OptionalParams&) const
     {
         if (params.GetType() != KernelType::ELTWISE)
         {
             return false;
         }
 
-        const EltwiseParams& ewParams = static_cast<const EltwiseParams&>(params);
+        const auto& ewParams = static_cast<const EltwiseParams&>(params);
+        const auto& output = ewParams.output;
+        const auto count = output.PhysicalSize();
+
+        const bool bSupportedCount = (count % 8) == 0;
 
         if (!CheckActivationSupport(ewParams.activationFunc) ||
             !CheckInputsOutputNoPitchSameDims(ewParams) ||
             ewParams.eltwiseParams.operations.size() != 1 ||
-            ewParams.inputs.size() != 2)
+            ewParams.inputs.size() != 2 ||
+            !bSupportedCount)
         {
             return false;
         }
@@ -70,7 +75,7 @@ namespace KernelSelector {
         return true;
     }
 
-    KernelsData SimpleEltwiseKernel_vload::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData EltwiseKernel_vload8::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         if (!Validate(params, options))
         {

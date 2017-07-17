@@ -17,7 +17,7 @@
 #include "eltwise_kernel_selector.h"
 #include "eltwise_kernel_ref.h"
 #include "generic_eltwise_kernel_ref.h"
-#include "simple_eltwise_kernel_vload.h"
+#include "eltwise_kernel_vload8.h"
  
 namespace KernelSelector 
 {
@@ -25,7 +25,7 @@ namespace KernelSelector
     {
         //Attach<EltwiseKernelRef>();
         Attach<GenericEltwiseKernelRef>();
-        Attach<SimpleEltwiseKernel_vload>();
+        Attach<EltwiseKernel_vload8>();
     }
 
     KernelsData EltwiseKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const

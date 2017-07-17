@@ -20,11 +20,11 @@
 
 namespace KernelSelector
 {
-    class SimpleEltwiseKernel_vload : public CommonKernelBase
+    class EltwiseKernel_vload8 : public CommonKernelBase
     {
     public:
-        SimpleEltwiseKernel_vload() : CommonKernelBase("eltwise_simple_vload8") {}
-        virtual ~SimpleEltwiseKernel_vload() {}
+        EltwiseKernel_vload8() : CommonKernelBase("eltwise_simple_vload8") {}
+        virtual ~EltwiseKernel_vload8() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
