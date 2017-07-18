@@ -20,8 +20,8 @@
 KERNEL(activation)(
     __global DATA_TYPE* input, 
     __global DATA_TYPE* output
-#ifdef ACTIVATION_FUNCTION_PRELU 
-    , __global DATA_TYPE* slope
+#ifdef PARAMETERIZED 
+    , __global ADDITIONAL_PARAMS_TYPE* params
 #endif
     )
 {
@@ -38,10 +38,20 @@ KERNEL(activation)(
     const unsigned src_index = batch*INPUT_BATCH_PITCH + feature*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x*INPUT_X_PITCH + INPUT_OFFSET;
     const unsigned dst_index = batch*OUTPUT_BATCH_PITCH + feature*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH + OUTPUT_OFFSET;
 
-#ifdef ACTIVATION_FUNCTION_PRELU 
-    float nl_m = (float)slope[feature];
+#if defined PARAMETERIZED
+    #if   PARAMS_NUM == 2
+        const float nl_m = (float)params[2*feature + 0];
+        const float nl_n = (float)params[2*feature + 1];
+    #elif PARAMS_NUM == 1
+        const float nl_m = (float)params[feature];
+        const float nl_n = (float)NL_N;
+    #else
+        const float nl_m = (float)NL_M;
+        const float nl_n = (float)NL_N;
+    #endif
 #else
-    float nl_m = (float)NL_M;
+    const float nl_m = (float)NL_M;
+    const float nl_n = (float)NL_N;
 #endif
-    output[dst_index] = FUNC_CALL(activation_function)(input[src_index], nl_m, NL_N);
+    output[dst_index] = FUNC_CALL(activation_function)(input[src_index], nl_m, nl_n);
 }

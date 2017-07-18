@@ -320,6 +320,53 @@ inline void convert_activation_func_params(const p_type primitive, kernel_select
     }
 }
 
+template <typename p_type>
+inline void convert_new_activation_func(const p_type primitive, kernel_selector::base_params& params)
+{
+    switch (primitive->activation_func)
+    {
+    case activation_none:           
+        params.activationFunc = kernel_selector::activation_function::NONE;
+        break;
+    case activation_logistic:
+        params.activationFunc = kernel_selector::activation_function::LOGISTIC;
+        break;
+    case activation_hyperbolic_tan:
+        params.activationFunc = kernel_selector::activation_function::HYPERBOLIC_TAN;
+        break;
+    case activation_relu:
+        params.activationFunc = kernel_selector::activation_function::RELU;
+        break;
+    case activation_relu_negative_slope:
+        params.activationFunc = kernel_selector::activation_function::RELU_NEGATIVE_SLOPE;
+        break;
+    case activation_brelu:
+        params.activationFunc = kernel_selector::activation_function::BRELU;
+        break;
+    case activation_softrelu:
+        params.activationFunc = kernel_selector::activation_function::SOFTRELU;
+        break;
+    case activation_abs:
+        params.activationFunc = kernel_selector::activation_function::ABS;
+        break;
+    case activation_linear:
+        params.activationFunc = kernel_selector::activation_function::LINEAR;
+        break;
+    case activation_square:
+        params.activationFunc = kernel_selector::activation_function::SQUARE;
+        break;
+    case activation_sqrt:
+        params.activationFunc = kernel_selector::activation_function::SQRT;
+        break;
+    default:
+        throw std::runtime_error("Unknown activation function");
+        break;
+    }
+
+    params.nlParams.m = primitive->additional_params.a;
+    params.nlParams.n = primitive->additional_params.b;
+}
+
 template <typename params_t, typename arg_t>
 inline params_t get_default_params(const arg_t& arg, uint32_t split = 1)
 {

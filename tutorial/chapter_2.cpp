@@ -45,7 +45,7 @@ topology chapter_2(engine& engine)
     activation relu(
         "relu",  // primitive identifier
         "input", // identifier of input ( output of primitive with provided name is input to current )
-        0.0);    // slope
+        activation_relu);
 
     // Softmax is also very easy to create:
     softmax softmax(

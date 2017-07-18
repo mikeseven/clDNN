@@ -20,6 +20,7 @@
 #include <memory>
 #include <sstream>
 #include <assert.h>
+#include <cmath>
 
 namespace KernelSelector {
 
@@ -36,6 +37,11 @@ namespace KernelSelector {
         std::string GetEntryPoint(const std::string& templateName, const std::string& layerID, const OptionalParams& options) const;
         static std::string Float2Str(const float f)
         {
+            if (std::isinf(f))
+            {
+                // OpenCL uses "INFINITY" instead of "inf"
+                return std::signbit(f) ? "-INFINITY" : "INFINITY";
+            }
             return std::to_string(f) + "f";
         }
     };

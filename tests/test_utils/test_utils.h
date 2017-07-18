@@ -404,7 +404,7 @@ inline void PrintTupleTo(const std::tuple<tests::test_params*, cldnn::primitive*
     else if (primitive->type == cldnn::activation::type_id())
     {
         auto activation = static_cast<cldnn::activation*>(primitive);
-        str << "Negative slope: " << activation->negative_slope << " Negative slope input id: " << activation->negative_slope_input;
+        str << "Negative slope: " << activation->additional_params.a << " Negative slope input id: " << activation->additional_params_input;
     }
     else if (primitive->type == cldnn::pooling::type_id())
     {

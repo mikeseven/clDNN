@@ -55,14 +55,21 @@ struct activation_gpu : typed_primitive_impl<activation>
         auto activation_params = get_default_params<kernel_selector::activation_params>(arg);
         auto activation_optional_params = get_default_optional_params<kernel_selector::activation_optional_params>(arg.get_program());
 
+        convert_new_activation_func(arg.get_primitive(), activation_params);
+
         if (arg.is_parameterized())
         {
-            activation_params.activationFunc = kernel_selector::activation_function::PRELU;
-        }
-        else
-        {
-            activation_params.nlParams.m = arg.get_primitive()->negative_slope;
-            activation_params.activationFunc = kernel_selector::activation_function::RELU_NEGATIVE_SLOPE;
+            const auto& slope_layout = arg.slope_input().get_output_layout();
+            const auto& output_layout = arg.get_output_layout();
+
+            const auto params_num = KernelSelector::GetActivationAdditionalParamsNumber(activation_params.activationFunc);
+
+            if (slope_layout.size.count() < output_layout.size.feature[0] * params_num)
+            {
+                throw std::runtime_error("Error - not enough data inside additional params buffer");
+            }
+
+            activation_params.actParams.inputNlParams.push_back(convert_data_tensor(slope_layout));
         }
 
         auto& kernel_selector = kernel_selector::activation_kernel_selector::Instance();

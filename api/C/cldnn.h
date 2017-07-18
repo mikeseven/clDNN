@@ -316,6 +316,28 @@ typedef struct cldnn_arg_t
 /// @brief Custom primitive kernel argument array
 typedef const cldnn_arg* cldnn_kernel_arguments;
 
+/// @brief activation functions
+typedef enum cldnn_activation_func_t
+{
+    activation_none,                    // val
+    activation_logistic,                // 1/(1 + exp(-val))
+    activation_hyperbolic_tan,          // tanh(val)
+    activation_relu,                    // max(0, val)
+    activation_relu_negative_slope,     // max(0, val) + a * min(0, val)    (a is additional param)
+    activation_brelu,                   // max(0, min(a, val)               (a is additional param)
+    activation_softrelu,                // log(1 + exp(val))
+    activation_abs,                     // abs(val)
+    activation_linear,                  // a*val + b                        (a,b are additional params) 
+    activation_square,                  // val*val
+    activation_sqrt,                    // sqrt(val)
+} cldnn_activation_func;
+
+/// @brief activation additional params
+typedef struct cldnn_activation_additional_params_t
+{
+    float a, b;
+} cldnn_activation_additional_params;
+
 /// @brief Begin primitive description definition
 /// @details Defines @p 'cldnn_primitive_type_desc' structure with first 5 fields
 /// common for all primitive descriptors. Other fields should be added after this macro.

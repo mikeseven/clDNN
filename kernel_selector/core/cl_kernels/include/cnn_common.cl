@@ -103,7 +103,7 @@ inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, floa
 inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
     { return log( (TYPE_T)(1) + exp(value)); }
     
-#elif defined ACTIVATION_FUNCTION_RELU_NEGATIVE_SLOPE || defined ACTIVATION_FUNCTION_PRELU
+#elif defined ACTIVATION_FUNCTION_RELU_NEGATIVE_SLOPE
 #define ACTIVATION_FUNCTION(TYPE_T) \
 inline TYPE_T CAT_FUNC(activation_function_, TYPE_T)(TYPE_T value, float m, float n)\
     { return isinf((TYPE_T)m) ? ((value >= (TYPE_T)0) ? value : -(TYPE_T)m) : (fmax(value, (TYPE_T)0) + (TYPE_T)m * fmin(value, (TYPE_T)0)); }
