@@ -34,7 +34,8 @@ public:
 
     bool is_in_place() const
     {
-        return (!get_primitive()->output_padding && !input().get_primitive()->output_padding);
+        return (!get_primitive()->output_padding && !input().get_primitive()->output_padding
+            && !input().get_output_layout().data_padding && !get_output_layout().data_padding);
     }
 };
 
