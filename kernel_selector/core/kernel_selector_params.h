@@ -66,7 +66,7 @@ namespace KernelSelector
                     uint32_t biasPerFeatureMap : 1;
                     uint32_t biasPerOutput : 1;
                     uint32_t nonBias : 1;
-                    uint32_t inputNlParams : 1;
+                    uint32_t activationAdditionalParamsAsInput : 1;
 
                     union dedicated_t
                     {
@@ -263,9 +263,9 @@ namespace KernelSelector
             key.restrict.val.biasPerOutput = 1;
         }
 
-        void EnableInputNlParams()
+        void EnableActivationAdditionalParamsAsInput()
         {
-            key.restrict.val.inputNlParams = 1;
+            key.restrict.val.activationAdditionalParamsAsInput = 1;
         }
 
         void EnableLRNMode(LRNMode m)
@@ -458,7 +458,7 @@ namespace KernelSelector
         virtual ~BaseParams() {}
 
         ActivationFunction  activationFunc = ActivationFunction::NONE;
-        NonLinearParams     nlParams;
+        NonLinearParams     nlParams;   // TODO: rename it to "activationAdditionalParams"
         MultiDataTensor     inputs;
         DataTensor          output;
 
@@ -816,7 +816,7 @@ namespace KernelSelector
             auto k = BaseParams::GetParamsKey();
             if (!actParams.inputNlParams.empty())
             {
-                k.EnableInputNlParams();
+                k.EnableActivationAdditionalParamsAsInput();
             }
             return k;
         }

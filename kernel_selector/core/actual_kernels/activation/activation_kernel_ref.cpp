@@ -26,7 +26,7 @@ namespace KernelSelector {
         k.EnableInputDataType(Datatype::F32);
         k.EnableOutputDataType(Datatype::F16);
         k.EnableOutputDataType(Datatype::F32);
-        k.EnableInputNlParams();
+        k.EnableActivationAdditionalParamsAsInput();
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
         k.EnableTensorOffset();

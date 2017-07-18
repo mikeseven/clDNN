@@ -71,8 +71,6 @@ namespace KernelSelector
         case ActivationFunction::BRELU:
             paramsNum = 1;
             break;
-        default:
-            break;
         }
 
         return paramsNum;

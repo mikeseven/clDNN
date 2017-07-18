@@ -59,7 +59,7 @@ struct activation : public primitive_base<activation, CLDNN_PRIMITIVE_DESC(activ
     {
     }
 
-    /// @brief Constructs Parameterized Relu primitive.
+    /// @brief Constructs activation with input per feature.
     /// @param id This primitive id.
     /// @param input Input primitive id.
     /// @param additional_params_input additional params stored on a memory.

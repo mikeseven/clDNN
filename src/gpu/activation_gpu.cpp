@@ -64,7 +64,7 @@ struct activation_gpu : typed_primitive_impl<activation>
 
             const auto params_num = KernelSelector::GetActivationAdditionalParamsNumber(activation_params.activationFunc);
 
-            if (slope_layout.size.spatial[0] < output_layout.size.feature[0] * params_num)
+            if (slope_layout.size.count() < output_layout.size.feature[0] * params_num)
             {
                 throw std::runtime_error("Error - not enough data inside additional params buffer");
             }

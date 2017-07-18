@@ -38,7 +38,10 @@ namespace KernelSelector {
         static std::string Float2Str(const float f)
         {
             if (std::isinf(f))
+            {
+                // OpenCL uses "INFINITY" instead of "inf"
                 return std::signbit(f) ? "-INFINITY" : "INFINITY";
+            }
             return std::to_string(f) + "f";
         }
     };
