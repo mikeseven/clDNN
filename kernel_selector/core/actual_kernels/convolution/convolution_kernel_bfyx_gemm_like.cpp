@@ -36,6 +36,7 @@ namespace KernelSelector
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableSubGroup();
+        //k.EnableSubGroupShort();
         k.EnableBiasPerFeature();
         k.EnableNonBiasTerm();
         k.EnableBatching();
@@ -95,6 +96,13 @@ namespace KernelSelector
     {
         if (!Parent::Validate(p, o) ||
             !CovolutionCheckInput(p, o))
+        {
+            return false;
+        }
+
+        const auto& params = static_cast<const ConvolutionParams&>(p);
+
+        if (!params.engineInfo.bSubGroupShortSupport && params.inputs[0].GetDType() == Datatype::F16)
         {
             return false;
         }

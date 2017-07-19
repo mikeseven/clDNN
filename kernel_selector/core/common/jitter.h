@@ -407,19 +407,20 @@ public:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 inline JitConstants MakeBaseParamsJitConstants(const BaseParams& params)
 {
-    bool fp16_unit_used = params.output.GetDType() == Datatype::F16;
+    bool bFP16Used = params.output.GetDType() == Datatype::F16;
     for (const auto& i : params.inputs)
     {
-        fp16_unit_used |= i.GetDType() == Datatype::F16;
+        bFP16Used |= i.GetDType() == Datatype::F16;
     }
 
     JitConstants jit{
         MakeJitConstant("OUTPUT",               params.output),
-        MakeJitConstant("FP16_SUPPORTED",       fp16_unit_used),                      // TODO: use engine
-        MakeJitConstant("FP16_UNIT_USED",       fp16_unit_used),
-        MakeJitConstant("UNIT_TYPE",            fp16_unit_used ? "half" : "float"),
-        MakeJitConstant("NL_M",                 params.nlParams.m),
-        MakeJitConstant("NL_N",                 params.nlParams.n),
+        MakeJitConstant("FP64_SUPPORTED",       params.engineInfo.bFP64Support),
+        MakeJitConstant("FP16_SUPPORTED",       params.engineInfo.bFP16Support),
+        MakeJitConstant("FP16_UNIT_USED",       bFP16Used),
+        MakeJitConstant("UNIT_TYPE",            bFP16Used ? "half" : "float"),
+        MakeJitConstant("NL_M",                 params.activationParams.m),
+        MakeJitConstant("NL_N",                 params.activationParams.n),
         MakeJitConstant("ACTIVATION_FUNCTION_"  + toString(params.activationFunc), ""),
     };
 
@@ -719,7 +720,7 @@ inline JitConstants MakeActivationJitConstants(const ActivationParams& params)
 {
     JitConstants jit = MakeBaseParamsJitConstants(params);
     
-    const auto& inputNlParams = params.actParams.inputNlParams;
+    const auto& inputNlParams = params.actParams.inputActivationParams;
 
     jit.AddConstants({
         MakeJitConstant("PARAMS_NUM", GetActivationAdditionalParamsNumber(params.activationFunc)),

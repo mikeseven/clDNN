@@ -339,9 +339,9 @@ public:
 #endif
 
             ConvolutionOptionalParams optParams;
-            optParams.allowPadding = true;
-            optParams.allowWeightsReorder = true;
-            optParams.bSupportSubGroupExt = true;
+            optParams.allowInputReordering = true;
+            optParams.allowStaticInputReordering = true;
+            //optParams.bSubGroupShortSupport = true;
 
             for (const auto& params : params_vec)
             {
@@ -355,9 +355,9 @@ public:
                 if (impl_key.Support(params_key))
                 {
                     ConvolutionOptionalParams optParams;
-                    optParams.allowPadding = true;
-                    optParams.allowWeightsReorder = true;
-                    optParams.bSupportSubGroupExt = true;
+                    optParams.allowInputReordering = true;
+                    optParams.allowStaticInputReordering = true;
+                    //optParams.bSubGroupShortSupport = true;
 
                     KernelsData kernelsData = kernel.GetKernelsData(params, optParams);
                     if (kernelsData.size() && kernelsData[0].kernels.size())

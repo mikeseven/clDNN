@@ -36,7 +36,7 @@ namespace KernelSelector
             bSupportedWeightsLayout |= params.weights.GetLayout() == l;
         }
 
-        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowWeightsReorder;
+        const bool bWeightsOK = bSupportedWeightsLayout || optParams.allowStaticInputReordering;
 
         if (!bWeightsOK)
         {

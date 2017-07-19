@@ -85,7 +85,7 @@ namespace KernelSelector { namespace
 
         const auto req_input = GetConvolutionBFYXPaddedTensor(params);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(params, req_input);
-        const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
+        const bool bInputPadded = optParams.allowInputReordering || bProperInputDesc;
 
         if (!bInputPadded)
         {
@@ -150,7 +150,7 @@ namespace KernelSelector { namespace
 
         if (!bProperWeights)
         {
-            if (!optParams.allowWeightsReorder)
+            if (!optParams.allowStaticInputReordering)
             {
                 return false;
             }

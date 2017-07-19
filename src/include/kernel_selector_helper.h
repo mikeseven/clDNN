@@ -306,7 +306,7 @@ inline void convert_activation_func_params(const p_type primitive, kernel_select
         const float negative_slope = primitive->activation_negative_slope;
         if (negative_slope)
         {
-            params.nlParams.m = negative_slope;
+            params.activationParams.m = negative_slope;
             params.activationFunc = kernel_selector::activation_function::RELU_NEGATIVE_SLOPE;
         }
         else
@@ -363,14 +363,24 @@ inline void convert_new_activation_func(const p_type primitive, kernel_selector:
         break;
     }
 
-    params.nlParams.m = primitive->additional_params.a;
-    params.nlParams.n = primitive->additional_params.b;
+    params.activationParams.m = primitive->additional_params.a;
+    params.activationParams.n = primitive->additional_params.b;
 }
 
 template <typename params_t, typename arg_t>
 inline params_t get_default_params(const arg_t& arg, uint32_t split = 1)
 {
     params_t params;
+
+    const auto& context = arg.get_program().get_engine()->get_context();
+    const auto& engine_info = context->get_engine_info();
+
+    params.engineInfo.bSubGroupSupport      = context->extension_supported("cl_intel_subgroups");
+    params.engineInfo.bSubGroupShortSupport = context->extension_supported("cl_intel_subgroups_short");
+    params.engineInfo.bFP16Support          = context->extension_supported("cl_khr_fp16");
+    params.engineInfo.bFP64Support          = context->extension_supported("cl_khr_fp64");
+    params.engineInfo.maxWorkGroupSize      = engine_info.max_work_group_size;
+    params.engineInfo.maxLocalMemSize       = engine_info.max_local_mem_size;
     
     const auto& input_layout    = arg.input().get_output_layout();
     const auto& output_layout   = arg.get_output_layout();
@@ -407,20 +417,17 @@ inline optional_params_t get_default_optional_params(const program_impl& program
     optional_params_t params;
     
     const auto& context = program.get_engine()->get_context();
-    const auto& engine_info = context->get_engine_info();
 
-    params.bSupportSubGroupExt = program.get_engine()->get_context()->extension_supported("cl_intel_subgroups_short");
-    params.maxWorkGroupSize = engine_info.max_work_group_size;
-    params.maxLocalMemSize = engine_info.max_local_mem_size;
-    params.meaningfulKernelsNames = context->get_configuration().meaningful_kernels_names;
+    params.meaningfulKernelsNames       = context->get_configuration().meaningful_kernels_names;
+    params.allowStaticInputReordering   = program.get_options().get<build_option_type::optimize_data>()->enabled();
+    params.allowInputReordering         = false;
+    params.allowOutputReordering        = false;
+
     return params;
 }
 
 template <typename optional_params_t>
 inline optional_params_t get_default_weights_bias_optional_params(const program_impl& program)
 {
-    optional_params_t params = get_default_optional_params<optional_params_t>(program);
-    //params.allow_padding = true; - TODO:
-    params.allowWeightsReorder = program.get_options().get<build_option_type::optimize_data>()->enabled();
-    return params;
+    return get_default_optional_params<optional_params_t>(program);
 }

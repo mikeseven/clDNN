@@ -140,7 +140,7 @@ namespace clDNN
     void BaseKernelBinary::InitBaseParams(const BaseParams& vxParams, KernelSelector::BaseParams& ksParams)
     {
         ksParams.activationFunc = vxParams.activationFunc;
-        ksParams.nlParams = vxParams.nlParams;
+        ksParams.activationParams = vxParams.nlParams;
 
         ksParams.inputs.resize(1);
 
