@@ -235,6 +235,14 @@ public:
             { _name + "_FEATURE_PITCH", toCodeString(_tensor.Feature().pitch) },
             { _name + "_ROI_PITCH",     toCodeString(_tensor.ROI().pitch) },
             { _name + "_BATCH_PITCH",   toCodeString(_tensor.Batch().pitch) },
+            { _name + "_PAD_BEFORE_SIZE_X",        toCodeString(_tensor.X().pad.before) },
+            { _name + "_PAD_BEFORE_SIZE_Y",        toCodeString(_tensor.Y().pad.before) },
+            { _name + "_PAD_BEFORE_FEATURE_NUM",   toCodeString(_tensor.Feature().pad.before) },
+            { _name + "_PAD_BEFORE_BATCH_NUM",     toCodeString(_tensor.Batch().pad.before) },
+            { _name + "_PAD_AFTER_SIZE_X",         toCodeString(_tensor.X().pad.after) },
+            { _name + "_PAD_AFTER_SIZE_Y",         toCodeString(_tensor.Y().pad.after) },
+            { _name + "_PAD_AFTER_FEATURE_NUM",    toCodeString(_tensor.Feature().pad.after) },
+            { _name + "_PAD_AFTER_BATCH_NUM",      toCodeString(_tensor.Batch().pad.after) },
         };
 
         definitions.insert(definitions.end(), baseDefinitions.begin(), baseDefinitions.end());

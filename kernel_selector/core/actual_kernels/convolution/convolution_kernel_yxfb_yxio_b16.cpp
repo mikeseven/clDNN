@@ -169,6 +169,8 @@ namespace KernelSelector
         auto cldnn_jit = GetJitConstants(newParams, runInfo);
 
         const auto batch_size = newParams.output.Batch().v;
+        const auto batch_pad_before = newParams.output.Batch().pad.before;
+        const auto feature_pitch = newParams.output.Feature().pitch;
 
         std::string kernel_name_postfix;
         if (newParams.inputs[0].GetDType() == Datatype::F32)
@@ -185,11 +187,11 @@ namespace KernelSelector
         else
         {
             kernel_name_postfix = "_fp16";
-            if (batch_size >= 64)
+            if (batch_size >= 64 && (feature_pitch % 2 == 0) && (batch_pad_before % 2 == 0))
             {
                 cldnn_jit.AddConstant(MakeJitConstant("USE_BLOCK_READ_2", ""));
             }
-            else if (batch_size >= 32)
+            else if (batch_size >= 32 && (feature_pitch % 2 == 0) && (batch_pad_before % 2 == 0))
             {
                 cldnn_jit.AddConstant(MakeJitConstant("USE_BLOCK_READ_1", ""));
             }

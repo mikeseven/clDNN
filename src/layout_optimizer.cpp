@@ -33,17 +33,34 @@ layout_optimizer::layout_optimizer(refcounted_obj_ptr<engine_impl> eng, bool ena
 {
 }
 
+bool layout_optimizer::convolution_bfyx_opt(layout const& output_layout, const layout& weights_layout, std::shared_ptr<const convolution> conv)
+{
+    //A set of rules that define when bfyx mem format has better performance than yxfb
+    if (output_layout.size.batch[0] % 16 != 0 || output_layout.data_type != data_types::f16 || weights_layout.size.batch[0] % 16 != 0 ||
+        !((weights_layout.size.spatial[0] == 1 && weights_layout.size.spatial[1] == 1) ||
+        (weights_layout.size.spatial[0] >= 5 && weights_layout.size.spatial[1] >= 5) ||
+            (weights_layout.size.feature[0] <= 64 && output_layout.size.spatial[0] < 112 && output_layout.size.spatial[1] < 112) ||
+            (weights_layout.size.feature[0] <= 128 && output_layout.size.spatial[0] < 56 && output_layout.size.spatial[1] < 56) ||
+            (weights_layout.size.feature[0] <= 256 && output_layout.size.spatial[0] < 28 && output_layout.size.spatial[1] < 28) ||
+            (weights_layout.size.feature[0] <= 512 && output_layout.size.spatial[0] < 14 && output_layout.size.spatial[1] < 14) ||
+            (conv->stride.spatial[0] > 1 && conv->stride.spatial[1] > 1)) ||
+            (_optimization_attributes.splitted_convolution && output_layout.size.batch[0] == 16) ||
+        (!_optimization_attributes.splitted_convolution && output_layout.size.batch[0] >= 128) ||
+        _optimization_attributes.bfyx_only_layer)
+        return true;
+
+    return false;
+}
+
 layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, boost::optional<layout> const& output_layout)
 {
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
     auto expected_format = current_layout.format;
-    auto batch = current_layout.size.batch[0];
 
-    if (output_layout)
+    if (output_layout && (type == data_type::weights || type == data_type::bias))
     {
         expected_data_type = output_layout.get().data_type;
-        batch = output_layout.get().size.batch[0];
     }
     else if (type != data_type::input)
         throw std::runtime_error("'output_layout' is required parameter for weights/bias optimization");
@@ -59,7 +76,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         if (current_layout.format.dimension() != 4)
             throw std::runtime_error("Convolution input not 4-dimensional?");
 
-        if (expected_data_type != data_types::f16 || batch < 32 || !_optimization_attributes.splitted_convolution
+        if (layout_optimizer::convolution_bfyx_opt(current_layout, output_layout.get(), prim)
             || (_output_size_handling_enabled && prim->with_output_size))
         {
             expected_tensor = current_layout.size;

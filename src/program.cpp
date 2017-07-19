@@ -29,6 +29,9 @@
 #include "api/CPP/input_layout.hpp"
 #include "api/CPP/pooling.hpp"
 #include "api/CPP/reorder.hpp"
+#include "api/CPP/detection_output.hpp"
+#include "api/CPP/proposal.hpp"
+#include "api/CPP/roi_pooling.hpp"
 
 #include "convolution_inst.h"
 #include "concatenation_inst.h"
@@ -431,12 +434,18 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
             if (prim.as<convolution>().get_primitive()->split() > 1)
                 lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::splitted_convolution, 1);
         }
+
+        //list of layers that do not support yxfb or perform worse than bfyx
+        if (prim.type() == cldnn::detection_output::type_id() || prim.type() == cldnn::proposal::type_id() ||
+            prim.type() == cldnn::roi_pooling::type_id() || prim.type() == cldnn::deconvolution::type_id())
+            lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::bfyx_only_layer, 1);
     }
 
     const auto reorder_input = [this, &lo](typed_program_node<convolution>& conv_node)
     {
         auto conv_prim = conv_node.get_primitive();
         auto& input_node = conv_node.get_dependency(0);
+        auto weights_layout = conv_node.weights(0).get_output_layout();
 
         std::shared_ptr<reorder> new_input = nullptr;
 
@@ -444,7 +453,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
         {
             new_input = lo.add_weights_for_optimization(input_node.as<data>().typed_desc(),
                 layout_optimizer::data_type::input,
-                conv_prim).first;
+                conv_prim,
+                weights_layout).first;
         }
         else if (input_node.type() == input_layout::type_id())
         {
@@ -452,7 +462,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 input_node.as<input_layout>().get_primitive()->layout,
                 input_node.id(),
                 layout_optimizer::data_type::input,
-                conv_prim).first;
+                conv_prim,
+                weights_layout).first;
         }
         else if (input_node.type() == reorder::type_id()) //convolution's input is a reorder
         {
@@ -464,7 +475,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 reorder_layout,
                 reorder_prim->id,
                 layout_optimizer::data_type::input,
-                conv_prim).first;
+                conv_prim,
+                weights_layout).first;
 
             if (new_input) //output format is not optimal
             {
@@ -496,6 +508,15 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
             }
 
             input_node.recalc_output_layout();
+        }
+        else
+        {
+            new_input = lo.get_reorder(
+                input_node.get_output_layout(),
+                input_node.id(),
+                layout_optimizer::data_type::input,
+                conv_prim,
+                weights_layout).first;
         }
 
         if (new_input)
@@ -832,10 +853,6 @@ void program_impl::prepare_buffer_fusing()
     {
         do_for_types<concatenation>(*node, [this](concatenation_node& node)
         {
-            auto format = node.get_output_layout().format;
-            if (format != format::bfyx)
-                return;
-
             //if any of this node's inputs is used by more than one primitive do not fuse buffers
             // todo: in future, if this case is problem, it can be optimized further to enable buffer fusing
             //       per single input rather than all/none
