@@ -62,7 +62,10 @@ namespace KernelSelector {
         std::string entry_point;
         bool        batch_compilation;
 
-        KernelString() : batch_compilation(false)
+        KernelString() :
+            str(""),jit(""),
+            options(""),entry_point(""),
+            batch_compilation(false)
         {};
     };
 
