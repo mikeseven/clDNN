@@ -28,9 +28,11 @@ clDNN uses 3<sup>rd</sup>-party components licensed under following licenses:
 - *OpenCL™ ICD and C++ Wrapper* under [Khronos™ License](https://github.com/KhronosGroup/OpenCL-CLHPP/blob/master/LICENSE.txt)
 
 ## Documentation
-The latest clDNN documentation is at [GitHub pages](http://01org.github.io/cldnn/).
+The latest clDNN documentation is at [GitHub pages](https://01org.github.io/clDNN/index.html).
 
 There is also inline documentation available that can be [generated with Doxygen](#generating-documentation).
+
+Accelerate Deep Learning Inference with Intel® Processor Graphics whitepaper [link](https://software.intel.com/en-us/articles/accelerating-deep-learning-inference-with-intel-processor-graphics).
 
 ## Support
 Please report issues and suggestions 
