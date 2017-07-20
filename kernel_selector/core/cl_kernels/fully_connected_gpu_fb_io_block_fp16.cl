@@ -258,7 +258,7 @@ KERNEL (fully_connected_gpu_xb_xb_block_fp16)(
 #else
             CHUNK_UNITS_TYPE output_val = AS_UNITS(acc[acc_pos]);
 #endif
-            ACTIVATION(output_val, output_val);
+            output_val = ACTIVATION(output_val, NL_M, NL_N);
             OUTPUT_WRITE(output, output_offset + sg_elem_offset, AS_CHUNK(output_val));
             output_offset += output_batch_byte_size;
         }
@@ -277,7 +277,7 @@ KERNEL (fully_connected_gpu_xb_xb_block_fp16)(
 #else
             CHUNK_UNITS_TYPE output_val = AS_UNITS(acc[acc_pos]);
 #endif
-            ACTIVATION(output_val, output_val);
+            output_val = ACTIVATION(output_val, NL_M, NL_N);
             OUTPUT_WRITE(output, output_offset + sg_elem_offset, AS_CHUNK(output_val));
             output_offset += output_batch_byte_size;
         }
@@ -293,8 +293,6 @@ KERNEL (fully_connected_gpu_xb_xb_block_fp16)(
 #undef AS_CHUNK
 #undef AS_UNITS
 #undef CHUNK_UNIT_SELECT
-
-#undef ACTIVATION
 
 #undef SG_UNIT_SELECT
 #undef ALIGNED_BLOCK_READ

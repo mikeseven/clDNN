@@ -131,9 +131,9 @@ KERNEL(convolution_gpu_yxfb_yxio_b8)(
     ADD_BIAS_8(_data1, bias[ofm_offset + sub_group_id + 8]);
 #endif
 #endif // #if BIAS_TERM
-    ACTIVATION(_data0, _data0);
+    _data0 = ACTIVATION(_data0, NL_M, NL_N);
 #if OFM_PER_WORK_ITEM == 16
-    ACTIVATION(_data1, _data1);
+    _data1 = ACTIVATION(_data1, NL_M, NL_N);
 #endif
 
     const uint _out_id = OUTPUT_OFFSET + out_id;
@@ -142,5 +142,3 @@ KERNEL(convolution_gpu_yxfb_yxio_b8)(
     intel_sub_group_block_write8((__global uint*)output + _out_id + 8 * INPUT_FEATURE_PITCH, as_uint8(_data1));
 #endif
 }
-
-#undef ACTIVATION

@@ -68,7 +68,5 @@ KERNEL(convolution_gpu_yxfb_ref)(
 #endif
     const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * FILTER_OUTPUT_FEATURE_NUM;
     const uint dst_index = batch_offset*OUTPUT_BATCH_PITCH + ofm_offset*OUTPUT_FEATURE_PITCH + out_y*OUTPUT_Y_PITCH + out_x*OUTPUT_X_PITCH + OUTPUT_OFFSET + out_split_offset;
-    ACTIVATION(output[dst_index], result);
+    output[dst_index] = ACTIVATION(result, NL_M, NL_N);
 }
-
-#undef ACTIVATION

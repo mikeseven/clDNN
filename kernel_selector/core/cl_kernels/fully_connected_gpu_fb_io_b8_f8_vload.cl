@@ -192,24 +192,24 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
 
 #endif // #if NEURONS_PER_WORK_ITEM > 1
 
-    ACTIVATION(blockC00, blockC00);
+    blockC00 = ACTIVATION(blockC00, NL_M, NL_N);
 #if BATCHES_PER_WORK_ITEM >= 16
-    ACTIVATION(blockC01, blockC01);
+    blockC01 = ACTIVATION(blockC01, NL_M, NL_N);
 #endif
 #if BATCHES_PER_WORK_ITEM >= 32
-    ACTIVATION(blockC02, blockC02);
-    ACTIVATION(blockC03, blockC03);
+    blockC02 = ACTIVATION(blockC02, NL_M, NL_N);
+    blockC03 = ACTIVATION(blockC03, NL_M, NL_N);
 #endif
 
 #if NEURONS_PER_WORK_ITEM > 1
 
-    ACTIVATION(blockC10, blockC10);
+    blockC10 = ACTIVATION(blockC10, NL_M, NL_N);
 #if BATCHES_PER_WORK_ITEM >= 16
-    ACTIVATION(blockC11, blockC11);
+    blockC11 = ACTIVATION(blockC11, NL_M, NL_N);
 #endif
 #if BATCHES_PER_WORK_ITEM >= 32
-    ACTIVATION(blockC12, blockC12);
-    ACTIVATION(blockC13, blockC13);
+    blockC12 = ACTIVATION(blockC12, NL_M, NL_N);
+    blockC13 = ACTIVATION(blockC13, NL_M, NL_N);
 #endif
 
 #endif // #if NEURONS_PER_WORK_ITEM > 1
@@ -245,4 +245,3 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
 #undef CONCAT_TOKEN
 #undef CONCAT_TOKEN_HANDLER1
 #undef MULTIPLY_BLOCKS_8x8
-#undef ACTIVATION

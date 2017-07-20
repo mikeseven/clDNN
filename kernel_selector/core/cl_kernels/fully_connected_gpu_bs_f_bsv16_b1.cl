@@ -494,7 +494,7 @@ KERNEL (fully_connected_gpu_bx_bs_x_bsv16_b1)(
 #if BIAS_TERM
             expanded_acc += bias[bias_id];
 #endif
-            ACTIVATION(output[output_id], expanded_acc);
+            output[output_id] = ACTIVATION(expanded_acc, NL_M, NL_N);
         }
     }
 }
@@ -507,8 +507,6 @@ KERNEL (fully_connected_gpu_bx_bs_x_bsv16_b1)(
 #undef AS_CHUNK
 #undef AS_UNITS
 #undef CHUNK_UNIT_SELECT
-
-#undef ACTIVATION
 
 #undef SG_UNIT_SELECT
 #undef CHUNK_VEC1_TYPE

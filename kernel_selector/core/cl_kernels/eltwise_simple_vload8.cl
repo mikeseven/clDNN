@@ -41,10 +41,8 @@ KERNEL (eltwise_gpu_vload8)(const __global UNIT_TYPE* input1, const __global UNI
     result = in1 + in2;
 #endif
    
-    ACTIVATION(result, result);
+    result = ACTIVATION(result, NL_M, NL_N);
 
     vstore8(result, global_id, output);
 
 }
-
-#undef ACTIVATION

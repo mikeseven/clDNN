@@ -197,7 +197,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
 #endif
     for(uint a = 0; a < X_PER_WORK_ITEM; a++)
     {
-        ACTIVATION(_data[a], _data[a]);
+        _data[a] = ACTIVATION(_data[a], NL_M, NL_N);
     }
 
     BLOCK_WRITE(output + out_id[0], _data[0]);
@@ -215,5 +215,3 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block_multiple_x)(
     #undef BLOCK_WRITE
 #endif
 }
-
-#undef ACTIVATION

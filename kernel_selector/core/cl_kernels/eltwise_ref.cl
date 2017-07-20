@@ -14,8 +14,7 @@
 // limitations under the License.
 */
 
-// for activation function
-#include "include/cnn_common.cl"
+#include "include/common.cl"
 
 #if ELTWISE_LAYOUT_BASED
 
@@ -76,5 +75,5 @@ KERNEL(eltwise)(
     
     DO_ELTWISE;
     
-    output[output_offset] = FUNC_CALL(activation_function)(res, NL_M, NL_N);
+    output[output_offset] = ACTIVATION(res, NL_M, NL_N);
 }

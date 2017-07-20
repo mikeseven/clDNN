@@ -13,24 +13,94 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
-#if FP16_SUPPORTED
-    #pragma OPENCL EXTENSION cl_khr_fp16 : enable
+
+#if defined(cl_intel_subgroups)
+#pragma OPENCL EXTENSION  cl_intel_subgroups : enable
 #endif
 
-#if RELU 
-    #if FP16_UNIT_USED
-        #define ACTIVATION(output, input) output = isinf(convert_half(NEGATIVE_SLOPE)) ? ((input >= 0.0h) ? \
-        input : -convert_half(NEGATIVE_SLOPE)) : (max(input, 0.0h) + convert_half(NEGATIVE_SLOPE) * min(input, 0.0h));
-    #else
-        #define ACTIVATION(output, input) output = isinf(NEGATIVE_SLOPE) ? ((input >= 0.0f) ? \
-        input : -NEGATIVE_SLOPE) : (max(input, 0.0f) + NEGATIVE_SLOPE * min(input, 0.0f));
+#if defined(cl_khr_fp16)
+#pragma OPENCL EXTENSION cl_khr_fp16 : enable
+#endif
+
+#if FP16_UNIT_USED
+    #ifndef UNIT_TYPE
+    #define UNIT_TYPE half
     #endif
+
+    // TODO: currently we calculate on float32 because it's lot of "add" operation and it stuck on the value "8192.0f"
+    #if !defined(ACCUMULATOR_TYPE)
+        #define ACCUMULATOR_TYPE float
+    #endif
+    
+    #define UNIT_VAL_MAX HALF_MAX
+    #define UNIT_VAL_MIN -UNIT_VAL_MAX
+    #define UNIT_VAL_ONE 1.0h
+    #define UNIT_VAL_ZERO 0.0h
+    #define TO_UNIT_TYPE(v) convert_half(v)
 #else
-    #define ACTIVATION(output, input) output = input;
+    #ifndef UNIT_TYPE
+    #define UNIT_TYPE float
+    #endif
+
+    // TODO: currently we calculate on float32 because it's lot of "add" operation and it stuck on the value "8192.0f"
+    #if !defined(ACCUMULATOR_TYPE)
+        #define ACCUMULATOR_TYPE float
+    #endif
+    
+    #define UNIT_VAL_MAX FLT_MAX
+    #define UNIT_VAL_MIN -UNIT_VAL_MAX
+    #define UNIT_VAL_ONE 1.0f
+    #define UNIT_VAL_ZERO 0.0f
+    #define TO_UNIT_TYPE(v) (float)(v)
+#endif
+
+// TODO: use native_exp and use cast for APL
+#define ACTIVATION_LOGISTIC(input)                      (UNIT_VAL_ONE/(UNIT_VAL_ONE + exp(-input)))
+#define ACTIVATION_HYPERBOLIC_TAN(input)                (tanh(input))
+#define ACTIVATION_RELU(input)                          (fmax(UNIT_VAL_ZERO, input))
+#define ACTIVATION_RELU_NEGATIVE_SLOPE(input, slope)    isinf(TO_UNIT_TYPE(slope)) ? ((input >= UNIT_VAL_ZERO) ? \
+                                                        input : -TO_UNIT_TYPE(slope)) : \
+                                                        (fmax(input, UNIT_VAL_ZERO) + TO_UNIT_TYPE(slope) * fmin(input, UNIT_VAL_ZERO))
+#define ACTIVATION_BRELU(input, m)                      (fmax(UNIT_VAL_ZERO, fmin(m, input)))
+#define ACTIVATION_SOFTRELU(input)                      (log(UNIT_VAL_ONE + exp(input)))
+#define ACTIVATION_ABS(input)                           (fabs(input))
+#define ACTIVATION_LINEAR(input, m, n)                  (m*input + n)
+#define ACTIVATION_SQUARE(input)                        (input*input)
+#define ACTIVATION_SQRT(input)                          (sqrt(input))
+
+#if defined ACTIVATION_FUNCTION_LOGISTIC
+    #define ACTIVATION(input, m, n) ACTIVATION_LOGISTIC(input)
+#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
+    #define ACTIVATION(input, m, n) ACTIVATION_HYPERBOLIC_TAN(input)
+#elif defined ACTIVATION_FUNCTION_RELU
+    #define ACTIVATION(input, m, n) ACTIVATION_RELU(input)
+#elif defined ACTIVATION_FUNCTION_RELU_NEGATIVE_SLOPE
+    #define ACTIVATION(input, m, n) ACTIVATION_RELU_NEGATIVE_SLOPE(input, m)
+#elif defined ACTIVATION_FUNCTION_BRELU
+    #define ACTIVATION(input, m, n) ACTIVATION_BRELU(input, m)
+#elif defined ACTIVATION_FUNCTION_SOFTRELU
+    #define ACTIVATION(input, m, n) ACTIVATION_SOFTRELU(input)    
+#elif defined ACTIVATION_FUNCTION_ABS
+    #define ACTIVATION(input, m, n) ACTIVATION_ABS(input)
+#elif defined ACTIVATION_FUNCTION_LINEAR
+    #define ACTIVATION(input, m, n) ACTIVATION_LINEAR(input, m, n)
+#elif defined ACTIVATION_FUNCTION_SQUARE
+    #define ACTIVATION(input, m, n) ACTIVATION_SQUARE(input)
+#elif defined ACTIVATION_FUNCTION_SQRT
+    #define ACTIVATION(input, m, n) ACTIVATION_SQRT(input)
+#else
+    #define ACTIVATION(input, m, n) input
 #endif
 
 #define __CAT(x, y) x##y
 #define CAT(x, y) __CAT(x, y)
+
+#define __CAT_FUNC(x, y) FUNC(x##y)
+#define CAT_FUNC(x, y) __CAT_FUNC(x, y)
+
+#define __CAT_FUNC_CALL(x, y) FUNC_CALL(x##y)
+#define CAT_FUNC_CALL(x, y) __CAT_FUNC_CALL(x, y)
+
 #define LOOP0(VAR, STMT) 
 #define LOOP1(VAR, STMT) (STMT); (VAR)++;
 #define LOOP2(VAR, STMT) LOOP1(VAR, STMT); (STMT); (VAR)++;

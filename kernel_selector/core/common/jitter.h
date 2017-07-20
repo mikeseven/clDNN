@@ -375,13 +375,6 @@ public:
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 inline JitConstants MakeBaseParamsJitConstants(const BaseParams& params)
 {
-    const bool relu =
-        params.activationFunc == ActivationFunction::RELU ||
-        params.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE;
-    const float negative_slope =
-        params.activationFunc == ActivationFunction::RELU_NEGATIVE_SLOPE ?
-        params.nlParams.m : 0.f;
-
     bool fp16_unit_used = params.output.GetDType() == Datatype::F16;
     for (const auto& i : params.inputs)
     {
@@ -393,17 +386,9 @@ inline JitConstants MakeBaseParamsJitConstants(const BaseParams& params)
         MakeJitConstant("FP16_SUPPORTED",       static_cast<int>(fp16_unit_used)),                      // TODO: use engine
         MakeJitConstant("FP16_UNIT_USED",       static_cast<int>(fp16_unit_used)),
         MakeJitConstant("UNIT_TYPE",            fp16_unit_used ? "half" : "float"),
-        MakeJitConstant("UNIT_VAL_ZERO",        fp16_unit_used ? "0.0h" : "0.0f"),
-        MakeJitConstant("UNIT_VAL_MAX",         fp16_unit_used ? "HALF_MAX" : "FLT_MAX"),
-        MakeJitConstant("UNIT_VAL_MIN",         "-(UNIT_VAL_MAX)"),
-        MakeJitConstant("TO_UNIT_TYPE_V1(v)",   fp16_unit_used ? "convert_half(v)" : "(float)(v)"),
-        MakeJitConstant("RELU",                 static_cast<int>(relu)),                                // TODO: remove it
-        MakeJitConstant("NEGATIVE_SLOPE",       negative_slope),
         MakeJitConstant("NL_M",                 params.nlParams.m),
         MakeJitConstant("NL_N",                 params.nlParams.n),
         MakeJitConstant("ACTIVATION_FUNCTION_"  + toString(params.activationFunc), ""),
-        MakeJitConstant("TYPE_"                 + toString(params.output.GetDType()), ""),
-        
     };
 
     if (params.inputs.size() >= 1)

@@ -73,7 +73,5 @@ KERNEL (fully_connected_gpu_yxfn)(
 #if BIAS_TERM
     result += bias[neuronIdx];
 #endif
-    ACTIVATION(output[output_idx], result);
+    output[output_idx] = ACTIVATION(result, NL_M, NL_N);
 }
-
-#undef ACTIVATION

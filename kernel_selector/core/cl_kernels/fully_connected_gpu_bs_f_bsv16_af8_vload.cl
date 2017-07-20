@@ -115,7 +115,7 @@ KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv16_vload)(
     blockC00 += bias[neuronIdx];
 #endif // #if BIAS_TERM
 
-    ACTIVATION(blockC00, blockC00);
+    blockC00 = ACTIVATION(blockC00, NL_M, NL_N);
 
     vstore16(blockC00, out_id, output);
 
@@ -127,4 +127,3 @@ KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv16_vload)(
 #undef CONCAT_TOKEN
 #undef CONCAT_TOKEN_HANDLER1
 #undef MULTIPLY_BLOCKS_16x16
-#undef ACTIVATION

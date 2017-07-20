@@ -208,7 +208,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
 
     for(uint r = 0; r < OUTPUT_BLOCK_HEIGHT; r++) {
         for(uint c = 0; c < OUTPUT_BLOCK_WIDTH; c++) {
-            ACTIVATION(out[r * OUTPUT_BLOCK_WIDTH + c], out[r * OUTPUT_BLOCK_WIDTH + c]);
+            out[r * OUTPUT_BLOCK_WIDTH + c] = ACTIVATION(out[r * OUTPUT_BLOCK_WIDTH + c], NL_M, NL_N);
         }
     }
 
@@ -227,6 +227,4 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
     }
 }
 
-
-#undef ACTIVATION
 #undef FEATURES_THREADS_PER_BATCH

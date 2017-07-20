@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "include/cnn_common.cl"
+#include "include/common.cl"
 
 // TODO: move it from layout based to memory based
 KERNEL(activation)(
-    __global DATA_TYPE* input, 
-    __global DATA_TYPE* output
+    __global UNIT_TYPE* input, 
+    __global UNIT_TYPE* output
 #ifdef PARAMETERIZED 
     , __global ADDITIONAL_PARAMS_TYPE* params
 #endif
@@ -53,5 +53,5 @@ KERNEL(activation)(
     const float nl_m = (float)NL_M;
     const float nl_n = (float)NL_N;
 #endif
-    output[dst_index] = FUNC_CALL(activation_function)(input[src_index], nl_m, nl_n);
+    output[dst_index] = ACTIVATION(input[src_index], nl_m, nl_n);
 }
