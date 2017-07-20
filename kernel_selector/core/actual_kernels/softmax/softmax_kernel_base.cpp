@@ -76,7 +76,7 @@ namespace KernelSelector
         kd.fp16UnitUsed = input.GetDType() == Datatype::F16;
         kd.leftovers = 0;
         kd.itemsNum = 0;
-
+        kd.normIndex = 0;
         kd.dataSetsCount = 0;
 
         // currently all derived kernels support bf/fb only
