@@ -31,7 +31,7 @@ inline uint3 FUNC(reshape)(uint i, uint y, uint x)
 #if (FILTER_DIMS == 4)
     return (uint3)(i,y,x);
 #elif (FILTER_DIMS == 2)
-    uint _i = i*INPUT_SIZE_Y*INPUT_SIZE_X + y*INPUT_SIZE_X + x;
+    uint _i = i*INPUT0_SIZE_Y*INPUT0_SIZE_X + y*INPUT0_SIZE_X + x;
     return (uint3)(_i,0,0);
 #else
 #error
@@ -49,21 +49,21 @@ KERNEL (fully_connected_gpu_yxfn)(
 #endif
 {
     const uint x = get_global_id(0);
-    const uint batch_id = x % INPUT_BATCH_NUM;
-    const uint neuronIdx = x / INPUT_BATCH_NUM;
+    const uint batch_id = x % INPUT0_BATCH_NUM;
+    const uint neuronIdx = x / INPUT0_BATCH_NUM;
 
     UNIT_TYPE result = UNIT_VAL_ZERO;
 
     uint weight_offset = neuronIdx * FILTER_OFM_PITCH;
-    for (uint k = 0; k < INPUT_FEATURE_NUM; k++)
+    for (uint k = 0; k < INPUT0_FEATURE_NUM; k++)
     {
-        for (uint j = 0; j < INPUT_SIZE_Y; j++)
+        for (uint j = 0; j < INPUT0_SIZE_Y; j++)
         {
-            for(uint i = 0; i < INPUT_SIZE_X; i++)
+            for(uint i = 0; i < INPUT0_SIZE_X; i++)
             {
                 uint3 widx = FUNC_CALL(reshape)(k,j,i);
                 uint weight_idx = weight_offset + widx[0]*FILTER_IFM_PITCH + widx[1]*FILTER_Y_PITCH + widx[2]*FILTER_X_PITCH;
-                uint input_idx = INPUT_OFFSET + k*INPUT_FEATURE_PITCH + j*INPUT_Y_PITCH + i*INPUT_X_PITCH + batch_id*INPUT_BATCH_PITCH;
+                uint input_idx = INPUT0_OFFSET + k*INPUT0_FEATURE_PITCH + j*INPUT0_Y_PITCH + i*INPUT0_X_PITCH + batch_id*INPUT0_BATCH_PITCH;
                 result += input[input_idx] * weight[weight_idx];
             }
         }

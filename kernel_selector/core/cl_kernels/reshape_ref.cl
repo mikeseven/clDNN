@@ -28,7 +28,7 @@ KERNEL (reshape_padding)(const __global UNIT_TYPE* input, __global UNIT_TYPE* ou
     const uint od3 = linear % OUTPUT_SIZES[2]; linear /= OUTPUT_SIZES[2];
     const uint od4 = linear;
     
-    uint input_offset =  INPUT_OFFSET +
+    uint input_offset =  INPUT0_OFFSET +
                          d1*INPUT0_PITCHES[0] +
                          d2*INPUT0_PITCHES[1] +
                          d3*INPUT0_PITCHES[2] +

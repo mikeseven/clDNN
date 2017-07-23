@@ -25,7 +25,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b8)(
 #endif
     uint split_idx)
 {
-    const uint batch_num = INPUT_BATCH_NUM;
+    const uint batch_num = INPUT0_BATCH_NUM;
 
     const uint linear_id_xy = get_global_id(1) + get_global_size(1) * get_global_id(2);
     // we're computing 8 OUTPUT_FEATURE_MAP so we must divide by 8, but we got 8 batches, so no division is needed.
@@ -52,19 +52,19 @@ KERNEL(convolution_gpu_yxfb_yxio_b8)(
     for (uint i = 0; i < FILTER_SIZE_Y; i++)
     {
         const int input_offset_y = y + i * DILATION_SIZE_Y;
-        const bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
+        const bool zero_y = input_offset_y >= INPUT0_SIZE_Y || input_offset_y < 0;
 
         if(!zero_y)
         {
             for (uint j = 0; j < FILTER_SIZE_X; j++)
             {
                 const int input_offset_x = x + j * DILATION_SIZE_X;
-                const bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
+                const bool zero = input_offset_x >= INPUT0_SIZE_X || input_offset_x < 0;
 
                 if(!zero)
                 {
-                    uint input_idx = input_offset_x*INPUT_X_PITCH + input_offset_y*INPUT_Y_PITCH;
-                    input_idx += INPUT_OFFSET + split_idx * FILTER_INPUT_FEATURE_NUM * INPUT_FEATURE_PITCH;
+                    uint input_idx = input_offset_x*INPUT0_X_PITCH + input_offset_y*INPUT0_Y_PITCH;
+                    input_idx += INPUT0_OFFSET + split_idx * FILTER_INPUT_FEATURE_NUM * INPUT0_FEATURE_PITCH;
                     input_idx += out_batch_id;
 
                     //sub_group_id used as offset to make each workitem load different filter, and then shuffle it
@@ -108,7 +108,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b8)(
 #if OFM_PER_WORK_ITEM == 16
                         DOT_PRODUCT_8(_data1, _input.s7, filter[filter_idx2]) filter_idx2 += FILTER_OUTPUT_FEATURE_NUM;
 #endif
-                        input_idx += 8 * INPUT_FEATURE_PITCH;
+                        input_idx += 8 * INPUT0_FEATURE_PITCH;
                     }
                     for (uint h = FILTER_INPUT_FEATURE_NUM - (FILTER_INPUT_FEATURE_NUM % 8); h < FILTER_INPUT_FEATURE_NUM; h++)
                     {
@@ -118,7 +118,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b8)(
                         float8 _filter2 = TRANSPOSE_BLOCK_8(filter[filter_idx2]); filter_idx2 += FILTER_OUTPUT_FEATURE_NUM;
                         _data1 = mad(input[input_idx], _filter2, _data1);
 #endif
-                        input_idx += INPUT_FEATURE_PITCH;
+                        input_idx += INPUT0_FEATURE_PITCH;
                     }
                 }
             }
@@ -139,6 +139,6 @@ KERNEL(convolution_gpu_yxfb_yxio_b8)(
     const uint _out_id = OUTPUT_OFFSET + out_id;
     intel_sub_group_block_write8((__global uint*)output + _out_id, as_uint8(_data0));
 #if OFM_PER_WORK_ITEM == 16
-    intel_sub_group_block_write8((__global uint*)output + _out_id + 8 * INPUT_FEATURE_PITCH, as_uint8(_data1));
+    intel_sub_group_block_write8((__global uint*)output + _out_id + 8 * INPUT0_FEATURE_PITCH, as_uint8(_data1));
 #endif
 }

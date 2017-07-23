@@ -28,16 +28,16 @@ inline uint FUNC(get_mean_index)(uint b, uint f, uint y, uint x)
 
 inline uint4 FUNC(reshape_mean)(uint b, uint f, uint y, uint x)
 {
-#if (INPUT_DIMS == MEAN_SUBTRUCT_DIMS)
+#if (INPUT0_DIMS == MEAN_SUBTRUCT_DIMS)
     return (uint4)(b,f,y,x);
-#elif (INPUT_DIMS == 2 && MEAN_SUBTRUCT_DIMS == 4)
-    uint _f  = f / (INPUT_SIZE_Y*INPUT_SIZE_X);
-    uint _yx = f % (INPUT_SIZE_Y*INPUT_SIZE_X);
-    uint _y = _yx / INPUT_SIZE_X;
-    uint _x = _yx % INPUT_SIZE_X;
+#elif (INPUT0_DIMS == 2 && MEAN_SUBTRUCT_DIMS == 4)
+    uint _f  = f / (INPUT0_SIZE_Y*INPUT0_SIZE_X);
+    uint _yx = f % (INPUT0_SIZE_Y*INPUT0_SIZE_X);
+    uint _y = _yx / INPUT0_SIZE_X;
+    uint _x = _yx % INPUT0_SIZE_X;
     return (uint4)(b,_f,_y,_x);
-#elif (INPUT_DIMS == 4 && MEAN_SUBTRUCT_DIMS == 2)
-    uint _f = f*INPUT_SIZE_Y*INPUT_SIZE_X + y*INPUT_SIZE_X + x;
+#elif (INPUT0_DIMS == 4 && MEAN_SUBTRUCT_DIMS == 2)
+    uint _f = f*INPUT0_SIZE_Y*INPUT0_SIZE_X + y*INPUT0_SIZE_X + x;
     return (uint4)(b,_f,0,0);
 #else
 #error
@@ -47,10 +47,10 @@ inline uint4 FUNC(reshape_mean)(uint b, uint f, uint y, uint x)
 #endif
 
 ///////////////////////// Input Index /////////////////////////
-#if INPUT_SIMPLE
+#if INPUT0_SIMPLE
 inline uint FUNC(get_input_index)(uint b, uint f, uint y, uint x)
 { 
-   return INPUT_OFFSET + b*INPUT_BATCH_PITCH + f*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x*INPUT_X_PITCH;
+   return INPUT0_OFFSET + b*INPUT0_BATCH_PITCH + f*INPUT0_FEATURE_PITCH + y*INPUT0_Y_PITCH + x*INPUT0_X_PITCH;
 }
 #else
 #error - not supported
@@ -78,16 +78,16 @@ inline uint FUNC(get_output_index)(uint b, uint f, uint y, uint x)
 
 inline uint4 FUNC(reshape)(uint b, uint f, uint y, uint x)
 {
-#if (INPUT_DIMS == OUTPUT_DIMS)
+#if (INPUT0_DIMS == OUTPUT_DIMS)
     return (uint4)(b,f,y,x);
-#elif (INPUT_DIMS == 2 && OUTPUT_DIMS == 4)
-    uint _f  = f / (INPUT_SIZE_Y*INPUT_SIZE_X);
-    uint _yx = f % (INPUT_SIZE_Y*INPUT_SIZE_X);
-    uint _y = _yx / INPUT_SIZE_X;
-    uint _x = _yx % INPUT_SIZE_X;
+#elif (INPUT0_DIMS == 2 && OUTPUT_DIMS == 4)
+    uint _f  = f / (INPUT0_SIZE_Y*INPUT0_SIZE_X);
+    uint _yx = f % (INPUT0_SIZE_Y*INPUT0_SIZE_X);
+    uint _y = _yx / INPUT0_SIZE_X;
+    uint _x = _yx % INPUT0_SIZE_X;
     return (uint4)(b,_f,_y,_x);
-#elif (INPUT_DIMS == 4 && OUTPUT_DIMS == 2)
-    uint _f = f*INPUT_SIZE_Y*INPUT_SIZE_X + y*INPUT_SIZE_X + x;
+#elif (INPUT0_DIMS == 4 && OUTPUT_DIMS == 2)
+    uint _f = f*INPUT0_SIZE_Y*INPUT0_SIZE_X + y*INPUT0_SIZE_X + x;
     return (uint4)(b,_f,0,0);
 #else
 #error
@@ -96,7 +96,7 @@ inline uint4 FUNC(reshape)(uint b, uint f, uint y, uint x)
 
 
 KERNEL (reorder_weights)(
-    const __global INPUT_TYPE* input, 
+    const __global INPUT0_TYPE* input, 
     __global OUTPUT_TYPE* output
 #ifdef MEAN_SUBTRUCT_IN_BUFFER
     , __global MEAN_SUBTRUCT_TYPE* mean_subtruct
@@ -105,12 +105,12 @@ KERNEL (reorder_weights)(
 {
     const unsigned b = get_global_id(GWS_BATCH);
     const unsigned f = get_global_id(GWS_FEATURE);
-#if   INPUT_DIMS == 2
+#if   INPUT0_DIMS == 2
     const unsigned y = 0;
     const unsigned x = 0;
-#elif INPUT_DIMS == 4
-    const unsigned y = get_global_id(GWS_YX) / INPUT_SIZE_X;
-    const unsigned x = get_global_id(GWS_YX) % INPUT_SIZE_X;
+#elif INPUT0_DIMS == 4
+    const unsigned y = get_global_id(GWS_YX) / INPUT0_SIZE_X;
+    const unsigned x = get_global_id(GWS_YX) % INPUT0_SIZE_X;
 #endif
 
     uint4 ov = FUNC_CALL(reshape)(b,f,y,x);

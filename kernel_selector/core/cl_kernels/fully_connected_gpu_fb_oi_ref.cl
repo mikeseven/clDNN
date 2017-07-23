@@ -38,16 +38,16 @@ KERNEL (fully_connected_gpu_xb_bx)(
 #endif
 {
     const uint x = get_global_id(0);
-    const uint batch_id = x % INPUT_BATCH_NUM;
-    const uint outXIdx = x / INPUT_BATCH_NUM;
+    const uint batch_id = x % INPUT0_BATCH_NUM;
+    const uint outXIdx = x / INPUT0_BATCH_NUM;
     UNIT_TYPE result = UNIT_VAL_ZERO;
     uint weight_offset = outXIdx * FILTER_OFM_PITCH;
-    uint input_offset = INPUT_OFFSET + batch_id*INPUT_BATCH_PITCH;
+    uint input_offset = INPUT0_OFFSET + batch_id*INPUT0_BATCH_PITCH;
 
-    for (uint i = 0; i < INPUT_ELEMENTS_COUNT; i++)
+    for (uint i = 0; i < INPUT0_ELEMENTS_COUNT; i++)
     {
         result += input[input_offset] * weight[weight_offset];
-        input_offset += INPUT_BATCH_NUM;
+        input_offset += INPUT0_BATCH_NUM;
         weight_offset++;
     }
 #if BIAS_TERM

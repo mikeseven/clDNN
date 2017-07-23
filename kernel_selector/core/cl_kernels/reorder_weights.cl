@@ -16,10 +16,10 @@
 #include "include/common.cl"
 
 ///////////////////////// Input Index /////////////////////////
-#if INPUT_SIMPLE
+#if INPUT0_SIMPLE
 inline uint FUNC(get_input_index)(uint o, uint i, uint y, uint x)
 {
-    return INPUT_OFFSET + o*INPUT_OFM_PITCH + i*INPUT_IFM_PITCH + y*INPUT_Y_PITCH + x*INPUT_X_PITCH;
+    return INPUT0_OFFSET + o*INPUT0_OFM_PITCH + i*INPUT0_IFM_PITCH + y*INPUT0_Y_PITCH + x*INPUT0_X_PITCH;
 }
 #else
 #error - not supported
@@ -96,16 +96,16 @@ inline uint FUNC(get_output_index)(uint o, uint i, uint y, uint x)
 
 inline uint4 FUNC(reshape)(uint o, uint i, uint y, uint x)
 {
-#if (INPUT_DIMS == OUTPUT_DIMS)
+#if (INPUT0_DIMS == OUTPUT_DIMS)
     return (uint4)(o,i,y,x);
-#elif (INPUT_DIMS == 4 && OUTPUT_DIMS == 2)
-    uint _i  = i / (INPUT_SIZE_Y*INPUT_SIZE_X);
-    uint _yx = i % (INPUT_SIZE_Y*INPUT_SIZE_X);
-    uint _y = _yx / INPUT_SIZE_X;
-    uint _x = _yx % INPUT_SIZE_X;
+#elif (INPUT0_DIMS == 4 && OUTPUT_DIMS == 2)
+    uint _i  = i / (INPUT0_SIZE_Y*INPUT0_SIZE_X);
+    uint _yx = i % (INPUT0_SIZE_Y*INPUT0_SIZE_X);
+    uint _y = _yx / INPUT0_SIZE_X;
+    uint _x = _yx % INPUT0_SIZE_X;
     return (uint4)(o,_i,_y,_x);
-#elif (INPUT_DIMS == 2 && OUTPUT_DIMS == 4)
-    uint _i = i*INPUT_SIZE_Y*INPUT_SIZE_X + y*INPUT_SIZE_X + x;
+#elif (INPUT0_DIMS == 2 && OUTPUT_DIMS == 4)
+    uint _i = i*INPUT0_SIZE_Y*INPUT0_SIZE_X + y*INPUT0_SIZE_X + x;
     return (uint4)(o,_i,0,0);
 #else
 #error
@@ -113,7 +113,7 @@ inline uint4 FUNC(reshape)(uint o, uint i, uint y, uint x)
 }
 
 
-KERNEL (reorder_weights)(const __global INPUT_TYPE* input, __global OUTPUT_TYPE* output)
+KERNEL (reorder_weights)(const __global INPUT0_TYPE* input, __global OUTPUT_TYPE* output)
 {
     const unsigned o = get_global_id(0);
     const unsigned i = get_global_id(1);
@@ -121,8 +121,8 @@ KERNEL (reorder_weights)(const __global INPUT_TYPE* input, __global OUTPUT_TYPE*
     const unsigned y = 0;
     const unsigned x = 0;
 #elif OUTPUT_DIMS == 4
-    const unsigned y = get_global_id(2) / INPUT_SIZE_X;
-    const unsigned x = get_global_id(2) % INPUT_SIZE_X;
+    const unsigned y = get_global_id(2) / INPUT0_SIZE_X;
+    const unsigned x = get_global_id(2) % INPUT0_SIZE_X;
 #endif
     uint4 ir = FUNC_CALL(reshape)(o,i,y,x);
     output[FUNC_CALL(get_output_index)(o, i, y, x)] = TO_OUTPUT_TYPE(input[FUNC_CALL(get_input_index)(ir[0],ir[1],ir[2],ir[3])]);

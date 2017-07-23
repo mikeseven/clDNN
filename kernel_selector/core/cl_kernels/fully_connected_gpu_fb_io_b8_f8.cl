@@ -28,12 +28,12 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8)(
 {
     const uint global_id = get_global_id(0);
     const int x = get_global_id(0);
-    const uint batch_id = x % INPUT_BATCH_NUM;
+    const uint batch_id = x % INPUT0_BATCH_NUM;
 
-    uint neuronIdx = (x / INPUT_BATCH_NUM) * NEURONS_PER_WORK_ITEM;
+    uint neuronIdx = (x / INPUT0_BATCH_NUM) * NEURONS_PER_WORK_ITEM;
 
     const uint sub_group_id = get_local_id(0);
-    const uint batch_num = INPUT_BATCH_NUM;
+    const uint batch_num = INPUT0_BATCH_NUM;
 
     const int out_id = (global_id / batch_num) * NEURONS_PER_WORK_ITEM * batch_num + batch_id;
 
@@ -46,7 +46,7 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8)(
 
     uint weight_offset = sub_group_id + neuronIdx;
 
-    for(uint h = 0; h < INPUT_ELEMENTS_COUNT; h++)
+    for(uint h = 0; h < INPUT0_ELEMENTS_COUNT; h++)
     {
         DOT_PRODUCT_8(_data0, input[h * batch_num + batch_id], weight[weight_offset])
 #if NEURONS_PER_WORK_ITEM > 8

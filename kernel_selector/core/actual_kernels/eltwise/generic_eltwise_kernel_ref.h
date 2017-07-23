@@ -23,7 +23,7 @@ namespace KernelSelector
     class GenericEltwiseKernelRef : public CommonKernelBase
     {
     public:
-        GenericEltwiseKernelRef() : CommonKernelBase("eltwise_ref") {}
+        GenericEltwiseKernelRef() : CommonKernelBase("generic_eltwise_ref") {}
         virtual ~GenericEltwiseKernelRef() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;

@@ -111,7 +111,7 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
 #endif // #if NEURONS_PER_WORK_ITEM > 1
 
     uint input_idx = sub_group_idx * (BATCHES_PER_WORK_ITEM / 8) * (uint)get_global_size(1) + (group_id * BATCHES_PER_WORK_ITEM) / 8;
-    for(uint h = 0; h < INPUT_ELEMENTS_COUNT / 8; h++)
+    for(uint h = 0; h < INPUT0_ELEMENTS_COUNT / 8; h++)
     {
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA00 = vload8(input_idx, input);
 
@@ -165,7 +165,7 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
 #endif
 
 #endif // #if NEURONS_PER_WORK_ITEM > 1
-        input_idx += INPUT_BATCH_NUM; // we don't need to multiply by 8 because of vload8
+        input_idx += INPUT0_BATCH_NUM; // we don't need to multiply by 8 because of vload8
     }
 
 #if BIAS_TERM
@@ -225,15 +225,15 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
 #endif // #if BIAS_TERM
 #if NEURONS_PER_WORK_ITEM > 1
 
-    vstore8(blockC10, out_id+INPUT_BATCH_NUM, output);
+    vstore8(blockC10, out_id+INPUT0_BATCH_NUM, output);
 
 #if BATCHES_PER_WORK_ITEM >= 16
-    vstore8(blockC11, out_id+INPUT_BATCH_NUM+1, output);
+    vstore8(blockC11, out_id+INPUT0_BATCH_NUM+1, output);
 #endif
 
 #if BATCHES_PER_WORK_ITEM >= 32
-    vstore8(blockC12, out_id+INPUT_BATCH_NUM+2, output);
-    vstore8(blockC13, out_id+INPUT_BATCH_NUM+3, output);
+    vstore8(blockC12, out_id+INPUT0_BATCH_NUM+2, output);
+    vstore8(blockC13, out_id+INPUT0_BATCH_NUM+3, output);
 #endif
 
 #endif // #if NEURONS_PER_WORK_ITEM > 1

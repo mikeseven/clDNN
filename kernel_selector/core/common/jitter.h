@@ -391,12 +391,6 @@ inline JitConstants MakeBaseParamsJitConstants(const BaseParams& params)
         MakeJitConstant("ACTIVATION_FUNCTION_"  + toString(params.activationFunc), ""),
     };
 
-    if (params.inputs.size() >= 1)
-    {
-        // default input is input 0
-        jit.AddConstant(MakeJitConstant("INPUT", params.inputs[0]));                                    // TODO: remove it
-    }
-
     for (size_t i = 0; i < params.inputs.size(); i++)
     {
         jit.AddConstant(MakeJitConstant("INPUT" + toCodeString(i), params.inputs[i]));
@@ -459,7 +453,7 @@ inline JitConstants MakeFullyConnectedJitConstants(const FullyConnectedParams& p
     const auto x_size = input.LogicalSize() / input.Batch().v;
 
     jit.AddConstants({
-        MakeJitConstant("INPUT_ELEMENTS_COUNT",      x_size),
+        MakeJitConstant("INPUT0_ELEMENTS_COUNT",      x_size),
         MakeJitConstant("WEIGHTS_BATCH_NUM",         "FILTER_OFM_NUM"),     // TODO: remove it
     });
 
@@ -642,7 +636,7 @@ inline JitConstants MakeReorderWeightsJitConstants(const ReorderWeightsParams& p
     JitConstants jit{
         MakeJitConstant("FP16_SUPPORTED",   static_cast<int>(fp16Supported)),                      // TODO: use engine
         MakeJitConstant("FP16_UNIT_USED",   static_cast<int>(fp16Supported)),
-        MakeJitConstant("INPUT",            input),
+        MakeJitConstant("INPUT0",           input),
         MakeJitConstant("OUTPUT",           output),
     };
 

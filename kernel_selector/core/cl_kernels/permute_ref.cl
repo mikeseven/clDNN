@@ -28,7 +28,7 @@ KERNEL (reshape_padding)(const __global UNIT_TYPE* input, __global UNIT_TYPE* ou
     output_indices[2] = input_indices[PERMUTE_ORDER[2]];
     output_indices[3] = input_indices[PERMUTE_ORDER[3]];
     
-    uint input_offset =  INPUT_OFFSET +
+    uint input_offset =  INPUT0_OFFSET +
                          input_indices[0]*INPUT0_PITCHES[0] +
                          input_indices[1]*INPUT0_PITCHES[1] +
                          input_indices[2]*INPUT0_PITCHES[2] +

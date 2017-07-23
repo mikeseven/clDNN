@@ -39,8 +39,8 @@ KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     const uint x    = (uint)get_global_id(0);
     const uint y    = (uint)get_global_id(1);
     const uint bf   = (uint)get_global_id(2);
-    const uint f    = bf % INPUT_FEATURE_NUM;
-    const uint b    = bf / INPUT_FEATURE_NUM;
+    const uint f    = bf % INPUT0_FEATURE_NUM;
+    const uint b    = bf / INPUT0_FEATURE_NUM;
     
     if (x >= OUTPUT_SIZE_X)
     {
@@ -50,8 +50,8 @@ KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     const uint x    = (uint)get_global_id(1);
     const uint y    = (uint)get_global_id(2);
     const uint bf   = (uint)get_global_id(0);
-    const uint f    = bf / INPUT_BATCH_NUM;
-    const uint b    = bf % INPUT_BATCH_NUM;
+    const uint f    = bf / INPUT0_BATCH_NUM;
+    const uint b    = bf % INPUT0_BATCH_NUM;
 #endif
 
     const int offset_x = (int)x*STRIDE_SIZE_X - PADDING_SIZE_X;
@@ -60,8 +60,8 @@ KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     UNIT_TYPE result = UNIT_INIT_VAL;
     
 #ifdef CHECK_BOUNDRY
-    if (offset_x + WINDOW_SIZE_X < 0 || offset_x >= INPUT_SIZE_X ||
-        offset_y + WINDOW_SIZE_Y < 0 || offset_y >= INPUT_SIZE_Y)
+    if (offset_x + WINDOW_SIZE_X < 0 || offset_x >= INPUT0_SIZE_X ||
+        offset_y + WINDOW_SIZE_Y < 0 || offset_y >= INPUT0_SIZE_Y)
     {
         return;
     }
@@ -70,20 +70,20 @@ KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     uint num_elementes = 0;
 #endif
     
-    const uint batch_and_feature_offset = INPUT_OFFSET + b*INPUT_BATCH_PITCH + f*INPUT_FEATURE_PITCH;
+    const uint batch_and_feature_offset = INPUT0_OFFSET + b*INPUT0_BATCH_PITCH + f*INPUT0_FEATURE_PITCH;
     for(uint j = 0; j < WINDOW_SIZE_Y; j++)
     {
         int input_offset_y = offset_y + j;
-        bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
+        bool zero_y = input_offset_y >= INPUT0_SIZE_Y || input_offset_y < 0;
         if(!zero_y)
         {
             for(uint i = 0; i < WINDOW_SIZE_X; i++)
             {
                 int input_offset_x = offset_x + i;
-                bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
+                bool zero = input_offset_x >= INPUT0_SIZE_X || input_offset_x < 0;
                 if(!zero)
                 {
-                    const uint input_idx = batch_and_feature_offset + input_offset_y*INPUT_Y_PITCH + input_offset_x*INPUT_X_PITCH;
+                    const uint input_idx = batch_and_feature_offset + input_offset_y*INPUT0_Y_PITCH + input_offset_x*INPUT0_X_PITCH;
                     result = FUNC_CALL(apply_pooling)(result, input[input_idx]);
                     
 #ifdef DYNAMIC_KERNEL_DIVIDER
@@ -94,16 +94,16 @@ KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
         }
     }
 #else
-    uint input_idx = INPUT_OFFSET + b*INPUT_BATCH_PITCH + f*INPUT_FEATURE_PITCH + offset_y*INPUT_Y_PITCH + offset_x*INPUT_X_PITCH;
+    uint input_idx = INPUT0_OFFSET + b*INPUT0_BATCH_PITCH + f*INPUT0_FEATURE_PITCH + offset_y*INPUT0_Y_PITCH + offset_x*INPUT0_X_PITCH;
 
     for(uint j = 0; j < WINDOW_SIZE_Y; j++)
     {
         for(uint i = 0; i < WINDOW_SIZE_X; i++)
         {
             result = FUNC_CALL(apply_pooling)(result, input[input_idx]);
-            input_idx += INPUT_X_PITCH;
+            input_idx += INPUT0_X_PITCH;
         }
-        input_idx += (INPUT_Y_PITCH - WINDOW_SIZE_X*INPUT_X_PITCH);
+        input_idx += (INPUT0_Y_PITCH - WINDOW_SIZE_X*INPUT0_X_PITCH);
     }
     
 #ifdef DYNAMIC_KERNEL_DIVIDER

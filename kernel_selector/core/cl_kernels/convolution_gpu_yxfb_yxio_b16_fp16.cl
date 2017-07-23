@@ -54,7 +54,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
     const uint out_x = get_global_id(1);
     const uint out_y = get_global_id(2);
 
-    const uint out_id = (global_id / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) * OFM_PER_WORK_ITEM * INPUT_BATCH_NUM + out_batch_id;
+    const uint out_id = (global_id / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) * OFM_PER_WORK_ITEM * INPUT0_BATCH_NUM + out_batch_id;
 
     const uint ofm_offset = ((global_id * OFM_PER_WORK_ITEM) / WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS) % FILTER_OUTPUT_FEATURE_NUM;
 
@@ -71,19 +71,19 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
     for (uint i = 0; i < FILTER_SIZE_Y; i++)
     {
         const int input_offset_y = y + i * DILATION_SIZE_Y;
-        const bool zero_y = input_offset_y >= INPUT_SIZE_Y || input_offset_y < 0;
+        const bool zero_y = input_offset_y >= INPUT0_SIZE_Y || input_offset_y < 0;
 
         if(!zero_y)
         {
             for (uint j = 0; j < FILTER_SIZE_X; j++)
             {
                 const int input_offset_x = x + j * DILATION_SIZE_X;
-                const bool zero = input_offset_x >= INPUT_SIZE_X || input_offset_x < 0;
+                const bool zero = input_offset_x >= INPUT0_SIZE_X || input_offset_x < 0;
 
                 if(!zero)
                 {
-                    uint input_idx = input_offset_x*INPUT_X_PITCH + input_offset_y*INPUT_Y_PITCH;
-                    input_idx += INPUT_OFFSET + split_idx * FILTER_INPUT_FEATURE_NUM * INPUT_FEATURE_PITCH;
+                    uint input_idx = input_offset_x*INPUT0_X_PITCH + input_offset_y*INPUT0_Y_PITCH;
+                    input_idx += INPUT0_OFFSET + split_idx * FILTER_INPUT_FEATURE_NUM * INPUT0_FEATURE_PITCH;
                     input_idx += out_batch_id;
 
                     //sub_group_id used as offset to make each workitem load different filter, and then shuffle it
@@ -100,14 +100,14 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
                         _data[1] = fma(_input.s1, filter_transp, _data[1]);
                         _data[2] = fma(_input.s2, filter_transp, _data[2]);
                         _data[3] = fma(_input.s3, filter_transp, _data[3]);
-                        input_idx += INPUT_FEATURE_PITCH;
+                        input_idx += INPUT0_FEATURE_PITCH;
 #elif defined(USE_BLOCK_READ_1)
                         half2 _input = as_half2(intel_sub_group_block_read((const __global uint*)(input + input_idx)));
                         uint filter_val_pair = *(const __global uint*)(filter + filter_idx);
                         half16 filter_transp = TRANSPOSE_BLOCK_16_FP16(filter_val_pair);
                         _data[0] = fma(_input.s0, filter_transp, _data[0]);
                         _data[1] = fma(_input.s1, filter_transp, _data[1]);
-                        input_idx += INPUT_FEATURE_PITCH;
+                        input_idx += INPUT0_FEATURE_PITCH;
 #else
                         uint filter_val_pair = *(const __global uint*)(filter + filter_idx);
                         half16 filter_transp = TRANSPOSE_BLOCK_16_FP16(filter_val_pair);
@@ -116,7 +116,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
                             _data[s] = fma(input[input_idx], filter_transp, _data[s]);
                             input_idx += LOCAL_WORK_GROUP_SIZE;
                         }
-                        input_idx += INPUT_FEATURE_PITCH - BATCHES_PER_WORK_ITEM * LOCAL_WORK_GROUP_SIZE;
+                        input_idx += INPUT0_FEATURE_PITCH - BATCHES_PER_WORK_ITEM * LOCAL_WORK_GROUP_SIZE;
 #endif
                         filter_idx += FILTER_IFM_PITCH;
                     }

@@ -24,9 +24,9 @@
 //  - FP16_UNIT_USED       - [0/1] Value indicating that current kernel should use FP16.
 //  - UNIT_TYPE            - Type of unit of input/output/weight/bias.
 //  - UNIT_VAL_ZERO        - Literal of current UNIT_TYPE that represents 0.
-//  - INPUT_BATCH_NUM      - [int] Batch size for input. Number of input sets of spatial and feature data that
+//  - INPUT0_BATCH_NUM      - [int] Batch size for input. Number of input sets of spatial and feature data that
 //                           are grouped to be processed in single batch.
-//  - INPUT_ELEMENTS_COUNT - [int] Cumulative number of elements in single data set from batch.
+//  - INPUT0_ELEMENTS_COUNT - [int] Cumulative number of elements in single data set from batch.
 //  - WEIGHTS_BATCH_NUM    - [int] Cumulative number of elements that are outputted for single input set from batch.
 //                           Number of layer responses per single input set from batch.
 //  - RELU                 - [0/1] Indicates that ReLU activation function should be used on output.
@@ -159,7 +159,7 @@
 
 
 // Kernel-specific JIT requirements.
-#if INPUT_BATCH_NUM != 1
+#if INPUT0_BATCH_NUM != 1
     #error Kernel does not support specified input batch size.
 #endif
 #if UNITS_PER_SG_READ <= 0 || RESPONSES_PER_SG_EXEC <= 0 || UNITS_PER_CHUNK <= 0 || UNITS_PER_SG_READ % RESPONSES_PER_SG_EXEC != 0 || RESPONSES_PER_SG_EXEC % UNITS_PER_CHUNK != 0
@@ -184,7 +184,7 @@ KERNEL (fully_connected_gpu_bx_bs_x_bsv16_b1)(
 #endif
 {
     // constexpr:
-    const uint input_byte_size  = INPUT_ELEMENTS_COUNT * UNIT_BYTE_SIZE;
+    const uint input_byte_size  = INPUT0_ELEMENTS_COUNT * UNIT_BYTE_SIZE;
 
     const uint output_size      = WEIGHTS_BATCH_NUM;
 
@@ -345,9 +345,9 @@ KERNEL (fully_connected_gpu_bx_bs_x_bsv16_b1)(
 
 
 // Processing input remainder (if needed).
-#define INPUT_ELEMENTS_REMAINDER             (INPUT_ELEMENTS_COUNT % (IN_CHUNK_PREFETCH_SIZE * UNITS_PER_SG_READ))
-#define IN_CHUNK_PREFETCH_REMAINDER_REQ_SIZE ((INPUT_ELEMENTS_REMAINDER + UNITS_PER_SG_READ - 1) / UNITS_PER_SG_READ)
-#if INPUT_ELEMENTS_REMAINDER != 0
+#define INPUT0_ELEMENTS_REMAINDER             (INPUT0_ELEMENTS_COUNT % (IN_CHUNK_PREFETCH_SIZE * UNITS_PER_SG_READ))
+#define IN_CHUNK_PREFETCH_REMAINDER_REQ_SIZE ((INPUT0_ELEMENTS_REMAINDER + UNITS_PER_SG_READ - 1) / UNITS_PER_SG_READ)
+#if INPUT0_ELEMENTS_REMAINDER != 0
 
     {
         CHUNK_TYPE input_val[IN_CHUNK_PREFETCH_SIZE];
@@ -387,10 +387,10 @@ KERNEL (fully_connected_gpu_bx_bs_x_bsv16_b1)(
     #endif
 
         __attribute__((opencl_unroll_hint))
-        for (uint elem_base_idx = 0; elem_base_idx < INPUT_ELEMENTS_REMAINDER; elem_base_idx += FILTER_CHUNK_PREFETCH_SIZE * UNITS_PER_SG_READ / RESPONSES_PER_SG_EXEC)
+        for (uint elem_base_idx = 0; elem_base_idx < INPUT0_ELEMENTS_REMAINDER; elem_base_idx += FILTER_CHUNK_PREFETCH_SIZE * UNITS_PER_SG_READ / RESPONSES_PER_SG_EXEC)
         {
-            // Size of array of CHUNK_TYPE needed to contain filter elements for input elements in range [elem_base_idx; INPUT_ELEMENTS_REMAINDER).
-            const uint filter_chunk_remainder_size = ((INPUT_ELEMENTS_REMAINDER - elem_base_idx) * RESPONSES_PER_SG_EXEC + UNITS_PER_SG_READ - 1) / UNITS_PER_SG_READ;
+            // Size of array of CHUNK_TYPE needed to contain filter elements for input elements in range [elem_base_idx; INPUT0_ELEMENTS_REMAINDER).
+            const uint filter_chunk_remainder_size = ((INPUT0_ELEMENTS_REMAINDER - elem_base_idx) * RESPONSES_PER_SG_EXEC + UNITS_PER_SG_READ - 1) / UNITS_PER_SG_READ;
             const uint filter_chunk_prefetch_req_size = filter_chunk_remainder_size < FILTER_CHUNK_PREFETCH_SIZE ? filter_chunk_remainder_size : FILTER_CHUNK_PREFETCH_SIZE;
 
             CHUNK_TYPE filter_val[FILTER_CHUNK_PREFETCH_SIZE];
@@ -440,17 +440,17 @@ KERNEL (fully_connected_gpu_bx_bs_x_bsv16_b1)(
 #if UNITS_PER_SG_READ / RESPONSES_PER_SG_EXEC == 4
                 UNIT_TYPE rearranged_input = sg_elem_id < SUB_GROUP_SIZE / 2
                     ? (sg_elem_id < SUB_GROUP_SIZE / 4
-                        ? (input_base_elem_idx     < INPUT_ELEMENTS_REMAINDER ? SG_UNIT_SELECT(input_val[input_base_elem_idx       / UNITS_PER_SG_READ], input_base_elem_idx % UNITS_PER_SG_READ)       : UNIT_VAL_ZERO)
-                        : (input_base_elem_idx + 1 < INPUT_ELEMENTS_REMAINDER ? SG_UNIT_SELECT(input_val[(input_base_elem_idx + 1) / UNITS_PER_SG_READ], (input_base_elem_idx + 1) % UNITS_PER_SG_READ) : UNIT_VAL_ZERO))
+                        ? (input_base_elem_idx     < INPUT0_ELEMENTS_REMAINDER ? SG_UNIT_SELECT(input_val[input_base_elem_idx       / UNITS_PER_SG_READ], input_base_elem_idx % UNITS_PER_SG_READ)       : UNIT_VAL_ZERO)
+                        : (input_base_elem_idx + 1 < INPUT0_ELEMENTS_REMAINDER ? SG_UNIT_SELECT(input_val[(input_base_elem_idx + 1) / UNITS_PER_SG_READ], (input_base_elem_idx + 1) % UNITS_PER_SG_READ) : UNIT_VAL_ZERO))
                     : (sg_elem_id < 3 * SUB_GROUP_SIZE / 4
-                        ? (input_base_elem_idx + 2 < INPUT_ELEMENTS_REMAINDER ? SG_UNIT_SELECT(input_val[(input_base_elem_idx + 2) / UNITS_PER_SG_READ], (input_base_elem_idx + 2) % UNITS_PER_SG_READ) : UNIT_VAL_ZERO)
-                        : (input_base_elem_idx + 3 < INPUT_ELEMENTS_REMAINDER ? SG_UNIT_SELECT(input_val[(input_base_elem_idx + 3) / UNITS_PER_SG_READ], (input_base_elem_idx + 3) % UNITS_PER_SG_READ) : UNIT_VAL_ZERO));
+                        ? (input_base_elem_idx + 2 < INPUT0_ELEMENTS_REMAINDER ? SG_UNIT_SELECT(input_val[(input_base_elem_idx + 2) / UNITS_PER_SG_READ], (input_base_elem_idx + 2) % UNITS_PER_SG_READ) : UNIT_VAL_ZERO)
+                        : (input_base_elem_idx + 3 < INPUT0_ELEMENTS_REMAINDER ? SG_UNIT_SELECT(input_val[(input_base_elem_idx + 3) / UNITS_PER_SG_READ], (input_base_elem_idx + 3) % UNITS_PER_SG_READ) : UNIT_VAL_ZERO));
 #elif UNITS_PER_SG_READ / RESPONSES_PER_SG_EXEC == 2
                 UNIT_TYPE rearranged_input = sg_elem_id < SUB_GROUP_SIZE / 2
-                    ? (input_base_elem_idx     < INPUT_ELEMENTS_REMAINDER ? SG_UNIT_SELECT(input_val[input_base_elem_idx       / UNITS_PER_SG_READ], input_base_elem_idx % UNITS_PER_SG_READ)       : UNIT_VAL_ZERO)
-                    : (input_base_elem_idx + 1 < INPUT_ELEMENTS_REMAINDER ? SG_UNIT_SELECT(input_val[(input_base_elem_idx + 1) / UNITS_PER_SG_READ], (input_base_elem_idx + 1) % UNITS_PER_SG_READ) : UNIT_VAL_ZERO);
+                    ? (input_base_elem_idx     < INPUT0_ELEMENTS_REMAINDER ? SG_UNIT_SELECT(input_val[input_base_elem_idx       / UNITS_PER_SG_READ], input_base_elem_idx % UNITS_PER_SG_READ)       : UNIT_VAL_ZERO)
+                    : (input_base_elem_idx + 1 < INPUT0_ELEMENTS_REMAINDER ? SG_UNIT_SELECT(input_val[(input_base_elem_idx + 1) / UNITS_PER_SG_READ], (input_base_elem_idx + 1) % UNITS_PER_SG_READ) : UNIT_VAL_ZERO);
 #elif UNITS_PER_SG_READ / RESPONSES_PER_SG_EXEC == 1
-                UNIT_TYPE rearranged_input = input_base_elem_idx < INPUT_ELEMENTS_REMAINDER ? SG_UNIT_SELECT(input_val[input_base_elem_idx / UNITS_PER_SG_READ], input_base_elem_idx % UNITS_PER_SG_READ) : UNIT_VAL_ZERO;
+                UNIT_TYPE rearranged_input = input_base_elem_idx < INPUT0_ELEMENTS_REMAINDER ? SG_UNIT_SELECT(input_val[input_base_elem_idx / UNITS_PER_SG_READ], input_base_elem_idx % UNITS_PER_SG_READ) : UNIT_VAL_ZERO;
 #else
     #error Selected RESPONSES_PER_SG_EXEC is not supported.
 #endif
@@ -461,7 +461,7 @@ KERNEL (fully_connected_gpu_bx_bs_x_bsv16_b1)(
     }
 
 #endif
-#undef INPUT_ELEMENTS_REMAINDER
+#undef INPUT0_ELEMENTS_REMAINDER
 #undef IN_CHUNK_PREFETCH_REMAINDER_REQ_SIZE
 
 

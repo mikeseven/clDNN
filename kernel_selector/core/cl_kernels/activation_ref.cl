@@ -35,7 +35,7 @@ KERNEL(activation)(
     const unsigned batch = get_global_id(2) / OUTPUT_FEATURE_NUM;
 #endif
 
-    const unsigned src_index = batch*INPUT_BATCH_PITCH + feature*INPUT_FEATURE_PITCH + y*INPUT_Y_PITCH + x*INPUT_X_PITCH + INPUT_OFFSET;
+    const unsigned src_index = batch*INPUT0_BATCH_PITCH + feature*INPUT0_FEATURE_PITCH + y*INPUT0_Y_PITCH + x*INPUT0_X_PITCH + INPUT0_OFFSET;
     const unsigned dst_index = batch*OUTPUT_BATCH_PITCH + feature*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH + OUTPUT_OFFSET;
 
 #if defined PARAMETERIZED

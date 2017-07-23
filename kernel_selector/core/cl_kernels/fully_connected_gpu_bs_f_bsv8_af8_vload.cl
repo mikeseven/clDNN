@@ -108,23 +108,23 @@ KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
 #endif
 #endif
 
-    uint weight_offset = id_in_sub_group + SUB_GROUP_SIZE * group_id * NEURONS_PER_WORK_ITEM * INPUT_ELEMENTS_COUNT;
+    uint weight_offset = id_in_sub_group + SUB_GROUP_SIZE * group_id * NEURONS_PER_WORK_ITEM * INPUT0_ELEMENTS_COUNT;
 #if NEURONS_PER_WORK_ITEM > 1
 
-    uint weight_offset2 = weight_offset + SUB_GROUP_SIZE * INPUT_ELEMENTS_COUNT;
+    uint weight_offset2 = weight_offset + SUB_GROUP_SIZE * INPUT0_ELEMENTS_COUNT;
 
 #endif // #if NEURONS_PER_WORK_ITEM > 1
 
-    uint input_idx = id_in_sub_group + batch_group_id * BATCHES_PER_WORK_ITEM * INPUT_ELEMENTS_COUNT;
-    for(uint h = 0; h < INPUT_ELEMENTS_COUNT / 8; h++)
+    uint input_idx = id_in_sub_group + batch_group_id * BATCHES_PER_WORK_ITEM * INPUT0_ELEMENTS_COUNT;
+    for(uint h = 0; h < INPUT0_ELEMENTS_COUNT / 8; h++)
     {
         // read input data in blocks ( 8 batch * 8 x )
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA00 = ALIGNED_BLOCK_READ8(input, input_idx);
 #if BATCHES_PER_WORK_ITEM >= 16
-        MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA01 = ALIGNED_BLOCK_READ8(input, input_idx + (INPUT_ELEMENTS_COUNT*8));
+        MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA01 = ALIGNED_BLOCK_READ8(input, input_idx + (INPUT0_ELEMENTS_COUNT*8));
 #if BATCHES_PER_WORK_ITEM >= 32
-        MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA02 = ALIGNED_BLOCK_READ8(input, input_idx + (INPUT_ELEMENTS_COUNT*16));
-        MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA03 = ALIGNED_BLOCK_READ8(input, input_idx + (INPUT_ELEMENTS_COUNT*24));
+        MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA02 = ALIGNED_BLOCK_READ8(input, input_idx + (INPUT0_ELEMENTS_COUNT*16));
+        MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA03 = ALIGNED_BLOCK_READ8(input, input_idx + (INPUT0_ELEMENTS_COUNT*24));
 #endif
 #endif
 
@@ -218,12 +218,12 @@ KERNEL (fully_connected_gpu_xb_bs_xs_xsv8_bsv8_vload)(
     if(neuronIdx + 8 >= OUTPUT_ELEMENTS_COUNT)
         return;
 
-    vstore8(blockC10, out_id+INPUT_BATCH_NUM, output);
+    vstore8(blockC10, out_id+INPUT0_BATCH_NUM, output);
 #if BATCHES_PER_WORK_ITEM >= 16
-    vstore8(blockC11, out_id+INPUT_BATCH_NUM+1, output);
+    vstore8(blockC11, out_id+INPUT0_BATCH_NUM+1, output);
 #if BATCHES_PER_WORK_ITEM >= 32
-    vstore8(blockC12, out_id+INPUT_BATCH_NUM+2, output);
-    vstore8(blockC13, out_id+INPUT_BATCH_NUM+3, output);
+    vstore8(blockC12, out_id+INPUT0_BATCH_NUM+2, output);
+    vstore8(blockC13, out_id+INPUT0_BATCH_NUM+3, output);
 #endif
 #endif
 

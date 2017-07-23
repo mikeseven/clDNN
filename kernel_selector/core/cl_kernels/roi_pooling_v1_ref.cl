@@ -28,15 +28,15 @@
 
 // Use same names as in ./kernel_selector/core/cl_kernels/cnn_roi_pooling_ref.cl
 
-#define SRC_W INPUT_SIZE_X
-#define SRC_H INPUT_SIZE_Y
+#define SRC_W INPUT0_SIZE_X
+#define SRC_H INPUT0_SIZE_Y
 #define DST_W POOLED_WIDTH
 #define DST_H POOLED_HEIGHT
 
 #if GORUP_SIZE == 0
-#define DST_C INPUT_FEATURE_NUM
+#define DST_C INPUT0_FEATURE_NUM
 #else
-#define DST_C (GORUP_SIZE ? (INPUT_FEATURE_NUM / GORUP_SIZE / GORUP_SIZE) : INPUT_FEATURE_NUM)
+#define DST_C (GORUP_SIZE ? (INPUT0_FEATURE_NUM / GORUP_SIZE / GORUP_SIZE) : INPUT0_FEATURE_NUM)
 #endif
 
 // Note: In the non-ROI_OLD case we keep the coordinates in float instead
@@ -148,14 +148,14 @@ KERNEL(roi_pooling_gpu)
     const uint work_c = group_x + GORUP_SIZE * (group_y + GORUP_SIZE * c);
 #endif
 
-    const __global UNIT_TYPE * data = src_data + INPUT_OFFSET + INPUT_FEATURE_PITCH*work_c;
+    const __global UNIT_TYPE * data = src_data + INPUT0_OFFSET + INPUT0_FEATURE_PITCH*work_c;
 
     ACCUM_T res = MAX_POOL && x_begin < x_after && y_begin < y_after ? UNIT_VAL_MIN : 0;
 
     for (int yy = y_begin; yy < y_after; ++yy)
     for (int xx = x_begin; xx < x_after; ++xx)
     {
-        UNIT_TYPE val = data[xx*INPUT_X_PITCH + yy*INPUT_Y_PITCH];
+        UNIT_TYPE val = data[xx*INPUT0_X_PITCH + yy*INPUT0_Y_PITCH];
 
         res = MAX_POOL ? MAX(res, (ACCUM_T)val) : res + (ACCUM_T)val;
     }

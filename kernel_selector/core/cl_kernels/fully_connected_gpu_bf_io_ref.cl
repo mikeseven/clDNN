@@ -20,8 +20,8 @@
 //  - FP16_UNIT_USED       - [0/1] Value indicating that current kernel should use FP16.
 //  - UNIT_TYPE            - Type of unit of input/output/weight/bias.
 //  - UNIT_VAL_ZERO        - Literal of current UNIT_TYPE that represents 0.
-//  - INPUT_BATCH_NUM      - [int] Number of elements from single spatial and single feature that are grouped in single batch in input.
-//  - INPUT_ELEMENTS_COUNT - [int] Cumulative number of elements from input that are processed in single batch.
+//  - INPUT0_BATCH_NUM      - [int] Number of elements from single spatial and single feature that are grouped in single batch in input.
+//  - INPUT0_ELEMENTS_COUNT - [int] Cumulative number of elements from input that are processed in single batch.
 //  - WEIGHTS_BATCH_NUM    - [int] Cumulative number of elements that are outputted in single batch.
 //  - RELU                 - [0/1] Indicates that ReLU activation function should be used on output.
 //  - NEGATIVE_SLOPE       - [float] Factor for negative output values (required when ReLU is specified).
@@ -43,10 +43,10 @@ KERNEL (fully_connected_gpu_bx_xb_from_fyxb)(
     const uint outXIdx = x % WEIGHTS_BATCH_NUM;
     UNIT_TYPE result = UNIT_VAL_ZERO;
 
-    uint input_idx = batch_id * INPUT_ELEMENTS_COUNT;
+    uint input_idx = batch_id * INPUT0_ELEMENTS_COUNT;
     input_idx = MULTIPLY_OFFSET(UNIT_TYPE, input_idx);
     uint weight_idx = MULTIPLY_OFFSET(UNIT_TYPE, outXIdx);
-    for (uint i = 0; i < INPUT_ELEMENTS_COUNT; i++)
+    for (uint i = 0; i < INPUT0_ELEMENTS_COUNT; i++)
     {
         UNIT_TYPE _in = *OFFSET_GLOBAL_PTR(UNIT_TYPE, input, input_idx);
         UNIT_TYPE _w =  *OFFSET_GLOBAL_PTR(UNIT_TYPE, weight, weight_idx);

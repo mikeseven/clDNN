@@ -25,7 +25,7 @@
 //  - STRIDE               - [tensor] Stride (only spatial). Factors that describe step size in X or Y dimension of
 //                           input position of application of convolution filter when next ouput value
 //                           (step 1 in in X or Y dimension of output) is computed.
-//  - INPUT_OFFSET         - [tensor] Offset between input and output (only spatial). Non-positive values that describe
+//  - INPUT0_OFFSET         - [tensor] Offset between input and output (only spatial). Non-positive values that describe
 //                           initial offset input position of application of convolution filter and output position.
 //  - FP16_SUPPORTED       - [0/1] Value indicating whether device supports FP16 OpenCL extension (cl_khr_fp16).
 //  - FP16_UNIT_USED       - [0/1] Value indicating that current kernel should use FP16.
@@ -94,9 +94,9 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
         out[i] = UNIT_VAL_ZERO;
     }
 
-    uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * FILTER_INPUT_FEATURE_NUM;
-    in_addr = batch_idx * INPUT_BATCH_PITCH;
-    in_addr += in_split_offset + INPUT_OFFSET_WITH_PADDING + or * STRIDE_SIZE_Y * INPUT_Y_PITCH + oc * STRIDE_SIZE_X + lid;
+    uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * FILTER_INPUT_FEATURE_NUM;
+    in_addr = batch_idx * INPUT0_BATCH_PITCH;
+    in_addr += in_split_offset + INPUT0_OFFSET_WITH_PADDING + or * STRIDE_SIZE_Y * INPUT0_Y_PITCH + oc * STRIDE_SIZE_X + lid;
 
     for(int kd = 0; kd < FILTER_INPUT_FEATURE_NUM; kd++)  // _ID = 3, RGB
     {
@@ -112,7 +112,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
 
             // If we have row break, move to the next row.
             if (in_block_next_x_pos == IN_BLOCK_WIDTH)
-                tmp_in_addr += INPUT_Y_PITCH;
+                tmp_in_addr += INPUT0_Y_PITCH;
         }
 #elif (2 * IN_BLOCK_WIDTH) % SUB_GROUP_SIZE == 0
         __attribute__((opencl_unroll_hint(IN_BLOCK_ARRAY_SIZE)))
@@ -125,7 +125,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
 
                 // If we have row break, move to the next row.
                 if (in_block_next_x_pos == IN_BLOCK_WIDTH)
-                    tmp_in_addr += INPUT_Y_PITCH;
+                    tmp_in_addr += INPUT0_Y_PITCH;
             }
             else {
                 // TODO: Generalize this step to relax IN_BLOCK_WIDTH restrictions.
@@ -135,13 +135,13 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
                 if (lid < sg_br_pos)
                     in[in_block_pos / SUB_GROUP_SIZE] = input[tmp_in_addr + in_block_pos % IN_BLOCK_WIDTH];
                 // We have row break inside sub-group. Need to move to next line.
-                tmp_in_addr += INPUT_Y_PITCH;
+                tmp_in_addr += INPUT0_Y_PITCH;
                 if (lid >= sg_br_pos)
                     in[in_block_pos / SUB_GROUP_SIZE] = input[tmp_in_addr - sg_br_pos];
 
                 // If we have another row break, move to the next row.
                 if (in_block_next_x_pos == 2 * IN_BLOCK_WIDTH)
-                    tmp_in_addr += INPUT_Y_PITCH;
+                    tmp_in_addr += INPUT0_Y_PITCH;
             }
         }
 #else
@@ -149,7 +149,7 @@ KERNEL(convolution_gpu_bfyx_os_iyx_osv16)(
 #endif
 
         //move to next filter
-        in_addr += INPUT_FEATURE_PITCH;
+        in_addr += INPUT0_FEATURE_PITCH;
 
         for(int pf=0; pf<PREFETCH; pf++) {
             w[pf] = weights[weight_addr]; weight_addr += SUB_GROUP_SIZE;
