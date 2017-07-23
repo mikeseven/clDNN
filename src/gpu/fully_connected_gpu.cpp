@@ -94,7 +94,7 @@ struct fully_connected_gpu : typed_primitive_impl<fully_connected>
             const auto& input_layout = arg.input().get_output_layout();
             cldnn::topology topology(
                 cldnn::input_layout("input", input_layout),
-                cldnn::reorder("reorder", "input", to_data_layout(new_fc_params.inputs[0].GetLayout()), input_layout.data_type)
+                cldnn::reorder("reorder", "input", from_data_layout(new_fc_params.inputs[0].GetLayout()), input_layout.data_type)
             );
 
             reorders.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });

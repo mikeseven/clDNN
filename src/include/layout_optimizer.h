@@ -182,7 +182,7 @@ public:
             if (reorder_params.engine == kernel_selector::weights_reorder_params::Engine::CPU &&
                 reorder_params.cpuKernel != nullptr)
             {
-                const auto intermediate_format = to_weights_layout(reorder_params.cpuKernel->GetInputLayout());
+                const auto intermediate_format = from_weights_layout(reorder_params.cpuKernel->GetInputLayout());
                 if (intermediate_format != old_layout.format)
                 {
                     const layout intermediate_layout = { old_layout.data_type, intermediate_format, old_layout.size.transform(intermediate_format, 1) };

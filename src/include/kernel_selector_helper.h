@@ -164,7 +164,7 @@ inline data_types from_weights_type(kernel_selector::weights_type dt)
     }
 }
 
-inline kernel_selector::data_layout from_data_layout(format f)
+inline kernel_selector::data_layout to_data_layout(format f)
 {
     switch (f)
     {
@@ -181,7 +181,7 @@ inline kernel_selector::data_layout from_data_layout(format f)
     }
 }
 
-static inline cldnn::format to_data_layout(kernel_selector::data_layout l)
+static inline cldnn::format from_data_layout(kernel_selector::data_layout l)
 {
     switch (l)
     {
@@ -200,7 +200,7 @@ static inline cldnn::format to_data_layout(kernel_selector::data_layout l)
     }
 }
 
-inline kernel_selector::weights_layout from_weights_layout(format f)
+inline kernel_selector::weights_layout to_weights_layout(format f)
 {
     switch (f)
     {
@@ -217,7 +217,7 @@ inline kernel_selector::weights_layout from_weights_layout(format f)
     }
 }
 
-static inline cldnn::format to_weights_layout(kernel_selector::weights_layout l)
+static inline cldnn::format from_weights_layout(kernel_selector::weights_layout l)
 {
     switch (l)
     {
@@ -243,7 +243,7 @@ inline kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_
     const auto& add_offsets = view_offset.sizes(l.format);
     const auto& lower_pad = pad.lower_size().sizes(l.format);
     const auto& upper_pad = pad.upper_size().sizes(l.format);
-    const auto ks_layout = from_data_layout(l.format);
+    const auto ks_layout = to_data_layout(l.format);
     kernel_selector::n_dims vec(KernelSelector::Tensor::ChannelsCount(ks_layout));
 
     size_t pitch = 1;
@@ -282,7 +282,7 @@ inline kernel_selector::weights_tensor convert_weights_tensor(const layout& l)
     const auto& t = l.size.sizes(format::bfyx);
     const auto base_layout = kernel_selector::weights_layout::oiyx;
     const auto ks_type = to_weights_type(l.data_type);
-    const auto ks_layout = from_weights_layout(l.format);
+    const auto ks_layout = to_weights_layout(l.format);
     std::vector<size_t> vec(KernelSelector::Tensor::ChannelsCount(base_layout));
 
     for (size_t i = 0; i < vec.size(); i++)

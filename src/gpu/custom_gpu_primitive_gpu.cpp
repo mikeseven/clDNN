@@ -105,7 +105,7 @@ static void add_layout_to_jit(kernel_selector::jit_constants& mem_consts, const 
 
     // Format
     // #define INPUT0_FORMAT_BFYX
-    mem_consts.AddConstant(KernelSelector::MakeJitConstant(name + "_FORMAT_" + KernelSelector::toString(from_data_layout(l.format)), ""));
+    mem_consts.AddConstant(KernelSelector::MakeJitConstant(name + "_FORMAT_" + KernelSelector::toString(to_data_layout(l.format)), ""));
 
     // Padding (in elements)
     // #define INPUT0_LOWER_PADDING (uint[]) { 0, 0, 0, 0 }
