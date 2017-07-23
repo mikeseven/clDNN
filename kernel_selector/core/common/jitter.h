@@ -32,24 +32,26 @@ using JitDefinitions = std::vector<std::pair<std::string, std::string>>;
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 template <typename T>
 inline std::string GetTypeName() { throw std::runtime_error("Implement me"); }
-#if defined(_WIN64) || defined(__linux__)
 template <>
-inline std::string GetTypeName<size_t>() { return "size_t"; } 
-#endif
+inline std::string GetTypeName<int8_t>() { return "char"; }
 template <>
-inline std::string GetTypeName<double>() { return "double"; }
+inline std::string GetTypeName<uint8_t>() { return "uchar"; }
+template <>
+inline std::string GetTypeName<int16_t>() { return "short"; }
+template <>
+inline std::string GetTypeName<uint16_t>() { return "ushort"; }
+template <>
+inline std::string GetTypeName<int32_t>() { return "int"; }
+template <>
+inline std::string GetTypeName<uint32_t>() { return "uint"; }
+template <>
+inline std::string GetTypeName<int64_t>() { return "long"; } 
+template <>
+inline std::string GetTypeName<uint64_t>() { return "ulong"; }
 template <>
 inline std::string GetTypeName<float>() { return "float"; }
 template <>
-inline std::string GetTypeName<int>() { return "int"; }
-template <>
-inline std::string GetTypeName<unsigned>() { return "unsigned"; }
-template <>
-inline std::string GetTypeName<char>() { return "char"; }
-template <>
-inline std::string GetTypeName<short>() { return "short"; }
-template <>
-inline std::string GetTypeName<uint16_t>() { return "unsigned short"; }
+inline std::string GetTypeName<double>() { return "double"; }
 
 inline std::string toCLType(WeightsType wType)
 {
@@ -121,13 +123,13 @@ inline std::string toCodeString<double>(double val) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // JitConstant
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-template <typename VecT, typename Func>
-inline std::string toVectorString(const VecT& vec, const std::string& vertorType, size_t maxDim, int padFillingVal, Func fetchVal)
+template <typename VecT, typename ValT, typename Func>
+inline std::string toVectorString(const VecT& vec, const std::string& vertorType, size_t maxDim, ValT padFillingVal, Func fetchFunc)
 {
     std::stringstream ss;
     ss << "(" << vertorType << " []){ ";
     for (size_t i = 0; i < vec.size(); i++)
-        ss << toCodeString(fetchVal(vec[i])) << ",";
+        ss << toCodeString(fetchFunc(vec[i])) << ",";
     for (size_t i = vec.size(); i < maxDim; i++)
         ss << padFillingVal << ",";
     ss << " } ";
