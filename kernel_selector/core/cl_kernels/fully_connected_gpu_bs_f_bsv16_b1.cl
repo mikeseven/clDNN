@@ -27,7 +27,7 @@
 //  - INPUT0_BATCH_NUM      - [int] Batch size for input. Number of input sets of spatial and feature data that
 //                           are grouped to be processed in single batch.
 //  - INPUT0_ELEMENTS_COUNT - [int] Cumulative number of elements in single data set from batch.
-//  - WEIGHTS_BATCH_NUM    - [int] Cumulative number of elements that are outputted for single input set from batch.
+//  - FILTER_OFM_NUM    - [int] Cumulative number of elements that are outputted for single input set from batch.
 //                           Number of layer responses per single input set from batch.
 //  - RELU                 - [0/1] Indicates that ReLU activation function should be used on output.
 //  - NEGATIVE_SLOPE       - [float] Factor for negative output values (required when ReLU is specified).
@@ -186,7 +186,7 @@ KERNEL (fully_connected_gpu_bx_bs_x_bsv16_b1)(
     // constexpr:
     const uint input_byte_size  = INPUT0_ELEMENTS_COUNT * UNIT_BYTE_SIZE;
 
-    const uint output_size      = WEIGHTS_BATCH_NUM;
+    const uint output_size      = FILTER_OFM_NUM;
 
     // Identifier of work item element in processing sub-group.
     const uint sg_elem_id       = get_sub_group_local_id();

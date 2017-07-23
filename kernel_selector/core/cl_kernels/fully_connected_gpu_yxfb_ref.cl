@@ -22,7 +22,7 @@
 //  - UNIT_VAL_ZERO        - Literal of current UNIT_TYPE that represents 0.
 //  - INPUT_BATCH_NUM      - [int] Number of elements from single spatial and single feature that are grouped in single batch in input.
 //  - INPUT_ELEMENTS_COUNT - [int] Cumulative number of elements from input that are processed in single batch.
-//  - WEIGHTS_BATCH_NUM    - [int] Cumulative number of elements that are outputted in single batch.
+//  - FILTER_OFM_NUM    - [int] Cumulative number of elements that are outputted in single batch.
 //  - RELU                 - [0/1] Indicates that ReLU activation function should be used on output.
 //  - NEGATIVE_SLOPE       - [float] Factor for negative output values (required when ReLU is specified).
 

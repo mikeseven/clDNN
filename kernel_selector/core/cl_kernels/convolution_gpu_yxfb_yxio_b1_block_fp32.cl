@@ -42,7 +42,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block)(
 
     const uint batch_num = INPUT0_BATCH_NUM;
     const uint linear_id_xy = get_group_id(1) + get_global_size(1) * get_group_id(2);
-    uint global_id = (((uint)get_group_id(0) * LOCAL_WORK_GROUP_SIZE) / batch_num) * batch_num + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OUTPUT_FEATURE_NUM / OFM_PER_WORK_ITEM) * batch_num;
+    uint global_id = (((uint)get_group_id(0) * LOCAL_WORK_GROUP_SIZE) / batch_num) * batch_num + (linear_id_xy * FILTER_ARRAY_NUM + split_idx) * (FILTER_OFM_NUM / OFM_PER_WORK_ITEM) * batch_num;
 
     const uint out_batch_id = (uint)get_local_id(0) % INPUT0_BATCH_NUM;
     const uint out_x = get_group_id(1);
@@ -50,7 +50,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block)(
 
     const uint out_id = (global_id / batch_num) * OFM_PER_WORK_ITEM * batch_num + out_batch_id;
 
-    const uint ofm_offset = (global_id * (OFM_PER_WORK_ITEM / batch_num)) % FILTER_OUTPUT_FEATURE_NUM;
+    const uint ofm_offset = (global_id * (OFM_PER_WORK_ITEM / batch_num)) % FILTER_OFM_NUM;
 
     const uint sub_group_id = (uint)get_local_id(0) % INPUT0_BATCH_NUM;
 
@@ -74,47 +74,47 @@ KERNEL(convolution_gpu_yxfb_yxio_b1_block)(
                 if(!zero)
                 {
                     uint input_idx = input_offset_x*INPUT0_X_PITCH + input_offset_y*INPUT0_Y_PITCH;
-                    input_idx += INPUT0_OFFSET + split_idx * FILTER_INPUT_FEATURE_NUM * INPUT0_FEATURE_PITCH;
+                    input_idx += INPUT0_OFFSET + split_idx * FILTER_IFM_NUM * INPUT0_FEATURE_PITCH;
                     input_idx += out_batch_id;
 
                     uint filter_idx = ofm_offset + sub_group_id + i*FILTER_Y_PITCH + j*FILTER_X_PITCH;
 
 #if INPUT0_BATCH_NUM == 1
-                    for(uint h = 0; h < FILTER_INPUT_FEATURE_NUM / 8; h++)
+                    for(uint h = 0; h < FILTER_IFM_NUM / 8; h++)
                     {
                         float _in = as_float(intel_sub_group_block_read((const __global uint*)input + input_idx));
                         float8 _input = TRANSPOSE_BLOCK_8(_in);
 
                         VECTOR_FLOAT _filter;
-                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OFM_NUM;
                         _data0 = mad(_input.s0, _filter, _data0);
 
-                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OFM_NUM;
                         _data0 = mad(_input.s1, _filter, _data0);
 
-                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OFM_NUM;
                         _data0 = mad(_input.s2, _filter, _data0);
 
-                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OFM_NUM;
                         _data0 = mad(_input.s3, _filter, _data0);
 
-                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OFM_NUM;
                         _data0 = mad(_input.s4, _filter, _data0);
 
-                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OFM_NUM;
                         _data0 = mad(_input.s5, _filter, _data0);
 
-                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OFM_NUM;
                         _data0 = mad(_input.s6, _filter, _data0);
 
-                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OUTPUT_FEATURE_NUM;
+                        _filter = BLOCK_READ(filter + filter_idx); filter_idx += FILTER_OFM_NUM;
                         _data0 = mad(_input.s7, _filter, _data0);
 
                         input_idx += 8 * INPUT0_FEATURE_PITCH;
                     }
-                    for (uint h = FILTER_INPUT_FEATURE_NUM - (FILTER_INPUT_FEATURE_NUM % 8); h < FILTER_INPUT_FEATURE_NUM; h++)
+                    for (uint h = FILTER_IFM_NUM - (FILTER_IFM_NUM % 8); h < FILTER_IFM_NUM; h++)
 #else
-                    for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
+                    for (uint h = 0; h < FILTER_IFM_NUM; h++)
 #endif
                     {
                         VECTOR_FLOAT _filter = BLOCK_READ(filter + filter_idx);

@@ -22,7 +22,7 @@
 //  - UNIT_VAL_ZERO        - Literal of current UNIT_TYPE that represents 0.
 //  - INPUT0_BATCH_NUM      - [int] Number of elements from single spatial and single feature that are grouped in single batch in input.
 //  - INPUT0_ELEMENTS_COUNT - [int] Cumulative number of elements from input that are processed in single batch.
-//  - WEIGHTS_BATCH_NUM    - [int] Cumulative number of elements that are outputted in single batch.
+//  - FILTER_OFM_NUM    - [int] Cumulative number of elements that are outputted in single batch.
 //  - RELU                 - [0/1] Indicates that ReLU activation function should be used on output.
 //  - NEGATIVE_SLOPE       - [float] Factor for negative output values (required when ReLU is specified).
 
@@ -38,9 +38,9 @@ KERNEL (fully_connected_gpu_bx_xb_from_fyxb)(
 #endif
 {
     const uint x = get_global_id(0);
-    const uint batch_id = x / WEIGHTS_BATCH_NUM;
+    const uint batch_id = x / FILTER_OFM_NUM;
 
-    const uint outXIdx = x % WEIGHTS_BATCH_NUM;
+    const uint outXIdx = x % FILTER_OFM_NUM;
     UNIT_TYPE result = UNIT_VAL_ZERO;
 
     uint input_idx = batch_id * INPUT0_ELEMENTS_COUNT;
@@ -52,7 +52,7 @@ KERNEL (fully_connected_gpu_bx_xb_from_fyxb)(
         UNIT_TYPE _w =  *OFFSET_GLOBAL_PTR(UNIT_TYPE, weight, weight_idx);
         result += _in * _w;
         input_idx  += MULTIPLY_OFFSET(UNIT_TYPE, 1);
-        weight_idx += MULTIPLY_OFFSET(UNIT_TYPE, WEIGHTS_BATCH_NUM);
+        weight_idx += MULTIPLY_OFFSET(UNIT_TYPE, FILTER_OFM_NUM);
     }
 #if BIAS_TERM
     result += bias[outXIdx];

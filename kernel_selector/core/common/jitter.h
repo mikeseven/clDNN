@@ -408,8 +408,6 @@ inline JitConstants MakeWeightBiasParamsJitConstants(const WeightBiasParams& par
     jit.AddConstants({
         MakeJitConstant("FILTER",                       params.weights),
         MakeJitConstant("BIAS_TERM",                    static_cast<int>(!params.bias.empty())),
-        MakeJitConstant("FILTER_OUTPUT_FEATURE_NUM",    "FILTER_OFM_NUM"),  // TODO: remove it
-        MakeJitConstant("FILTER_INPUT_FEATURE_NUM",     "FILTER_IFM_NUM"),  // TODO: remove it
     });
 
     if (params.bias.empty() == false)
@@ -452,10 +450,7 @@ inline JitConstants MakeFullyConnectedJitConstants(const FullyConnectedParams& p
     const auto& input = params.inputs[0];
     const auto x_size = input.LogicalSize() / input.Batch().v;
 
-    jit.AddConstants({
-        MakeJitConstant("INPUT0_ELEMENTS_COUNT",      x_size),
-        MakeJitConstant("WEIGHTS_BATCH_NUM",         "FILTER_OFM_NUM"),     // TODO: remove it
-    });
+    jit.AddConstant(MakeJitConstant("INPUT0_ELEMENTS_COUNT", x_size));
 
     return jit;
 }
@@ -492,8 +487,7 @@ inline JitConstants MakePoolingJitConstants(const PoolingParams& params)
     const auto& pp = params.poolParams;
 
     jit.AddConstants({
-        MakeJitConstant("WINDOW",   pp.poolSize),
-        MakeJitConstant("POOL",     pp.poolSize),   // TODO: remove it or WINDOW
+        MakeJitConstant("POOL",     pp.poolSize),
         MakeJitConstant("STRIDE",   pp.poolStride),
         MakeJitConstant("PADDING",  pp.poolPad),
         MakeJitConstant(toString(pp.poolType) + "_POOLING", 1),

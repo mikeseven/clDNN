@@ -52,7 +52,7 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8)(
 #if NEURONS_PER_WORK_ITEM > 8
         DOT_PRODUCT_8(_data1, input[h * batch_num + batch_id], weight[weight_offset + 8])
 #endif
-        weight_offset+= WEIGHTS_BATCH_NUM;
+        weight_offset+= FILTER_OFM_NUM;
     }
 
 #if BIAS_TERM

@@ -33,7 +33,7 @@ KERNEL(convolution_gpu_yxfb_ref)(
     const int x = (int)out_x * STRIDE_SIZE_X - PADDING_SIZE_X;
     const int y = (int)out_y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
     
-    const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * FILTER_INPUT_FEATURE_NUM;
+    const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
     const uint input_offset = INPUT0_OFFSET + batch_offset*INPUT0_BATCH_PITCH + in_split_offset;
 
     for (uint i = 0; i < FILTER_SIZE_Y; i++)
@@ -53,7 +53,7 @@ KERNEL(convolution_gpu_yxfb_ref)(
                     uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH;
                     uint filter_idx = ofm_offset*FILTER_OFM_PITCH + i*FILTER_Y_PITCH + j*FILTER_X_PITCH;
 
-                    for (uint h = 0; h < FILTER_INPUT_FEATURE_NUM; h++)
+                    for (uint h = 0; h < FILTER_IFM_NUM; h++)
                     {
                         result = fma(input[input_idx], filter[filter_idx], result);
                         filter_idx += FILTER_IFM_PITCH;
@@ -66,7 +66,7 @@ KERNEL(convolution_gpu_yxfb_ref)(
 #if BIAS_TERM
     result += bias[ofm_offset];
 #endif
-    const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * FILTER_OUTPUT_FEATURE_NUM;
+    const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * FILTER_OFM_NUM;
     const uint dst_index = batch_offset*OUTPUT_BATCH_PITCH + ofm_offset*OUTPUT_FEATURE_PITCH + out_y*OUTPUT_Y_PITCH + out_x*OUTPUT_X_PITCH + OUTPUT_OFFSET + out_split_offset;
     output[dst_index] = ACTIVATION(result, NL_M, NL_N);
 }

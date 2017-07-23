@@ -27,7 +27,7 @@
 //  - INPUT_BATCH_NUM      - [int] Batch size for input. Number of input sets of spatial and feature data that
 //                           are grouped to be processed in single batch.
 //  - INPUT_ELEMENTS_COUNT - [int] Cumulative number of elements in single data set from batch.
-//  - WEIGHTS_BATCH_NUM    - [int] Cumulative number of elements that are outputted for single input set from batch.
+//  - FILTER_OFM_NUM    - [int] Cumulative number of elements that are outputted for single input set from batch.
 //                           Number of layer responses per single input set from batch.
 //  - RELU                 - [0/1] Indicates that ReLU activation function should be used on output.
 //  - NEGATIVE_SLOPE       - [float] Factor for negative output values (required when ReLU is specified).
@@ -121,7 +121,7 @@
 
 // Depends on batch size (aligned to greatest power of 2 which divides INPUT0_BATCH_NUM).
 #define INPUT0_READ(ptr, byte_offset) ALIGNED_READ(ptr, byte_offset)
-// Depends on number of responses (aligned to greatest power of 2 which divides WEIGHTS_BATCH_NUM).
+// Depends on number of responses (aligned to greatest power of 2 which divides FILTER_OFM_NUM).
 #define FILTER_READ(ptr, byte_offset) ALIGNED_READ(ptr, byte_offset)
 // Aligned to BYTES_PER_SG_READ.
 #define BIAS_READ(ptr, byte_offset) ALIGNED_READ(ptr, byte_offset)
@@ -130,11 +130,11 @@
 
 
 /*
-#if WEIGHTS_BATCH_NUM % (2 * SUB_GROUP_SIZE) == 0 || (!FP16_UNIT_USED && WEIGHTS_BATCH_NUM % SUB_GROUP_SIZE == 0)
+#if FILTER_OFM_NUM % (2 * SUB_GROUP_SIZE) == 0 || (!FP16_UNIT_USED && FILTER_OFM_NUM % SUB_GROUP_SIZE == 0)
     #define FILTER_READ(ptr, byte_offset) ALIGNED_BLOCK_READ(ptr, byte_offset)
 #elifs
     #define FILTER_READ(ptr, byte_offset) ALIGNED_BLOCK_READ(ptr, byte_offset)
-#elif WEIGHTS_BATCH_NUM % 8 == 0
+#elif FILTER_OFM_NUM % 8 == 0
 #else
 #endif
 
@@ -180,12 +180,12 @@ KERNEL (fully_connected_gpu_xb_xb_block_fp16)(
 
     // Size in bytes of all responses for single spatial/feature data point (the same as filter_yxf_elems_distance).
     // Distance between two nearest xyf elements with the same response id.
-    const uint filter_response_byte_size = WEIGHTS_BATCH_NUM * UNIT_BYTE_SIZE;
+    const uint filter_response_byte_size = FILTER_OFM_NUM * UNIT_BYTE_SIZE;
     // Cumulative size in bytes of all weights/filters.
     const uint filters_byte_size         = INPUT0_ELEMENTS_COUNT * filter_response_byte_size;
 
     const uint output_batch_byte_size = input_batch_byte_size;
-    const uint output_byte_size = WEIGHTS_BATCH_NUM * output_batch_byte_size;
+    const uint output_byte_size = FILTER_OFM_NUM * output_batch_byte_size;
 
 // ---------------------------------------------------------------------------------------------------------------------
 

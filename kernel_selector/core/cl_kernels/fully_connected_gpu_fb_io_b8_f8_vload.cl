@@ -124,14 +124,14 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA03 = vload8(input_idx + 3, input);
 #endif
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockB00;
-        blockB00.s0 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
-        blockB00.s1 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
-        blockB00.s2 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
-        blockB00.s3 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
-        blockB00.s4 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
-        blockB00.s5 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
-        blockB00.s6 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
-        blockB00.s7 = weight[weight_offset]; weight_offset += WEIGHTS_BATCH_NUM;
+        blockB00.s0 = weight[weight_offset]; weight_offset += FILTER_OFM_NUM;
+        blockB00.s1 = weight[weight_offset]; weight_offset += FILTER_OFM_NUM;
+        blockB00.s2 = weight[weight_offset]; weight_offset += FILTER_OFM_NUM;
+        blockB00.s3 = weight[weight_offset]; weight_offset += FILTER_OFM_NUM;
+        blockB00.s4 = weight[weight_offset]; weight_offset += FILTER_OFM_NUM;
+        blockB00.s5 = weight[weight_offset]; weight_offset += FILTER_OFM_NUM;
+        blockB00.s6 = weight[weight_offset]; weight_offset += FILTER_OFM_NUM;
+        blockB00.s7 = weight[weight_offset]; weight_offset += FILTER_OFM_NUM;
         MULTIPLY_BLOCKS_8x8(blockC00, blockA00, blockB00)
 
 #if BATCHES_PER_WORK_ITEM >= 16
@@ -146,14 +146,14 @@ KERNEL (fully_connected_gpu_xb_xb_b8_x8_vload)(
 #if NEURONS_PER_WORK_ITEM > 1
 
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockB10;
-        blockB10.s0 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
-        blockB10.s1 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
-        blockB10.s2 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
-        blockB10.s3 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
-        blockB10.s4 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
-        blockB10.s5 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
-        blockB10.s6 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
-        blockB10.s7 = weight[weight_offset2]; weight_offset2 += WEIGHTS_BATCH_NUM;
+        blockB10.s0 = weight[weight_offset2]; weight_offset2 += FILTER_OFM_NUM;
+        blockB10.s1 = weight[weight_offset2]; weight_offset2 += FILTER_OFM_NUM;
+        blockB10.s2 = weight[weight_offset2]; weight_offset2 += FILTER_OFM_NUM;
+        blockB10.s3 = weight[weight_offset2]; weight_offset2 += FILTER_OFM_NUM;
+        blockB10.s4 = weight[weight_offset2]; weight_offset2 += FILTER_OFM_NUM;
+        blockB10.s5 = weight[weight_offset2]; weight_offset2 += FILTER_OFM_NUM;
+        blockB10.s6 = weight[weight_offset2]; weight_offset2 += FILTER_OFM_NUM;
+        blockB10.s7 = weight[weight_offset2]; weight_offset2 += FILTER_OFM_NUM;
         MULTIPLY_BLOCKS_8x8(blockC10, blockA00, blockB10)
 
 #if BATCHES_PER_WORK_ITEM >= 16
