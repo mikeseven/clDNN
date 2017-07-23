@@ -15,7 +15,7 @@
 */
 
 #include "vxa_reorder_kernel.h"
-#include "reorder/reorder_vx_kernel_selector.h"
+#include "permute/permute_kernel_selector.h"
 
 namespace clDNN
 {
@@ -24,13 +24,13 @@ namespace clDNN
         BaseKernelBinary(KernelType::REORDER),
         m_Params(params)
     {
-        KernelSelector::ReorderVxParams ksParams;
+        KernelSelector::PermuteParams ksParams;
 
         InitBaseParams(params, ksParams);
-        ksParams.reorderParams.mode = params.reorderParams.mode;
+        //ksParams.permuteParams.order = params.reorderParams.mode; TODO
 
-        KernelSelector::ReorderVxOptionalParams ksOptParams;
+        KernelSelector::ReorderOptionalParams ksOptParams;
 
-        HandleBestKernels(KernelSelector::ReorderVxKernelSelctor::Instance(), ksParams, ksOptParams);
+        HandleBestKernels(KernelSelector::PermuteKernelSelctor::Instance(), ksParams, ksOptParams);
     }
 }

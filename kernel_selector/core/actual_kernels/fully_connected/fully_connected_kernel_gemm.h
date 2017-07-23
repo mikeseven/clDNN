@@ -28,8 +28,5 @@ namespace KernelSelector {
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
-
-    private:
-        const std::string weights_reorder_kernel_name = "cnn_align_weights";
     };
 }
