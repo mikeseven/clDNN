@@ -22,10 +22,8 @@ namespace KernelSelector {
     ParamsKey GenericEltwiseKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.EnableInputDataType(Datatype::F16);
-        k.EnableInputDataType(Datatype::F32);
-        k.EnableOutputDataType(Datatype::F16);
-        k.EnableOutputDataType(Datatype::F32);
+        k.EnableAllInputDataType();
+        k.EnableAllOutputDataType();
         k.EnableDifferentTypes();
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();

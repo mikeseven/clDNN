@@ -269,8 +269,14 @@ namespace KernelSelector {
     {
         switch (dType)
         {
-        case Datatype::F16: return "F16";
-        case Datatype::F32: return "F32";
+        case Datatype::INT8:    return "INT8";
+        case Datatype::UINT8:   return "UINT8";
+        case Datatype::INT16:   return "INT16";
+        case Datatype::UINT16:  return "UINT16";
+        case Datatype::INT32:   return "INT32";
+        case Datatype::UINT32:  return "UINT32";
+        case Datatype::F16:     return "F16";
+        case Datatype::F32:     return "F32";
         default: return "";
         }
     }
@@ -282,22 +288,6 @@ namespace KernelSelector {
         case WeightsType::F16:  return "F16";
         case WeightsType::F32:  return "F32";
         case WeightsType::INT8: return "INT8";
-        default: return "";
-        }
-    }
-
-    inline std::string toString(ConvertTypes dType)
-    {
-        switch (dType)
-        {
-        case ConvertTypes::U8 : return "U8";
-        case ConvertTypes::U16: return "U16";
-        case ConvertTypes::U32: return "U32";
-        case ConvertTypes::S8 : return "S8";
-        case ConvertTypes::S16: return "S16";
-        case ConvertTypes::S32: return "S32";
-        case ConvertTypes::F16: return "F16";
-        case ConvertTypes::F32: return "F32";
         default: return "";
         }
     }
@@ -318,7 +308,6 @@ namespace KernelSelector {
         case KernelType::ELTWISE:           return "ELTWISE";
         case KernelType::TABLE_LOOKUP:      return "TABLE_LOOKUP";
         case KernelType::REORDER:           return "REORDER";
-        case KernelType::CONVERT:           return "CONVERT";
         default:
             return "";
         }

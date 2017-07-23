@@ -55,7 +55,6 @@ namespace kernel_selector
     using data_type                         = KernelSelector::Datatype;
     using kernel_type                       = KernelSelector::KernelType;
     using weights_type                      = KernelSelector::WeightsType;
-    using convert_types                     = KernelSelector::ConvertTypes;
     using activation_function               = KernelSelector::ActivationFunction;
     using pool_type                         = KernelSelector::PoolType;
     using pool_remainder                    = KernelSelector::PoolRemainder;
@@ -130,6 +129,7 @@ inline kernel_selector::data_type to_data_type(data_types dt)
 {
     switch (dt)
     {
+    case cldnn::data_types::i8:     return kernel_selector::data_type::INT8;
     case cldnn::data_types::f16:    return kernel_selector::data_type::F16;
     case cldnn::data_types::f32:    return kernel_selector::data_type::F32;
     default:
@@ -155,9 +155,9 @@ inline data_types from_weights_type(kernel_selector::weights_type dt)
 {
     switch (dt)
     {
-    case kernel_selector::weights_type::INT8:       return data_types::i8;
-    case kernel_selector::weights_type::F16: return data_types::f16;
-    case kernel_selector::weights_type::F32: return data_types::f32;
+    case kernel_selector::weights_type::INT8:   return data_types::i8;
+    case kernel_selector::weights_type::F16:    return data_types::f16;
+    case kernel_selector::weights_type::F32:    return data_types::f32;
     default:
         assert(0);
         return data_types::f16;;

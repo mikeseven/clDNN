@@ -212,19 +212,4 @@ namespace clDNN
 
         DedicatedParams reorderParams;
     };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvertParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvertParams : public BaseParams
-    {
-        ConvertParams() : BaseParams(KernelType::CONVERT), convertParams() {}
-
-        struct DedicatedParams
-        {
-            ConvertTypes covertType = ConvertTypes::U16;
-        };
-
-        DedicatedParams convertParams;
-    };
 }

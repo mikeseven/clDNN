@@ -23,7 +23,6 @@ namespace clDNN
 {
     using KernelType = KernelSelector::KernelType;
     using Datatype = KernelSelector::Datatype;
-    using ConvertTypes = KernelSelector::ConvertTypes;
     using ActivationFunction = KernelSelector::ActivationFunction;
     using PoolType = KernelSelector::PoolType;
     using PoolRemainder = KernelSelector::PoolRemainder;

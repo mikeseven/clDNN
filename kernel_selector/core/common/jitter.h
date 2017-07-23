@@ -57,19 +57,25 @@ inline std::string toCLType(WeightsType wType)
 {
     switch (wType)
     {
-    case WeightsType::F16: return "half";
-    case WeightsType::F32: return "float";
-    case WeightsType::INT8: return "char";
+    case WeightsType::INT8: GetTypeName<int8_t>();
+    case WeightsType::F16:  return "half";
+    case WeightsType::F32:  GetTypeName<float>();
     default: return "";
     }
 }
 
-inline std::string toCLType(Datatype wType)
+inline std::string toCLType(Datatype dType)
 {
-    switch (wType)
+    switch (dType)
     {
-    case Datatype::F16: return "half";
-    case Datatype::F32: return "float";
+    case Datatype::INT8:    GetTypeName<int8_t>();
+    case Datatype::UINT8:   GetTypeName<uint8_t>();
+    case Datatype::INT16:   GetTypeName<int16_t>();
+    case Datatype::UINT16:  GetTypeName<uint16_t>();
+    case Datatype::INT32:   GetTypeName<int32_t>();
+    case Datatype::UINT32:  GetTypeName<uint32_t>();
+    case Datatype::F16:     return "half";
+    case Datatype::F32:     GetTypeName<float>();
     default: return "";
     }
 }

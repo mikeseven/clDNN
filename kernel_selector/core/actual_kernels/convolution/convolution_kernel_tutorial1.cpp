@@ -37,7 +37,6 @@ namespace KernelSelector {
         // Supported layout
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
-        k.EnableAllWeightsLayout();
 
         // Supported tensor offset/pitch/padding
         k.EnableTensorOffset();

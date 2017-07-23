@@ -82,8 +82,9 @@ namespace KernelSelector { namespace
     {
         switch (t)
         {
-        case Datatype::F16: return WeightsType::F16;
-        case Datatype::F32: return WeightsType::F32;
+        case Datatype::INT8:    return WeightsType::INT8;
+        case Datatype::F16:     return WeightsType::F16;
+        case Datatype::F32:     return WeightsType::F32;
         default:
             return WeightsType::UNSUPPORTED;
         }

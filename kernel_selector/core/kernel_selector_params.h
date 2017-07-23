@@ -38,9 +38,12 @@ namespace KernelSelector
         {
             key.restrict.raw = 0;
             key.machineInfo.raw = 0;
+            key.inputType.raw = 0;
+            key.outputType.raw = 0;
+            key.inputWeightsType.raw = 0;
+            key.outputWeightsType.raw = 0;
             key.inputLayout = 0;
             key.outputLayout = 0;
-            key.weightsLayout = 0;
         }
 
         struct Key
@@ -49,16 +52,6 @@ namespace KernelSelector
             {
                 struct val_t
                 {
-                    uint32_t inputF16 : 1;
-                    uint32_t inputF32 : 1;
-                    uint32_t outputF16 : 1;
-                    uint32_t outputF32 : 1;
-                    uint32_t inputWeightsF16 : 1;
-                    uint32_t inputWeightsF32 : 1;
-                    uint32_t inputWeightsINT8 : 1;
-                    uint32_t outputWeightsF16 : 1;
-                    uint32_t outputWeightsF32 : 1;
-                    uint32_t outputWeightsINT8 : 1;
                     uint32_t different_types : 1;
                     uint32_t offset : 1;
                     uint32_t pitches : 1;
@@ -122,39 +115,105 @@ namespace KernelSelector
 
             static_assert(sizeof(restrict_t) == sizeof(uint64_t), "problem with union");
 
+            typedef union DataTypesKey_t
+            {
+                struct val_t
+                {
+                    uint32_t int8 : 1;
+                    uint32_t uint8 : 1;
+                    uint32_t int16 : 1;
+                    uint32_t uint16 : 1;
+                    uint32_t int32 : 1;
+                    uint32_t uint32 : 1;
+                    uint32_t F16 : 1;
+                    uint32_t F32 : 1;
+                } val;
+                uint32_t raw;
+            } DataTypesKey;
+
+
+            DataTypesKey inputType;
+            DataTypesKey outputType;
+            DataTypesKey inputWeightsType;
+            DataTypesKey outputWeightsType;
             uint32_t inputLayout;
             uint32_t outputLayout;
-            uint32_t weightsLayout;
         };
 
         void EnableInputDataType(Datatype dt)
         {
             switch (dt)
             {
+            case Datatype::INT8:
+                key.inputType.val.int8 = 1;
+                break;
+            case Datatype::UINT8:
+                key.inputType.val.uint8 = 1;
+                break;
+            case Datatype::INT16:
+                key.inputType.val.int16 = 1;
+                break;
+            case Datatype::UINT16:
+                key.inputType.val.uint16 = 1;
+                break;
+            case Datatype::INT32:
+                key.inputType.val.int32 = 1;
+                break;
+            case Datatype::UINT32:
+                key.inputType.val.uint32 = 1;
+                break;
             case Datatype::F16:
-                key.restrict.val.inputF16 = 1;
+                key.inputType.val.F16 = 1;
                 break;
             case Datatype::F32:
-                key.restrict.val.inputF32 = 1;
+                key.inputType.val.F32 = 1;
                 break;
             default:
                 break;
             }
         }
 
+        void EnableAllInputDataType()
+        {
+            key.inputType.raw = 0xffffffff;
+        }
+
         void EnableOutputDataType(Datatype dt)
         {
             switch (dt)
             {
+            case Datatype::INT8:
+                key.outputType.val.int8 = 1;
+                break;
+            case Datatype::UINT8:
+                key.outputType.val.uint8 = 1;
+                break;
+            case Datatype::INT16:
+                key.outputType.val.int16 = 1;
+                break;
+            case Datatype::UINT16:
+                key.outputType.val.uint16 = 1;
+                break;
+            case Datatype::INT32:
+                key.outputType.val.int32 = 1;
+                break;
+            case Datatype::UINT32:
+                key.outputType.val.uint32 = 1;
+                break;
             case Datatype::F16:
-                key.restrict.val.outputF16 = 1;
+                key.outputType.val.F16 = 1;
                 break;
             case Datatype::F32:
-                key.restrict.val.outputF32 = 1;
+                key.outputType.val.F32 = 1;
                 break;
             default:
                 break;
             }
+        }
+
+        void EnableAllOutputDataType()
+        {
+            key.outputType.raw = 0xffffffff;
         }
 
         void EnableInputWeightsType(WeightsType wt)
@@ -162,17 +221,22 @@ namespace KernelSelector
             switch (wt)
             {
             case WeightsType::F16:
-                key.restrict.val.inputWeightsF16 = 1;
+                key.inputWeightsType.val.F16 = 1;
                 break;
             case WeightsType::F32:
-                key.restrict.val.inputWeightsF32 = 1;
+                key.inputWeightsType.val.F32 = 1;
                 break;
             case WeightsType::INT8:
-                key.restrict.val.inputWeightsINT8 = 1;
+                key.inputWeightsType.val.int8 = 1;
                 break;
             default:
                 break;
             }
+        }
+
+        void EnableAllInputWeightsType()
+        {
+            key.inputWeightsType.raw = 0xffffffff;
         }
 
         void EnableOutputWeightsType(WeightsType wt)
@@ -180,17 +244,22 @@ namespace KernelSelector
             switch (wt)
             {
             case WeightsType::F16:
-                key.restrict.val.outputWeightsF16 = 1;
+                key.outputWeightsType.val.F16 = 1;
                 break;
             case WeightsType::F32:
-                key.restrict.val.outputWeightsF32 = 1;
+                key.outputWeightsType.val.F32 = 1;
                 break;
             case WeightsType::INT8:
-                key.restrict.val.outputWeightsINT8 = 1;
+                key.outputWeightsType.val.int8 = 1;
                 break;
             default:
                 break;
             }
+        }
+
+        void EnableAllOutputWeightsType()
+        {
+            key.outputWeightsType.raw = 0xffffffff;
         }
 
         void EnableDifferentTypes()
@@ -216,16 +285,6 @@ namespace KernelSelector
         void EnableAllOutputLayout()
         {
             key.outputLayout = 0xffffffff;
-        }
-
-        void EnableWeightsLayout(WeightsLayout l)
-        {
-            key.weightsLayout |= (1 << l);
-        }
-
-        void EnableAllWeightsLayout()
-        {
-            key.weightsLayout = 0xffffffff;
         }
 
         void EnableTensorOffset()
@@ -409,12 +468,15 @@ namespace KernelSelector
 
         bool Support(const ParamsKey& k) const
         {
-            return 
+            return
                 ((key.restrict.raw & k.key.restrict.raw) == k.key.restrict.raw) && // check if this kernel supports this params
                 ((key.machineInfo.raw & k.key.machineInfo.raw) == key.machineInfo.raw) && // check if machine supports this kernel
+                ((key.inputType.raw & k.key.inputType.raw) == k.key.inputType.raw) &&
+                ((key.outputType.raw & k.key.outputType.raw) == k.key.outputType.raw) &&
+                ((key.inputWeightsType.raw & k.key.inputWeightsType.raw) == k.key.inputWeightsType.raw) &&
+                ((key.outputWeightsType.raw & k.key.outputWeightsType.raw) == k.key.outputWeightsType.raw) &&
                 ((key.inputLayout & k.key.inputLayout) != 0 || key.inputLayout == k.key.inputLayout) &&
-                ((key.outputLayout & k.key.outputLayout) != 0 || key.outputLayout == k.key.outputLayout) &&
-                ((key.weightsLayout & k.key.weightsLayout) != 0 || key.weightsLayout == k.key.weightsLayout);
+                ((key.outputLayout & k.key.outputLayout) != 0 || key.outputLayout == k.key.outputLayout);
         }
 
         ParamsKey Merge(const ParamsKey& k) const
@@ -422,9 +484,12 @@ namespace KernelSelector
             ParamsKey ret;
             ret.key.restrict.raw = key.restrict.raw | k.key.restrict.raw;
             ret.key.machineInfo.raw = key.machineInfo.raw | k.key.machineInfo.raw;
+            ret.key.inputType.raw = key.inputType.raw | k.key.inputType.raw;
+            ret.key.outputType.raw = key.outputType.raw | k.key.outputType.raw;
+            ret.key.inputWeightsType.raw = key.inputWeightsType.raw | k.key.inputWeightsType.raw;
+            ret.key.outputWeightsType.raw = key.outputWeightsType.raw | k.key.outputWeightsType.raw;
             ret.key.inputLayout = key.inputLayout | k.key.inputLayout;
             ret.key.outputLayout = key.outputLayout | k.key.outputLayout;
-            ret.key.weightsLayout = key.weightsLayout | k.key.weightsLayout;
             return ret;
         }
 
@@ -977,8 +1042,6 @@ namespace KernelSelector
             ParamsKey k;
             const auto& input = reorderParams.input;
             const auto& output = reorderParams.output;
-            k.EnableWeightsLayout(input.GetLayout());
-            k.EnableWeightsLayout(output.GetLayout());
             k.EnableInputWeightsType(input.GetDType());
             k.EnableOutputWeightsType(output.GetDType());
 
@@ -993,26 +1056,6 @@ namespace KernelSelector
                 k.EnableTensorOffset();
             }
             return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvertParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvertParams : public BaseParams
-    {
-        ConvertParams() : BaseParams(KernelType::CONVERT), convertParams() {}
-
-        struct DedicatedParams
-        {
-            ConvertTypes covertType = ConvertTypes::U16;
-        };
-
-        DedicatedParams convertParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            return BaseParams::GetParamsKey();
         }
     };
 
@@ -1224,14 +1267,6 @@ namespace KernelSelector
     struct ReorderOptionalParams : OptionalParams
     {
         ReorderOptionalParams() : OptionalParams(KernelType::REORDER) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvertOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvertOptionalParams : OptionalParams
-    {
-        ConvertOptionalParams() : OptionalParams(KernelType::CONVERT) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
