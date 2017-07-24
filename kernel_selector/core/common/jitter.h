@@ -57,9 +57,9 @@ inline std::string toCLType(WeightsType wType)
 {
     switch (wType)
     {
-    case WeightsType::INT8: GetTypeName<int8_t>();
+    case WeightsType::INT8: return GetTypeName<int8_t>();
     case WeightsType::F16:  return "half";
-    case WeightsType::F32:  GetTypeName<float>();
+    case WeightsType::F32:  return GetTypeName<float>();
     default: return "";
     }
 }
@@ -68,14 +68,14 @@ inline std::string toCLType(Datatype dType)
 {
     switch (dType)
     {
-    case Datatype::INT8:    GetTypeName<int8_t>();
-    case Datatype::UINT8:   GetTypeName<uint8_t>();
-    case Datatype::INT16:   GetTypeName<int16_t>();
-    case Datatype::UINT16:  GetTypeName<uint16_t>();
-    case Datatype::INT32:   GetTypeName<int32_t>();
-    case Datatype::UINT32:  GetTypeName<uint32_t>();
+    case Datatype::INT8:    return GetTypeName<int8_t>();
+    case Datatype::UINT8:   return GetTypeName<uint8_t>();
+    case Datatype::INT16:   return GetTypeName<int16_t>();
+    case Datatype::UINT16:  return GetTypeName<uint16_t>();
+    case Datatype::INT32:   return GetTypeName<int32_t>();
+    case Datatype::UINT32:  return GetTypeName<uint32_t>();
     case Datatype::F16:     return "half";
-    case Datatype::F32:     GetTypeName<float>();
+    case Datatype::F32:     return GetTypeName<float>();
     default: return "";
     }
 }
@@ -443,7 +443,7 @@ inline JitConstants MakeConvolutionParamsJitConstants(const ConvolutionParams& p
         MakeJitConstant("PADDING",                      params.convParams.padding),
         MakeJitConstant("DILATION",                     params.convParams.dilation),
         MakeJitConstant("FILTER_ARRAY_NUM",             params.convParams.split),
-        MakeJitConstant("INPUT_OFFSET_WITH_PADDING",    input_offset_with_padding),
+        MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
     });
 
     return jit;
@@ -571,7 +571,7 @@ inline JitConstants MakeDeconvolutionJitConstants(const DeconvolutionParams& par
         MakeJitConstant("PADDING",                      dp.padding),
         MakeJitConstant("DILATION",                     dp.dilation),
         MakeJitConstant("FILTER_ARRAY_NUM",             dp.split),
-        MakeJitConstant("INPUT_OFFSET_WITH_PADDING",    input_offset_with_padding),
+        MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
     });
 
     return jit;
