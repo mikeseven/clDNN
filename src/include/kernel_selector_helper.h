@@ -304,6 +304,11 @@ inline void convert_activation_func_params(const p_type primitive, kernel_select
     if (primitive->with_activation)
     {
         const float negative_slope = primitive->activation_negative_slope;
+#if 1
+        // TODO W/A for issue in VGG16_face when slope == 0 but the result is "-inf"
+        params.nlParams.m = negative_slope;
+        params.activationFunc = kernel_selector::activation_function::RELU_NEGATIVE_SLOPE;
+#else
         if (negative_slope)
         {
             params.nlParams.m = negative_slope;
@@ -313,6 +318,7 @@ inline void convert_activation_func_params(const p_type primitive, kernel_select
         {
             params.activationFunc = kernel_selector::activation_function::RELU;
         }
+#endif
     }
     else
     {
