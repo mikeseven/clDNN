@@ -18,6 +18,7 @@
 #include "kernel.h"
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
+#include "events_waiter.h"
 
 using namespace cldnn;
 
@@ -38,6 +39,14 @@ struct reorder_gpu : typed_primitive_impl<reorder>
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, reorder_inst& instance) override
     {
+        if (outer.can_be_optimized())
+        {
+            if (events.size() == 1)
+                return events[0];
+
+            return neural::gpu::events_waiter(outer.get_program().get_engine()->get_context()).run(events);
+        }
+
         gpu::kernel::kernel_arguments_data args;
         args.scalars = &_kernel_data.kernels[0].scalars;
         args.inputs = { &instance.input_memory() };

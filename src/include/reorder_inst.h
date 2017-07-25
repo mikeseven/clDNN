@@ -34,6 +34,11 @@ public:
     auto& mean() const { return get_dependency(1); }
 
     bool has_mean() const { return !typed_desc()->mean.empty(); }
+    auto can_be_optimized() const { return optimized; }
+    void can_be_optimized(bool opt) { optimized = opt; }
+
+private:
+    bool optimized = false;
 };
 
 using reorder_node = typed_program_node<reorder>;

@@ -39,12 +39,16 @@ bool layout_optimizer::convolution_bfyx_opt(layout const& output_layout, const l
     if (output_layout.size.batch[0] % 16 != 0 || output_layout.data_type != data_types::f16 || weights_layout.size.batch[0] % 16 != 0 ||
         !((weights_layout.size.spatial[0] == 1 && weights_layout.size.spatial[1] == 1) ||
         (weights_layout.size.spatial[0] >= 5 && weights_layout.size.spatial[1] >= 5) ||
+            (conv->stride.spatial[0] > 1 && conv->stride.spatial[1] > 1) ||
+            (weights_layout.size.feature[0] <= 32 && output_layout.size.spatial[0] < 224 && output_layout.size.spatial[1] < 224) ||
             (weights_layout.size.feature[0] <= 64 && output_layout.size.spatial[0] < 112 && output_layout.size.spatial[1] < 112) ||
             (weights_layout.size.feature[0] <= 128 && output_layout.size.spatial[0] < 56 && output_layout.size.spatial[1] < 56) ||
             (weights_layout.size.feature[0] <= 256 && output_layout.size.spatial[0] < 28 && output_layout.size.spatial[1] < 28) ||
             (weights_layout.size.feature[0] <= 512 && output_layout.size.spatial[0] < 14 && output_layout.size.spatial[1] < 14) ||
-            (conv->stride.spatial[0] > 1 && conv->stride.spatial[1] > 1)) ||
-            (_optimization_attributes.splitted_convolution && output_layout.size.batch[0] == 16) ||
+            (weights_layout.size.feature[0] <= 1024 && output_layout.size.spatial[0] <= 7 && output_layout.size.spatial[1] <= 7)) ||
+        //WA for AgeGender, which has one convolution that is better on yxfb, but due to additonal reorder overall performance is worse than bfyx
+        (output_layout.size.spatial[0] == 82 && output_layout.size.spatial[1] == 82) ||
+        (_optimization_attributes.splitted_convolution && output_layout.size.batch[0] == 16) ||
         (!_optimization_attributes.splitted_convolution && output_layout.size.batch[0] >= 128) ||
         _optimization_attributes.bfyx_only_layer)
         return true;

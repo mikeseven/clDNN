@@ -103,14 +103,14 @@ KERNEL (reorder_weights)(
 #endif
     )
 {
-    const unsigned b = get_global_id(GWS_BATCH);
-    const unsigned f = get_global_id(GWS_FEATURE);
+    const uint b = get_global_id(GWS_BATCH);
+    const uint f = get_global_id(GWS_FEATURE);
 #if   INPUT0_DIMS == 2
-    const unsigned y = 0;
-    const unsigned x = 0;
-#elif INPUT0_DIMS == 4
-    const unsigned y = get_global_id(GWS_YX) / INPUT0_SIZE_X;
-    const unsigned x = get_global_id(GWS_YX) % INPUT0_SIZE_X;
+    const uint y = 0;
+    const uint x = 0;
+#elif INPUT_DIMS == 4
+    const uint y = ((uint)(get_global_id(GWS_YX))) / INPUT0_SIZE_X;
+    const uint x = ((uint)(get_global_id(GWS_YX))) % INPUT0_SIZE_X;
 #endif
 
     uint4 ov = FUNC_CALL(reshape)(b,f,y,x);

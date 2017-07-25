@@ -41,6 +41,12 @@ namespace KernelSelector {
 
         DispatchData runInfo;
         std::vector<size_t> global = { out.X().v, out.Y().v, out.Feature().v*out.Batch().v };
+        if (out.GetLayout() == DataLayout::yxfb)
+        {
+            global[0] = out.Feature().v*out.Batch().v;
+            global[1] = out.X().v;
+            global[2] = out.Y().v;
+        }
         std::vector<size_t> local = GetOptimalLocalWorkGroupSizes(global);
         runInfo.gws0 = global[0];
         runInfo.gws1 = global[1];

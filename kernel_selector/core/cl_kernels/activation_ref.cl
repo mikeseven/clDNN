@@ -25,6 +25,17 @@ KERNEL(activation)(
 #endif
     )
 {
+#if defined OUTPUT_LAYOUT_YXFB
+    const unsigned x = get_global_id(1);
+    const unsigned y = get_global_id(2);
+#if OUTPUT_BATCH_NUM == 1
+    const unsigned feature = get_global_id(0);
+    const unsigned batch = 0;
+#else
+    const unsigned feature = get_global_id(0) % OUTPUT_FEATURE_NUM;
+    const unsigned batch = get_global_id(0) / OUTPUT_FEATURE_NUM;
+#endif
+#else
     const unsigned x = get_global_id(0);
     const unsigned y = get_global_id(1);
 #if OUTPUT_BATCH_NUM == 1
@@ -33,6 +44,7 @@ KERNEL(activation)(
 #else
     const unsigned feature = get_global_id(2) % OUTPUT_FEATURE_NUM;
     const unsigned batch = get_global_id(2) / OUTPUT_FEATURE_NUM;
+#endif
 #endif
 
     const unsigned src_index = batch*INPUT0_BATCH_PITCH + feature*INPUT0_FEATURE_PITCH + y*INPUT0_Y_PITCH + x*INPUT0_X_PITCH + INPUT0_OFFSET;

@@ -78,5 +78,9 @@ reorder_inst::typed_primitive_inst(network_impl& network, reorder_node const& no
         if (static_cast<size_t>(input_mem.get_layout().size.feature[0]) != argument.subtract_per_feature.size())
             throw std::runtime_error("Number of features/channels in input does not match the number of features/channels in values to subtract");
     }
+
+    if (node.can_be_optimized())
+        for (auto const& i : _deps)
+            i->_output = _output;
 }
 }

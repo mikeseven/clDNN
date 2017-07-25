@@ -38,6 +38,7 @@
 #include "deconvolution_inst.h"
 #include "detection_output_inst.h"
 #include "crop_inst.h"
+#include "reorder_inst.h"
 
 #include "kernel_selector_helper.h"
 #include "sliding_window_utils.h"
@@ -948,6 +949,19 @@ void program_impl::prepare_buffer_fusing()
                     node.can_be_optimized(true);
                 }
             }
+        });
+
+        do_for_types<reorder>(*node, [this](reorder_node& node)
+        {
+            auto const& input = node.get_dependencies();
+            //Optimization only available in case of layers that support different input and output formats.
+            //todo: new api needs to be created to read such caps
+                if (!input[0]->is_type<pooling>())
+                    return;
+
+            input[0]->set_output_layout(node.get_output_layout());
+
+            node.can_be_optimized(true);
         });
     }
 }
