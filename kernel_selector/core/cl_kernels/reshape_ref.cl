@@ -14,7 +14,7 @@
 
 #include "include/common.cl"
 
-KERNEL (reshape_padding)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
+KERNEL (reshape_ref)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
     const uint d1 = get_global_id(0);
     const uint d2 = get_global_id(1);

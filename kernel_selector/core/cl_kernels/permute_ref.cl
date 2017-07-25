@@ -14,7 +14,7 @@
 
 #include "include/common.cl"
 
-KERNEL (reshape_padding)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
+KERNEL (permute_ref)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
     uint4 input_indices, output_indices;
     

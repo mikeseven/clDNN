@@ -614,7 +614,7 @@ inline JitConstants MakeReorderJitConstants(const ReorderParams& params)
 {
     JitConstants jit = MakeReorderBaseJitConstants(params);
 
-    jit.AddConstant(MakeJitConstant("MEAN_SUBTRUCT_" + toString(params.reorderParams.mode), 1));
+    jit.AddConstant(MakeJitConstant("MEAN_SUBTRACT_" + toString(params.reorderParams.mode), 1));
 
     if (params.reorderParams.mode == MeanSubtructMode::INSIDE_PARAMS)
     {
@@ -622,7 +622,7 @@ inline JitConstants MakeReorderJitConstants(const ReorderParams& params)
     }
     else if (params.reorderParams.mode == MeanSubtructMode::IN_BUFFER)
     {
-        jit.AddConstant(MakeJitConstant("MEAN_SUBTRUCT", params.reorderParams.mean));
+        jit.AddConstant(MakeJitConstant("MEAN_SUBTRACT", params.reorderParams.mean));
     }
 
     Datatype calc_type = params.inputs[0].GetDType();

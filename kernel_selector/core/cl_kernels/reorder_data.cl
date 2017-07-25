@@ -16,90 +16,49 @@
 #include "include/common.cl"
 
 ///////////////////////// subtruct Index /////////////////////////
-#ifdef MEAN_SUBTRUCT_IN_BUFFER
-#if MEAN_SUBTRUCT_SIMPLE
+#ifdef MEAN_SUBTRACT_IN_BUFFER
 inline uint FUNC(get_mean_index)(uint b, uint f, uint y, uint x)
-{ 
-   return MEAN_SUBTRUCT_OFFSET + b*MEAN_SUBTRUCT_BATCH_PITCH + f*MEAN_SUBTRUCT_FEATURE_PITCH + y*MEAN_SUBTRUCT_Y_PITCH + x*MEAN_SUBTRUCT_X_PITCH;
-}
+{
+#if MEAN_SUBTRACT_SIMPLE
+    return GET_DATA_INDEX(MEAN_SUBTRACT, b, f, y, x);
 #else
 #error - not supported
 #endif
-
-inline uint4 FUNC(reshape_mean)(uint b, uint f, uint y, uint x)
-{
-#if (INPUT0_DIMS == MEAN_SUBTRUCT_DIMS)
-    return (uint4)(b,f,y,x);
-#elif (INPUT0_DIMS == 2 && MEAN_SUBTRUCT_DIMS == 4)
-    uint _f  = f / (INPUT0_SIZE_Y*INPUT0_SIZE_X);
-    uint _yx = f % (INPUT0_SIZE_Y*INPUT0_SIZE_X);
-    uint _y = _yx / INPUT0_SIZE_X;
-    uint _x = _yx % INPUT0_SIZE_X;
-    return (uint4)(b,_f,_y,_x);
-#elif (INPUT0_DIMS == 4 && MEAN_SUBTRUCT_DIMS == 2)
-    uint _f = f*INPUT0_SIZE_Y*INPUT0_SIZE_X + y*INPUT0_SIZE_X + x;
-    return (uint4)(b,_f,0,0);
-#else
-#error
-#endif
 }
-
 #endif
 
 ///////////////////////// Input Index /////////////////////////
-#if INPUT0_SIMPLE
 inline uint FUNC(get_input_index)(uint b, uint f, uint y, uint x)
-{ 
-   return INPUT0_OFFSET + b*INPUT0_BATCH_PITCH + f*INPUT0_FEATURE_PITCH + y*INPUT0_Y_PITCH + x*INPUT0_X_PITCH;
-}
+{
+#if   INPUT0_SIMPLE
+    return GET_DATA_INDEX(INPUT0, b, f, y, x);
+#elif defined INPUT0_LAYOUT_BS_F_BSV8__AF8  || \
+      defined INPUT0_LAYOUT_BS_F_BSV16__AF8
+    return GET_DATA_BS_FYX_BSV8_INDEX(INPUT0, b, f, y, x, SUB_GROUP_SIZE);
 #else
 #error - not supported
 #endif
+}
 
 ///////////////////////// Output Index /////////////////////////
 
-#if OUTPUT_SIMPLE
 inline uint FUNC(get_output_index)(uint b, uint f, uint y, uint x)
-{ 
-    return OUTPUT_OFFSET + b*OUTPUT_BATCH_PITCH + f*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH;
-}
-#else
-
-#if defined OUTPUT_LAYOUT_OS_I_OSV16 || defined OUTPUT_LAYOUT_BS_F_BSV8__AF8 || defined OUTPUT_LAYOUT_BS_F_BSV16__AF8
-inline uint FUNC(get_output_index)(uint b, uint f, uint y, uint x)
-{ 
-    const uint slice_id = b / SUB_GROUP_SIZE;
-    const uint id_in_slice = b % SUB_GROUP_SIZE;
-    const size_t output_idx = OUTPUT_OFFSET + id_in_slice + SUB_GROUP_SIZE * (f*OUTPUT_FEATURE_PITCH + slice_id*OUTPUT_BATCH_PITCH);
-    return output_idx;
-}
-#endif
-#endif
-
-inline uint4 FUNC(reshape)(uint b, uint f, uint y, uint x)
 {
-#if (INPUT0_DIMS == OUTPUT_DIMS)
-    return (uint4)(b,f,y,x);
-#elif (INPUT0_DIMS == 2 && OUTPUT_DIMS == 4)
-    uint _f  = f / (INPUT0_SIZE_Y*INPUT0_SIZE_X);
-    uint _yx = f % (INPUT0_SIZE_Y*INPUT0_SIZE_X);
-    uint _y = _yx / INPUT0_SIZE_X;
-    uint _x = _yx % INPUT0_SIZE_X;
-    return (uint4)(b,_f,_y,_x);
-#elif (INPUT0_DIMS == 4 && OUTPUT_DIMS == 2)
-    uint _f = f*INPUT0_SIZE_Y*INPUT0_SIZE_X + y*INPUT0_SIZE_X + x;
-    return (uint4)(b,_f,0,0);
+#if   OUTPUT_SIMPLE
+    return GET_DATA_INDEX(OUTPUT, b, f, y, x);
+#elif defined OUTPUT_LAYOUT_BS_F_BSV8__AF8  || \
+      defined OUTPUT_LAYOUT_BS_F_BSV16__AF8
+    return GET_DATA_BS_FYX_BSV8_INDEX(OUTPUT, b, f, y, x, SUB_GROUP_SIZE);
 #else
-#error
+#error - not supported
 #endif
 }
 
-
-KERNEL (reorder_weights)(
+KERNEL (reorder_data)(
     const __global INPUT0_TYPE* input, 
     __global OUTPUT_TYPE* output
-#ifdef MEAN_SUBTRUCT_IN_BUFFER
-    , __global MEAN_SUBTRUCT_TYPE* mean_subtruct
+#ifdef MEAN_SUBTRACT_IN_BUFFER
+    , __global MEAN_SUBTRACT_TYPE* mean_subtruct
 #endif
     )
 {
@@ -113,20 +72,20 @@ KERNEL (reorder_weights)(
     const uint x = ((uint)(get_global_id(GWS_YX))) % INPUT0_SIZE_X;
 #endif
 
-    uint4 ov = FUNC_CALL(reshape)(b,f,y,x);
+    uint4 ov = FUNC_CALL(reshape_dims)(b,f,y,x, INPUT0_SIZE_Y, INPUT0_SIZE_X, INPUT0_DIMS, OUTPUT_DIMS);
     const uint input_idx  = FUNC_CALL(get_input_index)(b, f, y, x);
     const uint output_idx = FUNC_CALL(get_output_index)(ov[0],ov[1],ov[2],ov[3]);
     CALC_TYPE res = TO_CALC_TYPE(input[input_idx]);
     
-#if   defined MEAN_SUBTRUCT_INSIDE_PARAMS
+#if   defined MEAN_SUBTRACT_INSIDE_PARAMS
     res -= TO_CALC_TYPE(VALUE_TO_SUBTRACT[f % VALUE_TO_SUBTRACT_SIZE]);
-#elif defined MEAN_SUBTRUCT_IN_BUFFER
-    uint4 msv = FUNC_CALL(reshape_mean)(b,f,y,x);
+#elif defined MEAN_SUBTRACT_IN_BUFFER
+    uint4 msv = FUNC_CALL(reshape_dims)(b,f,y,x, INPUT0_SIZE_Y, INPUT0_SIZE_X, INPUT0_DIMS, MEAN_SUBTRACT_DIMS);
     res -= TO_CALC_TYPE(mean_subtruct[FUNC_CALL(get_mean_index)(
-        msv[0] % MEAN_SUBTRUCT_BATCH_NUM,
-        msv[1] % MEAN_SUBTRUCT_FEATURE_NUM,
-        msv[2] % MEAN_SUBTRUCT_SIZE_Y,
-        msv[3] % MEAN_SUBTRUCT_SIZE_X)]);
+        msv[0] % MEAN_SUBTRACT_BATCH_NUM,
+        msv[1] % MEAN_SUBTRACT_FEATURE_NUM,
+        msv[2] % MEAN_SUBTRACT_SIZE_Y,
+        msv[3] % MEAN_SUBTRACT_SIZE_X)]);
 #endif
 
     output[output_idx] = TO_OUTPUT_TYPE(res);
