@@ -60,7 +60,13 @@ namespace KernelSelector {
         std::string jit;
         std::string options;
         std::string entry_point;
-        bool        batch_compilation = false;
+        bool        batch_compilation;
+
+        KernelString() :
+            str(""),jit(""),
+            options(""),entry_point(""),
+            batch_compilation(false)
+        {};
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

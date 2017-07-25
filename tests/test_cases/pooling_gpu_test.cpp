@@ -1211,7 +1211,11 @@ public:
                                         num_of_elements++;
                                     }
                                 }
-
+                                if (num_of_elements == 0)
+                                {
+                                    assert(0);
+                                    return output;
+                                }
                                 if (pooling_mode == cldnn::pooling_mode::average)
                                 {
                                     // The pool size is fixed for all elements in pooling_mode::average.

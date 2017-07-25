@@ -28,9 +28,11 @@ clDNN uses 3<sup>rd</sup>-party components licensed under following licenses:
 - *OpenCL™ ICD and C++ Wrapper* under [Khronos™ License](https://github.com/KhronosGroup/OpenCL-CLHPP/blob/master/LICENSE.txt)
 
 ## Documentation
-The latest clDNN documentation is at [GitHub pages](http://01org.github.io/cldnn/).
+The latest clDNN documentation is at [GitHub pages](https://01org.github.io/clDNN/index.html).
 
 There is also inline documentation available that can be [generated with Doxygen](#generating-documentation).
+
+Accelerate Deep Learning Inference with Intel® Processor Graphics whitepaper [link](https://software.intel.com/en-us/articles/accelerating-deep-learning-inference-with-intel-processor-graphics).
 
 ## Support
 Please report issues and suggestions 
@@ -93,11 +95,13 @@ in CMake 3.4.3 and with CheckCXXCompilerFlag module in CMake 3.5.2, we strongly 
 
 ---
 
-The software was validated on:
-- CentOS\* 7 with GNU\* Compiler Collection 5.2 (64-bit only)
-- Windows® 10 and Windows® Server 2012 R2 with MSVC 14.0
+- The software was validated on:
+    * CentOS* 7.2 with GNU* Compiler Collection 5.2 (64-bit only), using Intel® intel-opencl-r.5.0 (SRB5.0) [Linux driver package](https://software.intel.com/en-us/articles/opencl-drivers) .
+    * Windows® 10 and Windows® Server 2012 R2 with MSVC 14.0, using [Intel® Graphics Driver for Windows* [15.46] driver package](https://downloadcenter.intel.com/download/26941).
 
-We have validated using [Intel® intel-opencl-r4.1 (SRB4.1) Linux driver package](http://registrationcenter-download.intel.com/akdlm/irc_nas/11396/SRB4.1_linux64.zip).
+	More information on Intel® OpenCL™ drivers can be found [here](https://software.intel.com/en-us/articles/opencl-drivers).
+
+We recommend to use SRB5.0 for Linux and 15.46 driver for Windows.
 
 ## Installation
 

@@ -494,7 +494,7 @@ set(CLDNN__MIN_COMPILER_VERSION__MSVC  "19.0")
 set(CLDNN__MIN_COMPILER_VERSION__CLANG "3.5")
 set(CLDNN__MIN_COMPILER_VERSION__ICC   "17.0")
 
-if (CLDNN__INCLUDE_CORE OR CLDNN__INCLUDE_TESTS OR CLDNN__INCLUDE_EXAMPLES)
+if (CLDNN__INCLUDE_CORE OR CLDNN__INCLUDE_TESTS)
   set(CLDNN__MIN_COMPILER_VERSION__GCC "5.2")
 else()
   set(CLDNN__MIN_COMPILER_VERSION__GCC "4.8")
@@ -801,7 +801,7 @@ else()
 endif()
 
 if(NOT __CLDNN_UseCxx14)
-  if(CLDNN__INCLUDE_CORE OR CLDNN__INCLUDE_EXAMPLES OR CLDNN__INCLUDE_TESTS)
+  if(CLDNN__INCLUDE_CORE OR CLDNN__INCLUDE_TESTS)
     message(WARNING "Due to lack of support of c++14 switch cldnn_core/examples/tests projects will not be included in created solution")
   endif()
   

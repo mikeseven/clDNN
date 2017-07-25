@@ -29,6 +29,14 @@ namespace KernelSelector
         size_t lws0, lws1, lws2;
         bool fp16UnitUsed;           ///< Value indicating that FP16 half precision floating point type will be used (instead of single precision).
         float effiency;
+
+        CommonDispatchData() :
+            gws0(0), gws1(0), gws2(0),
+            lws0(0), lws1(0), lws2(0),
+            fp16UnitUsed(false),
+            effiency(0.0f)
+        {};
+
     };
 
     class CommonKernelBase : public KernelBase
