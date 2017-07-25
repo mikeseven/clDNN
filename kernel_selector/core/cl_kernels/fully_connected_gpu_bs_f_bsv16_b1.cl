@@ -20,31 +20,31 @@
 // ---------------------------------------------------------------------------------------------------------------------
 
 // Required JIT constants:
-//  - FP16_SUPPORTED       - [0/1] Value indicating whether device supports FP16 OpenCL extension (cl_khr_fp16).
-//  - FP16_UNIT_USED       - [0/1] Value indicating that current kernel should use FP16.
-//  - UNIT_TYPE            - Type of unit of input/output/weight/bias.
-//  - UNIT_VAL_ZERO        - Literal of current UNIT_TYPE that represents 0.
+//  - FP16_SUPPORTED        - [0/1] Value indicating whether device supports FP16 OpenCL extension (cl_khr_fp16).
+//  - FP16_UNIT_USED        - [0/1] Value indicating that current kernel should use FP16.
+//  - UNIT_TYPE             - Type of unit of input/output/weight/bias.
+//  - UNIT_VAL_ZERO         - Literal of current UNIT_TYPE that represents 0.
 //  - INPUT0_BATCH_NUM      - [int] Batch size for input. Number of input sets of spatial and feature data that
-//                           are grouped to be processed in single batch.
+//                                  are grouped to be processed in single batch.
 //  - INPUT0_ELEMENTS_COUNT - [int] Cumulative number of elements in single data set from batch.
-//  - FILTER_OFM_NUM    - [int] Cumulative number of elements that are outputted for single input set from batch.
+//  - FILTER_OFM_NUM        - [int] Cumulative number of elements that are outputted for single input set from batch.
 //                           Number of layer responses per single input set from batch.
-//  - RELU                 - [0/1] Indicates that ReLU activation function should be used on output.
-//  - NEGATIVE_SLOPE       - [float] Factor for negative output values (required when ReLU is specified).
+//  - RELU                  - [0/1] Indicates that ReLU activation function should be used on output.
+//  - NEGATIVE_SLOPE        - [float] Factor for negative output values (required when ReLU is specified).
 //
-//  - SUB_GROUP_SIZE       - [int] Size of used subgroup (SIMD).
-//  - UNIT_BYTE_SIZE       - [int] Size of unit of input/output/weight/bias in bytes.
-//  - CHUNK_TYPE           - Type of chunk of data read by work item using sub-group operation (OpenCL scalar type).
-//  - CHUNK_BYTE_SIZE      - [int] Size of chunk of data read by work item using sub-group operation in bytes.
-//  - UNITS_PER_CHUNK      - [int] Number of units stored in single chunk of read data.
-//                                 Must be equal CHUNK_BYTE_SIZE / UNIT_BYTE_SIZE (and this division must not have
-//                                 remainder). Added as helper for manual loop unrolling.
-//  - BYTES_PER_SG_READ    - [int] Number of bytes read by single sub-group read operation (read by entire sub-group).
-//                                 Must be equal (CHUNK_BYTE_SIZE * SUB_GROUP_SIZE). Added as helper for manual loop
-//                                 unrolling.
-//  - UNITS_PER_SG_READ    - [int] Number of units read by single sub-group read operation (read by entire sub-group).
-//                                 Must be equal (UNIT_BYTE_SIZE * SUB_GROUP_SIZE). Added as helper for manual loop
-//                                 unrolling.
+//  - SUB_GROUP_SIZE        - [int] Size of used subgroup (SIMD).
+//  - UNIT_BYTE_SIZE        - [int] Size of unit of input/output/weight/bias in bytes.
+//  - CHUNK_TYPE            - Type of chunk of data read by work item using sub-group operation (OpenCL scalar type).
+//  - CHUNK_BYTE_SIZE       - [int] Size of chunk of data read by work item using sub-group operation in bytes.
+//  - UNITS_PER_CHUNK       - [int] Number of units stored in single chunk of read data.
+//                                  Must be equal CHUNK_BYTE_SIZE / UNIT_BYTE_SIZE (and this division must not have
+//                                  remainder). Added as helper for manual loop unrolling.
+//  - BYTES_PER_SG_READ     - [int] Number of bytes read by single sub-group read operation (read by entire sub-group).
+//                                  Must be equal (CHUNK_BYTE_SIZE * SUB_GROUP_SIZE). Added as helper for manual loop
+//                                  unrolling.
+//  - UNITS_PER_SG_READ     - [int] Number of units read by single sub-group read operation (read by entire sub-group).
+//                                  Must be equal (UNIT_BYTE_SIZE * SUB_GROUP_SIZE). Added as helper for manual loop
+//                                  unrolling.
 //
 //  - RESPONSES_PER_SG_EXEC      - [int] Number of neural responses processed/executed by single sub-group.
 //  - IN_CHUNK_PREFETCH_SIZE     - [int] Size of array of CHUNK_TYPE use to cache/prefetch input data.

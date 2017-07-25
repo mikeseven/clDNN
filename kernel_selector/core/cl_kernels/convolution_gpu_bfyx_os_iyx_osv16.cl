@@ -25,7 +25,7 @@
 //  - STRIDE               - [tensor] Stride (only spatial). Factors that describe step size in X or Y dimension of
 //                           input position of application of convolution filter when next ouput value
 //                           (step 1 in in X or Y dimension of output) is computed.
-//  - INPUT0_OFFSET         - [tensor] Offset between input and output (only spatial). Non-positive values that describe
+//  - INPUT0_OFFSET        - [tensor] Offset for the first element
 //                           initial offset input position of application of convolution filter and output position.
 //  - FP16_SUPPORTED       - [0/1] Value indicating whether device supports FP16 OpenCL extension (cl_khr_fp16).
 //  - FP16_UNIT_USED       - [0/1] Value indicating that current kernel should use FP16.
@@ -42,10 +42,8 @@
 gpu::make_jit_constant("OUTPUT_LIMIT",              output_size),
 gpu::make_jit_constant("FILTER",                    filter_mem.argument().size),
 gpu::make_jit_constant("FILTER_ARRAY_NUM",          split),
-gpu::make_jit_constant("FILTER_OFM_NUM", "FILTER_FEATURE_NUM_0"),
-gpu::make_jit_constant("FILTER_IFM_NUM",  "FILTER_FEATURE_NUM_1"),
-gpu::make_jit_constant("OUTPUT_BLOCK_WIDTH",           _kernel_data.block_width));
-gpu::make_jit_constant("OUTPUT_BLOCK_HEIGHT",          _kernel_data.block_height));
+gpu::make_jit_constant("OUTPUT_BLOCK_WIDTH",        _kernel_data.block_width));
+gpu::make_jit_constant("OUTPUT_BLOCK_HEIGHT",       _kernel_data.block_height));
 gpu::make_jit_constant("IN_BLOCK_ARRAY_SIZE",       _kernel_data.input_block_array_size));
 gpu::make_jit_constant("IN_BLOCK_WIDTH",            _kernel_data.input_block_width));
 gpu::make_jit_constant("PREFETCH",                  _kernel_data.prefetch));

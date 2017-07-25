@@ -27,7 +27,7 @@
 //  - INPUT_BATCH_NUM      - [int] Batch size for input. Number of input sets of spatial and feature data that
 //                           are grouped to be processed in single batch.
 //  - INPUT_ELEMENTS_COUNT - [int] Cumulative number of elements in single data set from batch.
-//  - FILTER_OFM_NUM    - [int] Cumulative number of elements that are outputted for single input set from batch.
+//  - FILTER_OFM_NUM       - [int] Cumulative number of elements that are outputted for single input set from batch.
 //                           Number of layer responses per single input set from batch.
 //  - RELU                 - [0/1] Indicates that ReLU activation function should be used on output.
 //  - NEGATIVE_SLOPE       - [float] Factor for negative output values (required when ReLU is specified).

@@ -16,15 +16,15 @@
 #include "include/common.cl"
 
 // Required JIT constants:
-//  - FP16_SUPPORTED       - [0/1] Value indicating whether device supports FP16 OpenCL extension (cl_khr_fp16).
-//  - FP16_UNIT_USED       - [0/1] Value indicating that current kernel should use FP16.
-//  - UNIT_TYPE            - Type of unit of input/output/weight/bias.
-//  - UNIT_VAL_ZERO        - Literal of current UNIT_TYPE that represents 0.
+//  - FP16_SUPPORTED        - [0/1] Value indicating whether device supports FP16 OpenCL extension (cl_khr_fp16).
+//  - FP16_UNIT_USED        - [0/1] Value indicating that current kernel should use FP16.
+//  - UNIT_TYPE             - Type of unit of input/output/weight/bias.
+//  - UNIT_VAL_ZERO         - Literal of current UNIT_TYPE that represents 0.
 //  - INPUT0_BATCH_NUM      - [int] Number of elements from single spatial and single feature that are grouped in single batch in input.
 //  - INPUT0_ELEMENTS_COUNT - [int] Cumulative number of elements from input that are processed in single batch.
-//  - FILTER_OFM_NUM    - [int] Cumulative number of elements that are outputted in single batch.
-//  - RELU                 - [0/1] Indicates that ReLU activation function should be used on output.
-//  - NEGATIVE_SLOPE       - [float] Factor for negative output values (required when ReLU is specified).
+//  - FILTER_OFM_NUM        - [int] Cumulative number of elements that are outputted in single batch.
+//  - RELU                  - [0/1] Indicates that ReLU activation function should be used on output.
+//  - NEGATIVE_SLOPE        - [float] Factor for negative output values (required when ReLU is specified).
 
 
 KERNEL (fully_connected_gpu_bx_xb_from_fyxb)(
