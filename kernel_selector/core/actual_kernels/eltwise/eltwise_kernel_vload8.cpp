@@ -52,8 +52,7 @@ namespace KernelSelector {
 
         const bool bSupportedCount = (count % 8) == 0;
 
-        if (!CheckActivationSupport(ewParams.activationFunc) ||
-            !CheckInputsOutputNoPitchSameDims(ewParams) ||
+        if (!CheckInputsOutputNoPitchSameDims(ewParams) ||
             ewParams.eltwiseParams.operations.size() != 1 ||
             ewParams.inputs.size() != 2 ||
             !bSupportedCount)

@@ -203,8 +203,8 @@ public:
         definitions.push_back({ _name + "_SIZE",        toCodeString(t.GetDims().size()) });
         definitions.push_back({ _name + "_SIZES",       toVectorString(t.GetDims(), "size_t", KERNEL_SELECTOR_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.v; }) });
         definitions.push_back({ _name + "_PITCHES",     toVectorString(t.GetDims(), "size_t", KERNEL_SELECTOR_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.pitch; }) });
-        definitions.push_back({ _name + "_PAD_BEFORE",  toVectorString(t.GetDims(), "size_t", KERNEL_SELECTOR_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.pad.before; }) });
-        definitions.push_back({ _name + "_PAD_AFTER",   toVectorString(t.GetDims(), "size_t", KERNEL_SELECTOR_TENSOR_DIM_MAX, 1, [](const Tensor::Dim& d) { return d.pad.after; }) });
+        definitions.push_back({ _name + "_PAD_BEFORE",  toVectorString(t.GetDims(), "size_t", KERNEL_SELECTOR_TENSOR_DIM_MAX, 0, [](const Tensor::Dim& d) { return d.pad.before; }) });
+        definitions.push_back({ _name + "_PAD_AFTER",   toVectorString(t.GetDims(), "size_t", KERNEL_SELECTOR_TENSOR_DIM_MAX, 0, [](const Tensor::Dim& d) { return d.pad.after; }) });
 
         return definitions;
     }
@@ -422,13 +422,18 @@ inline JitConstants MakeWeightBiasParamsJitConstants(const WeightBiasParams& par
 {
     JitConstants jit = MakeBaseParamsJitConstants(params);
     jit.AddConstants({
-        MakeJitConstant("FILTER",                       params.weights),
-        MakeJitConstant("BIAS_TERM",                    static_cast<int>(!params.bias.empty())),
+        MakeJitConstant("FILTER",       params.weights),
+        MakeJitConstant("BIAS_TERM",    static_cast<int>(!params.bias.empty())),
     });
 
     if (params.bias.empty() == false)
     {
-        jit.AddConstant(MakeJitConstant("BIAS", params.bias[0]));
+        const bool sameDims = params.bias[0].SameDims(params.output);
+        jit.AddConstants({
+            MakeJitConstant("BIAS",             params.bias[0]),
+            MakeJitConstant("BIAS_PER_OUTPUT",  static_cast<int>(sameDims)),
+            MakeJitConstant("BIAS_PER_OFM",     static_cast<int>(!sameDims)),
+        });
     }
 
     return jit;

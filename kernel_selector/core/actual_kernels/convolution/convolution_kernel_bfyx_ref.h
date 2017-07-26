@@ -16,17 +16,30 @@
 
 #pragma once
 
-#include "cnn_convolution_kernel_base.h"
+#include "convolution_kernel_base.h"
  
 namespace KernelSelector {
     
-    class ConvolutionKernelRef : public CNNConvolutionKernelBase
+    class ConvolutionKernel_bfyx_Ref : public ConvolutionKernelBase
     {
     public:
-        ConvolutionKernelRef() : CNNConvolutionKernelBase("cnn_convolution_ref") {}
-        virtual ~ConvolutionKernelRef() {}
+        ConvolutionKernel_bfyx_Ref() : ConvolutionKernelBase("convolution_gpu_bfyx_ref") {}
+        virtual ~ConvolutionKernel_bfyx_Ref() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
+
+    protected:
+        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts() const override
+        {
+            return{
+                WeightsLayout::oiyx,
+                WeightsLayout::yxio,
+                WeightsLayout::iyxo,
+                WeightsLayout::oyxi,
+            };
+        }
+
+        DispatchData SetDefault(const ConvolutionParams& arg) const override;
     };
 }

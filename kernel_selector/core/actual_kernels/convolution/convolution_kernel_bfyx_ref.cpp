@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "convolution_kernel_ref.h"
+#include "convolution_kernel_bfyx_ref.h"
 #include "kernel_selector_utils.h"
 
 namespace KernelSelector {
     
-    ParamsKey ConvolutionKernelRef::GetSupportedKey() const
+    ParamsKey ConvolutionKernel_bfyx_Ref::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
@@ -41,17 +41,43 @@ namespace KernelSelector {
         return k;
     }
 
-    KernelsData ConvolutionKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_Ref::SetDefault(const ConvolutionParams& params) const
     {
-        assert(params.GetType() == KernelType::CONVOLUTION && options.GetType() == KernelType::CONVOLUTION);
+        DispatchData kd = ConvolutionKernelBase::SetDefault(params);
 
+        const auto& out = params.output;
+
+        std::vector<size_t> global = { out.X().v, out.Y().v, out.Feature().v*out.Batch().v };
+        auto local = GetOptimalLocalWorkGroupSizes(global);
+
+        kd.gws0 = global[0];
+        kd.gws1 = global[1];
+        kd.gws2 = global[2];
+
+        kd.lws0 = local[0];
+        kd.lws1 = local[1];
+        kd.lws2 = local[2];
+
+        return kd;
+    }
+
+    KernelsData ConvolutionKernel_bfyx_Ref::GetKernelsData(const Params& params, const OptionalParams& options) const
+    {
+        if (!Validate(params, options))
+        {
+            return{};
+        }
+
+        const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
+
+        DispatchData runInfo = SetDefault(orgParams);
         KernelData kd = KernelData::Default<ConvolutionParams>(params);
         ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
         
         bool succeed = UpdateWeightsParams(
             newParams,
             options,
-            { WeightsLayout::oiyx },
+            GetSupportedWeightLayouts(),
             kd.weightsReorderParams);
 
         if (!succeed)
@@ -59,22 +85,15 @@ namespace KernelSelector {
             return{};
         }
 
-        const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
+        auto cldnn_jit = GetJitConstants(newParams, runInfo);
+        auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
+        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
-        SubGroupInfo runInfo;
-        std::stringstream jit;
-        jit << GetBaseJit(newParams, kernel_id)
-            << GetConvolutionJit(newParams, runInfo);
-
-        const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = { out.X().v, out.Y().v, out.Feature().v*out.Batch().v };
-        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
-        kernel.kernelString = GetKernelString(kernelName, jit.str(), kernel_id);
-        kernel.arguments = GetArgumentDesc(1, true, !newParams.bias.empty());
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, true, !newParams.bias.empty());
         kernel.arguments.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
 
-        kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        kd.estimatedTime = runInfo.effiency;
 
         return{ kd };
     }

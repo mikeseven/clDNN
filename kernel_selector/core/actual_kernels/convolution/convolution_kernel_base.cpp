@@ -29,11 +29,6 @@ namespace KernelSelector
         const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
         const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(o);
 
-        if (!CheckActivationSupport(params.activationFunc))
-        {
-            return false;
-        }
-
         bool bSupportedWeightsLayout = false;
 
         for (WeightsLayout l : GetSupportedWeightLayouts())

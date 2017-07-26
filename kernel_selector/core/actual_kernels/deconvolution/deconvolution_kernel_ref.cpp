@@ -50,18 +50,11 @@ namespace KernelSelector
 
         const DeconvolutionParams& orgParams = static_cast<const DeconvolutionParams&>(params);
 
-        const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
-
         const std::vector<WeightsLayout> weightsLayouts = {
             WeightsLayout::yxio,
             WeightsLayout::iyxo,
             WeightsLayout::oyxi,
             WeightsLayout::oiyx };
-        
-        if (!bSupportedActivation)
-        {
-            return{};
-        }
 
         DispatchData runInfo = SetDefault(orgParams);
         KernelData kd = KernelData::Default<DeconvolutionParams>(params);

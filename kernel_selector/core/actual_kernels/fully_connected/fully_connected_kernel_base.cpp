@@ -69,8 +69,6 @@ namespace KernelSelector
         const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
         const auto& orgOptParams = static_cast<const FullyConnectedOptionalParams&>(options);
 
-        const bool bSupportedActivation = CheckActivationSupport(orgParams.activationFunc);
-
         bool bProperInput = orgParams.inputs[0].GetLayout() == dl;
         if (!bProperInput && !orgParams.inputs[0].PitchesDifferFromLogicalDims())
         {
@@ -81,8 +79,7 @@ namespace KernelSelector
 
         const bool bSupportedInput = orgOptParams.allowReorderInput || bProperInput;
 
-        if (!bSupportedActivation || 
-            !bSupportedInput)
+        if (!bSupportedInput)
         {
             return KernelsData();
         }

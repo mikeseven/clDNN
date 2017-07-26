@@ -165,9 +165,8 @@ namespace KernelSelector
         const auto req_input = GetConvolutionBFYXPaddedTensor(params);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(params, req_input);
         const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
-        const bool bSupportedActivation = CheckActivationSupport(params.activationFunc);
 
-        if (!bInputPadded || !bSupportedActivation)
+        if (!bInputPadded)
         {
             return false;
         }

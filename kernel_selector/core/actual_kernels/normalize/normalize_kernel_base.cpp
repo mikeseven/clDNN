@@ -57,11 +57,6 @@ namespace KernelSelector
 
         const NormalizeParams& orgParams = static_cast<const NormalizeParams&>(params);
 
-        if (!CheckActivationSupport(orgParams.activationFunc))
-        {
-            return{};
-        }
-
         DispatchData runInfo;
 
         runInfo = SetDefault(orgParams);
