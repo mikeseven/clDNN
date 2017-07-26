@@ -209,7 +209,8 @@ CLDNN_API int32_t cldnn_is_user_event(cldnn_event event, cldnn_status * status)
     return exception_handler<int32_t>(CLDNN_ERROR, status, 0, [&]()
     {
         SHOULD_NOT_BE_NULL(event, "Event");
-        return api_cast(event)->is_user_event();
+        auto user_ev = dynamic_cast<user_event*>(api_cast(event));
+        return (user_ev != nullptr);
     });
 }
 
@@ -246,10 +247,10 @@ void cldnn_set_event(cldnn_event event, cldnn_status* status)
     exception_handler(CLDNN_ERROR, status, [&]()
     {
         SHOULD_NOT_BE_NULL(event, "Event");
-        if (!api_cast(event)->is_user_event())
-            throw std::invalid_argument("Event passed to cldnn_set_event should be a user event");
-
-        api_cast(event)->as_user_event()->set();
+        if (auto user_ev = dynamic_cast<user_event*>(api_cast(event)))
+            user_ev->set();
+        else
+            throw std::invalid_argument("Event passed to cldnn_set_event should be an user event");
     });
 }
 

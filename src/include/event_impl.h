@@ -39,9 +39,6 @@ public:
     
     const std::list<cldnn_profiling_interval>& get_profiling_info();
 
-    virtual bool is_user_event() { return false; }
-    virtual user_event* as_user_event() { return nullptr; }
-
 private:
     std::mutex _handlers_mutex;
     std::list<std::pair<cldnn_event_handler, void*>> _handlers;
@@ -78,9 +75,6 @@ public:
         set_impl();
         call_handlers();
     }
-
-    bool is_user_event() override { return true; }
-    user_event* as_user_event() override { return this; }
 
 private:
     virtual void set_impl() = 0;
