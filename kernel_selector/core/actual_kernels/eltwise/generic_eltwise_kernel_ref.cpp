@@ -133,8 +133,11 @@ namespace KernelSelector {
                 case EltwiseInputMode::INPUT_BUFFER:
                     jit.AddConstant(MakeJitConstant(name, "input" + std::to_string(input.index) + "[GET_INDEX(INPUT, " + std::to_string(input.index) +")]"));
                     break;
+                case EltwiseInputMode::UNORDERED_ACCESS_INPUT_BUFFER:
+                    jit.AddConstant(MakeJitConstant(name, "input" + std::to_string(input.index) + "[(size_t)tmp" + std::to_string(input.tmpIndex) + "]"));
+                    break;
                 case EltwiseInputMode::INTERMEDIATE_RESULTS_INDEX:
-                    jit.AddConstant(MakeJitConstant(name, "tmp" + std::to_string(input.index)));
+                    jit.AddConstant(MakeJitConstant(name, "tmp" + std::to_string(input.tmpIndex)));
                     break;
                 default:
                     break;

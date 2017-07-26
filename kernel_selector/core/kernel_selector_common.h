@@ -312,7 +312,6 @@ namespace KernelSelector {
         case KernelType::ACTIVATION:        return "ACTIVATION";
         case KernelType::SOFT_MAX:          return "SOFT_MAX";
         case KernelType::ELTWISE:           return "ELTWISE";
-        case KernelType::TABLE_LOOKUP:      return "TABLE_LOOKUP";
         case KernelType::REORDER:           return "REORDER";
         default:
             return "";

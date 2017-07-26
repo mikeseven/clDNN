@@ -918,9 +918,10 @@ namespace KernelSelector
 
         struct InputType
         {
-            EltwiseInputMode mode   = EltwiseInputMode::INPUT_BUFFER;
-            uint32_t         index  = 0; // for inputs/temp results;
-            float            scalar = 0.f;
+            EltwiseInputMode mode       = EltwiseInputMode::INPUT_BUFFER;
+            uint32_t         index      = 0;    // for inputs results;
+            uint32_t         tmpIndex   = 0;    // for temp results;
+            float            scalar     = 0.f;
 
             static InputType Buffer(uint32_t index) 
             {
@@ -930,11 +931,20 @@ namespace KernelSelector
                 return input;
             }
 
-            static InputType Intermediate(uint32_t index)
+            static InputType UnorderedAccessBuffer(uint32_t index, uint32_t tmpIndex)
+            {
+                EltwiseParams::InputType input;
+                input.mode = EltwiseInputMode::UNORDERED_ACCESS_INPUT_BUFFER;
+                input.index = index;
+                input.tmpIndex = tmpIndex;
+                return input;
+            }
+
+            static InputType Intermediate(uint32_t tmpIndex)
             {
                 EltwiseParams::InputType input;
                 input.mode = EltwiseInputMode::INTERMEDIATE_RESULTS_INDEX;
-                input.index = index;
+                input.tmpIndex = tmpIndex;
                 return input;
             }
 
@@ -1056,27 +1066,6 @@ namespace KernelSelector
                 k.EnableTensorOffset();
             }
             return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // TableLookupParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct TableLookupParams : public BaseParams
-    {
-        TableLookupParams() : BaseParams(KernelType::TABLE_LOOKUP), lookupParams() {}
-
-        struct DedicatedParams
-        {
-            Datatype tableFormat = Datatype::F16;
-            size_t tableSize = 0;
-        };
-
-        DedicatedParams lookupParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            return BaseParams::GetParamsKey();
         }
     };
 
@@ -1243,14 +1232,6 @@ namespace KernelSelector
     struct EltwiseOptionalParams : OptionalParams
     {
         EltwiseOptionalParams() : OptionalParams(KernelType::ELTWISE) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // TableLookupOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct TableLookupOptionalParams : OptionalParams
-    {
-        TableLookupOptionalParams() : OptionalParams(KernelType::TABLE_LOOKUP) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

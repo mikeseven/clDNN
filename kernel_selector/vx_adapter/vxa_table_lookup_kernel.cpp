@@ -15,7 +15,7 @@
 */
 
 #include "vxa_table_lookup_kernel.h"
-#include "table_lookup/table_lookup_kernel_selector.h"
+#include "eltwise/eltwise_kernel_selector.h"
 
 namespace clDNN
 {
@@ -24,6 +24,8 @@ namespace clDNN
         BaseKernelBinary(KernelType::TABLE_LOOKUP),
         m_Params(params)
     {
+        // TODO: use eltwise
+#if 0
         KernelSelector::TableLookupParams ksParams;
 
         InitBaseParams(params, ksParams);
@@ -33,5 +35,6 @@ namespace clDNN
         KernelSelector::TableLookupOptionalParams ksOptParams;
 
         HandleBestKernels(KernelSelector::TableLookupKernelSelctor::Instance(), ksParams, ksOptParams);
+#endif
     }
 }
