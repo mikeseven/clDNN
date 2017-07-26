@@ -66,6 +66,6 @@ KERNEL (reorder_weights)(const __global INPUT0_TYPE* input, __global OUTPUT_TYPE
     const unsigned y = get_global_id(2) / INPUT0_SIZE_X;
     const unsigned x = get_global_id(2) % INPUT0_SIZE_X;
 #endif
-    uint4 ir = FUNC_CALL(reshape_dims)(o,i,y,x, INPUT0_SIZE_Y, INPUT0_SIZE_X, INPUT0_DIMS, OUTPUT_DIMS);
+    uint4 ir = FUNC_CALL(reshape_dims)(o,i,y,x, OUTPUT_SIZE_Y, OUTPUT_SIZE_X, INPUT0_SIZE_Y, INPUT0_SIZE_X, OUTPUT_DIMS, INPUT0_DIMS);
     output[FUNC_CALL(get_output_index)(o, i, y, x)] = TO_OUTPUT_TYPE(input[FUNC_CALL(get_input_index)(ir[0],ir[1],ir[2],ir[3])]);
 }

@@ -14,30 +14,30 @@
 // limitations under the License.
 */
 
-inline uint4 FUNC(reshape_4_to_2)(uint o, uint i, uint y, uint x, uint size_y, uint size_x)
+inline uint4 FUNC(reshape_2_to_4)(uint o, uint i, uint y, uint x, uint dst_size_y, uint dst_size_x)
 {
-    uint _i  = i / (size_y*size_x);
-    uint _yx = i % (size_y*size_x);
-    uint _y = _yx / size_x;
-    uint _x = _yx % size_x;
+    uint _i  = i / (dst_size_y*dst_size_x);
+    uint _yx = i % (dst_size_y*dst_size_x);
+    uint _y = _yx / dst_size_x;
+    uint _x = _yx % dst_size_x;
     return (uint4)(o,_i,_y,_x);
 }
 
-inline uint4 FUNC(reshape_2_to_4)(uint o, uint i, uint y, uint x, uint size_y, uint size_x)
+inline uint4 FUNC(reshape_4_to_2)(uint o, uint i, uint y, uint x, uint src_size_y, uint src_size_x)
 {
-    uint _i = i*size_y*size_x + y*size_x + x;
+    uint _i = i*src_size_y*src_size_x + y*src_size_x + x;
     return (uint4)(o,_i,0,0);
 }
 
-inline uint4 FUNC(reshape_dims)(uint o, uint i, uint y, uint x, uint size_y, uint size_x, uint src_dims, uint dst_dims)
+inline uint4 FUNC(reshape_dims)(uint o, uint i, uint y, uint x, uint src_size_y, uint src_size_x, uint dst_size_y, uint dst_size_x, uint src_dims, uint dst_dims)
 {
     if (src_dims == 4 && dst_dims == 2)
     {
-        return FUNC_CALL(reshape_4_to_2)(o,i,y,x,size_y,size_x);
+        return FUNC_CALL(reshape_4_to_2)(o,i,y,x,src_size_y,src_size_x);
     }
     else if (src_dims == 2 && dst_dims == 4)
     {
-        return FUNC_CALL(reshape_2_to_4)(o,i,y,x,size_y,size_x);
+        return FUNC_CALL(reshape_2_to_4)(o,i,y,x,dst_size_y,dst_size_x);
     }
     
     return (uint4)(o,i,y,x);
