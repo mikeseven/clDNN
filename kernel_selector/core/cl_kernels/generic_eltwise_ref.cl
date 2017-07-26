@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "include/common.cl"
+#include "include/include_all.cl"
 
 #if ELTWISE_LAYOUT_BASED
 

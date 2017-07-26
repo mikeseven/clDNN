@@ -14,14 +14,10 @@
 // limitations under the License.
 */
 
-#define __CAT(x, y) x##y
-#define CAT(x, y) __CAT(x, y)
-
-#define __CAT_FUNC(x, y) FUNC(x##y)
-#define CAT_FUNC(x, y) __CAT_FUNC(x, y)
-
-#define __CAT_FUNC_CALL(x, y) FUNC_CALL(x##y)
-#define CAT_FUNC_CALL(x, y) __CAT_FUNC_CALL(x, y)
-
-#define OFFSET_GLOBAL_PTR(elem_type, ptr, byte_offset) ((__global elem_type*)((__global char*)(ptr) + byte_offset))
-#define MULTIPLY_OFFSET(elem_type, byte_offset) (byte_offset * sizeof(elem_type))
+#include "common.cl"
+#include "data_types.cl"
+#include "loop_unroll.cl"
+#include "activation_functions.cl"
+#include "sub_group.cl"
+#include "reshape_dims.cl"
+#include "fetch.cl"

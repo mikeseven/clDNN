@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-#include "include/common.cl"
+#include "include/include_all.cl"
 
 //
 // In this kernel we are processing "fyx" as flatten 1D "elements".

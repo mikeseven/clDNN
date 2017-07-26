@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "include/common.cl"
+#include "include/include_all.cl"
 
 // TODO: move it from layout based to memory based
 KERNEL(activation)(

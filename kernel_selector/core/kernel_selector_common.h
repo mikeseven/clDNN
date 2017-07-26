@@ -375,6 +375,16 @@ namespace KernelSelector {
         }
     }
 
+    inline std::string toString(LRNMode mode)
+    {
+        switch (mode)
+        {
+        case LRNMode::ACROSS_CHANNEL: return "ACROSS_CHANNEL";
+        case LRNMode::WITHIN_CHANNEL: return "WITHIN_CHANNEL";
+        default: return "";
+        }
+    }
+
     inline std::string toString(KernelDividerMode mode)
     {
         switch (mode)

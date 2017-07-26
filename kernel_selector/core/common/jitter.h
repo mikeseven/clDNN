@@ -488,6 +488,8 @@ inline JitConstants MakeLRNJitConstants(const LRNParams& params)
         MakeJitConstant("ALPHA",        np.alpha),
         MakeJitConstant("BETA",         np.beta),
         MakeJitConstant("K",            np.k),
+        MakeJitConstant(toString(np.divMode) + "_KERNEL_DIVIDER", ""),
+        MakeJitConstant(toString(np.normMode), ""),
     });
 
     return jit;

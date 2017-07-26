@@ -18,15 +18,17 @@
 #pragma OPENCL EXTENSION cl_khr_fp16 : enable
 #endif
 
+// TODO: currently we calculate on float32 because it's lot of "add" operation and it stuck on the value "8192.0f"
+#if !defined(ACCUMULATOR_TYPE)
+    #define ACCUMULATOR_TYPE float
+#endif
+    
 #if FP16_UNIT_USED
     #ifndef UNIT_TYPE
     #define UNIT_TYPE half
     #endif
 
-    // TODO: currently we calculate on float32 because it's lot of "add" operation and it stuck on the value "8192.0f"
-    #if !defined(ACCUMULATOR_TYPE)
-        #define ACCUMULATOR_TYPE float
-    #endif
+    
     
     #define UNIT_VAL_MAX HALF_MAX
     #define UNIT_VAL_MIN -UNIT_VAL_MAX
@@ -37,11 +39,6 @@
     #ifndef UNIT_TYPE
     #define UNIT_TYPE float
     #endif
-
-    // TODO: currently we calculate on float32 because it's lot of "add" operation and it stuck on the value "8192.0f"
-    #if !defined(ACCUMULATOR_TYPE)
-        #define ACCUMULATOR_TYPE float
-    #endif
     
     #define UNIT_VAL_MAX FLT_MAX
     #define UNIT_VAL_MIN -UNIT_VAL_MAX
@@ -49,15 +46,3 @@
     #define UNIT_VAL_ZERO 0.0f
     #define TO_UNIT_TYPE(v) (float)(v)
 #endif
-
-#define __CAT(x, y) x##y
-#define CAT(x, y) __CAT(x, y)
-
-#define __CAT_FUNC(x, y) FUNC(x##y)
-#define CAT_FUNC(x, y) __CAT_FUNC(x, y)
-
-#define __CAT_FUNC_CALL(x, y) FUNC_CALL(x##y)
-#define CAT_FUNC_CALL(x, y) __CAT_FUNC_CALL(x, y)
-
-#define OFFSET_GLOBAL_PTR(elem_type, ptr, byte_offset) ((__global elem_type*)((__global char*)(ptr) + byte_offset))
-#define MULTIPLY_OFFSET(elem_type, byte_offset) (byte_offset * sizeof(elem_type))

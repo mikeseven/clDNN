@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-#include "include/common.cl"
+#include "include/include_all.cl"
 
 // TODO: use CAT
 #define CONCAT_TOKEN_HANDLER1(prefix, suffix) prefix##suffix

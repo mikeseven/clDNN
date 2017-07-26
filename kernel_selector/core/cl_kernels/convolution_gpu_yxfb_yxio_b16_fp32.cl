@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-#include "include/common.cl"
+#include "include/include_all.cl"
 
 KERNEL(convolution_gpu_yxfb_yxio_b16)(
     const __global float* input,

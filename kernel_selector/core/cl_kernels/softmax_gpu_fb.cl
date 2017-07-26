@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-#include "include/common.cl"
+#include "include/include_all.cl"
 
 UNIT_TYPE FUNC(find_max_value)(__local UNIT_TYPE* partial_max, const int global_id, const int idx, const int batch_offset, const int data_sets_count, const __global UNIT_TYPE* input)
 {

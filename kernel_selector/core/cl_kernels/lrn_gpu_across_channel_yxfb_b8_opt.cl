@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-#include "include/common.cl"
+#include "include/include_all.cl"
 
 #if FP16_UNIT_USED
     #define UNIT_CVT_FUNC(val) convert_half(val)
@@ -62,5 +62,6 @@ KERNEL (lrn_gpu_yxfb_b8)(const __global UNIT_TYPE* input, __global UNIT_TYPE* ou
     const uint output_idx = OUTPUT_OFFSET + batch_id*OUTPUT_BATCH_PITCH + feature_id*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH;
     const uint output_idx_group = output_idx / SUB_GROUP_SIZE;
     float8 _in = vload8(input_id_group, input);
-    vstore8(acc * _in, output_idx_group, output);
+    float8 res = ACTIVATION(acc * _in, NL_M ,NL_N);
+    vstore8(res, output_idx_group, output);
 }

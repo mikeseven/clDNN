@@ -13,13 +13,7 @@
 // limitations under the License.
 
 
-#include "include/common.cl"
-
-#if FP16_UNIT_USED
-    #define UNIT_CVT_FUNC(val) convert_half(val)
-#else
-    #define UNIT_CVT_FUNC(val) (val)
-#endif
+#include "include/include_all.cl"
 
 
 KERNEL (lrn_gpu_within_channel)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
@@ -61,16 +55,16 @@ KERNEL (lrn_gpu_within_channel)(const __global UNIT_TYPE* input, __global UNIT_T
         {
             for (int w = wstart; w < wend; ++w)
             {
-                UNIT_TYPE tmp_val = bottom_slice[h*INPUT0_Y_PITCH + w*INPUT0_X_PITCH] * UNIT_CVT_FUNC(ALPHA_VAL_FACTOR);
+                UNIT_TYPE tmp_val = bottom_slice[h*INPUT0_Y_PITCH + w*INPUT0_X_PITCH] * TO_UNIT_TYPE(ALPHA_VAL_FACTOR);
                 aveval += (tmp_val * tmp_val);
             }
         }
 
         UNIT_TYPE acc = aveval / pool_size;
-        acc = mad(acc, UNIT_CVT_FUNC(ALPHA_AFTER_FACTORED), UNIT_CVT_FUNC(K));
-        acc = native_powr(acc, -UNIT_CVT_FUNC(BETA));
+        acc = mad(acc, TO_UNIT_TYPE(ALPHA_AFTER_FACTORED), TO_UNIT_TYPE(K));
+        acc = native_powr(acc, -TO_UNIT_TYPE(BETA));
 
         const uint output_idx = OUTPUT_OFFSET + batch_id*OUTPUT_BATCH_PITCH + feature_id*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH;
-        output[output_idx] = acc * input[input_id];
+        output[output_idx] = ACTIVATION(acc * input[input_id], NL_M ,NL_N);
     }
 }

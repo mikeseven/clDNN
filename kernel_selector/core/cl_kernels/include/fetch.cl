@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "common_macros.cl"
+#include "common.cl"
 
 #define GET_DATA_INDEX(prefix, b, f, y, x)  \
     CAT(prefix, _OFFSET) +                  \

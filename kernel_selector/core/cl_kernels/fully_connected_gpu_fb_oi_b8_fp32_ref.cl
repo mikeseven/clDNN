@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-#include "include/common.cl"
+#include "include/include_all.cl"
 
 
 __attribute__((reqd_work_group_size(8, 1, 1)))

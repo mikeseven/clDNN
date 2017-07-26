@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-#include "include/common.cl"
+#include "include/include_all.cl"
 
 #if   defined MAX_POOLING
     #define UNIT_INIT_VAL UNIT_VAL_MIN
