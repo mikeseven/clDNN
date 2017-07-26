@@ -959,6 +959,9 @@ void program_impl::prepare_buffer_fusing()
                 if (!input[0]->is_type<pooling>())
                     return;
 
+                if (input[0]->get_users().size() != 1)
+                    return;
+
             input[0]->set_output_layout(node.get_output_layout());
 
             node.can_be_optimized(true);

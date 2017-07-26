@@ -112,7 +112,12 @@ public:
 
     void set_output_layout(layout layout)
     {
+        layout.data_padding = output_layout.data_padding;
+        if (layout != output_layout) //output_layout has changed! invalidate users
+            invalidate_users();
+
         output_layout = layout;
+        valid_output_layout = true;
     }
 
     void recalc_output_layout()
