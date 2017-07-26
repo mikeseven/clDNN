@@ -108,7 +108,7 @@ KERNEL (reorder_weights)(
 #if   INPUT0_DIMS == 2
     const uint y = 0;
     const uint x = 0;
-#elif INPUT_DIMS == 4
+#elif INPUT0_DIMS == 4
     const uint y = ((uint)(get_global_id(GWS_YX))) / INPUT0_SIZE_X;
     const uint x = ((uint)(get_global_id(GWS_YX))) % INPUT0_SIZE_X;
 #endif
