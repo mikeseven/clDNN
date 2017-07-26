@@ -15,18 +15,6 @@
 
 #include "include/common.cl"
 
-///////////////////////// subtruct Index /////////////////////////
-#ifdef MEAN_SUBTRACT_IN_BUFFER
-inline uint FUNC(get_mean_index)(uint b, uint f, uint y, uint x)
-{
-#if MEAN_SUBTRACT_SIMPLE
-    return GET_DATA_INDEX(MEAN_SUBTRACT, b, f, y, x);
-#else
-#error - not supported
-#endif
-}
-#endif
-
 ///////////////////////// Input Index /////////////////////////
 inline uint FUNC(get_input_index)(uint b, uint f, uint y, uint x)
 {
@@ -81,11 +69,7 @@ KERNEL (reorder_data)(
     res -= TO_CALC_TYPE(VALUE_TO_SUBTRACT[f % VALUE_TO_SUBTRACT_SIZE]);
 #elif defined MEAN_SUBTRACT_IN_BUFFER
     uint4 msv = FUNC_CALL(reshape_dims)(b,f,y,x, INPUT0_SIZE_Y, INPUT0_SIZE_X, INPUT0_DIMS, MEAN_SUBTRACT_DIMS);
-    res -= TO_CALC_TYPE(mean_subtruct[FUNC_CALL(get_mean_index)(
-        msv[0] % MEAN_SUBTRACT_BATCH_NUM,
-        msv[1] % MEAN_SUBTRACT_FEATURE_NUM,
-        msv[2] % MEAN_SUBTRACT_SIZE_Y,
-        msv[3] % MEAN_SUBTRACT_SIZE_X)]);
+    res -= TO_CALC_TYPE(mean_subtruct[GET_DATA_INDEX_SAFE(MEAN_SUBTRACT, msv[0], msv[1], msv[2], msv[3])]);
 #endif
 
     output[output_idx] = TO_OUTPUT_TYPE(res);
