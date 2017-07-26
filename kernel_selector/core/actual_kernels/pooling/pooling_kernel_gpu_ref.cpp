@@ -47,11 +47,6 @@ namespace KernelSelector
 
         const PoolingParams& orgParams = static_cast<const PoolingParams&>(params);
 
-        if (orgParams.activationFunc != ActivationFunction::NONE)
-        {
-            return{};
-        }
-        
         DispatchData runInfo = SetDefault(orgParams);
         KernelData kd = KernelData::Default<PoolingParams>(params);
 

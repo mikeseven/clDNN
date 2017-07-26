@@ -70,7 +70,7 @@ KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     uint num_elementes = 0;
 #endif
     
-    const uint batch_and_feature_offset = INPUT0_OFFSET + b*INPUT0_BATCH_PITCH + f*INPUT0_FEATURE_PITCH;
+    const uint batch_and_feature_offset = GET_DATA_INDEX(INPUT0, b, f, 0, 0);
     for(uint j = 0; j < POOL_SIZE_Y; j++)
     {
         int input_offset_y = offset_y + j;
@@ -94,7 +94,7 @@ KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
         }
     }
 #else
-    uint input_idx = INPUT0_OFFSET + b*INPUT0_BATCH_PITCH + f*INPUT0_FEATURE_PITCH + offset_y*INPUT0_Y_PITCH + offset_x*INPUT0_X_PITCH;
+    uint input_idx = GET_DATA_INDEX(INPUT0, b, f, offset_y, offset_x);
 
     for(uint j = 0; j < POOL_SIZE_Y; j++)
     {
@@ -119,8 +119,8 @@ KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     #endif
 #endif
 
-    const uint output_pos = OUTPUT_OFFSET + b*OUTPUT_BATCH_PITCH + f*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH;
-    output[output_pos] = result;
+    const uint output_pos = GET_DATA_INDEX(OUTPUT, b, f, y, x);
+    output[output_pos] = ACTIVATION(result, NL_M ,NL_N);
 }
 
 #undef UNIT_INIT_VAL
