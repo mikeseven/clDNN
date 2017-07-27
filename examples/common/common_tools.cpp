@@ -379,7 +379,22 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     }
 
     if (!ep.dump_layer_name.empty())
+    {
+        if (ep.topology_name == "microbench")
+        {
+            for (auto prim_id : topology.get_primitive_ids())
+            {
+                if (prim_id.find("_weights") == std::string::npos &&
+                    prim_id.find("_bias") == std::string::npos &&
+                    prim_id.find("_input") == std::string::npos)
+                    outputs.push_back(prim_id);
+            }
+        }
+        else
+            outputs.push_back("output");
+
         outputs.push_back(ep.dump_layer_name);
+    }
 
     options.set_option(cldnn::build_option::outputs(outputs));
 
