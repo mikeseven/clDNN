@@ -33,7 +33,6 @@ namespace KernelSelector
         POOLING,
         ROI_POOLING,
         FULLY_CONNECTED,
-        LOCALLY_CONNECTED,
         ACTIVATION,
         SOFT_MAX,
         ELTWISE,

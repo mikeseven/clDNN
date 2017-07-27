@@ -18,7 +18,6 @@
 #include "vxa_activation_kernel.h"
 #include "vxa_convolution_kernel.h"
 #include "vxa_fully_connected_kernel.h"
-#include "vxa_locally_connected_kernel.h"
 #include "vxa_lrn_kernel.h"
 #include "vxa_pooling_kernel.h"
 #include "vxa_roi_pooling_kernel.h"
@@ -81,9 +80,6 @@ namespace clDNN
                 break;
             case KernelType::FULLY_CONNECTED:
                 pKernelBinary = CreateKernelBinaryT<FullyConnectedKernelBinary, FullyConnectedParams>(params);
-                break;
-            case KernelType::LOCALLY_CONNECTED:
-                pKernelBinary = CreateKernelBinaryT<LocallyConnectedKernelBinary, LocallyConnectedParams>(params);
                 break;
             case KernelType::ACTIVATION:
                 pKernelBinary = CreateKernelBinaryT<ActivationKernelBinary, ActivationParams>(params);

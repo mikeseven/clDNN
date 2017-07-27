@@ -85,7 +85,6 @@ namespace KernelSelector
                             uint32_t dilation : 1;
                         } conv;
                         struct fc_t {} fc;
-                        struct lc_t {} lc;
                         struct softmax_t 
                         {
                             uint32_t dimX : 1;
@@ -841,28 +840,6 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // LocallyConnectedParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LocallyConnectedParams : public BaseParams
-    {
-        LocallyConnectedParams() : BaseParams(KernelType::LOCALLY_CONNECTED), lcParams() {}
-
-        struct DedicatedParams
-        {
-            uSize filterSize;
-            uSize stride;
-            uSize padding;
-        };
-
-        DedicatedParams lcParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            return BaseParams::GetParamsKey();
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ActivationParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct ActivationParams : public BaseParams
@@ -1200,14 +1177,6 @@ namespace KernelSelector
     {
         FullyConnectedOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED) {}
         bool allowReorderInput = false;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // LocallyConnectedOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LocallyConnectedOptionalParams : OptionalParams
-    {
-        LocallyConnectedOptionalParams() : OptionalParams(KernelType::LOCALLY_CONNECTED) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
