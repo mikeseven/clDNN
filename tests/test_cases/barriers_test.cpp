@@ -14,7 +14,7 @@ using namespace tests;
 
 TEST(barriers, stress_test)
 {
-    engine_configuration cfg{ false, false, std::string(), std::string(), true };
+    engine_configuration cfg{ false, false, false, std::string(), std::string(), true };
     engine eng{ cfg };
 
     memory input_mem = memory::allocate(eng, layout{ data_types::f32, format::bfyx, { 1, 1, 1, 1 } });
