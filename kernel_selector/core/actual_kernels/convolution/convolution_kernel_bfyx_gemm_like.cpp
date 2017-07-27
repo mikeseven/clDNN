@@ -147,10 +147,7 @@ namespace KernelSelector
         auto jit = CreateJit(kernelName, cldnn_jit, entryPoint);
 
         auto& kernel = kd.kernels[0];
-        kernel.workGroups.global = { runInfo.gws0, runInfo.gws1, runInfo.gws2 };
-        kernel.workGroups.local = { runInfo.lws0, runInfo.lws1, runInfo.lws2 };
-        kernel.kernelString = GetKernelString(newKernelName, jit, entryPoint, AGE_BASED);
-        kernel.arguments = GetArgsDesc(1, true, !newParams.bias.empty());
+        FillCLKernelData(kernel, runInfo, newKernelName, jit, entryPoint, AGE_BASED, true, !newParams.bias.empty());
         kernel.arguments.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
 
         kd.estimatedTime = runInfo.effiency;
