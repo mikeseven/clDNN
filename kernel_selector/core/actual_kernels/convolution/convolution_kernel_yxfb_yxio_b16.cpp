@@ -56,31 +56,31 @@ namespace KernelSelector
             const uint32_t min_ofm_per_wi = 16;
             const uint32_t min_batches_per_wi = 1;
 
-            runInfo.ofmPerWorkItem = min_ofm_per_wi;
+            runInfo.igkStyle.ofmPerWorkItem = min_ofm_per_wi;
             if (batch_size % (4 * min_batches_per_wi * min_lws) == 0)
             {
-                runInfo.batchesPerWorkItem = 4 * min_batches_per_wi; // USE_BLOCK_READ_2 + as_half4
+                runInfo.igkStyle.batchesPerWorkItem = 4 * min_batches_per_wi; // USE_BLOCK_READ_2 + as_half4
             }
             else if (batch_size % (2 * min_batches_per_wi * min_lws) == 0)
             {
-                runInfo.batchesPerWorkItem = 2 * min_batches_per_wi; // USE_BLOCK_READ_1 + as_half2
+                runInfo.igkStyle.batchesPerWorkItem = 2 * min_batches_per_wi; // USE_BLOCK_READ_1 + as_half2
             }
             else
             {
-                runInfo.batchesPerWorkItem = min_batches_per_wi;
+                runInfo.igkStyle.batchesPerWorkItem = min_batches_per_wi;
             }
             
             runInfo.effiency = FORCE_PRIORITY_7;
         }
         else
         {
-            runInfo.ofmPerWorkItem = 8;
-            runInfo.batchesPerWorkItem = 2;
+            runInfo.igkStyle.ofmPerWorkItem = 8;
+            runInfo.igkStyle.batchesPerWorkItem = 2;
             runInfo.effiency = FORCE_PRIORITY_9;
         }
 
         runInfo.lws0 = min_lws;
-        runInfo.gws0 = filter_ofm_num * batch_size / (runInfo.ofmPerWorkItem * runInfo.batchesPerWorkItem);
+        runInfo.gws0 = filter_ofm_num * batch_size / (runInfo.igkStyle.ofmPerWorkItem * runInfo.igkStyle.batchesPerWorkItem);
         
         return runInfo;
     }

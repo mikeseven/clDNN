@@ -14,11 +14,11 @@
 // limitations under the License.
 */
 
-#include "include/cnn_common.cl"
+#include "include/include_all.cl"
 
 #if defined(cl_intel_subgroups_short)
 #define TILE_M          1
-#define TILE_K          KERNEL_WIDTH
+#define TILE_K          FILTER_SIZE_X
 #define TILE_N          32
 
 __attribute__((intel_reqd_sub_group_size(16)))
@@ -26,7 +26,7 @@ KERNEL(convolution_f16)(
     const __global half *src0,
     __global half *dst,
     const __global half *src1,
-#ifdef OUTPUT_BIASED
+#if BIAS_TERM
     const __global half *bias,
 #endif
     uint split_idx)
@@ -48,26 +48,26 @@ KERNEL(convolution_f16)(
     half16  blockC00 = 0.f;
     half16  blockC10 = 0.f;
 
-    const uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * INPUT_FEATURE_NUM;
+    const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * INPUT0_FEATURE_NUM;
     // Src0 (patch input) is directly used as atile.
     // Each work item points to the start of a different patch.
     // atile is M rows x K columns.
 #if defined(INPUT_BUFFER_WIDTH_PADDED) && defined(INPUT_BUFFER_HEIGHT_PADDED)
-    uint src0_read_offset = INPUT_OFFEST_FOR_PADDED_PART + in_split_offset
-     + INPUT_BATCH_PITCH * global_z                                   // batch offset
-     + ( ( global_y / OUTPUT_SIZE_X ) * STRIDE_Y * INPUT_Y_PITCH )      // y offset
-     + ( ( global_y % OUTPUT_SIZE_X ) * STRIDE_X );                 // x offset
+    uint src0_read_offset = INPUT0_OFFSET_WITH_PADDING + in_split_offset
+     + INPUT0_BATCH_PITCH * global_z                                                         // batch offset
+     + ( ( global_y / OUTPUT_SIZE_X ) * STRIDE_SIZE_Y * INPUT0_Y_PITCH )                     // y offset
+     + ( ( global_y % OUTPUT_SIZE_X ) * STRIDE_SIZE_X );                                     // x offset
 #elif !defined(INPUT_BUFFER_WIDTH_PADDED) && !defined(INPUT_BUFFER_HEIGHT_PADDED)
     #pragma error - fix this path
-    const int y_offset = ( global_y / OUTPUT_SIZE_X ) * STRIDE_Y - INPUT_PADDING_Y;
-    const int x_offset = ( global_y % OUTPUT_SIZE_X ) * STRIDE_X - INPUT_PADDING_X;
-    uint src0_read_offset = INPUT_OFFSET + in_split_offset + INPUT_BATCH_PITCH * global_z
-                            + y_offset * INPUT_Y_PITCH;
+    const int y_offset = ( global_y / OUTPUT_SIZE_X ) * STRIDE_SIZE_Y - PADDING_SIZE_Y;
+    const int x_offset = ( global_y % OUTPUT_SIZE_X ) * STRIDE_SIZE_X - PADDING_SIZE_X;
+    uint src0_read_offset = INPUT_OFFSET + in_split_offset + INPUT0_BATCH_PITCH * global_z
+                            + y_offset * INPUT0_Y_PITCH;
 
     int partial_left = 0, partial_right = 0;
     if (x_offset < 0)
     {
-        partial_left = min((int) KERNEL_WIDTH, (int) abs(x_offset));
+        partial_left = min((int) FILTER_SIZE_X, (int) abs(x_offset));
         src0_read_offset -= partial_left;
     }
     else
@@ -75,18 +75,18 @@ KERNEL(convolution_f16)(
         partial_left = 0;
         src0_read_offset +=  x_offset;
     }
-    if ((x_offset + KERNEL_WIDTH) >= INPUT_SIZE_X)
-        partial_right = min(KERNEL_WIDTH, INPUT_SIZE_X - x_offset);
+    if ((x_offset + FILTER_SIZE_X) >= INPUT_SIZE_X)
+        partial_right = min(FILTER_SIZE_X, INPUT_SIZE_X - x_offset);
     else
-        partial_right = KERNEL_WIDTH;
+        partial_right = FILTER_SIZE_X;
 
 #elif defined(INPUT_BUFFER_WIDTH_PADDED)
     #pragma error - fix this path
     // TODO: Handle offset
-    const int y_offset = ( global_y / OUTPUT_SIZE_X ) * STRIDE_Y -INPUT_PADDING_Y;
-    int src0_read_offset = in_split_offset + INPUT_BATCH_PITCH * global_z        // batch offset
-     + y_offset * INPUT_Y_PITCH                              // y offset
-     + ( ( global_y % OUTPUT_SIZE_X ) * STRIDE_X );                // x offset
+    const int y_offset = ( global_y / OUTPUT_SIZE_X ) * STRIDE_SIZE_Y -PADDING_SIZE_Y;
+    int src0_read_offset = in_split_offset + INPUT0_BATCH_PITCH * global_z        // batch offset
+     + y_offset * INPUT0_Y_PITCH                              // y offset
+     + ( ( global_y % OUTPUT_SIZE_X ) * STRIDE_SIZE_X );                // x offset
 #endif
 
     const __global half *src0_read = src0 + src0_read_offset;
@@ -115,10 +115,10 @@ KERNEL(convolution_f16)(
         _result.se = mad( _rowA, sub_group_broadcast( colB, 14 ), _result.se );  \
         _result.sf = mad( _rowA, sub_group_broadcast( colB, 15 ), _result.sf );  \
     }
-    typedef CAT( half, KERNEL_WIDTH ) half_t;
+    typedef CAT( half, FILTER_SIZE_X ) half_t;
     // Walk DOWN src0 (patch 0, 1, 2, ...) and DOWN src1.
-    // Inner loop loads and FMADs one row (KERNEL_WIDTH) of each input patch
-    // and KERNEL_WIDTH/2 rows of interleaved filter.
+    // Inner loop loads and FMADs one row (FILTER_SIZE_X) of each input patch
+    // and FILTER_SIZE_X/2 rows of interleaved filter.
     unsigned patch_depth = 0;
     __attribute__((opencl_unroll_hint(1)))
     do
@@ -129,22 +129,22 @@ KERNEL(convolution_f16)(
         {
             // Load atile and btile.
             // Kernel data is partially interleaved.  Every 2 rows are interleaved at half16 granularity.
-            // The exception is that if KERNEL_WIDTH is odd the last row is not interleaved.  The non
+            // The exception is that if FILTER_SIZE_X is odd the last row is not interleaved.  The non
             // interleaved row is padded with zero to ensure same size as interleaved rows. This
             // interleaving is done to ensure 0% GDR bank conflicts.  For example, this is how the
-            // kernel data would be arranged before/after interleaving for KERNEL_WIDTH=3.
+            // kernel data would be arranged before/after interleaving for FILTER_SIZE_X=3.
             // (0, 0) (16, 0) (32, 0) (48, 0) ...     (0, 0) ( 0, 1) (16, 0) ( 0, 1) (32, 0) (0, 1) (48, 0) ...
             // (0, 1) (16, 1) (32, 1) (48, 1) ... =>  (0, 2) (16, 2) (32, 2) (48, 2) ...
             // (0, 2) (16, 2) (32, 2) (48, 2) ...     ...
             // ...
-            const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
+            const bool kernel_width_is_odd = FILTER_SIZE_X % 2 == 1;
             #if defined(INPUT_BUFFER_WIDTH_PADDED) && defined(INPUT_BUFFER_HEIGHT_PADDED)
             
-            // in case the data is not aligned to sizeof(T)*KERNEL_WIDTH we need to use vload or set the data in a loop
-            half blockA00[KERNEL_WIDTH];
+            // in case the data is not aligned to sizeof(T)*FILTER_SIZE_X we need to use vload or set the data in a loop
+            half blockA00[FILTER_SIZE_X];
             {
                 unsigned i = 0;
-                LOOP(KERNEL_WIDTH, i, 
+                LOOP(FILTER_SIZE_X, i, 
                 {
                     blockA00[i] = src0_read[i];
                 } )
@@ -157,7 +157,7 @@ KERNEL(convolution_f16)(
             #pragma error
             half_t blockA00;
             half*  pblockA00 = (half*)(&blockA00);
-            #if (INPUT_PADDING_X == 1) && (INPPUT_PADDING_Y == 1) && (KERNEL_WIDTH == 3) && (KERNEL_HEIGHT == 3)
+            #if (PADDING_SIZE_X == 1) && (INPPUT_PADDING_Y == 1) && (FILTER_SIZE_X == 3) && (FILTER_SIZE_Y == 3)
             if ((y_offset +  patch_row < 0) || ((y_offset + patch_row) >= INPUT_SIZE_Y))
             {
                 blockA00 = half_zeros;
@@ -166,7 +166,7 @@ KERNEL(convolution_f16)(
             {
                  blockA00 = ( (const __global half_t*)(src0_read - partial_left) )[0];
                  if (partial_left) pblockA00[0] = 0;
-                 if (partial_right != KERNEL_WIDTH) pblockA00[KERNEL_WIDTH - 1] = 0;
+                 if (partial_right != FILTER_SIZE_X) pblockA00[FILTER_SIZE_X - 1] = 0;
             }
             #else
             if ((y_offset +  patch_row < 0) || ((y_offset + patch_row) >= INPUT_SIZE_Y))
@@ -177,7 +177,7 @@ KERNEL(convolution_f16)(
             {
                  blockA00 = ( (const __global half_t*)(src0_read - partial_left) )[0];
                  for (unsigned i = 0; i < partial_left; ++i) pblockA00[i] = 0;
-                 for (unsigned i = partial_right; i < KERNEL_WIDTH; ++i) pblockA00[i] = 0;
+                 for (unsigned i = partial_right; i < FILTER_SIZE_X; ++i) pblockA00[i] = 0;
 
             }
             #endif
@@ -193,29 +193,29 @@ KERNEL(convolution_f16)(
                 blockA00 = ( (const __global half_t*)(src0_read) )[0];
             }
             #endif
-            src0_read += INPUT_Y_PITCH;
+            src0_read += INPUT0_Y_PITCH;
 
-            ushort blockB00[KERNEL_WIDTH * 2];
+            ushort blockB00[FILTER_SIZE_X * 2];
             ushort4* p4BlockB00 = (ushort4*)blockB00;
             ushort2* p2BlockB00 = (ushort2*)blockB00;
             half* pBlockB00  = (half*)blockB00;
 
             interleaved_y = 0;
-            LOOP(KERNEL_WIDTH_DIV2, interleaved_y,
+            LOOP(FILTER_SIZE_X_DIV2, interleaved_y,
             {
                 p4BlockB00[interleaved_y] = intel_sub_group_block_read_us4( (const __global ushort*)src1_read );
                 src1_read += ALIGNED_OFM * 2;
             } )
             if ( kernel_width_is_odd )
             {
-                p2BlockB00[KERNEL_WIDTH - 1] = intel_sub_group_block_read_us2( (const __global ushort*)src1_read );
+                p2BlockB00[FILTER_SIZE_X - 1] = intel_sub_group_block_read_us2( (const __global ushort*)src1_read );
                 src1_read += ALIGNED_OFM * 2;
             }
 
             // Perform MADs
             kernel_idx = 0;
             interleaved_y = 0;
-            LOOP(KERNEL_WIDTH_DIV2, interleaved_y,
+            LOOP(FILTER_SIZE_X_DIV2, interleaved_y,
             {
                 kernel_y = interleaved_y * 2;
                 DOT_PRODUCT_16( blockC00, pblockA00[kernel_y    ], pBlockB00[kernel_idx] ); kernel_idx++;
@@ -230,11 +230,11 @@ KERNEL(convolution_f16)(
                 DOT_PRODUCT_16( blockC10, pblockA00[kernel_y], pBlockB00[kernel_idx] ); kernel_idx++;
             }
         }
-        while( ++patch_row < KERNEL_HEIGHT );
+        while( ++patch_row < FILTER_SIZE_Y );
 
-        src0_read += INPUT_FEATURE_PITCH - ( KERNEL_HEIGHT * INPUT_Y_PITCH ); // reset to start of next slice of patch
+        src0_read += INPUT0_FEATURE_PITCH - ( FILTER_SIZE_Y * INPUT0_Y_PITCH ); // reset to start of next slice of patch
     }
-    while ( ++patch_depth < INPUT_FEATURE_NUM );
+    while ( ++patch_depth < INPUT0_FEATURE_NUM );
 
     #undef DOT_PRODUCT_16
 
@@ -243,26 +243,26 @@ KERNEL(convolution_f16)(
     // (SIMD * TILE_M) x 1 x TILE_N.  Partial writes most likely generated if padding used.
     __global half *out = dst + OUTPUT_OFFSET + out_split_offset
      + global_z * OUTPUT_BATCH_PITCH                                                   // batch offset
-     + ( group_x * TILE_N ) * OUTPUT_FEATURE_PITCH                                       // channel offset
-     + ( ( global_y * TILE_M ) / OUTPUT_SIZE_X ) * OUTPUT_Y_PITCH  // y offset
-     + ( ( global_y * TILE_M ) % OUTPUT_SIZE_X );               // x offset
+     + ( group_x * TILE_N ) * OUTPUT_FEATURE_PITCH                                     // channel offset
+     + ( ( global_y * TILE_M ) / OUTPUT_SIZE_X ) * OUTPUT_Y_PITCH                      // y offset
+     + ( ( global_y * TILE_M ) % OUTPUT_SIZE_X );                                      // x offset
 
 
     if (global_y * TILE_M < OUTPUT_SIZE_X * OUTPUT_SIZE_Y )
     {
-         #ifdef OUTPUT_BIASED
+         #if BIAS_TERM
          __global half16* biasPtr = (__global half16*) (bias + group_x * TILE_N);
          #endif
 
 #if ( ( OUTPUT_FEATURE_NUM % TILE_N ) == 0 )
 
-        #ifdef OUTPUT_BIASED
+        #if BIAS_TERM
         blockC00 += *biasPtr;
         blockC10 += *(biasPtr + 1);
         #endif
 
-        blockC00 = FUNC_CALL(activation_function_half16)(blockC00, NL_M, NL_N);
-        blockC10 = FUNC_CALL(activation_function_half16)(blockC10, NL_M, NL_N);
+        blockC00 = ACTIVATION(blockC00, NL_M, NL_N);
+        blockC10 = ACTIVATION(blockC10, NL_M, NL_N);
 
         for (unsigned i = 0; i < 16; i++)
         {
@@ -273,13 +273,13 @@ KERNEL(convolution_f16)(
 #elif ( ( OUTPUT_FEATURE_NUM % 16 ) == 0 )
         if ( ( global_x + 1 ) < get_global_size(0) )
         {
-            #ifdef OUTPUT_BIASED
+            #if BIAS_TERM
             blockC00 += *biasPtr;
             blockC10 += *(biasPtr + 1);
             #endif
 
-            blockC00 = FUNC_CALL(activation_function_half16)(blockC00, NL_M, NL_N);
-            blockC10 = FUNC_CALL(activation_function_half16)(blockC10, NL_M, NL_N);
+            blockC00 = ACTIVATION(blockC00, NL_M, NL_N);
+            blockC10 = ACTIVATION(blockC10, NL_M, NL_N);
 
             for ( unsigned i = 0; i < 16; i++ )
             {
@@ -289,11 +289,11 @@ KERNEL(convolution_f16)(
         }
         else
         {
-            #ifdef OUTPUT_BIASED
+            #if BIAS_TERM
             blockC00 += *biasPtr;
             #endif
 
-            blockC00 = FUNC_CALL(activation_function_half16)(blockC00, NL_M, NL_N);
+            blockC00 = ACTIVATION(blockC00, NL_M, NL_N);
 
             for (unsigned i = 0; i < 16; i++)
             {
@@ -303,13 +303,13 @@ KERNEL(convolution_f16)(
 #else
         if ( ( global_x + 1 ) < get_global_size(0) )
         {
-            #ifdef OUTPUT_BIASED
+            #if BIAS_TERM
             blockC00 += *biasPtr;
             blockC10 += *(biasPtr + 1);
             #endif
 
-            blockC00 = FUNC_CALL(activation_function_half16)(blockC00, NL_M, NL_N);
-            blockC10 = FUNC_CALL(activation_function_half16)(blockC10, NL_M, NL_N);
+            blockC00 = ACTIVATION(blockC00, NL_M, NL_N);
+            blockC10 = ACTIVATION(blockC10, NL_M, NL_N);
 
             for ( unsigned i = 0; i < 16; i++ )
             {
@@ -321,13 +321,13 @@ KERNEL(convolution_f16)(
         {
 #if ( (OUTPUT_FEATURE_NUM % TILE_N) > 16 )
 
-            #ifdef OUTPUT_BIASED
+            #if BIAS_TERM
             blockC00 += *biasPtr;
             blockC10 += *(biasPtr + 1);
             #endif
 
-            blockC00 = FUNC_CALL(activation_function_half16)(blockC00, NL_M, NL_N);
-            blockC10 = FUNC_CALL(activation_function_half16)(blockC10, NL_M, NL_N);
+            blockC00 = ACTIVATION(blockC00, NL_M, NL_N);
+            blockC10 = ACTIVATION(blockC10, NL_M, NL_N);
 
             for (unsigned i = 0; i < 16 ; i++)
             {
@@ -338,11 +338,11 @@ KERNEL(convolution_f16)(
                 out[(16+i) * OUTPUT_FEATURE_PITCH] = blockC10[i];
             }
 #else
-            #ifdef OUTPUT_BIASED
+            #if BIAS_TERM
             blockC00 += *biasPtr;
             #endif
 
-            blockC00 = FUNC_CALL(activation_function_half16)(blockC00, NL_M, NL_N);
+            blockC00 = ACTIVATION(blockC00, NL_M, NL_N);
 
             for (unsigned i = 0; i < OUTPUT_FEATURE_NUM % 16 ; i++)
             {

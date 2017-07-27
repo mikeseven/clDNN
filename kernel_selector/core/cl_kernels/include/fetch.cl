@@ -89,7 +89,7 @@ inline uint FUNC(get_i_yxs_os_yxsv2_osv_index)(uint o, uint i, uint y, uint x, u
 
 #define GET_FILTER_I_YXS_OS_YXSV2_OSV_INDEX(prefix, o, i, y, x, sub_group_size) \
     FUNC_CALL(get_i_yxs_os_yxsv2_osv_index)(                                    \
-        o, i, y, x, CAT(prefix, _SIZE_X )),                                     \
+        o, i, y, x, CAT(prefix, _SIZE_X ),                                      \
         CAT(prefix, _IFM_PITCH),                                                \
         CAT(prefix, _Y_PITCH),                                                  \
         CAT(prefix, _X_PITCH),                                                  \
@@ -130,7 +130,7 @@ inline uint FUNC(get_iy_xs_os_xsv2_osv_index)(uint o, uint i, uint y, uint x, ui
 
 #define GET_FILTER_IY_XS_OS_XSV2_OSV_INDEX(prefix, o, i, y, x, sub_group_size)  \
     FUNC_CALL(get_iy_xs_os_xsv2_osv_index)(                                     \
-        o, i, y, x, CAT(prefix, _SIZE_X )),                                     \
+        o, i, y, x, CAT(prefix, _SIZE_X ),                                      \
         CAT(prefix, _IFM_PITCH),                                                \
         CAT(prefix, _Y_PITCH),                                                  \
         CAT(prefix, _X_PITCH),                                                  \

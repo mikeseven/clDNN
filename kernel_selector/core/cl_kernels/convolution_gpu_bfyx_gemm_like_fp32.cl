@@ -14,10 +14,10 @@
 // limitations under the License.
 */
 
-#include "include/cnn_common.cl"
+#include "include/include_all.cl"
 
 #define TILE_M          2
-#define TILE_K          KERNEL_WIDTH
+#define TILE_K          FILTER_SIZE_X
 #define TILE_N          32
 
 __attribute__((intel_reqd_sub_group_size(8)))
@@ -25,7 +25,7 @@ KERNEL(convolution_f32)(
     const __global float *src0,
     __global float *dst,
     const __global float *src1,
-#ifdef OUTPUT_BIASED
+#if BIAS_TERM
     const __global float *bias,
 #endif
     uint split_idx)
@@ -53,18 +53,18 @@ KERNEL(convolution_f32)(
     float8  blockC21 = 0.f;
     float8  blockC31 = 0.f;
 
-    const uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * INPUT_FEATURE_NUM;
+    const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * INPUT0_FEATURE_NUM;
     // Src0 (patch input) is directly used as atile.
     // Each work item points to the start of a different patch.
     // atile is M rows x K columns.
-    int src0_read_offset0 = INPUT_OFFEST_FOR_PADDED_PART + in_split_offset
-     + INPUT_BATCH_PITCH * global_z                                                 // batch offset
-     + ( ( ( global_y * TILE_M + 0 ) / OUTPUT_SIZE_X ) * STRIDE_Y * INPUT_Y_PITCH )   // y offset
-     + ( ( ( global_y * TILE_M + 0 ) % OUTPUT_SIZE_X ) * STRIDE_X );                    // x offset
-    int src0_read_offset1 = INPUT_OFFEST_FOR_PADDED_PART + in_split_offset
-     + INPUT_BATCH_PITCH * global_z                                                 // batch offset
-     + ( ( ( global_y * TILE_M + 1 ) / OUTPUT_SIZE_X ) * STRIDE_Y * INPUT_Y_PITCH )   // y offset
-     + ( ( ( global_y * TILE_M + 1 ) % OUTPUT_SIZE_X ) * STRIDE_X );                    // x offset
+    int src0_read_offset0 = INPUT0_OFFSET_WITH_PADDING + in_split_offset
+     + INPUT0_BATCH_PITCH * global_z                                                         // batch offset
+     + ( ( ( global_y * TILE_M + 0 ) / OUTPUT_SIZE_X ) * STRIDE_SIZE_Y * INPUT0_Y_PITCH )    // y offset
+     + ( ( ( global_y * TILE_M + 0 ) % OUTPUT_SIZE_X ) * STRIDE_SIZE_X );                    // x offset
+    int src0_read_offset1 = INPUT0_OFFSET_WITH_PADDING + in_split_offset
+     + INPUT0_BATCH_PITCH * global_z                                                 // batch offset
+     + ( ( ( global_y * TILE_M + 1 ) / OUTPUT_SIZE_X ) * STRIDE_SIZE_Y * INPUT0_Y_PITCH )    // y offset
+     + ( ( ( global_y * TILE_M + 1 ) % OUTPUT_SIZE_X ) * STRIDE_SIZE_X );                    // x offset
 
     // Src1 (filter) is directly used as btile.
     // It starts at the top of src1 and walks down.
@@ -82,11 +82,11 @@ KERNEL(convolution_f32)(
         _result.s6 = mad( _rowA, sub_group_broadcast( colB,  6 ), _result.s6 );  \
         _result.s7 = mad( _rowA, sub_group_broadcast( colB,  7 ), _result.s7 );  \
     }
-    typedef CAT( float, KERNEL_WIDTH ) float_t;
+    typedef CAT( float, FILTER_SIZE_X ) float_t;
 
     // Walk DOWN src0 (patch 0, 1, 2, ...) and DOWN src1.
-    // Inner loop loads and FMADs one row (KERNEL_WIDTH) of each input patch
-    // and KERNEL_WIDTH/2 rows of interleaved filter.
+    // Inner loop loads and FMADs one row (FILTER_SIZE_X) of each input patch
+    // and FILTER_SIZE_X/2 rows of interleaved filter.
     unsigned patch_depth = 0;
     do
     {
@@ -95,26 +95,26 @@ KERNEL(convolution_f32)(
         {
             // Load atile and btile.
             // Kernel data is partially interleaved.  Every 2 rows are interleaved at float8 granularity.
-            // The exception is that if KERNEL_WIDTH is odd the last row is not interleaved.  The non
+            // The exception is that if FILTER_SIZE_X is odd the last row is not interleaved.  The non
             // interleaved row is padded with zero to ensure same size as interleaved rows. This
             // interleaving is done to ensure 0% GDR bank conflicts.  For example, this is how the
-            // kernel data would be arranged before/after interleaving for KERNEL_WIDTH=3.
+            // kernel data would be arranged before/after interleaving for FILTER_SIZE_X=3.
             // (0, 0) (8, 0) (16, 0) (24, 0) ...       (0, 0) (0, 1) (8, 0) (0, 1) (16, 0) (0, 1) (24, 0) ..
             // (0, 1) (8, 1) (16, 1) (24, 1) ... =>    (0, 2) (8, 2) (16, 2) (24, 2) ...
             // (0, 2) (8, 2) (16, 2) (24, 2) ...       ...
             // ...
-            const bool kernel_width_is_odd = KERNEL_WIDTH % 2 == 1;
+            const bool kernel_width_is_odd = FILTER_SIZE_X % 2 == 1;
 
             const __global float *src0_read0 = src0 + src0_read_offset0;
             const __global float *src0_read1 = src0 + src0_read_offset1;
             
-            float blockA00[KERNEL_WIDTH];
-            float blockA01[KERNEL_WIDTH];
+            float blockA00[FILTER_SIZE_X];
+            float blockA01[FILTER_SIZE_X];
             
-            // in case the data is not aligned to sizeof(T)*KERNEL_WIDTH we need to use vload or set the data in a loop
+            // in case the data is not aligned to sizeof(T)*FILTER_SIZE_X we need to use vload or set the data in a loop
             {
                 unsigned i = 0;
-                LOOP(KERNEL_WIDTH, i, 
+                LOOP(FILTER_SIZE_X, i, 
                 {
                     blockA00[i] = src0_read0[i];
                     blockA01[i] = src0_read1[i];
@@ -124,31 +124,31 @@ KERNEL(convolution_f32)(
             float*  pblockA00 = (float*)(&blockA00);
             float*  pblockA01 = (float*)(&blockA01);
 
-            src0_read_offset0 += INPUT_Y_PITCH;
-            src0_read_offset1 += INPUT_Y_PITCH;
+            src0_read_offset0 += INPUT0_Y_PITCH;
+            src0_read_offset1 += INPUT0_Y_PITCH;
 
 
-            float blockB00[KERNEL_WIDTH*4];
+            float blockB00[FILTER_SIZE_X*4];
             float8* p8BlockB00 = (float8*)blockB00;
             float4* p4BlockB00 = (float4*)blockB00;
             float*  pBlockB00 =  (float* )blockB00;
 
             interleaved_y = 0;
-            LOOP(KERNEL_WIDTH_DIV2, interleaved_y,
+            LOOP(FILTER_SIZE_X_DIV2, interleaved_y,
             {
                 p8BlockB00[interleaved_y] = as_float8( intel_sub_group_block_read8( (const __global uint*)src1_read ) );
                 src1_read += ALIGNED_OFM * 2;
             } )
             if ( kernel_width_is_odd )
             {
-                p4BlockB00[KERNEL_WIDTH - 1] = as_float4( intel_sub_group_block_read4( (const __global uint*)src1_read ) );
+                p4BlockB00[FILTER_SIZE_X - 1] = as_float4( intel_sub_group_block_read4( (const __global uint*)src1_read ) );
                 src1_read += ALIGNED_OFM * 2;
             }
 
             // Perform MADs
             kernel_idx = 0;
             interleaved_y = 0;
-            LOOP(KERNEL_WIDTH_DIV2, interleaved_y,
+            LOOP(FILTER_SIZE_X_DIV2, interleaved_y,
             {
                 kernel_y = interleaved_y * 2;
                 DOT_PRODUCT_8( blockC00, pblockA00[kernel_y    ], pBlockB00[kernel_idx] );
@@ -183,29 +183,29 @@ KERNEL(convolution_f32)(
         }
 
         //while( ++patch_row < 1 ); //debug
-        while( ++patch_row < KERNEL_HEIGHT );
+        while( ++patch_row < FILTER_SIZE_Y );
 
-        src0_read_offset0 += INPUT_FEATURE_PITCH - ( KERNEL_HEIGHT * INPUT_Y_PITCH ); // reset to start of next slice of patch
-        src0_read_offset1 += INPUT_FEATURE_PITCH - ( KERNEL_HEIGHT * INPUT_Y_PITCH ); // reset to start of next slice of patch
+        src0_read_offset0 += INPUT0_FEATURE_PITCH - ( FILTER_SIZE_Y * INPUT0_Y_PITCH ); // reset to start of next slice of patch
+        src0_read_offset1 += INPUT0_FEATURE_PITCH - ( FILTER_SIZE_Y * INPUT0_Y_PITCH ); // reset to start of next slice of patch
     }
     //while ( ++patch_depth < 1 );  //debug
-    while ( ++patch_depth < INPUT_FEATURE_NUM );
+    while ( ++patch_depth < INPUT0_FEATURE_NUM );
 
     const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * OUTPUT_FEATURE_NUM;
     // Dst resembles a cube of width x height x (output channel * batches).  Each tile writes:
     // (SIMD * TILE_M) x 1 x TILE_N.  Partial writes most likely generated if padding used.
     __global float *out0 = dst + OUTPUT_OFFSET + out_split_offset
-     + global_z * OUTPUT_BATCH_PITCH                                                       // batch offset
-     + ( group_x * TILE_N ) * OUTPUT_FEATURE_PITCH                                           // channel offset
-     + ( ( global_y * TILE_M + 0 ) / OUTPUT_SIZE_X ) * OUTPUT_Y_PITCH // y offset
-     + ( ( global_y * TILE_M + 0 ) % OUTPUT_SIZE_X );               // x offset
+     + global_z * OUTPUT_BATCH_PITCH                                                   // batch offset
+     + ( group_x * TILE_N ) * OUTPUT_FEATURE_PITCH                                     // channel offset
+     + ( ( global_y * TILE_M ) / OUTPUT_SIZE_X ) * OUTPUT_Y_PITCH                      // y offset
+     + ( ( global_y * TILE_M ) % OUTPUT_SIZE_X );                                      // x offset
     __global float *out1 = dst + OUTPUT_OFFSET + out_split_offset
-     + global_z * OUTPUT_BATCH_PITCH                                                       // batch offset
-     + ( group_x * TILE_N ) * OUTPUT_FEATURE_PITCH                                           // channel offset
-     + ( ( global_y * TILE_M + 1 ) / OUTPUT_SIZE_X ) * OUTPUT_Y_PITCH // y offset
-     + ( ( global_y * TILE_M + 1 ) % OUTPUT_SIZE_X );               // x offset
+     + global_z * OUTPUT_BATCH_PITCH                                                   // batch offset
+     + ( group_x * TILE_N ) * OUTPUT_FEATURE_PITCH                                     // channel offset
+     + ( ( global_y * TILE_M + 1 ) / OUTPUT_SIZE_X ) * OUTPUT_Y_PITCH                  // y offset
+     + ( ( global_y * TILE_M + 1 ) % OUTPUT_SIZE_X );                                  // x offset
 
-    #ifdef OUTPUT_BIASED
+    #if BIAS_TERM
     __global float8* biasPtr = (__global float8*) (bias + group_x * TILE_N);
     #endif
     
@@ -213,17 +213,17 @@ KERNEL(convolution_f32)(
     {
         if ( ( OUTPUT_FEATURE_NUM % TILE_N ) == 0 )
         {
-            #ifdef OUTPUT_BIASED
+            #if BIAS_TERM
             blockC00 += *biasPtr;
             blockC10 += *(biasPtr + 1);
             blockC20 += *(biasPtr + 2);
             blockC30 += *(biasPtr + 3);
             #endif
 
-            blockC00 = FUNC_CALL(activation_function_float8)(blockC00, NL_M, NL_N);
-            blockC10 = FUNC_CALL(activation_function_float8)(blockC10, NL_M, NL_N);
-            blockC20 = FUNC_CALL(activation_function_float8)(blockC20, NL_M, NL_N);
-            blockC30 = FUNC_CALL(activation_function_float8)(blockC30, NL_M, NL_N);
+            blockC00 = ACTIVATION(blockC00, NL_M, NL_N);
+            blockC10 = ACTIVATION(blockC10, NL_M, NL_N);
+            blockC20 = ACTIVATION(blockC20, NL_M, NL_N);
+            blockC30 = ACTIVATION(blockC30, NL_M, NL_N);
 
             for( unsigned i = 0; i < 8; i++ )
             {
@@ -237,17 +237,17 @@ KERNEL(convolution_f32)(
         {
             if ( ( global_x + 1 ) < get_global_size(0) )
             {
-                #ifdef OUTPUT_BIASED
+                #if BIAS_TERM
                 blockC00 += *biasPtr;
                 blockC10 += *(biasPtr + 1);
                 blockC20 += *(biasPtr + 2);
                 blockC30 += *(biasPtr + 3);
                 #endif
 
-                blockC00 = FUNC_CALL(activation_function_float8)(blockC00, NL_M, NL_N);
-                blockC10 = FUNC_CALL(activation_function_float8)(blockC10, NL_M, NL_N);
-                blockC20 = FUNC_CALL(activation_function_float8)(blockC20, NL_M, NL_N);
-                blockC30 = FUNC_CALL(activation_function_float8)(blockC30, NL_M, NL_N);
+                blockC00 = ACTIVATION(blockC00, NL_M, NL_N);
+                blockC10 = ACTIVATION(blockC10, NL_M, NL_N);
+                blockC20 = ACTIVATION(blockC20, NL_M, NL_N);
+                blockC30 = ACTIVATION(blockC30, NL_M, NL_N);
 
                 for ( unsigned i = 0; i < 8; i++ )
                 {
@@ -261,16 +261,16 @@ KERNEL(convolution_f32)(
             {
                 if ( ( OUTPUT_FEATURE_NUM % TILE_N ) >= 24 )
                 {
-                    #ifdef OUTPUT_BIASED
+                    #if BIAS_TERM
                     blockC00 += *biasPtr;
                     blockC10 += *(biasPtr + 1);
                     blockC20 += *(biasPtr + 2);
                     if (( OUTPUT_FEATURE_NUM % TILE_N) > 24 ) blockC30 += *(biasPtr + 3);
                     #endif
 
-                    blockC00 = FUNC_CALL(activation_function_float8)(blockC00, NL_M, NL_N);
-                    blockC10 = FUNC_CALL(activation_function_float8)(blockC10, NL_M, NL_N);
-                    blockC20 = FUNC_CALL(activation_function_float8)(blockC20, NL_M, NL_N);
+                    blockC00 = ACTIVATION(blockC00, NL_M, NL_N);
+                    blockC10 = ACTIVATION(blockC10, NL_M, NL_N);
+                    blockC20 = ACTIVATION(blockC20, NL_M, NL_N);
 
                     for (unsigned i = 0; i < 8; i++)
                     {
@@ -282,20 +282,20 @@ KERNEL(convolution_f32)(
                     // remaining output channels
                     for (unsigned i = 0; i < OUTPUT_FEATURE_NUM % 8; i++)
                     {
-                        out0[(24+i) * OUTPUT_FEATURE_PITCH] = FUNC_CALL(activation_function)(blockC30[i], NL_M, NL_N);
+                        out0[(24+i) * OUTPUT_FEATURE_PITCH] = ACTIVATION(blockC30[i], NL_M, NL_N);
                     }
                 }
                 else if ( ( OUTPUT_FEATURE_NUM % TILE_N ) >= 16 )
                 {
-                    #ifdef OUTPUT_BIASED
+                    #if BIAS_TERM
                     blockC00 += *biasPtr;
                     blockC10 += *(biasPtr + 1);
                     if (( OUTPUT_FEATURE_NUM % TILE_N) > 16 )
                         blockC20 += *(biasPtr + 2);
                     #endif
 
-                    blockC00 = FUNC_CALL(activation_function_float8)(blockC00, NL_M, NL_N);
-                    blockC10 = FUNC_CALL(activation_function_float8)(blockC10, NL_M, NL_N);
+                    blockC00 = ACTIVATION(blockC00, NL_M, NL_N);
+                    blockC10 = ACTIVATION(blockC10, NL_M, NL_N);
 
                     for (unsigned i = 0; i < 8; i++)
                     {
@@ -305,19 +305,19 @@ KERNEL(convolution_f32)(
 
                     for (unsigned i = 0; i < OUTPUT_FEATURE_NUM % 8; i++)
                     {
-                        out0[(16+i) * OUTPUT_FEATURE_PITCH] = FUNC_CALL(activation_function)(blockC20[i], NL_M, NL_N);
+                        out0[(16+i) * OUTPUT_FEATURE_PITCH] = ACTIVATION(blockC20[i], NL_M, NL_N);
 
                     }
                 }
                 else if ( ( OUTPUT_FEATURE_NUM % TILE_N ) >= 8 )
                 {
-                    #ifdef OUTPUT_BIASED
+                    #if BIAS_TERM
                     blockC00 += *biasPtr;
                     if (( OUTPUT_FEATURE_NUM % TILE_N) > 8 )
                         blockC10 += *(biasPtr + 1);
                     #endif
 
-                    blockC00 = FUNC_CALL(activation_function_float8)(blockC00, NL_M, NL_N);
+                    blockC00 = ACTIVATION(blockC00, NL_M, NL_N);
 
                     for (unsigned i = 0; i < 8; i++)
                     {
@@ -326,17 +326,17 @@ KERNEL(convolution_f32)(
 
                     for (unsigned i = 0; i < OUTPUT_FEATURE_NUM % 8; i++)
                     {
-                        out0[(8+i) * OUTPUT_FEATURE_PITCH] = FUNC_CALL(activation_function)(blockC10[i], NL_M, NL_N);
+                        out0[(8+i) * OUTPUT_FEATURE_PITCH] = ACTIVATION(blockC10[i], NL_M, NL_N);
                     }
                 }
                 else
                 {
-                    #ifdef OUTPUT_BIASED
+                    #if BIAS_TERM
                     blockC00 += *biasPtr;
                     #endif
                     for (unsigned i = 0; i < OUTPUT_FEATURE_NUM % 8; i++)
                     {
-                        out0[( 0+i) * OUTPUT_FEATURE_PITCH] = FUNC_CALL(activation_function)(blockC00[i], NL_M, NL_N);
+                        out0[( 0+i) * OUTPUT_FEATURE_PITCH] = ACTIVATION(blockC00[i], NL_M, NL_N);
                     }
                 }
             }
@@ -347,17 +347,17 @@ KERNEL(convolution_f32)(
     {
         if ( ( OUTPUT_FEATURE_NUM % TILE_N ) == 0 )
         {
-            #ifdef OUTPUT_BIASED
+            #if BIAS_TERM
             blockC01 += *biasPtr;
             blockC11 += *(biasPtr + 1);
             blockC21 += *(biasPtr + 2);
             blockC31 += *(biasPtr + 3);
             #endif
 
-            blockC01 = FUNC_CALL(activation_function_float8)(blockC01, NL_M, NL_N);
-            blockC11 = FUNC_CALL(activation_function_float8)(blockC11, NL_M, NL_N);
-            blockC21 = FUNC_CALL(activation_function_float8)(blockC21, NL_M, NL_N);
-            blockC31 = FUNC_CALL(activation_function_float8)(blockC31, NL_M, NL_N);
+            blockC01 = ACTIVATION(blockC01, NL_M, NL_N);
+            blockC11 = ACTIVATION(blockC11, NL_M, NL_N);
+            blockC21 = ACTIVATION(blockC21, NL_M, NL_N);
+            blockC31 = ACTIVATION(blockC31, NL_M, NL_N);
 
             for( unsigned i = 0; i < 8; i++ )
             {
@@ -371,17 +371,17 @@ KERNEL(convolution_f32)(
         {
             if ( ( global_x + 1 ) < get_global_size(0) )
             {
-                #ifdef OUTPUT_BIASED
+                #if BIAS_TERM
                 blockC01 += *biasPtr;
                 blockC11 += *(biasPtr + 1);
                 blockC21 += *(biasPtr + 2);
                 blockC31 += *(biasPtr + 3);
                 #endif
 
-                blockC01 = FUNC_CALL(activation_function_float8)(blockC01, NL_M, NL_N);
-                blockC11 = FUNC_CALL(activation_function_float8)(blockC11, NL_M, NL_N);
-                blockC21 = FUNC_CALL(activation_function_float8)(blockC21, NL_M, NL_N);
-                blockC31 = FUNC_CALL(activation_function_float8)(blockC31, NL_M, NL_N);
+                blockC01 = ACTIVATION(blockC01, NL_M, NL_N);
+                blockC11 = ACTIVATION(blockC11, NL_M, NL_N);
+                blockC21 = ACTIVATION(blockC21, NL_M, NL_N);
+                blockC31 = ACTIVATION(blockC31, NL_M, NL_N);
 
                 for ( unsigned i = 0; i < 8; i++ )
                 {
@@ -395,16 +395,16 @@ KERNEL(convolution_f32)(
             {
                 if ( ( OUTPUT_FEATURE_NUM % TILE_N ) >= 24 )
                 {
-                    #ifdef OUTPUT_BIASED
+                    #if BIAS_TERM
                     blockC01 += *biasPtr;
                     blockC11 += *(biasPtr + 1);
                     blockC21 += *(biasPtr + 2);
                     if ( ( OUTPUT_FEATURE_NUM % TILE_N ) > 24 ) blockC31 += *(biasPtr + 3);
                     #endif
 
-                    blockC01 = FUNC_CALL(activation_function_float8)(blockC01, NL_M, NL_N);
-                    blockC11 = FUNC_CALL(activation_function_float8)(blockC11, NL_M, NL_N);
-                    blockC21 = FUNC_CALL(activation_function_float8)(blockC21, NL_M, NL_N);
+                    blockC01 = ACTIVATION(blockC01, NL_M, NL_N);
+                    blockC11 = ACTIVATION(blockC11, NL_M, NL_N);
+                    blockC21 = ACTIVATION(blockC21, NL_M, NL_N);
 
                     for (unsigned i = 0; i < 8; i++)
                     {
@@ -416,19 +416,19 @@ KERNEL(convolution_f32)(
                     // Remaining channels
                     for (unsigned i = 0; i < OUTPUT_FEATURE_NUM % 8; i++)
                     {
-                        out1[(24+i) * OUTPUT_FEATURE_PITCH] = FUNC_CALL(activation_function)(blockC31[i], NL_M, NL_N);
+                        out1[(24+i) * OUTPUT_FEATURE_PITCH] = ACTIVATION(blockC31[i], NL_M, NL_N);
                     }
                 }
                 else if ( ( OUTPUT_FEATURE_NUM % TILE_N ) >= 16 )
                 {
-                    #ifdef OUTPUT_BIASED
+                    #if BIAS_TERM
                     blockC01 += *biasPtr;
                     blockC11 += *(biasPtr + 1);
                     if ( ( OUTPUT_FEATURE_NUM % TILE_N ) > 16 ) blockC21 += *(biasPtr + 2);
                     #endif
 
-                    blockC01 = FUNC_CALL(activation_function_float8)(blockC01, NL_M, NL_N);
-                    blockC11 = FUNC_CALL(activation_function_float8)(blockC11, NL_M, NL_N);
+                    blockC01 = ACTIVATION(blockC01, NL_M, NL_N);
+                    blockC11 = ACTIVATION(blockC11, NL_M, NL_N);
 
                     for (unsigned i = 0; i < 8; i++)
                     {
@@ -438,17 +438,17 @@ KERNEL(convolution_f32)(
 
                     for (unsigned i = 0; i < OUTPUT_FEATURE_NUM % 8; i++)
                     {
-                        out1[(16+i) * OUTPUT_FEATURE_PITCH] = FUNC_CALL(activation_function)(blockC21[i], NL_M, NL_N);
+                        out1[(16+i) * OUTPUT_FEATURE_PITCH] = ACTIVATION(blockC21[i], NL_M, NL_N);
                     }
                 }
                 else if ( ( OUTPUT_FEATURE_NUM % TILE_N ) >= 8 )
                 {
-                    #ifdef OUTPUT_BIASED
+                    #if BIAS_TERM
                     blockC01 += *biasPtr;
                     if ( ( OUTPUT_FEATURE_NUM % TILE_N ) > 8 ) blockC11 += *(biasPtr + 1);
                     #endif
 
-                    blockC01 = FUNC_CALL(activation_function_float8)(blockC01, NL_M, NL_N);
+                    blockC01 = ACTIVATION(blockC01, NL_M, NL_N);
 
                     for (unsigned i = 0; i < 8; i++)
                     {
@@ -457,18 +457,18 @@ KERNEL(convolution_f32)(
 
                     for (unsigned i = 0; i < OUTPUT_FEATURE_NUM % 8; i++)
                     {
-                        out1[(8+i) * OUTPUT_FEATURE_PITCH] = FUNC_CALL(activation_function)(blockC11[i], NL_M, NL_N);
+                        out1[(8+i) * OUTPUT_FEATURE_PITCH] = ACTIVATION(blockC11[i], NL_M, NL_N);
                     }
                 }
                 else
                 {
-                    #ifdef OUTPUT_BIASED
+                    #if BIAS_TERM
                     blockC01 += *biasPtr;
                     #endif
 
                     for (unsigned i = 0; i < OUTPUT_FEATURE_NUM % 8; i++)
                     {
-                        out1[( 0+i) * OUTPUT_FEATURE_PITCH] = FUNC_CALL(activation_function)(blockC01[i], NL_M, NL_N);
+                        out1[( 0+i) * OUTPUT_FEATURE_PITCH] = ACTIVATION(blockC01[i], NL_M, NL_N);
                     }
                 }
             }

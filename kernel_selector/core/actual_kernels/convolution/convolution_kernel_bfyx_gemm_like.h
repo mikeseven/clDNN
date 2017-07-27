@@ -16,17 +16,31 @@
 
 #pragma once
 
-#include "cnn_convolution_kernel_base.h"
+#include "convolution_kernel_base.h"
 
 namespace KernelSelector {
 
-    class ConvolutionKernelGEMMLike : public CNNConvolutionKernelBase
+    class ConvolutionKernelGEMMLike : public ConvolutionKernelBase
     {
     public:
-        ConvolutionKernelGEMMLike() : CNNConvolutionKernelBase("cnn_convolution_gemm_like") {}
+        using Parent = ConvolutionKernelBase;
+        ConvolutionKernelGEMMLike() : Parent("convolution_gpu_bfyx_gemm_like") {}
         virtual ~ConvolutionKernelGEMMLike() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
+
+    protected:
+        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts() const override
+        {
+            return{
+                WeightsLayout::iy_xs_os_xsv2_osv8__ao32,
+                WeightsLayout::iy_xs_os_xsv2_osv16__ao32,
+            };
+        }
+
+        virtual JitConstants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const override;
+        bool Validate(const Params& p, const OptionalParams& o) const override;
+        DispatchData SetDefault(const ConvolutionParams& arg) const override;
     };
 }

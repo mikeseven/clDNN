@@ -80,7 +80,7 @@ namespace KernelSelector
 
         const auto of_maps = arg.output.Feature().v;
         const size_t of_threads_per_batch = RoundUp(of_maps, sub_group_size);
-        runInfo.leftovers = of_threads_per_batch - of_maps;
+        runInfo.igkStyle.leftovers = of_threads_per_batch - of_maps;
 
         const auto cp = arg.convParams;
 
@@ -90,60 +90,60 @@ namespace KernelSelector
         {
             if (cp.filterSize.x == 1 && cp.filterSize.y == 1)
             {
-                runInfo.blockWidth = 16;
-                runInfo.blockHeight = 1;
-                runInfo.prefetch = 4;
+                runInfo.igkStyle.blockWidth = 16;
+                runInfo.igkStyle.blockHeight = 1;
+                runInfo.igkStyle.prefetch = 4;
             }
             //if less than 16 values is required to compute one single row of output
             //then each WI shall compute one single row to maximize reuse within SIMD subgroup (this gives very nice performance results)
             else if (arg.output.X().v + (cp.filterSize.x - 1)*cp.dilation.x < sub_group_size)
             {
-                runInfo.blockWidth = arg.output.X().v;
-                runInfo.blockHeight = 1;
-                runInfo.prefetch = 4;
+                runInfo.igkStyle.blockWidth = arg.output.X().v;
+                runInfo.igkStyle.blockHeight = 1;
+                runInfo.igkStyle.prefetch = 4;
             }
             else if (cp.filterSize.x < 5 && cp.filterSize.y < 5)
             {
-                runInfo.blockWidth = sub_group_size - cp.filterSize.x + 1;
-                runInfo.blockHeight = 2;
-                runInfo.prefetch = 4;
+                runInfo.igkStyle.blockWidth = sub_group_size - cp.filterSize.x + 1;
+                runInfo.igkStyle.blockHeight = 2;
+                runInfo.igkStyle.prefetch = 4;
             }
             else
             {
-                runInfo.blockWidth = 4;
-                runInfo.blockHeight = 3;
-                runInfo.prefetch = 4;
+                runInfo.igkStyle.blockWidth = 4;
+                runInfo.igkStyle.blockHeight = 3;
+                runInfo.igkStyle.prefetch = 4;
             }
         }
         else if (cp.stride.x == 2 && cp.stride.y == 2)
         {
-            runInfo.blockWidth = 5;
-            runInfo.blockHeight = 4;
-            runInfo.prefetch = 4;
+            runInfo.igkStyle.blockWidth = 5;
+            runInfo.igkStyle.blockHeight = 4;
+            runInfo.igkStyle.prefetch = 4;
         }
         else
         {
-            runInfo.blockWidth = 4;
-            runInfo.blockHeight = 3;
-            runInfo.prefetch = 5;
+            runInfo.igkStyle.blockWidth = 4;
+            runInfo.igkStyle.blockHeight = 3;
+            runInfo.igkStyle.prefetch = 5;
             //run_info.effiency = FORCE_PRIORITY_7; // GEMM is better
         }
 
 
         auto input_block_dims = get_bfyx_req_input_block_dims(
-            runInfo.blockWidth, 
-            runInfo.blockHeight,
+            runInfo.igkStyle.blockWidth, 
+            runInfo.igkStyle.blockHeight,
             cp.filterSize,
             cp.stride,
             cp.dilation,
             sub_group_size,
             runInfo.fp16UnitUsed ? sub_group_size : sub_group_size / 2,
             sub_group_size);
-        runInfo.inputBlockArraySize = input_block_dims.first;
-        runInfo.inputBlockWidth = input_block_dims.second;
+        runInfo.igkStyle.inputBlockArraySize = input_block_dims.first;
+        runInfo.igkStyle.inputBlockWidth = input_block_dims.second;
 
-        runInfo.gws0 = CeilDiv(arg.output.X().v, runInfo.blockWidth);
-        runInfo.gws1 = CeilDiv(arg.output.Y().v, runInfo.blockHeight);
+        runInfo.gws0 = CeilDiv(arg.output.X().v, runInfo.igkStyle.blockWidth);
+        runInfo.gws1 = CeilDiv(arg.output.Y().v, runInfo.igkStyle.blockHeight);
         runInfo.gws2 = of_threads_per_batch * arg.output.Batch().v;
 
         runInfo.lws0 = 1;
@@ -209,15 +209,15 @@ namespace KernelSelector
 
         auto cldnn_jit = GetJitConstants(newParams, runInfo);
         cldnn_jit.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", runInfo.lws2));
-        cldnn_jit.AddConstant(MakeJitConstant("OUTPUT_BLOCK_WIDTH", runInfo.blockWidth));
-        cldnn_jit.AddConstant(MakeJitConstant("OUTPUT_BLOCK_HEIGHT", runInfo.blockHeight));
-        cldnn_jit.AddConstant(MakeJitConstant("IN_BLOCK_ARRAY_SIZE", runInfo.inputBlockArraySize));
-        cldnn_jit.AddConstant(MakeJitConstant("IN_BLOCK_WIDTH", runInfo.inputBlockWidth));
-        cldnn_jit.AddConstant(MakeJitConstant("PREFETCH", runInfo.prefetch));
+        cldnn_jit.AddConstant(MakeJitConstant("OUTPUT_BLOCK_WIDTH", runInfo.igkStyle.blockWidth));
+        cldnn_jit.AddConstant(MakeJitConstant("OUTPUT_BLOCK_HEIGHT", runInfo.igkStyle.blockHeight));
+        cldnn_jit.AddConstant(MakeJitConstant("IN_BLOCK_ARRAY_SIZE", runInfo.igkStyle.inputBlockArraySize));
+        cldnn_jit.AddConstant(MakeJitConstant("IN_BLOCK_WIDTH", runInfo.igkStyle.inputBlockWidth));
+        cldnn_jit.AddConstant(MakeJitConstant("PREFETCH", runInfo.igkStyle.prefetch));
 
-        if (runInfo.leftovers)
+        if (runInfo.igkStyle.leftovers)
         {
-            cldnn_jit.AddConstant(MakeJitConstant("LEFTOVERS", runInfo.leftovers));
+            cldnn_jit.AddConstant(MakeJitConstant("LEFTOVERS", runInfo.igkStyle.leftovers));
         }
 
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);

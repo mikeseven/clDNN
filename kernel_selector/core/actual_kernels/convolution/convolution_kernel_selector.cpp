@@ -16,7 +16,7 @@
 
 #include "convolution_kernel_selector.h"
 #include "convolution_kernel_bfyx_ref.h"
-#include "convolution_kernel_gemm_like.h"
+#include "convolution_kernel_bfyx_gemm_like.h"
 #include "convolution_kernel_direct_10_12_16.h"
 #include "convolution_kernel_bfyx_os_iyx_osv16.h"
 #include "convolution_kernel_yxfb_ref.h"

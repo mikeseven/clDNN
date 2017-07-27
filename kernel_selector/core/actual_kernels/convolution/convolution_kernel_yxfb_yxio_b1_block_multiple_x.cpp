@@ -61,22 +61,22 @@ namespace KernelSelector
         }
         else*/ if (filter_ofm_num % (runInfo.lws0 * 4) == 0)
         {
-            runInfo.ofmPerWorkItem = 4;
+            runInfo.igkStyle.ofmPerWorkItem = 4;
             // We compute multiple spatial coordinates "x" in a single workitem that's why we must divide
             runInfo.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(runInfo.gws1) / 4.0f));
         }
         else if (filter_ofm_num % (runInfo.lws0 * 2) == 0)
         {
-            runInfo.ofmPerWorkItem = 2;
+            runInfo.igkStyle.ofmPerWorkItem = 2;
             runInfo.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(runInfo.gws1) / 8.0f));
         }
         else
         {
-            runInfo.ofmPerWorkItem = 1;
+            runInfo.igkStyle.ofmPerWorkItem = 1;
             runInfo.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(runInfo.gws1) / 8.0f));
         }
 
-        runInfo.gws0 = filter_ofm_num * batch_size / (runInfo.ofmPerWorkItem * runInfo.batchesPerWorkItem);
+        runInfo.gws0 = filter_ofm_num * batch_size / (runInfo.igkStyle.ofmPerWorkItem * runInfo.igkStyle.batchesPerWorkItem);
         
         return runInfo;
     }
@@ -85,12 +85,12 @@ namespace KernelSelector
     {
         auto cldnn_jit = ConvolutionKernelBase::GetJitConstants(params, kd);
 
-        cldnn_jit.AddConstant(MakeJitConstant("USE_VECTOR", kd.ofmPerWorkItem));
-        if (kd.ofmPerWorkItem == 8)
+        cldnn_jit.AddConstant(MakeJitConstant("USE_VECTOR", kd.igkStyle.ofmPerWorkItem));
+        if (kd.igkStyle.ofmPerWorkItem == 8)
         {
             cldnn_jit.AddConstant(MakeJitConstant("X_PER_WORK_ITEM", 2));
         }
-        else if (kd.ofmPerWorkItem == 4)
+        else if (kd.igkStyle.ofmPerWorkItem == 4)
         {
             cldnn_jit.AddConstant(MakeJitConstant("X_PER_WORK_ITEM", 4));
         }
