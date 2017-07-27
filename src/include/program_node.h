@@ -106,6 +106,16 @@ public:
         return output_layout;
     }
 
+    void set_output_layout(layout layout)
+    {
+        layout.data_padding = output_layout.data_padding;
+        if (layout != output_layout) //output_layout has changed! invalidate users
+            invalidate_users();
+
+        output_layout = layout;
+        valid_output_layout = true;
+    }
+
     void recalc_output_layout()
     {
         valid_output_layout = false;
@@ -114,6 +124,11 @@ public:
 
     bool is_padded() { return static_cast<bool>(get_output_layout().data_padding); }
     bool is_padded() const { return static_cast<bool>(get_output_layout().data_padding); }
+
+    bool has_padded_dependency()
+    {
+        return std::any_of(get_dependencies().begin(), get_dependencies().end(), [](program_node* node) { return node->is_padded(); });
+    }
 
     bool has_padded_dependency() const
     {

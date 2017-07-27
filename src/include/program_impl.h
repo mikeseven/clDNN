@@ -32,21 +32,6 @@ namespace cldnn
 struct primitive_impl;
 class layout_optimizer;
 
-    void set_output_layout(layout layout)
-    {
-        layout.data_padding = output_layout.data_padding;
-        if (layout != output_layout) //output_layout has changed! invalidate users
-            invalidate_users();
-
-        output_layout = layout;
-        valid_output_layout = true;
-    }
-
-    }
-
-    bool has_padded_dependency()
-    {
-        return std::any_of(get_dependencies().begin(), get_dependencies().end(), [](program_node* node) { return node->is_padded(); });
 /*
     cldnn_program implementation
 */
