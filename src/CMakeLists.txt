@@ -19,7 +19,7 @@ set(CLDNN_BUILD__PROJ             "${CLDNN_BUILD__PROJ__clDNN}")
 set(CLDNN_BUILD__PROJ_LABEL       "${CLDNN_BUILD__PROJ_LABEL__clDNN}")
 set(CLDNN_BUILD__PROJ_OUTPUT_NAME "${CLDNN_BUILD__PROJ_OUTPUT_NAME__clDNN}")
 
-# ================================== Compiler preprocessor definitions =================================
+# ========================================== Compiler options ==========================================
 
 intel_config_flag_apply_settings(
     CompilerOptions
