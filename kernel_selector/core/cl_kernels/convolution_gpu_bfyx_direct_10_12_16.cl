@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "include/cnn_common.cl"
+#include "include/include_all.cl"
 
 //////////////////////////////////////////////////////////////////////////////
 // Direct Convolution
@@ -32,7 +32,7 @@ KERNEL(convolution_f16_10x12x16)(
     const __global half *src0,
     __global half *dst,
     const __global half *src1,
-#ifdef OUTPUT_BIASED
+#if BIAS_TERM
     const __global half *biases,
 #endif
     uint split_idx)
@@ -51,14 +51,14 @@ KERNEL(convolution_f16_10x12x16)(
 
     half blockC[TILE_M * TILE_K] = { 0 };
 
-    const uint in_split_offset = split_idx * INPUT_FEATURE_PITCH * INPUT_FEATURE_NUM;
-    uint src0_offset_tile = INPUT_OFFEST_FOR_PADDED_PART    // data offset
+    const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * INPUT0_FEATURE_NUM;
+    uint src0_offset_tile = INPUT0_OFFSET_WITH_PADDING      // data offset
      + in_split_offset
-     + batch_id * INPUT_BATCH_PITCH                         // batch offset
-     + ( global_y * TILE_M * STRIDE_Y ) * INPUT_Y_PITCH   // y offset
-     + ( global_x * TILE_K * STRIDE_X );                    // x offset
+     + batch_id * INPUT0_BATCH_PITCH                        // batch offset
+     + ( global_y * TILE_M * STRIDE_SIZE_Y ) * INPUT0_Y_PITCH    // y offset
+     + ( global_x * TILE_K * STRIDE_SIZE_X );                    // x offset
     uint src0_offset = src0_offset_tile
-     + ( local_z / ( TILE_X / 4 ) ) * INPUT_Y_PITCH       // y tile offset
+     + ( local_z / ( TILE_X / 4 ) ) * INPUT0_Y_PITCH        // y tile offset
      + ( local_z % ( TILE_X / 4 ) ) * 4;                    // x tile offset
 
     const __global half *src1_read = src1 + ( group_z * TILE_N % ALIGNED_OFM ) * 2;
@@ -69,35 +69,35 @@ KERNEL(convolution_f16_10x12x16)(
     {
         // Load atile (input) and btile (filters).
         // Kernel data is partially interleaved.  Every 2 rows are interleaved at float16 granularity.
-        // The exception is that if KERNEL_WIDTH is odd the last row is not interleaved.  The non
+        // The exception is that if FILTER_SIZE_X is odd the last row is not interleaved.  The non
         // interleaved row is padded with zero to ensure same size as interleaved rows. This
         // interleaving is done to increase consecutive data to fetch which reduces loads required.
-        // For example, this is how the kernel data would be arranged before/after interleaving for KERNEL_WIDTH=3.
+        // For example, this is how the kernel data would be arranged before/after interleaving for FILTER_SIZE_X=3.
         // (0, 0) (8, 0) (16, 0) (24, 0) ...       (0, 0) (0, 1) (8, 0) (0, 1) (16, 0) (0, 1) (24, 0) ..
         // (0, 1) (8, 1) (16, 1) (24, 1) ... =>    (0, 2) (8, 2) (16, 2) (24, 2) ...
         // (0, 2) (8, 2) (16, 2) (24, 2) ...       ...
         // ...
 
-        #if ((INPUT_Y_PITCH) % 4) == 0
+        #if ((INPUT0_Y_PITCH) % 4) == 0
         // aligned - can ignore vload
         half4 blockA0 = *(const __global half4 *)( src0 + src0_offset );
-        half4 blockA1 = *(const __global half4 *)( src0 + src0_offset + INPUT_Y_PITCH * 5 );
-        #elif ((INPUT_Y_PITCH) % 2) == 0
+        half4 blockA1 = *(const __global half4 *)( src0 + src0_offset + INPUT0_Y_PITCH * 5 );
+        #elif ((INPUT0_Y_PITCH) % 2) == 0
         // in case the data is not aligned to sizeof(T)*4 we need to use vload or set the data in a loop
         // first one is aligned
         half4 blockA0 = *(const __global half4 *)( src0 + src0_offset );
-        half4 blockA1 = vload4(0, src0 + src0_offset + INPUT_Y_PITCH * 5 );
+        half4 blockA1 = vload4(0, src0 + src0_offset + INPUT0_Y_PITCH * 5 );
         #else
         half4 blockA0 = vload4(0, src0 + src0_offset );
-        half4 blockA1 = vload4(0, src0 + src0_offset + INPUT_Y_PITCH * 5 );
+        half4 blockA1 = vload4(0, src0 + src0_offset + INPUT0_Y_PITCH * 5 );
         #endif
-        src0_offset += INPUT_FEATURE_PITCH;
+        src0_offset += INPUT0_FEATURE_PITCH;
 
-        half blockB[KERNEL_WIDTH * KERNEL_HEIGHT];
+        half blockB[FILTER_SIZE_X * FILTER_SIZE_Y];
         ushort2* p2BlockB = (ushort2*)blockB;
         ushort*  pBlockB =  (ushort* )blockB;
 
-        const bool kernel_slice_is_odd = ( KERNEL_WIDTH * KERNEL_HEIGHT ) % 2 == 1;
+        const bool kernel_slice_is_odd = ( FILTER_SIZE_X * FILTER_SIZE_Y ) % 2 == 1;
         unsigned interleaved_y = 0;
         LOOP(KERNEL_SLICE_DIV2, interleaved_y,
         {
@@ -106,7 +106,7 @@ KERNEL(convolution_f16_10x12x16)(
         } )
         if ( kernel_slice_is_odd )
         {
-            pBlockB[KERNEL_WIDTH * KERNEL_HEIGHT - 1] = intel_sub_group_block_read_us( (const __global ushort*)src1_read );
+            pBlockB[FILTER_SIZE_X * FILTER_SIZE_Y - 1] = intel_sub_group_block_read_us( (const __global ushort*)src1_read );
             src1_read += ALIGNED_OFM * 2;
         }
 
@@ -123,17 +123,17 @@ KERNEL(convolution_f16_10x12x16)(
             unsigned patch_x=0;
             LOOP(TILE_K, patch_x,
             {
-                unsigned tile_idx = patch_y * TILE_X * STRIDE_Y + patch_x * STRIDE_X;
+                unsigned tile_idx = patch_y * TILE_X * STRIDE_SIZE_Y + patch_x * STRIDE_SIZE_X;
                 unsigned out_idx  = patch_y * TILE_K + patch_x;
 
                 unsigned y=0;
-                LOOP(KERNEL_HEIGHT, y,
+                LOOP(FILTER_SIZE_Y, y,
                 {
                     unsigned x=0;
-                    LOOP(KERNEL_WIDTH, x,
+                    LOOP(FILTER_SIZE_X, x,
                     {
                         unsigned offset_idx = y * TILE_X + x;
-                        unsigned out_chan_idx = y * KERNEL_WIDTH + x;
+                        unsigned out_chan_idx = y * FILTER_SIZE_X + x;
 
                         blockC[out_idx] = mad( BLOCK_A( tile_idx + offset_idx ), blockB[out_chan_idx], blockC[out_idx] );
                     } )
@@ -141,7 +141,7 @@ KERNEL(convolution_f16_10x12x16)(
             } )
         } )
     }
-    while ( ++patch_depth < INPUT_FEATURE_NUM );
+    while ( ++patch_depth < INPUT0_FEATURE_NUM );
 
     // Dst resembles a cube of width x height x (output channel * batches).  Each tile writes:
     // TILE_K x TILE_M x SIMD.  Partial writes most likely generated if output padding used.
@@ -156,9 +156,9 @@ KERNEL(convolution_f16_10x12x16)(
 
     if ( batch_id < OUTPUT_BATCH_NUM && out_fm < OUTPUT_FEATURE_NUM )
     {
-#if !defined OUTPUT_BIASED
+#if BIAS_TERM == 0
         const half bias = 0.h;
-#elif defined BIAS_PER_OFM
+#elif BIAS_PER_OFM
         const half bias = biases[out_fm];
 #endif
         
@@ -174,11 +174,11 @@ KERNEL(convolution_f16_10x12x16)(
                     half *pvBlockC = (half*)&vBlockC;
                     for (unsigned i = 0; i < TILE_K; i++) 
                     {
-                    #ifdef BIAS_PER_OUTPUT
+                    #if BIAS_TERM && BIAS_PER_OUTPUT
                         const unsigned bias_index = out_fm*OUTPUT_SIZE_X*OUTPUT_SIZE_Y + ( global_y * TILE_M + y )*OUTPUT_SIZE_X + ( global_x * TILE_K + i);
                         const half bias = biases[bias_index];
                     #endif
-                        pvBlockC[i] = FUNC_CALL(activation_function)(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                        pvBlockC[i] = ACTIVATION(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
                         ((__global half*)(out + y * OUTPUT_Y_PITCH))[i] = pvBlockC[i];
                     }
                     //*(__global half_t*)(out + y * OUTPUT_Y_PITCH) = vBlockC;
@@ -196,11 +196,11 @@ KERNEL(convolution_f16_10x12x16)(
                     half *pvBlockC = (half*)&vBlockC;
                     for (unsigned i = 0; i < RIGHT_PARTIAL_TILE_K; i++) 
                     {
-                    #ifdef BIAS_PER_OUTPUT
+                    #if BIAS_TERM && BIAS_PER_OUTPUT
                         const unsigned bias_index = out_fm*OUTPUT_SIZE_X*OUTPUT_SIZE_Y + ( global_y * TILE_M + y )*OUTPUT_SIZE_X + ( global_x * TILE_K + i);
                         const half bias = biases[bias_index];
                     #endif
-                        pvBlockC[i] = FUNC_CALL(activation_function)(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
+                        pvBlockC[i] = ACTIVATION(blockC[y * TILE_K + i] + bias, NL_M, NL_N);
                         ((__global half*)(out + y * OUTPUT_Y_PITCH))[i] = pvBlockC[i];
                     }
                     //*(__global half_t*)(out + y * OUTPUT_Y_PITCH) = vBlockC;

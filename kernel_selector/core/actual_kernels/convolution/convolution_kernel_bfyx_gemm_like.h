@@ -20,12 +20,12 @@
 
 namespace KernelSelector {
 
-    class ConvolutionKernelGEMMLike : public ConvolutionKernelBase
+    class ConvolutionKernel_bfyx_GEMMLike : public ConvolutionKernelBase
     {
     public:
         using Parent = ConvolutionKernelBase;
-        ConvolutionKernelGEMMLike() : Parent("convolution_gpu_bfyx_gemm_like") {}
-        virtual ~ConvolutionKernelGEMMLike() {}
+        ConvolutionKernel_bfyx_GEMMLike() : Parent("convolution_gpu_bfyx_gemm_like") {}
+        virtual ~ConvolutionKernel_bfyx_GEMMLike() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;

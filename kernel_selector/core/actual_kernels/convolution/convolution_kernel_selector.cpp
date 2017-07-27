@@ -17,7 +17,7 @@
 #include "convolution_kernel_selector.h"
 #include "convolution_kernel_bfyx_ref.h"
 #include "convolution_kernel_bfyx_gemm_like.h"
-#include "convolution_kernel_direct_10_12_16.h"
+#include "convolution_kernel_bfyx_direct_10_12_16.h"
 #include "convolution_kernel_bfyx_os_iyx_osv16.h"
 #include "convolution_kernel_yxfb_ref.h"
 #include "convolution_kernel_yxfb_yxio_b16.h"
@@ -32,8 +32,8 @@ namespace KernelSelector
     ConvolutionKernelSelctor::ConvolutionKernelSelctor()
     {
         Attach<ConvolutionKernel_bfyx_Ref>();
-        Attach<ConvolutionKernelGEMMLike>();
-        Attach<ConvolutionKernelDirect_10_10_12>();
+        Attach<ConvolutionKernel_bfyx_GEMMLike>();
+        Attach<ConvolutionKernel_bfyx_Direct_10_10_12>();
         Attach<ConvolutionKernel_bfyx_os_iyx_osv16>();
         Attach<ConvolutionKernel_yxfb_Ref>();
         Attach<ConvolutionKernel_yxfb_yxio_b16>();

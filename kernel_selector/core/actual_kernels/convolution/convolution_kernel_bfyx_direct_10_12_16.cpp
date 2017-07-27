@@ -14,44 +14,44 @@
 // limitations under the License.
 */
 
-#include <cmath>
-#include "convolution_kernel_bfyx_gemm_like.h"
+#include "convolution_kernel_bfyx_direct_10_12_16.h"
 #include "kernel_selector_utils.h"
 #include "common_tools.h"
+#include <map>
 
-namespace KernelSelector 
-{
-    
-    ParamsKey ConvolutionKernel_bfyx_GEMMLike::GetSupportedKey() const
+namespace KernelSelector {
+
+    ParamsKey ConvolutionKernel_bfyx_Direct_10_10_12::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
-        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
         k.EnableInputWeightsType(WeightsType::F16);
         k.EnableInputWeightsType(WeightsType::F32);
-        k.EnableOutputDataType(Datatype::F16);
-        k.EnableOutputDataType(Datatype::F32);
         k.EnableInputLayout(DataLayout::bfyx);
         k.EnableOutputLayout(DataLayout::bfyx);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableSubGroup();
         k.EnableBiasPerFeature();
+        k.EnableBiasPerOutput();
         k.EnableNonBiasTerm();
         k.EnableBatching();
         k.EnableSplitSupport();
         return k;
     }
 
-    JitConstants ConvolutionKernel_bfyx_GEMMLike::GetJitConstants(const ConvolutionParams& params, Parent::DispatchData runInfo) const
+    JitConstants ConvolutionKernel_bfyx_Direct_10_10_12::GetJitConstants(const ConvolutionParams& params, Parent::DispatchData runInfo) const
     {
         JitConstants jit = Parent::GetJitConstants(params, runInfo);
-        
+        const auto& cp = params.convParams;
+
         jit.AddConstants({
             MakeJitConstant("ALIGNED_OFM",                  RoundUp(params.output.Feature().v, runInfo.amrStyle.subBlockDimN)),
             MakeJitConstant("DX",                           runInfo.amrStyle.globalWorkSizeDX),
             MakeJitConstant("DY",                           runInfo.amrStyle.globalWorkSizeDY),
-            MakeJitConstant("FILTER_SIZE_X_DIV2",           params.convParams.filterSize.x / 2),
+            MakeJitConstant("KERNEL_SLICE_DIV2",            (cp.filterSize.x * cp.filterSize.y) / 2),
+            MakeJitConstant("RIGHT_PARTIAL_TILE_K",         params.output.X().v % runInfo.amrStyle.globalWorkSizeDX),
             MakeJitConstant("INPUT_BUFFER_WIDTH_PADDED",    ""),    // TODO: enable non padding path again
             MakeJitConstant("INPUT_BUFFER_HEIGHT_PADDED",   ""),
         });
@@ -59,39 +59,36 @@ namespace KernelSelector
         return jit;
     }
 
-    ConvolutionKernel_bfyx_GEMMLike::Parent::DispatchData ConvolutionKernel_bfyx_GEMMLike::SetDefault(const ConvolutionParams& arg) const
+    ConvolutionKernel_bfyx_Direct_10_10_12::Parent::DispatchData ConvolutionKernel_bfyx_Direct_10_10_12::SetDefault(const ConvolutionParams& arg) const
     {
-        DispatchData runInfo = Parent::SetDefault(arg);
+        Parent::DispatchData runInfo = Parent::SetDefault(arg);
 
         const auto& cp = arg.convParams;
+        constexpr uint32_t TILE_N = 16;
 
-        runInfo.lws0 = 1;
-        runInfo.lws2 = 1;
-
-        if (arg.inputs[0].GetDType() == Datatype::F16)
+        if (cp.filterSize.x == 5)
         {
-            runInfo.amrStyle = { 1, cp.filterSize.x, 32, 32, 1, 1 };
-            runInfo.lws1 = 16;
-            runInfo.effiency = FORCE_PRIORITY_6;
+            runInfo.amrStyle = { 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 4, 1 };
         }
         else
         {
-            runInfo.amrStyle = { 2, cp.filterSize.x, 32, 32, 2, 1 };
-            runInfo.lws1 = 8;
-            runInfo.effiency = FORCE_PRIORITY_8;
+            runInfo.amrStyle = { 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 3, 1 };
         }
 
-        size_t sgemm_m = RoundUp(arg.output.X().v * arg.output.Y().v, runInfo.amrStyle.subBlockDimM);
-        size_t sgemm_n = RoundUp(arg.output.Feature().v, runInfo.amrStyle.subBlockDimN);
+        runInfo.gws0 = RoundUp(arg.output.X().v, runInfo.amrStyle.globalWorkSizeDX) / runInfo.amrStyle.globalWorkSizeDX;
+        runInfo.gws1 = RoundUp(arg.output.Y().v, runInfo.amrStyle.globalWorkSizeDY) / runInfo.amrStyle.globalWorkSizeDY;
+        runInfo.gws2 = RoundUp(arg.output.Feature().v, TILE_N) * arg.output.Batch().v;
 
-        runInfo.gws0 = RoundUp(CeilDiv(sgemm_n, runInfo.amrStyle.globalWorkSizeDX), runInfo.lws0);
-        runInfo.gws1 = RoundUp(CeilDiv(sgemm_m, runInfo.amrStyle.globalWorkSizeDY), runInfo.lws1);
-        runInfo.gws2 = arg.output.Batch().v;
+        runInfo.lws0 = 1;
+        runInfo.lws1 = 1;
+        runInfo.lws2 = TILE_N;
+
+        runInfo.effiency = FORCE_PRIORITY_4;
 
         return runInfo;
     }
 
-    bool ConvolutionKernel_bfyx_GEMMLike::Validate(const Params& p, const OptionalParams& o) const
+    bool ConvolutionKernel_bfyx_Direct_10_10_12::Validate(const Params& p, const OptionalParams& o) const
     {
         if (!Parent::Validate(p, o))
         {
@@ -109,10 +106,22 @@ namespace KernelSelector
             return false;
         }
 
+        const auto& cp = params.convParams;
+
+        const bool bStrideOK = (cp.stride.x == 1 && cp.stride.y == 1);
+        const bool bFilter3x3 = (cp.filterSize.x == 3 && cp.filterSize.y == 3);
+        const bool bFilter5x5 = (cp.filterSize.x == 5 && cp.filterSize.y == 5);
+        const bool bFilterOK = bFilter3x3 || bFilter5x5;
+
+        if (!bFilterOK || !bStrideOK)
+        {
+            return false;
+        }
+
         return true;
     }
 
-    KernelsData ConvolutionKernel_bfyx_GEMMLike::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ConvolutionKernel_bfyx_Direct_10_10_12::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         if (!Validate(params, options))
         {
@@ -135,25 +144,10 @@ namespace KernelSelector
 
         DispatchData runInfo = SetDefault(newParams);
 
-        WeightsLayout wLayout;
-
-        std::string newKernelName = kernelName;
-        
-        if (newParams.inputs[0].GetDType() == Datatype::F16)
-        {
-            newKernelName += "_fp16";
-            wLayout = WeightsLayout::iy_xs_os_xsv2_osv16__ao32;
-        }
-        else
-        {
-            newKernelName += "_fp32";
-            wLayout = WeightsLayout::iy_xs_os_xsv2_osv8__ao32;
-        }
-
         bool succeed = UpdateWeightsParams(
             newParams,
             options,
-            { wLayout },
+            GetSupportedWeightLayouts(),
             kd.weightsReorderParams);
 
         if (!succeed)
@@ -168,7 +162,7 @@ namespace KernelSelector
         auto& kernel = kd.kernels[0];
         kernel.workGroups.global = { runInfo.gws0, runInfo.gws1, runInfo.gws2 };
         kernel.workGroups.local = { runInfo.lws0, runInfo.lws1, runInfo.lws2 };
-        kernel.kernelString = GetKernelString(newKernelName, jit, entryPoint, AGE_BASED);
+        kernel.kernelString = GetKernelString(kernelName, jit, entryPoint, AGE_BASED);
         kernel.arguments = GetArgsDesc(1, true, !orgParams.bias.empty());
         kernel.arguments.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
 
