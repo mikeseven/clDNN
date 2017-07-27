@@ -595,7 +595,7 @@ void run_topology(const execution_params &ep)
             << " dummy images per batch!!! Please use batch=" << gpu_batch_size << "." << std::endl;
     }
 
-    cldnn::engine_configuration configuration(ep.profiling, ep.meaningful_kernels_names, "", ep.run_single_kernel_name);
+    cldnn::engine_configuration configuration(ep.profiling, ep.meaningful_kernels_names, false, "", ep.run_single_kernel_name);
     cldnn::engine engine(configuration);
 
     CIntelPowerGadgetLib energyLib;
