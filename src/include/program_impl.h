@@ -134,6 +134,11 @@ public:
         return std::any_of(get_dependencies().begin(), get_dependencies().end(), [](const program_node* node) { return node->is_padded(); });
     }
 
+    bool has_padded_dependency()
+    {
+        return std::any_of(get_dependencies().begin(), get_dependencies().end(), [](program_node* node) { return node->is_padded(); });
+    }
+
     auto is_input() const { return dependencies.empty(); }
     auto is_endpoint() const { return users.empty(); }
     auto set_output(bool out) { output = out; }
