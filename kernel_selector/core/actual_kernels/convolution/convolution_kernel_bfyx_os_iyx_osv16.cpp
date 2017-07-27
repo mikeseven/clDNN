@@ -155,18 +155,8 @@ namespace KernelSelector
 
     bool ConvolutionKernel_bfyx_os_iyx_osv16::Validate(const Params& p, const OptionalParams& o) const
     {
-        if (!ConvolutionKernelBase::Validate(p, o))
-        {
-            return false;
-        }
-        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
-        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(o);
-        
-        const auto req_input = GetConvolutionBFYXPaddedTensor(params);
-        const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(params, req_input);
-        const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
-
-        if (!bInputPadded)
+        if (!ConvolutionKernelBase::Validate(p, o) ||
+            !CovolutionCheckInput(p, o))
         {
             return false;
         }
@@ -181,20 +171,12 @@ namespace KernelSelector
             return{};
         }
 
-        const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
-        const auto req_input = GetConvolutionBFYXPaddedTensor(orgParams);
-        const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, req_input);
-
         KernelData kd = KernelData::Default<ConvolutionParams>(params);
         ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
         
         DispatchData runInfo = SetDefault(newParams);
         
-        if (!bProperInputDesc)
-        {
-            newParams.inputs[0] = req_input;
-            kd.reorderInput = true;
-        }
+        kd.reorderInput = CovolutionUpdateInputParams(newParams);
 
         bool succeed = UpdateWeightsParams(
             newParams,
@@ -220,11 +202,11 @@ namespace KernelSelector
             cldnn_jit.AddConstant(MakeJitConstant("LEFTOVERS", runInfo.igkStyle.leftovers));
         }
 
-        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);
+        auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, true, !orgParams.bias.empty());
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, true, !newParams.bias.empty());
         kernel.arguments.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
 
         kd.estimatedTime = runInfo.effiency;

@@ -93,18 +93,8 @@ namespace KernelSelector
 
     bool ConvolutionKernel_bfyx_GEMMLike::Validate(const Params& p, const OptionalParams& o) const
     {
-        if (!Parent::Validate(p, o))
-        {
-            return false;
-        }
-        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
-        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(o);
-
-        const auto req_input = GetConvolutionBFYXPaddedTensor(params);
-        const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(params, req_input);
-        const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
-
-        if (!bInputPadded)
+        if (!Parent::Validate(p, o) ||
+            !CovolutionCheckInput(p, o))
         {
             return false;
         }
@@ -119,19 +109,10 @@ namespace KernelSelector
             return{};
         }
 
-        const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
-
-        const DataTensor reqInput = GetConvolutionBFYXPaddedTensor(orgParams);
-        const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(orgParams, reqInput);
-
         KernelData kd = KernelData::Default<ConvolutionParams>(params);
         ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
 
-        if (!bProperInputDesc)
-        {
-            newParams.inputs[0] = reqInput;
-            kd.reorderInput = true;
-        }
+        kd.reorderInput = CovolutionUpdateInputParams(newParams);
 
         DispatchData runInfo = SetDefault(newParams);
 
@@ -162,14 +143,14 @@ namespace KernelSelector
         }
 
         auto cldnn_jit = GetJitConstants(newParams, runInfo);
-        auto entryPoint = GetEntryPoint(kernelName, orgParams.layerID, options);
+        auto entryPoint = GetEntryPoint(kernelName, newParams.layerID, options);
         auto jit = CreateJit(kernelName, cldnn_jit, entryPoint);
 
         auto& kernel = kd.kernels[0];
         kernel.workGroups.global = { runInfo.gws0, runInfo.gws1, runInfo.gws2 };
         kernel.workGroups.local = { runInfo.lws0, runInfo.lws1, runInfo.lws2 };
         kernel.kernelString = GetKernelString(newKernelName, jit, entryPoint, AGE_BASED);
-        kernel.arguments = GetArgsDesc(1, true, !orgParams.bias.empty());
+        kernel.arguments = GetArgsDesc(1, true, !newParams.bias.empty());
         kernel.arguments.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
 
         kd.estimatedTime = runInfo.effiency;

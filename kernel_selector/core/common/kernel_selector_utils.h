@@ -78,6 +78,37 @@ namespace KernelSelector { namespace
         return{dims, t.GetDType(), t.GetLayout()};
     }
 
+    bool CovolutionCheckInput(const Params& p, const OptionalParams& o)
+    {
+        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
+        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(o);
+
+        const auto req_input = GetConvolutionBFYXPaddedTensor(params);
+        const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(params, req_input);
+        const bool bInputPadded = optParams.allowPadding || bProperInputDesc;
+
+        if (!bInputPadded)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    bool CovolutionUpdateInputParams(ConvolutionParams& params)
+    {
+        const auto req_input = GetConvolutionBFYXPaddedTensor(params);
+        const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(params, req_input);
+
+        if (!bProperInputDesc)
+        {
+            params.inputs[0] = req_input;
+            return true;
+        }
+
+        return false;
+    }
+
     inline WeightsType DataTypeToWeightsType(Datatype t)
     {
         switch (t)
