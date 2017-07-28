@@ -167,6 +167,8 @@ program_impl::program_impl(engine_impl::ptr engine, topology_impl const& topolog
     pre_optimize_graph();
     compile_graph();
     post_optimize_graph();
+
+    engine->compile_program(*this);
 }
 
 // TODO: Remove once we will get full support for input/output padding in all primitive implementations.
@@ -337,8 +339,6 @@ void program_impl::compile_graph()
             node->selected_impl = node->type()->choose_impl(*engine, *node);
         }
     }
-
-    engine->compile_program(*this);
 }
 
 void program_impl::set_outputs()

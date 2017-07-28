@@ -375,8 +375,8 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     if (!ep.run_until_primitive_name.empty())
     {
         outputs.push_back(ep.run_until_primitive_name); //set the user custom primitive as output (works only while not in debug moge, because in debug mode every primitive is an output)
-            if(ep.dump_hidden_layers)
-                throw std::runtime_error("ERROR: Can't dump hidden layers when custom output is set.");
+        if(ep.dump_hidden_layers)
+            throw std::runtime_error("ERROR: Can't dump hidden layers when custom output is set.");
     }
 
     if (!ep.dump_layer_name.empty())
@@ -511,10 +511,7 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     if (ep.topology_name != "microbench")
     {
         std::string output_primitve_id = ep.run_until_primitive_name.empty() ? "output" : ep.run_until_primitive_name;
-        if (ep.run_single_kernel_name.empty())
-        {
-            output = outputs.at(output_primitve_id).get_memory();
-        } 
+        output = outputs.at(output_primitve_id).get_memory();
     }
     
     auto execution_time(timer_execution.uptime());

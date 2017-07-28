@@ -38,10 +38,11 @@ network_impl::network_impl(program_impl::cptr program)
         allocate_primitive_instance(*node);
 
     //sanity check
-    if (get_engine()->get_context()->enabled_single_kernel()
+    //TODO: fix run single layer design (in run single layer multiple networks can be run - i.e. weights optimization, we should have better logic to decide whether to filter or not some networks/nodes)
+    /*if (get_engine()->get_context()->enabled_single_kernel()
         && (_exec_order.size() != 1 || _exec_order.front()->id() != get_engine()->get_context()->single_kernel_name()))
         throw std::runtime_error("Network allocation: layer specified to be run with 'single_kernel_name' option could not be found (layer id: '"
-            + get_engine()->get_context()->single_kernel_name() + "').");
+            + get_engine()->get_context()->single_kernel_name() + "').");*/
 }
 
 network_impl::network_impl(engine_impl::ptr engine, const topology_impl& topo, const build_options& options)
@@ -101,8 +102,17 @@ void network_impl::execute(const std::vector<refcounted_obj_ptr<event_impl>>& ev
     reset_execution(false);
 
     for(auto& inst : _exec_order)
+        execute_primitive(inst, events);
+
+    if (get_engine()->get_context()->enabled_single_kernel())
     {
-        auto output_event = execute_primitive(inst, events);
+        auto it = _events.find(get_engine()->get_context()->single_kernel_name());
+        if (it != _events.end())
+        {
+            //replace outputs' events so waiting for output will wait for single kernel (to have better fps results)
+            for (auto& out : _outputs)
+                _events[out->id()] = it->second;
+        }
     }
 
     for (auto& prim : _primitives)
@@ -148,7 +158,15 @@ refcounted_obj_ptr<event_impl> network_impl::execute_primitive(const std::shared
     {
         return it->second;
     }
-    return _events.insert({ id, primitive->execute(events) }).first->second;
+
+    event_impl::ptr ev;
+    if (!get_engine()->get_context()->enabled_single_kernel() || get_engine()->get_context()->single_kernel_name() == id)
+        ev = primitive->execute(events);
+    else
+        ev = get_engine()->create_user_event(true);
+
+    _events.insert({ id, ev });
+    return ev;
 }
 
 void network_impl::allocate_primitive_instance(program_node const& node)
@@ -159,13 +177,7 @@ void network_impl::allocate_primitive_instance(program_node const& node)
     auto inst = node.type()->create_instance(*this, node);
     _primitives[node.id()] = inst;
     if (!node.is_type<data>())
-    {
-        //if run single layer is enabled, during execution only include a node with matching id
-        //TODO: consider storing informations about 'single_kernel_name' within build options of a program rather than set it globally via engine
-        if (!get_engine()->get_context()->enabled_single_kernel()
-            || get_engine()->get_context()->single_kernel_name() == node.id())
-            _exec_order.push_back(inst);
-    }
+        _exec_order.push_back(inst);
     if (node.is_input())
         _inputs.push_back(inst);
     if (node.is_output())
