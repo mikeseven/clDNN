@@ -28,7 +28,11 @@ public:
     event_impl(const cl::Event& event) : _event(event)
     {}
 
-    void wait() const { _event.wait(); }
+    void wait() const 
+    {
+        if(_event.get() != CL_NONE)
+            _event.wait();
+    }
     virtual void set() { throw std::logic_error("cannot set OCL event"); }
     void add_event_handler(cldnn_event_handler handler, void* data)
     {

@@ -44,7 +44,7 @@ struct reorder_gpu : typed_primitive_impl<reorder>
             if (events.size() == 1)
                 return events[0];
 
-            return neural::gpu::events_waiter(outer.get_program().get_engine()->get_context()).run(events);
+            return neural::gpu::events_waiter(outer.get_program().get_engine()->get_context()).run(events, instance);
         }
 
         gpu::kernel::kernel_arguments_data args;

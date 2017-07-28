@@ -46,7 +46,7 @@ struct reshape_gpu : public typed_primitive_impl<reshape>
                 return events[0];
 
             neural::gpu::events_waiter events_waiter(instance.get_network().get_engine()->get_context());
-            return events_waiter.run(events);
+            return events_waiter.run(events, instance);
         }
 
         gpu::kernel::kernel_arguments_data args;

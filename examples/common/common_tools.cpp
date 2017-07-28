@@ -569,14 +569,7 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
         std::vector<cldnn::instrumentation::profiling_info> profiling_table;
         for (auto& p : outputs)
         {
-            if (ep.run_single_kernel_name.empty())
-            {
-                profiling_table.push_back({ p.first, p.second.get_event().get_profiling_info() });
-            }
-            else if (ep.run_single_kernel_name == p.first)
-            {
-                profiling_table.push_back({ p.first, p.second.get_event().get_profiling_info() });
-            }
+            profiling_table.push_back({ p.first, p.second.get_event().get_profiling_info() });
         }
         print_profiling_table(std::cout, profiling_table);
     }

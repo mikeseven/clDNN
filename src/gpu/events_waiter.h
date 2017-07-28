@@ -24,7 +24,7 @@ class events_waiter: public context_holder
 {
 public:
     explicit events_waiter(std::shared_ptr<gpu_toolkit> context) : context_holder(context){}
-    cldnn::refcounted_obj_ptr<cldnn::event_impl> run(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& dependencies)
+    cldnn::refcounted_obj_ptr<cldnn::event_impl> run(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& dependencies, const primitive_inst& instance)
     {
         if(dependencies.size() == 0)
         {
@@ -39,14 +39,19 @@ public:
         {
             events.emplace_back(dependency->get());
         }
-        if (context()->enabled_single_kernel() == false)
+
+        if (context()->enabled_single_kernel())
         {
-            const_cast<cl::CommandQueue&>(context()->queue()).enqueueMarkerWithWaitList(&events, &end_event);
+            if (context()->single_kernel_name().compare(instance.desc()->id) == 0)
+            {
+                const_cast<cl::CommandQueue&>(context()->queue()).enqueueMarkerWithWaitList(nullptr, &end_event);
+            }
         }
         else
         {
-            const_cast<cl::CommandQueue&>(context()->queue()).enqueueMarkerWithWaitList(nullptr, &end_event);
+            const_cast<cl::CommandQueue&>(context()->queue()).enqueueMarkerWithWaitList(&events, &end_event);
         }
+
         return { new cldnn::event_impl(end_event), false };
     }
 };
