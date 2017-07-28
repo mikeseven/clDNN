@@ -3,7 +3,7 @@
 #include "ocl_base_event.h"
 
 #ifdef _WIN32
-#pragma warning(disable: 4250)
+#pragma warning(disable: 4250) //Visual Studio warns us about inheritance via dominance but it's done intentionally so turn it off
 #endif
 
 namespace cldnn { namespace gpu {

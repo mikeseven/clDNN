@@ -121,8 +121,8 @@ private:
     engine_info_internal _engine_info;
     kernels_cache _kernels_cache;
 
-    uint64_t _queue_counter = 0;
-    uint64_t _last_barrier = 0;
+    std::atomic<uint64_t> _queue_counter{ 0 };
+    std::atomic<uint64_t> _last_barrier{ 0 };
     cl::Event _last_barrier_ev;
 
     //returns whether a barrier has been added

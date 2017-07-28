@@ -23,37 +23,86 @@
 
 namespace cldnn { namespace gpu {
 
-cl_device_type convert_configuration_device_type(configuration::device_types device_type)
-{
-    cl_device_type device_types[] = {
-            CL_DEVICE_TYPE_DEFAULT,
-            CL_DEVICE_TYPE_CPU,
-            CL_DEVICE_TYPE_GPU,
-            CL_DEVICE_TYPE_ACCELERATOR };
-    return device_types[device_type];
+namespace {
+
+    cl_device_type convert_configuration_device_type(configuration::device_types device_type)
+    {
+        cl_device_type device_types[] = {
+                CL_DEVICE_TYPE_DEFAULT,
+                CL_DEVICE_TYPE_CPU,
+                CL_DEVICE_TYPE_GPU,
+                CL_DEVICE_TYPE_ACCELERATOR };
+        return device_types[device_type];
+    }
+
+    bool does_device_match_config(cl::Device const& dev, configuration const& config, std::list<std::string>& reasons)
+    {
+        auto dev_name = dev.getInfo<CL_DEVICE_NAME>();
+        bool ok = true;
+
+        auto dev_type = dev.getInfo<CL_DEVICE_TYPE>();
+
+        if (dev_type != convert_configuration_device_type(config.device_type))
+        {
+            reasons.push_back(dev_name + ": invalid device type");
+            ok = false;
+        }
+
+        auto vendor_id = dev.getInfo<CL_DEVICE_VENDOR_ID>();
+        if (vendor_id != config.device_vendor)
+        {
+            reasons.push_back(dev_name + ": invalid vendor type");
+            ok = false;
+        }
+
+        if (config.host_out_of_order)
+        {
+            auto queue_properties = dev.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
+            using cmp_t = std::common_type_t<decltype(queue_properties), std::underlying_type_t<cl::QueueProperties>>;
+            if (!(static_cast<cmp_t>(queue_properties) & static_cast<cmp_t>(cl::QueueProperties::OutOfOrder)))
+            {
+                reasons.push_back(dev_name + ": missing out of order support");
+                ok = false;
+            }
+        }
+
+        return ok;
+    }
+
+    bool starts_with(std::string const& str, std::string const& prefix)
+    {
+        if (str.size() < prefix.size())
+            return false;
+
+        return std::equal(prefix.begin(), prefix.end(), str.begin());
+    }
 }
 
 cl::Device get_gpu_device(const configuration& config)
 {
     std::vector<cl::Platform> platforms;
     cl::Platform::get(&platforms);
-    cl::Device default_device;
+    std::list<std::string> reasons;
+
     for (auto& p : platforms)
     {
         std::vector<cl::Device> devices;
         p.getDevices(CL_DEVICE_TYPE_ALL, &devices);
         for (auto& d : devices)
         {
-            if (d.getInfo<CL_DEVICE_TYPE>() == convert_configuration_device_type(config.device_type))
-            {
-                auto vendor_id = d.getInfo<CL_DEVICE_VENDOR_ID>();
-                //set Intel GPU device default
-                if (vendor_id == config.device_vendor)
-                    return d;
-            }
+            if (does_device_match_config(d, config, reasons))
+                return d;
         }
     }
-    throw std::runtime_error("No OpenCL GPU device found.");
+
+    if (reasons.empty())
+        throw std::runtime_error("Could not found any OpenCL device");
+
+    std::string error_msg = "No OpenCL device found which would match provided configuration:";
+    for (const auto& reason : reasons)
+        error_msg += "\n    " + reason;
+
+    throw std::invalid_argument(std::move(error_msg));
 }
 
 gpu_toolkit::gpu_toolkit(const configuration& config) 
@@ -81,7 +130,8 @@ event_impl::ptr gpu_toolkit::enqueue_kernel(cl::Kernel const& kern, cl::NDRange 
     if (!_configuration.host_out_of_order)
     {
         for (auto& dep : deps)
-            dep_events.push_back(dynamic_cast<base_event*>(dep.get())->get());
+            if (auto ocl_ev = dynamic_cast<base_event*>(dep.get()))
+                dep_events.push_back(ocl_ev->get());
     }
     else
     {
@@ -106,20 +156,21 @@ event_impl::ptr gpu_toolkit::enqueue_marker(std::vector<event_impl::ptr> const& 
         {
             std::vector<cl::Event> dep_events;
             for (auto& dep : deps)
-                dep_events.push_back(dynamic_cast<base_event*>(dep.get())->get());
+                if (auto ocl_ev = dynamic_cast<base_event*>(dep.get()))
+                    dep_events.push_back(ocl_ev->get());
 
             _command_queue.enqueueMarkerWithWaitList(&dep_events, &ret_ev);
         }
         else
             _command_queue.enqueueMarkerWithWaitList(nullptr, &ret_ev);
 
-        return{ new base_event(ret_ev), false };
+        return{ new base_event(ret_ev, ++_queue_counter), false };
     }
     else
     {
         sync_events(deps);
         assert(_last_barrier_ev() != nullptr);
-        return{ new base_event(_last_barrier_ev), false };
+        return{ new base_event(_last_barrier_ev, _last_barrier), false };
     }
 }
 
@@ -127,7 +178,8 @@ void gpu_toolkit::wait_for_events(std::vector<event_impl::ptr> const & events)
 {
     std::vector<cl::Event> clevents;
     for (auto& ev : events)
-        clevents.push_back(dynamic_cast<base_event*>(ev.get())->get());
+        if (auto ocl_ev = dynamic_cast<base_event*>(ev.get()))
+            clevents.push_back(ocl_ev->get());
 
     cl::WaitForEvents(clevents);
 }
@@ -148,7 +200,7 @@ void gpu_toolkit::sync_events(std::vector<event_impl::ptr> const & deps)
     if (needs_barrier)
     {
         _command_queue.enqueueBarrierWithWaitList(nullptr, &_last_barrier_ev);
-        _last_barrier = _queue_counter;
+        _last_barrier = ++_queue_counter;
     }
 }
 

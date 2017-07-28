@@ -21,6 +21,7 @@
 #include "topologies.h"
 
 #include <boost/filesystem.hpp>
+#include <boost/optional.hpp>
 
 #include <iostream>
 
@@ -588,14 +589,25 @@ void run_topology(const execution_params &ep)
             << " dummy images per batch!!! Please use batch=" << gpu_batch_size << "." << std::endl;
     }
 
-#ifdef _WIN32
-    constexpr bool use_ooo_queue = true;
-#else
-    constexpr bool use_ooo_queue = false;
-#endif
+    boost::optional<cldnn::engine> eng_storage;
 
-    cldnn::engine_configuration configuration(ep.profiling, ep.meaningful_kernels_names, false, "", ep.run_single_kernel_name, use_ooo_queue);
-    cldnn::engine engine(configuration);
+    const auto get_config = [&ep](bool use_ooq)
+    {
+        return cldnn::engine_configuration(ep.profiling, ep.meaningful_kernels_names, false, "", ep.run_single_kernel_name, use_ooq);
+    };
+
+    //try to init oooq engine
+    try {
+        eng_storage.emplace(get_config(true));
+    }
+    catch (cldnn::error&) {
+    }
+
+    //if initialization failed, fallback to in-order queue
+    if (!eng_storage.is_initialized())
+        eng_storage.emplace(get_config(false));
+
+    cldnn::engine& engine = eng_storage.get();
 
     CIntelPowerGadgetLib energyLib;
     if (ep.perf_per_watt)

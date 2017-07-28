@@ -199,7 +199,7 @@ kernels_cache::kernel_id kernels_cache::set_kernel_source(const std::shared_ptr<
     }
 
     assert(_kernels.find(id) == _kernels.end());
-
+    _pending_compilation = true;
     return id;
 }
 
@@ -277,7 +277,7 @@ kernels_cache::kernel_type kernels_cache::get_kernel(kernel_id id)
 
 void kernels_cache::build_all()
 {
-    if (_kernels_code.empty())
+    if (!_pending_compilation.exchange(false))
         return;
 
     std::lock_guard<std::mutex> lock(_mutex);

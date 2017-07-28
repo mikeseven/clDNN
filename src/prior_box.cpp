@@ -58,7 +58,7 @@ std::string prior_box_inst::to_string(prior_box_node const& node)
 {
     std::stringstream               primitive_description;
     auto desc                       = node.get_primitive();
-    auto input_lay                  = node.input().get_output_layout();
+    auto in_layout                  = node.input().get_output_layout();
     auto flip                       = desc->flip ? "true" : "false";
     auto clip                       = desc->clip ? "true" : "false";
     std::string str_min_sizes       = vector_to_string(desc->min_sizes);
@@ -67,7 +67,7 @@ std::string prior_box_inst::to_string(prior_box_node const& node)
     std::string str_variance        = vector_to_string(desc->variance);
 
     primitive_description << "id: " << desc->id << ", type: normalization" <<
-        "\n\tinput: "        << "id: " << node.get_primitive()->input[0] << ", count: " << input_lay.count() << ", size: " << input_lay.size <<
+        "\n\tinput: "        << "id: " << node.get_primitive()->input[0] << ", count: " << in_layout.count() << ", size: " << in_layout.size <<
         "\n\timage size: "   << desc->img_size <<
         "\n\tmin_sizes: "    << str_min_sizes << ", max sizes: " << str_max_sizes <<
         "\n\taspect_ratio: " << str_aspect_ratio <<

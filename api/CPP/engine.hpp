@@ -41,7 +41,7 @@ struct engine_configuration
     const bool dump_custom_program;      ///< Dump the user OpenCL programs to files
     const std::string compiler_options;  ///< OpenCL compiler options string.
     const std::string single_kernel_name; ///< If provided, runs specific layer.
-    const bool enable_parallelisation; ///< Enables parallel execution of primitives which don't depend on each other.
+    const bool enable_parallelisation; ///< Enables parallel execution of primitives which don't depend on each other. Disabled by default.
 
     /// @brief Constructs engine configuration with specified options.
     /// @param profiling Enable per-primitive profiling.

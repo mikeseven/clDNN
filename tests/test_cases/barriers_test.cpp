@@ -12,7 +12,7 @@
 using namespace cldnn;
 using namespace tests;
 
-TEST(barriers, stress_test)
+TEST(DISABLED_oooq_test, simple)
 {
     engine_configuration cfg{ false, false, false, std::string(), std::string(), true };
     engine eng{ cfg };

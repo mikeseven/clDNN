@@ -26,6 +26,7 @@ void event_impl::wait()
     if (_set)
         return;
 
+    //TODO: refactor in context of multiple simultaneous calls (for generic engine)
     wait_impl();
     _set = true;
     return;
@@ -36,6 +37,7 @@ bool event_impl::is_set()
     if (_set)
         return true;
 
+    //TODO: refactor in context of multiple simultaneous calls (for generic engine)
     _set = is_set_impl();
     return _set;
 }
@@ -80,11 +82,5 @@ void event_impl::call_handlers()
     }
     _handlers.clear();
 }
-
-namespace
-{
-}
-
-
 
 }

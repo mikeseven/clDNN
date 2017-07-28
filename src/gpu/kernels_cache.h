@@ -20,6 +20,7 @@
 #include <mutex>
 #include <vector>
 #include <memory>
+#include <atomic>
 
 namespace cl {
 class Kernel;
@@ -69,6 +70,7 @@ private:
     gpu_toolkit& _context;
     std::mutex _mutex;
     kernels_code _kernels_code;
+    std::atomic<bool> _pending_compilation;
     std::map<std::string, kernel_type> _kernels;
 
     sorted_code get_program_source(const kernels_code& kernels_source_code) const;
