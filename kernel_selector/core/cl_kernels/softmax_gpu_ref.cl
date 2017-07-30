@@ -16,40 +16,40 @@
 
 
 
-#include "include/cnn_common.cl"
+#include "include/include_all.cl"
 
-KERNEL(softmax)(__global DATA_TYPE* input, __global DATA_TYPE* output)
+KERNEL(softmax)(__global INPUT0_TYPE* input, __global OUTPUT_TYPE* output)
 {
     const uint other0 = get_global_id(0);
     const uint other1 = get_global_id(1);
     const uint batch  = get_global_id(2);
 
-    const uint in_depth_offset  = batch*INPUT_BATCH_PITCH  + other1*INPUT_OTHER1_PITCH  + other0*INPUT_OTHER0_PITCH  + INPUT_OFFSET;
+    const uint in_depth_offset  = batch*INPUT0_BATCH_PITCH + other1*INPUT0_OTHER1_PITCH + other0*INPUT0_OTHER0_PITCH + INPUT0_OFFSET;
     const uint out_depth_offset = batch*OUTPUT_BATCH_PITCH + other1*OUTPUT_OTHER1_PITCH + other0*OUTPUT_OTHER0_PITCH + OUTPUT_OFFSET;
     
-    DATA_TYPE max_value = DATA_TYPE_MIN;
-    DATA_TYPE data[INPUT_CLASS_NUM];
+    UNIT_TYPE max_value = UNIT_VAL_MIN;
+    UNIT_TYPE data[INPUT0_CLASS_NUM];
     
-    for (uint cls = 0; cls < INPUT_CLASS_NUM; ++cls)
+    for (uint cls = 0; cls < INPUT0_CLASS_NUM; ++cls)
     {
-        const uint index = in_depth_offset + cls*INPUT_CLASS_PITCH;
-        DATA_TYPE in = input[index];
+        const uint index = in_depth_offset + cls*INPUT0_CLASS_PITCH;
+        UNIT_TYPE in = input[index];
         max_value = max(max_value, in);
         data[cls] = in;
     }
 
     // TODO: currently we calculate on float32 because it's lot of "add" operation and it stuck on the value "8192.0f"
-    COUNTER_TYPE denominator = 0.0;
-    for (uint cls = 0; cls < INPUT_CLASS_NUM; ++cls)
+    ACCUMULATOR_TYPE denominator = 0.0;
+    for (uint cls = 0; cls < INPUT0_CLASS_NUM; ++cls)
     {
         data[cls] = native_exp(data[cls] - max_value);;
         denominator += data[cls];
     }
     
-    for (uint cls = 0; cls < INPUT_CLASS_NUM; ++cls)
+    for (uint cls = 0; cls < INPUT0_CLASS_NUM; ++cls)
     {
-        const DATA_TYPE res = data[cls] / (DATA_TYPE)denominator;
+        const UNIT_TYPE res = data[cls] / (UNIT_TYPE)denominator;
         const uint output_idx = out_depth_offset + cls*OUTPUT_CLASS_PITCH;
-        output[output_idx] = FUNC_CALL(activation_function)(res, NL_M, NL_N);
+        output[output_idx] = ACTIVATION(res, NL_M, NL_N);
     }
 }

@@ -36,9 +36,9 @@ namespace KernelSelector
         return k;
     }
 
-    SoftmaxKernelBase::DispatchData SoftmaxKernel_bf::SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const
+    SoftmaxKernel_bf::Parent::DispatchData SoftmaxKernel_bf::SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const
     {
-        auto kd = SoftmaxKernelBase::SetDefault(params, optParams);
+        auto kd = Parent::SetDefault(params, optParams);
 
         //start with 1 thread per data set
         kd.gws0 = 1;
