@@ -37,7 +37,7 @@ KERNEL(convolution_f16_10x12x16)(
 #endif
     uint split_idx)
 {
-#include "include/cnn_common_data_types.cl"
+#include "include/vec_typedefs.cl"
 
     const unsigned global_x = get_global_id(0);
     const unsigned global_y = get_global_id(1);

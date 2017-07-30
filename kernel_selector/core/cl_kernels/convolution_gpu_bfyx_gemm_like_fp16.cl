@@ -31,7 +31,7 @@ KERNEL(convolution_f16)(
 #endif
     uint split_idx)
 {
-#include "include/cnn_common_data_types.cl"
+#include "include/vec_typedefs.cl"
 
     const unsigned group_x = get_group_id(0);
     const unsigned group_y = get_group_id(1);
