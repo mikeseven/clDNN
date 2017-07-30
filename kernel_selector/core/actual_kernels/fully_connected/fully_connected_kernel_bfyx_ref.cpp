@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "fully_connected_kernel_yxfb_ref.h"
+#include "fully_connected_kernel_bfyx_ref.h"
 #include "kernel_selector_utils.h"
-
+ 
 namespace KernelSelector 
 {
-    ParamsKey FullyConnected_yxfb_ref::GetSupportedKey() const
+    ParamsKey FullyConnectedKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
@@ -29,19 +29,39 @@ namespace KernelSelector
         k.EnableInputWeightsType(WeightsType::F16);
         k.EnableInputWeightsType(WeightsType::F32);
         k.EnableAllInputLayout();
-        k.EnableOutputLayout(DataLayout::fb);
-        k.EnableBatching();
+        k.EnableInputLayout(DataLayout::bf);
+        k.EnableOutputLayout(DataLayout::bf);
+        k.EnableBiasPerOutput();
         k.EnableBiasPerFeature();
         k.EnableNonBiasTerm();
         k.EnableTensorOffset();
         k.EnableTensorPitches();
+        k.EnableBatching();
         return k;
     }
 
-    KernelsData FullyConnected_yxfb_ref::GetKernelsData(const Params& params, const OptionalParams& options) const
+    FullyConnectedKernelRef::Parent::DispatchData FullyConnectedKernelRef::SetDefault(const FullyConnectedParams& params) const
     {
-        return GetCommonKernelsData(params, options, DataLayout::yxfb,
-            { WeightsLayout::io, WeightsLayout::oi, WeightsLayout::oiyx, WeightsLayout::oyxi, WeightsLayout::iyxo, WeightsLayout::yxio }
+        auto runInfo = Parent::SetDefault(params);
+        
+        std::vector<size_t> global = { params.output.Feature().v, params.output.Batch().v };
+        std::vector<size_t> local  = GetOptimalLocalWorkGroupSizes(global);
+
+        runInfo.gws0 = global[0];
+        runInfo.gws1 = global[1];
+        runInfo.gws2 = 1;
+
+        runInfo.lws0 = local[0];
+        runInfo.lws1 = local[1];
+        runInfo.lws2 = 1;
+
+        return runInfo;
+    }
+
+    KernelsData FullyConnectedKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    {
+        return GetCommonKernelsData(params, options, DataLayout::bfyx,
+        { WeightsLayout::oiyx, WeightsLayout::oyxi, WeightsLayout::iyxo, WeightsLayout::yxio }
         );
     }
 }

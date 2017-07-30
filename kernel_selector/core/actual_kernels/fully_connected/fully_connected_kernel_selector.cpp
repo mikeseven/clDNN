@@ -15,7 +15,7 @@
 */
 
 #include "fully_connected_kernel_selector.h"
-#include "fully_connected_kernel_ref.h"
+#include "fully_connected_kernel_bfyx_ref.h"
 #include "fully_connected_kernel_gemm.h"
 #include "fully_connected_kernel_bs_f_bsv16_b1.h"
 #include "fully_connected_kernel_bs_f_bsv16_af8.h"
