@@ -145,7 +145,7 @@ namespace KernelSelector
             kernel_string->jit = jit;
             kernel_string->options = exe_mode + " -cl-mad-enable";
             kernel_string->entry_point = entry_point;
-            kernel_string->batch_compilation = false;
+            kernel_string->batch_compilation = true;
         }
 
         return kernel_string;

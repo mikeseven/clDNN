@@ -20,13 +20,13 @@
  
 namespace KernelSelector {
     
-    class FullyConnectedKernelRef : public FullyConnectedKernelBase
+    class FullyConnected_bfyx_Ref : public FullyConnectedKernelBase
     {
     public:
         using Parent = FullyConnectedKernelBase;
 
-        FullyConnectedKernelRef() : Parent("fully_connected_gpu_bfyx_ref") {}
-        virtual ~FullyConnectedKernelRef() {}
+        FullyConnected_bfyx_Ref() : Parent("fully_connected_gpu_bfyx_ref") {}
+        virtual ~FullyConnected_bfyx_Ref() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;

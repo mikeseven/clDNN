@@ -16,7 +16,7 @@
 
 #include "fully_connected_kernel_selector.h"
 #include "fully_connected_kernel_bfyx_ref.h"
-#include "fully_connected_kernel_gemm.h"
+#include "fully_connected_kernel_bf_io_gemm.h"
 #include "fully_connected_kernel_bs_f_bsv16_b1.h"
 #include "fully_connected_kernel_bs_f_bsv16_af8.h"
 #include "fully_connected_kernel_bs_f_bsv8_af8.h"
@@ -32,8 +32,8 @@ namespace KernelSelector {
 
     FullyConnectedKernelSelctor::FullyConnectedKernelSelctor()
     {
-        Attach<FullyConnectedKernelRef>();
-        Attach<FullyConnectedKernelGEMM>();
+        Attach<FullyConnected_bfyx_Ref>();
+        Attach<FullyConnected_bf_io_GEMM>();
         Attach<FullyConnected_bs_f_bsv16_b1>();
         Attach<FullyConnected_bs_f_bsv16_af8>();
         Attach<FullyConnected_bs_f_bsv8_af8>();

@@ -15,7 +15,7 @@
 */
 
 
-#include "include/cnn_common.cl"
+#include "include/include_all.cl"
 
 #if defined(__fc_f16)
 
@@ -23,10 +23,13 @@
 #define VEC_SIZE 4
 __attribute__ ((reqd_work_group_size(WORK_GROUP_X, 1, 1)))
 KERNEL(fc_f16)(
-    __global const half  *src_vector,
+    const __global const half  *src_vector,
     __global half        *dst_vector,
-    __global const half  *matrix,
-    __global const half  *biases)
+    const __global const half  *matrix
+#if BIAS_TERM
+    , const __global const half  *biases
+#endif
+    )
 {
     local half slm[WORK_GROUP_X];
     const unsigned x = get_local_id(0);
@@ -47,7 +50,7 @@ KERNEL(fc_f16)(
     
     // TODO: we need to support multi dims. currently it doesn't
     // TODO: check cases we have padding in y/z dimensions
-    unsigned w = INPUT_BATCH_PITCH;
+    unsigned w = INPUT0_BATCH_PITCH;
     
     #if (LAST_INPUT_SIZE_DIV_4 == 0)
     w /= VEC_SIZE;
@@ -60,7 +63,7 @@ KERNEL(fc_f16)(
     const int end_offset = start_offset + (w + VEC_SIZE - 1) / VEC_SIZE;
     #endif
 
-    __global const half4 *src_read    = (__global const half4 *) (src_vector + batch_id*INPUT_BATCH_PITCH + INPUT_OFFSET);
+    __global const half4 *src_read    = (__global const half4 *) (src_vector + batch_id*INPUT0_BATCH_PITCH + INPUT0_OFFSET);
     int m_offset = start_offset + x;
     int v_offset = x;
     half4 sum = (half4)(0);
@@ -118,11 +121,11 @@ KERNEL(fc_f16)(
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 
-    #if defined(OUTPUT_BIASED)
+    #if BIAS_TERM
     const half bias = biases[y];
-    if (x == 0) dst_vector[oidx] = FUNC_CALL(activation_function)(slm[0] + bias, NL_M, NL_N);
+    if (x == 0) dst_vector[oidx] = ACTIVATION(slm[0] + bias, NL_M, NL_N);
     #else
-    if (x == 0) dst_vector[oidx] = FUNC_CALL(activation_function)(slm[0], NL_M, NL_N);
+    if (x == 0) dst_vector[oidx] = ACTIVATION(slm[0], NL_M, NL_N);
     #endif
 }
 #endif 
@@ -134,10 +137,13 @@ KERNEL(fc_f16)(
 #define VEC_SIZE 4
 __attribute__ ((reqd_work_group_size(WORK_GROUP_X, 1, 1)))
 KERNEL(fc_f32)(
-    __global const float  *src_vector,
+    const __global const float  *src_vector,
     __global float        *dst_vector,
-    __global const float  *matrix,
-    __global const float  *biases)
+    const __global const float  *matrix
+#if BIAS_TERM
+    , const __global const float  *biases
+#endif
+    )
 {
     local float slm[WORK_GROUP_X];
     const unsigned x = get_local_id(0);
@@ -157,9 +163,9 @@ KERNEL(fc_f32)(
 #endif
     // TODO: we need to support multi dims. currently it doesn't
     // TODO: check cases we have padding in y/z dimensions
-    unsigned w = INPUT_BATCH_PITCH;
+    unsigned w = INPUT0_BATCH_PITCH;
     
-    #ifdef OUTPUT_BIASED
+    #if BIAS_TERM
     const float bias = biases[y];
     #else
     const float bias = 0;
@@ -176,7 +182,7 @@ KERNEL(fc_f32)(
     const int end_offset = start_offset + (w + VEC_SIZE - 1) / VEC_SIZE;
     #endif
 
-    __global const float4 *src_read    = (__global const float4 *) (src_vector + batch_id*INPUT_BATCH_PITCH + INPUT_OFFSET);
+    __global const float4 *src_read    = (__global const float4 *) (src_vector + batch_id*INPUT0_BATCH_PITCH + INPUT0_OFFSET);
     int m_offset = start_offset + x;
     int v_offset = x;
     float4 sum = (float4)(0);
@@ -234,7 +240,7 @@ KERNEL(fc_f32)(
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 
-    if (x == 0) dst_vector[oidx] = FUNC_CALL(activation_function)(slm[0] + bias, NL_M, NL_N);
+    if (x == 0) dst_vector[oidx] = ACTIVATION(slm[0] + bias, NL_M, NL_N);
 }
 #endif 
 

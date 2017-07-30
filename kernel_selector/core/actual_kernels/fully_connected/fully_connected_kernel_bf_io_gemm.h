@@ -16,17 +16,22 @@
 
 #pragma once
 
-#include "cnn_fully_connected_kernel_base.h"
+#include "fully_connected_kernel_base.h"
  
 namespace KernelSelector {
     
-    class FullyConnectedKernelGEMM : public CNNFullyConnectedKernelBase
+    class FullyConnected_bf_io_GEMM : public FullyConnectedKernelBase
     {
     public:
-        FullyConnectedKernelGEMM() : CNNFullyConnectedKernelBase("cnn_fc_gemm") {}
-        virtual ~FullyConnectedKernelGEMM() {}
+        using Parent = FullyConnectedKernelBase;
+        FullyConnected_bf_io_GEMM() : Parent("fully_connected_gpu_bf_io_gemm") {}
+        virtual ~FullyConnected_bf_io_GEMM() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
+
+    protected:
+        virtual DispatchData SetDefault(const FullyConnectedParams& params) const override;
+        virtual JitConstants GetJitConstants(const FullyConnectedParams& params, const DispatchData& kd) const override;
     };
 }

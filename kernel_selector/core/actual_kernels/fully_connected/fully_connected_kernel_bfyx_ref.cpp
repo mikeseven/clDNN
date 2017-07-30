@@ -19,7 +19,7 @@
  
 namespace KernelSelector 
 {
-    ParamsKey FullyConnectedKernelRef::GetSupportedKey() const
+    ParamsKey FullyConnected_bfyx_Ref::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
@@ -40,7 +40,7 @@ namespace KernelSelector
         return k;
     }
 
-    FullyConnectedKernelRef::Parent::DispatchData FullyConnectedKernelRef::SetDefault(const FullyConnectedParams& params) const
+    FullyConnected_bfyx_Ref::Parent::DispatchData FullyConnected_bfyx_Ref::SetDefault(const FullyConnectedParams& params) const
     {
         auto runInfo = Parent::SetDefault(params);
         
@@ -58,7 +58,7 @@ namespace KernelSelector
         return runInfo;
     }
 
-    KernelsData FullyConnectedKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData FullyConnected_bfyx_Ref::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         return GetCommonKernelsData(params, options, DataLayout::bfyx,
         { WeightsLayout::oiyx, WeightsLayout::oyxi, WeightsLayout::iyxo, WeightsLayout::yxio }
