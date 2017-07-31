@@ -29,7 +29,7 @@ namespace KernelSelector
 
         struct DispatchData : public CommonDispatchData
         {
-            struct IGKStyle
+            struct CLDNNStyle
             {
                 size_t ofmPerWorkItem;          // how many output feature maps a single work item compute
                 size_t batchesPerWorkItem;      // how many batches will a single work item compute
@@ -40,7 +40,7 @@ namespace KernelSelector
                 size_t leftovers;
             };
 
-            struct AMRStyle
+            struct GEMMStyle
             {
                 size_t subBlockDimM;
                 size_t subBlockDimK;
@@ -52,8 +52,8 @@ namespace KernelSelector
 
             union
             {
-                IGKStyle igkStyle;
-                AMRStyle amrStyle;
+                CLDNNStyle cldnnStyle;
+                GEMMStyle  gemmStyle;
             };
         };
     

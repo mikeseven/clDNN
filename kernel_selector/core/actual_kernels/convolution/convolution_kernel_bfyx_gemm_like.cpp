@@ -48,9 +48,9 @@ namespace KernelSelector
         JitConstants jit = Parent::GetJitConstants(params, runInfo);
         
         jit.AddConstants({
-            MakeJitConstant("ALIGNED_OFM",                  RoundUp(params.output.Feature().v, runInfo.amrStyle.subBlockDimN)),
-            MakeJitConstant("DX",                           runInfo.amrStyle.globalWorkSizeDX),
-            MakeJitConstant("DY",                           runInfo.amrStyle.globalWorkSizeDY),
+            MakeJitConstant("ALIGNED_OFM",                  RoundUp(params.output.Feature().v, runInfo.gemmStyle.subBlockDimN)),
+            MakeJitConstant("DX",                           runInfo.gemmStyle.globalWorkSizeDX),
+            MakeJitConstant("DY",                           runInfo.gemmStyle.globalWorkSizeDY),
             MakeJitConstant("FILTER_SIZE_X_DIV2",           params.convParams.filterSize.x / 2),
             MakeJitConstant("INPUT_BUFFER_WIDTH_PADDED",    ""),    // TODO: enable non padding path again
             MakeJitConstant("INPUT_BUFFER_HEIGHT_PADDED",   ""),
@@ -70,22 +70,22 @@ namespace KernelSelector
 
         if (arg.inputs[0].GetDType() == Datatype::F16)
         {
-            runInfo.amrStyle = { 1, cp.filterSize.x, 32, 32, 1, 1 };
+            runInfo.gemmStyle = { 1, cp.filterSize.x, 32, 32, 1, 1 };
             runInfo.lws1 = 16;
             runInfo.effiency = FORCE_PRIORITY_6;
         }
         else
         {
-            runInfo.amrStyle = { 2, cp.filterSize.x, 32, 32, 2, 1 };
+            runInfo.gemmStyle = { 2, cp.filterSize.x, 32, 32, 2, 1 };
             runInfo.lws1 = 8;
             runInfo.effiency = FORCE_PRIORITY_8;
         }
 
-        size_t sgemm_m = RoundUp(arg.output.X().v * arg.output.Y().v, runInfo.amrStyle.subBlockDimM);
-        size_t sgemm_n = RoundUp(arg.output.Feature().v, runInfo.amrStyle.subBlockDimN);
+        size_t sgemm_m = RoundUp(arg.output.X().v * arg.output.Y().v, runInfo.gemmStyle.subBlockDimM);
+        size_t sgemm_n = RoundUp(arg.output.Feature().v, runInfo.gemmStyle.subBlockDimN);
 
-        runInfo.gws0 = RoundUp(CeilDiv(sgemm_n, runInfo.amrStyle.globalWorkSizeDX), runInfo.lws0);
-        runInfo.gws1 = RoundUp(CeilDiv(sgemm_m, runInfo.amrStyle.globalWorkSizeDY), runInfo.lws1);
+        runInfo.gws0 = RoundUp(CeilDiv(sgemm_n, runInfo.gemmStyle.globalWorkSizeDX), runInfo.lws0);
+        runInfo.gws1 = RoundUp(CeilDiv(sgemm_m, runInfo.gemmStyle.globalWorkSizeDY), runInfo.lws1);
         runInfo.gws2 = arg.output.Batch().v;
 
         return runInfo;

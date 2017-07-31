@@ -58,10 +58,10 @@ namespace KernelSelector
 
             mem_consts.AddConstants({
                 MakeJitConstant("LOCAL_WORK_GROUP_SIZE",                            local_work_group_size),
-                MakeJitConstant("OFM_PER_WORK_ITEM",                                kd.igkStyle.ofmPerWorkItem), // how many output feature maps for a single batch will a single work item produce
-                MakeJitConstant("BATCHES_PER_WORK_ITEM",                            kd.igkStyle.batchesPerWorkItem), // how many batches will a single work item compute
-                MakeJitConstant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS",    std::max(batch_size / kd.igkStyle.batchesPerWorkItem / local_work_group_size, static_cast<size_t>(1))), // how many local work groups we need to compute single element for each batch
-                MakeJitConstant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS",           batch_size / kd.igkStyle.batchesPerWorkItem), // how many work items we need to compute single element for each batch
+                MakeJitConstant("OFM_PER_WORK_ITEM",                                kd.cldnnStyle.ofmPerWorkItem), // how many output feature maps for a single batch will a single work item produce
+                MakeJitConstant("BATCHES_PER_WORK_ITEM",                            kd.cldnnStyle.batchesPerWorkItem), // how many batches will a single work item compute
+                MakeJitConstant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS",    std::max(batch_size / kd.cldnnStyle.batchesPerWorkItem / local_work_group_size, static_cast<size_t>(1))), // how many local work groups we need to compute single element for each batch
+                MakeJitConstant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS",           batch_size / kd.cldnnStyle.batchesPerWorkItem), // how many work items we need to compute single element for each batch
             });
         }
 
@@ -147,14 +147,14 @@ namespace KernelSelector
         kd.lws0 = lws0;
         kd.lws1 = 1;
         kd.lws2 = 1;
-        kd.igkStyle.ofmPerWorkItem = 1;
-        kd.igkStyle.batchesPerWorkItem = 1;
-        kd.igkStyle.blockWidth = 1;
-        kd.igkStyle.blockHeight = 1;
-        kd.igkStyle.prefetch = 0;
-        kd.igkStyle.inputBlockArraySize = 0;
-        kd.igkStyle.inputBlockWidth = 0;
-        kd.igkStyle.leftovers = 0;
+        kd.cldnnStyle.ofmPerWorkItem = 1;
+        kd.cldnnStyle.batchesPerWorkItem = 1;
+        kd.cldnnStyle.blockWidth = 1;
+        kd.cldnnStyle.blockHeight = 1;
+        kd.cldnnStyle.prefetch = 0;
+        kd.cldnnStyle.inputBlockArraySize = 0;
+        kd.cldnnStyle.inputBlockWidth = 0;
+        kd.cldnnStyle.leftovers = 0;
         kd.effiency = DONT_USE_IF_HAVE_SOMETHING_ELSE;
         return kd;
     }

@@ -47,11 +47,11 @@ namespace KernelSelector {
         const auto& cp = params.convParams;
 
         jit.AddConstants({
-            MakeJitConstant("ALIGNED_OFM",                  RoundUp(params.output.Feature().v, runInfo.amrStyle.subBlockDimN)),
-            MakeJitConstant("DX",                           runInfo.amrStyle.globalWorkSizeDX),
-            MakeJitConstant("DY",                           runInfo.amrStyle.globalWorkSizeDY),
+            MakeJitConstant("ALIGNED_OFM",                  RoundUp(params.output.Feature().v, runInfo.gemmStyle.subBlockDimN)),
+            MakeJitConstant("DX",                           runInfo.gemmStyle.globalWorkSizeDX),
+            MakeJitConstant("DY",                           runInfo.gemmStyle.globalWorkSizeDY),
             MakeJitConstant("KERNEL_SLICE_DIV2",            (cp.filterSize.x * cp.filterSize.y) / 2),
-            MakeJitConstant("RIGHT_PARTIAL_TILE_K",         params.output.X().v % runInfo.amrStyle.globalWorkSizeDX),
+            MakeJitConstant("RIGHT_PARTIAL_TILE_K",         params.output.X().v % runInfo.gemmStyle.globalWorkSizeDX),
             MakeJitConstant("INPUT_BUFFER_WIDTH_PADDED",    ""),    // TODO: enable non padding path again
             MakeJitConstant("INPUT_BUFFER_HEIGHT_PADDED",   ""),
         });
@@ -68,15 +68,15 @@ namespace KernelSelector {
 
         if (cp.filterSize.x == 5)
         {
-            runInfo.amrStyle = { 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 4, 1 };
+            runInfo.gemmStyle = { 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 4, 1 };
         }
         else
         {
-            runInfo.amrStyle = { 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 3, 1 };
+            runInfo.gemmStyle = { 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 3, 1 };
         }
 
-        runInfo.gws0 = RoundUp(arg.output.X().v, runInfo.amrStyle.globalWorkSizeDX) / runInfo.amrStyle.globalWorkSizeDX;
-        runInfo.gws1 = RoundUp(arg.output.Y().v, runInfo.amrStyle.globalWorkSizeDY) / runInfo.amrStyle.globalWorkSizeDY;
+        runInfo.gws0 = RoundUp(arg.output.X().v, runInfo.gemmStyle.globalWorkSizeDX) / runInfo.gemmStyle.globalWorkSizeDX;
+        runInfo.gws1 = RoundUp(arg.output.Y().v, runInfo.gemmStyle.globalWorkSizeDY) / runInfo.gemmStyle.globalWorkSizeDY;
         runInfo.gws2 = RoundUp(arg.output.Feature().v, TILE_N) * arg.output.Batch().v;
 
         runInfo.lws0 = 1;

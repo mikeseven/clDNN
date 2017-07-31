@@ -52,14 +52,14 @@ namespace KernelSelector
 
         if (((filterOfmNum * batchSize) / 16) % runInfo.lws0)
         {
-            runInfo.igkStyle.ofmPerWorkItem = 8;
+            runInfo.cldnnStyle.ofmPerWorkItem = 8;
         }
         else
         {
-            runInfo.igkStyle.ofmPerWorkItem = 16;
+            runInfo.cldnnStyle.ofmPerWorkItem = 16;
         }
 
-        runInfo.gws0 = filterOfmNum * batchSize / (runInfo.igkStyle.ofmPerWorkItem * runInfo.igkStyle.batchesPerWorkItem);
+        runInfo.gws0 = filterOfmNum * batchSize / (runInfo.cldnnStyle.ofmPerWorkItem * runInfo.cldnnStyle.batchesPerWorkItem);
 
         runInfo.effiency = FORCE_PRIORITY_9;
         
