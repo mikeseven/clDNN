@@ -329,6 +329,7 @@ void program_impl::init_graph(topology_impl const& topology)
 void program_impl::pre_optimize_graph()
 {
     trim_to_outputs();
+    remove_redundant_reorders();
 
     if (get_engine()->configuration().enable_parallelisation)
         reorder_nodes_for_parallel_execution();
@@ -721,6 +722,31 @@ void program_impl::trim_to_outputs()
     for (auto const& opt : optimized_out)
     {
         nodes_map.erase(opt);
+    }
+}
+
+void program_impl::remove_redundant_reorders()
+{
+    auto itr = processing_order.begin(); //note we need to use iterators since currently processed element can be removed
+    while (itr != processing_order.end())
+    {
+        auto& node = (*itr++); //post-inc to avoid invalidation due to possible erase
+        if (!node->is_type<reorder>()) //only care for reorders
+            continue;
+
+        auto& r_node = node->as<reorder>();
+        if (r_node.has_mean() || !r_node.get_primitive()->subtract_per_feature.empty()) //do not optimize if mean of subtract are present
+            continue;
+
+        assert(r_node.dependencies.size() == 1 && "reorder without mean shoudl have exactly one dependecy (input)");
+        auto o_layout = r_node.get_output_layout();
+        auto i_layout = r_node.input().get_output_layout();
+        if (o_layout != i_layout) //do not optimize if layout changes (either format or paddings, size should remain the same)
+            continue;
+
+        //mark as optimized
+        r_node.can_be_optimized(true);
+        extract_and_remove(r_node); //try to remove if possible (with respect to r_node not being marked as output)
     }
 }
 
@@ -1426,6 +1452,7 @@ void program_impl::prepare_buffer_fusing()
             input[0]->set_output_layout(node.get_output_layout());
 
             node.can_be_optimized(true);
+            extract_and_remove(node); //try to remove redundant reorders
         });
     }
 }
@@ -1450,10 +1477,10 @@ void program_impl::add_intermediate(program_node& node, program_node& next, size
     node.processing_itr = processing_order.insert(next.processing_itr, &node);
 }
 
-void program_impl::remove_if_dangling(program_node& node)
+bool program_impl::remove_if_dangling(program_node& node)
 {
     if (!node.users.empty() || !node.dependencies.empty() || node.is_output())
-        return;
+        return false;
 
     processing_order.erase(node.processing_itr);
     optimized_out.push_back(node.id());
@@ -1461,6 +1488,26 @@ void program_impl::remove_if_dangling(program_node& node)
     
     if(node.is_input())
         inputs.remove(&node);
+
+    return true;
+}
+
+bool program_impl::extract_and_remove(program_node& node)
+{
+    if (node.is_output()) //TODO: add a mechanism to support removal of nodes which are marked as outputs
+        return false;
+
+    if (node.get_dependencies().size() != 1)
+        return false;
+
+    auto& input = node.get_dependency(0);
+    node.dependencies.clear();
+    input.users.remove(&node);
+
+    for (auto& user : node.get_users())
+        user->replace_dependency(node, input); //note: removal of the node should take place automatically when detached
+
+    return true;
 }
 
 void program_impl::forward_bfs(std::function<void(program_node&)> const& mark_func, std::function<void(program_node&)> const& unmark_func) const

@@ -98,13 +98,13 @@ private:
     */
     void set_outputs();
     void calc_processing_order();
-    void mark_constants();
-    void mark_data_flow();
-    void calc_dominators();
 
     /*
     ** Analysis functions
     */
+    void mark_constants();
+    void mark_data_flow();
+    void calc_dominators();
     // TODO: Remove once we will get full support for input/output padding in all primitive implementations.
     void analyze_output_size_handling_need();
 
@@ -112,6 +112,7 @@ private:
     ** Optimization functions
     */
     void trim_to_outputs();
+    void remove_redundant_reorders();
     void reorder_nodes_for_parallel_execution();
     void reorder_inputs(layout_optimizer& lo);
     void pre_optimize_bias(layout_optimizer& lo);
@@ -146,8 +147,20 @@ private:
         next.dependencies.push_back(&prev);
     }
 
-    void remove_if_dangling(program_node& node);
+    //returns if 'node' has been removed
+    bool remove_if_dangling(program_node& node);
 
+    //removes a node from the graph and deletes it afterwards,
+    //extraction is performed as follows (D = dependency, U = user, N = node):
+    // before:                  after:
+    //                +- U1             +- U1
+    //               /                 /
+    //  D1 --- N ---+--- U2     D1 ---+--- U2
+    //               \                 \
+    //                +- U3             +- U3
+    //prereq: node cannot be marked as output and has to have exactly one dependency
+    //returns if 'node' has been extracted and removed successfully
+    bool extract_and_remove(program_node& node);
 
     void forward_bfs(std::function<void(program_node&)> const& mark_func = nullptr, std::function<void(program_node&)> const& unmark_func = nullptr) const;
     void backward_bfs(std::function<void(program_node&)> const& mark_func = nullptr, std::function<void(program_node&)> const& unmark_func = nullptr) const;
