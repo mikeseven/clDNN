@@ -178,3 +178,42 @@ inline DATA_TYPE FUNC(activation_function)(DATA_TYPE in_f, float m, float n)
 {
     return CAT_FUNC_CALL(activation_function_, DATA_TYPE)(in_f, m ,n);
 }
+
+
+// TODO: use native_exp and use cast for APL
+#define ACTIVATION_LOGISTIC(input)                      (1/(1 + exp(-input)))
+#define ACTIVATION_HYPERBOLIC_TAN(input)                (tanh(input))
+#define ACTIVATION_RELU(input)                          (fmax(0, input))
+#define ACTIVATION_RELU_NEGATIVE_SLOPE(input, slope)    isinf((DATA_TYPE)(slope)) ? ((input >= 0) ? \
+                                                        input : -(DATA_TYPE)(slope)) : \
+                                                        (fmax(input, 0) + (DATA_TYPE)(slope) * fmin(input, 0))
+#define ACTIVATION_BRELU(input, m)                      (fmax(0, fmin(m, input)))
+#define ACTIVATION_SOFTRELU(input)                      (log(1 + exp(input)))
+#define ACTIVATION_ABS(input)                           (fabs(input))
+#define ACTIVATION_LINEAR(input, m, n)                  (m*input + n)
+#define ACTIVATION_SQUARE(input)                        (input*input)
+#define ACTIVATION_SQRT(input)                          (sqrt(input))
+
+#if defined ACTIVATION_FUNCTION_LOGISTIC
+    #define ACTIVATION(input, m, n) ACTIVATION_LOGISTIC(input)
+#elif defined ACTIVATION_FUNCTION_HYPERBOLIC_TAN
+    #define ACTIVATION(input, m, n) ACTIVATION_HYPERBOLIC_TAN(input)
+#elif defined ACTIVATION_FUNCTION_RELU
+    #define ACTIVATION(input, m, n) ACTIVATION_RELU(input)
+#elif defined ACTIVATION_FUNCTION_RELU_NEGATIVE_SLOPE
+    #define ACTIVATION(input, m, n) ACTIVATION_RELU_NEGATIVE_SLOPE(input, m)
+#elif defined ACTIVATION_FUNCTION_BRELU
+    #define ACTIVATION(input, m, n) ACTIVATION_BRELU(input, m)
+#elif defined ACTIVATION_FUNCTION_SOFTRELU
+    #define ACTIVATION(input, m, n) ACTIVATION_SOFTRELU(input)    
+#elif defined ACTIVATION_FUNCTION_ABS
+    #define ACTIVATION(input, m, n) ACTIVATION_ABS(input)
+#elif defined ACTIVATION_FUNCTION_LINEAR
+    #define ACTIVATION(input, m, n) ACTIVATION_LINEAR(input, m, n)
+#elif defined ACTIVATION_FUNCTION_SQUARE
+    #define ACTIVATION(input, m, n) ACTIVATION_SQUARE(input)
+#elif defined ACTIVATION_FUNCTION_SQRT
+    #define ACTIVATION(input, m, n) ACTIVATION_SQRT(input)
+#else
+    #define ACTIVATION(input, m, n) input
+#endif

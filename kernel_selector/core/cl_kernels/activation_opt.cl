@@ -1,4 +1,4 @@
-﻿/*
+/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,19 +14,19 @@
 // limitations under the License.
 */
 
-#pragma once
+#include "include/include_all.cl"
 
-#include "activation_kernel_base.h"
-
-namespace KernelSelector
+KERNEL(activation)(__global INPUT0_TYPE* input, __global OUTPUT_TYPE* output)
 {
-    class ActivationKernelRef : public ActivationKernelBase
-    {
-    public:
-        ActivationKernelRef() : ActivationKernelBase("activation_ref") {}
-        virtual ~ActivationKernelRef() {}
+    const unsigned int x = get_global_id(0) * NUM_COLS_WI;
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
-        virtual ParamsKey GetSupportedKey() const override;
-    };
+    unsigned int input_offset  = x + INPUT0_OFFSET; 
+    unsigned int output_offset = x + OUTPUT_OFFSET; 
+
+    typedef CAT(UNIT_TYPE, 4) type_t;
+    type_t v = ((__global type_t*) (input + input_offset))[0];
+
+    v = ACTIVATION(v, NL_M, NL_N);
+
+    *((__global type_t*)(output + output_offset)) = v;
 }

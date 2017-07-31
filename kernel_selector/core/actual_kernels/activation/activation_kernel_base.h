@@ -16,17 +16,22 @@
 
 #pragma once
 
-#include "activation_kernel_base.h"
+#include "common_kernel_base.h"
 
 namespace KernelSelector
 {
-    class ActivationKernelRef : public ActivationKernelBase
+    class ActivationKernelBase : public CommonKernelBase
     {
     public:
-        ActivationKernelRef() : ActivationKernelBase("activation_ref") {}
-        virtual ~ActivationKernelRef() {}
+        using DispatchData = CommonDispatchData;
+        using CommonKernelBase::CommonKernelBase;
+        
+        virtual ~ActivationKernelBase() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
-        virtual ParamsKey GetSupportedKey() const override;
+    protected:
+        virtual bool Validate(const Params& p, const OptionalParams& o) const override;
+        virtual JitConstants GetJitConstants(const ActivationParams& params, DispatchData kd) const;
+        virtual DispatchData SetDefault(const ActivationParams& arg) const;
+        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& options) const;
     };
 }
