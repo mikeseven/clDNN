@@ -96,7 +96,7 @@ cl::Device get_gpu_device(const configuration& config)
     }
 
     if (reasons.empty())
-        throw std::runtime_error("Could not found any OpenCL device");
+        throw std::runtime_error("Could not find any OpenCL device");
 
     std::string error_msg = "No OpenCL device found which would match provided configuration:";
     for (const auto& reason : reasons)

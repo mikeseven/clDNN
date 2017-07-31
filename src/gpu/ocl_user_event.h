@@ -3,6 +3,7 @@
 #include "ocl_base_event.h"
 
 #ifdef _WIN32
+#pragma warning(push)
 #pragma warning(disable: 4250) //Visual Studio warns us about inheritance via dominance but it's done intentionally so turn it off
 #endif
 
@@ -20,7 +21,7 @@ struct user_event : public base_event, public cldnn::user_event
 };
 
 #ifdef _WIN32
-#pragma warning(default: 4250)
+#pragma warning(pop)
 #endif
 
 } }

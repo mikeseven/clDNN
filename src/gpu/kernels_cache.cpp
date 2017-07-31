@@ -277,7 +277,7 @@ kernels_cache::kernel_type kernels_cache::get_kernel(kernel_id id)
 
 void kernels_cache::build_all()
 {
-    if (!_pending_compilation.exchange(false))
+    if (!_pending_compilation)
         return;
 
     std::lock_guard<std::mutex> lock(_mutex);
@@ -297,6 +297,7 @@ void kernels_cache::build_all()
     }
 
     _kernels_code.clear();
+    _pending_compilation = false;
 }
 
 }}

@@ -445,8 +445,13 @@ void program_impl::mark_constants()
 
         node->constant = true;
         for (auto& dep : node->get_dependencies())
+        {
             if (!dep->constant)
+            {
                 node->constant = false;
+                break;
+            }
+        }
     }
 }
 
@@ -476,7 +481,8 @@ void program_impl::mark_data_flow()
 
         for (auto dep : node->get_dependencies())
         {
-            bool data_flow = (dep_idx++ < inputs_count && !dep->constant);
+            bool data_flow = (dep_idx < inputs_count && !dep->constant);
+            ++dep_idx;
             if (!data_flow)
                 continue;
 
@@ -1202,9 +1208,9 @@ void program_impl::prepare_buffer_fusing()
             //       per single input rather than all/none
             // + restrict input types to pooling, convolution and activation only due to problems with output padding on b and f
             for (auto const& input : node.get_dependencies())
-                if (input->get_users().size() > 1 
-                    || (!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>())
-                    || (input->is_output() && !is_debug))
+                if (input->get_users().size() > 1 ||
+                    (!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>()) ||
+                    (input->is_output() && !is_debug))
                     return;
 
             // buffer fusing should not be performed if one of inputs produces padded output since
@@ -1309,11 +1315,11 @@ void program_impl::prepare_buffer_fusing()
             auto const& input = node.get_dependencies();
             //Optimization only available in case of layers that support different input and output formats.
             //todo: new api needs to be created to read such caps
-                if (!input[0]->is_type<pooling>())
-                    return;
+            if (!input[0]->is_type<pooling>())
+                return;
 
-                if (input[0]->get_users().size() != 1)
-                    return;
+            if (input[0]->get_users().size() != 1)
+                return;
 
             input[0]->set_output_layout(node.get_output_layout());
 
