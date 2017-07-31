@@ -44,7 +44,8 @@ public:
 
     struct program_code
     {
-        source_code source;
+        std::vector<source_code> source;
+        uint32_t kernels_counter;
         std::string options;
         bool dump_custom_program;
         std::map<std::string, std::string> entry_point_to_id;

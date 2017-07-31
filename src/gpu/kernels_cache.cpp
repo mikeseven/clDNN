@@ -25,9 +25,10 @@
 
 #include "kernel_selector_helper.h"
 
-//#ifndef NDEBUG
+#define MAX_KERNELS_PER_PROGRAM 10
+#ifndef NDEBUG
 #define OUT_PORGRAM_TO_FILE
-//#endif
+#endif
 
 namespace neural { namespace gpu {
 
@@ -154,6 +155,12 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
         if (current_bucket.source.empty())
         {
             current_bucket.options = options;
+            current_bucket.kernels_counter = 0;
+        }
+
+        if ((current_bucket.kernels_counter % MAX_KERNELS_PER_PROGRAM) == 0)
+        {
+            current_bucket.source.push_back({});
         }
 
         current_bucket.entry_point_to_id[entry_point] = code.second.id;
@@ -167,8 +174,10 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
 
         for (auto& s : new_source_code)
         {
-            current_bucket.source.push_back(std::move(s));
+            current_bucket.source.back().push_back(std::move(s));
         }
+
+        current_bucket.kernels_counter++;
     }
 
     return std::move(scode);
@@ -211,39 +220,43 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
 
     try 
     {
-#ifndef OUT_PORGRAM_TO_FILE
-        if (program_source.dump_custom_program)
-#endif
-        {
-            current_file_index++;
-            std::ofstream os(current_program_dump_file_name);
-            for (auto& s : program_source.source)
-                os << s;
-        }
-
-        cl::Program program(_context.context(), program_source.source);
-        program.build({ _context.device() }, program_source.options.c_str());
-
-#ifndef OUT_PORGRAM_TO_FILE
-        if (program_source.dump_custom_program)
-#endif
-        {
-            std::ofstream os(current_program_dump_file_name, std::ios_base::app);
-            os << "\n/* Build Log:\n";
-            for (auto& p : program.getBuildInfo<CL_PROGRAM_BUILD_LOG>()) {
-                os << p.second << "\n";
-            }
-            os << "*/\n";
-        }
-
-        cl::vector<cl::Kernel> kernels;
-        program.createKernels(&kernels);
         kernels_map kmap;
 
-        for (auto& k : kernels)
+        for (const auto& sources : program_source.source)
         {
-            auto kernel_name = k.getInfo<CL_KERNEL_FUNCTION_NAME>();
-            kmap.emplace(kernel_name, k);
+#ifndef OUT_PORGRAM_TO_FILE
+            if (program_source.dump_custom_program)
+#endif
+            {
+                current_file_index++;
+                std::ofstream os(current_program_dump_file_name);
+                for (auto& s : sources)
+                    os << s;
+            }
+
+            cl::Program program(_context.context(), sources);
+            program.build({ _context.device() }, program_source.options.c_str());
+
+#ifndef OUT_PORGRAM_TO_FILE
+            if (program_source.dump_custom_program)
+#endif
+            {
+                std::ofstream os(current_program_dump_file_name, std::ios_base::app);
+                os << "\n/* Build Log:\n";
+                for (auto& p : program.getBuildInfo<CL_PROGRAM_BUILD_LOG>()) {
+                    os << p.second << "\n";
+                }
+                os << "*/\n";
+            }
+
+            cl::vector<cl::Kernel> kernels;
+            program.createKernels(&kernels);
+
+            for (auto& k : kernels)
+            {
+                auto kernel_name = k.getInfo<CL_KERNEL_FUNCTION_NAME>();
+                kmap.emplace(kernel_name, k);
+            }
         }
 
         return std::move(kmap);
