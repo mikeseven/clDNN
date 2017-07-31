@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "include/cnn_common.cl"
+//#include "include/cnn_common.cl"
 
 //////////////////////////////////////////////////////////////////////////////
 // Direct Convolution

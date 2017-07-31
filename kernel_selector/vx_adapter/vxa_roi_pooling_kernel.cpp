@@ -30,9 +30,9 @@ namespace clDNN
 
         // TODO port to new tensor
 
-        ksParams.rois = params.rois;
-        ksParams.pitchRoisR = params.pitch_rois_r;
-        ksParams.pitchRoisB = params.pitch_rois_b;
+//         ksParams.rois = params.rois;
+//         ksParams.pitchRoisR = params.pitch_rois_r;
+//         ksParams.pitchRoisB = params.pitch_rois_b;
 
         KernelSelector::ROIPoolingOptionalParams ksOptParams;
 

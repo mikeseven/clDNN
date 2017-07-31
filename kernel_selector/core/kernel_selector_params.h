@@ -792,23 +792,6 @@ namespace KernelSelector
     {
         ROIPoolingParams() : BaseParams(KernelType::ROI_POOLING) {}
 
-        size_t rois = 0;
-        size_t pitchRoisR = 0;
-        size_t pitchRoisB = 0;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            return BaseParams::GetParamsKey();
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ROIPoolingV1Params
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ROIPoolingV1Params : public BaseParams
-    {
-        ROIPoolingV1Params() : BaseParams(KernelType::ROI_POOLING) {}
-
         struct DedicatedParams
         {
             PoolType    mode         = PoolType::MAX;

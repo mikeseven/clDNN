@@ -26,7 +26,7 @@
 #include "lrn/lrn_kernel_selector.h"
 #include "normalize/normalize_kernel_selector.h"
 #include "pooling/pooling_kernel_selector.h"
-#include "roi_pooling/roi_pooling_v1_kernel_selector.h"
+#include "roi_pooling/roi_pooling_kernel_selector.h"
 #include "fully_connected/fully_connected_kernel_selector.h"
 #include "activation/activation_kernel_selector.h"
 #include "softmax/softmax_kernel_selector.h"
@@ -81,7 +81,7 @@ namespace kernel_selector
     using lrn_params                        = KernelSelector::LRNParams;
     using normalize_params                  = KernelSelector::NormalizeParams;
     using pooling_params                    = KernelSelector::PoolingParams;
-    using roi_pooling_v1_params             = KernelSelector::ROIPoolingV1Params;
+    using roi_pooling_v1_params             = KernelSelector::ROIPoolingParams;
     using fully_connected_params            = KernelSelector::FullyConnectedParams;
     using activation_params                 = KernelSelector::ActivationParams;
     using softmax_params                    = KernelSelector::SoftmaxParams;
@@ -114,7 +114,7 @@ namespace kernel_selector
     using lrn_kernel_selector               = KernelSelector::LRNKernelSelctor;
     using normalize_kernel_selector         = KernelSelector::NormalizeKernelSelctor;
     using pooling_kernel_selector           = KernelSelector::PoolingKernelSelctor;
-    using roi_pooling_v1_kernel_selector    = KernelSelector::ROIPoolingV1KernelSelctor;
+    using roi_pooling_v1_kernel_selector    = KernelSelector::ROIPoolingKernelSelctor;
     using fully_connected_kernel_selector   = KernelSelector::FullyConnectedKernelSelctor;
     using activation_kernel_selector        = KernelSelector::ActivationKernelSelctor;
     using softmax_kernel_selector           = KernelSelector::SoftmaxKernelSelctor;

@@ -26,12 +26,11 @@
 // required for the kernel to have the same API as other implmentations.
 #define ROI_NUM_ELEMENTS 5
 
-// Use same names as in ./kernel_selector/core/cl_kernels/cnn_roi_pooling_ref.cl
-
 #define SRC_W INPUT0_SIZE_X
 #define SRC_H INPUT0_SIZE_Y
 #define DST_W POOLED_WIDTH
 #define DST_H POOLED_HEIGHT
+#define PITCH_ROI_R INPUT1_BATCH_PITCH
 
 #if GORUP_SIZE == 0
 #define DST_C INPUT0_FEATURE_NUM
@@ -77,7 +76,7 @@ KERNEL(roi_pooling_gpu)
     //       with SPATIAL_SCALE: It makes sense since the resolution of
     //       the pooled data is limited by its dimensions. (Is this clear?)
 
-    const __global UNIT_TYPE * roi_ptr = &src_rois[INPUT1_BATCH_PITCH * r];
+    const __global UNIT_TYPE * roi_ptr = &src_rois[PITCH_ROI_R * r];
 #if USE_OLD_SCALE_AND_ROUNDING
     const int roi_x  = round(roi_ptr[1] * SPATIAL_SCALE);
     const int roi_y  = round(roi_ptr[2] * SPATIAL_SCALE);
@@ -168,5 +167,5 @@ KERNEL(roi_pooling_gpu)
     }
 
     const uint output_offset = OUTPUT_OFFSET + x*OUTPUT_X_PITCH + y*OUTPUT_Y_PITCH + c*OUTPUT_FEATURE_PITCH + r*OUTPUT_ROI_PITCH;
-    dst_data[output_offset] = (UNIT_TYPE)res;
+    dst_data[output_offset] = ACTIVATION((UNIT_TYPE)res, NL_M, NL_N);
 } 

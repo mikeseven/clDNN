@@ -17,7 +17,7 @@
 #include "roi_pooling_inst.h"
 #include "kernel.h"
 #include "implementation_map.h"
-#include "roi_pooling/roi_pooling_v1_kernel_selector.h"
+#include "roi_pooling/roi_pooling_kernel_selector.h"
 #include "kernel_selector_helper.h"
 
 using namespace cldnn;

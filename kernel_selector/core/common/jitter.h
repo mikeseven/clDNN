@@ -663,7 +663,7 @@ inline JitConstants MakeReorderWeightsJitConstants(const ReorderWeightsParams& p
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MakeROIPoolingV1JitConstants
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeROIPoolingV1JitConstants(const ROIPoolingV1Params& params)
+inline JitConstants MakeROIPoolingV1JitConstants(const ROIPoolingParams& params)
 {
     JitConstants jit = MakeBaseParamsJitConstants(params);
 
