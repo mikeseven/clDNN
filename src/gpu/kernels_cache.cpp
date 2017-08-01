@@ -88,7 +88,7 @@ namespace
         return std::move(undefs);
     }
 
-    std::string reroder_options(const std::string& org_options)
+    std::string reorder_options(const std::string& org_options)
     {
         std::stringstream ss(org_options);
         std::set<std::string> sorted_options;
@@ -134,7 +134,7 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
 
         if (batch_compilation)
         {
-            options = reroder_options(options);
+            options = reorder_options(options);
         }
 
         std::string key = options;
@@ -155,7 +155,6 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
         if (current_bucket.source.empty())
         {
             current_bucket.options = options;
-            current_bucket.kernels_counter = 0;
         }
 
         if ((current_bucket.kernels_counter % MAX_KERNELS_PER_PROGRAM) == 0)
