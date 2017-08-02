@@ -46,7 +46,7 @@ public:
 
     auto& weights(size_t idx = 0) const
     {
-        if (idx >= this->get_split())
+        if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("weights offset too big");
 
         return get_dependency(1 + idx);
@@ -54,7 +54,7 @@ public:
 
     auto& bias(size_t idx = 0) const 
     { 
-        if (idx >= this->get_split())
+        if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("bias offset too big");
 
         return get_dependency(1 + this->get_split() + idx);
@@ -87,7 +87,7 @@ public:
 
     const memory& weights_memory(size_t index) const
     {
-        if (index > node.get_split())
+        if (static_cast<int32_t>(index) > node.get_split())
             throw std::range_error("weights offset too big");
 
         return dep_memory(1 + index);
@@ -95,10 +95,10 @@ public:
 
     const memory& bias_memory(size_t index) const
     {
-        if (argument.bias.size() == 0 && index > node.get_split())
+        if (argument.bias.size() == 0 && static_cast<int32_t>(index) > node.get_split())
             throw std::range_error("no bias data");
 
-        if (index > node.get_split())
+        if (static_cast<int32_t>(index) > node.get_split())
             throw std::range_error("bias offset too big");
 
         return dep_memory(1 + node.get_split() + index);
