@@ -73,8 +73,18 @@ public:
     auto const& get_dependencies() const { return dependencies; }
     auto& get_dependency(size_t idx) const { return *dependencies.at(idx); }
 
+    auto get_dependencies_ids() const
+    {
+        std::vector<primitive_id> dep_ids;
+        for (auto& dependency : dependencies)
+            dep_ids.push_back(dependency->get_primitive()->id);
+        return dep_ids;
+    }
+
     void replace_dependency(size_t idx, program_node& new_dep);
     void replace_dependency(program_node const& old_dep, program_node& new_dep);
+
+    void remove_dependency(size_t idx);
 
     auto const& get_users() { return users; }
     // for const method, add const to stored successors/predecessors

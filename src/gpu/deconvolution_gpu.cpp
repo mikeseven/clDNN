@@ -38,7 +38,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
 
     event_impl::ptr execute_impl(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events, deconvolution_inst& instance) override
     {
-        auto split = outer.get_primitive()->split();
+        auto split = instance.node.split;
 
         const auto* input_mem = &instance.input_memory();
         const auto* output_mem = &instance.output_memory();
@@ -64,7 +64,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
             args.output = output_mem;
             args.weights = filter_mem;
             args.bias = bias_mem;
-            args.split = i;
+            args.split = (uint32_t)i;
 
             auto event = _kernel.run(_kernel_data.kernels[0], tmp_events, args);
             tmp_events.clear();
@@ -102,14 +102,19 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
 #else
         const tensor dilation = {0,0,1,1};
 #endif
+        const auto& input_layout = arg.input().get_output_layout();
+        const auto depthwise_separable_opt = input_layout.size.feature[0] == split && split >= 16;
+
         const auto& input_offset = primitive->input_offset;
 
         assert(arg.get_output_layout().size.feature[0] / primitive->split() == weights_layout.size.batch[0]);
 
-        auto deconv_params = get_weights_bias_default_params<kernel_selector::deconvolution_params>(arg, split);
+        auto deconv_params = get_weights_bias_default_params<kernel_selector::deconvolution_params>(arg, depthwise_separable_opt ? 1 : split);
         auto deconv_optional_params = get_default_weights_bias_optional_params<kernel_selector::deconvolution_optional_params>(arg.get_program());
 
         convert_activation_func_params(primitive, deconv_params);
+
+        deconv_params.deconvParams.depthwiseSeparableOpt = depthwise_separable_opt;
 
         deconv_params.deconvParams.split = split;
         deconv_params.deconvParams.filterSize = {

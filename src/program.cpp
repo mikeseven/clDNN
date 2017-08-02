@@ -158,6 +158,27 @@ namespace {
     {
         return t;
     }
+
+    //helper function for merging the weights/biases buffers on cpu side for depthwise separable convolution optimization
+    void merge_buffers(engine_impl::ptr engine, program_node &node, layout target_layout, size_t begin_offset, size_t end_offset)
+    {
+        memory data_to_allocate(api_cast(engine->allocate_buffer(target_layout)));
+
+        for (size_t i = begin_offset; i < end_offset; i++)
+        {
+            auto& weights = node.get_dependency(i).as<data>();
+            auto src_ptr = weights.get_primitive()->mem.pointer<char>();
+            auto mem_size = weights.get_primitive()->mem.size();
+            auto dst_ptr = data_to_allocate.pointer<char>();
+            memcpy(dst_ptr.data() + (i - begin_offset)*mem_size, src_ptr.data(), mem_size);
+        }
+
+        for(size_t i = 0; i < end_offset - begin_offset - 1; i++)
+            node.remove_dependency(begin_offset + 1);
+
+        auto& data_node = node.get_dependency(begin_offset).as<data>();
+        const_cast<data&>(*data_node.get_primitive()).mem = data_to_allocate;
+    }
 }
 
 program_impl::program_impl(engine_impl::ptr engine, topology_impl const& topology, build_options const& options)
@@ -1057,6 +1078,60 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
     //all optimizing primitives has been added and inputs for all primitives has been updated.
     //run reorders now
     lo.optimize();
+
+    const auto prep_opt_depthwise_sep = [this](auto& node) -> void
+    {
+        auto weights_offset = node.get_primitive()->input.size();
+        auto bias_offset = weights_offset + wrap_if_single(node.get_primitive()->weights).size();
+
+        //enable optimization only when split = IFM and split > 16
+        if (node.get_dependency(0).get_output_layout().size.feature[0] == node.get_primitive()->split() &&
+            node.get_primitive()->split() >= 16)
+        {
+            auto depthwise_separable = true;
+
+            //make sure the weights and biases are data type and 
+            //are not reused in other primitives as they will be overriden with concatenated ones
+            for (size_t i = 1; i < node.get_dependencies().size(); i++)
+            {
+                auto& weights_or_biases = node.get_dependency(i);
+                if (weights_or_biases.get_users().size() > 1 || weights_or_biases.type() != data::type_id())
+                    depthwise_separable = false;
+            }
+
+            if (depthwise_separable)
+            {
+                const auto& weights_layout = node.get_dependency(1).get_output_layout();
+                const auto& split = node.get_primitive()->split();
+
+                //concatenate weights
+                {
+                    auto target_layout = layout( weights_layout.data_type, weights_layout.format,{ split, 1, weights_layout.size.spatial[0], weights_layout.size.spatial[1] } );
+                    merge_buffers(engine, node, target_layout, weights_offset, bias_offset);
+                }
+
+                //concatenate biases
+                if (node.get_primitive()->bias.size() != 0)
+                {
+                    auto target_layout = layout( weights_layout.data_type, cldnn::format::bfyx,{ 1, 1, split, 1 } );
+                    merge_buffers(engine, node, target_layout, weights_offset + 1, bias_offset + 1);
+                }
+
+                //override node split, as only one kernel will be executed
+                node.set_split(1);
+            }
+        }
+    };
+
+    //depthiwise separated convolution/deconvolution optimization
+    for (auto& p : nodes_map)
+    {
+        auto& prim = *p.second;
+        if (prim.type() == deconvolution::type_id())
+        {
+            prep_opt_depthwise_sep(prim.as<deconvolution>());
+        }
+    }
 }
 
 void program_impl::apply_needed_padding(program_node& node, program_node& prev_node,
@@ -1356,6 +1431,9 @@ void program_impl::remove_if_dangling(program_node& node)
     processing_order.erase(node.processing_itr);
     optimized_out.push_back(node.id());
     nodes_map.erase(node.id());
+    
+    if(node.is_input())
+        inputs.remove(&node);
 }
 
 void program_impl::forward_bfs(std::function<void(program_node&)> const& mark_func, std::function<void(program_node&)> const& unmark_func) const

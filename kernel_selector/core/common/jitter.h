@@ -587,6 +587,7 @@ inline JitConstants MakeDeconvolutionJitConstants(const DeconvolutionParams& par
         MakeJitConstant("DILATION",                     dp.dilation),
         MakeJitConstant("FILTER_ARRAY_NUM",             dp.split),
         MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
+        MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      static_cast<int>(dp.depthwiseSeparableOpt)),
     });
 
     return jit;

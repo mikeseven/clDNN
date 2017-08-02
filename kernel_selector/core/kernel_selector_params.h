@@ -673,6 +673,7 @@ namespace KernelSelector
             uSize    dilation;
             uSize    padding;
             uint32_t split = 1;
+            bool     depthwiseSeparableOpt = false;
         };
 
         DedicatedParams deconvParams;
