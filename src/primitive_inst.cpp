@@ -47,7 +47,7 @@ primitive_inst::primitive_inst(network_impl& network, program_node const& node, 
     : _network(network)
     , _node(node)
     , _impl(node.get_selected_impl())
-    , _deps(network.get_primitives(node.get_dependencies_ids()))
+    , _deps(network.get_primitives(node.get_dependencies()))
     , _output()
     , _output_changed(false)
 {
