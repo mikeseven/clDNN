@@ -34,8 +34,8 @@ std::string normalize_inst::to_string(normalize_node const& node)
 {
     std::stringstream           primitive_description;
     auto desc = node.get_primitive();
-    auto input = node.input();
-    auto scale_input = node.scale();
+    auto& input = node.input();
+    auto& scale_input = node.scale();
     auto epsilon = desc->epsilon;
     auto norm_region = desc->across_spatial ? "across spatial" : "within spatial";
 

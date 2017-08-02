@@ -39,7 +39,7 @@ std::string reshape_inst::to_string(reshape_node const& node)
 {
     std::stringstream           primitive_description;
     auto desc = node.get_primitive();
-    auto input = node.input();
+    auto& input = node.input();
     primitive_description << "id: " << desc->id << ", type: reshape" <<
         "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
         "\n\toutput shape: " << desc->output_shape <<

@@ -82,7 +82,7 @@ std::string fully_connected_inst::to_string(fully_connected_node const& node)
 {
     std::stringstream           primitive_description;
     auto desc                   = node.get_primitive();
-    auto input                  = node.input();
+    auto& input                 = node.input();
     auto weights_id             = desc->weights;
     auto weights_count          = node.weights().get_output_layout().count();
     auto bias_id                = desc->bias != "" ? desc->bias : "no bias";

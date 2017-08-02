@@ -27,30 +27,29 @@
 
 #define EPSILON 0.00001f
 
-using namespace cldnn;
+namespace cldnn { namespace gpu {
 
+namespace {
 
-/****************************************************************************
- *                                                                          *
- *                              Common Utils                                *
- *                                                                          *
- ****************************************************************************/
+    /****************************************************************************
+    *                                                                          *
+    *                              Common Utils                                *
+    *                                                                          *
+    ****************************************************************************/
 
-template <class T>
-static const T & clamp_v(const T & v, const T & lower, const T & upper)
-{
-    return std::max(lower, std::min(v, upper));
-}
+    template <class T>
+    const T & clamp_v(const T & v, const T & lower, const T & upper)
+    {
+        return std::max(lower, std::min(v, upper));
+    }
 
-static inline bool hasSingleBatchOutput(const program_node & node)
-{
-    const auto & batch = node.get_output_layout().size.batch;
+    inline bool hasSingleBatchOutput(const program_node & node)
+    {
+        const auto & batch = node.get_output_layout().size.batch;
 
-    return batch.empty() || (batch.size() == 1 && batch[0] == 1);
-}
+        return batch.empty() || (batch.size() == 1 && batch[0] == 1);
+    }
 
-namespace
-{
     struct roi_t
     {
         float x0, y0, x1, y1;
@@ -78,117 +77,113 @@ namespace
 
     struct delta_t { float shift_x, shift_y, log_w, log_h; };
     struct proposal_t { roi_t roi; float confidence; size_t ord; };
+
+    /****************************************************************************
+     *                                                                          *
+     *                              Impl Details                                *
+     *                                                                          *
+     ****************************************************************************/
+
+    void sort_and_keep_n_items(std::vector<proposal_t>& proposals, size_t n)
+    {
+        auto cmp_fn = [](const proposal_t& a, const proposal_t& b)
+        {
+            return (a.confidence > b.confidence) || (a.confidence == b.confidence && a.ord > b.ord);
+        };
+
+        if (proposals.size() > n)
+        {
+            std::partial_sort(proposals.begin(), proposals.begin() + n, proposals.end(), cmp_fn);
+            proposals.resize(n);
+        }
+        else
+        {
+            std::sort(proposals.begin(), proposals.end(), cmp_fn);
+        }        
+    }
+
+    roi_t gen_bbox(
+            const proposal_inst::anchor& box,
+            const delta_t& delta,
+            int anchor_shift_x,
+            int anchor_shift_y)
+    {
+        float anchor_w = box.end_x - box.start_x + 1.0f;
+        float anchor_h = box.end_y - box.start_y + 1;
+        float center_x = box.start_x + anchor_w * .5f;
+        float center_y = box.start_y + anchor_h *.5f;
+
+        float pred_center_x = delta.shift_x * anchor_w + center_x + anchor_shift_x;
+        float pred_center_y = delta.shift_y * anchor_h + center_y + anchor_shift_y;
+        float half_pred_w = std::exp(delta.log_w) * anchor_w * .5f;
+        float half_pred_h = std::exp(delta.log_h) * anchor_h * .5f;
+
+        return
+        {
+            pred_center_x - half_pred_w, pred_center_y - half_pred_h,
+            pred_center_x + half_pred_w, pred_center_y + half_pred_h
+        };
+    }
+        
+    std::vector<roi_t> perform_nms(
+            const std::vector<proposal_t>& proposals,
+            float iou_threshold,
+            size_t top_n)
+    {
+        std::vector<roi_t> res;
+        res.reserve(top_n);
+
+        for (const auto & prop : proposals)
+        {
+            const roi_t& bbox = prop.roi;
+
+            // For any realistic WL, this condition is true for all top_n values anyway
+            if (prop.confidence > 0)
+            {
+                bool overlaps = std::any_of(res.begin(), res.end(), [&](const roi_t& res_bbox)
+                {
+                    float interArea = bbox.intersect(res_bbox).area();
+                    float unionArea = res_bbox.area() + bbox.area() - interArea;
+
+                    return interArea > iou_threshold * unionArea;
+                });
+
+                if (!overlaps)
+                {
+                    res.push_back(bbox);
+                    if (res.size() == top_n) break;
+                }
+            }
+        }
+
+        res.resize(top_n);
+        return res;
+    }
 } // anonymous namespace
 
 
 /****************************************************************************
- *                                                                          *
- *                              Impl Details                                *
- *                                                                          *
- ****************************************************************************/
-
-static void sort_and_keep_n_items(std::vector<proposal_t>& proposals, size_t n)
-{
-    auto cmp_fn = [](const proposal_t& a, const proposal_t& b)
-    {
-        return (a.confidence > b.confidence) || (a.confidence == b.confidence && a.ord > b.ord);
-    };
-
-    if (proposals.size() > n)
-    {
-        std::partial_sort(proposals.begin(), proposals.begin() + n, proposals.end(), cmp_fn);
-        proposals.resize(n);
-    }
-    else
-    {
-        std::sort(proposals.begin(), proposals.end(), cmp_fn);
-    }        
-}
-
-static roi_t gen_bbox(
-        const proposal_inst::anchor& box,
-        const delta_t& delta,
-        int anchor_shift_x,
-        int anchor_shift_y)
-{
-    float anchor_w = box.end_x - box.start_x + 1.0f;
-    float anchor_h = box.end_y - box.start_y + 1;
-    float center_x = box.start_x + anchor_w * .5f;
-    float center_y = box.start_y + anchor_h *.5f;
-
-    float pred_center_x = delta.shift_x * anchor_w + center_x + anchor_shift_x;
-    float pred_center_y = delta.shift_y * anchor_h + center_y + anchor_shift_y;
-    float half_pred_w = std::exp(delta.log_w) * anchor_w * .5f;
-    float half_pred_h = std::exp(delta.log_h) * anchor_h * .5f;
-
-    return
-    {
-        pred_center_x - half_pred_w, pred_center_y - half_pred_h,
-        pred_center_x + half_pred_w, pred_center_y + half_pred_h
-    };
-}
-        
-static std::vector<roi_t> perform_nms(
-        const std::vector<proposal_t>& proposals,
-        float iou_threshold,
-        size_t top_n)
-{
-    std::vector<roi_t> res;
-    res.reserve(top_n);
-
-    for (const auto & prop : proposals)
-    {
-        const roi_t& bbox = prop.roi;
-
-        // For any realistic WL, this condition is true for all top_n values anyway
-        if (prop.confidence > 0)
-        {
-            bool overlaps = std::any_of(res.begin(), res.end(), [&](const roi_t& res_bbox)
-            {
-                float interArea = bbox.intersect(res_bbox).area();
-                float unionArea = res_bbox.area() + bbox.area() - interArea;
-
-                return interArea > iou_threshold * unionArea;
-            });
-
-            if (!overlaps)
-            {
-                res.push_back(bbox);
-                if (res.size() == top_n) break;
-            }
-        }
-    }
-
-    res.resize(top_n);
-    return res;
-}
-
-
-/****************************************************************************
- *                                                                          *
- *                              Proposal Layer                              *
- *                                                                          *
- ****************************************************************************/
-
-namespace neural
-{
+*                                                                          *
+*                              Proposal Layer                              *
+*                                                                          *
+****************************************************************************/
 
 template <>
-struct kd_default_value_selector<neural::gpu::engine_info_internal::architectures>
+struct kd_default_value_selector<engine_info_internal::architectures>
 {
-    static constexpr neural::gpu::engine_info_internal::architectures value = neural::gpu::engine_info_internal::architectures::GEN_UNKNOWN;
+    static constexpr engine_info_internal::architectures value = engine_info_internal::architectures::GEN_UNKNOWN;
 };
 
 template <>
-struct kd_default_value_selector<neural::gpu::engine_info_internal::configurations>
+struct kd_default_value_selector<engine_info_internal::configurations>
 {
-    static constexpr neural::gpu::engine_info_internal::configurations value = neural::gpu::engine_info_internal::configurations::GT_UNKNOWN;
+    static constexpr engine_info_internal::configurations value = engine_info_internal::configurations::GT_UNKNOWN;
 };
 
 struct proposal_gpu : typed_primitive_impl<proposal>
 {
     const proposal_node& outer;
-    gpu::engine_info_internal _engine_info;
+    engine_info_internal _engine_info;
 
     struct kernel_data 
     {
@@ -198,7 +193,7 @@ struct proposal_gpu : typed_primitive_impl<proposal>
         bool fp16_unit_used;
     } _kernel_data;
 
-    static kd_selector_t<kernel_data, proposal_node, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> ks;
+    static kd_selector_t<kernel_data, proposal_node, data_types, format::type, kd_optional_selector_t, int, engine_info_internal::architectures, engine_info_internal::configurations> ks;
 
     proposal_gpu(const proposal_node& arg)
         : outer(arg),
@@ -216,9 +211,9 @@ struct proposal_gpu : typed_primitive_impl<proposal>
     {
         kernel_data kd;
 
-        cldnn::data_types input_dt = outer.cls_score().get_output_layout().data_type;
+        data_types input_dt = outer.cls_score().get_output_layout().data_type;
 
-        kd.fp16_unit_used = (input_dt == cldnn::data_types::f16);
+        kd.fp16_unit_used = (input_dt == data_types::f16);
 
         // Determine global work sizes.
         kd.gws0 = 1;
@@ -264,9 +259,9 @@ struct proposal_gpu : typed_primitive_impl<proposal>
 
         size_t anchors_num = anchors.size();
       
-        const cldnn::memory& cls_scores = instance.dep_memory(proposal_inst::cls_scores_index);
-        const cldnn::memory& bbox_pred  = instance.dep_memory(proposal_inst::bbox_pred_index);
-        const cldnn::memory& image_info = instance.dep_memory(proposal_inst::image_info_index);
+        const memory& cls_scores = instance.dep_memory(proposal_inst::cls_scores_index);
+        const memory& bbox_pred  = instance.dep_memory(proposal_inst::bbox_pred_index);
+        const memory& image_info = instance.dep_memory(proposal_inst::image_info_index);
 
         // feat map sizes
         int fm_h = cls_scores.get_layout().size.spatial[1];
@@ -278,22 +273,22 @@ struct proposal_gpu : typed_primitive_impl<proposal>
         pointer<dtype> image_info_ptr = image_info.pointer<dtype>();
         const dtype* image_info_mem = image_info_ptr.data();
 
-        int img_w = (int)(float_read_helper(image_info_mem + cldnn::proposal_inst::image_info_width_index) + EPSILON);
-        int img_h = (int)(float_read_helper(image_info_mem + cldnn::proposal_inst::image_info_height_index) + EPSILON);
-        int img_z = (int)(float_read_helper(image_info_mem + cldnn::proposal_inst::image_info_depth_index) + EPSILON);
+        int img_w = (int)(float_read_helper(image_info_mem + proposal_inst::image_info_width_index) + EPSILON);
+        int img_h = (int)(float_read_helper(image_info_mem + proposal_inst::image_info_height_index) + EPSILON);
+        int img_z = (int)(float_read_helper(image_info_mem + proposal_inst::image_info_depth_index) + EPSILON);
 
         int scaled_min_bbox_size = instance.argument.min_bbox_size * img_z;
 
         int min_bbox_x = scaled_min_bbox_size;
-        if (image_info.count() > cldnn::proposal_inst::image_info_scale_min_bbox_x)
+        if (image_info.count() > proposal_inst::image_info_scale_min_bbox_x)
         {
-            min_bbox_x = static_cast<int>(min_bbox_x * float_read_helper(image_info_mem + cldnn::proposal_inst::image_info_scale_min_bbox_x));
+            min_bbox_x = static_cast<int>(min_bbox_x * float_read_helper(image_info_mem + proposal_inst::image_info_scale_min_bbox_x));
         }
 
         int min_bbox_y = scaled_min_bbox_size;
-        if (image_info.count() > cldnn::proposal_inst::image_info_scale_min_bbox_y)
+        if (image_info.count() > proposal_inst::image_info_scale_min_bbox_y)
         {
-            min_bbox_y = static_cast<int>(min_bbox_y * float_read_helper(image_info_mem + cldnn::proposal_inst::image_info_scale_min_bbox_y));
+            min_bbox_y = static_cast<int>(min_bbox_y * float_read_helper(image_info_mem + proposal_inst::image_info_scale_min_bbox_y));
         }
 
         pointer<dtype> cls_scores_ptr = cls_scores.pointer<dtype>();
@@ -342,7 +337,7 @@ struct proposal_gpu : typed_primitive_impl<proposal>
         sort_and_keep_n_items(sorted_proposals_confidence, instance.argument.pre_nms_topn);
         std::vector<roi_t> res = perform_nms(sorted_proposals_confidence, instance.argument.iou_threshold, instance.argument.post_nms_topn);
 
-        const cldnn::memory& output = instance.output_memory();
+        const memory& output = instance.output_memory();
         
         pointer<dtype> output_ptr = output.pointer<dtype>();
         dtype* top_data = output_ptr.data();        
@@ -372,10 +367,7 @@ struct proposal_gpu : typed_primitive_impl<proposal>
             execute<data_type_to_type<data_types::f32>::type>(instance);
         }
        
-        cldnn::event_impl* ev = instance.get_network().get_engine()->create_user_event();
-        ev->set();
-
-        return ev;
+        return instance.get_network().get_engine()->create_user_event(true);
     }
 
     static primitive_impl* create(const proposal_node& arg) 
@@ -397,25 +389,21 @@ struct proposal_gpu : typed_primitive_impl<proposal>
 
 
 
-kd_selector_t<proposal_gpu::kernel_data, proposal_node, data_types, format::type, kd_optional_selector_t, int, neural::gpu::engine_info_internal::architectures, neural::gpu::engine_info_internal::configurations> proposal_gpu::ks = {
-    { std::make_tuple(data_types::f32, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default },
-    { std::make_tuple(data_types::f16, format::bfyx, 0, gpu::engine_info_internal::architectures::GEN_UNKNOWN, gpu::engine_info_internal::configurations::GT_UNKNOWN), set_default }
+kd_selector_t<proposal_gpu::kernel_data, proposal_node, data_types, format::type, kd_optional_selector_t, int, engine_info_internal::architectures, engine_info_internal::configurations> proposal_gpu::ks = {
+    { std::make_tuple(data_types::f32, format::bfyx, 0, engine_info_internal::architectures::GEN_UNKNOWN, engine_info_internal::configurations::GT_UNKNOWN), set_default },
+    { std::make_tuple(data_types::f16, format::bfyx, 0, engine_info_internal::architectures::GEN_UNKNOWN, engine_info_internal::configurations::GT_UNKNOWN), set_default }
 };
 
-namespace
-{
-
-    struct attach
-    {
+namespace {
+    struct attach {
         attach()
         {
-            implementation_map<proposal>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), proposal_gpu::create);
-            implementation_map<proposal>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), proposal_gpu::create);
+            implementation_map<proposal>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), proposal_gpu::create);
+            implementation_map<proposal>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), proposal_gpu::create);
         }
 
         ~attach() {}
     };
-
     attach attach_impl;
 }
-} //namespace neural
+} }

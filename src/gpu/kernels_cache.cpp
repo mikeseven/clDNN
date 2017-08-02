@@ -30,12 +30,11 @@
 #define OUT_PORGRAM_TO_FILE
 #endif
 
-namespace neural { namespace gpu {
+namespace cldnn { namespace gpu {
 
 const char program_dump_file_name[] = "clDNN_program";
 
-namespace 
-{
+namespace {
     std::string get_undef_jit(kernels_cache::source_code org_source_code)
     {
         const std::string white_space_with_new_lines = " \t\r\n";
@@ -208,7 +207,7 @@ kernels_cache::kernel_id kernels_cache::set_kernel_source(const std::shared_ptr<
     }
 
     assert(_kernels.find(id) == _kernels.end());
-
+    _pending_compilation = true;
     return id;
 }
 
@@ -284,28 +283,33 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
 
 kernels_cache::kernel_type kernels_cache::get_kernel(kernel_id id) 
 {
+    build_all();
+    return _kernels.at(id);
+}
+
+void kernels_cache::build_all()
+{
+    if (!_pending_compilation)
+        return;
+
     std::lock_guard<std::mutex> lock(_mutex);
-    
-    if (_kernels_code.empty() == false) 
+
+    auto sorted_program_code = get_program_source(_kernels_code);
+
+    for (auto& program : sorted_program_code)
     {
-        auto sorted_program_code = get_program_source(_kernels_code);
+        auto kernels = build_program(program.second);
 
-        for (auto& program : sorted_program_code)
+        for (auto& k : kernels)
         {
-            auto kernels = build_program(program.second);
-
-            for (auto& k : kernels)
-            {
-                const auto& entry_point = k.first;
-                const auto& k_id = program.second.entry_point_to_id[entry_point];
-                _kernels[k_id] = k.second;
-            }
+            const auto& entry_point = k.first;
+            const auto& k_id = program.second.entry_point_to_id[entry_point];
+            _kernels[k_id] = k.second;
         }
-
-        _kernels_code.clear();
     }
 
-    return _kernels.at(id);
+    _kernels_code.clear();
+    _pending_compilation = false;
 }
 
 }}

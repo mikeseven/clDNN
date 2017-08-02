@@ -34,7 +34,7 @@ std::string lrn_inst::to_string(lrn_node const& node)
 {
     std::stringstream           primitive_description;
     auto desc                   = node.get_primitive();
-    auto input                  = node.input();
+    auto& input                 = node.input();
     auto norm_size              = desc->size;
     auto k                      = desc->k;
     auto alpha                  = desc->alpha;

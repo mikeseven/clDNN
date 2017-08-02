@@ -21,14 +21,11 @@
 #include "network_impl.h"
 #include "kernel_selector_helper.h"
 
-using namespace cldnn;
-
-namespace neural
-{
+namespace cldnn { namespace gpu {
 
 struct reshape_gpu : public typed_primitive_impl<reshape>
 {
-    std::unique_ptr<gpu::kernel> _kernel;
+    std::unique_ptr<kernel> _kernel;
 
     reshape_gpu(reshape_node const& node, const kernel_selector::kernel_data& kd)
         : _kernel(std::make_unique<gpu::kernel>(node.get_program().get_engine()->get_context(), kd.kernels[0].kernelString))
@@ -45,7 +42,7 @@ struct reshape_gpu : public typed_primitive_impl<reshape>
             if (events.size() == 1)
                 return events[0];
 
-            neural::gpu::events_waiter events_waiter(instance.get_network().get_engine()->get_context());
+            events_waiter events_waiter(instance.get_network().get_engine()->get_context());
             return events_waiter.run(events);
         }
 
@@ -84,11 +81,11 @@ namespace {
     struct attach {
         attach() {
             implementation_map<reshape>::add({
-                { cldnn::engine_types::ocl, reshape_gpu::create }
+                { engine_types::ocl, reshape_gpu::create }
             });
         }
         ~attach() {}
     };
     attach attach_impl;
 }
-}
+} }

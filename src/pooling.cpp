@@ -68,7 +68,7 @@ std::string pooling_inst::to_string(pooling_node const& node)
 {
     std::stringstream   primitive_description;
     auto desc           = node.get_primitive();
-    auto input          = node.input();
+    auto& input         = node.input();
     auto strd           = desc->stride;
     auto kernel_size    = desc->size;
     auto mode           = desc->mode == pooling_mode::max ? "max" : "average";

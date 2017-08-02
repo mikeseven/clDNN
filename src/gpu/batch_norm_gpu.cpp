@@ -20,15 +20,12 @@
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
 
-using namespace cldnn;
-
-namespace neural
-{
+namespace cldnn { namespace gpu {
 
 struct batch_norm_gpu : typed_primitive_impl<batch_norm>
 {
     const batch_norm_node& outer;
-    gpu::kernel _kernel;
+    kernel _kernel;
 
     batch_norm_gpu(const batch_norm_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
@@ -102,13 +99,13 @@ namespace {
         attach() {
             auto val_fw = batch_norm_gpu::create;
 
-            implementation_map<batch_norm>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), val_fw);
-            implementation_map<batch_norm>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), val_fw);
-            implementation_map<batch_norm>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), val_fw);
-            implementation_map<batch_norm>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), val_fw);
+            implementation_map<batch_norm>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), val_fw);
+            implementation_map<batch_norm>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), val_fw);
+            implementation_map<batch_norm>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), val_fw);
+            implementation_map<batch_norm>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), val_fw);
         }
         ~attach() {}
     };
     attach attach_impl;
 }
-} // namespace neural
+} }

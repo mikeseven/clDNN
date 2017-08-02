@@ -78,10 +78,7 @@ struct generic_layer_cpu : typed_primitive_impl<generic_layer>
 
         cpu_kernel.Execute(old_pointer.data(), old_pointer.size(), new_pointer.data(), new_pointer.size());
 
-        event_impl* event = instance.get_network().get_engine()->create_user_event();
-        event->set();
-
-        return event;
+        return instance.get_network().get_engine()->create_user_event(true);
     }
 };
 

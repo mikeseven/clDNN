@@ -20,22 +20,22 @@
 #include "roi_pooling/roi_pooling_kernel_selector.h"
 #include "kernel_selector_helper.h"
 
-using namespace cldnn;
+namespace cldnn { namespace gpu {
 
-static inline bool hasSingleBatchOutput(const program_node & node)
-{
-    const auto & batch = node.get_output_layout().size.batch;
+namespace {
+    static inline bool hasSingleBatchOutput(const program_node & node)
+    {
+        const auto & batch = node.get_output_layout().size.batch;
 
-    return batch.empty() || (batch.size() == 1 && batch[0] == 1);
+        return batch.empty() || (batch.size() == 1 && batch[0] == 1);
+    }
 }
 
-namespace neural
-{
 
 struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
 {
     const roi_pooling_node& outer;
-    gpu::kernel _kernel;
+    kernel _kernel;
 
     roi_pooling_gpu(const roi_pooling_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
@@ -112,23 +112,18 @@ struct roi_pooling_gpu : typed_primitive_impl<roi_pooling>
     }
 };
 
-namespace
-{
-
+namespace {
     struct attach
     {
         attach()
         {
-            implementation_map<roi_pooling>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), roi_pooling_gpu::create);
-            implementation_map<roi_pooling>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), roi_pooling_gpu::create);
+            implementation_map<roi_pooling>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), roi_pooling_gpu::create);
+            implementation_map<roi_pooling>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), roi_pooling_gpu::create);
         }
 
-        ~attach()
-        {
-        }
+        ~attach() {}
     };
 
     attach attach_impl;
 }
-
-}
+} }

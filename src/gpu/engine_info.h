@@ -17,7 +17,7 @@
 #include <cstdint>
 #include "api/CPP/engine.hpp"
 
-namespace neural { namespace gpu {
+namespace cldnn { namespace gpu {
 
 class gpu_toolkit;
 struct engine_info_internal : cldnn::engine_info

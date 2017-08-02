@@ -58,7 +58,7 @@ std::string prior_box_inst::to_string(prior_box_node const& node)
 {
     std::stringstream               primitive_description;
     auto desc                       = node.get_primitive();
-    auto input                      = node.input();
+    auto in_layout                  = node.input().get_output_layout();
     auto flip                       = desc->flip ? "true" : "false";
     auto clip                       = desc->clip ? "true" : "false";
     std::string str_min_sizes       = vector_to_string(desc->min_sizes);
@@ -67,7 +67,7 @@ std::string prior_box_inst::to_string(prior_box_node const& node)
     std::string str_variance        = vector_to_string(desc->variance);
 
     primitive_description << "id: " << desc->id << ", type: normalization" <<
-        "\n\tinput: "        << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
+        "\n\tinput: "        << "id: " << node.get_primitive()->input[0] << ", count: " << in_layout.count() << ", size: " << in_layout.size <<
         "\n\timage size: "   << desc->img_size <<
         "\n\tmin_sizes: "    << str_min_sizes << ", max sizes: " << str_max_sizes <<
         "\n\taspect_ratio: " << str_aspect_ratio <<
@@ -87,11 +87,10 @@ void prior_box_inst::generate_output()
     // Calculate output.
     // All the inputs for this layer are known at this point,
     // so the output buffer is written here and not in execute().
-    const auto& input_mem = input_memory();
     const auto& output_mem = output_memory();
 
-    const int layer_width = input_mem.get_layout().size.spatial[0];
-    const int layer_height = input_mem.get_layout().size.spatial[1];
+    const int layer_width = input_memory().get_layout().size.spatial[0];
+    const int layer_height = input_memory().get_layout().size.spatial[1];
     const int img_width = argument.img_size.spatial[0];
     const int img_height = argument.img_size.spatial[1];
     float step_w = argument.step_width;

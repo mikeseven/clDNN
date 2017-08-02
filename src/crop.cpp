@@ -37,7 +37,7 @@ std::string crop_inst::to_string(crop_node const& node)
 {
     std::stringstream               primitive_description;
     auto desc                       = node.get_primitive();
-    auto input                      = node.input();
+    auto& input                     = node.input();
     auto ref_input                  = desc->reference_input;
     auto offsets                    = desc->offsets;
     

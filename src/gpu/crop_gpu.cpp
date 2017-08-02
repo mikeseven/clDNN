@@ -20,15 +20,12 @@
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
 
-using namespace cldnn;
-
-namespace neural
-{
+namespace cldnn { namespace gpu {
 
 struct crop_gpu : typed_primitive_impl<crop>
 {
     const crop_node& outer;
-    gpu::kernel _kernel;
+    kernel _kernel;
 
     crop_gpu(const crop_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
@@ -44,7 +41,7 @@ struct crop_gpu : typed_primitive_impl<crop>
             if (events.size() == 1)
                 return events[0];
 
-            return neural::gpu::events_waiter(outer.get_program().get_engine()->get_context()).run(events);
+            return events_waiter(outer.get_program().get_engine()->get_context()).run(events);
         }
 
         gpu::kernel::kernel_arguments_data args;
@@ -84,10 +81,10 @@ namespace {
         attach() {
             auto val_fw = crop_gpu::create;
 
-            implementation_map<crop>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), val_fw);
-            implementation_map<crop>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), val_fw);
-            implementation_map<crop>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), val_fw);
-            implementation_map<crop>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), val_fw);
+            implementation_map<crop>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), val_fw);
+            implementation_map<crop>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), val_fw);
+            implementation_map<crop>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), val_fw);
+            implementation_map<crop>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), val_fw);
         }
         ~attach() {}
     };
@@ -95,4 +92,4 @@ namespace {
     attach attach_impl;
 
 }
-} // namespace neural
+} }

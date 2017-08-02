@@ -41,6 +41,7 @@ struct engine_configuration
     const bool dump_custom_program;      ///< Dump the user OpenCL programs to files
     const std::string compiler_options;  ///< OpenCL compiler options string.
     const std::string single_kernel_name; ///< If provided, runs specific layer.
+    const bool enable_parallelisation; ///< Enables parallel execution of primitives which don't depend on each other. Disabled by default.
 
     /// @brief Constructs engine configuration with specified options.
     /// @param profiling Enable per-primitive profiling.
@@ -48,16 +49,41 @@ struct engine_configuration
     /// @param dump_custom_program Dump the custom OpenCL programs to files
     /// @param options OpenCL compiler options string.
     /// @param single_kernel If provided, runs specific layer.
-    engine_configuration(bool profiling = false, bool decorate_kernel_names = false, bool dump_custom_program = false, const std::string& options = std::string(), const std::string& single_kernel = std::string())
-        :enable_profiling(profiling), meaningful_kernels_names(decorate_kernel_names), dump_custom_program(dump_custom_program), compiler_options(options), single_kernel_name(single_kernel) {}
+    engine_configuration(
+            bool profiling = false,
+            bool decorate_kernel_names = false,
+            bool dump_custom_program = false,
+            const std::string& options = std::string(),
+            const std::string& single_kernel = std::string(),
+            bool primitives_parallelisation = false)
+        : enable_profiling(profiling)
+        , meaningful_kernels_names(decorate_kernel_names)
+        , dump_custom_program(dump_custom_program)
+        , compiler_options(options)
+        , single_kernel_name(single_kernel)
+        , enable_parallelisation(primitives_parallelisation)
+    {}
 
     engine_configuration(const cldnn_engine_configuration& c_conf)
-        :enable_profiling(c_conf.enable_profiling != 0), meaningful_kernels_names(c_conf.meaningful_kernels_names != 0), dump_custom_program(c_conf.dump_custom_program != 0), compiler_options(c_conf.compiler_options), single_kernel_name(c_conf.single_kernel_name){}
+        : enable_profiling(c_conf.enable_profiling != 0)
+        , meaningful_kernels_names(c_conf.meaningful_kernels_names != 0)
+        , dump_custom_program(c_conf.dump_custom_program != 0)
+        , compiler_options(c_conf.compiler_options)
+        , single_kernel_name(c_conf.single_kernel_name)
+        , enable_parallelisation(c_conf.enable_parallelisation != 0)
+    {}
 
     /// @brief Implicit conversion to C API @ref ::cldnn_engine_configuration
     operator ::cldnn_engine_configuration() const
     {
-        return{ enable_profiling, meaningful_kernels_names, dump_custom_program, compiler_options.c_str(), single_kernel_name.c_str() };
+        return{
+            enable_profiling,
+            meaningful_kernels_names,
+            dump_custom_program,
+            compiler_options.c_str(),
+            single_kernel_name.c_str(),
+            enable_parallelisation
+        };
     }
 };
 

@@ -21,13 +21,12 @@
 
 using namespace cldnn;
 
-namespace neural
-{
+namespace cldnn { namespace gpu {
 
 struct permute_gpu : typed_primitive_impl<permute>
 {
     const permute_node& outer;
-    gpu::kernel _kernel;
+    kernel _kernel;
 
     permute_gpu(const permute_node& arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
@@ -74,11 +73,11 @@ namespace {
     struct attach {
         attach() {
             implementation_map<permute>::add({
-                { cldnn::engine_types::ocl, permute_gpu::create },
+                { engine_types::ocl, permute_gpu::create },
             });
         }
         ~attach() {}
     };
     attach attach_impl;
 }
-}
+} }

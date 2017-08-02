@@ -17,7 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "ocl_toolkit.h"
 
-namespace neural {
+namespace cldnn {
     namespace gpu {
 
         configuration::configuration()
@@ -27,6 +27,7 @@ namespace neural {
             , device_vendor(0x8086)
             , compiler_options("")
             , single_kernel_name("")
+            , host_out_of_order(false)
         {}
     }
 }

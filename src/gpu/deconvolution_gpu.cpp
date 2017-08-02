@@ -22,15 +22,12 @@
 #include "kernel_selector_helper.h"
 #include <initializer_list>
 
-using namespace cldnn;
-
-namespace neural 
-{
+namespace cldnn { namespace gpu {
 
 struct deconvolution_gpu : typed_primitive_impl<deconvolution> 
 {
     const deconvolution_node& outer;
-    gpu::kernel _kernel;
+    kernel _kernel;
 
     deconvolution_gpu(const deconvolution_node &arg, const kernel_selector::kernel_data& kd)
         : outer(arg)
@@ -38,7 +35,6 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
     {
         _kernel_data = kd;
     }
-
 
     event_impl::ptr execute_impl(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events, deconvolution_inst& instance) override
     {
@@ -152,13 +148,13 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
 namespace{
     struct attach {
         attach() {
-            implementation_map<deconvolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), deconvolution_gpu::create);
-            implementation_map<deconvolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), deconvolution_gpu::create);
-            implementation_map<deconvolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), deconvolution_gpu::create);
-            implementation_map<deconvolution>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), deconvolution_gpu::create);
+            implementation_map<deconvolution>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), deconvolution_gpu::create);
+            implementation_map<deconvolution>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), deconvolution_gpu::create);
+            implementation_map<deconvolution>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), deconvolution_gpu::create);
+            implementation_map<deconvolution>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), deconvolution_gpu::create);
         }
         ~attach() {}
     };
     attach attach_impl;
 }
-}
+} }

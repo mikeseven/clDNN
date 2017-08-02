@@ -20,6 +20,7 @@
 #include <mutex>
 #include <vector>
 #include <memory>
+#include <atomic>
 
 namespace cl {
 class Kernel;
@@ -35,10 +36,12 @@ namespace kernel_selector
     using kernel_string = KernelSelector::KernelString;
 }
 
-namespace neural {namespace gpu {
+namespace cldnn { namespace gpu {
+
 class gpu_toolkit;
 
-class kernels_cache {
+class kernels_cache
+{
 public:
     using source_code = std::vector<std::string>;
 
@@ -68,6 +71,7 @@ private:
     gpu_toolkit& _context;
     std::mutex _mutex;
     kernels_code _kernels_code;
+    std::atomic<bool> _pending_compilation{ false };
     std::map<std::string, kernel_type> _kernels;
 
     sorted_code get_program_source(const kernels_code& kernels_source_code) const;
@@ -78,6 +82,9 @@ private:
 public:
     kernel_id set_kernel_source(const std::shared_ptr<kernel_selector::kernel_string>& kernel_string, bool dump_custom_program);
     kernel_type get_kernel(kernel_id id);
+
+    //forces compilation of all pending kernels/programs
+    void build_all();
 };
 
 }}

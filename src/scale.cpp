@@ -51,8 +51,8 @@ std::string scale_inst::to_string(scale_node const& node)
     std::stringstream               primitive_description;
     auto desc                        = node.get_primitive();
     auto bias_count                  = desc->bias == "" ? 0 : node.bias().get_output_layout().count();
-    auto input                       = node.input();
-    auto scale_input                 = node.scale_in();
+    auto& input                      = node.input();
+    auto& scale_input                = node.scale_in();
 
     primitive_description << "id: " << desc->id << ", type: scale" << 
         "\n\tinput: "         << input.id() << ", count: " << input.get_output_layout().count() << ",  size: " << input.get_output_layout().size <<

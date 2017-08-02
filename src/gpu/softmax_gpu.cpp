@@ -19,15 +19,13 @@
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
 
-using namespace cldnn;
+namespace cldnn { namespace gpu {
 
-namespace neural
-{
 
 struct softmax_gpu : typed_primitive_impl<softmax>
 {
     const softmax_node& outer;
-    gpu::kernel _kernel;
+    kernel _kernel;
 
 
     softmax_gpu(const softmax_node& arg, const kernel_selector::kernel_data& kd)
@@ -98,13 +96,15 @@ namespace {
     struct attach {
         attach() {
             auto val_fw = softmax_gpu::create;
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::yxfb), val_fw);
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::yxfb), val_fw);
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f32, format::bfyx), val_fw);
-            implementation_map<softmax>::add(std::make_tuple(cldnn::engine_types::ocl, data_types::f16, format::bfyx), val_fw);
+            implementation_map<softmax>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), val_fw);
+            implementation_map<softmax>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), val_fw);
+            implementation_map<softmax>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), val_fw);
+            implementation_map<softmax>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), val_fw);
         }
         ~attach() {}
     };
+
+    attach attach_impl;
 }
-attach attach_impl;
-} // namespace neural
+
+} }

@@ -119,6 +119,7 @@ typedef struct
     uint32_t dump_custom_program;      ///< dump the custom generated program to files 
     const char* compiler_options;      ///< OpenCL compiler options string.
     const char* single_kernel_name;    ///< If provided, runs specific layer.
+    uint32_t enable_parallelisation;   ///< Enables parallel execution of primitives which don't depend on each other. Disabled by default.
 }  cldnn_engine_configuration;
 
 /// @brief Information about the engine returned by cldnn_get_engine_info().
@@ -413,6 +414,9 @@ CLDNN_API /*cldnn_engine_type*/ int32_t cldnn_get_engine_type(cldnn_engine engin
 
 /// @brief Creates an event which can be set by user.
 CLDNN_API cldnn_event cldnn_create_user_event(cldnn_engine engine, cldnn_status* status);
+
+/// @brief Checks if an event was created by user.
+CLDNN_API int32_t cldnn_is_user_event(cldnn_event event, cldnn_status* status);
 
 /// @brief Increment reference counter for the event object.
 CLDNN_API void cldnn_retain_event(cldnn_event event, cldnn_status* status);

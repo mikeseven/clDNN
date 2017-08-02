@@ -19,6 +19,7 @@
 #include "api/CPP/memory.hpp"
 
 #include "api_impl.h"
+#include "event_impl.h"
 #include "refcounted_obj.h"
 #include "implementation_map.h"
 
@@ -26,11 +27,13 @@
 
 #include <memory>
 
-namespace neural { namespace gpu { class gpu_toolkit; } }
-namespace cldnn
-{
+namespace cldnn {
+namespace gpu { 
+    class gpu_toolkit;
+}
+
 class build_options;
-using gpu_toolkit = neural::gpu::gpu_toolkit;
+using gpu_toolkit = gpu::gpu_toolkit;
 
 struct memory_impl;
 struct event_impl;
@@ -52,7 +55,7 @@ public:
     memory_impl* reinterpret_buffer(memory_impl* memory, layout new_layout);
     bool is_the_same_buffer(memory_impl* mem1, memory_impl* mem2);
 
-    event_impl* create_user_event();
+    event_impl* create_user_event(bool set = false);
     program_impl* build_program(const topology_impl& topology, const build_options& options);
     network_impl* build_network(const topology_impl& topology, const build_options& options);
     network_impl* allocate_network(const program_impl* program);
@@ -67,11 +70,15 @@ public:
         return std::move(std::unique_ptr<primitive_impl>(factory(node)));
     }
 
+    void wait_for_events(std::vector<event_impl::ptr> const& events);
+
     const engine_configuration& configuration() const { return _configuration; }
 
     std::shared_ptr<gpu_toolkit> get_context() const { return _context; }
 
-    neural::gpu::engine_info_internal get_engine_info() const;
+    gpu::engine_info_internal get_engine_info() const;
+
+    void compile_program(program_impl& prog);
 
 private:
     engine_configuration _configuration;

@@ -47,9 +47,9 @@ std::string detection_output_inst::to_string(detection_output_node const& node)
 {
     std::stringstream           primitive_description;
     auto desc                   = node.get_primitive();
-    auto input_location         = node.location();
-    auto input_confidence       = node.confidence();
-    auto input_prior_box        = node.prior_box();
+    auto& input_location        = node.location();
+    auto& input_confidence      = node.confidence();
+    auto& input_prior_box       = node.prior_box();
     auto share_location         = desc->share_location ? "true" : "false"; 
     auto variance_encoded       = desc->variance_encoded_in_target ? "true" : "false";
     std::string                 str_code_type;

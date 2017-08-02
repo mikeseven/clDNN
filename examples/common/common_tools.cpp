@@ -21,6 +21,7 @@
 #include "topologies.h"
 
 #include <boost/filesystem.hpp>
+#include <boost/optional.hpp>
 
 #include <iostream>
 
@@ -374,8 +375,8 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     if (!ep.run_until_primitive_name.empty())
     {
         outputs.push_back(ep.run_until_primitive_name); //set the user custom primitive as output (works only while not in debug moge, because in debug mode every primitive is an output)
-            if(ep.dump_hidden_layers)
-                throw std::runtime_error("ERROR: Can't dump hidden layers when custom output is set.");
+        if(ep.dump_hidden_layers)
+            throw std::runtime_error("ERROR: Can't dump hidden layers when custom output is set.");
     }
 
     if (!ep.dump_layer_name.empty())
@@ -510,10 +511,7 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     if (ep.topology_name != "microbench")
     {
         std::string output_primitve_id = ep.run_until_primitive_name.empty() ? "output" : ep.run_until_primitive_name;
-        if (ep.run_single_kernel_name.empty())
-        {
-            output = outputs.at(output_primitve_id).get_memory();
-        } 
+        output = outputs.at(output_primitve_id).get_memory();
     }
     
     auto execution_time(timer_execution.uptime());
@@ -569,14 +567,7 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
         std::vector<cldnn::instrumentation::profiling_info> profiling_table;
         for (auto& p : outputs)
         {
-            if (ep.run_single_kernel_name.empty())
-            {
-                profiling_table.push_back({ p.first, p.second.get_event().get_profiling_info() });
-            }
-            else if (ep.run_single_kernel_name == p.first)
-            {
-                profiling_table.push_back({ p.first, p.second.get_event().get_profiling_info() });
-            }
+            profiling_table.push_back({ p.first, p.second.get_event().get_profiling_info() });
         }
         print_profiling_table(std::cout, profiling_table);
     }
@@ -595,8 +586,25 @@ void run_topology(const execution_params &ep)
             << " dummy images per batch!!! Please use batch=" << gpu_batch_size << "." << std::endl;
     }
 
-    cldnn::engine_configuration configuration(ep.profiling, ep.meaningful_kernels_names, false, "", ep.run_single_kernel_name);
-    cldnn::engine engine(configuration);
+    boost::optional<cldnn::engine> eng_storage;
+
+    const auto get_config = [&ep](bool use_ooq)
+    {
+        return cldnn::engine_configuration(ep.profiling, ep.meaningful_kernels_names, false, "", ep.run_single_kernel_name, use_ooq);
+    };
+
+    //try to init oooq engine
+    try {
+        eng_storage.emplace(get_config(true));
+    }
+    catch (cldnn::error&) {
+    }
+
+    //if initialization failed, fallback to in-order queue
+    if (!eng_storage.is_initialized())
+        eng_storage.emplace(get_config(false));
+
+    cldnn::engine& engine = eng_storage.get();
 
     CIntelPowerGadgetLib energyLib;
     if (ep.perf_per_watt)
