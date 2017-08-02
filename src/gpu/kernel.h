@@ -63,7 +63,7 @@ public:
         const cldnn::memory* lookup_table   = nullptr;
         const cldnn::memory* scale_table    = nullptr;
         const cldnn::memory* slope          = nullptr;
-        uint32_t             split          = 0;
+        int32_t              split          = 0;
         const kernel_selector::kernel_scalar_arguments* scalars = nullptr;
     };
 

@@ -34,6 +34,7 @@
 #include "api/CPP/detection_output.hpp"
 #include "api/CPP/proposal.hpp"
 #include "api/CPP/roi_pooling.hpp"
+#include "api/CPP/memory.hpp"
 
 #include "internal_primitive.h"
 #include "internal_primitive_type_base.h"
@@ -162,22 +163,22 @@ namespace {
     //helper function for merging the weights/biases buffers on cpu side for depthwise separable convolution optimization
     void merge_buffers(engine_impl::ptr engine, program_node &node, layout target_layout, size_t begin_offset, size_t end_offset)
     {
-        memory data_to_allocate(api_cast(engine->allocate_buffer(target_layout)));
+        memory_impl* data_to_allocate = engine->allocate_buffer(target_layout);
 
         for (size_t i = begin_offset; i < end_offset; i++)
         {
             auto& weights = node.get_dependency(i).as<data>();
-            auto src_ptr = weights.get_primitive()->mem.pointer<char>();
+            pointer<char> src_ptr(weights.get_primitive()->mem);
             auto mem_size = weights.get_primitive()->mem.size();
-            auto dst_ptr = data_to_allocate.pointer<char>();
-            memcpy(dst_ptr.data() + (i - begin_offset)*mem_size, src_ptr.data(), mem_size);
+            pointer<char> dst_ptr(memory(api_cast(data_to_allocate), true));
+            std::copy(src_ptr.begin(), src_ptr.end(), dst_ptr.begin() + (i - begin_offset)*mem_size);
         }
 
         for(size_t i = 0; i < end_offset - begin_offset - 1; i++)
             node.remove_dependency(begin_offset + 1);
 
         auto& data_node = node.get_dependency(begin_offset).as<data>();
-        const_cast<data&>(*data_node.get_primitive()).mem = data_to_allocate;
+        const_cast<data&>(*data_node.get_primitive()).mem = api_cast(data_to_allocate);
     }
 }
 
@@ -1084,43 +1085,38 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
         auto weights_offset = node.get_primitive()->input.size();
         auto bias_offset = weights_offset + wrap_if_single(node.get_primitive()->weights).size();
 
-        //enable optimization only when split = IFM and split > 16
-        if (node.get_dependency(0).get_output_layout().size.feature[0] == node.get_primitive()->split() &&
-            node.get_primitive()->split() >= 16)
+        //enable optimization only when split = IFM and split >= 16
+        if (!(node.get_dependency(0).get_output_layout().size.feature[0] == node.get_primitive()->split()) ||
+            !(node.get_primitive()->split() >= 16))
+            return;
+
+        //make sure the weights and biases are data type and 
+        //are not reused in other primitives as they will be overriden with concatenated ones
+        for (size_t i = 1; i < node.get_dependencies().size(); i++)
         {
-            auto depthwise_separable = true;
-
-            //make sure the weights and biases are data type and 
-            //are not reused in other primitives as they will be overriden with concatenated ones
-            for (size_t i = 1; i < node.get_dependencies().size(); i++)
-            {
-                auto& weights_or_biases = node.get_dependency(i);
-                if (weights_or_biases.get_users().size() > 1 || weights_or_biases.type() != data::type_id())
-                    depthwise_separable = false;
-            }
-
-            if (depthwise_separable)
-            {
-                const auto& weights_layout = node.get_dependency(1).get_output_layout();
-                const auto& split = node.get_primitive()->split();
-
-                //concatenate weights
-                {
-                    auto target_layout = layout( weights_layout.data_type, weights_layout.format,{ split, 1, weights_layout.size.spatial[0], weights_layout.size.spatial[1] } );
-                    merge_buffers(engine, node, target_layout, weights_offset, bias_offset);
-                }
-
-                //concatenate biases
-                if (node.get_primitive()->bias.size() != 0)
-                {
-                    auto target_layout = layout( weights_layout.data_type, cldnn::format::bfyx,{ 1, 1, split, 1 } );
-                    merge_buffers(engine, node, target_layout, weights_offset + 1, bias_offset + 1);
-                }
-
-                //override node split, as only one kernel will be executed
-                node.set_split(1);
-            }
+            auto& weights_or_biases = node.get_dependency(i);
+            if (weights_or_biases.get_users().size() > 1 || weights_or_biases.type() != data::type_id())
+                return;
         }
+
+        const auto& weights_layout = node.get_dependency(1).get_output_layout();
+        const auto& split = node.get_primitive()->split();
+
+        //concatenate weights
+        {
+            auto target_layout = layout(weights_layout.data_type, weights_layout.format, { split, 1, weights_layout.size.spatial[0], weights_layout.size.spatial[1] });
+            merge_buffers(engine, node, target_layout, weights_offset, bias_offset);
+        }
+
+        //concatenate biases
+        if (node.get_primitive()->bias.size() != 0)
+        {
+            auto target_layout = layout(weights_layout.data_type, cldnn::format::bfyx, { 1, 1, split, 1 });
+            merge_buffers(engine, node, target_layout, weights_offset + 1, bias_offset + 1);
+        }
+
+        //override node split, as only one kernel will be executed
+        node.set_split(1);
     };
 
     //depthiwise separated convolution/deconvolution optimization

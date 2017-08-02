@@ -26,23 +26,27 @@ template <>
 struct typed_program_node<deconvolution> : public typed_program_node_base<deconvolution>
 {
     using parent = typed_program_node_base<deconvolution>;
-    uint32_t split;
 
     typed_program_node(std::shared_ptr<primitive> prim, program_impl& prog)
         : parent(prim, prog)
-        , split(this->get_primitive()->split())
+        , _split(this->get_primitive()->split())
     {
     }
+
+private:
+    int32_t _split;
 
 public:
     using parent::parent;
 
-    void set_split(uint32_t node_split) { split = node_split; }
+    void set_split(uint32_t node_split) { _split = node_split; }
+    int32_t get_split() const { return _split; }
+
     auto& input() const { return get_dependency(0); }
 
     auto& weights(size_t idx = 0) const
     {
-        if (idx >= split)
+        if (idx >= this->get_split())
             throw std::range_error("weights offset too big");
 
         return get_dependency(1 + idx);
@@ -50,10 +54,10 @@ public:
 
     auto& bias(size_t idx = 0) const 
     { 
-        if (idx >= split)
+        if (idx >= this->get_split())
             throw std::range_error("bias offset too big");
 
-        return get_dependency(1 + split + idx);
+        return get_dependency(1 + this->get_split() + idx);
     }
 
     bool bias_term() const
@@ -83,7 +87,7 @@ public:
 
     const memory& weights_memory(size_t index) const
     {
-        if (index > node.split)
+        if (index > node.get_split())
             throw std::range_error("weights offset too big");
 
         return dep_memory(1 + index);
@@ -91,13 +95,13 @@ public:
 
     const memory& bias_memory(size_t index) const
     {
-        if (argument.bias.size() == 0 && index > node.split)
+        if (argument.bias.size() == 0 && index > node.get_split())
             throw std::range_error("no bias data");
 
-        if (index > node.split)
+        if (index > node.get_split())
             throw std::range_error("bias offset too big");
 
-        return dep_memory(1 + node.split + index);
+        return dep_memory(1 + node.get_split() + index);
     }
 
     bool bias_term() const

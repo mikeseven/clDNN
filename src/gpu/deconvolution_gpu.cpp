@@ -38,7 +38,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
 
     event_impl::ptr execute_impl(const std::vector<cldnn::refcounted_obj_ptr<cldnn::event_impl>>& events, deconvolution_inst& instance) override
     {
-        auto split = instance.node.split;
+        auto split = instance.node.get_split();
 
         const auto* input_mem = &instance.input_memory();
         const auto* output_mem = &instance.output_memory();
@@ -64,7 +64,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
             args.output = output_mem;
             args.weights = filter_mem;
             args.bias = bias_mem;
-            args.split = (uint32_t)i;
+            args.split = i;
 
             auto event = _kernel.run(_kernel_data.kernels[0], tmp_events, args);
             tmp_events.clear();

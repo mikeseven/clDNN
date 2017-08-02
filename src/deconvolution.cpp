@@ -114,7 +114,7 @@ deconvolution_inst::typed_primitive_inst(network_impl& network, deconvolution_no
     if (stride.raw.size() != output_inst.size.raw.size())
         throw std::runtime_error("Stride/output number of dimension does not match.");
 
-    auto split = node.split;
+    auto split = node.get_split();
     for (decltype(split) j = 0; j < split; j++)
     {
         auto& filter_mem = weights_memory(j);
@@ -126,7 +126,7 @@ deconvolution_inst::typed_primitive_inst(network_impl& network, deconvolution_no
             auto& bias_inst = bias_memory(j).get_layout();
             if (bias_inst.size.batch[0] != 1 && bias_inst.size.feature[0] != 1 && bias_inst.size.spatial[1] != 1)
                 throw std::runtime_error("Biases isn't 1D vector."); // b=1, f=1
-            if ((uint32_t)bias_inst.size.spatial[0] != output_size.feature[0] / split)
+            if (bias_inst.size.spatial[0] != output_size.feature[0] / split)
                 throw std::runtime_error("Biases/output feature maps number does not match.");
         }
         if (node.get_output_layout().data_padding.filling_value() != 0.0f)
@@ -140,7 +140,7 @@ deconvolution_inst::typed_primitive_inst(network_impl& network, deconvolution_no
         if (2 != filter_inst.size.spatial.size())
             throw std::runtime_error("Weights have to have 2 dimensions in spatial domain.");
 
-        if ((input_inst.size.feature[0] - input_offset.feature[0]) / split < (uint32_t)filter_inst.size.feature[0])
+        if ((input_inst.size.feature[0] - input_offset.feature[0]) / split < filter_inst.size.feature[0])
             throw std::runtime_error("Weights/input feature maps number does not match.");
     }
 }

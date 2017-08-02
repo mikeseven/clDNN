@@ -97,6 +97,22 @@ template<>
 inline std::string toCodeString<char*>(char* val) { return val; }
 
 template<>
+inline std::string toCodeString<bool>(bool val)
+{
+    std::stringstream ss;
+    ss << static_cast<int>(val);
+    return ss.str();
+}
+
+template<>
+inline std::string toCodeString<const bool>(const bool val)
+{
+    std::stringstream ss;
+    ss << static_cast<int>(val);
+    return ss.str();
+}
+
+template<>
 inline std::string toCodeString<float>(float val) {
     if (std::isinf(val))
         return std::signbit(val) ? "-INFINITY" : "INFINITY";
@@ -399,8 +415,8 @@ inline JitConstants MakeBaseParamsJitConstants(const BaseParams& params)
 
     JitConstants jit{
         MakeJitConstant("OUTPUT",               params.output),
-        MakeJitConstant("FP16_SUPPORTED",       static_cast<int>(fp16_unit_used)),                      // TODO: use engine
-        MakeJitConstant("FP16_UNIT_USED",       static_cast<int>(fp16_unit_used)),
+        MakeJitConstant("FP16_SUPPORTED",       fp16_unit_used),                      // TODO: use engine
+        MakeJitConstant("FP16_UNIT_USED",       fp16_unit_used),
         MakeJitConstant("UNIT_TYPE",            fp16_unit_used ? "half" : "float"),
         MakeJitConstant("NL_M",                 params.nlParams.m),
         MakeJitConstant("NL_N",                 params.nlParams.n),
@@ -423,7 +439,7 @@ inline JitConstants MakeWeightBiasParamsJitConstants(const WeightBiasParams& par
     JitConstants jit = MakeBaseParamsJitConstants(params);
     jit.AddConstants({
         MakeJitConstant("FILTER",       params.weights),
-        MakeJitConstant("BIAS_TERM",    static_cast<int>(!params.bias.empty())),
+        MakeJitConstant("BIAS_TERM",    !params.bias.empty()),
     });
 
     if (params.bias.empty() == false)
@@ -431,8 +447,8 @@ inline JitConstants MakeWeightBiasParamsJitConstants(const WeightBiasParams& par
         const bool sameDims = params.bias[0].SameDims(params.output);
         jit.AddConstants({
             MakeJitConstant("BIAS",             params.bias[0]),
-            MakeJitConstant("BIAS_PER_OUTPUT",  static_cast<int>(sameDims)),
-            MakeJitConstant("BIAS_PER_OFM",     static_cast<int>(!sameDims)),
+            MakeJitConstant("BIAS_PER_OUTPUT",  sameDims),
+            MakeJitConstant("BIAS_PER_OFM",     !sameDims),
         });
     }
 
@@ -587,7 +603,7 @@ inline JitConstants MakeDeconvolutionJitConstants(const DeconvolutionParams& par
         MakeJitConstant("DILATION",                     dp.dilation),
         MakeJitConstant("FILTER_ARRAY_NUM",             dp.split),
         MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
-        MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      static_cast<int>(dp.depthwiseSeparableOpt)),
+        MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      dp.depthwiseSeparableOpt),
     });
 
     return jit;
@@ -652,8 +668,8 @@ inline JitConstants MakeReorderWeightsJitConstants(const ReorderWeightsParams& p
     const bool fp16Supported = output.GetDType() == WeightsType::F16 || input.GetDType() == WeightsType::F16;
 
     JitConstants jit{
-        MakeJitConstant("FP16_SUPPORTED",   static_cast<int>(fp16Supported)),                      // TODO: use engine
-        MakeJitConstant("FP16_UNIT_USED",   static_cast<int>(fp16Supported)),
+        MakeJitConstant("FP16_SUPPORTED",   fp16Supported),                      // TODO: use engine
+        MakeJitConstant("FP16_UNIT_USED",   fp16Supported),
         MakeJitConstant("INPUT0",           input),
         MakeJitConstant("OUTPUT",           output),
     };
