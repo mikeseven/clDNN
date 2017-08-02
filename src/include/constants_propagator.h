@@ -39,12 +39,8 @@ private:
     std::vector<primitive_id> const_outputs;
     bool has_non_trivial_constants = false;
 
-    bool is_constant(program_node const& node) const;
-
     void handle_constant(program_node& node);
     void add_constant(program_node& node);
-    void handle_non_constant(program_node& node);
-    void check_for_constant_frontier(program_node& node);
 };
 
 }

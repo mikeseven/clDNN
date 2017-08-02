@@ -30,10 +30,8 @@ constants_propagator::constants_propagator(program_impl::ptr program) : prog(pro
 
 void constants_propagator::visit_node(program_node& node)
 {
-    if (is_constant(node))
+    if (node.is_constant())
         handle_constant(node);
-    else
-        handle_non_constant(node);
 }
 
 std::list<std::pair<primitive_id, memory>> cldnn::constants_propagator::calculate()
@@ -59,26 +57,14 @@ std::list<std::pair<primitive_id, memory>> cldnn::constants_propagator::calculat
     return ret;
 }
 
-bool cldnn::constants_propagator::is_constant(program_node const& node) const
-{
-    if (node.is_marked())
-        return true;
-
-    if (node.is_type<input_layout>())
-        return false;
-
-    for (auto& dep : node.get_dependencies())
-        if (!dep->is_marked())
-            return false;
-
-    return true;
-}
-
 void constants_propagator::handle_constant(program_node& node)
 {
-    node.mark();
     if (!node.is_type<data>())
+    {
         add_constant(node);
+        if (node.has_non_const_user())
+            const_outputs.push_back(node.id());
+    }
 }
 
 void constants_propagator::add_constant(program_node& node)
@@ -104,25 +90,3 @@ void constants_propagator::add_constant(program_node& node)
     }
 }
 
-void constants_propagator::handle_non_constant(program_node& node)
-{
-    check_for_constant_frontier(node);
-}
-
-void constants_propagator::check_for_constant_frontier(program_node& node)
-{
-    //if a node is a constant frontier (i.e. non-const node which uses directly a constant node)
-    //we need to examinate its dependencies to check which of them are constant and which are non-trivial (i.e. constans other than data).
-    // 1. each constant dependecy of a non-constant node needs to be kept in an original network.
-    // 2. if a constant dependency is not a trivial constant, we need to add it as an output of constant-propagating network
-    //    to enable replacement of this primitive in original network (for example replace reorder with data).
-    for (auto& dep : node.get_dependencies())
-    {
-        if (dep->is_marked())
-        {
-            //see 2.
-            if (!dep->is_type<data>())
-                const_outputs.push_back(dep->id());
-        }
-    }
-}

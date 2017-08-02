@@ -45,6 +45,7 @@ struct internal_primitive_type_base;
 struct program_node
 {
     friend struct program_impl;
+    friend class constants_propagator;
 
     template <class PType>
     friend struct typed_program_node;
@@ -76,6 +77,7 @@ public:
     void replace_dependency(size_t idx, program_node& new_dep, bool detach_whole_branch = false);
     //searches for 'old_dep' in dependecies list of 'this' and replaces it with 'new_dep', calls program::remove_if_dangling(old_dep, detach_whole_branch)
     void replace_dependency(program_node const& old_dep, program_node& new_dep, bool detach_whole_branch = false);
+
 
     std::vector<primitive_id> get_dependencies_ids() const;
 
@@ -174,6 +176,7 @@ public:
     bool is_split_point() const { return joint != nullptr; }
 
     bool is_constant() const { return constant; }
+    bool has_non_const_user() const { return (!constant || constant_frontier); }
 
     //returns true if all paths from network's source to sink must come through this node
     //(i.e. if this is a dominator of all the outputs)
@@ -232,6 +235,8 @@ protected:
     program_node* dominator = nullptr;
     program_node* joint = nullptr;
     bool constant = false;
+    bool constant_frontier = false;
+
     bool main_branch = true;
     bool data_flow = false;
 

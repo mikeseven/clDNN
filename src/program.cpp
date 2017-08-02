@@ -428,6 +428,7 @@ void program_impl::post_optimize_graph()
     layout_optimizer lo(engine);
     post_optimize_weights(lo);
     remove_redundant_reorders(); //TODO: do we need it at this place also?
+    propagate_constants();
     //prepare_padding(); - TODO: padding should be prepare according to the kernels needs
 
     dump_program("5_post_optimized", true);
@@ -725,6 +726,11 @@ void program_impl::mark_constants()
                 break;
             }
         }
+
+        if (!node->constant)
+            for (auto& dep : node->get_dependencies())
+                if (dep->constant)
+                    dep->constant_frontier = true;
     }
 }
 
@@ -1307,33 +1313,24 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
         auto* impl = node.get_selected_impl().get();
         auto output_layout = node.get_output_layout();
         const auto weights_type = layout_optimizer::data_type::weights;
-        if (wtype == data::type_id())
-        {
-            lo.add_weights_for_optimization(
-                impl->_weights_reorder_params,
-                weights.as<data>().typed_desc(),
-                weights_type);
-        }
-        else if (wtype == input_layout::type_id())
-        {
-            auto reorders = lo.get_generic_layer(
-                impl->_weights_reorder_params,
-                weights.as<input_layout>().typed_desc()->id,
-                output_layout,
-                weights_type);
 
-            for (auto& reorder : reorders)
-            {
+        auto reorders = lo.get_generic_layer(
+            impl->_weights_reorder_params,
+            weights.as<input_layout>().typed_desc()->id,
+            output_layout,
+            weights_type);
+
+        for (auto& reorder : reorders)
+        {
                 //insert new generic_layer node to topology
-                this->add_intermediate(reorder.first, node, dep_idx);
+            this->add_intermediate(reorder.first, node, dep_idx);
                 //set generic_layer's node output layout and implementation
                 auto& g_node = node.get_dependency(dep_idx);
                 g_node.get_output_layout();
                 g_node.selected_impl = g_node.type()->choose_impl(*engine, g_node);
-            }
+        }
             //set the old output layout and do not invalidate users as change of weights will not affect output layout
             node.set_output_layout(output_layout, false);
-        }
     };
 
     //generic lambda function which prepares given primitive for weights optimization
@@ -1368,7 +1365,6 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
             prep_opt(prim.as<fully_connected>());
         }
     }
-
     const auto prep_opt_depthwise_sep = [this](auto& node) -> void
     {
         if (!node.get_depthwise_sep_opt())
@@ -1581,7 +1577,7 @@ void program_impl::propagate_constants()
 
         rename(new_node, id_to_replace);
 
-        //a data node is always an input (since it does not have any dependencies) so add it to a list of inputs
+        //a data node is always an input (since it does not have any dependencies) so add it to the list of inputs
         inputs.push_back(&new_node);
     }
 }

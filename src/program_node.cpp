@@ -159,6 +159,36 @@ void program_node::invalidate_users() const
     }
 }
 
+layout cldnn::program_node::get_output_layout() const
+{
+    if (!valid_output_layout)
+        throw std::runtime_error("Output layout not calculated");
+
+    return output_layout;
+}
+
+void cldnn::program_node::set_output_layout(layout layout)
+{
+    layout.data_padding = output_layout.data_padding;
+    if (layout != output_layout) //output_layout has changed! invalidate users
+        invalidate_users();
+
+    output_layout = layout;
+    valid_output_layout = true;
+}
+
+void cldnn::program_node::invalidate_users() const
+{
+    for (auto& user : users)
+    {
+        if (user->valid_output_layout)
+        {
+            user->valid_output_layout = false;
+            user->invalidate_users();
+        }
+    }
+}
+
 primitive_id details::internal_program_node_base::get_next_internal_id()
 {
     static std::atomic<uint64_t> counter{ 0 };
