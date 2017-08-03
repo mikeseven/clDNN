@@ -1099,19 +1099,25 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
                 return;
         }
 
+        //if weights were optimized it is needed to use the sizes after optimization
+        const auto& weights_data_node = node.get_dependency(1).as<data>();
+        const auto weights_size_x = const_cast<data&>(*weights_data_node.get_primitive()).mem.get_layout().size.spatial[0];
+        const auto weights_size_y = const_cast<data&>(*weights_data_node.get_primitive()).mem.get_layout().size.spatial[1];
+        const auto weights_ofm = const_cast<data&>(*weights_data_node.get_primitive()).mem.get_layout().size.batch[0];
+
         const auto& weights_layout = node.get_dependency(1).get_output_layout();
         const auto& split = node.get_primitive()->split();
 
         //concatenate weights
         {
-            auto target_layout = layout(weights_layout.data_type, weights_layout.format, { split, 1, weights_layout.size.spatial[0], weights_layout.size.spatial[1] });
+            auto target_layout = layout(weights_layout.data_type, weights_layout.format, { weights_ofm * split, 1, weights_size_x, weights_size_y });
             merge_buffers(engine, node, target_layout, weights_offset, bias_offset);
         }
 
         //concatenate biases
         if (node.get_primitive()->bias.size() != 0)
         {
-            auto target_layout = layout(weights_layout.data_type, cldnn::format::bfyx, { 1, 1, split, 1 });
+            auto target_layout = layout(weights_layout.data_type, cldnn::format::bfyx, { 1, 1, weights_ofm * split, 1 });
             merge_buffers(engine, node, target_layout, weights_offset + 1, bias_offset + 1);
         }
 
