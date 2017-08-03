@@ -44,30 +44,6 @@ namespace {
         {
             return (xmax - xmin) * (ymax - ymin);
         }
-
-        // Computes the intersection between 2 bounding boxes.
-        bounding_box intersect(const bounding_box& other) const
-        {
-            return bounding_box(std::max(xmin, other.xmin), std::max(ymin, other.ymin), std::min(xmax, other.xmax), std::min(ymax, other.ymax));
-        }
-
-        // Computes the overlap between 2 bounding boxes.
-        float overlap(const bounding_box& other) const
-        {
-            const bounding_box& intersect_bbox = intersect(other);
-            const float intersect_width = intersect_bbox.xmax - intersect_bbox.xmin;
-            const float intersect_height = intersect_bbox.ymax - intersect_bbox.ymin;
-            if (intersect_width > 0 && intersect_height > 0)
-            {
-                const float intersect_size = intersect_width * intersect_height;
-                return intersect_size / (area() + other.area() - intersect_size);
-            }
-            else
-            {
-                // There is no intersection.
-                return 0;
-            }
-        }
     };
 }
 
@@ -185,7 +161,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
             const float score = scores[i];
             if (score > score_threshold)
             {
-                score_index_vec.emplace_back(std::make_pair(score, i));
+                score_index_vec.emplace_back(score, i);
             }
         }
 
@@ -208,18 +184,23 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
         {
             const int idx = score_index.second;
             bool keep = true;
-            for (int k = 0; k < (int)indices.size(); ++k) 
+            for (int kept_idx : indices)
             {
-                if (keep) 
-                {
-                    const int kept_idx = indices[k];
-                    const float overlap = bboxes[idx].overlap(bboxes[kept_idx]);
-                    keep = (overlap <= adaptive_threshold);
-                }
-                else 
+                if (!keep)
                 {
                     break;
                 }
+                bounding_box box1(bboxes[idx]), box2(bboxes[kept_idx]);
+                bool intersecting = (box1.xmin < box2.xmax) & (box2.xmin < box1.xmax) & (box1.ymin < box2.ymax) & (box2.ymin < box1.ymax);
+                float overlap = 0.0f;
+                if (intersecting)
+                {
+                    const float intersect_width = std::min(box1.xmax, box2.xmax) - std::max(box1.xmin, box2.xmin);
+                    const float intersect_height = std::min(box1.ymax, box2.ymax) - std::max(box1.ymin, box2.ymin);
+                    const float intersect_size = intersect_width * intersect_height;
+                    overlap = intersect_size / (box1.area() + box2.area() - intersect_size);
+                }
+                keep = (overlap <= adaptive_threshold);
             }
             if (keep) 
             {
@@ -233,16 +214,16 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
     }
 
     template<typename dtype>
-    void generate_detections(const detection_output_inst& instance, const int num_of_images, const std::vector<std::map<int, std::vector<bounding_box> >>& all_bboxes, const std::vector<std::map<int, std::vector<float> > >& confidences)
+    void generate_detections(const detection_output_inst& instance, const int num_of_images, const std::vector<std::vector<std::vector<bounding_box>>>& all_bboxes, const std::vector<std::vector<std::vector<float>>>& confidences)
     {
         pointer<dtype> out_ptr = instance.output_memory().pointer<dtype>();
         const auto& args = instance.argument;
-        std::vector<std::map<int, std::vector<int> > > all_indices;
+        std::vector<std::vector<std::vector<int>>> all_indices;
         for (int image = 0; image < num_of_images; ++image)
         {
-            const std::map<int, std::vector<bounding_box> >& bboxes_per_image = all_bboxes[image];
-            const std::map<int, std::vector<float> >& conf_per_image = confidences[image];
-            std::map<int, std::vector<int> > indices; // class -> indices of bounding boxes
+            const std::vector<std::vector<bounding_box> >& bboxes_per_image = all_bboxes[image];
+            const std::vector<std::vector<float> >& conf_per_image = confidences[image];
+            std::vector<std::vector<int>> indices(args.num_classes); // class -> indices of bounding boxes
             int num_det = 0;
             for (uint32_t cls = 0; cls < args.num_classes; ++cls)
             {
@@ -250,43 +231,24 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
                 {
                     continue; // Skip background class.
                 }
-                const auto& conf_cls = conf_per_image.find(cls);
-                if (conf_cls == conf_per_image.end())
-                {
-                    assert(0); // No predictions for current label - shouldn't happen.
-                    continue;
-                }
-                const std::vector<float>& scores = conf_cls->second;
-                const int label = args.share_location ? -1 : cls;
-                const auto& bbox_label = bboxes_per_image.find(label);
-                if (bbox_label == bboxes_per_image.end())
-                {
-                    assert(0); // No predictions for current label - shouldn't happen.
-                    continue;
-                }
-                apply_nms(bbox_label->second, scores, args.confidence_threshold, args.nms_threshold, args.eta, args.top_k, indices[cls]);
+                const std::vector<float>& scores = conf_per_image[cls];
+                const int label = args.share_location ? 0 : cls;
+                apply_nms(bboxes_per_image[label], scores, args.confidence_threshold, args.nms_threshold, args.eta, args.top_k, indices[cls]);
                 num_det += (int)indices[cls].size();
             }
             if (num_det > args.keep_top_k)
             {
                 std::vector<std::pair<float, std::pair<int, int> > > score_index_pairs;
                 score_index_pairs.reserve(num_det);
-                for (std::map<int, std::vector<int> >::iterator it = indices.begin(); it != indices.end(); ++it)
+                for (int label = 0; label < (int)indices.size(); ++label)
                 {
-                    int label = it->first;
-                    const std::vector<int>& indices_per_label = it->second;
-                    const auto& conf_label = conf_per_image.find(label);
-                    if (conf_label == conf_per_image.end())
-                    {
-                        assert(0); // No predictions for current label - shouldn't happen.
-                        continue;
-                    }
-                    const std::vector<float>& scores = conf_label->second;
+                    const std::vector<int>& indices_per_label = indices[label];
+                    const std::vector<float>& scores = conf_per_image[label];
                     for (int j = 0; j < (int)indices_per_label.size(); ++j)
                     {
                         int idx = indices_per_label[j];
                         assert(idx < (int)scores.size());
-                        score_index_pairs.emplace_back(std::make_pair(scores[idx], std::make_pair(label, idx)));
+                        score_index_pairs.emplace_back(scores[idx], std::make_pair(label, idx));
                     }
                 }
 
@@ -303,7 +265,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
                 }
 
                 // Store the new indices.
-                std::map<int, std::vector<int> > new_indices;
+                std::vector<std::vector<int> > new_indices(args.num_classes);
                 for (int j = 0; j < (int)score_index_pairs.size(); ++j)
                 {
                     int label = score_index_pairs[j].second.first;
@@ -322,28 +284,15 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
         for (int image = 0; image < num_of_images; ++image)
         {
             int saved_detections_per_image = 0;
-            const std::map<int, std::vector<float> >& conf_scores = confidences[image];
-            const std::map<int, std::vector<bounding_box> >& bboxes_per_image = all_bboxes[image];
+            const std::vector<std::vector<float> >& conf_scores = confidences[image];
+            const std::vector<std::vector<bounding_box> >& bboxes_per_image = all_bboxes[image];
             auto& all_indices_per_image = all_indices[image];
-            for (std::map<int, std::vector<int> >::iterator it = all_indices_per_image.begin(); it != all_indices_per_image.end(); ++it)
+            for (int label = 0; label < (int)all_indices_per_image.size(); ++label)
             {
-                int label = it->first;
-                const auto& conf_label = conf_scores.find(label);
-                if (conf_label == conf_scores.end())
-                {
-                    assert(0); // No predictions for current label - shouldn't happen.
-                    continue;
-                }
-                const std::vector<float>& scores = conf_label->second;
-                int loc_label = args.share_location ? -1 : label;
-                const auto& bbox_label = bboxes_per_image.find(loc_label);
-                if (bbox_label == bboxes_per_image.end())
-                {
-                    assert(0); // No predictions for current label - shouldn't happen.
-                    continue;
-                }
-                const std::vector<bounding_box>& bboxes = bbox_label->second;
-                const std::vector<int>& indices = it->second;
+                const std::vector<float>& scores = conf_scores[label];
+                int loc_label = args.share_location ? 0 : label;
+                const std::vector<bounding_box>& bboxes = bboxes_per_image[loc_label];
+                const std::vector<int>& indices = all_indices_per_image[label];
                 for (size_t i = 0; i < indices.size(); ++i)
                 {
                     int idx = indices[i];
@@ -389,7 +338,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
     }
 
     template<typename dtype>
-    void extract_locations_per_image(const detection_output_inst& instance, std::vector<std::map<int, std::vector<bounding_box> >>& locations, const int num_of_priors, const int num_loc_classes)
+    void extract_locations_per_image(const detection_output_inst& instance, std::vector<std::vector<std::vector<bounding_box>>>& locations, const int num_of_priors, const int num_loc_classes)
     {
         const bool share_location = instance.argument.share_location;
         const auto& input_location = instance.location_memory();
@@ -409,11 +358,11 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 
         for (int image = 0; image < num_of_images; ++image)
         {
-            std::map<int, std::vector<bounding_box> >& label_to_bbox = locations[image];
-
+            std::vector<std::vector<bounding_box>>& label_to_bbox = locations[image];
+            label_to_bbox.resize(num_loc_classes);
             for (int cls = 0; cls < num_loc_classes; ++cls)
             {
-                int label = share_location ? -1 : cls;
+                int label = share_location ? 0 : cls;
                 auto & bboxes = label_to_bbox[label];
                 bboxes.resize(num_of_priors);
 
@@ -453,7 +402,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
     }
 
     template<typename dtype>
-    void extract_confidences_per_image(const detection_output_inst& instance, std::vector<std::map<int, std::vector<float> > >& confidences, const int num_of_priors)
+    void extract_confidences_per_image(const detection_output_inst& instance, std::vector<std::vector<std::vector<float> > >& confidences, const int num_of_priors)
     {
         const int num_classes = instance.argument.num_classes;
 
@@ -474,25 +423,24 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 
         for (int image = 0; image < num_of_images; ++image)
         {
-            std::map<int, std::vector<float> >& label_to_scores = confidences[image];
-
-            for (int cls = 0; cls < num_classes; ++cls)
+            std::vector<std::vector<float> >& label_to_scores = confidences[image];
+            label_to_scores = std::vector<std::vector<float>>(num_classes, std::vector<float>(num_of_priors));
+            int idx = get_linear_feature_index(image, 0, input_buffer_size_f, input_buffer_size_y,
+                input_buffer_size_x, input_padding_lower_y, input_padding_lower_x);
+            int stride = input_buffer_size_y * input_buffer_size_x;
+            for (int prior = 0; prior < num_of_priors; ++prior)
             {
-                auto & scores = label_to_scores[cls];
-                scores.resize(num_of_priors);
-                for (int prior = 0; prior < num_of_priors; ++prior)
+                for (int cls = 0; cls < num_classes; ++cls)
                 {
-                    int idx = prior * num_classes;
-                    scores[prior] = ((float)confidence_data[get_linear_feature_index(image, idx + cls, input_buffer_size_f, input_buffer_size_y,
-                                                                                        input_buffer_size_x, input_padding_lower_y, input_padding_lower_x)]);
+                    label_to_scores[cls][prior] = (float)confidence_data[idx];
+                    idx += stride;
                 }
             }
-
-        }    
+        }
     }
 
     template<typename dtype>
-    void prepare_data(const detection_output_inst& instance, std::vector<std::map<int, std::vector<bounding_box>>> &bboxes, std::vector<std::map<int, std::vector<float> > >& confidences)
+    void prepare_data(const detection_output_inst& instance, std::vector<std::vector<std::vector<bounding_box>>> &bboxes, std::vector<std::vector<std::vector<float>>>& confidences)
     {
         assert(bboxes.size() == confidences.size());
 
@@ -503,7 +451,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
         const int num_loc_classes = args.share_location ? 1 : args.num_classes;
 
         // Extract locations per image.
-        std::vector<std::map<int, std::vector<bounding_box> >> locations(num_of_images); // Per image : label -> bounding boxes.
+        std::vector<std::vector<std::vector<bounding_box>>> locations(num_of_images); // Per image : label -> bounding boxes.
         extract_locations_per_image<dtype>(instance, locations, num_of_priors, num_loc_classes);
 
         // Extract prior boxes - same within a batch.
@@ -514,19 +462,17 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
         // Create the decoded bounding boxes according to locations predictions and prior-boxes. 
         for (int image = 0; image < num_of_images; ++image)
         {
-            std::map<int, std::vector<bounding_box> > & bboxes_per_image = bboxes[image];
+            std::vector<std::vector<bounding_box>>& bboxes_per_image = bboxes[image];
+            bboxes_per_image.resize(num_loc_classes);
+            locations[image].resize(num_loc_classes);
             for (int cls = 0; cls < num_loc_classes; ++cls)
             {
-                const int label = args.share_location ? -1 : cls;
-                if (label == args.background_label_id)
+                const int label = args.share_location ? 0 : cls;
+                if (!args.share_location && label == args.background_label_id)
                 {
                     continue; // Skip background class.
                 }
-                if (locations[image].find(label) == locations[image].end())
-                {
-                    assert(0); // No predictions for current label - shouldn't happen (locations[image] is constructed above and holds for each label a vector of prior-boxes).  
-                }
-                const std::vector<bounding_box>& label_loc_preds = locations[image].find(label)->second;
+                const std::vector<bounding_box>& label_loc_preds = locations[image][label];
                 int label_loc_preds_size = (int)label_loc_preds.size();
                 assert((int)prior_bboxes.size() == label_loc_preds_size);
                 
@@ -554,8 +500,8 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
 
         const int num_of_images = instance.location_memory().get_layout().size.batch[0]; //batch size
         
-        std::vector<std::map<int, std::vector<bounding_box> >> bboxes(num_of_images); // Per image : label -> decoded bounding boxes.
-        std::vector<std::map<int, std::vector<float> > > confidences(num_of_images); // Per image : class -> confidences per bounding box.
+        std::vector<std::vector<std::vector<bounding_box>>> bboxes(num_of_images); // Per image : label -> decoded bounding boxes.
+        std::vector<std::vector<std::vector<float>>> confidences(num_of_images); // Per image : class -> confidences per bounding box.
 
         if (instance.location_memory().get_layout().data_type == data_types::f32)
         {
