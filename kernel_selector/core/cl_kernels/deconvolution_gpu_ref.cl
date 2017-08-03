@@ -34,7 +34,7 @@ KERNEL(deconvolution_gpu_yxfb_ref)(
     const int y = (int)out_y + PADDING_SIZE_Y - (FILTER_SIZE_Y - 1);
     
 #if DEPTHWISE_SEPARABLE_OPT
-    const uint in_split_offset = ofm_offset * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
+    const uint in_split_offset = (ofm_offset / FILTER_OFM_NUM) * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
 #else
     const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
 #endif
