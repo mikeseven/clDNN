@@ -15,11 +15,13 @@
 */
 
 #pragma once
+#include <limits>
 #include <string>
 #include <memory>
 #include "primitive_db.h"
 #include "kernel_selector_params.h"
 #include <float.h>
+#include <sstream>
  
 #define AGE_BASED "-cl-no-subgroup-ifp"
 #define ROUND_ROBIN ""
@@ -210,10 +212,13 @@ namespace KernelSelector {
         std::shared_ptr<Params> params;
         std::vector<clKernelData> kernels;
         float estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        uint64_t runTime = std::numeric_limits<uint64_t>::max(); // kernel run time in nanoseconds
 
         bool reorderInput = false;
         WeightsReorderParams weightsReorderParams;
         std::string kernelName;
+
+        int autoTuneIndex = -1;
 
         template <typename T>
         inline static KernelData Default(const Params& _params, size_t kernel_nums = 1)
@@ -223,7 +228,9 @@ namespace KernelSelector {
             kd.params = std::make_shared<T>(orgParams);
             kd.kernels.resize(kernel_nums);
             kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE; // for KW
+            kd.runTime = std::numeric_limits<uint64_t>::max();
             kd.reorderInput = false; // for KW
+            kd.autoTuneIndex = -1;
             return kd;
         }
     };
@@ -449,4 +456,33 @@ namespace KernelSelector {
         default: return "";
         }
     }
+
+    inline std::string toString(NonLinearParams params)
+    {
+        std::stringstream s;
+        s << "m" << params.m << "_n" << params.n;
+        return s.str();
+    }
+
+    inline std::string toString(Tensor::Dim dim)
+    {
+        std::stringstream s;
+        s << "v" << dim.v << "_p" << dim.pitch << "_" << dim.pad.before << "_" << dim.pad.after;
+        return s.str();
+    }
+
+    inline std::string toString(DataTensor tensor)
+    {
+        std::stringstream s;
+        s << toString(tensor.GetDType()) << "_";
+        s << toString(tensor.GetLayout()) << "_";
+        int i = 0;
+        for (auto dim : tensor.GetDims())
+        {
+            s << "d" << i << "_" << toString(dim) << "_";
+            i++;
+        }
+        return s.str();
+    }
+
 }

@@ -20,6 +20,7 @@
 #include "implementation_map.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
+#include "kernel_runner.h"
 #include <initializer_list>
 
 namespace cldnn { namespace gpu {
@@ -120,8 +121,20 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
         };
 
         auto& kernel_selector = kernel_selector::convolution_kernel_selector::Instance();
-        auto best_kernels = kernel_selector.GetBestKernels(conv_params, conv_optional_params);
 
+        bool enable_auto_tune = arg.get_program().get_options().get<build_option_type::enable_kernels_auto_tune>()->enabled();
+        KernelSelector::KernelsData best_kernels;
+
+        if (enable_auto_tune)
+        {
+            gpu::kernel_runner runner(arg.get_program().get_engine().get(), true);
+            best_kernels = kernel_selector.GetBestKernels(conv_params, conv_optional_params, runner);
+        }
+        else
+        {
+            best_kernels = kernel_selector.GetBestKernels(conv_params, conv_optional_params);
+        }
+		
         CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 
         auto conv = new convolution_gpu(arg, best_kernels[0]);

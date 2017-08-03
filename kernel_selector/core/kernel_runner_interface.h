@@ -16,25 +16,12 @@
 
 #pragma once
 
-#include "kernel_selector.h"
-#include "kernel_runner_interface.h"
- 
 namespace KernelSelector 
 {
-    class ConvolutionKernelSelctor : public KernelSelctorBase
+    class KernelRunnerInterface
     {
     public:
-        static ConvolutionKernelSelctor &Instance() {
-            static ConvolutionKernelSelctor instance_;
-            return instance_;
-        }
-
-        ConvolutionKernelSelctor();
-
-        virtual ~ConvolutionKernelSelctor() {}
-
-        virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
-
-        virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options, KernelRunnerInterface& runner) const override;
+        // Gets a list of kernels, executes them and returns the run time of each kernel (in nano-seconds).
+        virtual std::vector<uint64_t> run_kernels(const KernelSelector::KernelsData& kernelsData) = 0;
     };
 }
