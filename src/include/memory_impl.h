@@ -77,8 +77,8 @@ struct mem_lock
     auto begin() & { return stdext::make_checked_array_iterator(ptr, size()); }
     auto end() & { return stdext::make_checked_array_iterator(ptr, size(), size()); }
 #else
-    T* begin() & { return _ptr; }
-    T* end() & { return _ptr + size(); }
+    T* begin() & { return ptr; }
+    T* end() & { return ptr + size(); }
 #endif
 
     T* data() const { return ptr; }

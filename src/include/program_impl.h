@@ -162,13 +162,6 @@ private:
     bool remove_if_dangling(program_node& node);
 
     //removes a node from the graph and deletes it afterwards,
-    //extraction is performed as follows (D = dependency, U = user, N = node):
-    // before:                  after:
-    //                +- U1             +- U1
-    //               /                 /
-    //  D1 --- N ---+--- U2     D1 ---+--- U2
-    //               \                 \
-    //                +- U3             +- U3
     //prereq: node cannot be marked as output and has to have exactly one dependency
     //returns if 'node' has been extracted and removed successfully
     bool extract_and_remove(program_node& node);
