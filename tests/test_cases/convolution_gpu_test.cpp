@@ -1661,9 +1661,9 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2_depthw
         auto biases2 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 1, 1 } });
 
         set_values(weights1, { -2.0f, 0.5f, 3.5f, 1.5f });
-        set_values(biases1, { 0.0f });
+        set_values(biases1, { 2.0f });
         set_values(weights2, { -1.2f, 1.5f, 0.5f, -0.5f });
-        set_values(biases2, { 0.0f });
+        set_values(biases2, { -1.0f });
 
         primitive_id weights_id = "weights_" + std::to_string(i);
         primitive_id weights2_id = "weights2_" + std::to_string(i);
