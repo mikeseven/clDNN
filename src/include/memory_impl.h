@@ -53,6 +53,41 @@ private:
     void* _pointer;
 };
 
+template <class T>
+struct mem_lock
+{
+    mem_lock(memory_impl::ptr mem)
+        : mem(mem), ptr(reinterpret_cast<T*>(mem->lock()))
+    {
+    }
+
+    mem_lock(memory_impl& mem)
+        : mem_lock(&mem)
+    {}
+
+    ~mem_lock()
+    {
+        ptr = nullptr;
+        mem->unlock();
+    }
+
+    size_t size() const { return mem->size() / sizeof(T); }
+
+#if defined(_SECURE_SCL) && (_SECURE_SCL > 0)
+    auto begin() & { return stdext::make_checked_array_iterator(ptr, size()); }
+    auto end() & { return stdext::make_checked_array_iterator(ptr, size(), size()); }
+#else
+    T* begin() & { return _ptr; }
+    T* end() & { return _ptr + size(); }
+#endif
+
+    T* data() const { return ptr; }
+
+private:
+    memory_impl::ptr mem;
+    T* ptr;
+};
+
 }
 
 API_CAST(::cldnn_memory, cldnn::memory_impl)

@@ -371,7 +371,7 @@ void cldnn_set_network_input(cldnn_network network, cldnn_primitive_id id, cldnn
         SHOULD_NOT_BE_NULL(id,          "Id");
         SHOULD_NOT_BE_NULL(mem,         "Mem");
         SHOULD_NOT_EQUAL_0(mem_size,    "Memory size");
-        api_cast(network)->set_input_data(id, api_cast(mem));
+        api_cast(network)->set_input_data(id, *api_cast(mem));
     });
 }
 
@@ -488,9 +488,9 @@ cldnn_network_output cldnn_get_network_output(cldnn_network network, const char*
         SHOULD_NOT_BE_NULL(name,    "ID of primitive");
         cldnn::primitive_id id(name);
         auto event = api_cast(network)->get_primitive_event(id);
-        auto mem_result = api_cast(network)->get_primitive(id)->output_memory().get();
-        api_cast(mem_result)->add_ref();
-        return{ api_cast(event.detach()), mem_result };
+        auto& mem_result = api_cast(network)->get_primitive(id)->output_memory();
+        mem_result.add_ref();
+        return{ api_cast(event.detach()), api_cast(&mem_result) };
     });
 }
 
@@ -538,7 +538,7 @@ CLDNN_API int32_t cldnn_is_the_same_buffer(cldnn_memory mem1, cldnn_memory mem2,
             return api_cast(mem1)->lock() == api_cast(mem2)->lock();
 
         //memories were allocated by the engine so let it decide whether they refer to the same buffer
-        return api_cast(mem1)->get_engine()->is_the_same_buffer(api_cast(mem1), api_cast(mem2));
+        return api_cast(mem1)->get_engine()->is_the_same_buffer(*api_cast(mem1), *api_cast(mem2));
     }));
 }
 

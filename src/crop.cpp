@@ -83,7 +83,7 @@ void crop_inst::on_execute()
     if (!node.can_be_optimized())
         return;
 
-    if (_output && _output->is_the_same_buffer(input_memory()))
+    if (_output && _network.get_engine()->is_the_same_buffer(output_memory(), input_memory()))
         return;
 
     reuse_input();
@@ -91,6 +91,6 @@ void crop_inst::on_execute()
 
 void crop_inst::reuse_input()
 {
-    _output = api_cast(_network.get_engine()->reinterpret_buffer(api_cast(input_memory().get()), node.get_output_layout()));
+    _output = _network.get_engine()->reinterpret_buffer(input_memory(), node.get_output_layout());
 }
 }

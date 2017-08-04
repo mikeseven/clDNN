@@ -28,19 +28,15 @@ primitive_type_id data_type_id()
 }
 
 namespace {
-    cldnn::memory attach_or_copy_data(network_impl& network, const memory& mem)
+    memory_impl::ptr attach_or_copy_data(network_impl& network, memory_impl::ptr mem)
     {
         auto engine = network.get_engine();
-        auto mem_ref = mem.get();
-        auto mem_impl = api_cast(mem_ref);
-        if (mem_impl->is_allocated_by(engine))
-        {
+        if (mem->is_allocated_by(engine))
             return mem;
-        }
 
-        memory result(api_cast(engine->allocate_buffer(mem.get_layout())));
-        pointer<char> src(mem);
-        pointer<char> dst(result);
+        memory_impl::ptr result = engine->allocate_buffer(mem->get_layout());
+        mem_lock<char> src(mem);
+        mem_lock<char> dst(result);
         std::copy(src.begin(), src.end(), dst.begin());
         return result;
     }
@@ -59,7 +55,7 @@ std::string data_inst::to_string(data_node const& node)
 }
 
 data_inst::typed_primitive_inst(network_impl& network, data_node const& node)
-    : parent(network, node, attach_or_copy_data(network, node.get_primitive()->mem))
+    : parent(network, node, attach_or_copy_data(network, api_cast(node.get_primitive()->mem.get())))
 {
 }
 

@@ -59,15 +59,15 @@ public:
 
     struct kernel_arguments_data
     {
-        std::vector<const cldnn::memory*> inputs;
-        std::vector<const cldnn::memory*> intermediates;
-        const cldnn::memory* output         = nullptr;
-        const cldnn::memory* weights        = nullptr;
-        const cldnn::memory* bias           = nullptr;
-        const cldnn::memory* lookup_table   = nullptr;
-        const cldnn::memory* scale_table    = nullptr;
-        const cldnn::memory* slope          = nullptr;
-        int32_t              split          = 0;
+        std::vector<memory_impl::cptr> inputs;
+        std::vector<memory_impl::cptr> intermediates;
+        memory_impl::cptr output;
+        memory_impl::cptr weights;
+        memory_impl::cptr bias;
+        memory_impl::cptr lookup_table;
+        memory_impl::cptr scale_table;
+        memory_impl::cptr slope;
+        int32_t           split          = 0;
         const kernel_selector::kernel_scalar_arguments* scalars = nullptr;
     };
 

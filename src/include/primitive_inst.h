@@ -17,11 +17,11 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 
-#include "api/CPP/memory.hpp"
 #include "api/CPP/primitive.hpp"
 
 #include "event_impl.h"
 #include "program_impl.h"
+#include "memory_impl.h"
 #include "meta_utils.h"
 #include "kernel_selector_helper.h"
 
@@ -72,17 +72,18 @@ public:
         return reinterpret_cast<std::vector<std::shared_ptr<const primitive_inst>> const&>(_deps);
     }
 
-    const memory&       dep_memory(size_t index)        const { return dependencies().at(index)->output_memory(); }
-    const memory&       output_memory()                 const { return _output.get(); }
-    size_t              inputs_memory_count()           const { return _node.get_primitive()->input.size(); }
-    primitive_type_id   type()                          const { return _node.type(); }
-    primitive_id        id()                            const { return _node.id(); }
-    const auto          desc()                          const { return _node.get_primitive(); }
-    network_impl&       get_network()                   const { return _network; }
+    memory_impl& dep_memory(size_t index) const { return dependencies().at(index)->output_memory(); }
+    memory_impl& output_memory() const { return _output.get(); }
+    size_t inputs_memory_count() const { return _node.get_primitive()->input.size(); }
+    primitive_type_id type() const { return _node.type(); }
+    primitive_id id() const { return _node.id(); }
+    const auto desc() const { return _node.get_primitive(); }
+    network_impl& get_network() const { return _network; }
+    
     //return pointer to const to prevent arbitrary 'execute' call -> use primitive_inst.execute() instead
-    const auto          get_impl()                      const { return _impl.get(); }
+    const auto get_impl() const { return _impl.get(); }
 
-    const memory&       input_memory(size_t index = 0)  const 
+    const memory& input_memory(size_t index = 0)  const 
     { 
         if (static_cast<int32_t>(index) >= inputs_memory_count())
             throw std::range_error("input offset too big");
@@ -106,12 +107,12 @@ protected:
 
     //_output is optional because its initialization might be postponed (reshape_inst may either allocate it's own buffer or attach input as output
     // depending on reshape_node.is_in_place())
-    boost::optional<memory> _output;
+    memory_impl::ptr _output;
 
     bool _output_changed; //todo: implement output reuse if neither of inputs has changed
     bool _has_valid_input = true; //by default all primitives has valid inputs, exception is input_layout (see input_layout_inst)
 
-    memory allocate_output();
+    memory_impl::ptr allocate_output();
 
     //event function called by primitive_inst::execute after checking if primitive should rerun and before calling _impl->execute()
     //mainly for reshape (to update output memory if reshape_node.is_in_place() == true)
@@ -170,7 +171,7 @@ namespace details
             , argument(*node.get_primitive())
         {}
 
-        api_typed_primitive_inst_base(network_impl& network, typed_node const& node, memory const& buffer)
+        api_typed_primitive_inst_base(network_impl& network, typed_node const& node, memory_impl::ptr buffer)
             : api_typed_primitive_inst_base(network, node, false)
         {
             _output = buffer;
@@ -205,7 +206,7 @@ namespace details
             , node(_node)
         {}
 
-        internal_typed_primitive_inst_base(network_impl& network, typed_node const& node, memory const& buffer)
+        internal_typed_primitive_inst_base(network_impl& network, typed_node const& node, memory_impl::ptr buffer)
             : internal_typed_primitive_inst_base(network, node, false)
         {
             _output = buffer;

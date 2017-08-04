@@ -260,9 +260,9 @@ struct proposal_gpu : typed_primitive_impl<proposal>
 
         size_t anchors_num = anchors.size();
       
-        const memory& cls_scores = instance.dep_memory(proposal_inst::cls_scores_index);
-        const memory& bbox_pred  = instance.dep_memory(proposal_inst::bbox_pred_index);
-        const memory& image_info = instance.dep_memory(proposal_inst::image_info_index);
+        auto& cls_scores = instance.dep_memory(proposal_inst::cls_scores_index);
+        auto& bbox_pred  = instance.dep_memory(proposal_inst::bbox_pred_index);
+        auto& image_info = instance.dep_memory(proposal_inst::image_info_index);
 
         // feat map sizes
         int fm_h = cls_scores.get_layout().size.spatial[1];
@@ -271,7 +271,7 @@ struct proposal_gpu : typed_primitive_impl<proposal>
         int fm_sz = fm_w * fm_h;
 
         // original input image to the graph (after possible scaling etc.) so that coordinates are valid for it
-        pointer<dtype> image_info_ptr = image_info.pointer<dtype>();
+        mem_lock<dtype> image_info_ptr{ image_info };
         const dtype* image_info_mem = image_info_ptr.data();
 
         int img_w = (int)(float_read_helper(image_info_mem + proposal_inst::image_info_width_index) + EPSILON);
@@ -281,19 +281,19 @@ struct proposal_gpu : typed_primitive_impl<proposal>
         int scaled_min_bbox_size = instance.argument.min_bbox_size * img_z;
 
         int min_bbox_x = scaled_min_bbox_size;
-        if (image_info.count() > proposal_inst::image_info_scale_min_bbox_x)
+        if (image_info.get_layout().count() > proposal_inst::image_info_scale_min_bbox_x)
         {
             min_bbox_x = static_cast<int>(min_bbox_x * float_read_helper(image_info_mem + proposal_inst::image_info_scale_min_bbox_x));
         }
 
         int min_bbox_y = scaled_min_bbox_size;
-        if (image_info.count() > proposal_inst::image_info_scale_min_bbox_y)
+        if (image_info.get_layout().count() > proposal_inst::image_info_scale_min_bbox_y)
         {
             min_bbox_y = static_cast<int>(min_bbox_y * float_read_helper(image_info_mem + proposal_inst::image_info_scale_min_bbox_y));
         }
 
-        pointer<dtype> cls_scores_ptr = cls_scores.pointer<dtype>();
-        pointer<dtype> bbox_pred_ptr  = bbox_pred.pointer<dtype>();
+        mem_lock<dtype> cls_scores_ptr{ cls_scores };
+        mem_lock<dtype> bbox_pred_ptr{ bbox_pred };
         dtype* cls_scores_mem = cls_scores_ptr.data();
         dtype* bbox_pred_mem  = bbox_pred_ptr.data();
 
@@ -338,9 +338,9 @@ struct proposal_gpu : typed_primitive_impl<proposal>
         sort_and_keep_n_items(sorted_proposals_confidence, instance.argument.pre_nms_topn);
         std::vector<roi_t> res = perform_nms(sorted_proposals_confidence, instance.argument.iou_threshold, instance.argument.post_nms_topn);
 
-        const memory& output = instance.output_memory();
+        auto& output = instance.output_memory();
         
-        pointer<dtype> output_ptr = output.pointer<dtype>();
+        mem_lock<dtype> output_ptr{ output };
         dtype* top_data = output_ptr.data();        
 
         size_t res_num_rois = res.size();

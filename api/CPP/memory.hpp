@@ -70,14 +70,13 @@ struct memory
         });
     }
 
-    // TODO remove cldnn::memory usage from the implementation code
     /// @brief Constructs memory object form C API ::cldnn_memory handler
-    memory(cldnn_memory data, bool add_ref = false)
+    memory(cldnn_memory data)
         :_impl(data), _layout(get_layout_impl(data))
         ,_size(_layout.bytes_count()), _count(_layout.count())
     {
         if (!_impl) throw std::invalid_argument("data");
-        if (add_ref) retain();
+        retain();
     }
 
     memory(const memory& other)

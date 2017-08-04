@@ -29,6 +29,7 @@ struct typed_program_node<convolution> : public typed_program_node_base<convolut
 {
     using parent = typed_program_node_base<convolution>;
 
+public:
     typed_program_node(std::shared_ptr<primitive> prim, program_impl& prog)
         : parent(prim, prog)
         , split(this->get_primitive()->split())
@@ -36,22 +37,15 @@ struct typed_program_node<convolution> : public typed_program_node_base<convolut
     {
     }
 
-private:
-    int32_t split;
-    bool depthwise_sep_opt;
-
-public:
-    using parent::parent;
-
     void set_split(int32_t node_split) { split = node_split; }
     int32_t get_split() const { return split; }
 
     void set_depthwise_sep_opt(bool node_depthwise_sep_opt) { depthwise_sep_opt = node_depthwise_sep_opt; }
     bool get_depthwise_sep_opt() const { return depthwise_sep_opt; }
 
-    auto& input() const { return get_dependency(0); }
+    decltype(auto) input() const { return get_dependency(0); }
 
-    auto& weights(size_t idx = 0) const
+    decltype(auto) weights(size_t idx = 0) const
     {
         if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("weights offset too big");
@@ -59,7 +53,7 @@ public:
         return get_dependency(1 + idx);
     }
 
-    auto& bias(size_t idx = 0) const 
+    decltype(auto) bias(size_t idx = 0) const
     { 
         if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("bias offset too big");
@@ -74,6 +68,10 @@ public:
         else
             return false;
     }
+    
+private:
+    int32_t split;
+    bool depthwise_sep_opt;
 };
 
 using convolution_node = typed_program_node<convolution>;
@@ -90,7 +88,7 @@ public:
 public:
     typed_primitive_inst(network_impl& network, convolution_node const& node);
 
-    const memory& weights_memory(size_t index) const
+    decltype(auto)weights_memory(size_t index) const
     {
         if (static_cast<int32_t>(index) >= node.get_split())
             throw std::range_error("weights offset too big");
@@ -98,7 +96,7 @@ public:
         return dep_memory(1 + index);
     }
 
-    const memory& bias_memory(size_t index) const
+    decltype(auto) bias_memory(size_t index) const
     { 
         if (static_cast<int32_t>(index) >= node.get_split())
             throw std::range_error("bias offset too big");

@@ -29,7 +29,7 @@ struct typed_program_node<custom_gpu_primitive> : public typed_program_node_base
 public:
     using parent::parent;
 
-    auto& input(size_t idx = 0) const { return get_dependency(idx); }
+    decltype(auto) input(size_t idx = 0) const { return get_dependency(idx); }
 };
 
 using custom_gpu_primitive_node = typed_program_node<custom_gpu_primitive>;

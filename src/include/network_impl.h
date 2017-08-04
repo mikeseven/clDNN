@@ -44,7 +44,7 @@ public:
     engine_impl::ptr get_engine() const { return _program->get_engine(); }
 
     void reset_execution(bool wait = true);
-    void set_input_data(const primitive_id& id, memory_impl* data);
+    void set_input_data(const primitive_id& id, memory_impl& data);
 
     auto const& get_outputs() { return _outputs; }
 

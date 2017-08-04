@@ -203,7 +203,9 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
     template<typename dtype>
     void generate_detections(const detection_output_inst& instance, const int num_of_images, const std::vector<std::vector<std::vector<bounding_box>>>& all_bboxes, std::vector<std::vector<std::vector<std::pair<float,int>>>>& confidences)
     {
-        pointer<dtype> out_ptr = instance.output_memory().pointer<dtype>();
+        mem_lock<dtype> lock{ instance.output_memory() };
+        auto out_ptr = lock.begin();
+
         const auto& args = instance.argument;
         std::vector<std::vector<std::vector<std::pair<float,int>>>> final_detections; // Per image -> For each label: Pair (score, prior index)
         for (int image = 0; image < num_of_images; ++image)
@@ -322,10 +324,11 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
     void extract_locations_per_image(const detection_output_inst& instance, std::vector<std::vector<std::vector<bounding_box>>>& locations, const int num_of_priors, const int num_loc_classes)
     {
         const bool share_location = instance.argument.share_location;
-        const auto& input_location = instance.location_memory();
-        const auto location_ptr = input_location.pointer<dtype>();
-        const dtype* location_data = location_ptr.data();
+        auto& input_location = instance.location_memory();
         const int num_of_images = (int)locations.size();
+
+        mem_lock<dtype> lock{ input_location };
+        auto location_data = lock.begin();
 
         assert(num_of_priors * num_loc_classes * PRIOR_BOX_SIZE == input_location.get_layout().size.feature[0]);
 
@@ -366,10 +369,12 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
     template<typename dtype>
     void extract_prior_boxes_and_variances(const detection_output_inst& instance, std::vector<bounding_box>& prior_bboxes, std::vector<std::array<float, PRIOR_BOX_SIZE>>& prior_variances)
     {
-        const auto& input_prior_box = instance.prior_box_memory();
-        const auto prior_box_ptr = input_prior_box.pointer<dtype>();
-        const dtype* prior_box_data = prior_box_ptr.data();
+        auto& input_prior_box = instance.prior_box_memory();
         const int num_of_priors = (int)prior_bboxes.size();
+
+        mem_lock<dtype> lock{ input_prior_box };
+        auto prior_box_data = lock.begin();
+
         for (int prior = 0; prior < num_of_priors; ++prior)
         {
             int idx = prior * PRIOR_BOX_SIZE;
@@ -388,10 +393,11 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
         const int num_classes = instance.argument.num_classes;
 
         const int num_of_images = (int)confidences.size();
-        const auto& input_confidence = instance.confidence_memory();
-        const auto confidence_ptr = input_confidence.pointer<dtype>();
-        const dtype* confidence_data = confidence_ptr.data();
+        auto& input_confidence = instance.confidence_memory();
         const float confidence_threshold = instance.argument.confidence_threshold;
+
+        mem_lock<dtype> lock{ &input_confidence };
+        auto confidence_data = lock.begin();
 
         assert(num_of_priors * num_classes == input_confidence.get_layout().size.feature[0]);
 

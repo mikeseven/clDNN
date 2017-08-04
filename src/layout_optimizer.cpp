@@ -230,6 +230,6 @@ void layout_optimizer::optimize() const
         }
         
         auto& data_node = net.get_program()->get_node(input_id).as<data>();
-        const_cast<data&>(*data_node.get_primitive()).mem = output->output_memory();
+        const_cast<data&>(*data_node.get_primitive()).mem = memory(api_cast(&output->output_memory()));
     }
 }

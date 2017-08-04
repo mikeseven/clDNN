@@ -45,6 +45,7 @@
 #include "detection_output_inst.h"
 #include "prior_box_inst.h"
 #include "reorder_inst.h"
+#include "reshape_inst.h"
 
 #include "kernel_selector_helper.h"
 #include "sliding_window_utils.h"
@@ -168,10 +169,9 @@ namespace {
         for (size_t i = begin_offset; i < end_offset; i++)
         {
             auto& weights = node.get_dependency(i).as<data>();
-            pointer<char> src_ptr(weights.get_primitive()->mem);
-            auto mem_size = weights.get_primitive()->mem.size();
-            pointer<char> dst_ptr(memory(api_cast(data_to_allocate), true));
-            std::copy(src_ptr.begin(), src_ptr.end(), dst_ptr.begin() + (i - begin_offset)*mem_size);
+            mem_lock<char> src{ api_cast(weights.get_primitive()->mem.get()) };
+            mem_lock<char> dst{ data_to_allocate };
+            std::copy(src.begin(), src.end(), dst.begin() + (i - begin_offset)*src.size());
         }
 
         for(size_t i = 0; i < end_offset - begin_offset - 1; i++)
@@ -187,6 +187,25 @@ namespace {
         auto& mem_layout = const_cast<data&>(*data_node.get_primitive()).mem.get_layout();
 
         return layout(mem_layout.data_type, mem_layout.format, { split * mem_layout.size.batch[0], mem_layout.size.feature[0], mem_layout.size.spatial[0], mem_layout.size.spatial[1] });
+    }
+
+    // pair.first tells whether l1 and l2 are absolutely identical
+    // pair.second tells whether l1 and l2 can be reinterpreted to each other without need of reordering
+    std::pair<bool, bool> are_layouts_identical(layout const& l1, layout const& l2)
+    {
+        if (l1 == l2)
+            return{ true, true };
+        if (l1.data_type != l2.data_type)
+            return{ false, false };
+
+        auto l1_pitch = l1.get_pitches();
+        auto l2_pitch = l2.get_pitches();
+        auto l1_offset = l1.get_linear_offset();
+        auto l2_offset = l2.get_linear_offset();
+        if (l1_pitch == l2_pitch && l1_offset == l2_offset)
+            return{ false, true };
+
+        return{ false, false };
     }
 }
 
@@ -329,7 +348,6 @@ void program_impl::init_graph(topology_impl const& topology)
 void program_impl::pre_optimize_graph()
 {
     trim_to_outputs();
-    remove_redundant_reorders();
 
     if (get_engine()->configuration().enable_parallelisation)
         reorder_nodes_for_parallel_execution();
@@ -344,6 +362,7 @@ void program_impl::pre_optimize_graph()
         pre_optimize_bias(lo);
     }
 
+    remove_redundant_reorders();
     prepare_padding();
     prepare_depthwise_sep_opt();
 
@@ -738,15 +757,18 @@ void program_impl::remove_redundant_reorders()
         if (r_node.has_mean() || !r_node.get_primitive()->subtract_per_feature.empty()) //do not optimize if mean of subtract are present
             continue;
 
-        assert(r_node.dependencies.size() == 1 && "reorder without mean shoudl have exactly one dependecy (input)");
+        assert(r_node.dependencies.size() == 1 && "reorder without mean should have exactly one dependecy (input)");
         auto o_layout = r_node.get_output_layout();
         auto i_layout = r_node.input().get_output_layout();
-        if (o_layout != i_layout) //do not optimize if layout changes (either format or paddings, size should remain the same)
+
+        auto ident = are_layouts_identical(o_layout, i_layout);
+        if (!ident.second)
             continue;
 
         //mark as optimized
-        r_node.can_be_optimized(true);
-        extract_and_remove(r_node); //try to remove if possible (with respect to r_node not being marked as output)
+        r_node.can_be_optimized(true, !ident.first);
+        if (ident.first) //no need of reshape
+            extract_and_remove(r_node); //try to remove if possible (with respect to r_node not being marked as output)
     }
 }
 
@@ -1440,16 +1462,16 @@ void program_impl::prepare_buffer_fusing()
 
         do_for_types<reorder>(*node, [this](reorder_node& node)
         {
-            auto const& input = node.get_dependencies();
+            auto& input = node.input();
             //Optimization only available in case of layers that support different input and output formats.
             //todo: new api needs to be created to read such caps
-            if (!input[0]->is_type<pooling>())
+            if (!input.is_type<pooling>())
                 return;
 
-            if (input[0]->get_users().size() != 1)
+            if (input.get_users().size() != 1)
                 return;
 
-            input[0]->set_output_layout(node.get_output_layout());
+            input.set_output_layout(node.get_output_layout());
 
             node.can_be_optimized(true);
             extract_and_remove(node); //try to remove redundant reorders
@@ -1477,9 +1499,120 @@ void program_impl::add_intermediate(program_node& node, program_node& next, size
     node.processing_itr = processing_order.insert(next.processing_itr, &node);
 }
 
+void program_impl::rename(program_node & node, primitive_id const & new_id)
+{
+    if (nodes_map.count(new_id))
+        throw std::runtime_error("Trying to rename program_node but node with id " + new_id + " already exists");
+    if (node.is_output())
+        throw std::invalid_argument("Trying to rename an output node. If you intend to do that, please clear 'output' flag manually.");
+
+    auto node_ptr = nodes_map.find(node.id())->second;
+    nodes_map.emplace(new_id, node_ptr);
+    nodes_map.erase(node.id());
+
+    if (!node.is_type<internal_primitive>())
+        const_cast<primitive_id&>(node.desc->id) = new_id;
+    else
+        reinterpret_cast<details::internal_program_node_base&>(node).internal_id = new_id;
+}
+
+void program_impl::replace_all_usages(program_node & old_node, program_node & new_node)
+{
+    auto itr = old_node.users.begin();
+    bool end = (itr == old_node.users.end());
+    while (!end)
+    {
+        auto& usage = (*itr++);
+        end = (itr == old_node.users.end());
+        usage->replace_dependency(old_node, new_node);
+    }
+}
+
+void program_impl::replace(program_node& old_node, program_node& new_node, bool invalidate_output_layout)
+{
+    if (!new_node.dependencies.empty() || !new_node.users.empty() || new_node.dominator || new_node.joint)
+        throw std::invalid_argument("Node which is about to replace other node should be detached");
+
+    if (new_node.is_output())
+        throw std::invalid_argument("Replacement node shouldn't be marked as an output since it's impossible to rename such node.");
+
+    auto id = old_node.id();
+
+    //copy old's dependencies
+    while (!old_node.dependencies.empty())
+    {
+        auto& dep = old_node.dependencies.back();
+        add_connection(*dep, new_node);
+        remove_connection(*dep, old_node);
+    }
+
+    //append users
+    for (auto& user : old_node.users)
+    {
+        new_node.users.push_back(user);
+        for (auto& users_dep : user->dependencies)
+        {
+            if (users_dep == &old_node)
+            {
+                users_dep = &new_node;
+                break;
+            }
+        }
+    }
+
+    old_node.users.clear();
+
+    bool old_was_output = false;
+    //copy node's state
+    if (old_node.is_output())
+    {
+        old_was_output = true;
+        old_node.set_output(false);
+        outputs.erase(std::remove(outputs.begin(), outputs.end(), &old_node), outputs.end());
+    }
+    if (new_node.is_input())
+        inputs.push_back(&new_node);
+
+    new_node.dominator = old_node.dominator;
+    if (old_node.dominator && old_node.dominator->joint == &old_node)
+        old_node.dominator->joint = &new_node;
+    new_node.joint = old_node.joint;
+    if (old_node.joint && old_node.joint->dominator == &old_node)
+        old_node.joint->dominator = &new_node;
+
+    new_node.data_flow = old_node.data_flow;
+    new_node.main_branch = old_node.main_branch;
+    new_node.constant = old_node.constant;
+    new_node.user_mark = old_node.user_mark;
+
+    auto old_news_pos = new_node.processing_itr;
+    new_node.processing_itr = processing_order.insert(old_node.processing_itr, &new_node);
+    new_node.processing_num = old_node.processing_num;
+    if (old_news_pos != processing_order.end())
+        processing_order.erase(old_news_pos);
+
+    if (invalidate_output_layout)
+        old_node.invalidate_users();
+
+    bool rem = remove_if_dangling(old_node);
+    assert(rem && "Replaced node should have been removed");
+    (void)rem;
+
+    rename(new_node, id);
+    //mark new node as an output after renaming
+    if (old_was_output)
+    {
+        new_node.set_output(true);
+        outputs.push_back(&new_node);
+    }
+}
+
 bool program_impl::remove_if_dangling(program_node& node)
 {
-    if (!node.users.empty() || !node.dependencies.empty() || node.is_output())
+    if (!node.users.empty() || !node.dependencies.empty())
+        return false;
+
+    if (node.is_output() && !is_debug_build())
         return false;
 
     processing_order.erase(node.processing_itr);
@@ -1494,18 +1627,35 @@ bool program_impl::remove_if_dangling(program_node& node)
 
 bool program_impl::extract_and_remove(program_node& node)
 {
-    if (node.is_output()) //TODO: add a mechanism to support removal of nodes which are marked as outputs
-        return false;
-
     if (node.get_dependencies().size() != 1)
         return false;
+
+    if (node.is_output() && node.get_dependency(0).is_output() && !is_debug_build()) //TODO: add a mechanism to support removal of nodes which are marked as outputs
+        return false;
+
+    if (node.is_output() && !is_debug_build())
+    {
+        auto& prev = node.get_dependency(0);
+        auto node_id = node.id();
+
+        node.set_output(false);
+        outputs.erase(std::remove(outputs.begin(), outputs.end(), &node), outputs.end());
+
+        rename(node, "_cldnn_tmp_" + node_id);
+        rename(prev, node_id);
+
+        prev.set_output(true);
+        outputs.push_back(&prev);
+    }
 
     auto& input = node.get_dependency(0);
     node.dependencies.clear();
     input.users.remove(&node);
 
-    for (auto& user : node.get_users())
-        user->replace_dependency(node, input); //note: removal of the node should take place automatically when detached
+    if (!node.is_endpoint())
+        replace_all_usages(node, input);
+    else
+        remove_if_dangling(node);
 
     return true;
 }

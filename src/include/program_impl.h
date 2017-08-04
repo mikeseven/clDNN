@@ -44,6 +44,7 @@ public:
 
     auto get_engine() const { return engine; }
     auto get_options() const { return options; }
+    bool is_debug_build() const { return options.get<build_option_type::debug>()->enabled(); }
 
     std::list<std::shared_ptr<program_node>> get_nodes() const;
 
@@ -146,6 +147,16 @@ private:
         prev.users.push_back(&next);
         next.dependencies.push_back(&prev);
     }
+
+    void remove_connection(program_node& prev, program_node& next)
+    {
+        prev.users.remove(&next);
+        next.dependencies.erase(std::remove(next.dependencies.begin(), next.dependencies.end(), &prev), next.dependencies.end());
+    }
+
+    void rename(program_node & node, primitive_id const & new_id);
+    void replace_all_usages(program_node& old_node, program_node& new_node);
+    void replace(program_node& old_node, program_node& new_node, bool invalidate_output_layout);
 
     //returns if 'node' has been removed
     bool remove_if_dangling(program_node& node);

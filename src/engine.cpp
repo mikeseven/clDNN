@@ -64,27 +64,27 @@ memory_impl* engine_impl::allocate_buffer(layout layout)
     }
 }
 
-memory_impl* engine_impl::reinterpret_buffer(memory_impl* memory, layout new_layout)
+memory_impl* engine_impl::reinterpret_buffer(const memory_impl& memory, layout new_layout)
 {
-    if (memory->get_engine() != this)
+    if (memory.get_engine() != this)
         throw error("trying to reinterpret buffer allocated by a different engine", CLDNN_ERROR);
 
     try {
-        return new gpu::gpu_buffer(this, new_layout, reinterpret_cast<gpu::gpu_buffer*>(memory)->get_buffer());
+        return new gpu::gpu_buffer(this, new_layout, reinterpret_cast<const gpu::gpu_buffer&>(memory).get_buffer());
     }
     catch (cl::Error const& err) {
         throw gpu::ocl_error(err);
     }
 }
 
-bool engine_impl::is_the_same_buffer(memory_impl* mem1, memory_impl* mem2)
+bool engine_impl::is_the_same_buffer(const memory_impl& mem1, const memory_impl& mem2)
 {
-    if (mem1->get_engine() != this || mem2->get_engine() != this)
+    if (mem1.get_engine() != this || mem2.get_engine() != this)
         return false;
-    if (mem1 == mem2)
+    if (&mem1 == &mem2)
         return true;
 
-    return (reinterpret_cast<gpu::gpu_buffer*>(mem1)->get_buffer() == reinterpret_cast<gpu::gpu_buffer*>(mem2)->get_buffer());
+    return (reinterpret_cast<const gpu::gpu_buffer&>(mem1).get_buffer() == reinterpret_cast<const gpu::gpu_buffer&>(mem2).get_buffer());
 }
 
 event_impl* engine_impl::create_user_event(bool set)

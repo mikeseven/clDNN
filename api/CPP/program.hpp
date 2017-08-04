@@ -332,7 +332,7 @@ public:
     /// @brief Returns program build option for @p OptType
     template<build_option_type OptType>
     std::shared_ptr<const typename detail::build_option_traits<OptType>::object_type>
-        get()
+        get() const
     {
         using T = typename detail::build_option_traits<OptType>::object_type;
         for (auto& option : _options)

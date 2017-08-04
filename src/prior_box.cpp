@@ -88,7 +88,7 @@ void prior_box_inst::generate_output()
     // Calculate output.
     // All the inputs for this layer are known at this point,
     // so the output buffer is written here and not in execute().
-    const auto& output_mem = output_memory();
+    auto& output_mem = output_memory();
 
     const int layer_width = input_memory().get_layout().size.spatial[0];
     const int layer_height = input_memory().get_layout().size.spatial[1];
@@ -103,7 +103,9 @@ void prior_box_inst::generate_output()
     const float offset = argument.offset;
     int num_priors = (int)argument.aspect_ratios.size() * (int)argument.min_sizes.size() + (int)argument.max_sizes.size();
 
-    auto out_ptr = output_mem.pointer<dtype>();
+    mem_lock<dtype> lock{ output_mem };
+    auto out_ptr = lock.begin();
+
     int dim = layer_height * layer_width * num_priors * 4;
     int idx = 0;
     for (int h = 0; h < layer_height; ++h) {

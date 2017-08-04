@@ -19,8 +19,13 @@
 
 using namespace cldnn;
 
-primitive_id cldnn::details::empty_primitive_id{};
+program_node::program_node(std::shared_ptr<primitive> prim, program_impl & prog) : desc(prim), myprog(prog)
+{
+    if (prim)
+        output_layout.data_padding = prim->output_padding;
 
+    processing_itr = prog.processing_order.end();
+}
 void program_node::replace_dependency(size_t idx, program_node& new_dep)
 {
     if (idx >= dependencies.size())
@@ -72,4 +77,15 @@ layout program_node::get_output_layout()
     output_layout = new_layout;
     valid_output_layout = true;
     return std::move(new_layout);
+}
+
+primitive_id details::internal_program_node_base::get_next_internal_id()
+{
+    static std::atomic<uint64_t> counter{ 0 };
+    auto idx = counter++;
+    return primitive_id("_cldnn_internal_") + std::to_string(idx);
+}
+
+details::internal_program_node_base::internal_program_node_base(program_impl & prog) : program_node(nullptr, prog), internal_id(get_next_internal_id())
+{
 }

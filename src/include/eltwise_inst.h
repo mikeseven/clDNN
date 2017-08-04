@@ -31,8 +31,8 @@ struct typed_program_node<eltwise> : public typed_program_node_base<eltwise>
 public:
     using parent::parent;
 
-    auto& input() const { return get_dependency(0); }
-    auto& input2() const { return get_dependency(1); }
+    decltype(auto) input() const { return get_dependency(0); }
+    decltype(auto) input2() const { return get_dependency(1); }
 };
 
 using eltwise_node = typed_program_node<eltwise>;

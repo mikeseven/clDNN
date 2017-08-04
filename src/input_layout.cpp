@@ -34,18 +34,18 @@ input_layout_inst::typed_primitive_inst(network_impl& network, input_layout_node
     _has_valid_input = false; //by default input for 'input_layout' is invalid as long as user doesn't call set_data
 }
 
-void input_layout_inst::set_data(memory_impl* mem)
+void input_layout_inst::set_data(memory_impl& mem)
 {
-    CLDNN_ERROR_LAYOUT_MISMATCH("input layout", "memory layout", mem->get_layout(), "output memory layout", output_memory().get_layout(), "");
+    CLDNN_ERROR_LAYOUT_MISMATCH("input layout", "memory layout", mem.get_layout(), "output memory layout", output_memory().get_layout(), "");
 
-    if (mem->is_allocated_by(get_network().get_engine()))
+    if (mem.is_allocated_by(get_network().get_engine()))
     {
-        _output = memory(api_cast(mem), true);
+        _output = &mem;
     }
     else
     {
-        pointer<char> src(memory(api_cast(mem), true));
-        pointer<char> dst(output_memory());
+        mem_lock<char> src(&mem);
+        mem_lock<char> dst(_output);
         std::copy(src.begin(), src.end(), dst.begin());
     }
 

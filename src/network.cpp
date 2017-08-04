@@ -70,7 +70,7 @@ void network_impl::reset_execution(bool wait)
     _events.clear();
 }
 
-void network_impl::set_input_data(const primitive_id& id, memory_impl* data)
+void network_impl::set_input_data(const primitive_id& id, memory_impl& data)
 {
     std::shared_ptr<primitive_inst> primitive_inst;
     try {
@@ -89,7 +89,6 @@ void network_impl::set_input_data(const primitive_id& id, memory_impl* data)
 
     //Wait for previous execution completion
     reset_execution(true);
-        
     input->set_data(data);
 }
 

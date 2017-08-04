@@ -68,7 +68,7 @@ public:
         else
         {
             auto network = _reorders[0];
-            network->set_input_data("input", api_cast(instance.input_memory().get()));
+            network->set_input_data("input", instance.input_memory());
             network->execute(tmp_events);
             auto output_id = network->get_output_ids()[0];
             new_input_mem = &network->get_primitive(output_id)->output_memory();

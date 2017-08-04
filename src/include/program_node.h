@@ -46,11 +46,7 @@ struct program_node
 {
     friend struct program_impl;
 
-    program_node(std::shared_ptr<primitive> prim, program_impl& prog) : desc(prim), myprog(prog)
-    {
-        if (prim)
-            output_layout.data_padding = prim->output_padding;
-    }
+    program_node(std::shared_ptr<primitive> prim, program_impl& prog);
 
     program_node(program_node const&) = delete;
 
@@ -150,9 +146,11 @@ public:
     auto set_output(bool out) { output = out; }
     auto is_output() const { return output; }
 
-    auto mark() { user_mark = true; }
-    auto unmark() { user_mark = false; }
-    auto is_marked() const { return user_mark; }
+    uint8_t mark(uint8_t val = 1) { uint8_t ret = user_mark; user_mark = val; return ret; }
+    void unmark() { user_mark = 0; }
+    auto is_marked() const { return user_mark != 0; }
+    auto is_marked(uint8_t val) const { return user_mark == val; }
+    uint8_t ged_user_mark() const { return user_mark; }
 
     // returns immidiate dominator of this node if it's not its direct predecessor, otherwise returns nullptr
     program_node* get_dominator() { return dominator; }
@@ -230,7 +228,7 @@ protected:
     bool data_flow = false;
 
     bool output = false;
-    bool user_mark = false;
+    uint8_t user_mark = 0;
 
     void invalidate_users() const
     {
@@ -262,19 +260,28 @@ namespace details
         std::shared_ptr<PType> typed_desc() const { return std::static_pointer_cast<PType>(desc); }
     };
 
-    extern primitive_id empty_primitive_id;
-
-    template <class PType>
-    struct internal_typed_program_node_base : public program_node
+    struct internal_program_node_base : public program_node
     {
-        static_assert(meta::is_internal_primitive_v<PType>, "PType should name a non-const, non-volatile type derived from cldnn::internal_primitive");
         friend struct cldnn::program_impl;
 
-    public:
-        internal_typed_program_node_base(program_impl& prog) : program_node(nullptr, prog)
-        {}
+        internal_program_node_base(program_impl& prog);
 
-        const primitive_id& id() const override { return empty_primitive_id; }
+        const primitive_id& id() const override { return internal_id; }
+
+    private:
+        primitive_id internal_id;
+
+        static primitive_id get_next_internal_id();
+    };
+
+    template <class PType>
+    struct internal_typed_program_node_base : public internal_program_node_base
+    {
+        static_assert(meta::is_internal_primitive_v<PType>, "PType should name a non-const, non-volatile type derived from cldnn::internal_primitive");
+
+    public:
+        using internal_program_node_base::internal_program_node_base;
+
         primitive_type_id type() const override { return PType::type_id(); }
 
         template <class... Guard>

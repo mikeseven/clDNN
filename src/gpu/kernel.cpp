@@ -23,44 +23,6 @@
 namespace cldnn { namespace gpu {
 
 namespace {
-    class memory_arg
-    {
-        cldnn::memory _mem;
-
-    protected:
-        memory_arg(const cldnn::memory& mem) : _mem(mem) {}
-
-    public:
-        const cl::Buffer& get_buffer() const { return static_cast<const gpu_buffer*>(api_cast(_mem.get()))->get_buffer(); }
-    };
-
-    class input_mem : public memory_arg
-    {
-    public:
-        input_mem(const cldnn::memory& mem) :memory_arg(mem) {}
-    };
-
-    class output_mem : public memory_arg
-    {
-    public:
-        output_mem(const cldnn::memory& mem) :memory_arg(mem) {}
-    };
-
-    template<typename T, class Enable = void>
-    struct kernel_arg_handler;
-
-    template<typename T>
-    struct kernel_arg_handler<T, typename std::enable_if<!std::is_base_of<memory_arg, T>::value>::type>
-    {
-        static const T& get(const T& arg) { return arg; }
-    };
-
-    template<typename T>
-    struct kernel_arg_handler<T, typename std::enable_if<std::is_base_of<memory_arg, T>::value>::type>
-    {
-        static const cl::Buffer& get(const T& arg) { return arg.get_buffer(); }
-    };
-
     inline cl::NDRange toNDRange(const std::vector<size_t>& v)
     {
         switch (v.size())
@@ -93,7 +55,7 @@ namespace {
                     const auto& input_mem = data.inputs[args[i].index];
                     if (input_mem)
                     {
-                        status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*input_mem));
+                        status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*input_mem).get_buffer());
                     }
                 }
                 break;
@@ -110,37 +72,37 @@ namespace {
             case kernel_selector::kernel_argument_types::OUTPUT:
                 if (data.output)
                 {
-                    status = kernel.setArg(i, kernel_arg_handler<gpu::output_mem>::get(*data.output));
+                    status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.output).get_buffer());
                 }
                 break;
             case kernel_selector::kernel_argument_types::WEIGHTS:
                 if (data.weights)
                 {
-                    status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*data.weights));
+                    status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.weights).get_buffer());
                 }
                 break;
             case kernel_selector::kernel_argument_types::BIAS:
                 if (data.bias)
                 {
-                    status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*data.bias));
+                    status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.bias).get_buffer());
                 }
                 break;
             case kernel_selector::kernel_argument_types::LOOKUP_TABLE:
                 if (data.lookup_table)
                 {
-                    status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*data.lookup_table));
+                    status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.lookup_table).get_buffer());
                 }
                 break;
             case kernel_selector::kernel_argument_types::SCALE_TABLE:
                 if (data.scale_table)
                 {
-                    status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*data.scale_table));
+                    status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.scale_table).get_buffer());
                 }
                 break;
             case kernel_selector::kernel_argument_types::SLOPE:
                 if (data.slope)
                 {
-                    status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*data.slope));
+                    status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.slope).get_buffer());
                 }
                 break;
             case kernel_selector::kernel_argument_types::SPLIT:

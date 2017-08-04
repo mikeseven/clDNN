@@ -37,7 +37,7 @@ public:
 public:
     typed_primitive_inst(network_impl& network, prior_box_node const& node);
 
-    auto const& input_memory() const { return dep_memory(0); }
+    decltype(auto) input_memory() const { return dep_memory(0); }
 
 private:
     template<typename dtype> void generate_output();
