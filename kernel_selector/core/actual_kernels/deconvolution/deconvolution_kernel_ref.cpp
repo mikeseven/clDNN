@@ -39,8 +39,7 @@ namespace KernelSelector
         k.EnableNonBiasTerm();
         k.EnableBatching();
         k.EnableSplitSupport();
-        k.EnableTensorOffset();
-        k.EnableTensorPitches();
+        k.EnableDepthwiseSeparableOpt();
         return k;
     }
 

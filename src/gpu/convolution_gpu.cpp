@@ -38,7 +38,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, convolution_inst& instance) override
     {
-        auto split = outer.get_primitive()->split();
+        auto split = instance.node.get_split();
 
         const auto* input_mem = &instance.input_memory();
         const auto* output_mem = &instance.output_memory();
@@ -89,12 +89,16 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
         const auto& dilation        = primitive->dilation;
         const auto& input_offset    = primitive->input_offset;
 
+        const auto depthwise_separable_opt = input_layout.size.feature[0] == split && split >= 16;
+
         assert(arg.get_output_layout().size.feature[0] / primitive->split() == weights_layout.size.batch[0]);
 
-        auto conv_params = get_weights_bias_default_params<kernel_selector::convolution_params>(arg, split);
+        auto conv_params = get_weights_bias_default_params<kernel_selector::convolution_params>(arg, depthwise_separable_opt ? 1 : split);
         auto conv_optional_params = get_default_weights_bias_optional_params<kernel_selector::convolution_optional_params>(arg.get_program());
 
         convert_activation_func_params(primitive, conv_params);
+
+        conv_params.convParams.depthwiseSeparableOpt = depthwise_separable_opt;
 
         conv_params.convParams.split = split;
         conv_params.convParams.filterSize = {

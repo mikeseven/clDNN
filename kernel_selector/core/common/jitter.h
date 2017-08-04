@@ -473,6 +473,7 @@ inline JitConstants MakeConvolutionParamsJitConstants(const ConvolutionParams& p
         MakeJitConstant("DILATION",                     params.convParams.dilation),
         MakeJitConstant("FILTER_ARRAY_NUM",             params.convParams.split),
         MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
+        MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      params.convParams.depthwiseSeparableOpt),
     });
 
     return jit;

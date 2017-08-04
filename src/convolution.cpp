@@ -110,7 +110,7 @@ convolution_inst::typed_primitive_inst(network_impl& network, convolution_node c
     if (stride.raw.size() != output_inst.size.raw.size())
         throw std::runtime_error("Stride/output number of dimension does not match.");
 
-    auto split = argument.split();
+    auto split = node.get_split();
     for (decltype(split) j = 0; j < split; j++)
     {
         auto& filter_mem = weights_memory(j);

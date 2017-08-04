@@ -38,6 +38,7 @@ namespace KernelSelector {
         k.EnableNonBiasTerm();
         k.EnableBatching();
         k.EnableSplitSupport();
+        k.EnableDepthwiseSeparableOpt();
         return k;
     }
 

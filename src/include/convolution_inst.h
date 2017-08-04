@@ -29,14 +29,26 @@ struct typed_program_node<convolution> : public typed_program_node_base<convolut
 {
     using parent = typed_program_node_base<convolution>;
 
+    typed_program_node(std::shared_ptr<primitive> prim, program_impl& prog)
+        : parent(prim, prog)
+        , _split(this->get_primitive()->split())
+    {
+    }
+
+private:
+    int32_t _split;
+
 public:
     using parent::parent;
+
+    void set_split(int32_t node_split) { _split = node_split; }
+    int32_t get_split() const { return _split; }
 
     auto& input() const { return get_dependency(0); }
 
     auto& weights(size_t idx = 0) const
     {
-        if (idx >= typed_desc()->weights.size())
+        if (static_cast<int32_t>(idx) >= _split)
             throw std::range_error("weights offset too big");
 
         return get_dependency(1 + idx);
@@ -44,10 +56,10 @@ public:
 
     auto& bias(size_t idx = 0) const 
     { 
-        if (idx >= typed_desc()->bias.size()) 
+        if (static_cast<int32_t>(idx) >= _split)
             throw std::range_error("bias offset too big");
 
-        return get_dependency(1 + typed_desc()->weights.size() + idx);
+        return get_dependency(1 + _split + idx);
     }
 
     bool bias_term() const
@@ -77,7 +89,7 @@ public:
 
     const memory& weights_memory(size_t index) const
     {
-        if (index >= argument.weights.size())
+        if (static_cast<int32_t>(index) >= node.get_split())
             throw std::range_error("weights offset too big");
         
         return dep_memory(1 + index);
@@ -85,10 +97,10 @@ public:
 
     const memory& bias_memory(size_t index) const
     { 
-        if (index >= argument.bias.size()) 
+        if (static_cast<int32_t>(index) >= node.get_split())
             throw std::range_error("bias offset too big");
 
-        return dep_memory(1 + argument.weights.size() + index);
+        return dep_memory(1 + node.get_split() + index);
     }
 
     bool bias_term() const

@@ -39,7 +39,7 @@ private:
 public:
     using parent::parent;
 
-    void set_split(uint32_t node_split) { _split = node_split; }
+    void set_split(int32_t node_split) { _split = node_split; }
     int32_t get_split() const { return _split; }
 
     auto& input() const { return get_dependency(0); }
@@ -87,7 +87,7 @@ public:
 
     const memory& weights_memory(size_t index) const
     {
-        if (static_cast<int32_t>(index) > node.get_split())
+        if (static_cast<int32_t>(index) >= node.get_split())
             throw std::range_error("weights offset too big");
 
         return dep_memory(1 + index);
@@ -95,7 +95,7 @@ public:
 
     const memory& bias_memory(size_t index) const
     {
-        if (argument.bias.size() == 0 && static_cast<int32_t>(index) > node.get_split())
+        if (argument.bias.size() == 0 && static_cast<int32_t>(index) >= node.get_split())
             throw std::range_error("no bias data");
 
         if (static_cast<int32_t>(index) > node.get_split())

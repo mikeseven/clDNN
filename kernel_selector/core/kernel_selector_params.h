@@ -83,6 +83,7 @@ namespace KernelSelector
                         {
                             uint32_t split : 1;
                             uint32_t dilation : 1;
+                            uint32_t depthwiseSeparableOpt : 1;
                         } conv;
                         struct fc_t {} fc;
                         struct softmax_t 
@@ -426,6 +427,11 @@ namespace KernelSelector
             key.restrict.val.dedicated.conv.dilation = 1;
         }
 
+        void EnableDepthwiseSeparableOpt()
+        {
+            key.restrict.val.dedicated.conv.depthwiseSeparableOpt = 1;
+        }
+
         void EnableSoftmaxDim(SoftmaxDim d)
         {
             switch (d)
@@ -634,6 +640,7 @@ namespace KernelSelector
             uSize    dilation;
             uSize    padding;
             uint32_t split = 1;
+            bool     depthwiseSeparableOpt = false;
         };
 
         DedicatedParams convParams;
@@ -653,6 +660,11 @@ namespace KernelSelector
                 convParams.dilation.y != 1)
             {
                 k.EnableDilation();
+            }
+
+            if (convParams.depthwiseSeparableOpt)
+            {
+                k.EnableDepthwiseSeparableOpt();
             }
 
             return k;
@@ -693,6 +705,11 @@ namespace KernelSelector
                 deconvParams.dilation.y != 1)
             {
                 k.EnableDilation();
+            }
+
+            if (deconvParams.depthwiseSeparableOpt)
+            {
+                k.EnableDepthwiseSeparableOpt();
             }
 
             return k;
