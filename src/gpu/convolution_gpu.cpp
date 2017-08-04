@@ -89,7 +89,7 @@ struct convolution_gpu : typed_primitive_impl<convolution> {
         const auto& dilation        = primitive->dilation;
         const auto& input_offset    = primitive->input_offset;
 
-        const auto depthwise_separable_opt = input_layout.size.feature[0] == split && split >= 16;
+        const auto depthwise_separable_opt = arg.get_depthwise_sep_opt();
 
         assert(arg.get_output_layout().size.feature[0] / primitive->split() == weights_layout.size.batch[0]);
 

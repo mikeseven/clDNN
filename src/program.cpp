@@ -182,10 +182,9 @@ namespace {
     }
 
     //helper function for getting target layout used in depthwise sep optimization
-    layout get_weights_layout(program_node &node, int32_t split)
+    layout get_weights_layout(typed_program_node<cldnn::data> &data_node, int32_t split)
     {
-        auto& weights_data_node = node.get_dependency(1).as<data>();
-        auto& mem_layout = const_cast<data&>(*weights_data_node.get_primitive()).mem.get_layout();
+        auto& mem_layout = const_cast<data&>(*data_node.get_primitive()).mem.get_layout();
 
         return layout(mem_layout.data_type, mem_layout.format, { split * mem_layout.size.batch[0], mem_layout.size.feature[0], mem_layout.size.spatial[0], mem_layout.size.spatial[1] });
     }
@@ -345,6 +344,7 @@ void program_impl::pre_optimize_graph()
     }
 
     prepare_padding();
+    prepare_depthwise_sep_opt();
 
     //try to fuse buffers (i.e. depth_concat in bfyx format) after padding calculations
     if (options.get<build_option_type::optimize_data>()->enabled())
@@ -1019,6 +1019,38 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
         dnode->recalc_output_layout();
 }
 
+void program_impl::prepare_depthwise_sep_opt()
+{
+    const auto prepare_depthwise_sep_opt = [this](auto& node) -> void
+    {
+        //enable optimization only when split = IFM and split >= 16
+        if (!(node.get_dependency(0).get_output_layout().size.feature[0] == node.get_primitive()->split()) ||
+            !(node.get_primitive()->split() >= 16))
+            return;
+
+        //make sure the weights and biases are data type and 
+        //are not reused in other primitives as they will be overriden with concatenated ones
+        for (size_t i = 1; i < node.get_dependencies().size(); i++)
+        {
+            auto& weights_or_biases = node.get_dependency(i);
+            if (weights_or_biases.get_users().size() > 1 || weights_or_biases.type() != data::type_id())
+                return;
+        }
+
+        node.set_depthwise_sep_opt(true);
+    };
+
+    //depthiwise separated convolution/deconvolution optimization
+    for (auto& p : nodes_map)
+    {
+        auto& prim = *p.second;
+        do_for_types<deconvolution, convolution>(prim,
+            prepare_depthwise_sep_opt,   //case for deconvolution
+            prepare_depthwise_sep_opt    //case for convolution
+            );
+    }
+}
+
 void program_impl::post_optimize_weights(layout_optimizer& lo)
 {
     //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
@@ -1091,22 +1123,11 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
 
     const auto prep_opt_depthwise_sep = [this](auto& node) -> void
     {
-        auto weights_offset = node.get_primitive()->input.size();
-        auto bias_offset = weights_offset + wrap_if_single(node.get_primitive()->weights).size();
-
-        //enable optimization only when split = IFM and split >= 16
-        if (!(node.get_dependency(0).get_output_layout().size.feature[0] == node.get_primitive()->split()) ||
-            !(node.get_primitive()->split() >= 16))
+        if (!node.get_depthwise_sep_opt())
             return;
 
-        //make sure the weights and biases are data type and 
-        //are not reused in other primitives as they will be overriden with concatenated ones
-        for (size_t i = 1; i < node.get_dependencies().size(); i++)
-        {
-            auto& weights_or_biases = node.get_dependency(i);
-            if (weights_or_biases.get_users().size() > 1 || weights_or_biases.type() != data::type_id())
-                return;
-        }
+        auto weights_offset = node.get_primitive()->input.size();
+        auto bias_offset = weights_offset + wrap_if_single(node.get_primitive()->weights).size();
 
         const auto& weights_layout = node.get_dependency(1).get_output_layout();
         const auto& split = node.get_primitive()->split();
@@ -1114,7 +1135,7 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
         //concatenate weights
         {
             //if weights were optimized it is needed to use the sizes after optimization
-            auto target_layout = get_weights_layout(node, split);
+            auto target_layout = get_weights_layout(node.get_dependency(1), split);
             merge_buffers(engine, node, target_layout, weights_offset, bias_offset);
         }
 

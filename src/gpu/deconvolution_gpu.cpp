@@ -102,8 +102,7 @@ struct deconvolution_gpu : typed_primitive_impl<deconvolution>
 #else
         const tensor dilation = {0,0,1,1};
 #endif
-        const auto& input_layout = arg.input().get_output_layout();
-        const auto depthwise_separable_opt = input_layout.size.feature[0] == split && split >= 16;
+        const auto depthwise_separable_opt = arg.get_depthwise_sep_opt();
 
         const auto& input_offset = primitive->input_offset;
 

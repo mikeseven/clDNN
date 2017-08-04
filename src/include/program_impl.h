@@ -119,6 +119,7 @@ private:
     void apply_needed_padding(program_node& node, program_node& prev_node, const padding& needed_padding);
     void prepare_padding();
     void prepare_buffer_fusing();
+    void prepare_depthwise_sep_opt();
 
     /*
     ** Utilities

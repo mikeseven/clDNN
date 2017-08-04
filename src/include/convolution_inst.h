@@ -31,24 +31,29 @@ struct typed_program_node<convolution> : public typed_program_node_base<convolut
 
     typed_program_node(std::shared_ptr<primitive> prim, program_impl& prog)
         : parent(prim, prog)
-        , _split(this->get_primitive()->split())
+        , split(this->get_primitive()->split())
+        , depthwise_sep_opt(false)
     {
     }
 
 private:
-    int32_t _split;
+    int32_t split;
+    bool depthwise_sep_opt;
 
 public:
     using parent::parent;
 
-    void set_split(int32_t node_split) { _split = node_split; }
-    int32_t get_split() const { return _split; }
+    void set_split(int32_t node_split) { split = node_split; }
+    int32_t get_split() const { return split; }
+
+    void set_depthwise_sep_opt(bool node_depthwise_sep_opt) { depthwise_sep_opt = node_depthwise_sep_opt; }
+    bool get_depthwise_sep_opt() const { return depthwise_sep_opt; }
 
     auto& input() const { return get_dependency(0); }
 
     auto& weights(size_t idx = 0) const
     {
-        if (static_cast<int32_t>(idx) >= _split)
+        if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("weights offset too big");
 
         return get_dependency(1 + idx);
@@ -56,10 +61,10 @@ public:
 
     auto& bias(size_t idx = 0) const 
     { 
-        if (static_cast<int32_t>(idx) >= _split)
+        if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("bias offset too big");
 
-        return get_dependency(1 + _split + idx);
+        return get_dependency(1 + this->get_split() + idx);
     }
 
     bool bias_term() const

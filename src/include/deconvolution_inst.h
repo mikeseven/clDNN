@@ -29,18 +29,23 @@ struct typed_program_node<deconvolution> : public typed_program_node_base<deconv
 
     typed_program_node(std::shared_ptr<primitive> prim, program_impl& prog)
         : parent(prim, prog)
-        , _split(this->get_primitive()->split())
+        , split(this->get_primitive()->split())
+        , depthwise_sep_opt(false)
     {
     }
 
 private:
-    int32_t _split;
+    int32_t split;
+    bool depthwise_sep_opt;
 
 public:
     using parent::parent;
 
-    void set_split(int32_t node_split) { _split = node_split; }
-    int32_t get_split() const { return _split; }
+    void set_split(int32_t node_split) { split = node_split; }
+    int32_t get_split() const { return split; }
+
+    void set_depthwise_sep_opt(bool node_depthwise_sep_opt) { depthwise_sep_opt = node_depthwise_sep_opt; }
+    bool get_depthwise_sep_opt() const { return depthwise_sep_opt; }
 
     auto& input() const { return get_dependency(0); }
 
