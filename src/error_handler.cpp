@@ -80,23 +80,22 @@ void error_on_mismatching_data_types(std::string file, int line, std::string ins
     }
 }
 
-void error_on_tensor_dims_less_then_other_tensor_dims(std::string file, int line, std::string instance_id, std::string tensor_id, tensor tens, std::string tensor_to_compare_to_id, tensor tens_to_compre, std::string additional_message)
+void error_on_tensor_dims_less_than_other_tensor_dims(std::string file, int line, std::string instance_id, std::string tensor_id, tensor tens, std::string tensor_to_compare_to_id, tensor tens_to_compre, std::string additional_message)
 {
-    auto temp_tens = tens.sub(tens_to_compre);
     std::vector<std::string> errors;
-    if (temp_tens.batch[0] < 0)
+    if (tens.batch[0] < tens_to_compre.batch[0])
     {
         errors.push_back("Batch");
     }
-    if (temp_tens.feature[0] < 0)
+    if (tens.feature[0] < tens_to_compre.feature[0])
     {
         errors.push_back("Feature");
     }
-    if (temp_tens.spatial[0] < 0)
+    if (tens.spatial[0] < tens_to_compre.spatial[0])
     {
         errors.push_back("Spatial x");
     }
-    if (temp_tens.spatial[1] < 0)
+    if (tens.spatial[1] < tens_to_compre.spatial[1])
     {
         errors.push_back("Spatial y");
     }
@@ -116,23 +115,22 @@ void error_on_tensor_dims_less_then_other_tensor_dims(std::string file, int line
     }
 }
 
-void error_on_tensor_dims_greater_then_other_tensor_dims(std::string file, int line, std::string instance_id, std::string tensor_id, tensor tens, std::string tensor_to_compare_to_id, tensor tens_to_compre, std::string additional_message)
+void error_on_tensor_dims_greater_than_other_tensor_dims(std::string file, int line, std::string instance_id, std::string tensor_id, tensor tens, std::string tensor_to_compare_to_id, tensor tens_to_compre, std::string additional_message)
 {
-    auto temp_tens = tens.sub(tens_to_compre);
     std::vector<std::string> errors;
-    if (temp_tens.batch[0] > 0)
+    if (tens.batch[0] > tens_to_compre.batch[0])
     {
         errors.push_back("Batch");
     }
-    if (temp_tens.feature[0] > 0)
+    if (tens.feature[0] > tens_to_compre.feature[0])
     {
         errors.push_back("Feature");
     }
-    if (temp_tens.spatial[0] > 0)
+    if (tens.spatial[0] > tens_to_compre.spatial[0])
     {
         errors.push_back("Spatial x");
     }
-    if (temp_tens.spatial[1] > 0)
+    if (tens.spatial[1] > tens_to_compre.spatial[1])
     {
         errors.push_back("Spatial y");
     }
