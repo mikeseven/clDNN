@@ -24,7 +24,7 @@ namespace KernelSelector {
     {
     public:
         using Parent = ConvolutionKernelBase;
-        ConvolutionKernel_bfyx_Direct_10_10_12() : ConvolutionKernelBase("cnn_convolution_direct_10_12_16") {}
+        ConvolutionKernel_bfyx_Direct_10_10_12() : ConvolutionKernelBase("convolution_gpu_bfyx_direct_10_12_16") {}
         virtual ~ConvolutionKernel_bfyx_Direct_10_10_12() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
