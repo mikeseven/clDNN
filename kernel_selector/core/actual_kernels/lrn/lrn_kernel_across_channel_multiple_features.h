@@ -24,7 +24,6 @@ namespace KernelSelector
     {
     public:
         LRNKernelAcrossChannelMultipleFeatures() : LRNKernelBase("lrn_gpu_across_channel_multiple_features") {}
-        virtual ~LRNKernelAcrossChannelMultipleFeatures() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;

@@ -37,7 +37,7 @@ namespace KernelSelector
         return k;
     }
 
-    unsigned int GetOfmPerSimd(const LRNParams& params)
+    static unsigned int GetOfmPerSimd(const LRNParams& params)
     {
         const auto &output = params.output;
         const auto local_size = params.lrnParams.localSize;

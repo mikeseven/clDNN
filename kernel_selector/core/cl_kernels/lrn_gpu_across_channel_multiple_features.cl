@@ -38,8 +38,8 @@ KERNEL (lrn_gpu_across_channel_multiple_features)(const __global UNIT_TYPE* inpu
         return;
 #elif defined OUTPUT_LAYOUT_YXFB
     const uint b_f          = get_global_id(0);
-    const uint x            = (uint)get_global_id(1);
-    const uint y            = (uint)get_global_id(2);
+    const uint x            = get_group_id(1);
+    const uint y            = get_group_id(2);
     const uint feature_id   = (b_f / INPUT0_BATCH_NUM) * OFM_PER_SIMD;
     const uint batch_id     = b_f % INPUT0_BATCH_NUM;
 #endif    
