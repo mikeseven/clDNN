@@ -136,7 +136,7 @@ deconvolution_inst::typed_primitive_inst(network_impl& network, deconvolution_no
         CLDNN_ERROR_NOT_EQUAL(node.id(), "Output batch size", output_size.batch.size(), "expected output batch size", 1, "Only one-dimensional features are supported");
         CLDNN_ERROR_NOT_EQUAL(node.id(), "Weights spatial size", filter_inst.size.spatial.size(), "expected deconvolution weights spatial size", 2, "Weights have to have 2 dimensions in spatial domain.");
 
-        CLDNN_ERROR_NOT_EQUAL(node.id(), "Weights feature maps number", (input_inst.size.feature[0] - input_offset.feature[0]) / split, "input feature maps number", filter_inst.size.feature[0], "Weights/ifm mimsmatch");
+        CLDNN_ERROR_LESS_THAN(node.id(), "Weights feature maps number", (input_inst.size.feature[0] - input_offset.feature[0]) / split, "input feature maps number", filter_inst.size.feature[0], "Weights/ifm mimsmatch");
     }
 }
 }
