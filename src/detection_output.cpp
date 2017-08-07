@@ -105,9 +105,9 @@ detection_output_inst::typed_primitive_inst(network_impl& network, detection_out
     CLDNN_ERROR_NOT_EQUAL(node.id(), "Confidene batch size", confidence_size.batch[0], "lacation input batch size", location_size.batch[0], "Batch sizes mismatch.");
 
     tensor prior_box_size = prior_box_memory().get_layout().size;
-    CLDNN_ERROR_NOT_EQUAL(node.id(), "Prior box batch size", prior_box_size.batch[0], "expexted value", 1, "");
-    CLDNN_ERROR_NOT_EQUAL(node.id(), "Prior box spatial X", prior_box_size.spatial[0], "expexted value", 1, "");
-    CLDNN_ERROR_NOT_EQUAL(node.id(), "Prior box featuresize", prior_box_size.feature[0], "expexted value", 2, "");
+    CLDNN_ERROR_NOT_EQUAL(node.id(), "Prior box batch size", prior_box_size.batch[0], "expected value", 1, "");
+    CLDNN_ERROR_NOT_EQUAL(node.id(), "Prior box spatial X", prior_box_size.spatial[0], "expected value", 1, "");
+    CLDNN_ERROR_NOT_EQUAL(node.id(), "Prior box featuresize", prior_box_size.feature[0], "expected value", 2, "");
 
     CLDNN_ERROR_BOOL(node.id(), "Detecion output layer padding", node.is_padded(), "Detection output layer doesn't support output padding.");
     CLDNN_ERROR_BOOL(node.id(), "Detecion output layer PRior-box input padding", node.get_dependency(2).is_padded(), "Detection output layer doesn't support input padding in Prior-Box input");

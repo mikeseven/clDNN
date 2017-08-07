@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2017 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -52,7 +52,7 @@ inline void error_on_greater_than(std::string file, int line, std::string instan
     std::stringstream error_msg;
     if (number > static_cast<decltype(number)>(number_to_compare_to))
     {
-        error_msg << number_id << "(=" << number << ") is greater then: " << compare_to_id << "(=" << number_to_compare_to << ")" << std::endl;
+        error_msg << number_id << "(=" << number << ") is greater than: " << compare_to_id << "(=" << number_to_compare_to << ")" << std::endl;
         err_details::cldnn_print_error_message(file, line, instance_id, error_msg, additional_message);
     }
 }
@@ -64,7 +64,7 @@ inline void error_on_less_than(std::string file, int line, std::string instance_
     std::stringstream error_msg;
     if (number < static_cast<decltype(number)>(number_to_compare_to))
     {
-        error_msg << number_id << "(=" << number << ") is less then: " << compare_to_id << "(=" << number_to_compare_to << ")" << std::endl;
+        error_msg << number_id << "(=" << number << ") is less than: " << compare_to_id << "(=" << number_to_compare_to << ")" << std::endl;
         err_details::cldnn_print_error_message(file, line, instance_id, error_msg, additional_message);
     }
 }
@@ -76,7 +76,7 @@ inline void error_on_less_or_equal_than(std::string file, int line, std::string 
     std::stringstream error_msg;
     if (number <= static_cast<decltype(number)>(number_to_compare_to))
     {
-        error_msg << number_id << "(=" << number << ") is less or equal then: " << compare_to_id << "(=" << number_to_compare_to << ")" << std::endl;
+        error_msg << number_id << "(=" << number << ") is less or equal than: " << compare_to_id << "(=" << number_to_compare_to << ")" << std::endl;
         err_details::cldnn_print_error_message(file, line, instance_id, error_msg, additional_message);
     }
 }
@@ -88,7 +88,7 @@ inline void error_on_greater_or_equal_than(std::string file, int line, std::stri
     std::stringstream error_msg;
     if (number >= static_cast<decltype(number)>(number_to_compare_to))
     {
-        error_msg << number_id << "(=" << number << ") is greater or equal then: " << compare_to_id << "(=" << number_to_compare_to << ")" << std::endl;
+        error_msg << number_id << "(=" << number << ") is greater or equal than: " << compare_to_id << "(=" << number_to_compare_to << ")" << std::endl;
         err_details::cldnn_print_error_message(file, line, instance_id, error_msg, additional_message);
     }
 }
@@ -134,23 +134,6 @@ inline void error_on_not_proper_enum_values(std::string file, int line, std::str
 }
 #define CLDNN_ERROR_NOT_PROPER_FORMAT(instance_id, format_id, formatt, formats_ids, ...) error_on_not_proper_enum_values(__FILE__, __LINE__, instance_id, format_id, formatt, formats_ids, __VA_ARGS__)
 #define CLDNN_ERROR_NOT_PROPER_LRN_NORM_REGION(instance_id, lrn_norm_region_id, lrn_norm_region, lrn_norm_region_ids, ...) error_on_not_proper_enum_values(__FILE__, __LINE__, instance_id, lrn_norm_region_id, lrn_norm_region, lrn_norm_region_ids, __VA_ARGS__)
-
-//template<typename F, typename... Fs>
-//inline void error_on_not_proper_format(std::string file, int line, std::string instance_id, std::string format_id, F format, std::string formats_id, Fs... formats)
-//{
-//    std::stringstream error_msg;
-//    const std::array<const F, sizeof...(Fs)> formats_to_compare_to{ std::forward<Fs>(formats)... };
-//    if (std::all_of(formats_to_compare_to.begin(), formats_to_compare_to.end(), [&](const F& f)->int {return format != f; }))
-//    {
-//        error_msg << format_id << "( " << format::traits(format).order << " ) is incompatible with " << formats_id << ". Should be one of: ";
-//        for (const auto& forms : formats_to_compare_to)
-//        {
-//            error_msg << format::traits(forms).order << ", ";
-//        }
-//        error_msg << std::endl;
-//        err_details::cldnn_print_error_message(file, line, instance_id, error_msg);
-//    }
-//}
 
 void error_message(std::string file, int line, std::string instance_id, std::string message);
 #define CLDNN_ERROR_MESSAGE(instance_id, message) error_message(__FILE__, __LINE__, instance_id, message)

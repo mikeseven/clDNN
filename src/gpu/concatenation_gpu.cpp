@@ -20,7 +20,6 @@
 #include "events_waiter.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
-#include "error_handler.h"
 
 #include <initializer_list>
 

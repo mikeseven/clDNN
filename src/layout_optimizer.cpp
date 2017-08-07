@@ -79,7 +79,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
 
     case data_type::input: //convolution input
 
-        CLDNN_ERROR_NOT_EQUAL(prim->id, "Convolutio input dimension", current_layout.format.dimension(), "expected dimension", static_cast<size_t>(4), "");
+        CLDNN_ERROR_NOT_EQUAL(prim->id, "Convolution input dimension", current_layout.format.dimension(), "expected dimension", static_cast<size_t>(4), "");
         if (layout_optimizer::convolution_bfyx_opt(current_layout, output_layout.get(), prim)
             || (_output_size_handling_enabled && prim->with_output_size))
         {
