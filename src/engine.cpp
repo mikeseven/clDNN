@@ -41,7 +41,7 @@ gpu_toolkit_config convert_configuration(const engine_configuration conf)
 
 engine_impl::engine_impl(const engine_configuration& conf)
     : _configuration(conf)
-    , _context(std::make_shared<gpu_toolkit>(convert_configuration(conf)))
+    , _context(gpu_toolkit::create(convert_configuration(conf)))
 {}
 
 memory_impl* engine_impl::allocate_buffer(layout layout)
@@ -69,7 +69,12 @@ memory_impl* engine_impl::reinterpret_buffer(memory_impl* memory, layout new_lay
     if (memory->get_engine() != this)
         throw error("trying to reinterpret buffer allocated by a different engine", CLDNN_ERROR);
 
-    return new gpu::gpu_buffer(this, new_layout, reinterpret_cast<gpu::gpu_buffer*>(memory)->get_buffer());
+    try {
+        return new gpu::gpu_buffer(this, new_layout, reinterpret_cast<gpu::gpu_buffer*>(memory)->get_buffer());
+    }
+    catch (cl::Error const& err) {
+        throw gpu::ocl_error(err);
+    }
 }
 
 bool engine_impl::is_the_same_buffer(memory_impl* mem1, memory_impl* mem2)
@@ -84,7 +89,12 @@ bool engine_impl::is_the_same_buffer(memory_impl* mem1, memory_impl* mem2)
 
 event_impl* engine_impl::create_user_event(bool set)
 {
-    return new gpu::user_event(cl::UserEvent(get_context()->context()), set);
+    try {
+        return new gpu::user_event(cl::UserEvent(get_context()->context()), set);
+    }
+    catch (cl::Error const& err) {
+        throw gpu::ocl_error(err);
+    }
 }
 
 program_impl* engine_impl::build_program(const topology_impl& topology, const build_options& options)

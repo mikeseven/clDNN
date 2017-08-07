@@ -31,6 +31,12 @@
 
 namespace cldnn { namespace gpu {
 
+class ocl_error : public error
+{
+public:
+    ocl_error(cl::Error const& err);
+};
+
 struct configuration
 {
     enum device_types { default_device = 0, cpu, gpu, accelerator };
@@ -86,11 +92,13 @@ private:
 
 class gpu_toolkit
 {
-    std::string extensions;
     friend class context_holder;
 
-public:
+protected:
     gpu_toolkit(const configuration& configuration = configuration());
+
+public:
+    static std::shared_ptr<gpu_toolkit> create(const configuration& cfg = configuration());
 
     const configuration& get_configuration() const { return _configuration; }
     const cl::Device& device() const { return _device; }
@@ -100,7 +108,7 @@ public:
     kernels_cache& get_kernels_cache() { return _kernels_cache; }
 
     engine_info_internal get_engine_info() const { return _engine_info; }
-    inline bool extension_supported(const std::string ext) { return extensions.find(ext) != std::string::npos; }
+    inline bool extension_supported(const std::string ext) { return _extensions.find(ext) != std::string::npos; }
 
     gpu_toolkit(const gpu_toolkit& other) = delete;
     gpu_toolkit(gpu_toolkit&& other) = delete;
@@ -124,6 +132,8 @@ private:
     std::atomic<uint64_t> _queue_counter{ 0 };
     std::atomic<uint64_t> _last_barrier{ 0 };
     cl::Event _last_barrier_ev;
+
+    std::string _extensions;
 
     //returns whether a barrier has been added
     void sync_events(std::vector<event_impl::ptr> const& deps);

@@ -194,7 +194,14 @@ event_impl::ptr kernel::run(
     const kernel_arguments_data& args) const
 {
     auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
-    set_arguments(clkernel, kernel_data.arguments, args);
+
+    try {
+        set_arguments(clkernel, kernel_data.arguments, args);
+    }
+    catch (cl::Error const& err) {
+        throw ocl_error(err);
+    }
+
     return context()->enqueue_kernel(clkernel, toNDRange(kernel_data.workGroups.global), toNDRange(kernel_data.workGroups.local), dependencies);
 }
 

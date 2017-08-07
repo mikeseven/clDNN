@@ -23,6 +23,10 @@
 
 namespace cldnn { namespace gpu {
 
+ocl_error::ocl_error(cl::Error const & err) : error(err.what() + std::string(", error code: ") + std::to_string(err.err()))
+{
+}
+
 namespace {
 
     cl_device_type convert_configuration_device_type(configuration::device_types device_type)
@@ -105,6 +109,17 @@ cl::Device get_gpu_device(const configuration& config)
     throw std::invalid_argument(std::move(error_msg));
 }
 
+std::shared_ptr<gpu_toolkit> gpu_toolkit::create(const configuration & cfg)
+{
+    struct make_shared_wa : public gpu_toolkit { make_shared_wa(const configuration& cfg) : gpu_toolkit(cfg) {} };
+    try {
+        return std::make_shared<make_shared_wa>(cfg);
+    }
+    catch (cl::Error const& err) {
+        throw ocl_error(err);
+    }
+}
+
 gpu_toolkit::gpu_toolkit(const configuration& config) 
     : _configuration(config)
     , _device(get_gpu_device(config))
@@ -119,9 +134,9 @@ gpu_toolkit::gpu_toolkit(const configuration& config)
                         : cl::QueueProperties::None))
     , _engine_info(*this)
     , _kernels_cache(*this)
-    {
-        _device.getInfo(CL_DEVICE_EXTENSIONS, &extensions);
-    }
+{
+    _device.getInfo(CL_DEVICE_EXTENSIONS, &_extensions);
+}
 
 event_impl::ptr gpu_toolkit::enqueue_kernel(cl::Kernel const& kern, cl::NDRange const& global, cl::NDRange const& local, std::vector<event_impl::ptr> const & deps)
 {
@@ -140,7 +155,12 @@ event_impl::ptr gpu_toolkit::enqueue_kernel(cl::Kernel const& kern, cl::NDRange 
     }
 
     cl::Event ret_ev;
-    _command_queue.enqueueNDRangeKernel(kern, cl::NullRange, global, local, dep_events_ptr, &ret_ev);
+    try {
+        _command_queue.enqueueNDRangeKernel(kern, cl::NullRange, global, local, dep_events_ptr, &ret_ev);
+    }
+    catch (cl::Error const& err) {
+        throw ocl_error(err);
+    }
     return{ new base_event(ret_ev, ++_queue_counter), false };
 }
 
@@ -159,10 +179,22 @@ event_impl::ptr gpu_toolkit::enqueue_marker(std::vector<event_impl::ptr> const& 
                 if (auto ocl_ev = dynamic_cast<base_event*>(dep.get()))
                     dep_events.push_back(ocl_ev->get());
 
-            _command_queue.enqueueMarkerWithWaitList(&dep_events, &ret_ev);
+            try {
+                _command_queue.enqueueMarkerWithWaitList(&dep_events, &ret_ev);
+            } 
+            catch (cl::Error const& err) {
+                throw ocl_error(err);
+            }
         }
         else
-            _command_queue.enqueueMarkerWithWaitList(nullptr, &ret_ev);
+        {
+            try {
+                _command_queue.enqueueMarkerWithWaitList(nullptr, &ret_ev);
+            }
+            catch (cl::Error const& err) {
+                throw ocl_error(err);
+            }
+        }
 
         return{ new base_event(ret_ev, ++_queue_counter), false };
     }
@@ -181,7 +213,12 @@ void gpu_toolkit::wait_for_events(std::vector<event_impl::ptr> const & events)
         if (auto ocl_ev = dynamic_cast<base_event*>(ev.get()))
             clevents.push_back(ocl_ev->get());
 
-    cl::WaitForEvents(clevents);
+    try {
+        cl::WaitForEvents(clevents);
+    }
+    catch (cl::Error const& err) {
+        throw ocl_error(err);
+    }
 }
 
 void gpu_toolkit::sync_events(std::vector<event_impl::ptr> const & deps)
@@ -199,9 +236,17 @@ void gpu_toolkit::sync_events(std::vector<event_impl::ptr> const & deps)
 
     if (needs_barrier)
     {
-        _command_queue.enqueueBarrierWithWaitList(nullptr, &_last_barrier_ev);
+        try {
+            _command_queue.enqueueBarrierWithWaitList(nullptr, &_last_barrier_ev);
+        }
+        catch (cl::Error const& err) {
+            throw ocl_error(err);
+        }
+
         _last_barrier = ++_queue_counter;
     }
 }
 
-}}
+}
+
+}

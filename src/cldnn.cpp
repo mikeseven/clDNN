@@ -25,8 +25,11 @@
 #include "memory_impl.h"
 #include "primitive_inst.h"
 
+#include <gpu/ocl_toolkit.h>
+
 namespace cldnn {
-    last_err& last_err::instance() {
+    last_err& last_err::instance()
+    {
         thread_local static last_err _instance;
         return _instance;
     }

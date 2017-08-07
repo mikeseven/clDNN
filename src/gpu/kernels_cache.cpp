@@ -279,6 +279,10 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
 
         throw std::runtime_error(build_log);
     }
+    catch (const cl::Error& err)
+    {
+        throw ocl_error(err);
+    }
 }
 
 kernels_cache::kernel_type kernels_cache::get_kernel(kernel_id id) 
