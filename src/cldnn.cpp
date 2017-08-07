@@ -271,10 +271,9 @@ void cldnn_get_event_profiling_info(cldnn_event event, cldnn_profiling_interval*
     {
         SHOULD_NOT_BE_NULL(event, "Event");
         auto& profiling_info = api_cast(event)->get_profiling_info();
-        SHOULD_NOT_EQUAL_0(profiling_info.size(), "Profiling info of event");
         if (size_ret)
             *size_ret = profiling_info.size();
-        if(size < profiling_info.size())
+        if(profiling_info.size() == 0 || size < profiling_info.size())
         {
             if(status) *status = CLDNN_INVALID_ARG;
             return;
