@@ -150,10 +150,10 @@ void error_on_bool(std::string file, int line, std::string instance_id, std::str
 void error_on_mismatching_data_types(std::string file, int line, std::string instance_id, std::string data_format_1_id, data_types data_format_1, std::string data_format_2_id, data_types data_format_2, std::string additional_message = "");
 #define CLDNN_ERROR_DATA_TYPES_MISMATCH(instance_id, data_format_1_id, data_format_1, data_format_2_id, data_format_2, add_msg) error_on_mismatching_data_types(__FILE__, __LINE__, instance_id, data_format_1_id, data_format_1, data_format_2_id, data_format_2, add_msg)
 
-void error_on_tensor_dims_less_then_other_tensor_dims(std::string file, int line, std::string instance_id, std::string tensor_id, tensor tens, std::string tensor_to_compare_to_id, tensor tens_to_compre, std::string additional_message = "");
-#define CLDNN_ERROR_TENSOR_SIZES_LESS_THEN(instance_id, tensor_id, tensor_1, compare_to_id, tensor_to_compare_to, ...) error_on_tensor_dims_less_then_other_tensor_dims(__FILE__, __LINE__, instance_id, tensor_id, tensor_1, compare_to_id, tensor_to_compare_to, __VA_ARGS__)
+void error_on_tensor_dims_less_than_other_tensor_dims(std::string file, int line, std::string instance_id, std::string tensor_id, tensor tens, std::string tensor_to_compare_to_id, tensor tens_to_compre, std::string additional_message = "");
+#define CLDNN_ERROR_TENSOR_SIZES_LESS_THAN(instance_id, tensor_id, tensor_1, compare_to_id, tensor_to_compare_to, ...) error_on_tensor_dims_less_than_other_tensor_dims(__FILE__, __LINE__, instance_id, tensor_id, tensor_1, compare_to_id, tensor_to_compare_to, __VA_ARGS__)
 
-void error_on_tensor_dims_greater_then_other_tensor_dims(std::string file, int line, std::string instance_id, std::string tensor_id, tensor tens, std::string tensor_to_compare_to, tensor tens_to_compre, std::string additional_message = "");
-#define CLDNN_ERROR_TENSOR_SIZES_GREATER_THEN(instance_id, tensor_id, tensor_1, compare_to_id, tensor_to_compare_to, ...) error_on_tensor_dims_greater_then_other_tensor_dims(__FILE__, __LINE__, instance_id, tensor_id, tensor_1, compare_to_id, tensor_to_compare_to, __VA_ARGS__)
+void error_on_tensor_dims_greater_than_other_tensor_dims(std::string file, int line, std::string instance_id, std::string tensor_id, tensor tens, std::string tensor_to_compare_to, tensor tens_to_compre, std::string additional_message = "");
+#define CLDNN_ERROR_TENSOR_SIZES_GREATER_THAN(instance_id, tensor_id, tensor_1, compare_to_id, tensor_to_compare_to, ...) error_on_tensor_dims_greater_than_other_tensor_dims(__FILE__, __LINE__, instance_id, tensor_id, tensor_1, compare_to_id, tensor_to_compare_to, __VA_ARGS__)
 
 }

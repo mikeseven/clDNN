@@ -64,12 +64,12 @@ crop_inst::typed_primitive_inst(network_impl& network, crop_node const& node)
     CLDNN_ERROR_NOT_PROPER_FORMAT(node.id(), "Input format", input_format.value, "supported crop input formats", format::yxfb, format::bfyx );
 
     //check if output sizes matches reference input sizes
-    CLDNN_ERROR_TENSOR_SIZES_GREATER_THEN(node.id(), "Reference input", reference_input_sizes, "input sizes", input_sizes, "Reference input tensor/ input tensor mismtach");
+    CLDNN_ERROR_TENSOR_SIZES_GREATER_THAN(node.id(), "Reference input", reference_input_sizes, "input sizes", input_sizes, "Reference input tensor/ input tensor mismtach");
     
     //check if offsets do not extend input sizes and if match the output sizes
-    CLDNN_ERROR_TENSOR_SIZES_LESS_THEN(node.id(), "Batch offsets", offsets, "0 value", { 0, 0, 0, 0 }, "Invalid Batch offset: negative value");
+    CLDNN_ERROR_TENSOR_SIZES_LESS_THAN(node.id(), "Batch offsets", offsets, "0 value", { 0, 0, 0, 0 }, "Invalid Batch offset: negative value");
     auto input_size_sub_offsets = input_sizes - offsets;
-    CLDNN_ERROR_TENSOR_SIZES_LESS_THEN(node.id(), "input sizes - offsets", input_size_sub_offsets, "reference input sizes", reference_input_sizes, "Invalid Batch offset: exceeds data for output!");
+    CLDNN_ERROR_TENSOR_SIZES_LESS_THAN(node.id(), "input sizes - offsets", input_size_sub_offsets, "reference input sizes", reference_input_sizes, "Invalid Batch offset: exceeds data for output!");
 
     if (node.can_be_optimized())
     {
