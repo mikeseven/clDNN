@@ -20,8 +20,8 @@
 #include "primitive_inst.h"
 #include "error_handler.h"
 
-#include "api/CPP/data.hpp"
-#include "api/CPP/reorder.hpp"
+#include "data_inst.h"
+#include "reorder_inst.h"
 #include "generic_layer.hpp"
 #include <boost/filesystem.hpp>
 #include <sstream>
@@ -211,25 +211,28 @@ layout_optimizer::create_reorder_from_given_source(const cldnn::primitive_id& me
     return std::make_pair(reorder, false);
 }
 
-void layout_optimizer::optimize() const
+std::map<primitive_id, memory_impl::ptr> layout_optimizer::optimize() const
 {
     if (!_enabled || _topology.get_primitives().empty())
     {
-        return;
+        return{};
     }
 
+    std::map<primitive_id, memory_impl::ptr> results;
+
     network_impl net(_engine, _topology);
-    net.execute(std::vector<refcounted_obj_ptr<event_impl>>());
+    net.execute({});
     for (auto const& output : net.get_outputs())
     {
         // in order to handle list of reorders
-        auto input_id = output->dependencies().at(0)->id();
-        while (net.get_program()->get_node(input_id).get_dependencies().empty() == false)
+        std::shared_ptr<const primitive_inst> input = output;
+        while (input->dependencies().empty() == false)
         {
-            input_id = net.get_program()->get_node(input_id).get_dependencies().at(0)->id();
+            input = input->dependencies().at(0);
         }
         
-        auto& data_node = net.get_program()->get_node(input_id).as<data>();
-        const_cast<data&>(*data_node.get_primitive()).mem = memory(api_cast(&output->output_memory()));
+        results.emplace(input->id(), &output->output_memory());
     }
+
+    return results;
 }

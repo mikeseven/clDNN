@@ -268,7 +268,7 @@ public:
         }
     }
 
-    void optimize() const;
+    std::map<primitive_id, memory_impl::ptr> optimize() const;
     auto get_engine() { return _engine; }
 };
 }

@@ -151,4 +151,5 @@ private:
     void ptr_add_ref() { if (_ptr) _ptr->add_ref(); }
     void ptr_release() { if (_ptr) _ptr->release(); }
 };
+
 }

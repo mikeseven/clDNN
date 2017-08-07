@@ -171,10 +171,10 @@ namespace details
             , argument(*node.get_primitive())
         {}
 
-        api_typed_primitive_inst_base(network_impl& network, typed_node const& node, memory_impl::ptr buffer)
+        api_typed_primitive_inst_base(network_impl& network, typed_node const& node, memory_impl& buffer)
             : api_typed_primitive_inst_base(network, node, false)
         {
-            _output = buffer;
+            _output = &buffer;
         }
     };
 

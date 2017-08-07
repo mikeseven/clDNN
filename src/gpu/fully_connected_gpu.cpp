@@ -106,7 +106,7 @@ public:
                 cldnn::reorder("reorder", "input", from_data_layout(new_fc_params.inputs[0].GetLayout()), input_layout.data_type)
             );
 
-            reorders.push_back({ arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()), false });
+            reorders.push_back(arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()));
         }
 
         auto fc = new fully_connected_gpu(arg, best_kernels[0], reorders);

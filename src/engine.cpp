@@ -44,10 +44,10 @@ engine_impl::engine_impl(const engine_configuration& conf)
     , _context(gpu_toolkit::create(convert_configuration(conf)))
 {}
 
-memory_impl* engine_impl::allocate_buffer(layout layout)
+memory_impl::ptr engine_impl::allocate_buffer(layout layout)
 {
     try {
-        return new gpu::gpu_buffer(this, layout);
+        return{ new gpu::gpu_buffer(this, layout), false };
     }
     catch (const cl::Error& clErr)
     {
@@ -64,13 +64,13 @@ memory_impl* engine_impl::allocate_buffer(layout layout)
     }
 }
 
-memory_impl* engine_impl::reinterpret_buffer(const memory_impl& memory, layout new_layout)
+memory_impl::ptr engine_impl::reinterpret_buffer(const memory_impl& memory, layout new_layout)
 {
     if (memory.get_engine() != this)
         throw error("trying to reinterpret buffer allocated by a different engine", CLDNN_ERROR);
 
     try {
-        return new gpu::gpu_buffer(this, new_layout, reinterpret_cast<const gpu::gpu_buffer&>(memory).get_buffer());
+        return{ new gpu::gpu_buffer(this, new_layout, reinterpret_cast<const gpu::gpu_buffer&>(memory).get_buffer()), false };
     }
     catch (cl::Error const& err) {
         throw gpu::ocl_error(err);
@@ -87,30 +87,29 @@ bool engine_impl::is_the_same_buffer(const memory_impl& mem1, const memory_impl&
     return (reinterpret_cast<const gpu::gpu_buffer&>(mem1).get_buffer() == reinterpret_cast<const gpu::gpu_buffer&>(mem2).get_buffer());
 }
 
-event_impl* engine_impl::create_user_event(bool set)
+event_impl::ptr engine_impl::create_user_event(bool set)
 {
     try {
-        return new gpu::user_event(cl::UserEvent(get_context()->context()), set);
+        return{ new gpu::user_event(cl::UserEvent(get_context()->context()), set), false };
     }
     catch (cl::Error const& err) {
         throw gpu::ocl_error(err);
     }
 }
 
-program_impl* engine_impl::build_program(const topology_impl& topology, const build_options& options)
+program_impl::ptr engine_impl::build_program(const topology_impl& topology, const build_options& options)
 {
-    return new program_impl(this, topology, options);
+    return{ new program_impl(this, topology, options), false };
 }
 
-network_impl* engine_impl::build_network(const topology_impl& topology, const build_options& options)
+network_impl::ptr engine_impl::build_network(const topology_impl& topology, const build_options& options)
 {
-    auto program = build_program(topology, options);
-    return new network_impl(program);
+    return{ new network_impl(this, topology, options), false };
 }
 
-network_impl* engine_impl::allocate_network(const program_impl* program)
+network_impl::ptr engine_impl::allocate_network(const program_impl& program)
 {
-    return new network_impl(program);
+    return{ new network_impl(program), false };
 }
 
 void engine_impl::wait_for_events(std::vector<event_impl::ptr> const & events)

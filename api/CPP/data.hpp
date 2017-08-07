@@ -50,7 +50,9 @@ struct data : public primitive_base<data, CLDNN_PRIMITIVE_DESC(data)>
     explicit data(const dto* dto)
         :primitive_base(dto)
         , mem(dto->mem)
-    {}
+    {
+        mem.retain();
+    }
 
     /// @brief @ref memory object which contains data.
     /// @note If memory is attached by memory::attach(), the attached buffer should be valid till network build.

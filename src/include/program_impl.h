@@ -22,6 +22,7 @@
 #include "topology_impl.h"
 #include "engine_impl.h"
 #include "program_node.h"
+#include "memory_impl.h"
 
 #include <list>
 #include <algorithm>
@@ -165,6 +166,8 @@ private:
     //prereq: node cannot be marked as output and has to have exactly one dependency
     //returns if 'node' has been extracted and removed successfully
     bool extract_and_remove(program_node& node);
+
+    void replace_data_with_optimized(std::map<primitive_id, memory_impl::ptr> const& replace_map);
 
     void forward_bfs(std::function<void(program_node&)> const& mark_func = nullptr, std::function<void(program_node&)> const& unmark_func = nullptr) const;
     void backward_bfs(std::function<void(program_node&)> const& mark_func = nullptr, std::function<void(program_node&)> const& unmark_func = nullptr) const;

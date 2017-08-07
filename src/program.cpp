@@ -22,25 +22,19 @@
 
 #include "primitive_type.h"
 #include "api/CPP/activation.hpp"
-#include "api/CPP/convolution.hpp"
-#include "api/CPP/deconvolution.hpp"
-#include "api/CPP/data.hpp"
 #include "api/CPP/eltwise.hpp"
 #include "api/CPP/input_layout.hpp"
 #include "api/CPP/pooling.hpp"
 #include "api/CPP/proposal.hpp"
-#include "api/CPP/prior_box.hpp"
-#include "api/CPP/reorder.hpp"
-#include "api/CPP/detection_output.hpp"
 #include "api/CPP/proposal.hpp"
 #include "api/CPP/roi_pooling.hpp"
-#include "api/CPP/memory.hpp"
 
 #include "internal_primitive.h"
 #include "internal_primitive_type_base.h"
 #include "convolution_inst.h"
 #include "concatenation_inst.h"
 #include "crop_inst.h"
+#include "data_inst.h"
 #include "deconvolution_inst.h"
 #include "detection_output_inst.h"
 #include "prior_box_inst.h"
@@ -164,12 +158,12 @@ namespace {
     //helper function for merging the weights/biases buffers on cpu side for depthwise separable convolution optimization
     void merge_buffers(engine_impl::ptr engine, program_node &node, layout target_layout, size_t begin_offset, size_t end_offset)
     {
-        memory_impl* data_to_allocate = engine->allocate_buffer(target_layout);
+        memory_impl::ptr data_to_allocate = engine->allocate_buffer(target_layout);
 
         for (size_t i = begin_offset; i < end_offset; i++)
         {
             auto& weights = node.get_dependency(i).as<data>();
-            mem_lock<char> src{ api_cast(weights.get_primitive()->mem.get()) };
+            mem_lock<char> src{ weights.get_attached_memory() };
             mem_lock<char> dst{ data_to_allocate };
             std::copy(src.begin(), src.end(), dst.begin() + (i - begin_offset)*src.size());
         }
@@ -178,7 +172,7 @@ namespace {
             node.remove_dependency(begin_offset + 1);
 
         auto& data_node = node.get_dependency(begin_offset).as<data>();
-        const_cast<data&>(*data_node.get_primitive()).mem = api_cast(data_to_allocate);
+        data_node.attach_memory(*data_to_allocate);
     }
 
     //helper function for getting target layout used in depthwise sep optimization
@@ -987,12 +981,10 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
 
 void program_impl::pre_optimize_bias(layout_optimizer& lo)
 {
-    std::list<program_node*> outputs_to_recalc;
-
     //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
     //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
     //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
-    const auto add_bias = [this, &lo, &outputs_to_recalc](program_node& bias, auto& node, layout const& output_layout, size_t dep_idx)
+    const auto add_bias = [this, &lo](program_node& bias, auto& node, layout const& output_layout, size_t dep_idx)
     {
         const auto bias_type = layout_optimizer::data_type::bias;
         if (bias.type() == data::type_id())
@@ -1002,7 +994,6 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
                 bias_type,
                 node.get_primitive(),
                 output_layout);
-            outputs_to_recalc.push_back(&bias);
         }
         else if (bias.type() == input_layout::type_id())
         {
@@ -1026,16 +1017,12 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
     //argument should match few requirements:
     // - it should be of a form 'typed_program_node<T>&'
     // - both 'T.weights' and 'T.bias' should be either of type 'primitive_id' or 'std::vector<primitive_id>'
-    const auto prep_opt = [this, &add_bias, &outputs_to_recalc](auto& node) -> void
+    const auto prep_opt = [this, &add_bias](auto& node) -> void
     {
         auto output_layout = node.get_output_layout();
 
         auto weights_offset = node.get_primitive()->input.size();
         auto bias_offset = weights_offset + wrap_if_single(node.get_primitive()->weights).size();
-        for (auto i = weights_offset; i < bias_offset; ++i)
-        {
-            outputs_to_recalc.push_back(&node.get_dependency(i));
-        }
         for (auto i = bias_offset; i < node.get_dependencies().size(); ++i)
         {
             add_bias(node.get_dependency(i), node, output_layout, i);
@@ -1060,11 +1047,8 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
     }
 
     //all optimizing primitives has been added and inputs for all primitives has been updated.
-    //run reorders and replace cldnn::data::mem
-    lo.optimize();
-
-    for (auto dnode : outputs_to_recalc)
-        dnode->recalc_output_layout();
+    //run reorders and attach new buffer to all data_nodes
+    replace_data_with_optimized(lo.optimize());
 }
 
 void program_impl::prepare_depthwise_sep_opt()
@@ -1167,7 +1151,7 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
 
     //all optimizing primitives has been added and inputs for all primitives has been updated.
     //run reorders now
-    lo.optimize();
+    replace_data_with_optimized(lo.optimize());
 
     const auto prep_opt_depthwise_sep = [this](auto& node) -> void
     {
@@ -1658,6 +1642,17 @@ bool program_impl::extract_and_remove(program_node& node)
         remove_if_dangling(node);
 
     return true;
+}
+
+void program_impl::replace_data_with_optimized(std::map<primitive_id, memory_impl::ptr> const & replace_map)
+{
+    for (auto result : replace_map)
+    {
+        auto& node = *nodes_map.at(result.first);
+        assert(node.is_type<data>() && "Optimized primitive is not a cldnn::data");
+        assert(result.second != nullptr && "Memory which handles result of optimization should not be nullptr");
+        node.as<data>().attach_memory(*result.second);
+    }
 }
 
 void program_impl::forward_bfs(std::function<void(program_node&)> const& mark_func, std::function<void(program_node&)> const& unmark_func) const

@@ -32,8 +32,8 @@
 namespace cldnn
 {
 
-network_impl::network_impl(program_impl::cptr program)
-    : _program(program)
+network_impl::network_impl(const program_impl& program)
+    : _program(&program)
 {
     for (auto const& node : _program->get_nodes())
         allocate_primitive_instance(*node);
@@ -47,7 +47,7 @@ network_impl::network_impl(program_impl::cptr program)
 }
 
 network_impl::network_impl(engine_impl::ptr engine, const topology_impl& topo, const build_options& options)
-    : network_impl(program_impl::cptr(engine->build_program(topo, options), false))
+    : network_impl(*engine->build_program(topo, options))
 {
 }
 

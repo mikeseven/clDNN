@@ -51,14 +51,14 @@ public:
 
     engine_types type() const { return engine_types::ocl; }
 
-    memory_impl* allocate_buffer(layout layout);
-    memory_impl* reinterpret_buffer(const memory_impl& memory, layout new_layout);
+    refcounted_obj_ptr<memory_impl> allocate_buffer(layout layout);
+    refcounted_obj_ptr<memory_impl> reinterpret_buffer(const memory_impl& memory, layout new_layout);
     bool is_the_same_buffer(const memory_impl& mem1, const memory_impl& mem2);
 
-    event_impl* create_user_event(bool set = false);
-    program_impl* build_program(const topology_impl& topology, const build_options& options);
-    network_impl* build_network(const topology_impl& topology, const build_options& options);
-    network_impl* allocate_network(const program_impl* program);
+    refcounted_obj_ptr<event_impl> create_user_event(bool set = false);
+    refcounted_obj_ptr<program_impl> build_program(const topology_impl& topology, const build_options& options);
+    refcounted_obj_ptr<network_impl> build_network(const topology_impl& topology, const build_options& options);
+    refcounted_obj_ptr<network_impl> allocate_network(const program_impl& program);
 
     template <class T>
     std::unique_ptr<primitive_impl> create_primitive_impl(typed_program_node<T> const& node)
