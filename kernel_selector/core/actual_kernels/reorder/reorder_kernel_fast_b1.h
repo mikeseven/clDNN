@@ -14,20 +14,19 @@
 // limitations under the License.
 */
 
-#include "reorder_kernel_selector.h"
-#include "reorder_kernel.h"
-#include "reorder_kernel_fast_b1.h"
+#pragma once
+
+#include "reorder_kernel_base.h"
  
-namespace KernelSelector {
-
-    ReorderKernelSelctor::ReorderKernelSelctor()
+namespace KernelSelector 
+{    
+    class ReorderKernelFastBatch1 : public ReorderKernelBase
     {
-        Attach<ReorderKernelRef>();
-        Attach<ReorderKernelFastBatch1>();
-    }
+    public:
+        ReorderKernelFastBatch1() : ReorderKernelBase("reorder_data_fast_b1") {}
 
-    KernelsData ReorderKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
-    {
-        return GetNaiveBestKernel(params, options, KernelType::REORDER);
-    }
+        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual ParamsKey GetSupportedKey() const override;
+        virtual JitConstants GetJitConstants(const ReorderParams& params) const override;
+    };
 }

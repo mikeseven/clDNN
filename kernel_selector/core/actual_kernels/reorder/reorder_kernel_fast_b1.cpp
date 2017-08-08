@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "reorder_kernel.h"
+#include "reorder_kernel_fast_b1.h"
 #include "kernel_selector_utils.h"
  
 namespace KernelSelector 
 {
-    ParamsKey ReorderKernelRef::GetSupportedKey() const
+    ParamsKey ReorderKernelFastBatch1::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
@@ -35,14 +35,21 @@ namespace KernelSelector
         return k;
     }
 
-    JitConstants ReorderKernelRef::GetJitConstants(const ReorderParams& params) const
+    JitConstants ReorderKernelFastBatch1::GetJitConstants(const ReorderParams& params) const
     {
         auto jit = ReorderKernelBase::GetJitConstants(params);
         jit.Merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
+
+        KernelData kd = KernelData::Default<ReorderParams>(params);
+        ReorderParams& newParams = *static_cast<ReorderParams*>(kd.params.get());
+
+        const auto& input = newParams.inputs[0];
+        jit.AddConstant(MakeJitConstant("ELEMENTS_COUNT", input.LogicalSize()));
+
         return jit;
     }
 
-    KernelsData ReorderKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ReorderKernelFastBatch1::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         if (!Validate(params, options))
         {
@@ -59,8 +66,13 @@ namespace KernelSelector
         
         auto& kernel = kd.kernels[0];
 
-        kernel.workGroups.global = GetTensorFriendlyWorkGroups(newParams.inputs[0]);
-        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
+        const auto& input = newParams.inputs[0];
+        const auto& output = newParams.output;
+
+        unsigned int gws = (unsigned int)input.LogicalSize();
+
+        kernel.workGroups.global = { Align(gws, 32),1,1 };
+        kernel.workGroups.local = { 32, 1, 1 };
 
         kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
         kernel.arguments = GetArgsDesc(1, false, false);
@@ -69,7 +81,15 @@ namespace KernelSelector
             kernel.arguments.push_back({ ArgumentDescriptor::Types::BIAS, 0 });
         }
 
-        kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        if (input.Batch().v == 1 &&
+            output.Batch().v == 1)
+        {
+            kd.estimatedTime = FORCE_PRIORITY_6;
+        }
+        else
+        {
+            kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        }
 
         return{ kd };
     }
