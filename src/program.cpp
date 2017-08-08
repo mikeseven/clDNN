@@ -1023,8 +1023,8 @@ void program_impl::prepare_depthwise_sep_opt()
 {
     const auto prepare_depthwise_sep_opt = [this](auto& node) -> void
     {
-        //enable optimization only when split = IFM and split >= 16
-        if (!(node.get_dependency(0).get_output_layout().size.feature[0] == node.get_primitive()->split()) ||
+        //enable optimization only when IFM / split <= 8 (otherwise scheduling multiple opt kernels is better) and split >= 16
+        if (!(node.get_dependency(0).get_output_layout().size.feature[0] / node.get_primitive()->split() <= 8) ||
             !(node.get_primitive()->split() >= 16))
             return;
 
