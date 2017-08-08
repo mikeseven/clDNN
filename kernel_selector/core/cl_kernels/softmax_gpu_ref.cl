@@ -18,6 +18,7 @@
 
 #include "include/include_all.cl"
 
+__attribute__((intel_reqd_sub_group_size(16)))
 KERNEL(softmax)(__global INPUT0_TYPE* input, __global OUTPUT_TYPE* output)
 {
     const uint other0 = get_global_id(0);
