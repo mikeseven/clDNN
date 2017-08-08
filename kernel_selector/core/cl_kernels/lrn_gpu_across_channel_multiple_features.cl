@@ -15,16 +15,10 @@
 
 #include "include/include_all.cl"
 
-#if FP16_UNIT_USED
-    #define UNIT_CVT_FUNC(val) convert_half(val)
-#else
-    #define UNIT_CVT_FUNC(val) (val)
-#endif
-
 #ifdef FORCE_SIMD_16
 __attribute__((intel_reqd_sub_group_size(16)))
 #endif
-KERNEL (lrn_gpu_across_channel_multiple_features)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
+KERNEL (lrn_gpu_across_channel_multiple_features)(const __global INPUT0_TYPE* input, __global OUTPUT_TYPE* output)
 {
 #if   defined OUTPUT_LAYOUT_BFYX
 // PERF NOTE: SIMD IS OVER global_id(0) so in SIMD global_id(1) and global_id(2) does not change, so we can use group_id to have SIMD1 instructions
@@ -59,7 +53,7 @@ KERNEL (lrn_gpu_across_channel_multiple_features)(const __global UNIT_TYPE* inpu
     {
         bool zero = input_offset_f < 0 || input_offset_f >= INPUT0_FEATURE_NUM;
         UNIT_TYPE _in = *OFFSET_GLOBAL_PTR(UNIT_TYPE, input, input_idx);
-        UNIT_TYPE value = zero ? UNIT_VAL_ZERO : UNIT_CVT_FUNC(ALPHA_VAL_FACTOR_DIV_BY_SIZE) * _in;
+        UNIT_TYPE value = zero ? UNIT_VAL_ZERO : TO_UNIT_TYPE(ALPHA_VAL_FACTOR_DIV_BY_SIZE) * _in;
         vals[i] = value;
         input_offset_f++;
         input_idx += MULTIPLY_OFFSET(UNIT_TYPE, INPUT0_FEATURE_PITCH);
@@ -78,7 +72,7 @@ KERNEL (lrn_gpu_across_channel_multiple_features)(const __global UNIT_TYPE* inpu
 
         bool zero = input_offset_f < 0 || input_offset_f >= INPUT0_FEATURE_NUM;
         UNIT_TYPE _in = *OFFSET_GLOBAL_PTR(UNIT_TYPE, input, input_idx);
-        UNIT_TYPE value = zero ? UNIT_VAL_ZERO : UNIT_CVT_FUNC(ALPHA_VAL_FACTOR_DIV_BY_SIZE) * _in;
+        UNIT_TYPE value = zero ? UNIT_VAL_ZERO : TO_UNIT_TYPE(ALPHA_VAL_FACTOR_DIV_BY_SIZE) * _in;
         vals[OFM_PER_SIMD-1] = value;
 
         input_offset_f++;
@@ -92,8 +86,8 @@ KERNEL (lrn_gpu_across_channel_multiple_features)(const __global UNIT_TYPE* inpu
 
     for(uint j = 0; j < OFM_PER_SIMD; j++)
     {
-        results[j] = mad(results[j], UNIT_CVT_FUNC(ALPHA_DIV_BY_SIZE), UNIT_CVT_FUNC(K));
-        results[j] = native_powr(results[j], -UNIT_CVT_FUNC(BETA));
+        results[j] = mad(results[j], TO_UNIT_TYPE(ALPHA_DIV_BY_SIZE), TO_UNIT_TYPE(K));
+        results[j] = native_powr(results[j], -TO_UNIT_TYPE(BETA));
     }
 
     uint output_idx = OUTPUT_OFFSET + batch_id*OUTPUT_BATCH_PITCH + feature_id*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH;
@@ -104,5 +98,3 @@ KERNEL (lrn_gpu_across_channel_multiple_features)(const __global UNIT_TYPE* inpu
         input_id += INPUT0_FEATURE_PITCH;
     }
 }
-
-#undef UNIT_CVT_FUNC

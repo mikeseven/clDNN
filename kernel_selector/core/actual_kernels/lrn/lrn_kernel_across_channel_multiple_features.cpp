@@ -88,7 +88,7 @@ namespace KernelSelector
             }
         }
 
-        runInfo.effiency = FORCE_PRIORITY_1;
+        runInfo.effiency = FORCE_PRIORITY_6;
 
         return runInfo;
     }
@@ -102,7 +102,9 @@ namespace KernelSelector
 
         const LRNParams& params = static_cast<const LRNParams&>(p);
         if (params.lrnParams.localSize > 32)
+        {
             return false;
+        }
 
         return true;
     }
@@ -116,7 +118,8 @@ namespace KernelSelector
         unsigned int ofm_per_simd = GetOfmPerSimd(params);
 
         cldnnJit.AddConstant(MakeJitConstant("OFM_PER_SIMD", ofm_per_simd));
-        if (input.GetLayout() == DataLayout::bfyx && output.X().v <= 16)
+        if (input.GetLayout() == DataLayout::bfyx &&
+            output.X().v <= 16)
         {
             cldnnJit.AddConstant(MakeJitConstant("FORCE_SIMD_16", 1));
         }
@@ -125,6 +128,6 @@ namespace KernelSelector
 
     KernelsData LRNKernelAcrossChannelMultipleFeatures::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        return GetCommonKernelsData(params, options, FORCE_PRIORITY_1);
+        return GetCommonKernelsData(params, options, FORCE_PRIORITY_6);
     }
 }
