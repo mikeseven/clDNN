@@ -88,13 +88,13 @@ struct event
         size_t size_ret = 0;
         status_t err_invalid_arg = CLDNN_SUCCESS;
         cldnn_get_event_profiling_info(_impl, nullptr, 0, &size_ret, &err_invalid_arg);
-        assert(err_invalid_arg == CLDNN_INVALID_ARG);
-
-        const size_t user_event_profiling_size = 0;
-        if (size_ret == user_event_profiling_size)
+        
+        if (size_ret == 0)
         {
             return std::vector<profiling_interval>(0);
         }
+        assert(err_invalid_arg == CLDNN_INVALID_ARG);
+
         std::vector<cldnn_profiling_interval> profiling_info_ref(size_ret);
 
         check_status<void>("get event profiling info failed", [&](status_t* status)
