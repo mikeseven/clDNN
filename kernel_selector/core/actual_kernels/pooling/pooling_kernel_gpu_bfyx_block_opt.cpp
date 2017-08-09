@@ -66,7 +66,8 @@ namespace KernelSelector
         }
 
         const PoolingParams& params = static_cast<const PoolingParams&>(p);
-        if (NeedsBoundaryCheck(params))
+        if (NeedsBoundaryCheck(params) ||
+            params.poolParams.poolSize.x > 5 || params.poolParams.poolSize.y > 5)
         {
             return false;
         }
