@@ -36,5 +36,28 @@ namespace KernelSelector
         virtual bool Validate(const Params&, const OptionalParams&) const override;
         virtual JitConstants GetJitConstants(const PoolingParams& params, DispatchData kd) const;
         virtual DispatchData SetDefault(const PoolingParams& params) const;
+
+        // Checks if we need boundary checking in kernel.
+        static bool NeedsBoundaryCheck(const PoolingParams& params)
+        {
+            const auto& pp = params.poolParams;
+
+            if (pp.poolPad.x != 0 || pp.poolPad.y != 0)
+            {
+                return true;
+            }
+
+            const auto& input = params.inputs[0];
+
+            if (input.X().v < pp.poolSize.x || input.Y().v < pp.poolSize.y)
+            {
+                return true;
+            }
+
+            auto mod_x = (input.X().v - pp.poolSize.x) % pp.poolStride.x;
+            auto mod_y = (input.Y().v - pp.poolSize.y) % pp.poolStride.y;
+
+            return mod_x || mod_y;
+        }
     };
 }

@@ -126,7 +126,7 @@ namespace KernelSelector
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point);
 
-        kd.estimatedTime = FORCE_PRIORITY_8;
+        kd.estimatedTime = FORCE_PRIORITY_7;
 
         return{ kd };
     }
