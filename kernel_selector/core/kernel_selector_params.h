@@ -1045,7 +1045,7 @@ namespace KernelSelector
 
         struct DedicatedParams
         {
-            MeanSubtructMode    mode = MeanSubtructMode::NONE;
+            MeanSubtractMode    mode = MeanSubtractMode::NONE;
             std::vector<float>  meanValues;
             DataTensor          mean;
         };

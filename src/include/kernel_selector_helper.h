@@ -64,7 +64,7 @@ namespace kernel_selector
     using eltwise_mode                      = KernelSelector::EltwiseMode;
     using eltwise_input_mode                = KernelSelector::EltwiseInputMode;
     using softmax_dim                       = KernelSelector::SoftmaxDim;
-    using mean_subtruct_mode                = KernelSelector::MeanSubtructMode;
+    using mean_subtruct_mode                = KernelSelector::MeanSubtractMode;
     using concat_axis                       = KernelSelector::ConcatAxis;
 
     using data_tensor                       = KernelSelector::DataTensor;

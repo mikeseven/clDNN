@@ -60,7 +60,7 @@ namespace KernelSelector
 
         kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
         kernel.arguments = GetArgsDesc(1, false, false);
-        if (newParams.reorderParams.mode == MeanSubtructMode::IN_BUFFER)
+        if (newParams.reorderParams.mode == MeanSubtractMode::IN_BUFFER)
         {
             kernel.arguments.push_back({ ArgumentDescriptor::Types::BIAS, 0 });
         }

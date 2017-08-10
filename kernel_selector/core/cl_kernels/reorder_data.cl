@@ -43,8 +43,8 @@ inline uint FUNC(get_output_index)(uint b, uint f, uint y, uint x)
 }
 
 KERNEL (reorder_data)(
-    const __global INPUT0_TYPE* input, 
-    __global OUTPUT_TYPE* output
+    const __global INPUT_REORDER_TYPE* input, 
+    __global OUTPUT_REORDER_TYPE* output
 #ifdef MEAN_SUBTRACT_IN_BUFFER
     , __global MEAN_SUBTRACT_TYPE* mean_subtruct
 #endif
@@ -72,5 +72,5 @@ KERNEL (reorder_data)(
     res -= TO_CALC_TYPE(mean_subtruct[GET_DATA_INDEX_SAFE(MEAN_SUBTRACT, msv[0], msv[1], msv[2], msv[3])]);
 #endif
 
-    output[output_idx] = TO_OUTPUT_TYPE(res);
+    output[output_idx] = TO_OUTPUT_REORDER_TYPE(res);
 }
