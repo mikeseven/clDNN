@@ -41,6 +41,29 @@ namespace KernelSelector
         return mem_consts;
     }
 
+    // Checks if we need boundary checking in kernel.
+    bool PoolingKernelBase::NeedsBoundaryCheck(const PoolingParams& params) const
+    {
+        const auto& pp = params.poolParams;
+
+        if (pp.poolPad.x != 0 || pp.poolPad.y != 0)
+        {
+            return true;
+        }
+
+        const auto& input = params.inputs[0];
+
+        if (input.X().v < pp.poolSize.x || input.Y().v < pp.poolSize.y)
+        {
+            return true;
+        }
+
+        auto mod_x = (input.X().v - pp.poolSize.x) % pp.poolStride.x;
+        auto mod_y = (input.Y().v - pp.poolSize.y) % pp.poolStride.y;
+
+        return mod_x || mod_y;
+    }
+
     PoolingKernelBase::DispatchData PoolingKernelBase::SetDefault(const PoolingParams& params) const
     {
         const auto& output = params.output;
@@ -80,5 +103,30 @@ namespace KernelSelector
         kd.needsBoundary = NeedsBoundaryCheck(params);
 
         return kd;
+    }
+
+    KernelsData PoolingKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, float estimatedTime) const
+    {
+        if (!Validate(params, options))
+        {
+            return{};
+        }
+
+        const PoolingParams& orgParams = static_cast<const PoolingParams&>(params);
+
+        DispatchData runInfo = SetDefault(orgParams);
+
+        KernelData kd = KernelData::Default<PoolingParams>(params);
+
+        auto cldnn_jit = GetJitConstants(orgParams, runInfo);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);
+        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
+
+        auto& kernel = kd.kernels[0];
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point);
+
+        kd.estimatedTime = estimatedTime;
+
+        return{ kd };
     }
 }
