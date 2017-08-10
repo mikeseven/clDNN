@@ -120,6 +120,7 @@ protected:
         // TODO - split should be handle in kernel selector by providing multiple kernels.
         auto split = get_split();
 
+        // we iterate over split first in order to be able parallelism with OOOQ mechanism.
         for (size_t k = 0; k < _kernels.size(); ++k)
         {
             std::vector<event_impl::ptr> new_events;

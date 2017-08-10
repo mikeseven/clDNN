@@ -49,7 +49,6 @@ public:
 public:
     typed_primitive_inst(network_impl& network, fully_connected_node const& node);
 
-    size_t inputs_memory_count() const override { return static_cast<size_t>(1); }
     const memory& weights_memory() const { return dep_memory(1); }
     const memory& bias_memory() const { return dep_memory(2); }
     bool bias_term() const { return !argument.bias.empty(); }

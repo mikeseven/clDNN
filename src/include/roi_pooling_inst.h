@@ -47,7 +47,6 @@ public:
 public:    
     using parent::parent;
 
-    size_t inputs_memory_count() const override { return static_cast<size_t>(1); }
     const memory& rois_memory() const { return dep_memory(1); }
 };
 
