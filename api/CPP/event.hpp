@@ -91,9 +91,8 @@ struct event
         
         if (size_ret == 0)
         {
-            return std::vector<profiling_interval>(0);
+            return{};
         }
-        assert(err_invalid_arg == CLDNN_INVALID_ARG);
 
         std::vector<cldnn_profiling_interval> profiling_info_ref(size_ret);
 
