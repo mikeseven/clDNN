@@ -220,7 +220,7 @@ std::map<primitive_id, memory_impl::ptr> layout_optimizer::optimize() const
 
     std::map<primitive_id, memory_impl::ptr> results;
 
-    network_impl net(_engine, _topology);
+    network_impl net(*_engine, _topology);
     net.execute({});
     for (auto const& output : net.get_outputs())
     {

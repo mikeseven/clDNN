@@ -99,12 +99,12 @@ event_impl::ptr engine_impl::create_user_event(bool set)
 
 program_impl::ptr engine_impl::build_program(const topology_impl& topology, const build_options& options)
 {
-    return{ new program_impl(this, topology, options), false };
+    return{ new program_impl(*this, topology, options), false };
 }
 
 network_impl::ptr engine_impl::build_network(const topology_impl& topology, const build_options& options)
 {
-    return{ new network_impl(this, topology, options), false };
+    return{ new network_impl(*this, topology, options), false };
 }
 
 network_impl::ptr engine_impl::allocate_network(const program_impl& program)

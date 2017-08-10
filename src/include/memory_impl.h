@@ -32,7 +32,7 @@ struct memory_impl : refcounted_obj<memory_impl>
     virtual void* lock() = 0;
     virtual void unlock() = 0;
     size_t size() const { return _layout.bytes_count(); }
-    virtual bool is_allocated_by(const refcounted_obj_ptr<engine_impl>& engine) const { return engine == _engine; }
+    virtual bool is_allocated_by(const engine_impl& engine) const { return &engine == _engine.get(); }
     const refcounted_obj_ptr<engine_impl>& get_engine() const { return _engine; }
     const layout& get_layout() const { return _layout; }
 protected:

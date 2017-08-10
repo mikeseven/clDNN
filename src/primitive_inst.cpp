@@ -58,7 +58,7 @@ primitive_inst::primitive_inst(network_impl& network, program_node const& node, 
 memory_impl::ptr primitive_inst::allocate_output()
 {
     auto layout = _node.get_output_layout();
-    return get_network().get_engine()->allocate_buffer(layout);
+    return get_network().get_engine().allocate_buffer(layout);
 }
 
 std::string primitive_inst::generic_to_string(program_node const& node, const char* type_name)

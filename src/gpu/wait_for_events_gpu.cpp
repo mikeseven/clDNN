@@ -32,7 +32,7 @@ public:
 
     event_impl::ptr execute(const std::vector<event_impl::ptr>& events, primitive_inst& instance) override
     {
-        events_waiter events_waiter(instance.get_network().get_engine()->get_context());
+        events_waiter events_waiter(instance.get_network().get_engine().get_context());
         return events_waiter.run(events);
     }
 

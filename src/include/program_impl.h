@@ -41,9 +41,9 @@ struct program_impl : public refcounted_obj<program_impl>
     friend struct program_node;
 
 public:
-    program_impl(engine_impl::ptr engine, topology_impl const& topology, build_options const& options);
+    program_impl(engine_impl& engine_ref, topology_impl const& topology, build_options const& options);
 
-    auto get_engine() const { return engine; }
+    auto& get_engine() const { return *engine; }
     auto get_options() const { return options; }
     bool is_debug_build() const { return options.get<build_option_type::debug>()->enabled(); }
 

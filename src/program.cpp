@@ -186,6 +186,8 @@ namespace {
     // pair.first tells whether l1 and l2 are absolutely identical
     // pair.second tells whether l1 and l2 can be reinterpreted to each other without need of reordering
     // note: layouts can only be considered identical if data size described by both layouts match (so no data are genereted nor dropped)
+    // note: if layouts describe two buffers with different size, consider them not to be identical even if smaller buffer can be considered to hold subsequence of larger buffer,
+    //       this behavior is required to force buffer allocation for smaller buffer which, currently, should always be performed
     std::pair<bool, bool> are_layouts_identical(layout const& l1, layout const& l2)
     {
         if (l1 == l2)
@@ -194,16 +196,18 @@ namespace {
             return{ false, false };
         if (l1.size != l2.size)
             return{ false, false };
+        if (l1.get_linear_size() != l2.get_linear_size())
+            return{ false, false };
 
         auto l1_pitch = l1.get_pitches();
         auto l2_pitch = l2.get_pitches();
 
-        //ignore pitches which will never be used (for dims with size == 1 && lpad == 0)
+        //ignore pitches which will never be used (for dims with size == 1)
         for (size_t i = 0; i < CLDNN_TENSOR_DIM_MAX; ++i)
-            if (l1.size.raw[i] == 1 && l1.data_padding.lower_size().raw[i] == 0)
+            if (l1.size.raw[i] == 1)
                 l1_pitch.raw[i] = 0;
         for (size_t i = 0; i < CLDNN_TENSOR_DIM_MAX; ++i)
-            if (l2.size.raw[i] == 1 && l2.data_padding.lower_size().raw[i] == 0)
+            if (l2.size.raw[i] == 1)
                 l2_pitch.raw[i] = 0;
 
         auto l1_offset = l1.get_linear_offset();
@@ -215,8 +219,8 @@ namespace {
     }
 }
 
-program_impl::program_impl(engine_impl::ptr engine, topology_impl const& topology, build_options const& options)
-    : engine(engine), options(options), output_size_handling_enabled(true)
+program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topology, build_options const& options)
+    : engine(&engine_ref), options(options), output_size_handling_enabled(true)
 {
     init_graph(topology);
     pre_optimize_graph();
@@ -355,7 +359,7 @@ void program_impl::pre_optimize_graph()
 {
     trim_to_outputs();
 
-    if (get_engine()->configuration().enable_parallelisation)
+    if (get_engine().configuration().enable_parallelisation)
         reorder_nodes_for_parallel_execution();
 
     analyze_output_size_handling_need();

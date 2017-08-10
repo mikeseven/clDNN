@@ -30,11 +30,11 @@ primitive_type_id data_type_id()
 namespace {
     memory_impl::ptr attach_or_copy_data(network_impl& network, memory_impl& mem)
     {
-        auto engine = network.get_engine();
+        auto& engine = network.get_engine();
         if (mem.is_allocated_by(engine))
             return &mem;
 
-        memory_impl::ptr result = engine->allocate_buffer(mem.get_layout());
+        memory_impl::ptr result = engine.allocate_buffer(mem.get_layout());
         mem_lock<char> src(mem);
         mem_lock<char> dst(result);
         std::copy(src.begin(), src.end(), dst.begin());

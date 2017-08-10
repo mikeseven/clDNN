@@ -198,7 +198,7 @@ struct proposal_gpu : typed_primitive_impl<proposal>
 
     proposal_gpu(const proposal_node& arg)
         : outer(arg),
-        _engine_info(outer.get_program().get_engine()->get_context()->get_engine_info()),
+        _engine_info(outer.get_program().get_engine().get_context()->get_engine_info()),
         _kernel_data(ks.get_kernel(
             outer,
             outer.cls_score().get_output_layout().data_type,
@@ -368,7 +368,7 @@ struct proposal_gpu : typed_primitive_impl<proposal>
             execute<data_type_to_type<data_types::f32>::type>(instance);
         }
        
-        return instance.get_network().get_engine()->create_user_event(true);
+        return instance.get_network().get_engine().create_user_event(true);
     }
 
     static primitive_impl* create(const proposal_node& arg) 

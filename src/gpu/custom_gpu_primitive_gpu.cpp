@@ -40,7 +40,7 @@ struct custom_gpu_primitive_gpu : typed_primitive_impl<custom_gpu_primitive>
     custom_gpu_primitive_gpu(const custom_gpu_primitive_node& arg, std::shared_ptr<kernel_selector::cl_kernel_data>& cl_kernel)
     : outer(arg)
     , cl_kernel(cl_kernel)
-    , _kernel(arg.get_program().get_engine()->get_context(), cl_kernel->kernelString, arg.get_program().get_engine()->get_context()->get_configuration().dump_custom_program)
+    , _kernel(arg.get_program().get_engine().get_context(), cl_kernel->kernelString, arg.get_program().get_engine().get_context()->get_configuration().dump_custom_program)
     {}
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, custom_gpu_primitive_inst& instance) override

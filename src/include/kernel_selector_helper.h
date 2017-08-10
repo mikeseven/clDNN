@@ -385,7 +385,7 @@ inline params_t get_default_params(const arg_t& arg, uint32_t split = 1)
 {
     params_t params;
 
-    const auto& context = arg.get_program().get_engine()->get_context();
+    const auto& context = arg.get_program().get_engine().get_context();
     const auto& engine_info = context->get_engine_info();
 
     params.engineInfo.bSubGroupSupport      = context->extension_supported("cl_intel_subgroups");
@@ -429,7 +429,7 @@ inline optional_params_t get_default_optional_params(const program_impl& program
 {
     optional_params_t params;
     
-    const auto& context = program.get_engine()->get_context();
+    const auto& context = program.get_engine().get_context();
 
     params.meaningfulKernelsNames       = context->get_configuration().meaningful_kernels_names;
     params.allowStaticInputReordering   = program.get_options().get<build_option_type::optimize_data>()->enabled();

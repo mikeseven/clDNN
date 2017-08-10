@@ -110,7 +110,7 @@ public:
 
         if (enable_auto_tune)
         {
-            gpu::kernel_runner runner(arg.get_program().get_engine().get(), true);
+            gpu::kernel_runner runner(arg.get_program().get_engine(), true);
             best_kernels = kernel_selector.GetBestKernels(conv_params, conv_optional_params, runner);
         }
         else

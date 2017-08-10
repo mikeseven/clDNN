@@ -72,7 +72,7 @@ void reshape_inst::on_execute()
     if (!node.is_in_place())
         return;
 
-    if (_output && _network.get_engine()->is_the_same_buffer(output_memory(), input_memory()))
+    if (_output && _network.get_engine().is_the_same_buffer(output_memory(), input_memory()))
         return;
 
     reuse_input();
@@ -80,7 +80,7 @@ void reshape_inst::on_execute()
 
 void reshape_inst::reuse_input()
 {
-    _output = _network.get_engine()->reinterpret_buffer(input_memory(), node.get_output_layout());
+    _output = _network.get_engine().reinterpret_buffer(input_memory(), node.get_output_layout());
 }
 
 }

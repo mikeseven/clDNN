@@ -508,7 +508,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
             generate_detections<data_type_to_type<data_types::f16>::type>(instance, num_of_images, bboxes, confidences);
         }
 
-        return instance.get_network().get_engine().get()->create_user_event(true);
+        return instance.get_network().get_engine().create_user_event(true);
     }
 
     static primitive_impl* create(const detection_output_node& arg)

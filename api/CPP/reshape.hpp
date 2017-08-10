@@ -52,20 +52,6 @@ struct reshape : public primitive_base<reshape, CLDNN_PRIMITIVE_DESC(reshape)>
     {
     }
 
-    /// @brief Constructs reshape primitive.
-    /// @param id This primitive id.
-    /// @param input Input primitive id.
-    /// @param output_layout Requested memory layout.
-    reshape(
-        const primitive_id& id,
-        const primitive_id& input,
-        const layout& output_layout
-    )
-        : primitive_base(id, { input }, output_layout.data_padding)
-        , output_shape(output_layout.size)
-    {
-    }
-
     /// @brief Constructs a copy from basic C API @CLDNN_PRIMITIVE_DESC{reshape}
     reshape(const dto* dto)
         : primitive_base(dto)

@@ -92,8 +92,8 @@ void reorder_inst::reuse_input()
 
     if (node.requires_reinterpret())
     {
-        if (!_output || !_network.get_engine()->is_the_same_buffer(output_memory(), input_memory()))
-            _output = _network.get_engine()->reinterpret_buffer(input_memory(), node.get_output_layout());
+        if (!_output || !_network.get_engine().is_the_same_buffer(output_memory(), input_memory()))
+            _output = _network.get_engine().reinterpret_buffer(input_memory(), node.get_output_layout());
     }
     else if (!_output)
         _output = &input_memory();

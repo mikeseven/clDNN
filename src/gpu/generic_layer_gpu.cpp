@@ -35,7 +35,7 @@ struct generic_layer_gpu : typed_primitive_impl<generic_layer>
     generic_layer_gpu(const generic_layer_node& arg)
     : outer(arg)
     , _cl_kernel_data(*outer.get_primitive()->generic_params.clKernel.get())
-    , _kernel(arg.get_program().get_engine()->get_context(), outer.get_primitive()->generic_params.clKernel->kernelString)
+    , _kernel(arg.get_program().get_engine().get_context(), outer.get_primitive()->generic_params.clKernel->kernelString)
     {}
 
     event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, generic_layer_inst& instance) override
@@ -78,7 +78,7 @@ struct generic_layer_cpu : typed_primitive_impl<generic_layer>
 
         cpu_kernel.Execute(old_pointer.data(), old_pointer.size(), new_pointer.data(), new_pointer.size());
 
-        return instance.get_network().get_engine()->create_user_event(true);
+        return instance.get_network().get_engine().create_user_event(true);
     }
 };
 

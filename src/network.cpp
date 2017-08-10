@@ -46,8 +46,8 @@ network_impl::network_impl(const program_impl& program)
             + get_engine()->get_context()->single_kernel_name() + "').");*/
 }
 
-network_impl::network_impl(engine_impl::ptr engine, const topology_impl& topo, const build_options& options)
-    : network_impl(*engine->build_program(topo, options))
+network_impl::network_impl(engine_impl& engine, const topology_impl& topo, const build_options& options)
+    : network_impl(*engine.build_program(topo, options))
 {
 }
 
@@ -65,7 +65,7 @@ void network_impl::reset_execution(bool wait)
             events.push_back(ev);
         }
 
-        get_engine()->wait_for_events(events);
+        get_engine().wait_for_events(events);
     }
     _events.clear();
 }
@@ -106,9 +106,9 @@ void network_impl::execute(const std::vector<refcounted_obj_ptr<event_impl>>& ev
     for(auto& inst : _exec_order)
         execute_primitive(inst, events);
 
-    if (get_engine()->get_context()->enabled_single_kernel())
+    if (get_engine().get_context()->enabled_single_kernel())
     {
-        auto it = _events.find(get_engine()->get_context()->single_kernel_name());
+        auto it = _events.find(get_engine().get_context()->single_kernel_name());
         if (it != _events.end())
         {
             //replace outputs' events so waiting for output will wait for single kernel (to have better fps results)
@@ -162,10 +162,10 @@ refcounted_obj_ptr<event_impl> network_impl::execute_primitive(const std::shared
     }
 
     event_impl::ptr ev;
-    if (!get_engine()->get_context()->enabled_single_kernel() || get_engine()->get_context()->single_kernel_name() == id)
+    if (!get_engine().get_context()->enabled_single_kernel() || get_engine().get_context()->single_kernel_name() == id)
         ev = primitive->execute(events);
     else
-        ev = get_engine()->create_user_event(true);
+        ev = get_engine().create_user_event(true);
 
     _events.insert({ id, ev });
     return ev;

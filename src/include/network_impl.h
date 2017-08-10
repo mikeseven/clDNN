@@ -38,10 +38,10 @@ struct network_impl : public refcounted_obj<network_impl>
 {
 public:
     network_impl(const program_impl& program);
-    network_impl(engine_impl::ptr engine, const topology_impl& topo, const build_options& options = build_options());
+    network_impl(engine_impl& engine, const topology_impl& topo, const build_options& options = build_options());
 
     const program_impl& get_program() const { return *_program; }
-    engine_impl::ptr get_engine() const { return _program->get_engine(); }
+    engine_impl& get_engine() const { return _program->get_engine(); }
 
     void reset_execution(bool wait = true);
     void set_input_data(const primitive_id& id, memory_impl& data);

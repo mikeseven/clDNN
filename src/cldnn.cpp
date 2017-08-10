@@ -351,7 +351,7 @@ cldnn_network cldnn_allocate_network(cldnn_program program, cldnn_status* status
     return exception_handler<cldnn_network>(CLDNN_ERROR, status, nullptr, [&]()
     {
         SHOULD_NOT_BE_NULL(program, "Program");
-        return init_external_from_internal(api_cast(program)->get_engine()->allocate_network(*api_cast(program)));
+        return init_external_from_internal(api_cast(program)->get_engine().allocate_network(*api_cast(program)));
     });
 }
 
@@ -401,9 +401,7 @@ cldnn_engine cldnn_get_network_engine(cldnn_network network, cldnn_status* statu
     return exception_handler<cldnn_engine>(CLDNN_ERROR, status, nullptr, [&]()
     {
         SHOULD_NOT_BE_NULL(network, "Network");
-        auto engine_ptr = api_cast(network)->get_engine();
-        if (!engine_ptr) throw std::logic_error("no assigned engine");
-        return api_cast(engine_ptr.detach());
+        return init_external_from_internal(api_cast(network)->get_engine());
     });
 }
 

@@ -28,7 +28,7 @@ class kernel_runner : public KernelSelector::KernelRunnerInterface
 {
 public:
 
-    kernel_runner(cldnn::engine_impl::ptr engine_ptr, bool weights_and_bias_exist = false);
+    kernel_runner(engine_impl& engine_ref, bool weights_and_bias_exist = false);
 
     std::vector<uint64_t> run_kernels(const KernelSelector::KernelsData& kernelsData) override;
 
@@ -39,12 +39,12 @@ private:
 
     void prepare_kernel_args(const KernelSelector::KernelsData& kernels_data, gpu::kernel::kernel_arguments_data& args);
 
-    cldnn::engine_impl::ptr engine;
+    engine_impl::ptr engine;
     bool weights_and_bias_exist;
-    std::vector<cldnn::memory> input_buffers;
-    std::vector<cldnn::memory> output_buffers;
-    std::vector<cldnn::memory> weight_buffers;
-    std::vector<cldnn::memory> bias_buffers;
+    std::vector<memory_impl::ptr> input_buffers;
+    std::vector<memory_impl::ptr> output_buffers;
+    std::vector<memory_impl::ptr> weight_buffers;
+    std::vector<memory_impl::ptr> bias_buffers;
 };
 
 //////////////////////////////////////////////////////////////////////////////////////////////////////////

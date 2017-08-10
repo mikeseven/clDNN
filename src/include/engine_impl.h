@@ -63,7 +63,7 @@ public:
     template <class T>
     std::unique_ptr<primitive_impl> create_primitive_impl(typed_program_node<T> const& node)
     {
-        if (node.get_program().get_engine() != this)
+        if (&node.get_program().get_engine() != this)
             throw std::invalid_argument("engine_impl::create_primitive_impl: program's engine does not match called engine");
 
         auto factory = implementation_map<T>::get(type(), node);
