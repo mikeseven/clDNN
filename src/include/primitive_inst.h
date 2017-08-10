@@ -49,6 +49,7 @@ struct primitive_impl
 
     virtual event_impl::ptr execute(const std::vector<event_impl::ptr>& events, primitive_inst& instance) = 0;
 
+    // TODO: added a derived class for weights reordering (maybe for all static data reordering)
     const kernel_selector::weights_reorder_params _weights_reorder_params;
 };
 
