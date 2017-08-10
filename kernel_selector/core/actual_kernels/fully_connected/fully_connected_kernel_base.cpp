@@ -77,7 +77,7 @@ namespace KernelSelector
                 (dl == DataLayout::bf && orgParams.inputs[0].GetLayout() == DataLayout::bfyx);
         }
 
-        const bool bSupportedInput = orgOptParams.allowReorderInput || bProperInput;
+        const bool bSupportedInput = orgOptParams.allowInputReordering || bProperInput;
 
         if (!bSupportedInput)
         {

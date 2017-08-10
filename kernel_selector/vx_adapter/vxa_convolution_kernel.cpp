@@ -51,7 +51,7 @@ namespace clDNN
         }
 
         KernelSelector::ConvolutionOptionalParams ksOptParams;
-        ksOptParams.allowPadding = params.bAllowChangeInputTensor;
+        ksOptParams.allowInputReordering = params.bAllowChangeInputTensor;
         
         HandleBestKernels(KernelSelector::ConvolutionKernelSelctor::Instance(), ksParams, ksOptParams);
     }

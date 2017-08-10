@@ -128,6 +128,7 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
         std::string         options             = code.second.kernel_strings->options;
         bool                batch_compilation   = code.second.kernel_strings->batch_compilation;
         bool                dump_custom_program = code.second.dump_custom_program;
+		bool                one_time_kernel     = code.second.one_time_kernel;
 
         batch_compilation &= does_options_support_batch_compilation(options);
 
@@ -148,8 +149,15 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
             key += " __DUMP_CUSTOM_PROGRAM__"; // Adding label to key so it would be separated from other programs
         }
 
+
+		if (one_time_kernel)
+        {
+            key += " __ONE_TIME__";
+        }
+		
         auto& current_bucket = scode[key];
         current_bucket.dump_custom_program = dump_custom_program;
+		current_bucket.one_time = one_time_kernel;
 
         if (current_bucket.source.empty())
         {
@@ -183,7 +191,7 @@ kernels_cache::sorted_code kernels_cache::get_program_source(const kernels_code&
 
 kernels_cache::kernels_cache(gpu_toolkit& context): _context(context) {}
 
-kernels_cache::kernel_id kernels_cache::set_kernel_source(const std::shared_ptr<kernel_selector::kernel_string>& kernel_string, bool dump_custom_program)
+kernels_cache::kernel_id kernels_cache::set_kernel_source(const std::shared_ptr<kernel_selector::kernel_string>& kernel_string, bool dump_custom_program, bool one_time_kernel)
 {
     kernels_cache::kernel_id id;
     
@@ -199,7 +207,7 @@ kernels_cache::kernel_id kernels_cache::set_kernel_source(const std::shared_ptr<
         // we need unique id in order to avoid conflict across topologies.
         const auto kernel_num = _kernels.size() + _kernels_code.size(); 
         id = kernel_string->entry_point + "_" + std::to_string(kernel_num);
-        _kernels_code[key] = { kernel_string, id, dump_custom_program };
+        _kernels_code[key] = { kernel_string, id, dump_custom_program, one_time_kernel };
     }
     else
     {
@@ -285,10 +293,17 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
     }
 }
 
-kernels_cache::kernel_type kernels_cache::get_kernel(kernel_id id) 
+kernels_cache::kernel_type kernels_cache::get_kernel(kernel_id id, bool one_time_kernel) 
 {
     build_all();
-    return _kernels.at(id);
+    if (one_time_kernel)
+    {
+        return _one_time_kernels.at(id);
+    }
+    else
+    {
+        return _kernels.at(id);
+    }
 }
 
 void kernels_cache::build_all()
@@ -300,6 +315,7 @@ void kernels_cache::build_all()
 
     auto sorted_program_code = get_program_source(_kernels_code);
 
+	_one_time_kernels.clear();
     for (auto& program : sorted_program_code)
     {
         auto kernels = build_program(program.second);
@@ -308,7 +324,14 @@ void kernels_cache::build_all()
         {
             const auto& entry_point = k.first;
             const auto& k_id = program.second.entry_point_to_id[entry_point];
-            _kernels[k_id] = k.second;
+            if (program.second.one_time)
+            {
+				_one_time_kernels[k_id] = k.second;
+			}
+			else
+			{
+                _kernels[k_id] = k.second;
+			}
         }
     }
 

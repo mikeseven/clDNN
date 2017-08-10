@@ -60,6 +60,7 @@ namespace KernelSelector
                     uint32_t biasPerOutput : 1;
                     uint32_t nonBias : 1;
                     uint32_t activationAdditionalParamsAsInput : 1;
+                    uint32_t FP16Emulation : 1;
 
                     union dedicated_t
                     {
@@ -111,6 +112,7 @@ namespace KernelSelector
                 struct val_t
                 {
                     uint32_t subgroup : 1;
+                    uint32_t subgroupShort : 1;
                 } val;
                 uint32_t raw;
             } machineInfo;
@@ -264,6 +266,11 @@ namespace KernelSelector
             key.outputWeightsType.raw = 0xffffffff;
         }
 
+        void EnableFP16Emulation()
+        {
+            key.restrict.val.FP16Emulation = 1;
+        }
+
         void EnableDifferentTypes()
         {
             key.restrict.val.different_types = 1;
@@ -307,6 +314,11 @@ namespace KernelSelector
         void EnableSubGroup()
         {
             key.machineInfo.val.subgroup = 1;
+        }
+
+        void EnableSubGroupShort()
+        {
+            key.machineInfo.val.subgroupShort = 1;
         }
 
         void EnableNonBiasTerm()
@@ -515,6 +527,19 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // EngineInfo
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct EngineInfo
+    {
+        bool bSubGroupSupport = false;
+        bool bSubGroupShortSupport = false;
+        bool bFP16Support = false;
+        bool bFP64Support = false;
+        uint64_t maxWorkGroupSize = 0;
+        uint64_t maxLocalMemSize = 0;
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct Params
@@ -530,6 +555,8 @@ namespace KernelSelector
 
     public:
         std::string layerID;
+
+        virtual std::string to_string() const;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -540,9 +567,11 @@ namespace KernelSelector
         virtual ~BaseParams() {}
 
         ActivationFunction  activationFunc = ActivationFunction::NONE;
-        NonLinearParams     nlParams;   // TODO: rename it to "activationAdditionalParams"
+        NonLinearParams     activationParams;
         MultiDataTensor     inputs;
         DataTensor          output;
+        // TODO: I've still not sure it's the right place for engineInfo
+        EngineInfo          engineInfo;
 
         virtual std::string to_string() const;
 
@@ -554,6 +583,7 @@ namespace KernelSelector
             bool bPitches = false;
             bool bOffests = false;
             bool bDifferentTypes = false;
+            bool bFP16Used = (output.GetDType() == Datatype::F16);
 
             for (const auto& i : inputs)
             {
@@ -564,6 +594,7 @@ namespace KernelSelector
                 bPitches        |= (i.PitchesDifferFromLogicalDims());
                 bOffests        |= (i.GetFirstElementOffset() != 0);
                 bDifferentTypes |= (i.GetDType() != output.GetDType());
+                bFP16Used       |= (i.GetDType() == Datatype::F16);
             }
 
             k.EnableOutputDataType(output.GetDType());
@@ -589,6 +620,23 @@ namespace KernelSelector
                 output.GetFirstElementOffset() != 0)
             {
                 k.EnableTensorOffset();
+            }
+
+            if (engineInfo.bSubGroupSupport)
+            {
+                k.EnableSubGroup();
+            }
+
+            if (engineInfo.bSubGroupShortSupport)
+            {
+                k.EnableSubGroupShort();
+            }
+
+            if (!engineInfo.bFP16Support &&
+                bFP16Used)
+            {
+                // I'm not sure it's the best idea, but we can live with it right now
+                k.EnableFP16Emulation();
             }
 
             return k;
@@ -861,7 +909,7 @@ namespace KernelSelector
 
         struct DedicatedParams
         {
-            MultiDataTensor inputNlParams;
+            MultiDataTensor inputActivationParams;
         };
 
         DedicatedParams actParams;
@@ -869,7 +917,7 @@ namespace KernelSelector
         virtual ParamsKey GetParamsKey() const
         {
             auto k = BaseParams::GetParamsKey();
-            if (!actParams.inputNlParams.empty())
+            if (!actParams.inputActivationParams.empty())
             {
                 k.EnableActivationAdditionalParamsAsInput();
             }
@@ -1092,10 +1140,11 @@ namespace KernelSelector
 
         std::vector<DataLayout> inputLayouts;
         std::vector<DataLayout> outputLayouts;
-        bool bSupportSubGroupExt = false;
-        uint64_t maxWorkGroupSize = 1;
-        uint64_t maxLocalMemSize = 16*1024*1024;
-        bool meaningfulKernelsNames = false;
+
+        bool meaningfulKernelsNames     = false;    // use layer name instead of internal kernel name
+        bool allowStaticInputReordering = true;     // allow kernel to provide a kernel which reorder static data like weights/bias/tables...
+        bool allowInputReordering       = false;    // allow kernel to ask graph compiler to reorder the input data before executing its
+        bool allowOutputReordering      = false;    // allow kernel to ask graph compiler to reorder the output data before executing the next kernel
 
         virtual ParamsKey GetSupportedKey() const
         {
@@ -1111,11 +1160,6 @@ namespace KernelSelector
                 k.EnableOutputLayout(l);
             }
 
-            if (bSupportSubGroupExt)
-            {
-                k.EnableSubGroup();
-            }
-
             return k;
         }
 
@@ -1129,7 +1173,6 @@ namespace KernelSelector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct WeightsBiasOptionalParams : OptionalParams
     {
-        bool allowWeightsReorder = true;
     protected:
         WeightsBiasOptionalParams(KernelType kt) : OptionalParams(kt) {}
     };
@@ -1140,7 +1183,6 @@ namespace KernelSelector
     struct ConvolutionOptionalParams : WeightsBiasOptionalParams
     {
         ConvolutionOptionalParams() : WeightsBiasOptionalParams(KernelType::CONVOLUTION) {}
-        bool allowPadding = false;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1189,7 +1231,6 @@ namespace KernelSelector
     struct FullyConnectedOptionalParams : WeightsBiasOptionalParams
     {
         FullyConnectedOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED) {}
-        bool allowReorderInput = false;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

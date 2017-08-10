@@ -50,7 +50,16 @@ enum class build_option_type
     debug = cldnn_build_option_debug,
 
     /// @brief User selected list of program outputs.
-    outputs = cldnn_build_option_outputs
+    outputs = cldnn_build_option_outputs,
+
+    /// @brief Enable kernels auto-tune (default: false).
+    /// @details This option optimizes the kernel dispatch parameters by running multiple versions 
+    /// of the kernel and storing the optimal one.
+    /// Expect long execution time in the first run. 
+    /// After the first run a cache with the tunning results will be created in the 
+    /// running directory (tuner_kernels_cache.txt).
+    /// This cache will be used in the next runs.
+    enable_kernels_auto_tune = cldnn_build_option_enable_kernels_auto_tune
 };
 
 /// @brief Represents user-provided program build option.
@@ -73,6 +82,15 @@ struct build_option
 
     /// @brief User selected list of program outputs.
     static std::shared_ptr<const build_option> outputs(const std::vector<primitive_id>& outs);
+
+    /// @brief Enable kernels auto-tune (default: false).
+    /// @details This option optimizes the kernel dispatch parameters by running multiple versions 
+    /// of the kernel and storing the optimal one.
+    /// Expect long execution time in the first run. 
+    /// After the first run a cache with the tunning results will be created in the 
+    /// running directory (tuner_kernels_cache.txt).
+    /// This cache will be used in the next runs.
+    static std::shared_ptr<const build_option> enable_kernels_auto_tune(bool enable = false);
 
     virtual ~build_option() = default;
 
@@ -232,6 +250,16 @@ namespace detail
             return std::make_shared<object_type>(option);
         }
     };
+    template<> struct build_option_traits<build_option_type::enable_kernels_auto_tune>
+    {
+        typedef build_option_bool<build_option_type::enable_kernels_auto_tune> object_type;
+        static std::shared_ptr<const build_option> make_default() { return build_option::enable_kernels_auto_tune(); }
+        static std::shared_ptr<const build_option> make_option(const cldnn_build_option& option)
+        {
+            assert(option.type == cldnn_build_option_enable_kernels_auto_tune);
+            return std::make_shared<object_type>(option);
+        }
+    };
 #endif
 } // namespace detail
 
@@ -259,6 +287,11 @@ inline std::shared_ptr<const build_option> build_option::debug(bool enable)
 inline std::shared_ptr<const build_option> build_option::outputs(const std::vector<primitive_id>& outs)
 {
     return std::make_shared<build_option_outputs>(outs);
+}
+
+inline std::shared_ptr<const build_option> build_option::enable_kernels_auto_tune(bool enable)
+{
+    return std::make_shared<build_option_bool<build_option_type::enable_kernels_auto_tune>>(enable);
 }
 #endif
 
@@ -353,6 +386,8 @@ private:
             return detail::build_option_traits<build_option_type::debug>::make_option(option);
         case cldnn_build_option_outputs:
             return detail::build_option_traits<build_option_type::outputs>::make_option(option);
+        case cldnn_build_option_enable_kernels_auto_tune:
+            return detail::build_option_traits<build_option_type::enable_kernels_auto_tune>::make_option(option);
         default: throw std::out_of_range("unsupported build option type");
         }
     }

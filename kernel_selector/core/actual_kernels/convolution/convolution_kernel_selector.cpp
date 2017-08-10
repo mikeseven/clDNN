@@ -49,4 +49,9 @@ namespace KernelSelector
         //std::cout << orgParams.to_string() << std::endl;
         return GetNaiveBestKernel(params, options, KernelType::CONVOLUTION);
     }
+
+    KernelSelector::KernelsData ConvolutionKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options, KernelRunnerInterface& runner) const
+    {
+        return GetAutoTuneBestKernel(params, options, KernelType::CONVOLUTION, runner);
+    }
 }

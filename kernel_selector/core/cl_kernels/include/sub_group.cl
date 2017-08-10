@@ -18,6 +18,10 @@
 #pragma OPENCL EXTENSION  cl_intel_subgroups : enable
 #endif
 
+#if defined(cl_intel_subgroups_short)
+#pragma OPENCL EXTENSION  cl_intel_subgroups_short : enable
+#endif
+
 #define TRANSPOSE_BLOCK_8( _block )   \
         (float8)( intel_sub_group_shuffle( _block, 0 ), \
                   intel_sub_group_shuffle( _block, 1 ), \

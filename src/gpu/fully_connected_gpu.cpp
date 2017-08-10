@@ -83,7 +83,7 @@ public:
     {
         auto fc_params = get_weights_bias_default_params<kernel_selector::fully_connected_params>(arg);
         auto fc_optional_params = get_default_weights_bias_optional_params<kernel_selector::fully_connected_optional_params>(arg.get_program());
-        fc_optional_params.allowReorderInput = true;
+        fc_optional_params.allowInputReordering = true;
 
         convert_activation_func_params(arg.get_primitive(), fc_params);
 

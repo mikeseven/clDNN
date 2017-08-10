@@ -203,7 +203,7 @@ event_impl::ptr kernel::run(
     const std::vector<event_impl::ptr>& dependencies,
     const kernel_arguments_data& args) const
 {
-    auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id);
+    auto clkernel = context()->get_kernels_cache().get_kernel(_kernel_id, _one_time_kernel);
 
     try {
         set_arguments(clkernel, kernel_data.arguments, args);

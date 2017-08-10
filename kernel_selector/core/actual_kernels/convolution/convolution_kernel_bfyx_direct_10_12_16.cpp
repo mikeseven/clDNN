@@ -33,6 +33,7 @@ namespace KernelSelector {
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableSubGroup();
+        k.EnableSubGroupShort();
         k.EnableBiasPerFeature();
         k.EnableBiasPerOutput();
         k.EnableNonBiasTerm();
