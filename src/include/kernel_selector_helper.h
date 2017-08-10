@@ -138,6 +138,19 @@ inline kernel_selector::data_type to_data_type(data_types dt)
     }
 }
 
+inline data_types from_data_type(kernel_selector::data_type dt)
+{
+    switch (dt)
+    {
+    case kernel_selector::data_type::INT8:   return cldnn::data_types::i8;
+    case kernel_selector::data_type::F16:    return cldnn::data_types::f16;
+    case kernel_selector::data_type::F32:    return cldnn::data_types::f32;
+    default:
+        assert(0);
+        return cldnn::data_types::f16;
+    }
+}
+
 inline kernel_selector::weights_type to_weights_type(data_types dt)
 {
     switch (dt)

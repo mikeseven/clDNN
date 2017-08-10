@@ -42,7 +42,7 @@ namespace KernelSelector
     }
 
     // Checks if we need boundary checking in kernel.
-    static bool NeedsBoundaryCheck(const PoolingParams& params)
+    bool PoolingKernelBase::NeedsBoundaryCheck(const PoolingParams& params) const
     {
         const auto& pp = params.poolParams;
 
@@ -103,5 +103,30 @@ namespace KernelSelector
         kd.needsBoundary = NeedsBoundaryCheck(params);
 
         return kd;
+    }
+
+    KernelsData PoolingKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, float estimatedTime) const
+    {
+        if (!Validate(params, options))
+        {
+            return{};
+        }
+
+        const PoolingParams& orgParams = static_cast<const PoolingParams&>(params);
+
+        DispatchData runInfo = SetDefault(orgParams);
+
+        KernelData kd = KernelData::Default<PoolingParams>(params);
+
+        auto cldnn_jit = GetJitConstants(orgParams, runInfo);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);
+        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
+
+        auto& kernel = kd.kernels[0];
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point);
+
+        kd.estimatedTime = estimatedTime;
+
+        return{ kd };
     }
 }

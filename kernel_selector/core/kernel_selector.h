@@ -19,7 +19,8 @@
 #include "kernel_base.h"
 #include "kernel_selector_common.h"
 #include "kernel_selector_params.h"
- 
+#include "kernel_runner_interface.h" 
+
 namespace KernelSelector 
 {
     using KernelList = std::vector<std::shared_ptr<KernelBase>>;
@@ -33,6 +34,8 @@ namespace KernelSelector
 
         virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const = 0;
 
+        virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options, KernelRunnerInterface& runner) const;
+
     protected:
         template<typename T>
         inline void Attach()
@@ -42,7 +45,15 @@ namespace KernelSelector
 
         virtual KernelsData GetNaiveBestKernel(const Params& params, const OptionalParams& options, KernelType kType) const;
 
+        virtual KernelsData GetAutoTuneBestKernel(const Params& params, const OptionalParams& options, KernelType kType, KernelRunnerInterface& runner) const;
+
         KernelList implementations;
         ForceList forceKernels;
+
+    private:
+        virtual std::map<std::string, std::tuple<std::string, int>> LoadTunedKernels() const;
+        virtual void StoreTunedKernel(const std::string hash, const std::string name, const int autoTuneIndex) const;
+
+        const std::string tunedkerenlsCacheFileName = "tuner_kernels_cache.txt";
     };
 }

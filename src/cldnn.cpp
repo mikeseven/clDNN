@@ -270,22 +270,28 @@ void cldnn_get_event_profiling_info(cldnn_event event, cldnn_profiling_interval*
     exception_handler(CLDNN_ERROR, status, [&]()
     {
         SHOULD_NOT_BE_NULL(event, "Event");
-        auto& profiling_info = api_cast(event)->get_profiling_info();
-        SHOULD_NOT_EQUAL_0(profiling_info.size(), "Profiling info of event");
-        if (size_ret)
-            *size_ret = profiling_info.size();
-        if(size < profiling_info.size())
+        if (!profiling && !size_ret)
         {
-            if(status) *status = CLDNN_INVALID_ARG;
+            if (status) *status = CLDNN_INVALID_ARG;
             return;
         }
-
-        size_t i = 0;
-        for(auto& info : profiling_info)
+        auto& profiling_info = api_cast(event)->get_profiling_info();
+        if (size_ret)
+            *size_ret = profiling_info.size();
+        if(profiling != nullptr)
         {
-            profiling[i].name = info.name;
-            profiling[i].nanoseconds = info.nanoseconds;
-            ++i;
+            if (size != profiling_info.size())
+            {
+                if (status) *status = CLDNN_INVALID_ARG;
+                return;
+            }
+            size_t i = 0;
+            for (auto& info : profiling_info)
+            {
+                profiling[i].name = info.name;
+                profiling[i].nanoseconds = info.nanoseconds;
+                ++i;
+            }
         }
     });
 }
