@@ -22,7 +22,7 @@
 #include "kernel_selector_params.h"
 #include <float.h>
 #include <sstream>
- 
+
 #define AGE_BASED "-cl-no-subgroup-ifp"
 #define ROUND_ROBIN ""
 
@@ -65,8 +65,8 @@ namespace KernelSelector {
         bool        batch_compilation;
 
         KernelString() :
-            str(""),jit(""),
-            options(""),entry_point(""),
+            str(""), jit(""),
+            options(""), entry_point(""),
             batch_compilation(false)
         {};
     };
@@ -362,13 +362,13 @@ namespace KernelSelector {
         }
     }
 
-    inline std::string toString(MeanSubtructMode mode)
+    inline std::string toString(MeanSubtractMode mode)
     {
         switch (mode)
         {
-        case MeanSubtructMode::NONE:            return "NONE";
-        case MeanSubtructMode::INSIDE_PARAMS:   return "INSIDE_PARAMS";
-        case MeanSubtructMode::IN_BUFFER:       return "IN_BUFFER";
+        case MeanSubtractMode::NONE:            return "NONE";
+        case MeanSubtractMode::INSIDE_PARAMS:   return "INSIDE_PARAMS";
+        case MeanSubtractMode::IN_BUFFER:       return "IN_BUFFER";
         default: return "";
         }
     }

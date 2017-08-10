@@ -642,19 +642,27 @@ inline JitConstants MakeReorderJitConstants(const ReorderParams& params)
 
     jit.AddConstant(MakeJitConstant("MEAN_SUBTRACT_" + toString(params.reorderParams.mode), 1));
 
-    if (params.reorderParams.mode == MeanSubtructMode::INSIDE_PARAMS)
+    if (params.reorderParams.mode == MeanSubtractMode::INSIDE_PARAMS)
     {
         jit.AddConstant(MakeJitConstant("VALUE_TO_SUBTRACT", params.reorderParams.meanValues));
     }
-    else if (params.reorderParams.mode == MeanSubtructMode::IN_BUFFER)
+    else if (params.reorderParams.mode == MeanSubtractMode::IN_BUFFER)
     {
         jit.AddConstant(MakeJitConstant("MEAN_SUBTRACT", params.reorderParams.mean));
     }
 
-    Datatype calc_type = params.inputs[0].GetDType();
+    //half->half without subtraction (so plain reorder) can be done on shorts without explicit fp16 support
+    bool useUshort = (params.inputs[0].GetDType() == Datatype::F16 && params.output.GetDType() == Datatype::F16 &&
+        params.reorderParams.mode == MeanSubtractMode::NONE);
+    
+    Datatype calc_type = useUshort ? Datatype::UINT16 : params.inputs[0].GetDType();
+
     jit.AddConstants({
         MakeJitConstant("CALC_TYPE",                      toCLType(calc_type)),
         MakeJitConstant("TO_CALC_TYPE",      "convert_" + toCLType(calc_type)),
+        MakeJitConstant("INPUT_REORDER_TYPE",             useUshort ? toCLType(Datatype::UINT16) : "INPUT0_TYPE"),
+        MakeJitConstant("OUTPUT_REORDER_TYPE",            useUshort ? toCLType(Datatype::UINT16) : "OUTPUT_TYPE"),
+        MakeJitConstant("TO_OUTPUT_REORDER_TYPE",         useUshort ? "" : "TO_OUTPUT_TYPE")
     });
 
     return jit;
