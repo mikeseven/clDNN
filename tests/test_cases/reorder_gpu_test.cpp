@@ -721,7 +721,7 @@ TEST(reorder_gpu_opt, basic_remove_redundant)
 {
     engine eng;
 
-    memory in = memory::allocate(eng, { data_types::f32, format::bfyx, tensor{ 1, 1, 1, 1 } });
+    memory in = memory::allocate(eng, { data_types::f32, format::bfyx, tensor{ 1, 2, 2, 1 } });
     topology tpl{
         input_layout("in", in.get_layout()),
         reorder("r1", "in", format::bfyx, data_types::f32),
@@ -745,8 +745,8 @@ TEST(reorder_gpu_opt, basic_remove_redundant_due_to_implicit_reorders)
 {
     engine eng;
 
-    memory in = memory::allocate(eng, { data_types::f32, format::yxfb, tensor{ 1, 1, 1, 1 } });
-    memory weights = memory::allocate(eng, { data_types::f32, format::bfyx, tensor{ 1, 1, 1, 1 } });
+    memory in = memory::allocate(eng, { data_types::f32, format::yxfb, tensor{ 1, 2, 2, 1 } });
+    memory weights = memory::allocate(eng, { data_types::f32, format::bfyx, tensor{ 1, 2, 2, 1 } });
     topology tpl{
         input_layout("in", in.get_layout()),
         convolution("conv", "in", { "weights" }),
@@ -771,8 +771,8 @@ TEST(reorder_gpu_opt, basic_remove_redundant_output_due_to_implicit_reorders)
 {
     engine eng;
 
-    memory in = memory::allocate(eng, { data_types::f32, format::yxfb, tensor{ 1, 1, 1, 1 } });
-    memory weights = memory::allocate(eng, { data_types::f32, format::bfyx, tensor{ 1, 1, 1, 1 } });
+    memory in = memory::allocate(eng, { data_types::f32, format::yxfb, tensor{ 1, 2, 2, 1 } });
+    memory weights = memory::allocate(eng, { data_types::f32, format::bfyx, tensor{ 1, 2, 2, 1 } });
     topology tpl{
         input_layout("in", in.get_layout()),
         convolution("conv", "in",{ "weights" }),
@@ -799,8 +799,7 @@ TEST(reorder_gpu_opt, non_trivial_remove_redundant)
 {
     engine eng;
 
-    memory in = memory::allocate(eng, { data_types::f32, format::yxfb, tensor{ 1, 1, 1, 1 } });
-    memory weights = memory::allocate(eng, { data_types::f32, format::bfyx, tensor{ 1, 1, 1, 1 } });
+    memory in = memory::allocate(eng, { data_types::f32, format::yxfb, tensor{ 1, 1, 5, 2 } });
     topology tpl{
         input_layout("in", in.get_layout()),
         reorder("r1", "in", format::bfyx, data_types::f32)

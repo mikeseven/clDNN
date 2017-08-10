@@ -185,15 +185,27 @@ namespace {
 
     // pair.first tells whether l1 and l2 are absolutely identical
     // pair.second tells whether l1 and l2 can be reinterpreted to each other without need of reordering
+    // note: layouts can only be considered identical if data size described by both layouts match (so no data are genereted nor dropped)
     std::pair<bool, bool> are_layouts_identical(layout const& l1, layout const& l2)
     {
         if (l1 == l2)
             return{ true, true };
         if (l1.data_type != l2.data_type)
             return{ false, false };
+        if (l1.size != l2.size)
+            return{ false, false };
 
         auto l1_pitch = l1.get_pitches();
         auto l2_pitch = l2.get_pitches();
+
+        //ignore pitches which will never be used (for dims with size == 1 && lpad == 0)
+        for (size_t i = 0; i < CLDNN_TENSOR_DIM_MAX; ++i)
+            if (l1.size.raw[i] == 1 && l1.data_padding.lower_size().raw[i] == 0)
+                l1_pitch.raw[i] = 0;
+        for (size_t i = 0; i < CLDNN_TENSOR_DIM_MAX; ++i)
+            if (l2.size.raw[i] == 1 && l2.data_padding.lower_size().raw[i] == 0)
+                l2_pitch.raw[i] = 0;
+
         auto l1_offset = l1.get_linear_offset();
         auto l2_offset = l2.get_linear_offset();
         if (l1_pitch == l2_pitch && l1_offset == l2_offset)
@@ -371,6 +383,7 @@ void program_impl::post_optimize_graph()
 {
     layout_optimizer lo(engine);
     post_optimize_weights(lo);
+    remove_redundant_reorders(); //TODO: do we need it at this place also?
     //prepare_padding(); - TODO: padding should be prepare according to the kernels needs
 }
 

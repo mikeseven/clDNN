@@ -291,7 +291,7 @@ struct layout
     {
         auto sizes = get_buffer_size().sizes(format);
         std::vector<tensor::value_type> pitches(sizes.size(), tensor::value_type(1));
-        std::partial_sum(sizes.rbegin() + 1, sizes.rend(), pitches.rbegin() + 1, std::multiplies<tensor::value_type>());
+        std::partial_sum(sizes.rbegin(), sizes.rend() - 1, pitches.rbegin() + 1, std::multiplies<tensor::value_type>());
         return{ format, pitches };
     }
 
