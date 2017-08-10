@@ -71,20 +71,27 @@ public:
         return reinterpret_cast<std::vector<std::shared_ptr<const primitive_inst>> const&>(_deps);
     }
 
-    const memory& dep_memory(size_t index) const { return dependencies().at(index)->output_memory(); }
-    const memory& output_memory() const { return _output.get(); }
-    primitive_type_id type() const { return _node.type(); }
-    primitive_id id() const { return _node.id(); }
-    const auto desc() const { return _node.get_primitive(); }
-    network_impl& get_network() const { return _network; }
+    virtual size_t      inputs_memory_count()           const { return dependencies().size(); }
+    const memory&       dep_memory(size_t index)        const { return dependencies().at(index)->output_memory(); }
+    const memory&       output_memory()                 const { return _output.get(); }
+    primitive_type_id   type()                          const { return _node.type(); }
+    primitive_id        id()                            const { return _node.id(); }
+    const auto          desc()                          const { return _node.get_primitive(); }
+    network_impl&       get_network()                   const { return _network; }
+    //return pointer to const to prevent arbitrary 'execute' call -> use primitive_inst.execute() instead
+    const auto          get_impl()                      const { return _impl.get(); }
+
+    const memory&       input_memory(size_t index = 0)  const 
+    { 
+        if (static_cast<int32_t>(index) >= inputs_memory_count())
+            throw std::range_error("input offset too big");
+        return dep_memory(index); 
+    }
 
     event_impl::ptr execute(const std::vector<event_impl::ptr>& events);
 
     auto output_changed() const { return _output_changed; }
     void reset_output_change() { _output_changed = false; }
-
-    //return pointer to const to prevent arbitrary 'execute' call -> use primitive_inst.execute() instead
-    const auto get_impl() const { return _impl.get(); }
 
 protected:
     primitive_inst(network_impl& network, program_node const& node, bool allocate_buffer);

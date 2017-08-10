@@ -49,7 +49,7 @@ public:
 public:
     typed_primitive_inst(network_impl& network, batch_norm_node const& node);
 
-    const memory& input_memory() const { return dep_memory(0); }
+    size_t inputs_memory_count() const override { return static_cast<size_t>(1); }
     const memory& mean_memory() const { return dep_memory(1); }
     const memory& variance_memory() const { return dep_memory(2); }
 };

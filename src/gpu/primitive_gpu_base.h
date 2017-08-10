@@ -20,6 +20,7 @@
 #include "primitive_inst.h"
 #include "kernel.h"
 #include "events_waiter.h"
+#include "error_handler.h"
 #include "kernel_selector_helper.h"
 
 namespace cldnn { namespace gpu
@@ -80,8 +81,14 @@ protected:
     virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<PType>& instance, int32_t /*split*/) const
     {
         kernel::kernel_arguments_data args;
-        args.inputs = { &instance.input_memory() };
+
+        for (size_t i = 0; i < instance.inputs_memory_count(); i++)
+        {
+            args.inputs.push_back(&instance.input_memory(i));
+        }
+
         args.output = &instance.output_memory();
+
         return args;
     }
 
@@ -100,7 +107,8 @@ protected:
 
     virtual event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, typed_primitive_inst<PType>& instance) override
     {
-        validate(instance);
+        const bool validated = validate(instance);
+        CLDNN_ERROR_NOT_EQUAL(_outer.id(), "validate", validated, "", true, "not a valid instance.");
 
         if (optimized_out(instance))
         {

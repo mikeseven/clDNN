@@ -74,8 +74,8 @@ std::string eltwise_inst::to_string(eltwise_node const& node)
 eltwise_inst::typed_primitive_inst(network_impl& network, eltwise_node const& node)
     :parent(network, node)
 {
-    auto input_layout = input_memory().get_layout();
-    auto input2_layout = input2_memory().get_layout();
+    auto input_layout = input_memory(0).get_layout();
+    auto input2_layout = input_memory(1).get_layout();
 
     CLDNN_ERROR_LAYOUT_MISMATCH(node.id(), "input layout", input_layout, "input_2 layout", input2_layout, "Different layouts of eltwise's inputs");
 }

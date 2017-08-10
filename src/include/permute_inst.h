@@ -46,8 +46,6 @@ public:
 
 public:
     typed_primitive_inst(network_impl& network, permute_node const& node);
-
-    const memory& input_memory() const { return dep_memory(0); }
 };
 
 using permute_inst = typed_primitive_inst<permute>;

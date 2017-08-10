@@ -51,7 +51,7 @@ public:
 public:
     typed_primitive_inst(network_impl& network, scale_node const& desc);
 
-    const memory& input_memory() const { return dep_memory(0); }
+    size_t inputs_memory_count() const override { return static_cast<size_t>(1); }
     const memory& scale_memory() const { return dep_memory(1); }
     const memory& bias_memory() const { return dep_memory(2); }
 

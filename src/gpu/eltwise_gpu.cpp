@@ -43,20 +43,6 @@ struct eltwise_gpu : typed_primitive_gpu_impl<eltwise>
     using parent = typed_primitive_gpu_impl<eltwise>;
     using parent::parent;
 
-protected:
-
-    virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<eltwise>& instance, int32_t) const override
-    {
-        gpu::kernel::kernel_arguments_data args;
-
-        args.inputs = { &instance.input_memory(), &instance.input2_memory() };
-        args.output = &instance.output_memory();
-
-        return args;
-    }
-
-public:
-
     static primitive_impl* create(const eltwise_node& arg) 
     { 
         auto ew_params = get_default_params<kernel_selector::eltwise_params>(arg);

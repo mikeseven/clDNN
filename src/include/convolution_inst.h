@@ -90,7 +90,7 @@ public:
 public:
     typed_primitive_inst(network_impl& network, convolution_node const& node);
 
-    const memory& input_memory() const { return dep_memory(0); }
+    size_t inputs_memory_count() const override { return static_cast<size_t>(1); }
 
     const memory& weights_memory(size_t index) const
     {

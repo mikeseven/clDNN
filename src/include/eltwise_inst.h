@@ -48,9 +48,6 @@ public:
 
 public:
     typed_primitive_inst(network_impl& network, eltwise_node const& node);
-
-    const memory& input_memory() const { return dep_memory(0); }
-    const memory& input2_memory() const { return dep_memory(1); }
 };
 
 using eltwise_inst = typed_primitive_inst<eltwise>;

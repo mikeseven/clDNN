@@ -44,10 +44,8 @@ protected:
 
     virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<deconvolution>& instance, int32_t split) const override
     {
-        gpu::kernel::kernel_arguments_data args;
+        kernel::kernel_arguments_data args = parent::get_arguments(instance, split);
 
-        args.inputs     = { &instance.input_memory() };
-        args.output     = &instance.output_memory();
         args.weights    = &instance.weights_memory(split);
         args.bias       = instance.bias_term() ? &instance.bias_memory(split) : nullptr;
 

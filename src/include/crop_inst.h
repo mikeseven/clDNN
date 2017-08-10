@@ -50,8 +50,6 @@ public:
     static std::string to_string(crop_node const& node);
     typed_primitive_inst(network_impl& network, crop_node const& node);
 
-    const memory& input_memory() const { return dep_memory(0); }
-
 private:
     void on_execute() override;
 

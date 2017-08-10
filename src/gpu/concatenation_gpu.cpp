@@ -55,58 +55,40 @@ struct concatenation_gpu : typed_primitive_gpu_impl<concatenation>
 
 protected:
 
-    virtual bool optimized_out(typed_primitive_inst<concatenation>& instance) const override
+    virtual bool optimized_out(concatenation_inst& instance) const override
     {
         return 
             parent::optimized_out(instance) || _outer.can_be_optimized();
-    }
-
-    virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<concatenation>& instance, int32_t) const override
-    {
-        gpu::kernel::kernel_arguments_data args;
-
-        args.output = &instance.output_memory();
-
-        for (size_t i = 0; i < _outer.inputs_count(); ++i)
-        {
-            args.inputs.push_back(&instance.input_memory(i));
-        }
-
-        return args;
     }
 
 public:
 
     static primitive_impl* create(const concatenation_node& arg) 
     {
-        concatenation_gpu* concat = nullptr;
-        if (!arg.can_be_optimized())
+        if (arg.can_be_optimized())
         {
-            auto concat_params = get_default_params<kernel_selector::concatenation_params>(arg);
-            auto concat_optional_params = get_default_optional_params<kernel_selector::concatenation_optional_params>(arg.get_program());
-            auto axis = arg.get_primitive()->axis;
-
-            concat_params.inputs.resize(arg.inputs_count());
-            for (size_t i = 0; i < arg.inputs_count(); ++i)
-            {
-                const layout& input_layout = arg.input(i).get_output_layout();
-                concat_params.inputs[i] = convert_data_tensor(input_layout);
-            }
-
-
-            concat_params.concatParams.axis = convert_axis(axis);
-            concat_optional_params.kernelPerInput = true;
-
-            auto& kernel_selector = kernel_selector::concatenation_kernel_selector::Instance();
-            auto best_kernels = kernel_selector.GetBestKernels(concat_params, concat_optional_params);
-            CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
-
-            concat = new concatenation_gpu(arg, best_kernels[0]);
+            return new concatenation_gpu(arg, {});
         }
-        else
+
+        auto concat_params = get_default_params<kernel_selector::concatenation_params>(arg);
+        auto concat_optional_params = get_default_optional_params<kernel_selector::concatenation_optional_params>(arg.get_program());
+        auto axis = arg.get_primitive()->axis;
+
+        concat_params.inputs.resize(arg.inputs_count());
+        for (size_t i = 0; i < arg.inputs_count(); ++i)
         {
-            concat = new concatenation_gpu(arg, {});
+            const layout& input_layout = arg.input(i).get_output_layout();
+            concat_params.inputs[i] = convert_data_tensor(input_layout);
         }
+
+        concat_params.concatParams.axis = convert_axis(axis);
+        concat_optional_params.kernelPerInput = true;
+
+        auto& kernel_selector = kernel_selector::concatenation_kernel_selector::Instance();
+        auto best_kernels = kernel_selector.GetBestKernels(concat_params, concat_optional_params);
+        CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
+
+        concatenation_gpu* concat = new concatenation_gpu(arg, best_kernels[0]);
 
         return concat;
     };

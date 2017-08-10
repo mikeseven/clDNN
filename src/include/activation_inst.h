@@ -49,7 +49,7 @@ public:
 public:
     typed_primitive_inst(network_impl& network, activation_node const& node);
 
-    const memory& input_memory() const { return dep_memory(0); }
+    size_t inputs_memory_count() const override { return static_cast<size_t>(1); }
     const memory& slope_memory() const { return dep_memory(1); }
 
     bool is_parameterized() const { return !argument.additional_params_input.empty(); }

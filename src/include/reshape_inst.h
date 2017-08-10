@@ -52,8 +52,6 @@ public:
 public:
     typed_primitive_inst(network_impl& network, reshape_node const& node);
 
-    const memory& input_memory() const { return dep_memory(0); }
-
 private:
     void on_execute() override;
 

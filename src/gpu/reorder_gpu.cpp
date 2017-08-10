@@ -29,19 +29,21 @@ struct reorder_gpu : typed_primitive_gpu_impl<reorder>
 
 protected:
 
-    virtual bool optimized_out(typed_primitive_inst<reorder>& instance) const override
+    virtual bool optimized_out(reorder_inst& instance) const override
     {
         return
             parent::optimized_out(instance) || _outer.can_be_optimized();
     }
 
-    virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<reorder>& instance, int32_t split) const override
+    virtual kernel::kernel_arguments_data get_arguments(reorder_inst& instance, int32_t split) const override
     {
         kernel::kernel_arguments_data args = parent::get_arguments(instance, split);
+
         if (_outer.has_mean())
         {
             args.bias = &instance.mean_memory();
         }
+
         return args;
     }
 

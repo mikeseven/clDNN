@@ -29,7 +29,7 @@ struct crop_gpu : typed_primitive_gpu_impl<crop>
 
 protected:
 
-    virtual bool optimized_out(typed_primitive_inst<crop>& instance) const override
+    virtual bool optimized_out(crop_inst& instance) const override
     {
         return
             parent::optimized_out(instance) || _outer.can_be_optimized();

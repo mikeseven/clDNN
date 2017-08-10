@@ -29,7 +29,7 @@ struct reshape_gpu : public typed_primitive_gpu_impl<reshape>
 
 protected:
 
-    virtual bool optimized_out(typed_primitive_inst<reshape>& instance) const override
+    virtual bool optimized_out(reshape_inst& instance) const override
     {
         return
             parent::optimized_out(instance) || _outer.is_in_place();
