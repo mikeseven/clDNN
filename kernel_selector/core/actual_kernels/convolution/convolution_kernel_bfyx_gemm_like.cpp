@@ -36,7 +36,7 @@ namespace KernelSelector
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableSubGroup();
-        //k.EnableSubGroupShort();
+        //k.EnableSubGroupShort(); // we need it for FP16 only. we check it on the Validate phase
         k.EnableBiasPerFeature();
         k.EnableNonBiasTerm();
         k.EnableBatching();

@@ -523,8 +523,8 @@ namespace KernelSelector
         bool bSubGroupShortSupport = false;
         bool bFP16Support = false;
         bool bFP64Support = false;
-        uint64_t maxWorkGroupSize = 1;
-        uint64_t maxLocalMemSize = 16 * 1024 * 1024;
+        uint64_t maxWorkGroupSize = 0;
+        uint64_t maxLocalMemSize = 0;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
