@@ -73,7 +73,7 @@ public:
     }
 
     memory_impl& dep_memory(size_t index) const { return dependencies().at(index)->output_memory(); }
-    memory_impl& output_memory() const { return _output.get(); }
+    memory_impl& output_memory() const { return *_output; }
     size_t inputs_memory_count() const { return _node.get_primitive()->input.size(); }
     primitive_type_id type() const { return _node.type(); }
     primitive_id id() const { return _node.id(); }
@@ -83,9 +83,9 @@ public:
     //return pointer to const to prevent arbitrary 'execute' call -> use primitive_inst.execute() instead
     const auto get_impl() const { return _impl.get(); }
 
-    const memory& input_memory(size_t index = 0)  const 
+    memory_impl& input_memory(size_t index = 0)  const 
     { 
-        if (static_cast<int32_t>(index) >= inputs_memory_count())
+        if (index >= inputs_memory_count())
             throw std::range_error("input offset too big");
         return dep_memory(index); 
     }

@@ -65,7 +65,7 @@ namespace {
                     const auto& input_mem = data.intermediates[args[i].index];
                     if (input_mem)
                     {
-                        status = kernel.setArg(i, kernel_arg_handler<gpu::input_mem>::get(*input_mem));
+                        status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*input_mem).get_buffer());
                     }
                 }
                 break;

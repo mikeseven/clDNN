@@ -33,11 +33,11 @@ For example, all convolution implementations should derive from typed_primitive_
 template <class PType>
 struct typed_primitive_gpu_impl : public typed_primitive_impl<PType>
 {
-    const typed_program_node<PType>&    _outer;
-    engine_info_internal                _engine_info;
-    kernel_selector::kernel_data        _kernel_data;
-    std::vector<gpu::kernel>            _kernels;
-    std::vector<memory>                 _intermediates_memory;
+    const typed_program_node<PType>& _outer;
+    engine_info_internal _engine_info;
+    kernel_selector::kernel_data _kernel_data;
+    std::vector<gpu::kernel> _kernels;
+    std::vector<memory_impl::ptr> _intermediates_memory;
 
     typed_primitive_gpu_impl(const typed_program_node<PType>& arg, const kernel_selector::kernel_data& kd)
         : typed_primitive_impl<PType>(kd.weightsReorderParams)
@@ -131,7 +131,7 @@ protected:
 
                 for (const auto& m : _intermediates_memory)
                 {
-                    args.intermediates.push_back(&m);
+                    args.intermediates.push_back(m);
                 }
 
                 auto event = _kernels[k].run(_kernel_data.kernels[k], tmp_events, args);

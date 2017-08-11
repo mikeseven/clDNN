@@ -34,7 +34,7 @@ struct fully_connected_gpu : typed_primitive_gpu_impl<fully_connected>
     using parent = typed_primitive_gpu_impl<fully_connected>;
 
     std::vector<network_impl::ptr> _reorders;   // TODO: move this reorder to graph compiler
-    const memory* new_input_mem = nullptr;      // TODO: remove this hack
+    memory_impl::ptr new_input_mem;      // TODO: remove this hack
 
     fully_connected_gpu(const fully_connected_node& arg, const kernel_selector::kernel_data& kd, std::vector<network_impl::ptr> reorders)
         : parent(arg, kd)
@@ -101,12 +101,10 @@ public:
         if (fc_params.inputs[0].GetLayout() != new_fc_params.inputs[0].GetLayout())
         {
             const auto& input_layout = arg.input().get_output_layout();
-            cldnn::topology topology(
-                cldnn::input_layout("input", input_layout),
-                cldnn::reorder("reorder", "input", from_data_layout(new_fc_params.inputs[0].GetLayout()), input_layout.data_type)
-            );
-
-            reorders.push_back(arg.get_program().get_engine()->build_network(*api_cast(topology.get()), cldnn::build_options()));
+            topology_impl tpl;
+            tpl.add(std::make_shared<cldnn::input_layout>("input", input_layout));
+            tpl.add(std::make_shared<cldnn::reorder>("reorder", "input", from_data_layout(new_fc_params.inputs[0].GetLayout()), input_layout.data_type));
+            reorders.push_back(arg.get_program().get_engine().build_network(tpl, cldnn::build_options()));
         }
 
         auto fc = new fully_connected_gpu(arg, best_kernels[0], reorders);
