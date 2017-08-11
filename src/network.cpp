@@ -106,17 +106,6 @@ void network_impl::execute(const std::vector<refcounted_obj_ptr<event_impl>>& ev
     for(auto& inst : _exec_order)
         execute_primitive(inst, events);
 
-    if (get_engine().get_context()->enabled_single_kernel())
-    {
-        auto it = _events.find(get_engine().get_context()->single_kernel_name());
-        if (it != _events.end())
-        {
-            //replace outputs' events so waiting for output will wait for single kernel (to have better fps results)
-            for (auto& out : _outputs)
-                _events[out->id()] = it->second;
-        }
-    }
-
     for (auto& prim : _primitives)
         prim.second->reset_output_change();
 }
