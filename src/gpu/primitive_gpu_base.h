@@ -42,13 +42,13 @@ struct typed_primitive_gpu_impl : public typed_primitive_impl<PType>
     typed_primitive_gpu_impl(const typed_program_node<PType>& arg, const kernel_selector::kernel_data& kd)
         : typed_primitive_impl<PType>(kd.weightsReorderParams)
         , _outer(arg)
-        , _engine_info(arg.get_program().get_engine()->get_context()->get_engine_info())
+        , _engine_info(arg.get_program().get_engine().get_context()->get_engine_info())
         , _kernel_data(kd)
     {
         _kernels.reserve(kd.kernels.size());
         for (size_t i = 0; i < kd.kernels.size(); ++i)
         {
-            gpu::kernel kernel(_outer.get_program().get_engine()->get_context(), kd.kernels[i].kernelString);
+            gpu::kernel kernel(_outer.get_program().get_engine().get_context(), kd.kernels[i].kernelString);
             _kernels.emplace_back(std::move(kernel));
         }
 
@@ -61,9 +61,8 @@ struct typed_primitive_gpu_impl : public typed_primitive_impl<PType>
                 { 1,1,1,(tensor::value_type)(size / bpp) }
             };
 
-            auto eimpl = arg.get_program().get_engine().get();
-            auto api_engine = *reinterpret_cast<engine*>(&eimpl);
-            _intermediates_memory.push_back(memory::allocate(api_engine, expected_layout));
+            auto& eimpl = arg.get_program().get_engine();
+            _intermediates_memory.push_back(eimpl.allocate_buffer(expected_layout));
         }
     }
 protected:
@@ -102,7 +101,7 @@ protected:
         if (events.size() == 1)
             return events[0];
 
-        return events_waiter(_outer.get_program().get_engine()->get_context()).run(events);
+        return events_waiter(_outer.get_program().get_engine().get_context()).run(events);
     }
 
     virtual event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, typed_primitive_inst<PType>& instance) override
