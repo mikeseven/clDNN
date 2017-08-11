@@ -82,8 +82,8 @@ file(GLOB __CLDNN_Headers__include
   )
 
 # Special handling of capabilities files.
-set(__CLDNN_Directory__caps)           "${CMAKE_CURRENT_SOURCE_DIR}/caps")
-set(__CLDNN_Label__caps)               "caps")
+set(__CLDNN_Directory__caps            "${CMAKE_CURRENT_SOURCE_DIR}/caps")
+set(__CLDNN_Label__caps                "caps")
 foreach(__CLDNN_CapsScanDir ${CLDNN__CAPS_SCAN_ORDER})
   string(REPLACE ";" "\;" __CLDNN_CapsScanDir "${__CLDNN_CapsScanDir}") # [WA#1] Must escape ; again if occurred in item.
   file(GLOB __CLDNN_Sources__caps "${__CLDNN_Directory__caps}/${__CLDNN_CapsScanDir}/*.inc")
