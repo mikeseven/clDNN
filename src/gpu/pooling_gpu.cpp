@@ -94,6 +94,13 @@ struct pooling_gpu : typed_primitive_gpu_impl<pooling>
         pp.poolType                 = cldnn_2_pool_type(primitive->mode);
         pp.remainderAction          = kernel_selector::pool_remainder::CEIL;
         pp.divMode                  = cldnn_2_kernel_divider_mode(primitive->mode);
+
+        const auto additional_offset = tensor::max(input_offset, 0);
+        if (additional_offset != 0)
+        {
+            const auto& input_layout = arg.input().get_output_layout();
+            pool_params.inputs[0] = convert_data_tensor(input_layout, 1, additional_offset);
+        }
         
         pp.poolSize = {
             (uint32_t)primitive->size.spatial[0],

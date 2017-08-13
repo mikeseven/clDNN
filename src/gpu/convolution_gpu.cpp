@@ -73,11 +73,18 @@ public:
         const auto& input_offset    = primitive->input_offset;
 
         const auto depthwise_separable_opt = arg.get_depthwise_sep_opt();
+        const auto actual_split = depthwise_separable_opt ? (decltype(split))1 : split;
 
         assert(arg.get_output_layout().size.feature[0] / primitive->split() == weights_layout.size.batch[0]);
 
-        auto conv_params = get_weights_bias_default_params<kernel_selector::convolution_params>(arg, depthwise_separable_opt ? 1 : split);
+        auto conv_params = get_weights_bias_default_params<kernel_selector::convolution_params>(arg, actual_split);
         auto conv_optional_params = get_default_weights_bias_optional_params<kernel_selector::convolution_optional_params>(arg.get_program());
+
+        const auto additional_offset = tensor::max(input_offset, 0);
+        if (additional_offset != 0)
+        {
+            conv_params.inputs[0] = convert_data_tensor(input_layout, actual_split, additional_offset);
+        }
 
         convert_activation_func_params(primitive, conv_params);
 
