@@ -65,10 +65,10 @@ namespace KernelSelector
         switch (func)
         {
         case ActivationFunction::LINEAR:
+        case ActivationFunction::CLAMP:
             paramsNum = 2;
             break;
         case ActivationFunction::RELU_NEGATIVE_SLOPE:
-        case ActivationFunction::BRELU:
             paramsNum = 1;
             break;
         default:

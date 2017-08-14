@@ -223,7 +223,7 @@ TEST(activation_f32_fw_gpu, basic_yxfb_all_functions)
         activation_hyperbolic_tan,
         activation_relu,
         activation_relu_negative_slope,
-        activation_brelu,
+        activation_clamp,
         activation_softrelu,
         activation_abs,
         activation_linear,
@@ -287,8 +287,8 @@ TEST(activation_f32_fw_gpu, basic_yxfb_all_functions)
                 case activation_relu:
                     EXPECT_FLOAT_EQ(std::fmax((float)input_ptr[i], 0.f), output_ptr[i]);
                     break;
-                case activation_brelu:
-                    EXPECT_FLOAT_EQ(std::fmin((float)std::fmax((float)input_ptr[i], 0), params.a), output_ptr[i]);
+                case activation_clamp:
+                    EXPECT_FLOAT_EQ(std::fmin((float)std::fmax((float)input_ptr[i], params.a), params.b), output_ptr[i]);
                     break;
                 case activation_softrelu:
                     EXPECT_FLOAT_EQ(std::log(1.f + std::exp((float)input_ptr[i])), output_ptr[i]);

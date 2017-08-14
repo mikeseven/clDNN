@@ -252,7 +252,7 @@ namespace KernelSelector {
         case ActivationFunction::HYPERBOLIC_TAN:        method = "HYPERBOLIC_TAN"; break;
         case ActivationFunction::RELU:                  method = "RELU"; break;
         case ActivationFunction::RELU_NEGATIVE_SLOPE:   method = "RELU_NEGATIVE_SLOPE"; break;
-        case ActivationFunction::BRELU:                 method = "BRELU"; break;
+        case ActivationFunction::CLAMP:                 method = "CLAMP"; break;
         case ActivationFunction::SOFTRELU:              method = "SOFTRELU"; break;
         case ActivationFunction::ABS:                   method = "ABS"; break;
         case ActivationFunction::SQUARE:                method = "SQUARE"; break;

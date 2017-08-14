@@ -326,7 +326,7 @@ typedef enum cldnn_activation_func_t
     activation_hyperbolic_tan,          // tanh(val)
     activation_relu,                    // max(0, val)
     activation_relu_negative_slope,     // max(0, val) + a * min(0, val)    (a is additional param)
-    activation_brelu,                   // max(0, min(a, val)               (a is additional param)
+    activation_clamp,                   // max(a, min(b, val)               (a,b are additional param)
     activation_softrelu,                // log(1 + exp(val))
     activation_abs,                     // abs(val)
     activation_linear,                  // a*val + b                        (a,b are additional params) 

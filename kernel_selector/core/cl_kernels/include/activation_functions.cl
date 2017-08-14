@@ -22,7 +22,7 @@
 #define ACTIVATION_RELU_NEGATIVE_SLOPE(input, slope)    isinf(TO_UNIT_TYPE(slope)) ? ((input >= UNIT_VAL_ZERO) ? \
                                                         input : -TO_UNIT_TYPE(slope)) : \
                                                         (fmax(input, UNIT_VAL_ZERO) + TO_UNIT_TYPE(slope) * fmin(input, UNIT_VAL_ZERO))
-#define ACTIVATION_BRELU(input, m)                      (fmax(UNIT_VAL_ZERO, fmin(m, input)))
+#define ACTIVATION_CLAMP(input, m, n)                      (fmax(m, fmin(n, input)))
 #define ACTIVATION_SOFTRELU(input)                      (log(UNIT_VAL_ONE + exp(input)))
 #define ACTIVATION_ABS(input)                           (fabs(input))
 #define ACTIVATION_LINEAR(input, m, n)                  (m*input + n)
@@ -37,8 +37,8 @@
     #define ACTIVATION(input, m, n) ACTIVATION_RELU(input)
 #elif defined ACTIVATION_FUNCTION_RELU_NEGATIVE_SLOPE
     #define ACTIVATION(input, m, n) ACTIVATION_RELU_NEGATIVE_SLOPE(input, m)
-#elif defined ACTIVATION_FUNCTION_BRELU
-    #define ACTIVATION(input, m, n) ACTIVATION_BRELU(input, m)
+#elif defined ACTIVATION_FUNCTION_CLAMP
+    #define ACTIVATION(input, m, n) ACTIVATION_CLAMP(input, m, n)
 #elif defined ACTIVATION_FUNCTION_SOFTRELU
     #define ACTIVATION(input, m, n) ACTIVATION_SOFTRELU(input)    
 #elif defined ACTIVATION_FUNCTION_ABS
