@@ -43,7 +43,6 @@ public:
 
     static primitive_impl* create(const batch_norm_node &arg) 
     { 
-        CLDNN_ERROR_BOOL(arg.id(), "!use_global_stats", !arg.get_primitive()->use_global_stats, "no_global_stats is not supported - it's for training only.");
         auto ew_params = get_default_params<kernel_selector::eltwise_params>(arg);
         auto ew_optional_params = get_default_optional_params<kernel_selector::eltwise_optional_params>(arg.get_program());
 

@@ -29,7 +29,7 @@
 using namespace cldnn;
 using namespace tests;
 
-TEST(batch_normalization_gpu, basic_in2x3x2x2_use_global_stats) {
+TEST(batch_normalization_gpu, basic_in2x3x2x2) {
     //  Mean   : 3x2x2
     //  Input  : 2x3x2x2
     //  Output : 2x3x2x2
@@ -61,7 +61,7 @@ TEST(batch_normalization_gpu, basic_in2x3x2x2_use_global_stats) {
     topology.add(input_layout("input", input.get_layout()));
     topology.add(data("mean", mean));
     topology.add(data("variance", variance));
-    topology.add(batch_norm("batch_norm", "input", "mean", "variance", true, epsilon));
+    topology.add(batch_norm("batch_norm", "input", "mean", "variance", epsilon));
 
     set_values(input, {
         1.f, 0.f, 5.f, 1.5f,
@@ -103,7 +103,7 @@ TEST(batch_normalization_gpu, basic_in2x3x2x2_use_global_stats) {
     }
 }
 
-TEST(batch_normalization_gpu, basic_in2x2x3x2_bfyx_use_global_stats) {
+TEST(batch_normalization_gpu, basic_in2x2x3x2_bfyx) {
     //  Mean   : 3x2x2
     //  Input  : 2x3x2x2
     //  Output : 2x3x2x2
@@ -135,7 +135,7 @@ TEST(batch_normalization_gpu, basic_in2x2x3x2_bfyx_use_global_stats) {
     topology.add(input_layout("input", input.get_layout()));
     topology.add(data("mean", mean));
     topology.add(data("variance", variance));
-    topology.add(batch_norm("batch_norm", "input", "mean", "variance", true, epsilon));
+    topology.add(batch_norm("batch_norm", "input", "mean", "variance", epsilon));
 
     set_values(input, {
         1.f, 2.f, -10.f, 3.f,
@@ -182,7 +182,7 @@ TEST(batch_normalization_gpu, basic_in2x2x3x2_bfyx_use_global_stats) {
     }
 }
 
-TEST(batch_normalization_gpu, basic_in2x2x3x2_bfyx_use_global_stats_padding) {
+TEST(batch_normalization_gpu, basic_in2x2x3x2_bfyx_padding) {
     //  Mean   : 3x2x2
     //  Input  : 2x3x2x2
     //  Output : 2x3x2x2
@@ -217,7 +217,7 @@ TEST(batch_normalization_gpu, basic_in2x2x3x2_bfyx_use_global_stats_padding) {
     topology.add(data("mean", mean));
     topology.add(data("variance", variance));
     topology.add(reorder("reorder", "input", input.get_layout().with_padding({ { 0, 0, 1, 2 }, 0 })));
-    topology.add(batch_norm("batch_norm", "reorder", "mean", "variance", true, epsilon, padding({ 0, 0, 2, 1 }, 0)));
+    topology.add(batch_norm("batch_norm", "reorder", "mean", "variance", epsilon, padding({ 0, 0, 2, 1 }, 0)));
 
     set_values(input, {
         1.f, 2.f, -10.f, 3.f,

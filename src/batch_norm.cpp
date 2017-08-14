@@ -38,13 +38,11 @@ std::string batch_norm_inst::to_string(batch_norm_node const& node)
     auto& input                     = node.input();
     auto& mean                      = node.mean();
     auto& variance                  = node.variance();
-    auto global_stats               = desc->use_global_stats ? " true" : "false";
 
     primitive_description << "id: " << desc->id << ", type: batch_norm" << 
         "\n\tinput id: " << input.id() << ", size: " << node.input().get_output_layout().count() << ",  size: " << input.get_output_layout().size <<
         "\n\tmean id: " << mean.id() << ", size: " << mean.get_output_layout().count() << ",  size: " << mean.get_output_layout().size <<
         "\n\tvariance id: " << variance.id() << ", size: " << variance.get_output_layout().count() << ",  size: " << variance.get_output_layout().size <<
-        "\n\tuse_global_stats: " << global_stats << 
         "\n\tepsilon: " << desc->epsilon << 
         "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
         "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
