@@ -72,7 +72,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , _weights(weights)
         , _bias(bias)
     {
-        if (weights.size() != bias.size())
+        if ((bias.size() != 0) && (weights.size() != bias.size()))
             throw std::runtime_error("convolution's weights/bias count does not match");
     }
 
@@ -151,7 +151,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , _weights(weights)
         , _bias(bias)
     {
-        if (weights.size() != bias.size())
+        if ((bias.size() != 0) && (weights.size() != bias.size()))
             throw std::runtime_error("convolution's weights/bias count does not match");
     }
 
