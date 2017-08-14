@@ -361,6 +361,8 @@ struct proposal_gpu : typed_primitive_impl<proposal>
             a->wait();
         }
 
+        auto ev = instance.get_network().get_engine().create_user_event(false);
+
         if (_kernel_data.fp16_unit_used) {
             execute<data_type_to_type<data_types::f16>::type>(instance);
         }
@@ -368,7 +370,8 @@ struct proposal_gpu : typed_primitive_impl<proposal>
             execute<data_type_to_type<data_types::f32>::type>(instance);
         }
        
-        return instance.get_network().get_engine().create_user_event(true);
+        dynamic_cast<cldnn::user_event*>(ev.get())->set(); // set as complete
+        return ev;
     }
 
     static primitive_impl* create(const proposal_node& arg) 

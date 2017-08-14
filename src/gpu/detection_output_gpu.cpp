@@ -490,6 +490,8 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
             a->wait();
         }
 
+        auto ev = instance.get_network().get_engine().create_user_event(false);
+
         const int num_of_images = instance.location_memory().get_layout().size.batch[0]; //batch size
 
         std::vector<std::vector<std::vector<bounding_box>>> bboxes(num_of_images); // Per image : label -> decoded bounding boxes.
@@ -508,7 +510,9 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
             generate_detections<data_type_to_type<data_types::f16>::type>(instance, num_of_images, bboxes, confidences);
         }
 
-        return instance.get_network().get_engine().create_user_event(true);
+        dynamic_cast<cldnn::user_event*>(ev.get())->set(); // set as complete
+        // TODO: consider refactoring create_user_event() to return cldnn::user_event*
+        return ev;
     }
 
     static primitive_impl* create(const detection_output_node& arg)

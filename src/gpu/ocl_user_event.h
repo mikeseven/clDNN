@@ -18,6 +18,12 @@ struct user_event : public base_event, public cldnn::user_event
     }
 
     void set_impl() override;
+
+    bool get_profiling_info_impl(std::list<cldnn_profiling_interval>& info) override;
+
+protected:
+    cldnn::instrumentation::timer<> _timer;
+    std::unique_ptr<cldnn::instrumentation::profiling_period_basic> _duration;
 };
 
 #ifdef _WIN32
