@@ -39,7 +39,7 @@ namespace KernelSelector {
 
         const auto totalSize = params.inputs[0].LogicalSize();
 
-        std::vector<size_t> global = { totalSize };
+        std::vector<size_t> global = { totalSize/NUM_COLS_WI };
         std::vector<size_t> local = GetOptimalLocalWorkGroupSizes(global);
 
         runInfo.gws0 = global[0];
@@ -66,7 +66,9 @@ namespace KernelSelector {
         const ActivationParams& params = static_cast<const ActivationParams&>(p);
 
         const auto totalSize = params.inputs[0].LogicalSize();
-        if ((totalSize % NUM_COLS_WI) != 0)
+        if ((totalSize % NUM_COLS_WI) != 0 ||
+            (params.inputs[0].GetFirstElementOffset() % NUM_COLS_WI) != 0 ||
+            (params.output.GetFirstElementOffset() % NUM_COLS_WI) != 0)
         {
             return false;
         }
