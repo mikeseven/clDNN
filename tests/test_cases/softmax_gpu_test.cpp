@@ -597,7 +597,7 @@ public:
         const memory & input = inputs[0];
 
         //Output is bfyx
-        auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, cldnn::format::bfyx, input.get_layout().size));
+        auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, input.get_layout().format, input.get_layout().size));
 
 //        const auto params = static_cast<cldnn::softmax *>(layer_parmas);
 
