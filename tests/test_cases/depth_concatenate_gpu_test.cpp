@@ -278,6 +278,18 @@ public:
         return format == cldnn_format_type::cldnn_format_bfyx;
     }
 
+    virtual cldnn::tensor get_expected_output_tensor() override
+    {
+        cldnn::tensor::value_type features = 0;
+        for (const auto& t : generic_params->input_layouts)
+        {
+            features += t.size.feature[0];
+        }
+
+        const auto& t = generic_params->input_layouts[0].size;
+        return{ t.batch[0], features, t.spatial[0], t.spatial[1] };
+    }
+
     template<typename Type>
     memory generate_reference_typed(const std::vector<memory> & inputs)
     {
