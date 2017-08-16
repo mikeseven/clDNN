@@ -234,7 +234,7 @@ inline bool floating_point_equal(FLOAT16 x, FLOAT16 y, int max_ulps_diff = 4) {
         return a == 0 && b == 0;
     }
     else {
-        return std::abs(a - b) <= (1 << (max_ulps_diff));
+        return std::abs(a - b) < (1 << (max_ulps_diff));
     }
 }
 
