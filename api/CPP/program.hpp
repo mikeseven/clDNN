@@ -37,11 +37,6 @@ enum class build_option_type
     /// @brief Allow primitives fusing during program build (default: false).
     fusing = cldnn_build_option_fusing,
 
-    /// @brief Enable primitives profiling (default: false).
-    /// @details This option allows to collect @ref profiling_interval for every program output.
-    /// This option reduces performance.
-    profiling = cldnn_build_option_profiling,
-
     /// @brief Enable implicit reordering for user inputs (default: false).
     optimize_data = cldnn_build_option_optimize_data,
 
@@ -94,11 +89,6 @@ struct build_option
 {
     /// @brief Allow primitives fusing during program build (default: false).
     static std::shared_ptr<const build_option> fusing(bool enable = false);
-
-    /// @brief Enable primitives profiling (default: false).
-    /// @details This option allows to collect @ref profiling_interval for every program output.
-    /// This option reduces performance.
-    static std::shared_ptr<const build_option> profiling(bool enable = false);
 
     /// @brief Enable implicit reordering for user inputs (default: false).
     static std::shared_ptr<const build_option> optimize_data(bool enable = false);
@@ -319,16 +309,6 @@ namespace detail
             return std::make_shared<object_type>(option);
         }
     };
-    template<> struct build_option_traits<build_option_type::profiling>
-    {
-        typedef build_option_bool<build_option_type::profiling> object_type;
-        static std::shared_ptr<const build_option> make_default() { return build_option::profiling(); }
-        static std::shared_ptr<const build_option> make_option(const cldnn_build_option& option)
-        {
-            assert(option.type == cldnn_build_option_profiling);
-            return std::make_shared<object_type>(option);
-        }
-    };
     template<> struct build_option_traits<build_option_type::optimize_data>
     {
         typedef build_option_bool<build_option_type::optimize_data> object_type;
@@ -386,11 +366,6 @@ namespace detail
 inline std::shared_ptr<const build_option> build_option::fusing(bool enable)
 {
     return std::make_shared<build_option_bool<build_option_type::fusing>>(enable);
-}
-
-inline std::shared_ptr<const build_option> build_option::profiling(bool enable)
-{
-    return std::make_shared<build_option_bool<build_option_type::profiling>>(enable);
 }
 
 inline std::shared_ptr<const build_option> build_option::optimize_data(bool enable)
@@ -502,8 +477,6 @@ private:
         {
         case cldnn_build_option_fusing:
             return  detail::build_option_traits<build_option_type::fusing>::make_option(option);
-        case cldnn_build_option_profiling:
-            return detail::build_option_traits<build_option_type::profiling>::make_option(option);
         case cldnn_build_option_optimize_data:
             return detail::build_option_traits<build_option_type::optimize_data>::make_option(option);
         case cldnn_build_option_debug:

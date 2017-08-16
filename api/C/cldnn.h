@@ -159,7 +159,6 @@ typedef struct
 typedef enum /*:int32_t*/
 {
     cldnn_build_option_fusing,                  ///< Allow primitives fusing during network build.
-    cldnn_build_option_profiling,               ///< Enable primitives profiling.
     cldnn_build_option_optimize_data,           ///< Enable implicit reordering for user input.
     cldnn_build_option_debug,                   ///< Enable debug mode.
     cldnn_build_option_outputs,                 ///< User selected list of network outputs.
