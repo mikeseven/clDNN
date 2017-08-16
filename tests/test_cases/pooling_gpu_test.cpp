@@ -1131,7 +1131,8 @@ public:
         int output_width = output.get_layout().get_buffer_size().spatial[0];
         int output_height = output.get_layout().get_buffer_size().spatial[1];
 
-        const auto input_pitches = get_linear_index_pitches(inputs[0].get_layout());
+        const auto input_desc = get_linear_memory_desc(inputs[0].get_layout());
+        const auto output_desc = get_linear_memory_desc(output.get_layout());
 
         switch (pooling_mode)
         {
@@ -1157,15 +1158,13 @@ public:
                                 int input_offset_y_end = std::min(input_offset_y_start + kernel_height, height);
                                 input_offset_y_start = std::max(input_offset_y_start, 0);
 
-                                int output_index = (b * feature + f) * output_height * output_width;
-                                tensor lower_padding = pooling->output_padding.lower_size();
-                                output_index += (lower_padding.spatial[1] + h) * output_width + lower_padding.spatial[0] + w;
+                                const size_t output_index = get_linear_index(output.get_layout(), b, f, h, w, output_desc);
 
                                 for (int y = input_offset_y_start; y < input_offset_y_end; y++) 
                                 {
                                     for (int x = input_offset_x_start; x < input_offset_x_end; x++) 
                                     {
-                                        const size_t input_index = get_linear_index(inputs[0].get_layout(), b, f, y, x, input_pitches);	
+                                        const size_t input_index = get_linear_index(inputs[0].get_layout(), b, f, y, x, input_desc);
                                         
                                         if (input_mem[input_index] > output_mem[output_index])
                                         {
@@ -1212,7 +1211,7 @@ public:
                                 {
                                     for (int x = input_offset_x_start; x < input_offset_x_end; x++) 
                                     {
-                                        const size_t input_index = get_linear_index(inputs[0].get_layout(), b, f, y, x, input_pitches);
+                                        const size_t input_index = get_linear_index(inputs[0].get_layout(), b, f, y, x, input_desc);
 
                                         output_mem[output_index] += input_mem[input_index];
                                         num_of_elements++;

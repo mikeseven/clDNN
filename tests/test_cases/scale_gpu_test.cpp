@@ -1456,28 +1456,28 @@ public:
             }
         }
 
-        const auto input_pitches = get_linear_index_pitches(input.get_layout());
-        const auto output_pitches = get_linear_index_pitches(output.get_layout());
-        const auto scale_pitches = get_linear_index_pitches(scale.get_layout());
-        const auto bias_pitches =
+        const auto input_desc = get_linear_memory_desc(input.get_layout());
+        const auto output_desc = get_linear_memory_desc(output.get_layout());
+        const auto scale_desc = get_linear_memory_desc(scale.get_layout());
+        const auto bias_desc =
             bias ?
-            get_linear_index_pitches(bias->get_layout()) :
-            Pitches();
+            get_linear_memory_desc(bias->get_layout()) :
+            memory_desc();
 
         for (int n = 0; n < in0_b; ++n)
         for (int c = 0; c < in0_f; ++c)
         for (int y = 0; y < in0_h; ++y)
         for (int x = 0; x < in0_w; ++x)
         {
-            const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x, input_pitches);
-            const size_t in1_idx = get_linear_index_with_broadcast(scale.get_layout(), n, c, y, x, scale_pitches);
-            const size_t out_idx = get_linear_index(output.get_layout(), n, c, y, x, output_pitches);
+            const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x, input_desc);
+            const size_t in1_idx = get_linear_index_with_broadcast(scale.get_layout(), n, c, y, x, scale_desc);
+            const size_t out_idx = get_linear_index(output.get_layout(), n, c, y, x, output_desc);
 
             out_mem[out_idx] = in0_mem[in0_idx] * in1_mem[in1_idx];
 
             if (bias)
             {
-                const size_t in2_idx = get_linear_index_with_broadcast(bias->get_layout(), n, c, y, x, bias_pitches);
+                const size_t in2_idx = get_linear_index_with_broadcast(bias->get_layout(), n, c, y, x, bias_desc);
                 out_mem[out_idx] += in2_mem[in2_idx];
             }
         }

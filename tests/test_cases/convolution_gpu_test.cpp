@@ -252,7 +252,7 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
     EXPECT_EQ(f_size, (int)output_cpu[0].size());
     EXPECT_EQ(b_size, (int)output_cpu.size());
     bool test_is_correct = true;
-    const auto output_pitches = generic_test::get_linear_index_pitches(output_layout);
+    const auto output_desc = generic_test::get_linear_memory_desc(output_layout);
 
     for (int b = 0; b < b_size; b++)
     {
@@ -270,7 +270,7 @@ void generic_convolution_test(cldnn::format test_input_fmt, cldnn::format test_f
                         //Ignore padded values in the output.
                         continue;
                     }
-                    size_t res_index = generic_test::get_linear_index(output_layout, b, f, y, x, output_pitches);
+                    size_t res_index = generic_test::get_linear_index(output_layout, b, f, y, x, output_desc);
                     // CPU reference format is bfyx.
                     if (!floating_point_equal(output_cpu[b][f][y][x], output_ptr[res_index])) {
                         test_is_correct = false;
@@ -2810,8 +2810,8 @@ public:
             }
         }
 
-        const auto input0_pitches = get_linear_index_pitches(inputs[0].get_layout());
-        const auto input1_pitches = get_linear_index_pitches(inputs[1].get_layout());
+        const auto input0_desc = get_linear_memory_desc(inputs[0].get_layout());
+        const auto input1_desc = get_linear_memory_desc(inputs[1].get_layout());
 
         // Convolve with weights
         for (int b = 0; b < input_size.batch[0]; b++)
@@ -2850,13 +2850,13 @@ public:
                                         continue;
                                     }
 
-                                    size_t input_index = get_linear_index(inputs[0].get_layout(), input_bi, input_fi, input_yi, input_xi, input0_pitches);
+                                    size_t input_index = get_linear_index(inputs[0].get_layout(), input_bi, input_fi, input_yi, input_xi, input0_desc);
 
                                     int weight_bi = out_f;
                                     int weight_fi = in_f;
                                     int weight_yi = kernel_y;
                                     int weight_xi = kernel_x;
-                                    size_t weight_index = get_linear_index(inputs[1].get_layout(), weight_bi, weight_fi, weight_yi, weight_xi, input1_pitches);
+                                    size_t weight_index = get_linear_index(inputs[1].get_layout(), weight_bi, weight_fi, weight_yi, weight_xi, input1_desc);
                                     output_mem[output_index] += input_mem[input_index] * weights_mem[weight_index];
                                 }
                             }

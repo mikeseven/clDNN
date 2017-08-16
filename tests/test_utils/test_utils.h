@@ -283,9 +283,15 @@ public:
     static std::string print_tensor(cldnn::tensor tensor);
 };
 
-struct Pitches
+struct pitches
 {
-    size_t x, y, f, b;
+    size_t b, f, y, x;
+};
+
+struct memory_desc
+{
+    pitches pitch;
+    size_t offset;
 };
 
 class generic_test : public ::testing::TestWithParam<std::tuple<test_params*, cldnn::primitive*>>
@@ -299,10 +305,10 @@ public:
     template<typename Type>
     void compare_buffers(const cldnn::memory& out, const cldnn::memory& ref);
 
-    static size_t get_linear_index(const cldnn::layout & layout, int b, int f, int y, int x, const Pitches& p);
-    static size_t get_linear_index_with_broadcast(const cldnn::layout& in_layout, int b, int f, int y, int x, const Pitches& p);
+    static size_t get_linear_index(const cldnn::layout & layout, int b, int f, int y, int x, const memory_desc& desc);
+    static size_t get_linear_index_with_broadcast(const cldnn::layout& in_layout, int b, int f, int y, int x, const memory_desc& desc);
 
-    static Pitches get_linear_index_pitches(const cldnn::layout & layout);
+    static memory_desc get_linear_memory_desc(const cldnn::layout & layout);
 
     static std::vector<test_params*> generate_generic_test_params(std::vector<test_params*>& all_generic_params);
 

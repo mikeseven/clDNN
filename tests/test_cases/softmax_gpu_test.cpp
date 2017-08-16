@@ -622,7 +622,7 @@ public:
         std::vector<float> cached_exp_vals;
         cached_exp_vals.resize(in0_f);
 
-        const auto input_pitches = get_linear_index_pitches(input.get_layout());
+        const auto input_desc = get_linear_memory_desc(input.get_layout());
 
         for (int n = 0; n < in0_b; ++n)
         for (int y = 0; y < in0_h; ++y)
@@ -632,7 +632,7 @@ public:
 
             for (int c = 0; c < in0_f; ++c)
             {
-                const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x, input_pitches);
+                const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x, input_desc);
 
                 max_val = std::max(max_val, static_cast<float>(in0_mem[in0_idx]));
             }
@@ -641,7 +641,7 @@ public:
 
             for (int c = 0; c < in0_f; ++c)
             {
-                const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x, input_pitches);
+                const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x, input_desc);
 
                 float tmp = static_cast<float>((Type)std::exp(static_cast<float>(in0_mem[in0_idx]) - max_val));
                 Z += tmp;
@@ -650,7 +650,7 @@ public:
 
             for (int c = 0; c < in0_f; ++c)
             {
-                const size_t out_idx = get_linear_index(output.get_layout(), n, c, y, x, input_pitches);
+                const size_t out_idx = get_linear_index(output.get_layout(), n, c, y, x, input_desc);
                 out_mem[out_idx] = (Type)(cached_exp_vals[c] / Z);
             }
         }

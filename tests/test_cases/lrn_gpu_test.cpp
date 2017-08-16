@@ -743,7 +743,7 @@ public:
         //Initialized output with zeros.
         std::fill(output_mem.begin(), output_mem.end(), static_cast<Type>(0));
 
-        const auto input_pitches = get_linear_index_pitches(inputs[0].get_layout());
+        const auto input_desc = get_linear_memory_desc(inputs[0].get_layout());
 
         switch (lrn_norm_region)
         {
@@ -763,7 +763,7 @@ public:
                                 Type scale = 0;
                                 for (int i = c_start; i < c_end; ++i) 
                                 {
-                                    size_t input_index = get_linear_index(inputs[0].get_layout(), n, i, h, w, input_pitches);
+                                    size_t input_index = get_linear_index(inputs[0].get_layout(), n, i, h, w, input_desc);
                                     Type value = input_mem[input_index] * alpha_div_by_size_abs_sqrt;
                                     scale += value * value;
                                 }
@@ -773,7 +773,7 @@ public:
                                 tensor lower_padding = lrn->output_padding.lower_size(); 
                                 output_index += (lower_padding.spatial[1] + h) * output_width + lower_padding.spatial[0] + w;
 
-                                size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w, input_pitches);
+                                size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w, input_desc);
                                 output_mem[output_index] = input_mem[input_index] * (Type)(float)pow((float)scale, -(float)beta);
                             }
                         }
@@ -806,13 +806,13 @@ public:
                                 {
                                     for (int nw = w_start; nw < w_end; ++nw) 
                                     {
-                                        size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, nh, nw, input_pitches);
+                                        size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, nh, nw, input_desc);
                                         Type value = input_mem[input_index] * alpha_abs_sqrt;
                                         scale += value * value;
                                     }
                                 }
                                 scale /= pool_size;
-                                size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w, input_pitches);
+                                size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w, input_desc);
 
                                 int output_index = (n * feature + c) * output_height * output_width;
                                 tensor lower_padding = lrn->output_padding.lower_size();

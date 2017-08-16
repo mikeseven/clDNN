@@ -283,7 +283,7 @@ inline kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_
         const auto up = upper_pad[tensor_index];
 
         auto& elm = vec[i];
-        elm.v = static_cast<size_t>(d);
+        elm.v = static_cast<size_t>(d - add_offsets[tensor_index]);
         elm.pitch = pitch;
         elm.pad.before = lp;
         elm.pad.after = up;
