@@ -66,6 +66,7 @@ namespace kernel_selector
     using softmax_dim                       = KernelSelector::SoftmaxDim;
     using mean_subtruct_mode                = KernelSelector::MeanSubtractMode;
     using concat_axis                       = KernelSelector::ConcatAxis;
+	using tuning_mode                       = KernelSelector::TuningMode;
 
     using data_tensor                       = KernelSelector::DataTensor;
     using weights_tensor                    = KernelSelector::WeightsTensor;
@@ -246,6 +247,18 @@ static inline cldnn::format from_weights_layout(kernel_selector::weights_layout 
     case kernel_selector::weights_layout::os_i_osv16__ai8:    return cldnn::format::bs_xs_xsv8_bsv16;
     default:
         return cldnn::format::bfyx;
+    }
+}
+
+inline kernel_selector::tuning_mode to_tuning_mode(cldnn::tuning_mode mode)
+{
+    switch (mode)
+    {
+    case cldnn::tuning_mode::tuning_disabled:         return kernel_selector::tuning_mode::TUNING_DISABLED;
+    case cldnn::tuning_mode::tuning_use_cache:        return kernel_selector::tuning_mode::TUNING_USE_CACHE;
+    case cldnn::tuning_mode::tuning_tune_and_cache:   return kernel_selector::tuning_mode::TUNING_TUNE_AND_CACHE;
+    default:
+        return kernel_selector::tuning_mode::TUNING_DISABLED;
     }
 }
 
@@ -435,6 +448,10 @@ inline optional_params_t get_default_optional_params(const program_impl& program
     params.allowStaticInputReordering   = program.get_options().get<build_option_type::optimize_data>()->enabled();
     params.allowInputReordering         = false;
     params.allowOutputReordering        = false;
+	
+	const auto& tuning_config = program.get_options().get<build_option_type::tuning_config>();
+    params.tuningParams.mode = to_tuning_mode(tuning_config->config.mode);
+    params.tuningParams.cacheFilePath = tuning_config->config.cache_file_path;
 
     return params;
 }

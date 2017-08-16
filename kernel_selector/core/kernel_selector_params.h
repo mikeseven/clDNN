@@ -17,6 +17,7 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 #include "common_types.h"
 #include "common_tools.h"
 #include "tensor_type.h"
@@ -1130,6 +1131,19 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Auto tuner parameters
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    class KernelRunnerInterface;
+    struct TuningParams
+    {
+        TuningMode mode;
+        std::string cacheFilePath;
+        std::shared_ptr<KernelRunnerInterface> runner;
+
+        TuningParams() : mode(TuningMode::TUNING_DISABLED), cacheFilePath(""), runner(nullptr) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // OptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct OptionalParams
@@ -1145,6 +1159,8 @@ namespace KernelSelector
         bool allowStaticInputReordering = true;     // allow kernel to provide a kernel which reorder static data like weights/bias/tables...
         bool allowInputReordering       = false;    // allow kernel to ask graph compiler to reorder the input data before executing its
         bool allowOutputReordering      = false;    // allow kernel to ask graph compiler to reorder the output data before executing the next kernel
+
+        TuningParams tuningParams;
 
         virtual ParamsKey GetSupportedKey() const
         {

@@ -161,9 +161,23 @@ typedef enum /*:int32_t*/
     cldnn_build_option_optimize_data,           ///< Enable implicit reordering for user input.
     cldnn_build_option_debug,                   ///< Enable debug mode.
     cldnn_build_option_outputs,                 ///< User selected list of network outputs.
-    cldnn_build_option_enable_kernels_auto_tune ///< Enable kernels auto-tune.
+    cldnn_build_option_tuning_config            ///< Tuning config.
 } cldnn_build_option_type;
 
+/// @brief Tuning modes.
+typedef enum /*:int32_t*/
+{
+    cldnn_tuning_disabled,          ///< Tuning is disabled.
+    cldnn_tuning_use_cache,         ///< Tuning using the cached data (no on-line tuning for non-existing data).
+    cldnn_tuning_tune_and_cache,    ///< Tuning using the cached data if exist, tune and update cache otherwise.
+} cldnn_tuning_mode_type;
+
+/// @brief Tuning config.
+struct cldnn_tuning_config
+{
+    const int32_t mode;             ///< #cldnn_tuning_mode_type.
+    const char* cache_file_path;    ///< A path to the tuning cache file.
+};
 
 /// @brief Represents network build option.
 typedef struct

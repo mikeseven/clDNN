@@ -34,7 +34,5 @@ namespace KernelSelector
         virtual ~ConvolutionKernelSelctor() {}
 
         virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
-
-        virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options, KernelRunnerInterface& runner) const override;
     };
 }

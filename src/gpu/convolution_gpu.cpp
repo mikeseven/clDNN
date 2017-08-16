@@ -105,18 +105,14 @@ public:
 
         auto& kernel_selector = kernel_selector::convolution_kernel_selector::Instance();
 
-        bool enable_auto_tune = arg.get_program().get_options().get<build_option_type::enable_kernels_auto_tune>()->enabled();
-        KernelSelector::KernelsData best_kernels;
+        const auto& tuning_config = arg.get_program().get_options().get<build_option_type::tuning_config>();
 
-        if (enable_auto_tune)
+        if (tuning_config->config.mode == tuning_mode::tuning_tune_and_cache)
         {
-            gpu::kernel_runner runner(arg.get_program().get_engine(), true);
-            best_kernels = kernel_selector.GetBestKernels(conv_params, conv_optional_params, runner);
+            conv_optional_params.tuningParams.runner = std::make_shared<gpu::kernel_runner>(arg.get_program().get_engine(), true);
         }
-        else
-        {
-            best_kernels = kernel_selector.GetBestKernels(conv_params, conv_optional_params);
-        }
+
+        KernelSelector::KernelsData best_kernels = kernel_selector.GetBestKernels(conv_params, conv_optional_params);
 		
         CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 

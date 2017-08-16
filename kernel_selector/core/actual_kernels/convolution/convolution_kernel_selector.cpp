@@ -47,11 +47,13 @@ namespace KernelSelector
     {
         //const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
         //std::cout << orgParams.to_string() << std::endl;
-        return GetNaiveBestKernel(params, options, KernelType::CONVOLUTION);
-    }
-
-    KernelSelector::KernelsData ConvolutionKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options, KernelRunnerInterface& runner) const
-    {
-        return GetAutoTuneBestKernel(params, options, KernelType::CONVOLUTION, runner);
+        if (options.tuningParams.mode == TuningMode::TUNING_DISABLED)
+        {
+            return GetNaiveBestKernel(params, options, KernelType::CONVOLUTION);
+        }
+        else
+        {
+            return GetAutoTuneBestKernel(params, options, KernelType::CONVOLUTION);
+        }
     }
 }

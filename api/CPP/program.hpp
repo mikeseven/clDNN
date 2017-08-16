@@ -52,14 +52,38 @@ enum class build_option_type
     /// @brief User selected list of program outputs.
     outputs = cldnn_build_option_outputs,
 
-    /// @brief Enable kernels auto-tune (default: false).
-    /// @details This option optimizes the kernel dispatch parameters by running multiple versions 
-    /// of the kernel and storing the optimal one.
+    /// @brief Tuning config (default: Tuning is disabled).
+    /// @details The tuner will automatically find the optimal kernel/config for each node in the graph,
+    /// by running multiple implementations and configurations per node and storing the optimal one in cache.
     /// Expect long execution time in the first run. 
-    /// After the first run a cache with the tunning results will be created in the 
-    /// running directory (tuner_kernels_cache.txt).
+    /// After the first run a cache with the tuning results will be created in the path provided.
     /// This cache will be used in the next runs.
-    enable_kernels_auto_tune = cldnn_build_option_enable_kernels_auto_tune
+    tuning_config = cldnn_build_option_tuning_config
+};
+
+/// @brief Tuning mode.
+enum class tuning_mode
+{
+    /// @brief Tuning is disabled.
+    tuning_disabled = cldnn_tuning_disabled,
+
+    /// @brief Tuning using the cached data (no on-line tuning for non-existing data).
+    tuning_use_cache = cldnn_tuning_use_cache,
+
+    /// @brief Tuning using the cached data if exist, tune and update cache otherwise.
+    tuning_tune_and_cache = cldnn_tuning_tune_and_cache
+};
+
+/// @brief Tuning configuration.
+struct tuning_config_options
+{
+    tuning_mode mode;
+    std::string cache_file_path;
+
+    tuning_config_options() :
+        mode(tuning_mode::tuning_disabled),
+        cache_file_path("")
+    {}
 };
 
 /// @brief Represents user-provided program build option.
@@ -83,14 +107,13 @@ struct build_option
     /// @brief User selected list of program outputs.
     static std::shared_ptr<const build_option> outputs(const std::vector<primitive_id>& outs);
 
-    /// @brief Enable kernels auto-tune (default: false).
-    /// @details This option optimizes the kernel dispatch parameters by running multiple versions 
-    /// of the kernel and storing the optimal one.
-    /// Expect long execution time in the first run. 
-    /// After the first run a cache with the tunning results will be created in the 
-    /// running directory (tuner_kernels_cache.txt).
+    /// @brief Tuning configuration (default: false).
+    /// @details This option will automatically find the optimal kernel/config for each node in the graph,
+    /// by running multiple implementations and configurations per node and storing the optimal one in cache.
+    /// Expect long execution time in the first run (unless the cache only mode is enabled). 
+    /// After the first run a cache with the tuning results will be created in the path provided.
     /// This cache will be used in the next runs.
-    static std::shared_ptr<const build_option> enable_kernels_auto_tune(bool enable = false);
+    static std::shared_ptr<const build_option> tuning_config(const tuning_config_options& config = tuning_config_options());
 
     virtual ~build_option() = default;
 
@@ -185,6 +208,50 @@ private:
     }
 };
 
+/// @brief @ref build_option specialization for tuning config.
+struct build_option_tuning_config : build_option
+{
+    /// @brief Tuning configuration
+    const tuning_config_options config;
+
+    /// @brief Constructs tuning config build option.
+    /// @param tuning_config Configuration for the tuning.
+    explicit build_option_tuning_config(const tuning_config_options& tuning_config) :
+        config(tuning_config),
+        config_ref({ static_cast<int32_t>(config.mode), config.cache_file_path.c_str() })
+    {}
+
+    /// @brief Constructs tuning config build option from C API @ref ::cldnn_build_option.
+    explicit build_option_tuning_config(const cldnn_build_option& value)
+        : build_option_tuning_config(make_config_from_ref(value))
+    {
+        assert(value.type == static_cast<int32_t>(cldnn_build_option_tuning_config));
+    }
+
+private:
+    /// @brief Returns build_option_type::tuning_config.
+    build_option_type get_type() const override { return build_option_type::tuning_config; }
+    /// @brief Returns pointer to @ref cldnn_tuning_config
+    const void* get_data() const override { return &config_ref; }
+
+    build_option_tuning_config(const build_option_tuning_config& other) = delete;
+    build_option_tuning_config& operator=(const build_option_tuning_config& other) = delete;
+
+    const cldnn_tuning_config config_ref;
+
+    static tuning_config_options make_config_from_ref(const cldnn_build_option& value)
+    {
+        if (value.type != cldnn_build_option_tuning_config) throw std::invalid_argument("option type does not match: should be 'tuning_config'");
+        if (value.data == nullptr) throw std::invalid_argument("Tuning config data is empty");
+        auto refs = reinterpret_cast<const cldnn_tuning_config*>(value.data);
+        tuning_config_options result;
+        result.mode = tuning_mode(refs->mode);
+        result.cache_file_path = std::string(refs->cache_file_path);
+        return result;
+    }
+};
+
+
 namespace detail
 {
     /// @brief Helper template to convert @ref build_option_type value to particular @ref build_option class.
@@ -250,13 +317,13 @@ namespace detail
             return std::make_shared<object_type>(option);
         }
     };
-    template<> struct build_option_traits<build_option_type::enable_kernels_auto_tune>
+    template<> struct build_option_traits<build_option_type::tuning_config>
     {
-        typedef build_option_bool<build_option_type::enable_kernels_auto_tune> object_type;
-        static std::shared_ptr<const build_option> make_default() { return build_option::enable_kernels_auto_tune(); }
+        typedef build_option_tuning_config object_type;
+        static std::shared_ptr<const build_option> make_default() { return build_option::tuning_config(); }
         static std::shared_ptr<const build_option> make_option(const cldnn_build_option& option)
         {
-            assert(option.type == cldnn_build_option_enable_kernels_auto_tune);
+            assert(option.type == cldnn_build_option_tuning_config);
             return std::make_shared<object_type>(option);
         }
     };
@@ -289,9 +356,9 @@ inline std::shared_ptr<const build_option> build_option::outputs(const std::vect
     return std::make_shared<build_option_outputs>(outs);
 }
 
-inline std::shared_ptr<const build_option> build_option::enable_kernels_auto_tune(bool enable)
+inline std::shared_ptr<const build_option> build_option::tuning_config(const tuning_config_options& config)
 {
-    return std::make_shared<build_option_bool<build_option_type::enable_kernels_auto_tune>>(enable);
+    return std::make_shared<build_option_tuning_config>(config);
 }
 #endif
 
@@ -386,8 +453,8 @@ private:
             return detail::build_option_traits<build_option_type::debug>::make_option(option);
         case cldnn_build_option_outputs:
             return detail::build_option_traits<build_option_type::outputs>::make_option(option);
-        case cldnn_build_option_enable_kernels_auto_tune:
-            return detail::build_option_traits<build_option_type::enable_kernels_auto_tune>::make_option(option);
+        case cldnn_build_option_tuning_config:
+            return detail::build_option_traits<build_option_type::tuning_config>::make_option(option);
         default: throw std::out_of_range("unsupported build option type");
         }
     }

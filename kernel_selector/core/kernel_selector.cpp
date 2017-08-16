@@ -74,12 +74,6 @@ namespace KernelSelector {
 #endif
     }
 
-    KernelsData KernelSelctorBase::GetBestKernels(const Params& params, const OptionalParams& options, KernelRunnerInterface& runner) const
-    {
-        UNUSED(runner);
-        return GetBestKernels(params, options);
-    }
-
     KernelsData KernelSelctorBase::GetNaiveBestKernel(const Params& params, const OptionalParams& options, KernelType kType) const
     {
         KernelsData kernelsData;
@@ -145,10 +139,10 @@ namespace KernelSelector {
         return kernelsData;
     }
 
-    std::map<std::string, std::tuple<std::string, int>> KernelSelctorBase::LoadTunedKernels() const
+    std::map<std::string, std::tuple<std::string, int>> KernelSelctorBase::LoadTunedKernels(const std::string& cacheFilePath) const
     {
         std::map<std::string, std::tuple<std::string, int>> cachedKernels;
-        std::ifstream cachedKernelsFile(tunedkerenlsCacheFileName);
+        std::ifstream cachedKernelsFile(cacheFilePath);
         std::string hash;
         std::string cachedkernelName;
         int autoTuneIndex;
@@ -174,17 +168,19 @@ namespace KernelSelector {
         return cachedKernels;
     }
 
-    void KernelSelctorBase::StoreTunedKernel(const std::string hash, const std::string name, const int autoTuneIndex) const
+    void KernelSelctorBase::StoreTunedKernel(const std::string hash, const std::string name, const int autoTuneIndex, const std::string& cacheFilePath) const
     {
-        std::ofstream cachedKernelsFile(tunedkerenlsCacheFileName, std::ofstream::out | std::ofstream::app);
+        std::ofstream cachedKernelsFile(cacheFilePath, std::ofstream::out | std::ofstream::app);
         cachedKernelsFile << hash << " ";
         cachedKernelsFile << name << " ";
         cachedKernelsFile << autoTuneIndex << "\n";
         cachedKernelsFile.close();
     }
 
-    KernelsData KernelSelctorBase::GetAutoTuneBestKernel(const Params& params, const OptionalParams& options, KernelType kType, KernelRunnerInterface& runner) const
+    KernelsData KernelSelctorBase::GetAutoTuneBestKernel(const Params& params, const OptionalParams& options, KernelType kType) const
     {
+        assert(options.tuningParams.mode != TuningMode::TUNING_DISABLED);
+
         KernelsData kernelsData;
         std::string kernelName;
         std::string cacheFile;
@@ -192,10 +188,12 @@ namespace KernelSelector {
         if (params.GetType() == kType &&
             options.GetType() == kType)
         {
-            auto cachedKernels = LoadTunedKernels();
+            auto cachedKernels = LoadTunedKernels(options.tuningParams.cacheFilePath);
             std::string hash = std::to_string(std::hash<std::string>{}(params.to_string()));
 
-            if (cachedKernels.find(hash) != cachedKernels.end())
+            bool hashFoundInCache = cachedKernels.find(hash) != cachedKernels.end();
+
+            if (hashFoundInCache)
             {
                 std::tuple<std::string, int> cachedKernel = cachedKernels[hash];
                 std::string cachedkernelName = std::get<0>(cachedKernel);
@@ -216,13 +214,22 @@ namespace KernelSelector {
                     }
                 }
 
-                if (kernelsData.empty())
+                if (!kernelsData.empty())
                 {
-                    // Cache is not valid - fall back to the default path.
-                    return GetNaiveBestKernel(params, options, kType);
+                    return kernelsData;
                 }
-                return kernelsData;
             }
+
+            if( hashFoundInCache || // Cache is not valid - hash exists in cache but kernelsData was empty.
+                (options.tuningParams.mode == TuningMode::TUNING_USE_CACHE) || // Cache only mode - on-line tuning is not allowed.
+                !options.tuningParams.runner ) // Runner is invalid - can't run on-line tuning
+            {
+                // Fall back to the default path.
+                return GetNaiveBestKernel(params, options, kType);
+            }    
+
+            // Start on-line tuning
+            assert(options.tuningParams.runner);
 
             const ParamsKey requireKey = params.GetParamsKey().Merge(options.GetSupportedKey());
             for (const auto& implementation : implementations)
@@ -233,7 +240,7 @@ namespace KernelSelector {
                     try
                     {
                         KernelsData kds = implementation->GetKernelsDataForAutoTune(params, options);
-                        std::vector<uint64_t> runTimes = runner.run_kernels(kds);
+                        std::vector<uint64_t> runTimes = options.tuningParams.runner->run_kernels(kds);
 
                         for (size_t i = 0; i < kds.size(); i++)
                         {
@@ -256,7 +263,7 @@ namespace KernelSelector {
             {
                 kernelsData[0].kernelName = kernelName;
                 kernelsData[0].kernels[0].layerID = params.layerID;
-                StoreTunedKernel(hash, kernelName, kernelsData[0].autoTuneIndex);
+                StoreTunedKernel(hash, kernelName, kernelsData[0].autoTuneIndex, options.tuningParams.cacheFilePath);
             }
         } 
 

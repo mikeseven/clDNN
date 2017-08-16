@@ -23,5 +23,7 @@ namespace KernelSelector
     public:
         // Gets a list of kernels, executes them and returns the run time of each kernel (in nano-seconds).
         virtual std::vector<uint64_t> run_kernels(const KernelSelector::KernelsData& kernelsData) = 0;
+
+        virtual ~KernelRunnerInterface() = default;
     };
 }
