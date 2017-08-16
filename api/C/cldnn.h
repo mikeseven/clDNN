@@ -230,6 +230,7 @@ typedef enum /*:int32_t*/
 } cldnn_format_type;
 
 #define CLDNN_FLOAT_TYPE_MASK 0x80
+#define CLDNN_UINT_TYPE_MASK 0x40
 
 #define CLDNN_TENSOR_BATCH_DIM_MAX 1
 #define CLDNN_TENSOR_FEATURE_DIM_MAX 1
@@ -258,9 +259,11 @@ typedef struct
 /// @brief Data type stored in memory.
 typedef enum /*:size_t*/
 {
-    cldnn_i8  = sizeof(int8_t),
+	cldnn_i8  = sizeof(int8_t),
     cldnn_f16 = sizeof(int16_t) | CLDNN_FLOAT_TYPE_MASK,
     cldnn_f32 = sizeof(float) | CLDNN_FLOAT_TYPE_MASK,
+    cldnn_u8 = sizeof(uint8_t) | CLDNN_UINT_TYPE_MASK // TODO: move to top of list and re-compile inference engine
+
 } cldnn_data_type;
 
 /// @brief Memory layout description.

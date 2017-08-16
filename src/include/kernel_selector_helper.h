@@ -66,7 +66,7 @@ namespace kernel_selector
     using softmax_dim                       = KernelSelector::SoftmaxDim;
     using mean_subtruct_mode                = KernelSelector::MeanSubtractMode;
     using concat_axis                       = KernelSelector::ConcatAxis;
-	using tuning_mode                       = KernelSelector::TuningMode;
+    using tuning_mode                       = KernelSelector::TuningMode;
 
     using data_tensor                       = KernelSelector::DataTensor;
     using weights_tensor                    = KernelSelector::WeightsTensor;
@@ -131,6 +131,7 @@ inline kernel_selector::data_type to_data_type(data_types dt)
     switch (dt)
     {
     case cldnn::data_types::i8:     return kernel_selector::data_type::INT8;
+    case cldnn::data_types::u8:     return kernel_selector::data_type::UINT8;
     case cldnn::data_types::f16:    return kernel_selector::data_type::F16;
     case cldnn::data_types::f32:    return kernel_selector::data_type::F32;
     default:
@@ -444,8 +445,8 @@ inline optional_params_t get_default_optional_params(const program_impl& program
     params.allowStaticInputReordering   = program.get_options().get<build_option_type::optimize_data>()->enabled();
     params.allowInputReordering         = false;
     params.allowOutputReordering        = false;
-	
-	const auto& tuning_config = program.get_options().get<build_option_type::tuning_config>();
+    
+    const auto& tuning_config = program.get_options().get<build_option_type::tuning_config>();
     params.tuningParams.mode = to_tuning_mode(tuning_config->config.mode);
     params.tuningParams.cacheFilePath = tuning_config->config.cache_file_path;
 

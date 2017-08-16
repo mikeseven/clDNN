@@ -22,6 +22,7 @@ namespace KernelSelector
     ParamsKey ReorderKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
+        k.EnableInputDataType(Datatype::UINT8);
         k.EnableInputDataType(Datatype::F16);
         k.EnableInputDataType(Datatype::F32);
         k.EnableOutputDataType(Datatype::F16);
