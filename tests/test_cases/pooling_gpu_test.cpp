@@ -1131,6 +1131,8 @@ public:
         int output_width = output.get_layout().get_buffer_size().spatial[0];
         int output_height = output.get_layout().get_buffer_size().spatial[1];
 
+        const auto input_pitches = get_linear_index_pitches(inputs[0].get_layout());
+
         switch (pooling_mode)
         {
             case cldnn::pooling_mode::max:
@@ -1163,7 +1165,7 @@ public:
                                 {
                                     for (int x = input_offset_x_start; x < input_offset_x_end; x++) 
                                     {
-                                        const size_t input_index = get_linear_index(inputs[0].get_layout(), b, f, y, x);	
+                                        const size_t input_index = get_linear_index(inputs[0].get_layout(), b, f, y, x, input_pitches);	
                                         
                                         if (input_mem[input_index] > output_mem[output_index])
                                         {
@@ -1210,7 +1212,7 @@ public:
                                 {
                                     for (int x = input_offset_x_start; x < input_offset_x_end; x++) 
                                     {
-                                        const size_t input_index = get_linear_index(inputs[0].get_layout(), b, f, y, x);
+                                        const size_t input_index = get_linear_index(inputs[0].get_layout(), b, f, y, x, input_pitches);
 
                                         output_mem[output_index] += input_mem[input_index];
                                         num_of_elements++;

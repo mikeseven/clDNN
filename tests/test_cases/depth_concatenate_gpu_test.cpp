@@ -308,6 +308,9 @@ public:
         int out_f_off = 0;
         for (const memory & input : inputs)
         {
+            const auto input_pitches = get_linear_index_pitches(input.get_layout());
+            const auto output_pitches = get_linear_index_pitches(output.get_layout());
+
             const int in_f = input.get_layout().size.feature[0];
             const auto in_mem = input.pointer<Type>();
 
@@ -316,8 +319,8 @@ public:
             for (int y = 0; y < in_h; ++y)
             for (int x = 0; x < in_w; ++x)
             {
-                const size_t in_idx = get_linear_index(input.get_layout(), n, f, y, x);
-                const size_t out_idx = get_linear_index(output.get_layout(), n, out_f_off + f, y, x);
+                const size_t in_idx = get_linear_index(input.get_layout(), n, f, y, x, input_pitches);
+                const size_t out_idx = get_linear_index(output.get_layout(), n, out_f_off + f, y, x, output_pitches);
 
                 out_mem[out_idx] = in_mem[in_idx];
             }

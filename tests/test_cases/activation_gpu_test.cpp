@@ -628,6 +628,8 @@ public:
         int output_height = output.get_layout().get_buffer_size().spatial[1];
         int output_width = output.get_layout().get_buffer_size().spatial[0];
 
+        const auto input_pitches = get_linear_index_pitches(inputs[0].get_layout());
+
         for (int b = 0; b < batch; ++b)
         {
             for (int f = 0; f < feature; ++f)
@@ -636,7 +638,7 @@ public:
                 {
                     for (int x = 0; x < width; ++x)
                     {
-                        size_t input_index = get_linear_index(inputs[0].get_layout(), b, f, y, x);
+                        size_t input_index = get_linear_index(inputs[0].get_layout(), b, f, y, x, input_pitches);
 
                         int output_index = (b * feature + f) * output_height * output_width;
                         tensor lower_padding = relu->output_padding.lower_size();
@@ -774,6 +776,8 @@ public:
         int output_height = output.get_layout().get_buffer_size().spatial[1];
         int output_width = output.get_layout().get_buffer_size().spatial[0];
 
+        const auto input_pitches = get_linear_index_pitches(inputs[0].get_layout());
+
         for (int b = 0; b < batch; ++b)
         {
             for (int f = 0; f < feature; ++f)
@@ -782,7 +786,7 @@ public:
                 {
                     for (int x = 0; x < width; ++x)
                     {
-                        size_t input_index = get_linear_index(inputs[0].get_layout(), b, f, y, x);
+                        size_t input_index = get_linear_index(inputs[0].get_layout(), b, f, y, x, input_pitches);
 
                         int output_index = (b * feature + f) * output_height * output_width;
                         tensor lower_padding = relu->output_padding.lower_size();

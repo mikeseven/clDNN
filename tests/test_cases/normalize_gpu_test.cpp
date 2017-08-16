@@ -27,6 +27,7 @@
 #include "test_utils/test_utils.h"
 #include <iostream>
 #include "float16.h"
+#include "test_utils.h"
 
 using namespace cldnn;
 
@@ -74,6 +75,8 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial)
     int y_size = output_sizes[3];
     int x_size = output_sizes[2];
 
+    const auto output_pitches = generic_test::get_linear_index_pitches(output.get_layout());
+
     for (int b = 0; b < batch_size; ++b)
     {
         float norm = 0;
@@ -83,7 +86,7 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial)
             {
                 for (int x = 0; x < x_size; ++x)
                 {
-                    size_t data_index = generic_test::get_linear_index(output.get_layout(), b, f, y, x);
+                    size_t data_index = generic_test::get_linear_index(output.get_layout(), b, f, y, x, output_pitches);
                     float data = buff[data_index];
                     norm += data * data;
                 }
@@ -134,6 +137,8 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial_scale_channels_shared)
     int y_size = output_sizes[3];
     int x_size = output_sizes[2];
 
+    const auto output_pitches = generic_test::get_linear_index_pitches(output.get_layout());
+
     for (int b = 0; b < batch_size; ++b)
     {
         float norm = 0;
@@ -143,7 +148,7 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial_scale_channels_shared)
             {
                 for (int x = 0; x < x_size; ++x)
                 {
-                    size_t data_index = generic_test::get_linear_index(output.get_layout(), b, f, y, x);
+                    size_t data_index = generic_test::get_linear_index(output.get_layout(), b, f, y, x, output_pitches);
                     float data = buff[data_index];
                     norm += data * data;
                 }
@@ -194,6 +199,8 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial_scale_channels_not_shar
     int y_size = output_sizes[3];
     int x_size = output_sizes[2];
 
+    const auto output_pitches = generic_test::get_linear_index_pitches(output.get_layout());
+
     for (int b = 0; b < batch_size; ++b)
     {
         float norm = 0;
@@ -203,7 +210,7 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial_scale_channels_not_shar
             {
                 for (int x = 0; x < x_size; ++x)
                 {
-                    size_t data_index = generic_test::get_linear_index(output.get_layout(), b, f, y, x);
+                    size_t data_index = generic_test::get_linear_index(output.get_layout(), b, f, y, x, output_pitches);
                     float data = buff[data_index];
                     norm += data * data;
                 }
@@ -255,6 +262,8 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial)
     int y_size = output_sizes[3];
     int x_size = output_sizes[2];
 
+    const auto output_pitches = generic_test::get_linear_index_pitches(output.get_layout());
+
     for (int b = 0; b < batch_size; ++b) 
     {
         for (int y = 0; y < y_size; ++y) 
@@ -264,7 +273,7 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial)
                 float norm = 0;
                 for (int f = 0; f < feature_size; ++f) 
                 {
-                    size_t data_index = generic_test::get_linear_index(output.get_layout(), b, f, y, x);
+                    size_t data_index = generic_test::get_linear_index(output.get_layout(), b, f, y, x, output_pitches);
                     float data = buff[data_index];
                     norm += data * data;
                 }
@@ -315,6 +324,8 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial_scale_channels_shared)
     int y_size = output_sizes[3];
     int x_size = output_sizes[2];
 
+    const auto output_pitches = generic_test::get_linear_index_pitches(output.get_layout());
+
     for (int b = 0; b < batch_size; ++b)
     {
         for (int y = 0; y < y_size; ++y)
@@ -324,7 +335,7 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial_scale_channels_shared)
                 float norm = 0;
                 for (int f = 0; f < feature_size; ++f)
                 {
-                    size_t data_index = generic_test::get_linear_index(output.get_layout(), b, f, y, x);
+                    size_t data_index = generic_test::get_linear_index(output.get_layout(), b, f, y, x, output_pitches);
                     float data = buff[data_index];
                     norm += data * data;
                 }
@@ -375,6 +386,8 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial_scale_channels_not_shar
     int y_size = output_sizes[3];
     int x_size = output_sizes[2];
 
+    const auto output_pitches = generic_test::get_linear_index_pitches(output.get_layout());
+
     for (int b = 0; b < batch_size; ++b)
     {
         for (int y = 0; y < y_size; ++y)
@@ -384,7 +397,7 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial_scale_channels_not_shar
                 float norm = 0;
                 for (int f = 0; f < feature_size; ++f)
                 {
-                    size_t data_index = generic_test::get_linear_index(output.get_layout(), b, f, y, x);
+                    size_t data_index = generic_test::get_linear_index(output.get_layout(), b, f, y, x, output_pitches);
                     float data = buff[data_index];
                     norm += data * data;
                 }
@@ -414,7 +427,7 @@ public:
 
     virtual void SetUp()
     {
-        max_ulps_diff_allowed = 9;
+        max_ulps_diff_allowed = 6;
     }
 
     static void TearDownTestCase() 
@@ -551,6 +564,8 @@ public:
         //Initialized output with zeros.
         std::fill(output_mem.begin(), output_mem.end(), static_cast<Type>(0));
 
+        const auto input_pitches = get_linear_index_pitches(inputs[0].get_layout());
+
         if (normalize->across_spatial)
         {
             for (int n = 0; n < batch; ++n)
@@ -563,7 +578,7 @@ public:
                     {
                         for (int w = 0; w < width; ++w)
                         {
-                            size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
+                            size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w, input_pitches);
                             float value = (float)input_mem[input_index];
                             norm += value * value;
                         }
@@ -579,7 +594,7 @@ public:
                     {
                         for (int w = 0; w < width; ++w)
                         {
-                            size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
+                            size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w, input_pitches);
 
                             int output_index = (n * feature + c) * output_height * output_width;
                             tensor lower_padding = normalize->output_padding.lower_size();
@@ -603,7 +618,7 @@ public:
                         float norm = epsilon;
                         for (int c = 0; c < feature; ++c)
                         {
-                            size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
+                            size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w, input_pitches);
                             float value = (float)input_mem[input_index];
                             norm += value * value;
                         }
@@ -613,7 +628,7 @@ public:
                         for (int c = 0; c < feature; ++c)
                         {
                             int scale_index = (scale_feature_size == 1) ? 0 : c;
-                            size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w);
+                            size_t input_index = get_linear_index(inputs[0].get_layout(), n, c, h, w, input_pitches);
 
                             int output_index = (n * feature + c) * output_height * output_width;
                             tensor lower_padding = normalize->output_padding.lower_size();

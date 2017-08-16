@@ -550,6 +550,11 @@ public:
     {
     }
 
+    virtual void SetUp()
+    {
+        max_ulps_diff_allowed = 6;
+    }
+
     static void TearDownTestCase()
     {
         for (auto generic_params : all_generic_params)
@@ -565,7 +570,7 @@ public:
 
     static std::vector<cldnn::primitive*> generate_specific_test_params()
     {
-        all_layer_params.push_back(new softmax("softmax", "input0"));
+        all_layer_params.push_back(new softmax("softmax", "input0", softmax::normalize_f));
 
         //The test checks only valid combinations.
         //TODO: add more combinations.
@@ -617,6 +622,8 @@ public:
         std::vector<float> cached_exp_vals;
         cached_exp_vals.resize(in0_f);
 
+        const auto input_pitches = get_linear_index_pitches(input.get_layout());
+
         for (int n = 0; n < in0_b; ++n)
         for (int y = 0; y < in0_h; ++y)
         for (int x = 0; x < in0_w; ++x)
@@ -625,7 +632,7 @@ public:
 
             for (int c = 0; c < in0_f; ++c)
             {
-                const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x);
+                const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x, input_pitches);
 
                 max_val = std::max(max_val, static_cast<float>(in0_mem[in0_idx]));
             }
@@ -634,7 +641,7 @@ public:
 
             for (int c = 0; c < in0_f; ++c)
             {
-                const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x);
+                const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x, input_pitches);
 
                 float tmp = static_cast<float>((Type)std::exp(static_cast<float>(in0_mem[in0_idx]) - max_val));
                 Z += tmp;
@@ -643,7 +650,7 @@ public:
 
             for (int c = 0; c < in0_f; ++c)
             {
-                const size_t out_idx = get_linear_index(output.get_layout(), n, c, y, x);
+                const size_t out_idx = get_linear_index(output.get_layout(), n, c, y, x, input_pitches);
                 out_mem[out_idx] = (Type)(cached_exp_vals[c] / Z);
             }
         }
