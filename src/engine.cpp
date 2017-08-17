@@ -97,6 +97,11 @@ event_impl::ptr engine_impl::create_user_event(bool set)
     }
 }
 
+void engine_impl::flush_network()
+{ 
+    get_context()->flush();
+}
+
 program_impl::ptr engine_impl::build_program(const topology_impl& topology, const build_options& options)
 {
     return{ new program_impl(*this, topology, options), false };

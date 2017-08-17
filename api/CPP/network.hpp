@@ -170,7 +170,7 @@ struct network
         return result;
     }
 
-    /// @brief Returns @ref network_output object for particular @p output
+    /// @brief Returns @ref network_output object for particular @p output. Can't be called before network execution
     network_output get_output(const primitive_id& output_id) const
     {
         cldnn_network_output output =
@@ -179,6 +179,17 @@ struct network
             return cldnn_get_network_output(_impl, output_id.c_str(), status);
         });
         return network_output( output.event, output.memory );
+    }
+
+    /// @brief Returns @ref memory object for particular @p output. Can be called before network execution
+    memory get_output_memory(const primitive_id& output_id) const
+    {
+        cldnn_network_output output =
+            check_status<cldnn_network_output>("get network output failed", [&](status_t* status)
+        {
+            return cldnn_get_network_output(_impl, output_id.c_str(), status);
+        });
+        return output.memory;
     }
 
     /// @brief Executes network and returns the list of @ref network_output.
