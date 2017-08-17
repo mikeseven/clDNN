@@ -54,7 +54,7 @@ namespace KernelSelector
     KernelsData ConcatenationKernelRef::GetKernelsData(const Params& params, const OptionalParams& optParams) const
     {
         KernelsData kd = GetCommonKernelsData(params, optParams);
-        for (int i = 0; i < kd[0].kernels.size(); i++)
+        for (int i = 0; i < (int)kd[0].kernels.size(); i++)
         {
             auto& kernel = kd[0].kernels[i];
 
