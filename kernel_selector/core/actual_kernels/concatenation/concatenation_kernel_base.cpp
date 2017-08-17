@@ -113,6 +113,15 @@ namespace KernelSelector
             auto entryPoint = GetEntryPoint(kernelName, newParams.layerID, options);
             auto jit = CreateJit(kernelName, cldnnJit, entryPoint);
             
+            // to avoid cases when we execute with local work sizes 1x1x1
+            if (runInfo.lws0 == 1 &&
+                runInfo.gws1 != 1)
+            {
+                cldnnJit.AddConstant(MakeJitConstant("CHECK_FEATURES", 1));
+                runInfo.gws1 = Align(runInfo.gws1, 32);
+                runInfo.lws1 = 32;
+            }
+
             kernel.workGroups.global = { runInfo.gws0, runInfo.gws1, runInfo.gws2 };
             kernel.workGroups.local = { runInfo.lws0, runInfo.lws1, runInfo.lws2 };
             kernel.kernelString = GetKernelString(kernelName, jit, entryPoint);
