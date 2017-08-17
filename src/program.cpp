@@ -61,6 +61,8 @@ namespace cldnn
 CLDNN_DEFINE_INTERNAL_PRIM(connector)
 CLDNN_DEFINE_SIMPLE_PRIM_INST(connector)
 
+}
+
 namespace {
 
     //helper function for selecting function basing on the type of the given primitive
@@ -1994,7 +1996,6 @@ bool program_impl::remove_if_dangling(program_node& node, bool detach_whole_bran
     }
 
     return true;
-
     return true;
 }
 
