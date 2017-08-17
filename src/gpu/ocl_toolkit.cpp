@@ -208,7 +208,7 @@ event_impl::ptr gpu_toolkit::enqueue_marker(std::vector<event_impl::ptr> const& 
 
 void gpu_toolkit::flush()
 {
-    cl::flush();
+    queue().flush();
 }
 
 void gpu_toolkit::wait_for_events(std::vector<event_impl::ptr> const & events)

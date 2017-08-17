@@ -56,12 +56,14 @@ public:
     bool is_the_same_buffer(const memory_impl& mem1, const memory_impl& mem2);
 
     refcounted_obj_ptr<event_impl> create_user_event(bool set = false);
-    void flush_network(); 
+    void wait_for_events(std::vector<event_impl::ptr> const& events);
 
     refcounted_obj_ptr<program_impl> build_program(const topology_impl& topology, const build_options& options);
     void compile_program(program_impl& prog);
-    refcounted_obj_ptr<network_impl> build_network(const topology_impl& topology, const build_options& options);
+
     refcounted_obj_ptr<network_impl> allocate_network(const program_impl& program);
+    refcounted_obj_ptr<network_impl> build_network(const topology_impl& topology, const build_options& options);
+    void flush_network();
 
     template <class T>
     std::unique_ptr<primitive_impl> create_primitive_impl(typed_program_node<T> const& node)
@@ -72,14 +74,10 @@ public:
         auto factory = implementation_map<T>::get(type(), node);
         return std::move(std::unique_ptr<primitive_impl>(factory(node)));
     }
-
-    void wait_for_events(std::vector<event_impl::ptr> const& events);
     
     const engine_configuration& configuration() const { return _configuration; }
     std::shared_ptr<gpu_toolkit> get_context() const { return _context; }
     gpu::engine_info_internal get_engine_info() const;
-    
-    
 
 private:
     engine_configuration _configuration;
