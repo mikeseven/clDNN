@@ -102,14 +102,6 @@ namespace {
 
         return ok;
     }
-
-    bool starts_with(std::string const& str, std::string const& prefix)
-    {
-        if (str.size() < prefix.size())
-            return false;
-
-        return std::equal(prefix.begin(), prefix.end(), str.begin());
-    }
 }
 
 cl::Device get_gpu_device(const configuration& config)

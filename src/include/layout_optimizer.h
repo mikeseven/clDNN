@@ -170,19 +170,6 @@ public:
         const layout& old_layout,
         data_type type);
 
-    template <typename T>
-    void add_reoder_to_topology(T& reorder, const std::shared_ptr<data> src_data)
-    {
-        if (reorder.first)
-        {
-            _topology.add(src_data);
-            if (!reorder.second) //returned reorder is a new primitive (i.e. not cached), add it to topology and as an output
-            {
-                _topology.add(reorder.first);
-            }
-        }
-    }
-
     void set_optimization_attribute(optimization_attributes_type attribute, int32_t val);
 };
 }
