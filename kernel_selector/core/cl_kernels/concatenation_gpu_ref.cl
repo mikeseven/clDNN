@@ -20,7 +20,7 @@ KERNEL (concatenation_gpu_ref)(__global UNIT_TYPE* input, __global UNIT_TYPE* ou
     const uint d1 = get_global_id(0);
     const uint d2 = get_global_id(1);
 #ifdef CHECK_FEATURES
-    if(d2 >= INPUT0_FEATURES)
+    if(d2 >= INPUT0_FEATURE_NUM)
         return;
 #endif
     const uint d3 = get_global_id(2);
