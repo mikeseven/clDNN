@@ -538,6 +538,12 @@ CLDNN_API                 void cldnn_execute_network(cldnn_network network, cldn
 /// To work with the result of this function, user should first wait for cldnn_network_output::event
 /// before getting an access to cldnn_network_output::memory.
 CLDNN_API cldnn_network_output cldnn_get_network_output(cldnn_network network, const char* name, cldnn_status* status);
+
+/// @brief Returns @ref memory coressponding to output with @p name.
+/// @details User can call this function even before calling cldnn_execute_network(), but than content of memory is uninitilized.
+/// @param name Output name to get the result.
+/// @returns @ref cldnn_memory structure with the output information.
+CLDNN_API cldnn_memory cldnn_get_network_output_memory(cldnn_network network, const char* name, cldnn_status* status);
 /// @}
 
 /// @addtogroup c_memory

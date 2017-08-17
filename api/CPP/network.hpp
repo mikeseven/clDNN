@@ -184,12 +184,12 @@ struct network
     /// @brief Returns @ref memory object for particular @p output. Can be called before network execution
     memory get_output_memory(const primitive_id& output_id) const
     {
-        cldnn_network_output output =
-            check_status<cldnn_network_output>("get network output failed", [&](status_t* status)
+        cldnn_memory output =
+            check_status<cldnn_memory>("get output memory failed", [&](status_t* status)
         {
-            return cldnn_get_network_output(_impl, output_id.c_str(), status);
+            return cldnn_get_network_output_memory(_impl, output_id.c_str(), status);
         });
-        return output.memory;
+        return output;
     }
 
     /// @brief Executes network and returns the list of @ref network_output.
