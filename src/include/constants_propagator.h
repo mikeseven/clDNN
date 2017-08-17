@@ -30,7 +30,7 @@ public:
 
     void visit_node(program_node& node);
 
-    std::list<std::pair<primitive_id, memory>> calculate();
+    std::list<std::pair<primitive_id, memory_impl::ptr>> calculate();
 
 private:
     program_impl::ptr prog;

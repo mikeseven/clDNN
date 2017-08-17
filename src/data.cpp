@@ -45,6 +45,7 @@ namespace {
 data_node::typed_program_node(const std::shared_ptr<data> dprim, program_impl& prog)
     : parent(dprim, prog), mem(api_cast(dprim->mem.get()))
 {
+    constant = true;
     recalc_output_layout(false);
 }
 

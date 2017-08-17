@@ -28,6 +28,12 @@ primitive_type_id prior_box_type_id()
     return &instance;
 }
 
+prior_box_node::typed_program_node(std::shared_ptr<prior_box> prim, program_impl& prog)
+    : parent(prim, prog)
+{
+    constant = true;
+}
+
 layout prior_box_inst::calc_output_layout(prior_box_node const& node)
 {
     auto desc = node.get_primitive();

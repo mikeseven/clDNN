@@ -159,25 +159,22 @@ void program_node::invalidate_users() const
     }
 }
 
-layout cldnn::program_node::get_output_layout() const
+bool program_node::recalc_output_layout(bool invalidate_users_if_changed)
 {
-    if (!valid_output_layout)
-        throw std::runtime_error("Output layout not calculated");
-
-    return output_layout;
+    return set_output_layout(calc_output_layout(), invalidate_users_if_changed);
 }
 
-void cldnn::program_node::set_output_layout(layout layout)
+bool program_node::has_padded_dependency()
 {
-    layout.data_padding = output_layout.data_padding;
-    if (layout != output_layout) //output_layout has changed! invalidate users
-        invalidate_users();
-
-    output_layout = layout;
-    valid_output_layout = true;
+    return std::any_of(get_dependencies().begin(), get_dependencies().end(), [](program_node* node) { return node->is_padded(); });
 }
 
-void cldnn::program_node::invalidate_users() const
+bool program_node::has_padded_dependency() const
+{
+    return std::any_of(get_dependencies().begin(), get_dependencies().end(), [](const program_node* node) { return node->is_padded(); });
+}
+
+void program_node::invalidate_users() const
 {
     for (auto& user : users)
     {

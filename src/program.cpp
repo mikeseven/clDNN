@@ -399,7 +399,7 @@ void program_impl::pre_optimize_graph()
 
     if (options.get<build_option_type::optimize_data>()->enabled())
     {
-        layout_optimizer lo(engine, true, output_size_handling_enabled);
+        layout_optimizer lo(output_size_handling_enabled);
         reorder_inputs(lo);
         // this code should move to post compilation after kernel selector will support handling reorder bias
         pre_optimize_bias(lo);
@@ -425,7 +425,7 @@ void program_impl::pre_optimize_graph()
 
 void program_impl::post_optimize_graph()
 {
-    layout_optimizer lo(engine);
+    layout_optimizer lo;
     post_optimize_weights(lo);
     remove_redundant_reorders(); //TODO: do we need it at this place also?
     propagate_constants();
@@ -443,7 +443,8 @@ void program_impl::compile_graph()
         if (!node->is_type<internal_primitive>() && !node->is_type<data>())
         {
             node->get_output_layout();
-            node->selected_impl = node->type()->choose_impl(*engine, *node);
+            if (!node->is_type<data>())
+                node->selected_impl = node->type()->choose_impl(*engine, *node);
         }
     }
 
@@ -709,12 +710,7 @@ void program_impl::mark_constants()
 {
     for (auto& node : processing_order)
     {
-        if (node->is_type<data>() || node->is_type<prior_box>())
-        {
-            node->constant = true;
-            continue;
-        }
-        else if (node->dependencies.empty())
+        if (node->dependencies.empty())
             continue;
 
         node->constant = true;
@@ -1309,28 +1305,27 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
     //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
     const auto add_weights = [this, &lo](program_node const& weights, auto& node, size_t dep_idx)
     {
-        auto wtype = weights.type();
         auto* impl = node.get_selected_impl().get();
         auto output_layout = node.get_output_layout();
         const auto weights_type = layout_optimizer::data_type::weights;
 
         auto reorders = lo.get_generic_layer(
             impl->_weights_reorder_params,
-            weights.as<input_layout>().typed_desc()->id,
+            weights.id(),
             output_layout,
             weights_type);
 
         for (auto& reorder : reorders)
         {
-                //insert new generic_layer node to topology
+            //insert new generic_layer node to topology
             this->add_intermediate(reorder.first, node, dep_idx);
-                //set generic_layer's node output layout and implementation
-                auto& g_node = node.get_dependency(dep_idx);
-                g_node.get_output_layout();
-                g_node.selected_impl = g_node.type()->choose_impl(*engine, g_node);
+            //set generic_layer's node output layout and implementation
+            auto& g_node = node.get_dependency(dep_idx);
+            g_node.get_output_layout();
+            g_node.selected_impl = g_node.type()->choose_impl(*engine, g_node);
         }
-            //set the old output layout and do not invalidate users as change of weights will not affect output layout
-            node.set_output_layout(output_layout, false);
+        //set the old output layout and do not invalidate users as change of weights will not affect output layout
+        node.set_output_layout(output_layout, false);
     };
 
     //generic lambda function which prepares given primitive for weights optimization
@@ -1548,37 +1543,54 @@ void program_impl::propagate_constants()
     for (auto& node : processing_order)
         prop.visit_node(*node);
 
-    for (auto& node : processing_order)
-        node->unmark();
-
     auto&& to_replace = prop.calculate();
+    
+    //remove all nodes which are no longer relevant, i.e. nodes which:
+    // 1. are constants, and
+    // 2. do not have non-const user (so their data are not used during inference), and
+    // 3. are not marked as outputs.
+    // in case if node has either non-const user or is marked as output, it should be replace with cldnn::data rather than removed (see next loop)
+    auto proc_itr = processing_order.begin();
+    while (proc_itr != processing_order.end())
+    {
+        auto& node = (*proc_itr++);
+        if (!node->is_constant())
+            continue;
+        if (node->has_non_const_user() || (node->is_output() && !node->is_type<data>()))
+            continue;
+
+        node->users.clear();
+        node->dependencies.clear();
+
+        if (!node->is_output())
+        {
+            auto rem = remove_if_dangling(*node);
+            assert(rem && "Non-output constant node which has only constant users should have been removed during constants propagation pass");
+            (void)rem;
+        }
+    }
+
+    //replace all constant nodes which are relevant for inference (either used by non-const user or marked as output) with recomputed cldnn::data
     for (auto& cout : to_replace)
     {
         auto& id_to_replace = cout.first;
-        auto const_data = std::make_shared<data>(data("_cldnn_const_prop_" + id_to_replace, cout.second));
+
+        //TODO: do not use API primitives internally and get rid of this last 'cldnn::memory' internal usage
+        memory api_memory = details::memory_c_to_cpp_converter::convert(api_cast(cout.second.get()));
+        //c-cpp converter does not retain since normally it is done inside API-impl layer (cldnn.cpp) so we need to do it manually
+        cout.second->add_ref();
+
+        auto const_data = std::make_shared<data>("_cldnn_const_prop_" + id_to_replace, api_memory /* <<< REMOVE ME WHEN POSSIBLE */);
         auto& new_node = get_or_create(const_data);
-        auto curr_node = nodes_map.at(id_to_replace);
-        new_node.processing_itr = processing_order.insert(curr_node->processing_itr, &new_node);
+        auto& curr_node = *nodes_map.at(id_to_replace);
 
-        if (curr_node->is_output())
-        {
-            new_node.set_output(true);
-            for (auto& output : outputs)
-                if (output == curr_node.get())
-                    output = &new_node;
-
-            curr_node->set_output(false);
-        }
-
-        if (!curr_node->is_endpoint())
-            replace_all_usages(*curr_node, new_node, true);
-        else
-            remove_if_dangling(*curr_node, true);
-
-        rename(new_node, id_to_replace);
-
-        //a data node is always an input (since it does not have any dependencies) so add it to the list of inputs
-        inputs.push_back(&new_node);
+        curr_node.dependencies.clear();
+        //remove all constant users (as they will be either removed or replaced by cldnn::data which does not have any dependencies)
+        curr_node.users.erase(
+            std::remove_if(curr_node.users.begin(), curr_node.users.end(), [](program_node* node) { return node->is_constant(); }),
+            curr_node.users.end()
+        );
+        replace(curr_node, new_node, false, false);
     }
 }
 
@@ -1802,6 +1814,11 @@ void program_impl::add_intermediate(program_node& node, program_node& next, size
     node.constant = prev.constant;
     node.data_flow = prev.data_flow;
     node.main_branch = prev.main_branch;
+    if (prev.constant_frontier)
+    {
+        node.constant_frontier = true;
+        prev.constant_frontier = false;
+    }
 }
 
 void program_impl::rename(program_node & node, primitive_id const & new_id)
@@ -1896,6 +1913,7 @@ void program_impl::replace(program_node& old_node, program_node& new_node, bool 
     new_node.data_flow = old_node.data_flow;
     new_node.main_branch = old_node.main_branch;
     new_node.constant = old_node.constant;
+    new_node.constant_frontier = old_node.constant_frontier;
     new_node.user_mark = old_node.user_mark;
 
     auto old_news_pos = new_node.processing_itr;
@@ -1974,6 +1992,8 @@ bool program_impl::remove_if_dangling(program_node& node, bool detach_whole_bran
             nodes_map.erase(rem->id());
         }
     }
+
+    return true;
 
     return true;
 }
@@ -2351,6 +2371,4 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
     graph << '\n';
     graph.flush();
     graph.close();
-}
-
 }

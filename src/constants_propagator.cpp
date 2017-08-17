@@ -34,7 +34,7 @@ void constants_propagator::visit_node(program_node& node)
         handle_constant(node);
 }
 
-std::list<std::pair<primitive_id, memory>> cldnn::constants_propagator::calculate()
+std::list<std::pair<primitive_id, memory_impl::ptr>> constants_propagator::calculate()
 {
     if (!has_non_trivial_constants)
         return{};
@@ -42,17 +42,17 @@ std::list<std::pair<primitive_id, memory>> cldnn::constants_propagator::calculat
     build_options bo;
     bo.set_option(build_option::optimize_data(false));
     bo.set_option(build_option::outputs(const_outputs));
-    network_impl::ptr net = prog->get_engine()->build_network(tpl, bo);
+    network_impl::ptr net = prog->get_engine().build_network(tpl, bo);
     for (auto& cin : const_inputs)
-        net->set_input_data(cin->id(), api_cast(cin->get_primitive()->mem.get()));
+        net->set_input_data(cin->id(), cin->get_attached_memory());
 
     net->execute({});
     net->reset_execution(true); //wait for computations to complete
     auto outputs = net->get_outputs();
 
-    std::list<std::pair<primitive_id, memory>> ret;
+    std::list<std::pair<primitive_id, memory_impl::ptr>> ret;
     for (auto& out : outputs)
-        ret.push_back({ out->id(), out->output_memory() });
+        ret.push_back({ out->id(), &out->output_memory() });
 
     return ret;
 }
@@ -75,8 +75,8 @@ void constants_propagator::add_constant(program_node& node)
     tpl.add(node.desc);
     has_non_trivial_constants = true;
 
-    //if a node is an endpoint, always add it as an output
-    if (node.is_endpoint())
+    //if a node is either an endpoint or an output, always add it as an output
+    if (node.is_endpoint() || node.is_output())
         const_outputs.push_back(node.id());
 
     //if a non-tirivial constant has a trivial input, add this input as an input for our network

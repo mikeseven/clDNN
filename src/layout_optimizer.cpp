@@ -28,9 +28,9 @@
 
 using namespace cldnn;
 
-layout_optimizer::layout_optimizer(refcounted_obj_ptr<engine_impl> eng, bool enabled, bool output_size_handling_enabled)
-    : _enabled(enabled), _engine(eng), _optimization_attributes()
-      _output_size_handling_enabled(output_size_handling_enabled)
+layout_optimizer::layout_optimizer(bool output_size_handling_enabled)
+    : _optimization_attributes()
+    , _output_size_handling_enabled(output_size_handling_enabled)
 {
 }
 
@@ -209,6 +209,67 @@ layout_optimizer::create_reorder_from_given_source(const cldnn::primitive_id& me
     auto reorder = std::make_shared<cldnn::generic_layer>(ss.str(), memid, expected_layout, reorder_params);
     _cached_generic_layers[ckey] = reorder;
     return std::make_pair(reorder, false);
+}
+
+std::vector<std::pair<std::shared_ptr<primitive>, bool>> layout_optimizer::get_generic_layer(
+    const kernel_selector::weights_reorder_params & reorder_params,
+    primitive_id input_id,
+    const layout & old_layout,
+    data_type type)
+{
+
+    if (reorder_params.engine == kernel_selector::weights_reorder_params::Engine::NONE || type != data_type::weights)
+        return{};
+
+    std::vector<std::pair<std::shared_ptr<primitive>, bool>> ret;
+
+    if (reorder_params.engine == kernel_selector::weights_reorder_params::Engine::CPU &&
+        reorder_params.cpuKernel != nullptr)
+    {
+        const auto intermediate_format = from_weights_layout(reorder_params.cpuKernel->GetExpectedInputLayout());
+        const auto intermediate_type = from_weights_type(reorder_params.cpuKernel->GetExpectedInputType());
+        if (intermediate_format != old_layout.format ||
+            intermediate_type != old_layout.data_type)
+        {
+            const layout intermediate_layout = { intermediate_type, intermediate_format, old_layout.size.transform(intermediate_format, 1) };
+
+            auto reorder = create_reorder_if_needed(old_layout, input_id, intermediate_layout);
+            if (reorder.first)
+            {
+                ret.push_back(reorder);
+                input_id = reorder.first->id;
+            }
+        }
+    }
+
+    auto new_dtype = from_weights_type(reorder_params.dtype);
+    const auto bpp = data_type_traits::size_of(new_dtype);
+    layout expected_layout = {
+        new_dtype, format::bfyx, // simple linear format (flatten to x channel)
+        { 1,1,1,(tensor::value_type)(reorder_params.newBufferSize / bpp) }
+    };
+    auto reorder = create_reorder_from_given_source(input_id, expected_layout, reorder_params);
+    if (reorder.first)
+    {
+        ret.push_back(reorder);
+    }
+
+    return ret;
+}
+
+void layout_optimizer::set_optimization_attribute(optimization_attributes_type attribute, int32_t val)
+{
+    switch (attribute)
+    {
+    case optimization_attributes_type::splitted_convolution:
+        _optimization_attributes.splitted_convolution = val;
+        break;
+    case optimization_attributes_type::bfyx_only_layer:
+        _optimization_attributes.bfyx_only_layer = val;
+        break;
+    default:
+        throw std::out_of_range("unsupported layout optimization attribute");
+    }
 }
 
     net.reset_execution(true);

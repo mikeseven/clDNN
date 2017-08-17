@@ -24,6 +24,16 @@
 namespace cldnn
 {
 
+template <>
+struct typed_program_node<prior_box> : typed_program_node_base<prior_box>
+{
+    using parent = typed_program_node_base<prior_box>;
+
+    typed_program_node(std::shared_ptr<prior_box> prim, program_impl& prog);
+
+    decltype(auto) input() const { return get_dependency(0); }
+};
+
 using prior_box_node = typed_program_node<prior_box>;
 
 template <>
