@@ -23,26 +23,20 @@
 // Creates vector type.
 #define MAKE_VECTOR_TYPE(elem_type, size) CONCAT_TOKEN(elem_type, size)
 
-KERNEL (eltwise_gpu_vload8)(const __global UNIT_TYPE* input1, const __global UNIT_TYPE* input2, __global UNIT_TYPE* output)
+KERNEL(eltwise_gpu_vload8)(
+    INPUTS_DECLS
+    __global UNIT_TYPE* output)
 {
     const uint global_id = get_global_id(0);
 
-    const MAKE_VECTOR_TYPE(UNIT_TYPE, 8) in1 = vload8(global_id, input1);
-    const MAKE_VECTOR_TYPE(UNIT_TYPE, 8) in2 = vload8(global_id, input2);
+    VLOAD_DECLS
 
-    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) result;
-#if   defined MAX_MODE_USED
-    result = (in1 > in2 ? in1 : in2);
-#elif defined MUL_MODE_USED
-    result = in1 * in2;
-#elif defined SUB_MODE_USED
-    result = in1 - in2;
-#elif defined ADD_MODE_USED
-    result = in1 + in2;
-#endif
-   
-    result = ACTIVATION(result, NL_M, NL_N);
+    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) res;
 
-    vstore8(result, global_id, output);
+    DO_ELTWISE
+    
+    res = ACTIVATION(res, NL_M, NL_N);
+
+    vstore8(res, global_id, output);
 
 }
