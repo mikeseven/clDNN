@@ -37,6 +37,9 @@ void base_event::set_ocl_callback()
 
 void base_event::wait_impl()
 {
+    if (get_context()->logging_enabled())
+        get_context()->log(0, "Wait for event: " + std::to_string(_queue_stamp));
+
     _event.wait();
 }
 

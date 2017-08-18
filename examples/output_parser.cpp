@@ -1,6 +1,8 @@
 #include "output_parser.h"
 #include "api/CPP/network.hpp"
 
+#include "common/instrumentation.h"
+
 #include <algorithm>
 #include <memory>
 #include <sstream>
@@ -105,8 +107,7 @@ std::vector<std::string> load_category_names(const std::string & file_name)
 
 html::html(const std::string & file_name, const std::string & title)
 {
-    auto t = std::chrono::system_clock::to_time_t(std::chrono::system_clock::now( ));
-    html_file.open(file_name + "_" + std::to_string(t) + ".html", std::ios::out | std::ios::trunc);
+    html_file.open(instrumentation::logger::get_dumps_dir() + "/" + file_name + ".html", std::ios::out | std::ios::trunc);
     if(html_file.is_open( ))
     {
         // begin HTML file

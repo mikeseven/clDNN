@@ -22,12 +22,17 @@
 #define CL_HPP_MINIMUM_OPENCL_VERSION 120
 #define CL_HPP_TARGET_OPENCL_VERSION 120
 #include <cl2_wrapper.h>
-#include <memory>
-#include <chrono>
+
 #include "api/CPP/profiling.hpp"
 #include "kernels_cache.h"
 #include "engine_info.h"
 #include "event_impl.h"
+
+#include <boost/optional.hpp>
+
+#include <memory>
+#include <chrono>
+#include <fstream>
 
 namespace cldnn { namespace gpu {
 
@@ -51,6 +56,8 @@ struct configuration
     std::string compiler_options;
     std::string single_kernel_name;
     bool host_out_of_order;
+    std::string log;
+    std::string ocl_sources_dumps_dir;
 };
 
 class gpu_toolkit;
@@ -90,7 +97,7 @@ private:
     cl_profiling_info _end;
 };
 
-class gpu_toolkit
+class gpu_toolkit : public std::enable_shared_from_this<gpu_toolkit>
 {
     friend class context_holder;
 
@@ -123,6 +130,9 @@ public:
     void flush();
     void wait_for_events(std::vector<event_impl::ptr> const& events);
 
+    void log(uint64_t id, std::string const& msg);
+    bool logging_enabled() const { return !_configuration.log.empty(); }
+
 private:
     configuration _configuration;
     cl::Device _device;
@@ -137,8 +147,12 @@ private:
 
     std::string _extensions;
 
+    boost::optional<std::ofstream> _log_file;
+
     //returns whether a barrier has been added
     void sync_events(std::vector<event_impl::ptr> const& deps);
+
+    std::ofstream& open_log();
 };
 
 }}

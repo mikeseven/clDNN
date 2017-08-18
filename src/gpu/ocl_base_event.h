@@ -14,14 +14,16 @@ struct profiling_period_ocl_start_stop
 struct base_event : virtual public event_impl
 {
 public:
-    base_event(cl::Event const& ev, uint64_t queue_stamp = 0) : _event(ev), _queue_stamp(queue_stamp)
+    base_event(std::shared_ptr<gpu_toolkit> ctx, cl::Event const& ev, uint64_t queue_stamp = 0) : _ctx(ctx), _event(ev), _queue_stamp(queue_stamp)
     {}
 
+    auto get_context() const { return _ctx; }
     cl::Event get() { return _event; }
 
     uint64_t get_queue_stamp() const { return _queue_stamp; }
 
 private:
+    std::shared_ptr<gpu_toolkit> _ctx;
     cl::Event _event;
     bool _callback_set = false;
     uint64_t _queue_stamp = 0;

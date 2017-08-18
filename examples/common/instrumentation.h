@@ -43,6 +43,9 @@ namespace instrumentation {
     {
         static void log_memory_to_file(const cldnn::memory&, std::string prefix = "", bool single_batch = false, cldnn::tensor::value_type batch_id = 0, bool single_feature = false, cldnn::tensor::value_type feature_id = 0);
         static void log_weights_to_file(const cldnn::memory&, std::string prefix = "");
+        static std::string create_graphs_dumps_dir(std::string& err_str); //err_str is not empty in case of failure, returned value does not contain trailing /
+        static std::string get_dumps_dir(); //returns empty if could not create, returned values does not contain trailing /
+        static std::string create_sources_dumps_dir(std::string& err_str); //err_str is not empty in case of failure, returned value does not contain trailing /
     private:
         static const std::string dump_dir;
     };

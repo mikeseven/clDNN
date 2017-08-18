@@ -26,13 +26,8 @@
 #include "kernel_selector_helper.h"
 
 #define MAX_KERNELS_PER_PROGRAM 10
-#ifndef NDEBUG
-#define OUT_PORGRAM_TO_FILE
-#endif
 
 namespace cldnn { namespace gpu {
-
-const char program_dump_file_name[] = "clDNN_program";
 
 namespace {
     std::string get_undef_jit(kernels_cache::source_code org_source_code)
@@ -222,70 +217,83 @@ kernels_cache::kernel_id kernels_cache::set_kernel_source(const std::shared_ptr<
 kernels_cache::kernels_map kernels_cache::build_program(const program_code& program_source) const
 {
     static uint32_t current_file_index = 0;
-    const std::string current_program_dump_file_name = program_dump_file_name + std::to_string(current_file_index) + ".cl";
 
-    try 
+    bool dump_sources = !_context.get_configuration().ocl_sources_dumps_dir.empty();
+
+    std::string dump_file_name = "";
+    if (dump_sources)
+    {
+        dump_file_name = _context.get_configuration().ocl_sources_dumps_dir;
+        if (dump_file_name.back() != '/')
+            dump_file_name += '/';
+
+        dump_file_name += "clDNN_program_" + std::to_string(current_file_index++) + "_part_";
+    }
+
+    try
     {
         kernels_map kmap;
+        std::string err_log; //accumulated build log from all program's parts (only contains messages from parts which failed to compile)
 
+        uint32_t part_idx = 0;
         for (const auto& sources : program_source.source)
         {
-#ifndef OUT_PORGRAM_TO_FILE
-            if (program_source.dump_custom_program)
-#endif
+            auto current_dump_file_name = dump_file_name + std::to_string(part_idx++) + ".cl";
+            boost::optional<std::ofstream> dump_file;
+
+            if (dump_sources)
             {
-                current_file_index++;
-                std::ofstream os(current_program_dump_file_name);
+                dump_file.emplace(current_dump_file_name);
                 for (auto& s : sources)
-                    os << s;
+                    dump_file.get() << s;
             }
 
-            cl::Program program(_context.context(), sources);
-            program.build({ _context.device() }, program_source.options.c_str());
-
-#ifndef OUT_PORGRAM_TO_FILE
-            if (program_source.dump_custom_program)
-#endif
+            try
             {
-                std::ofstream os(current_program_dump_file_name, std::ios_base::app);
-                os << "\n/* Build Log:\n";
-                for (auto& p : program.getBuildInfo<CL_PROGRAM_BUILD_LOG>()) {
-                    os << p.second << "\n";
+                cl::Program program(_context.context(), sources);
+                program.build({ _context.device() }, program_source.options.c_str());
+
+                if (dump_sources)
+                {
+                    dump_file.get() << "\n/* Build Log:\n";
+                    for (auto& p : program.getBuildInfo<CL_PROGRAM_BUILD_LOG>())
+                        dump_file.get() << p.second << "\n";
+
+                    dump_file.get() << "*/\n";
                 }
-                os << "*/\n";
+
+                cl::vector<cl::Kernel> kernels;
+                program.createKernels(&kernels);
+
+                for (auto& k : kernels)
+                {
+                    auto kernel_name = k.getInfo<CL_KERNEL_FUNCTION_NAME>();
+                    kmap.emplace(kernel_name, k);
+                }
             }
-
-            cl::vector<cl::Kernel> kernels;
-            program.createKernels(&kernels);
-
-            for (auto& k : kernels)
+            catch (const cl::BuildError& err)
             {
-                auto kernel_name = k.getInfo<CL_KERNEL_FUNCTION_NAME>();
-                kmap.emplace(kernel_name, k);
+                if (dump_sources)
+                    dump_file.get() << "\n/* Build Log:\n";
+
+                for (auto& p : err.getBuildLog())
+                {
+                    if (dump_sources)
+                        dump_file.get() << p.second << "\n";
+                
+                    err_log += p.second + '\n';
+                }
+
+                if (dump_sources)
+                    dump_file.get() << "*/\n";
             }
+            
         }
 
-        return std::move(kmap);
-    }
-    catch (const cl::BuildError& err) 
-    {
-        std::string build_log{"Build program error "};
-        build_log += err.what();
+        if (!err_log.empty())
+            throw std::runtime_error("Program build failed:\n" + std::move(err_log));
 
-#ifndef OUT_PORGRAM_TO_FILE
-        if (program_source.dump_custom_program)
-#endif
-        {
-            std::ofstream os(current_program_dump_file_name, std::ios_base::app);
-            os << "\n/* Build Log:\n";
-            for (auto& p : err.getBuildLog()) {
-                os << p.second << "\n";
-                build_log += "\n" + p.second;
-            }
-            os << "*/\n";
-        }
-
-        throw std::runtime_error(build_log);
+        return kmap;
     }
     catch (const cl::Error& err)
     {

@@ -28,6 +28,8 @@ namespace cldnn {
             , compiler_options("")
             , single_kernel_name("")
             , host_out_of_order(false)
+            , log("")
+            , ocl_sources_dumps_dir("")
         {}
     }
 }

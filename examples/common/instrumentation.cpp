@@ -29,7 +29,7 @@ using cldnn::backward_comp::argument;
 
 namespace instrumentation {
     // initalize dumping directory for whole run
-    const std::string logger::dump_dir = std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+    const std::string logger::dump_dir = "cldnn_dumps/" + std::to_string(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
 
     static float convert_half_to_float(half_t val, bool flush_denorm_to_zero = false)
     {
@@ -502,5 +502,40 @@ namespace instrumentation {
         std::ofstream file_stream = std::ofstream(filename, std::ios::out);
         file_stream << stream.str();
         file_stream.close();
+    }
+    std::string logger::create_graphs_dumps_dir(std::string& err_str)
+    {
+        auto dir = dump_dir + "/graphs";
+        try
+        {
+            boost::filesystem::create_directories(dir);
+            err_str.clear();
+        }
+        catch (boost::filesystem::filesystem_error const& err)
+        {
+           err_str = err.what();
+        }
+
+        return dir;
+    }
+    std::string logger::get_dumps_dir()
+    {
+        boost::filesystem::create_directories(dump_dir);
+        return dump_dir;
+    }
+    std::string logger::create_sources_dumps_dir(std::string& err_str)
+    {
+        auto dir = dump_dir + "/sources";
+        try
+        {
+            boost::filesystem::create_directories(dir);
+            err_str.clear();
+        }
+        catch (boost::filesystem::filesystem_error const& err)
+        {
+            err_str = err.what();
+        }
+
+        return dir;
     }
 }

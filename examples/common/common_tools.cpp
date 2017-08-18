@@ -370,17 +370,16 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     options.set_option(cldnn::build_option::profiling(ep.profiling));
     options.set_option(cldnn::build_option::debug(ep.dump_hidden_layers || ep.profiling));
 
-    if (!ep.dump_graphs_dir.empty())
+    if (ep.dump_graphs)
     {
-        try
+        std::string err;
+        auto graphs_dumps_dir = instrumentation::logger::create_graphs_dumps_dir(err);
+        if (err.empty())
+            options.set_option(cldnn::build_option::graph_dumps_dir(graphs_dumps_dir));
+        else
         {
-            boost::filesystem::create_directories(ep.dump_graphs_dir);
-            options.set_option(cldnn::build_option::graph_dumps_dir(ep.dump_graphs_dir));
-        }
-        catch (boost::filesystem::filesystem_error const& err)
-        {
-            std::cout << "Could not create requested directory for graph dumps: " << ep.dump_graphs_dir << ", error:\n"
-                << err.what() << "\n -- dumping disabled" << std::endl;
+            std::cout << "Could not create requested directory for graph dumps: '" << graphs_dumps_dir << "'\n    error:\n"
+                << err << "\n    -- dumping will be disabled" << std::endl;
         }
     }
 
@@ -604,7 +603,22 @@ void run_topology(const execution_params &ep)
 
     const auto get_config = [&ep](bool use_ooq)
     {
-        return cldnn::engine_configuration(ep.profiling, ep.meaningful_kernels_names, false, "", ep.run_single_kernel_name, use_ooq);
+        std::string engine_log;
+        std::string sources_dir;
+        if (ep.log_engine)
+            engine_log = instrumentation::logger::get_dumps_dir() + "/engine_log.txt";
+        if (ep.dump_sources)
+        {
+            std::string err;
+            sources_dir = instrumentation::logger::create_sources_dumps_dir(err);
+            if (!err.empty())
+            {
+                std::cout << "Could not create directory for sources dumps, directory path: '" + sources_dir + "'\n    error: " + err + "\n    -- dumping will be disabled." << std::endl;
+                sources_dir = "";
+            }
+        }
+
+        return cldnn::engine_configuration(ep.profiling, ep.meaningful_kernels_names, false, "", ep.run_single_kernel_name, use_ooq, engine_log, sources_dir);
     };
 
     //try to init oooq engine

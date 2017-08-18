@@ -36,6 +36,8 @@ gpu_toolkit_config convert_configuration(const engine_configuration conf)
     result.dump_custom_program = conf.dump_custom_program != 0;
     result.single_kernel_name = conf.single_kernel_name;
     result.host_out_of_order = false /*conf.enable_parallelisation != 0*/; //TODO: enable when barriers in driver will be fixed
+    result.log = conf.engine_log;
+    result.ocl_sources_dumps_dir = conf.sources_dumps_dir;
     return result;
 }
 
@@ -90,7 +92,7 @@ bool engine_impl::is_the_same_buffer(const memory_impl& mem1, const memory_impl&
 event_impl::ptr engine_impl::create_user_event(bool set)
 {
     try {
-        return{ new gpu::user_event(cl::UserEvent(get_context()->context()), set), false };
+        return{ new gpu::user_event(get_context(), cl::UserEvent(get_context()->context()), set), false };
     }
     catch (cl::Error const& err) {
         throw gpu::ocl_error(err);

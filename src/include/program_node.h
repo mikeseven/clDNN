@@ -275,10 +275,7 @@ namespace details
 
         const primitive_id& id() const override { return internal_id; }
 
-        void set_implementation(std::unique_ptr<primitive_impl>&& impl)
-        {
-            selected_impl = std::move(impl);
-        }
+        void set_implementation(std::unique_ptr<primitive_impl>&& impl);
 
     private:
         primitive_id internal_id;

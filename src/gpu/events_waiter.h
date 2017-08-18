@@ -31,7 +31,7 @@ public:
     {
         if (dependencies.size() == 0)
         {
-            auto ev = new gpu::user_event(cl::UserEvent(context()->context()), true);
+            auto ev = new gpu::user_event(context(), cl::UserEvent(context()->context()), true);
             return{ ev, false };
         }
 

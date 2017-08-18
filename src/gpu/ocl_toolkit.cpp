@@ -21,6 +21,36 @@
 
 #include <cassert>
 
+namespace {
+    std::string ndrange_to_string(cl::NDRange const& range)
+    {
+        std::string ret = "(";
+        for (cl::size_type i = 0; i < range.dimensions(); ++i)
+            ret += (!i ? "" : ", ") + std::to_string(range.get()[i]);
+
+        ret += ")";
+        return ret;
+    }
+
+    std::string events_list_to_string(std::vector<cldnn::event_impl::ptr> events)
+    {
+        std::string ret = "(";
+        bool empty = true;
+        for (auto& ev : events)
+        {
+            std::string id = "unk";
+            if (auto* ocl_ev = dynamic_cast<cldnn::gpu::base_event*>(ev.get()))
+                id = std::to_string(ocl_ev->get_queue_stamp());
+
+            ret += (empty ? "" : ", ") + id;
+            empty = false;
+        }
+
+        ret += ")";
+        return ret;
+    }
+}
+
 namespace cldnn { namespace gpu {
 
 ocl_error::ocl_error(cl::Error const & err) : error(err.what() + std::string(", error code: ") + std::to_string(err.err()))
@@ -161,13 +191,25 @@ event_impl::ptr gpu_toolkit::enqueue_kernel(cl::Kernel const& kern, cl::NDRange 
     catch (cl::Error const& err) {
         throw ocl_error(err);
     }
-    return{ new base_event(ret_ev, ++_queue_counter), false };
+
+    if (logging_enabled())
+    {
+        auto msg = kern.getInfo<CL_KERNEL_FUNCTION_NAME>() + ", gws: " + ndrange_to_string(global) + ", lws: " + ndrange_to_string(local) + ", deps: ";
+        if (_configuration.host_out_of_order)
+            msg += "()";
+        else
+            msg += events_list_to_string(deps);
+
+        log(_queue_counter + 1, msg);
+    }
+
+    return{ new base_event(shared_from_this(), ret_ev, ++_queue_counter), false };
 }
 
 event_impl::ptr gpu_toolkit::enqueue_marker(std::vector<event_impl::ptr> const& deps)
 {
     if (deps.empty())
-        return{ new user_event(cl::UserEvent(_context), true), false };
+        return{ new user_event(shared_from_this(), cl::UserEvent(_context), true), false };
 
     if (!_configuration.host_out_of_order)
     {
@@ -196,13 +238,16 @@ event_impl::ptr gpu_toolkit::enqueue_marker(std::vector<event_impl::ptr> const& 
             }
         }
 
-        return{ new base_event(ret_ev, ++_queue_counter), false };
+        if (logging_enabled())
+            log(_queue_counter + 1, "Marker with dependencies: " + events_list_to_string(deps));
+
+        return{ new base_event(shared_from_this(), ret_ev, ++_queue_counter), false };
     }
     else
     {
         sync_events(deps);
         assert(_last_barrier_ev() != nullptr);
-        return{ new base_event(_last_barrier_ev, _last_barrier), false };
+        return{ new base_event(shared_from_this(), _last_barrier_ev, _last_barrier), false };
     }
 }
 
@@ -213,6 +258,9 @@ void gpu_toolkit::flush()
 
 void gpu_toolkit::wait_for_events(std::vector<event_impl::ptr> const & events)
 {
+    if (logging_enabled())
+        log(0, "Wait for events: " + events_list_to_string(events));
+
     std::vector<cl::Event> clevents;
     for (auto& ev : events)
         if (auto ocl_ev = dynamic_cast<base_event*>(ev.get()))
@@ -224,6 +272,14 @@ void gpu_toolkit::wait_for_events(std::vector<event_impl::ptr> const & events)
     catch (cl::Error const& err) {
         throw ocl_error(err);
     }
+}
+
+void gpu_toolkit::log(uint64_t id, std::string const & msg)
+{
+    if (_configuration.log.empty())
+        return;
+
+    open_log() << "[" << id << "] " << msg << std::endl;
 }
 
 void gpu_toolkit::sync_events(std::vector<event_impl::ptr> const & deps)
@@ -249,7 +305,26 @@ void gpu_toolkit::sync_events(std::vector<event_impl::ptr> const & deps)
         }
 
         _last_barrier = ++_queue_counter;
+        if (logging_enabled())
+            log(_last_barrier, "Barrier");
     }
+}
+
+std::ofstream& gpu_toolkit::open_log()
+{
+    if (!_log_file.is_initialized())
+    {
+        _log_file.emplace(_configuration.log, std::ios::out | std::ios::trunc);
+        if (!_log_file.is_initialized())
+            throw std::runtime_error("Could not initialize ocl_toolkit log file");
+        if (!_log_file->is_open())
+        {
+            _log_file.reset();
+            throw std::runtime_error("Could not open ocl_toolkit log file '" + _configuration.log + "' for writing");
+        }
+    }
+
+    return _log_file.get();
 }
 
 }

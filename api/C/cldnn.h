@@ -120,6 +120,8 @@ typedef struct
     const char* compiler_options;      ///< OpenCL compiler options string.
     const char* single_kernel_name;    ///< If provided, runs specific layer.
     uint32_t enable_parallelisation;   ///< Enables parallel execution of primitives which don't depend on each other. Disabled by default.
+    const char* engine_log;            ///< Specifies a file to which engine log should be dumped. Null/empty values means no logging.
+    const char* sources_dumps_dir;     ///< Specifies a directory where sources of cldnn::program objects should be dumped. Null/empty values means no loggins.
 }  cldnn_engine_configuration;
 
 /// @brief Information about the engine returned by cldnn_get_engine_info().

@@ -192,8 +192,12 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Dump results only for this specified batch.")
         ("dump_feature", bpo::value<std::uint32_t>()->value_name("<feature-id>"),
             "Dump results only for this specified feature.")
-        ("dump_graph", bpo::value<std::string>()->value_name("<dump-dir>"),
-            "Dump informations about stages of graph compilation to files within specified directory.")
+        ("dump_graphs", bpo::bool_switch(),
+            "Dump informations about stages of graph compilation to files.")
+        ("log_engine", bpo::bool_switch(),
+            "Log engine actions during execution of a network.")
+        ("dump_sources", bpo::bool_switch(),
+            "Dump ocl source code per compilation.")
         ("weights", bpo::value<std::string>()->value_name("<weights-dir>"),
             "Path to directory containing weights used in classification.\n"
             "Non-absolute paths are computed in relation to <executable-dir> (not working directory).\n"
@@ -434,7 +438,9 @@ int main(int argc, char* argv[])
         ep.dump_batch_id = ep.dump_single_batch ? parsed_args["dump_batch"].as<uint32_t>() : 0;
         ep.dump_single_feature = parsed_args.count("dump_feature") != 0;
         ep.dump_feature_id = ep.dump_single_feature ? parsed_args["dump_feature"].as<uint32_t>() : 0;
-        ep.dump_graphs_dir = parsed_args.count("dump_graph") > 0 ? parsed_args.at("dump_graph").as<std::string>() : std::string();
+        ep.dump_graphs = parsed_args["dump_graphs"].as<bool>();
+        ep.log_engine = parsed_args["log_engine"].as<bool>();
+        ep.dump_sources = parsed_args["dump_sources"].as<bool>();
         ep.perf_per_watt = parsed_args["perf_per_watt"].as<bool>();
         ep.loop = parsed_args["loop"].as<std::uint32_t>();
 

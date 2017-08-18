@@ -16,6 +16,7 @@
 
 #include "program_node.h"
 #include "program_impl.h"
+#include "primitive_inst.h"
 
 using namespace cldnn;
 
@@ -95,4 +96,9 @@ primitive_id details::internal_program_node_base::get_next_internal_id()
 
 details::internal_program_node_base::internal_program_node_base(program_impl & prog) : program_node(nullptr, prog), internal_id(get_next_internal_id())
 {
+}
+
+void details::internal_program_node_base::set_implementation(std::unique_ptr<primitive_impl>&& impl)
+{
+    selected_impl = std::move(impl);
 }
