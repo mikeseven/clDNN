@@ -621,11 +621,15 @@ void run_topology(const execution_params &ep)
         return cldnn::engine_configuration(ep.profiling, ep.meaningful_kernels_names, false, "", ep.run_single_kernel_name, use_ooq, engine_log, sources_dir);
     };
 
-    //try to init oooq engine
-    try {
-        eng_storage.emplace(get_config(true));
-    }
-    catch (cldnn::error&) {
+    if (ep.use_oooq)
+    {
+        //try to init oooq engine
+        try {
+            eng_storage.emplace(get_config(true));
+        }
+        catch (cldnn::error& err) {
+            std::cout << "Could not initialize cldnn::engine with out-of-order queue,\n    error: (" + std::to_string(err.status()) + ") " + err.what() << "\n    --- fallbacking to in-order-queue" << std::endl;
+        }
     }
 
     //if initialization failed, fallback to in-order queue

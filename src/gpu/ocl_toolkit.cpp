@@ -166,6 +166,33 @@ gpu_toolkit::gpu_toolkit(const configuration& config)
     , _kernels_cache(*this)
 {
     _device.getInfo(CL_DEVICE_EXTENSIONS, &_extensions);
+    if (logging_enabled())
+    {
+        open_log()
+            << "Engine configuration:\n"
+            << "    profiling: " + std::to_string(_configuration.enable_profiling) << "\n"
+            << "    meaningful names: " + std::to_string(_configuration.enable_profiling) << "\n"
+            << "    dump custom program: " + std::to_string(_configuration.enable_profiling) << "\n"
+            << "    device type: " + std::to_string(_configuration.enable_profiling) << "\n"
+            << "    vendor type: " + std::to_string(_configuration.enable_profiling) << "\n"
+            << "    compiler options: " + _configuration.enable_profiling << "\n"
+            << "    single kernel name: " + _configuration.enable_profiling << "\n"
+            << "    out-of-order: " + std::to_string(_configuration.host_out_of_order) << "\n"
+            << "    engine log: " + _configuration.log << "\n"
+            << "    sources dumps: " + _configuration.ocl_sources_dumps_dir << "\n"
+            << "\nEngine info:\n"
+            << "    configuration: " + std::to_string(_engine_info.configuration) << "\n"
+            << "    model: " + std::to_string(_engine_info.model) << "\n"
+            << "    architecture: " + std::to_string(_engine_info.architecture) << "\n"
+            << "    cores count: " + std::to_string(_engine_info.cores_count) << "\n"
+            << "    core frequencey: " + std::to_string(_engine_info.core_frequency) << "\n"
+            << "    max work group size: " + std::to_string(_engine_info.max_work_group_size) << "\n"
+            << "    local memory size: " + std::to_string(_engine_info.max_local_mem_size) << "\n"
+            << "    fp16: " + std::to_string(_engine_info.supports_fp16) << "\n"
+            << "    fp16 denorms: " + std::to_string(_engine_info.supports_fp16_denorms) << "\n"
+            << "    subgroups short: " + std::to_string(_engine_info.supports_subgroups_short) << "\n"
+            << std::endl;
+    }
 }
 
 event_impl::ptr gpu_toolkit::enqueue_kernel(cl::Kernel const& kern, cl::NDRange const& global, cl::NDRange const& local, std::vector<event_impl::ptr> const & deps)
