@@ -35,7 +35,7 @@ gpu_toolkit_config convert_configuration(const engine_configuration conf)
     result.meaningful_kernels_names = conf.meaningful_kernels_names != 0;
     result.dump_custom_program = conf.dump_custom_program != 0;
     result.single_kernel_name = conf.single_kernel_name;
-    result.host_out_of_order = conf.enable_parallelisation != 0; //TODO: enable when barriers in driver will be fixed
+    result.host_out_of_order = false /*conf.enable_parallelisation != 0*/; //TODO: enable when barriers in driver will be fixed
     result.log = conf.engine_log;
     result.ocl_sources_dumps_dir = conf.sources_dumps_dir;
     return result;
