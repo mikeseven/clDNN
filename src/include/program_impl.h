@@ -73,6 +73,8 @@ public:
     }
 
 private:
+    uint32_t prog_id = 0;
+
     engine_impl::ptr engine;
     build_options options;
 
@@ -168,9 +170,10 @@ private:
     bool extract_and_remove(program_node& node);
 
     void replace_data_with_optimized(std::map<primitive_id, memory_impl::ptr> const& replace_map);
-
     void forward_bfs(std::function<void(program_node&)> const& mark_func = nullptr, std::function<void(program_node&)> const& unmark_func = nullptr) const;
     void backward_bfs(std::function<void(program_node&)> const& mark_func = nullptr, std::function<void(program_node&)> const& unmark_func = nullptr) const;
+
+    void dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter = nullptr) const;
 };
 }
 

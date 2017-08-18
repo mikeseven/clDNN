@@ -46,6 +46,9 @@ struct program_node
 {
     friend struct program_impl;
 
+    template <class PType>
+    friend struct typed_program_node;
+
     program_node(std::shared_ptr<primitive> prim, program_impl& prog);
 
     program_node(program_node const&) = delete;
@@ -85,6 +88,10 @@ public:
     auto const& get_users() { return users; }
     // for const method, add const to stored successors/predecessors
     auto const& get_users() const { return reinterpret_cast<const std::list<const program_node*>&>(users); }
+
+    bool has_next() const;
+    program_node* get_next() { auto itr = processing_itr; return (*++itr); }
+    const program_node* get_next() const { auto itr = processing_itr; return (*++itr); }
 
     //do not modify primitive directly to keep synchronisation wit graph
     std::shared_ptr<const primitive> get_primitive() const { return desc; }
@@ -268,6 +275,11 @@ namespace details
 
         const primitive_id& id() const override { return internal_id; }
 
+        void set_implementation(std::unique_ptr<primitive_impl>&& impl)
+        {
+            selected_impl = std::move(impl);
+        }
+
     private:
         primitive_id internal_id;
 
@@ -290,6 +302,7 @@ namespace details
         {
             static_assert(meta::always_false_v<meta::pack<Guard...>>, "Trying to get primitive from internal node");
         }
+
 
     protected:
         template <class... Guard>

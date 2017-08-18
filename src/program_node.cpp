@@ -49,6 +49,12 @@ void program_node::replace_dependency(program_node const& old_dep, program_node&
             return replace_dependency(i, new_dep);
 }
 
+bool program_node::has_next() const
+{
+    auto itr = processing_itr;
+    return (++itr == myprog.processing_order.end());
+}
+
 void program_node::remove_dependency(size_t idx)
 {
     if (idx >= dependencies.size())

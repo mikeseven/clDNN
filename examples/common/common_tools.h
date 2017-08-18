@@ -141,6 +141,7 @@ struct execution_params {
     uint32_t    dump_batch_id;
     bool        dump_single_feature;
     uint32_t    dump_feature_id;
+    std::string dump_graphs_dir;
 
     PrintType print_type = PrintType::Verbose; // printing modes - to support Verbose, vs Perf ony, vs ImageNet testing prints
     size_t loop = 1; // running the same input in a loop for smoothing perf results

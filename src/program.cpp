@@ -44,6 +44,8 @@
 #include "kernel_selector_helper.h"
 #include "sliding_window_utils.h"
 
+#include <fstream>
+
 namespace cldnn
 {
 
@@ -222,12 +224,18 @@ namespace {
 program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topology, build_options const& options)
     : engine(&engine_ref), options(options), output_size_handling_enabled(true)
 {
+    static std::atomic<uint32_t> id_gen{ 0 };
+    prog_id = ++id_gen;
+    assert(prog_id != 0);
+
     init_graph(topology);
     pre_optimize_graph();
     compile_graph();
     post_optimize_graph();
 
     engine->compile_program(*this);
+
+    this->dump_program("6_finished", true);
 }
 
 // TODO: Remove once we will get full support for input/output padding in all primitive implementations.
@@ -350,14 +358,23 @@ void program_impl::init_graph(topology_impl const& topology)
 
     set_outputs();
     calc_processing_order();
+
+    dump_program("0_init", true);
+
     mark_constants();
     mark_data_flow();
     calc_dominators();
+
+    dump_program("1_analyzed_graph", true);
+    dump_program("1_1_data_flow", false, [](program_node const& node){ return node.is_in_data_flow(); });
+    dump_program("1_2_constants", false, [](program_node const& node){ return node.is_constant(); });
 }
 
 void program_impl::pre_optimize_graph()
 {
     trim_to_outputs();
+
+    dump_program("2_trimmed", true);
 
     if (get_engine().configuration().enable_parallelisation)
         reorder_nodes_for_parallel_execution();
@@ -381,6 +398,10 @@ void program_impl::pre_optimize_graph()
     {
         prepare_buffer_fusing();
     }
+
+    dump_program("3_pre_optimized", true);
+    dump_program("3_1_data_flow", false, [](program_node const& node) { return node.is_in_data_flow(); });
+    dump_program("3_2_constants", false, [](program_node const& node) { return node.is_constant(); });
 }
 
 void program_impl::post_optimize_graph()
@@ -389,6 +410,10 @@ void program_impl::post_optimize_graph()
     post_optimize_weights(lo);
     remove_redundant_reorders(); //TODO: do we need it at this place also?
     //prepare_padding(); - TODO: padding should be prepare according to the kernels needs
+
+    dump_program("5_post_optimized", true);
+    dump_program("5_1_data_flow", false, [](program_node const& node) { return node.is_in_data_flow(); });
+    dump_program("5_2_constants", false, [](program_node const& node) { return node.is_constant(); });
 }
 
 void program_impl::compile_graph()
@@ -401,6 +426,9 @@ void program_impl::compile_graph()
             node->selected_impl = node->type()->choose_impl(*engine, *node);
         }
     }
+
+    dump_program("4_compiled", true);
+    dump_program("4_1_data_flow", false, [](program_node const& node) { return node.is_in_data_flow(); });
 }
 
 void program_impl::set_outputs()
@@ -1734,6 +1762,245 @@ void program_impl::backward_bfs(std::function<void(program_node&)> const& mark_f
             unmark_func(*node.second);
         node.second->unmark();
     }
+}
+
+void program_impl::dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter) const
+{
+    auto path = options.get<build_option_type::graph_dumps_dir>()->directory_path;
+    if (path.empty())
+        return;
+
+    if (path.back() != '/' && path.back() != '\\')
+        path += "/";
+
+    const auto node_id = [](program_node* ptr)
+    {
+        return "node_" + std::to_string(reinterpret_cast<uintptr_t>(ptr));
+    };
+
+    const auto extr_type = [](const char* str) -> std::string
+    {
+        if (!str)
+            return{};
+
+        while (*str && *str != '<')
+            ++str;
+        if (!*str)
+            return{};
+
+        auto end = str;
+        while (*end && *end != '>')
+            ++end;
+        if (!*end)
+            return{};
+
+        return{ str + 1, end };
+    };
+
+
+    std::ofstream graph(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".graph");
+    graph << "digraph cldnn_program {\n";
+    for (auto& pair : nodes_map)
+    {
+        auto node = pair.second.get();
+        if (filter && !filter(*node))
+            continue;
+
+        graph << "    " << node_id(node) << "[label=\"" << node->id() << ":\\n" << extr_type(typeid(*node).name()) << "\"";
+        if (node->is_type<data>() || node->is_constant())
+            graph << ", shape=box";
+        if (node->is_type<internal_primitive>())
+            graph << ", color=blue";
+        if (node->is_in_data_flow())
+            graph << ", group=data_flow";
+        graph << "];\n";
+
+        for (auto& user : node->get_users())
+        {
+            if (filter && !filter(*user))
+                continue;
+
+            bool doubled = true;
+            if (std::find(user->dependencies.begin(), user->dependencies.end(), node) == user->dependencies.end())
+                doubled = false;
+
+            graph << "    " << node_id(node) << " -> " << node_id(user);
+
+            bool data_flow = node->is_in_data_flow() && user->is_in_data_flow();
+            if (data_flow)
+            {
+                if (doubled)
+                    graph << " [color=red]";
+                else
+                    graph << " [color=red, style=dashed, label=\"usr\"]";
+            }
+            else
+            {
+                if (!doubled)
+                    graph << " [style=dashed, label=\"usr\"]";
+            }
+            graph << ";\n";
+        }
+
+        for (auto& dep : node->get_dependencies())
+        {
+            if (filter && !filter(*dep))
+                continue;
+
+            if (std::find(dep->users.begin(), dep->users.end(), node) != dep->users.end())
+                continue;
+
+            graph << "   " << node_id(node) << " -> " << node_id(dep) << " [style=dashed, label=\"dep\", constraint=false];\n";
+        }
+
+        if (node->dominator && (!filter || filter(*node->dominator)))
+            graph << "    " << node_id(node) << " -> " << node_id(node->dominator) << " [style=dotted, label=\"dom\", constraint=false];\n";
+        if (node->joint && (!filter || filter(*node->joint)))
+            graph << "    " << node_id(node) << " -> " << node_id(node->joint) << " [style=dotted, label=\"p-dom\", constraint=false];\n";
+    }
+
+    graph << "}\n";
+    graph.flush();
+    graph.close();
+
+    if (!with_full_info)
+        return;
+
+    graph.open(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".info");
+
+    const auto dt_to_str = [](data_types dt) -> std::string
+    {
+        switch (dt)
+        {
+        case data_types::i8: return "i8";
+        case data_types::f16: return "f16";
+        case data_types::f32: return "f32";
+        default:
+            return "unk (" + std::to_string(std::underlying_type_t<data_types>(dt)) + ")";
+        }
+    };
+
+    const auto fmt_to_str = [](format fmt) -> std::string
+    {
+        switch (fmt.value)
+        {
+        case format::bfyx: return "bfyx";
+        case format::byxf: return "byxf";
+        case format::yxfb: return "yxfb";
+        case format::fyxb: return "fyxb";
+        case format::bs_x_bsv16: return "bs_x_bsv16";
+        case format::bs_xs_xsv8_bsv8: return "bs_xs_xsv8_bsv8";
+        case format::bs_xs_xsv8_bsv16: return "bs_xs_xsv8_bsv16";
+        case format::os_iyx_osv16: return "os_iyx_osv16";
+        default:
+            return "unk (" + std::to_string(fmt.value) + ")";
+        }
+    };
+
+    auto const dump_full_node = [&dt_to_str, &fmt_to_str, &extr_type](std::ostream& out, program_node* node)
+    {
+        out << "ptr: " << reinterpret_cast<uintptr_t>(node) << ",\n";
+        out << "id: " << node->id() << ",\n";
+        out << "type: " << extr_type(typeid(*node).name()) << ",\n";
+        out << "internal: " << (node->is_type<internal_primitive>() ? "yes" : "no") << ",\n";
+        out << "valid output layout: " << (node->valid_output_layout ? "yes" : "no") << ",\n";
+        out << "output layout: {\n"
+            << "    data_type: " << dt_to_str(node->output_layout.data_type) << ",\n"
+            << "    format: " << fmt_to_str(node->output_layout.format) << ",\n"
+            << "    size: " << node->output_layout.size << ",\n"
+            << "    padding: {\n"
+            << "        lower size: " << node->output_layout.data_padding.lower_size() << ",\n"
+            << "        upper size: " << node->output_layout.data_padding.upper_size() << ",\n"
+            << "    }\n"
+            << "},\n";
+        out << "processing number: " << node->processing_num << ",\n";
+        out << "constant: " << (node->constant ? "yes" : "no") << ",\n";
+        out << "in data flow: " << (node->data_flow ? "yes" : "no") << ",\n";
+        out << "main branch: " << (node->main_branch ? "yes" : "no") << ",\n";
+        out << "dominator: " << reinterpret_cast<uintptr_t>(node->dominator) << ",\n";
+        out << "join: " << reinterpret_cast<uintptr_t>(node->joint) << ",\n";
+        out << "output: " << (node->output ? "yes" : "no") << ",\n";
+        out << "dependencies: [";
+        {
+            bool empty = true;
+            auto itr = node->dependencies.begin();
+            while (itr != node->dependencies.end())
+            {
+                if (empty)
+                {
+                    out << " ";
+                    empty = false;
+                }
+                else
+                    out << ", ";
+
+                out << reinterpret_cast<uintptr_t>(*itr++);
+            }
+
+            if (!empty)
+                out << " ";
+        }
+        out << "],\n";
+        out << "users: [";
+        {
+            bool empty = true;
+            auto itr = node->users.begin();
+            while (itr != node->users.end())
+            {
+                if (empty)
+                {
+                    out << " ";
+                    empty = false;
+                }
+                else
+                    out << ", ";
+
+                out << reinterpret_cast<uintptr_t>(*itr++);
+            }
+
+            if (!empty)
+                out << " ";
+        }
+        out << "],\n";
+        if (!node->selected_impl)
+            out << "implementation: null\n";
+        else
+        {
+            out << "implementation: {\n";
+            out << "    name: " << typeid(*node->selected_impl.get()).name() << ",\n";
+            out << "    kernels: [\n";
+            out << "        //todo: add proper impl dump\n";
+            out << "    ]\n";
+            out << "}\n";
+        }
+    };
+
+    for (auto& pair : nodes_map)
+    {
+        auto node = pair.second.get();
+        if (filter && !filter(*node))
+            continue;
+
+        dump_full_node(graph, node);
+        graph << std::endl << std::endl;
+    }
+
+    graph.flush();
+    graph.close();
+
+    graph.open(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".order");
+    for (auto node : processing_order)
+        graph << reinterpret_cast<uintptr_t>(node) << " (" << node->id() << ")\n";
+    graph << '\n';
+    graph.flush();
+    graph.close();
+
+    graph.open(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".optimized");
+    for (auto& prim_id : optimized_out)
+        graph << prim_id << "\n";
+    graph << '\n';
+    graph.flush();
+    graph.close();
 }
 
 }

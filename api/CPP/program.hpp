@@ -58,7 +58,10 @@ enum class build_option_type
     /// Expect long execution time in the first run. 
     /// After the first run a cache with the tuning results will be created in the path provided.
     /// This cache will be used in the next runs.
-    tuning_config = cldnn_build_option_tuning_config
+    tuning_config = cldnn_build_option_tuning_config,
+
+    /// @brief Specifies a directory to which stages of network compilation should be dumped. (default: empty, i.e. no dumping)
+    graph_dumps_dir = cldnn_build_option_graph_dumps_dir
 };
 
 /// @brief Tuning mode.
@@ -114,6 +117,9 @@ struct build_option
     /// After the first run a cache with the tuning results will be created in the path provided.
     /// This cache will be used in the next runs.
     static std::shared_ptr<const build_option> tuning_config(const tuning_config_options& config = tuning_config_options());
+
+    /// @brief Specifies a directory to which stages of network compilation should be dumped (default: empty, i.e. no dumping)
+    static std::shared_ptr<const build_option> graph_dumps_dir(const std::string& dir_path);
 
     virtual ~build_option() = default;
 
@@ -251,6 +257,42 @@ private:
     }
 };
 
+/// @brief @ref build_option specialization for selecting a directory.
+template<build_option_type OptType>
+struct build_option_directory : build_option
+{
+    const std::string directory_path;
+
+    /// @brief Constructs option.
+    /// @param outs List of ouput ids (names)
+    explicit build_option_directory(const std::string& dir_path)
+        : directory_path(dir_path)
+    {}
+
+    /// @brief Constructs from C API @ref ::cldnn_build_option.
+    explicit build_option_directory(const cldnn_build_option& value)
+        : directory_path(from_c_value(value))
+    {}
+
+private:
+    /// @brief Returns build_option_type::graph_dumps_dir.
+    build_option_type get_type() const override { return build_option_type::graph_dumps_dir; }
+    /// @brief Returns null terminated C string.
+    const void* get_data() const override { return (directory_path.empty() ? nullptr : directory_path.c_str()); }
+
+    build_option_directory(const build_option_directory& other) = delete;
+    build_option_directory& operator=(const build_option_directory& other) = delete;
+
+    static std::string from_c_value(const cldnn_build_option& value)
+    {
+        if (value.type != static_cast<int32_t>(OptType))
+            throw std::invalid_argument("option type does not match");
+        if (value.data == nullptr)
+            return{};
+
+        return{ static_cast<const char*>(value.data) };
+    }
+};
 
 namespace detail
 {
@@ -327,6 +369,16 @@ namespace detail
             return std::make_shared<object_type>(option);
         }
     };
+    template<> struct build_option_traits<build_option_type::graph_dumps_dir>
+    {
+        typedef build_option_directory<build_option_type::graph_dumps_dir> object_type;
+        static std::shared_ptr<const build_option> make_default() { return build_option::graph_dumps_dir({}); }
+        static std::shared_ptr<const build_option> make_option(const cldnn_build_option& option)
+        {
+            assert(option.type == cldnn_build_option_graph_dumps_dir);
+            return std::make_shared<object_type>(option);
+        }
+    };
 #endif
 } // namespace detail
 
@@ -359,6 +411,11 @@ inline std::shared_ptr<const build_option> build_option::outputs(const std::vect
 inline std::shared_ptr<const build_option> build_option::tuning_config(const tuning_config_options& config)
 {
     return std::make_shared<build_option_tuning_config>(config);
+}
+
+inline std::shared_ptr<const build_option> build_option::graph_dumps_dir(const std::string& dir_path)
+{
+    return std::make_shared<build_option_directory<build_option_type::graph_dumps_dir>>(dir_path);
 }
 #endif
 
@@ -455,6 +512,8 @@ private:
             return detail::build_option_traits<build_option_type::outputs>::make_option(option);
         case cldnn_build_option_tuning_config:
             return detail::build_option_traits<build_option_type::tuning_config>::make_option(option);
+        case cldnn_build_option_graph_dumps_dir:
+            return detail::build_option_traits<build_option_type::graph_dumps_dir>::make_option(option);
         default: throw std::out_of_range("unsupported build option type");
         }
     }

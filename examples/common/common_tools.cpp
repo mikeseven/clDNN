@@ -370,6 +370,20 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     options.set_option(cldnn::build_option::profiling(ep.profiling));
     options.set_option(cldnn::build_option::debug(ep.dump_hidden_layers || ep.profiling));
 
+    if (!ep.dump_graphs_dir.empty())
+    {
+        try
+        {
+            boost::filesystem::create_directories(ep.dump_graphs_dir);
+            options.set_option(cldnn::build_option::graph_dumps_dir(ep.dump_graphs_dir));
+        }
+        catch (boost::filesystem::filesystem_error const& err)
+        {
+            std::cout << "Could not create requested directory for graph dumps: " << ep.dump_graphs_dir << ", error:\n"
+                << err.what() << "\n -- dumping disabled" << std::endl;
+        }
+    }
+
     std::vector<cldnn::primitive_id> outputs(0);
 
     if (!ep.run_until_primitive_name.empty())
