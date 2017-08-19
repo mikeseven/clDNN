@@ -16,23 +16,17 @@
 
 #pragma once
 
-#include "common_kernel_base.h"
-#include "kernel_selector_params.h"
-
+#include "reorder_kernel_base.h"
+ 
 namespace KernelSelector 
-{
-    class ConcatenationKernelBase : public CommonKernelBase
+{    
+    class ReorderKernelFastBatch1 : public ReorderKernelBase
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
-        virtual ~ConcatenationKernelBase() {}
+        ReorderKernelFastBatch1() : ReorderKernelBase("reorder_data_fast_b1") {}
 
-        using DispatchData = CommonDispatchData;
-    
-    protected:
-        virtual bool Validate(const Params&, const OptionalParams&) const override;
-        virtual JitConstants GetJitConstants(const ConcatenationParams& params) const;
-        virtual DispatchData SetDefault(const ConcatenationParams& params) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&) const;
+        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual ParamsKey GetSupportedKey() const override;
+        virtual JitConstants GetJitConstants(const ReorderParams& params) const override;
     };
 }

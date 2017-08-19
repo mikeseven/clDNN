@@ -513,6 +513,19 @@ cldnn_network_output cldnn_get_network_output(cldnn_network network, const char*
     });
 }
 
+cldnn_memory cldnn_get_network_output_memory(cldnn_network network, const char* name, cldnn_status* status)
+{
+    cldnn_memory error_result =  nullptr;
+    return exception_handler<cldnn_memory>(CLDNN_ERROR, status, error_result, [&]() -> cldnn_memory
+    {
+        SHOULD_NOT_BE_NULL(network, "Network");
+        SHOULD_NOT_BE_NULL(name, "ID of primitive");
+        cldnn::primitive_id id(name);
+        auto& mem_result = api_cast(network)->get_primitive(id)->output_memory();
+        return init_external_from_internal(mem_result);
+    });
+}
+
 cldnn_memory cldnn_allocate_memory(cldnn_engine engine, cldnn_layout layout, cldnn_status* status)
 {
     return exception_handler<cldnn_memory>(CLDNN_ERROR, status, nullptr, [&]()
@@ -535,7 +548,7 @@ cldnn_memory cldnn_attach_memory(cldnn_layout layout, void* pointer, size_t size
     {
         cldnn::layout layout_obj(layout);
         if (layout_obj.bytes_count() > size) 
-            std::invalid_argument("buffer size does not match layout size");
+            throw std::invalid_argument("buffer size does not match layout size");
         return api_cast(new cldnn::simple_attached_memory(layout_obj, pointer));
     });
 }

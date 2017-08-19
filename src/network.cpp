@@ -108,6 +108,11 @@ void network_impl::execute(const std::vector<refcounted_obj_ptr<event_impl>>& ev
 
     for (auto& prim : _primitives)
         prim.second->reset_output_change();
+
+    // Using output of previouse network as input to another one may cause hazard (in OOOQ mode) if user would not 
+    // provide proper event to execution. Flushing pipeline should prevent this kind of issues. 
+    // In scenarios with a big number of very small networks it can provide performance drop.
+    get_engine().flush_network();
 }
 
 std::vector<primitive_id> network_impl::get_output_ids() const

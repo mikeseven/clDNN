@@ -100,14 +100,15 @@ protected:
 public:
     static std::shared_ptr<gpu_toolkit> create(const configuration& cfg = configuration());
 
-    const configuration& get_configuration() const { return _configuration; }
-    const cl::Device& device() const { return _device; }
+
     const cl::Context& context() const { return _context; }
+    const cl::Device& device() const { return _device; }
     const cl::CommandQueue& queue() const { return _command_queue; }
-
-    kernels_cache& get_kernels_cache() { return _kernels_cache; }
-
+    
+    const configuration& get_configuration() const { return _configuration; }
     engine_info_internal get_engine_info() const { return _engine_info; }
+    kernels_cache& get_kernels_cache() { return _kernels_cache; }
+    
     inline bool extension_supported(const std::string ext) { return _extensions.find(ext) != std::string::npos; }
 
     gpu_toolkit(const gpu_toolkit& other) = delete;
@@ -119,6 +120,7 @@ public:
 
     event_impl::ptr enqueue_kernel(cl::Kernel const& kern, cl::NDRange const& global, cl::NDRange const& local, std::vector<event_impl::ptr> const& deps);
     event_impl::ptr enqueue_marker(std::vector<event_impl::ptr> const& deps);
+    void flush();
     void wait_for_events(std::vector<event_impl::ptr> const& events);
 
 private:

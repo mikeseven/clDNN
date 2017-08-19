@@ -112,7 +112,7 @@ namespace KernelSelector
             auto cldnnJit = GetJitConstants(newParams);
             auto entryPoint = GetEntryPoint(kernelName, newParams.layerID, options);
             auto jit = CreateJit(kernelName, cldnnJit, entryPoint);
-            
+
             kernel.workGroups.global = { runInfo.gws0, runInfo.gws1, runInfo.gws2 };
             kernel.workGroups.local = { runInfo.lws0, runInfo.lws1, runInfo.lws2 };
             kernel.kernelString = GetKernelString(kernelName, jit, entryPoint);
