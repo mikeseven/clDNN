@@ -55,7 +55,8 @@ namespace KernelSelector {
         {
             //allow only the same input sizes or scalars, without pitches
             if (ewParams.inputs[i].PitchesDifferFromLogicalDims() ||
-               (!(ewParams.inputs[0] == ewParams.inputs[i]) && ewParams.inputs[i].PhysicalSize() != 1))
+               (!(ewParams.inputs[0] == ewParams.inputs[i] && ewParams.inputs[i] == ewParams.output) &&
+                   ewParams.inputs[i].PhysicalSize() != 1))
                 bCheckSizes = false;
         }
 

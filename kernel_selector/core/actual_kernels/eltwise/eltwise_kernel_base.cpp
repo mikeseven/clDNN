@@ -145,20 +145,21 @@ namespace KernelSelector
                 }
             }
 
-            std::string input0_str, input1_str, op;
+            std::string input0_str, input1_str, cast_type, op;
 
             if (useVload8)
             {
-                input0_str = "(MAKE_VECTOR_TYPE(UNIT_TYPE, 8))INPUT_" + op_num_str + "_0";
-                input1_str = "(MAKE_VECTOR_TYPE(UNIT_TYPE, 8))INPUT_" + op_num_str + "_1";
+                cast_type = "(MAKE_VECTOR_TYPE(UNIT_TYPE, 8))";
                 op = "MAKE_VECTOR_TYPE(UNIT_TYPE, 8) tmp" + op_num_str + " = ";
             }
             else
             {
-                input0_str = "(UNIT_TYPE)INPUT_" + op_num_str + "_0";
-                input1_str = "(UNIT_TYPE)INPUT_" + op_num_str + "_1";
+                cast_type = "(UNIT_TYPE)";
                 op = "UNIT_TYPE tmp" + op_num_str + " = ";
             }
+
+            input0_str = cast_type + "INPUT_" + op_num_str + "_0";
+            input1_str = cast_type + "INPUT_" + op_num_str + "_1";
 
             switch (ew.mode)
             {
@@ -167,11 +168,11 @@ namespace KernelSelector
             case EltwiseMode::MUL:      op += input0_str + " * " + input1_str; break;
             case EltwiseMode::DIV:      op += input0_str + " / " + input1_str; break;
             case EltwiseMode::MODULU:   op += input0_str + " % " + input1_str; break;
-            case EltwiseMode::MIN:      op += "fmin(" + input0_str + ", " + input1_str + ")"; break;
-            case EltwiseMode::MAX:      op += "fmax(" + input0_str + ", " + input1_str + ")"; break;
-            case EltwiseMode::POW:      op += "pow(" + input0_str + ", " + input1_str + ")"; break;
-            case EltwiseMode::SQRT:     op += "sqrt(" + input0_str + ")"; break;
-            case EltwiseMode::RSQRT:    op += "1/sqrt(" + input0_str + ")"; break;
+            case EltwiseMode::MIN:      op += cast_type + "fmin(" + input0_str + ", " + input1_str + ")"; break;
+            case EltwiseMode::MAX:      op += cast_type + "fmax(" + input0_str + ", " + input1_str + ")"; break;
+            case EltwiseMode::POW:      op += cast_type + "pow(" + input0_str + ", " + input1_str + ")"; break;
+            case EltwiseMode::SQRT:     op += cast_type + "sqrt(" + input0_str + ")"; break;
+            case EltwiseMode::RSQRT:    op += cast_type + "1/sqrt(" + input0_str + ")"; break;
             case EltwiseMode::ASSIGN:   op += input0_str; break;
             default:
                 break;;
