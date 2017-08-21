@@ -15,13 +15,8 @@
 
 #include "include/include_all.cl"
 
-#define CONCAT_TOKEN_HANDLER1(prefix, suffix) prefix##suffix
-
-// Expands and concatenates two tokens into one.
-#define CONCAT_TOKEN(prefix, suffix) CONCAT_TOKEN_HANDLER1(prefix, suffix)
-
 // Creates vector type.
-#define MAKE_VECTOR_TYPE(elem_type, size) CONCAT_TOKEN(elem_type, size)
+#define MAKE_VECTOR_TYPE(elem_type, size) CAT(elem_type, size)
 
 KERNEL(eltwise_gpu_vload8)(
     INPUTS_DECLS

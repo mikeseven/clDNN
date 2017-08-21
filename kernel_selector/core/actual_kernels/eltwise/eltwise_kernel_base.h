@@ -20,11 +20,11 @@
 
 namespace KernelSelector
 {
-    class GenericEltwiseKernelBase : public CommonKernelBase
+    class EltwiseKernelBase : public CommonKernelBase
     {
     public:
         using CommonKernelBase::CommonKernelBase;
-        virtual ~GenericEltwiseKernelBase() {}
+        virtual ~EltwiseKernelBase() {}
 
         using DispatchData = CommonDispatchData;
         JitConstants GetJitConstantsCommon(const EltwiseParams& params, bool useVload8) const;

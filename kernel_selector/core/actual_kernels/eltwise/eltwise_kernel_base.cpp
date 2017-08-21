@@ -41,7 +41,7 @@ namespace KernelSelector
         }
     }
 
-    bool GenericEltwiseKernelBase::Validate(const Params& p, const OptionalParams&) const
+    bool EltwiseKernelBase::Validate(const Params& p, const OptionalParams&) const
     {
         if (p.GetType() != KernelType::ELTWISE)
         {
@@ -85,7 +85,7 @@ namespace KernelSelector
         return true;
     }
 
-    JitConstants GenericEltwiseKernelBase::GetJitConstantsCommon(const EltwiseParams& params, bool useVload8) const
+    JitConstants EltwiseKernelBase::GetJitConstantsCommon(const EltwiseParams& params, bool useVload8) const
     {
         auto jit = MakeEltwiseJitConstants(params);
 
@@ -195,12 +195,12 @@ namespace KernelSelector
         return jit;
     }
 
-    JitConstants GenericEltwiseKernelBase::GetJitConstants(const EltwiseParams& params) const
+    JitConstants EltwiseKernelBase::GetJitConstants(const EltwiseParams& params) const
     {
         return GetJitConstantsCommon(params, false);
     }
 
-    KernelsData GenericEltwiseKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData EltwiseKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options) const
     {
         if (!Validate(params, options))
         {

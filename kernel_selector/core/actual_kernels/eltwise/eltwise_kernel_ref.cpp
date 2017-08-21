@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "generic_eltwise_kernel_ref.h"
+#include "eltwise_kernel_ref.h"
 #include "kernel_selector_utils.h" 
 
 namespace KernelSelector {
 
-    ParamsKey GenericEltwiseKernelRef::GetSupportedKey() const
+    ParamsKey EltwiseKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableAllInputDataType();
@@ -33,7 +33,7 @@ namespace KernelSelector {
         return k;
     }
 
-    KernelsData GenericEltwiseKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData EltwiseKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         return GetCommonKernelsData(params, options);
     }

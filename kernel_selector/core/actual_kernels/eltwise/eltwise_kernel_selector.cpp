@@ -15,14 +15,14 @@
 */
 
 #include "eltwise_kernel_selector.h"
-#include "generic_eltwise_kernel_ref.h"
+#include "eltwise_kernel_ref.h"
 #include "eltwise_kernel_vload8.h"
  
 namespace KernelSelector 
 {
     EltwiseKernelSelctor::EltwiseKernelSelctor()
     {
-        Attach<GenericEltwiseKernelRef>();
+        Attach<EltwiseKernelRef>();
         Attach<EltwiseKernel_vload8>();
     }
 

@@ -39,7 +39,7 @@ namespace KernelSelector {
 
     bool EltwiseKernel_vload8::Validate(const Params& params, const OptionalParams& o) const
     {
-        if (!GenericEltwiseKernelBase::Validate(params, o))
+        if (!EltwiseKernelBase::Validate(params, o))
         {
             return false;
         }

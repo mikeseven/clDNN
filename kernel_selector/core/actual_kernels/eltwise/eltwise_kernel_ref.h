@@ -20,11 +20,11 @@
 
 namespace KernelSelector
 {
-    class GenericEltwiseKernelRef : public GenericEltwiseKernelBase
+    class EltwiseKernelRef : public EltwiseKernelBase
     {
     public:
-        GenericEltwiseKernelRef() : GenericEltwiseKernelBase("generic_eltwise_ref") {}
-        virtual ~GenericEltwiseKernelRef() {}
+        EltwiseKernelRef() : EltwiseKernelBase("generic_eltwise_ref") {}
+        virtual ~EltwiseKernelRef() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
