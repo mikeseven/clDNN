@@ -41,9 +41,10 @@ namespace KernelSelector
         }
     }
 
-    bool EltwiseKernelBase::Validate(const Params& p, const OptionalParams&) const
+    bool EltwiseKernelBase::Validate(const Params& p, const OptionalParams& o) const
     {
-        if (p.GetType() != KernelType::ELTWISE)
+        if (p.GetType() != KernelType::ELTWISE ||
+            o.GetType() != KernelType::ELTWISE)
         {
             return false;
         }
