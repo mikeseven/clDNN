@@ -280,6 +280,8 @@ event_impl::ptr gpu_toolkit::enqueue_marker(std::vector<event_impl::ptr> const& 
 
 void gpu_toolkit::flush()
 {
+    if (logging_enabled())
+        log(0, "Flush");
     queue().flush();
 }
 
