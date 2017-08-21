@@ -23,6 +23,8 @@
 #include <algorithm>
 #include <stdexcept>
 #include <string>
+#include <type_traits>
+#include <xmmintrin.h>
 
 namespace cldnn { namespace gpu {
 
@@ -408,6 +410,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
         const auto& input_padding = input_confidence.get_layout().data_padding;
         const int input_padding_lower_x = input_padding.lower_size().spatial[0];
         const int input_padding_lower_y = input_padding.lower_size().spatial[1];
+        const int stride = input_buffer_size_y * input_buffer_size_x;
 
         for (int image = 0; image < num_of_images; ++image)
         {
@@ -415,17 +418,72 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
             label_to_scores.resize(num_classes);
             int idx = get_linear_feature_index(image, 0, input_buffer_size_f, input_buffer_size_y,
                 input_buffer_size_x, input_padding_lower_y, input_padding_lower_x);
-            int stride = input_buffer_size_y * input_buffer_size_x;
-            for (int prior = 0; prior < num_of_priors; ++prior)
+            
+            if (stride == 1 && std::is_same<dtype, float>::value)
             {
-                for (int cls = 0; cls < num_classes; ++cls)
+                float const* confidence_ptr_float = (float const*)(&(*confidence_data));
+                confidence_ptr_float += idx;
+                __m128 threshold = _mm_load_ps1(&confidence_threshold);
+                for (int prior = 0; prior < num_of_priors; ++prior)
                 {
-                    float score = (float)confidence_data[idx];
-                    if (score > confidence_threshold)
+                    int cls = 0;
+                    for (; cls + 3 < num_classes; cls += 4)
                     {
-                        label_to_scores[cls].emplace_back(score, prior);
+                        __m128 scores = _mm_loadu_ps(confidence_ptr_float);
+                        confidence_ptr_float += 4;
+                        __m128i mask128 = _mm_castps_si128(_mm_cmpgt_ps(scores, threshold));
+                        if (_mm_testz_si128(mask128, mask128))
+                        {
+                            continue;
+                        }
+                        int mask = _mm_movemask_ps(_mm_castsi128_ps(mask128));
+                        if (mask & 1)
+                        {
+                            label_to_scores[cls + 0].emplace_back(_mm_cvtss_f32(scores), prior);
+                        }
+                        if (mask & 2)
+                        {
+                            int score = _mm_extract_ps(scores, 1);
+                            float s = reinterpret_cast<float&>(score);
+                            label_to_scores[cls + 1].emplace_back(s, prior);
+                        }
+                        if (mask & 4)
+                        {
+                            int score = _mm_extract_ps(scores, 2);
+                            float s = reinterpret_cast<float&>(score);
+                            label_to_scores[cls + 2].emplace_back(s, prior);
+                        }
+                        if (mask & 8)
+                        {
+                            int score = _mm_extract_ps(scores, 3);
+                            float s = reinterpret_cast<float&>(score);
+                            label_to_scores[cls + 3].emplace_back(s, prior);
+                        }
                     }
-                    idx += stride;
+                    for (; cls < num_classes; ++cls)
+                    {
+                        float score = *confidence_ptr_float;
+                        if (score > confidence_threshold)
+                        {
+                            label_to_scores[cls].emplace_back(score, prior);
+                        }
+                        ++confidence_ptr_float;
+                    }
+                }
+            }
+            else
+            {
+                for (int prior = 0; prior < num_of_priors; ++prior)
+                {
+                    for (int cls = 0; cls < num_classes; ++cls)
+                    {
+                        float score = (float)confidence_data[idx];
+                        if (score > confidence_threshold)
+                        {
+                            label_to_scores[cls].emplace_back(score, prior);
+                        }
+                        idx += stride;
+                    }
                 }
             }
         }
