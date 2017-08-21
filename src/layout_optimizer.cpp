@@ -222,6 +222,8 @@ std::map<primitive_id, memory_impl::ptr> layout_optimizer::optimize() const
 
     network_impl net(*_engine, _topology);
     net.execute({});
+    net.reset_execution(true);
+
     for (auto const& output : net.get_outputs())
     {
         // in order to handle list of reorders
