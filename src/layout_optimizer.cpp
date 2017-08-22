@@ -271,5 +271,3 @@ void layout_optimizer::set_optimization_attribute(optimization_attributes_type a
         throw std::out_of_range("unsupported layout optimization attribute");
     }
 }
-
-    net.reset_execution(true);

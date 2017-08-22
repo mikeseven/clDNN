@@ -105,7 +105,6 @@ protected:
 
     //this is a set of dependencies in terms of memory, if execution of this primitive requires data from another one, it should be added to this set
     std::vector<std::shared_ptr<primitive_inst>> _deps;
-    std::vector<std::shared_ptr<primitive_inst>> _exec_deps;
 
     //this is a set of dependencies in terms of execution
     // execution of all primitives from this set should be enough to guarantee that all memory deps (see _deps)

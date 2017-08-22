@@ -51,12 +51,6 @@ void program_node::replace_dependency(program_node const& old_dep, program_node&
             return replace_dependency(i, new_dep, detach_whole_branch);
 }
 
-bool program_node::has_next() const
-{
-    auto itr = processing_itr;
-    return (++itr == myprog.processing_order.end());
-}
-
 std::vector<primitive_id> program_node::get_dependencies_ids() const
 {
     std::vector<primitive_id> dep_ids;
@@ -92,6 +86,12 @@ bool program_node::is_detached(bool whole_branch)
         return false;
 
     return true;
+}
+
+bool program_node::has_next() const
+{
+    auto itr = processing_itr;
+    return (++itr == myprog.processing_order.end());
 }
 
 layout program_node::calc_output_layout() const
@@ -130,33 +130,6 @@ bool program_node::set_output_layout(layout new_layout, bool invalidate_users_if
     output_layout = new_layout;
     valid_output_layout = true;
     return changed;
-}
-
-bool program_node::recalc_output_layout(bool invalidate_users_if_changed)
-{
-    return set_output_layout(calc_output_layout(), invalidate_users_if_changed);
-}
-
-bool program_node::has_padded_dependency()
-{
-    return std::any_of(get_dependencies().begin(), get_dependencies().end(), [](program_node* node) { return node->is_padded(); });
-}
-
-bool program_node::has_padded_dependency() const
-{
-    return std::any_of(get_dependencies().begin(), get_dependencies().end(), [](const program_node* node) { return node->is_padded(); });
-}
-
-void program_node::invalidate_users() const
-{
-    for (auto& user : users)
-    {
-        if (user->valid_output_layout)
-        {
-            user->valid_output_layout = false;
-            user->invalidate_users();
-        }
-    }
 }
 
 bool program_node::recalc_output_layout(bool invalidate_users_if_changed)

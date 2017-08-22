@@ -714,6 +714,8 @@ void program_impl::mark_constants()
     {
         if (node->dependencies.empty())
             continue;
+        if (node->is_type<prior_box>())
+            continue;
 
         node->constant = true;
         for (auto& dep : node->get_dependencies())
