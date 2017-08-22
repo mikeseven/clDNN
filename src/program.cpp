@@ -1464,7 +1464,11 @@ void program_impl::prepare_buffer_fusing()
                     crop_prim->reference_input.spatial[0] == input_layout.size.spatial[0] &&
                     crop_prim->reference_input.spatial[1] == input_layout.size.spatial[1] &&
                     out_padd.lower_size().feature[0] == 0 &&
-                    out_padd.upper_size().feature[0] == 0)
+                    out_padd.upper_size().feature[0] == 0 &&
+                    out_padd.lower_size().spatial[0] == 0 &&
+                    out_padd.lower_size().spatial[1] == 0 && 
+                    out_padd.upper_size().spatial[0] == 0 && 
+                    out_padd.upper_size().spatial[1] == 0)
                 {
                     //  Regular crop
                     //  crop input buffer
