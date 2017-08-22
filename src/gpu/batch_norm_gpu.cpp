@@ -50,6 +50,8 @@ public:
         ew_params.inputs.push_back(convert_data_tensor(arg.mean().get_output_layout()));
         ew_params.inputs.push_back(convert_data_tensor(arg.variance().get_output_layout()));
 
+        convert_fused_activation_func_params(arg, ew_params);
+
         ew_params.eltwiseParams.operations.push_back({
             { kernel_selector::eltwise_params::InputType::Buffer(0), kernel_selector::eltwise_params::InputType::Buffer(1) },
             kernel_selector::eltwise_mode::SUB });

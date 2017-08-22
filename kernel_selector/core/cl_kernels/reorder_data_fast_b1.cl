@@ -113,7 +113,7 @@ KERNEL (reorder_data_fast_b1)(
     res -= TO_CALC_TYPE(mean_subtract[GET_DATA_INDEX_SAFE(MEAN_SUBTRACT, msv[0], msv[1], msv[2], msv[3])]);
 #endif
 
-    output[output_idx] = TO_OUTPUT_TYPE(res);
+    output[output_idx] = ACTIVATION(TO_OUTPUT_TYPE(res), NL_M ,NL_N);
 }
 
 #undef GET_DATA_INDEX_SAFFFE

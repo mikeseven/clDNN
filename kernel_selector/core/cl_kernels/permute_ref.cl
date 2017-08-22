@@ -39,5 +39,5 @@ KERNEL (permute_ref)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output
                          output_indices[2]*OUTPUT_PITCHES[2] +
                          output_indices[3]*OUTPUT_PITCHES[3];
 
-    output[output_offset] = input[input_offset];
+    output[output_offset] = ACTIVATION(input[input_offset], NL_M, NL_N);
 }

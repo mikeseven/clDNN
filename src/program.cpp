@@ -26,9 +26,10 @@
 #include "api/CPP/input_layout.hpp"
 #include "api/CPP/pooling.hpp"
 #include "api/CPP/proposal.hpp"
-#include "api/CPP/proposal.hpp"
 #include "api/CPP/roi_pooling.hpp"
 
+#include "activation_inst.h"
+#include "batch_norm_inst.h"
 #include "internal_primitive.h"
 #include "internal_primitive_type_base.h"
 #include "convolution_inst.h"
@@ -37,9 +38,14 @@
 #include "data_inst.h"
 #include "deconvolution_inst.h"
 #include "detection_output_inst.h"
+#include "lrn_inst.h"
+#include "normalize_inst.h"
+#include "permute_inst.h"
 #include "prior_box_inst.h"
 #include "reorder_inst.h"
 #include "reshape_inst.h"
+#include "scale_inst.h"
+#include "softmax_inst.h"
 
 #include "kernel_selector_helper.h"
 #include "sliding_window_utils.h"
@@ -397,6 +403,7 @@ void program_impl::pre_optimize_graph()
     if (options.get<build_option_type::optimize_data>()->enabled())
     {
         prepare_buffer_fusing();
+        prepare_primitive_fusing();
     }
 
     dump_program("3_pre_optimized", true);
@@ -1510,6 +1517,50 @@ void program_impl::prepare_buffer_fusing()
 
             node.can_be_optimized(true);
             extract_and_remove(node); //try to remove redundant reorders
+        });
+    }
+}
+
+void program_impl::prepare_primitive_fusing()
+{
+    bool is_debug = options.get<build_option_type::debug>()->enabled();
+
+    auto itr = processing_order.begin(); //note we need to use iterators since currently processed element can be removed
+    while (itr != processing_order.end())
+    {
+        auto node_itr = itr++;
+        auto& node = (*node_itr);
+
+        do_for_types<activation>(*node, [this, is_debug](activation_node& node)
+        {
+            
+            auto& input = node.get_dependency(0);
+
+            //Restrictions:
+            // - inputs cannot be padded
+            // - primitive cannot be output
+            // - no activation additional input
+            // - activation is the last primitive in topology (or before connector)
+            if (node.has_padded_dependency() || (node.is_output() && !is_debug) || node.get_dependencies().size() != 1 ||
+                node.get_users().size() == 0 || (node.get_users().size() == 1 && node.get_users().front()->is_type<connector>()))
+                return;
+            
+            // - check if there is no activation fused already
+            // - limit to primitives which implementations support activation fusing
+            if (input.get_users().size() != 1 || input.get_fused_activation_func() != activation_none ||
+                //TODO: new api needs to be created to read such caps
+                //right now use whitelist so no new primitives will be affected in case of lack of fused activation support
+                (!input.is_type<batch_norm>() && !input.is_type<concatenation>() && !input.is_type<convolution>() &&
+                 !input.is_type<crop>() && !input.is_type<deconvolution>() && !input.is_type<eltwise>() &&
+                 !input.is_type<fully_connected>() && !input.is_type<lrn>() && !input.is_type<normalize>() &&
+                 !input.is_type<permute>() && !input.is_type<pooling>() && !input.is_type<reorder>() &&
+                 !input.is_type<reshape>() && !input.is_type<roi_pooling>() && !input.is_type<scale>() &&
+                 !input.is_type<softmax>()))
+                return;
+
+            input.set_fused_activation(node.get_primitive()->activation_func, node.get_primitive()->additional_params);
+
+            extract_and_remove(node);
         });
     }
 }

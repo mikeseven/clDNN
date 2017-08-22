@@ -75,8 +75,8 @@ KERNEL (softmax_gpu_continoues_yxfb)(const __global UNIT_TYPE* input, __global U
     barrier(CLK_LOCAL_MEM_FENCE);
     for(int i = 0; i < ITEMS_NUM; i++)
     {
-        output[LWS * i + global_id] = tmp_vals[i] / partial_acc[batch_offset];
+        output[LWS * i + global_id] = ACTIVATION(tmp_vals[i] / partial_acc[batch_offset], NL_M ,NL_N);
     }
     if(global_id < LEFTOVERS)
-        output[LWS * ITEMS_NUM + global_id] = tmp_vals[ITEMS_NUM] / partial_acc[batch_offset];
+        output[LWS * ITEMS_NUM + global_id] = ACTIVATION(tmp_vals[ITEMS_NUM] / partial_acc[batch_offset], NL_M ,NL_N);
 }

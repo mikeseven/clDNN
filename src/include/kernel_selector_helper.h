@@ -327,68 +327,62 @@ inline kernel_selector::weights_tensor convert_weights_tensor(const layout& l)
 template <typename p_type>
 inline void convert_activation_func_params(const p_type primitive, kernel_selector::base_params& params)
 {
-    if (primitive->with_activation)
+    const float negative_slope = primitive->activation_negative_slope;
+    if (negative_slope)
     {
-        const float negative_slope = primitive->activation_negative_slope;
-        if (negative_slope)
-        {
-            params.activationParams.m = negative_slope;
-            params.activationFunc = kernel_selector::activation_function::RELU_NEGATIVE_SLOPE;
-        }
-        else
-        {
-            params.activationFunc = kernel_selector::activation_function::RELU;
-        }
+        params.activationParams.m = negative_slope;
+        params.activationFunc = kernel_selector::activation_function::RELU_NEGATIVE_SLOPE;
     }
     else
     {
-        params.activationFunc = kernel_selector::activation_function::NONE;
+        params.activationFunc = kernel_selector::activation_function::RELU;
     }
 }
 
-template <typename p_type>
-inline void convert_new_activation_func(const p_type primitive, kernel_selector::base_params& params)
+inline kernel_selector::activation_function get_kernel_selector_activation_param(cldnn_activation_func activation_func)
 {
-    switch (primitive->activation_func)
+    switch (activation_func)
     {
-    case activation_none:           
-        params.activationFunc = kernel_selector::activation_function::NONE;
-        break;
+    case activation_none:
+        return kernel_selector::activation_function::NONE;
     case activation_logistic:
-        params.activationFunc = kernel_selector::activation_function::LOGISTIC;
-        break;
+        return kernel_selector::activation_function::LOGISTIC;
     case activation_hyperbolic_tan:
-        params.activationFunc = kernel_selector::activation_function::HYPERBOLIC_TAN;
-        break;
+        return kernel_selector::activation_function::HYPERBOLIC_TAN;
     case activation_relu:
-        params.activationFunc = kernel_selector::activation_function::RELU;
-        break;
+        return kernel_selector::activation_function::RELU;
     case activation_relu_negative_slope:
-        params.activationFunc = kernel_selector::activation_function::RELU_NEGATIVE_SLOPE;
-        break;
+        return kernel_selector::activation_function::RELU_NEGATIVE_SLOPE;
     case activation_clamp:
-        params.activationFunc = kernel_selector::activation_function::CLAMP;
-        break;
+        return kernel_selector::activation_function::CLAMP;
     case activation_softrelu:
-        params.activationFunc = kernel_selector::activation_function::SOFTRELU;
-        break;
+        return kernel_selector::activation_function::SOFTRELU;
     case activation_abs:
-        params.activationFunc = kernel_selector::activation_function::ABS;
-        break;
+        return kernel_selector::activation_function::ABS;
     case activation_linear:
-        params.activationFunc = kernel_selector::activation_function::LINEAR;
-        break;
+        return kernel_selector::activation_function::LINEAR;
     case activation_square:
-        params.activationFunc = kernel_selector::activation_function::SQUARE;
-        break;
+        return kernel_selector::activation_function::SQUARE;
     case activation_sqrt:
-        params.activationFunc = kernel_selector::activation_function::SQRT;
-        break;
+        return kernel_selector::activation_function::SQRT;
     default:
         throw std::runtime_error("Unknown activation function");
         break;
     }
+}
 
+template <typename arg_t>
+inline void convert_fused_activation_func_params(const arg_t& arg, kernel_selector::base_params& params)
+{
+    params.activationParams.m = arg.get_fused_activation_params().a;
+    params.activationParams.n = arg.get_fused_activation_params().b;
+    params.activationFunc = get_kernel_selector_activation_param(arg.get_fused_activation_func());
+}
+
+template <typename p_type>
+inline void convert_new_activation_func(const p_type primitive, kernel_selector::base_params& params)
+{        
+    params.activationFunc = get_kernel_selector_activation_param(primitive->activation_func);
     params.activationParams.m = primitive->additional_params.a;
     params.activationParams.n = primitive->additional_params.b;
 }

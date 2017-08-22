@@ -33,6 +33,8 @@ struct lrn_gpu : typed_primitive_gpu_impl<lrn>
         auto lrn_params = get_default_params<kernel_selector::lrn_params>(arg);
         auto lrn_optional_params = get_default_optional_params<kernel_selector::lrn_optional_params>(arg.get_program());
 
+        convert_fused_activation_func_params(arg, lrn_params);
+
         const auto& primitive = arg.get_primitive();
 
         lrn_params.lrnParams.alpha      = primitive->alpha;

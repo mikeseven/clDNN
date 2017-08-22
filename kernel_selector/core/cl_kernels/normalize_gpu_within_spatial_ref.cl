@@ -55,7 +55,7 @@ KERNEL (normalize_gpu_within_spatial_bfyx)(const __global UNIT_TYPE* input, __gl
         const uint scale_index = f % SCALE_TABLE_FEATURE_NUM;
 #endif 
 
-        output[output_idx] = UNIT_CVT_FUNC(norm) * input[input_idx] * scale_input[scale_index];
+        output[output_idx] = ACTIVATION(UNIT_CVT_FUNC(norm) * input[input_idx] * scale_input[scale_index], NL_M, NL_N);
         output_idx += OUTPUT_FEATURE_PITCH;
         input_idx += INPUT0_FEATURE_PITCH;
     }

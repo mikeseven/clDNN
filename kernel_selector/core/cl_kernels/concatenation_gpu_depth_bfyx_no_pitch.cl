@@ -73,7 +73,7 @@ KERNEL (concatenation_gpu_depth_bfyx_no_padding)(__global float* input, __global
             if(element_offset + i >= INPUT0_ELEMENTS_COUNT)
                 return;
 
-            output[output_offset + element_offset_in_workitem] = input[input_offset + element_offset_in_workitem];
+            output[output_offset + element_offset_in_workitem] = ACTIVATION(input[input_offset + element_offset_in_workitem], NL_M, NL_N);
             element_offset_in_workitem++;
         }
     }

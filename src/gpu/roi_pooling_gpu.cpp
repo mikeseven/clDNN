@@ -76,6 +76,8 @@ public:
         auto roi_params = get_default_params<kernel_selector::roi_pooling_v1_params>(arg);
         auto roi_optional_params = get_default_optional_params<kernel_selector::roi_pooling_optional_params>(arg.get_program());
         
+        convert_fused_activation_func_params(arg, roi_params);
+
         const auto& out = roi_params.output;
         
         const auto roi_bfyx = convert_data_tensor(rois_layout);

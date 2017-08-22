@@ -13,7 +13,7 @@
 // limitations under the License.
 
 
-#include "include/common.cl
+#include "include/include_all.cl"
 
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
 __attribute__((reqd_work_group_size(SUB_GROUP_SIZE, 1, 1)))
@@ -95,7 +95,7 @@ KERNEL(pooling_gpu_average_opt)(const __global float* input, __global float* out
 
         if ((local_id < TILE_WIDTH) && (offset_x < INPUT0_SIZE_X))
         {
-            output[offset + y * INPUT0_SIZE_X + offset_x] = res;
+            output[offset + y * INPUT0_SIZE_X + offset_x] = ACTIVATION(res, NL_M ,NL_N);
         }
 
         first = (first + 1) % 3;

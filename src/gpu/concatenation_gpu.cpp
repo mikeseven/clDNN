@@ -74,6 +74,8 @@ public:
         auto concat_optional_params = get_default_optional_params<kernel_selector::concatenation_optional_params>(arg.get_program());
         auto axis = arg.get_primitive()->axis;
 
+        convert_fused_activation_func_params(arg, concat_params);
+
         concat_params.inputs.resize(arg.inputs_count());
         for (size_t i = 0; i < arg.inputs_count(); ++i)
         {

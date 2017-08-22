@@ -33,6 +33,8 @@ struct softmax_gpu : typed_primitive_gpu_impl<softmax>
         auto sm_params = get_default_params<kernel_selector::softmax_params>(arg);
         auto sm_optional_params = get_default_optional_params<kernel_selector::softmax_optional_params>(arg.get_program());
 
+        convert_fused_activation_func_params(arg, sm_params);
+
         auto& input = sm_params.inputs[0];
         auto& output = sm_params.output;
         auto& sm = sm_params.smParams;

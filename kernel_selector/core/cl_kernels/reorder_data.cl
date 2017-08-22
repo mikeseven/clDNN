@@ -72,5 +72,5 @@ KERNEL (reorder_data)(
     res -= TO_CALC_TYPE(mean_subtruct[GET_DATA_INDEX_SAFE(MEAN_SUBTRACT, msv[0], msv[1], msv[2], msv[3])]);
 #endif
 
-    output[output_idx] = TO_OUTPUT_REORDER_TYPE(res);
+    output[output_idx] = ACTIVATION(TO_OUTPUT_REORDER_TYPE(res), NL_M ,NL_N);
 }

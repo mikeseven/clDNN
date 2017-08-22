@@ -85,7 +85,10 @@ public:
         auto fc_optional_params = get_default_weights_bias_optional_params<kernel_selector::fully_connected_optional_params>(arg.get_program());
         fc_optional_params.allowInputReordering = true;
 
-        convert_activation_func_params(arg.get_primitive(), fc_params);
+        if(arg.get_primitive()->with_activation)
+            convert_activation_func_params(arg.get_primitive(), fc_params);
+        else
+            convert_fused_activation_func_params(arg, fc_params);
 
         fc_params.output = fc_params.output.FlattenFeatureAndSpatials();
 

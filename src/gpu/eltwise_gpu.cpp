@@ -51,7 +51,10 @@ struct eltwise_gpu : typed_primitive_gpu_impl<eltwise>
         ew_params.inputs.push_back(convert_data_tensor(arg.input2().get_output_layout()));
         
         const auto& primitive = arg.get_primitive();
-        convert_activation_func_params(primitive, ew_params);
+        if(primitive->with_activation)
+            convert_activation_func_params(primitive, ew_params);
+        else
+            convert_fused_activation_func_params(arg, ew_params);
 
         ew_params.eltwiseParams.operations.push_back({ 
             { kernel_selector::eltwise_params::InputType::Buffer(0), kernel_selector::eltwise_params::InputType::Buffer(1) },

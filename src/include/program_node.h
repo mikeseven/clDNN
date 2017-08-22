@@ -159,6 +159,22 @@ public:
     auto is_marked(uint8_t val) const { return user_mark == val; }
     uint8_t ged_user_mark() const { return user_mark; }
 
+    void set_fused_activation(cldnn_activation_func activation_func, cldnn_activation_additional_params additional_params)
+    {
+        fused_activation.activation_func = activation_func;
+        fused_activation.additional_params = additional_params;
+    }
+
+    cldnn_activation_func get_fused_activation_func() const
+    {
+        return fused_activation.activation_func;
+    }
+
+    cldnn_activation_additional_params get_fused_activation_params() const
+    {
+        return fused_activation.additional_params;
+    }
+
     // returns immidiate dominator of this node if it's not its direct predecessor, otherwise returns nullptr
     program_node* get_dominator() { return dominator; }
     const program_node* get_dominator() const { return dominator; }
@@ -236,6 +252,14 @@ protected:
 
     bool output = false;
     uint8_t user_mark = 0;
+
+    struct fused_activation_params
+    {
+        cldnn_activation_func activation_func = activation_none;
+        cldnn_activation_additional_params additional_params = { 0.0f, 0.0f };
+    };
+
+    fused_activation_params fused_activation;
 
     void invalidate_users() const
     {

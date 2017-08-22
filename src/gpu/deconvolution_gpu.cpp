@@ -96,7 +96,10 @@ public:
         auto deconv_params = get_weights_bias_default_params<kernel_selector::deconvolution_params>(arg, depthwise_separable_opt ? 1 : split);
         auto deconv_optional_params = get_default_weights_bias_optional_params<kernel_selector::deconvolution_optional_params>(arg.get_program());
 
-        convert_activation_func_params(primitive, deconv_params);
+        if(primitive->with_activation)
+            convert_activation_func_params(primitive, deconv_params);
+        else
+            convert_fused_activation_func_params(arg, deconv_params);
 
         deconv_params.deconvParams.depthwiseSeparableOpt = depthwise_separable_opt;
 
