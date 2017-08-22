@@ -175,6 +175,9 @@ public:
         return fused_activation.additional_params;
     }
 
+    auto can_be_optimized() const { return optimized; }
+    void can_be_optimized(bool opt) { optimized = opt; }
+
     // returns immidiate dominator of this node if it's not its direct predecessor, otherwise returns nullptr
     program_node* get_dominator() { return dominator; }
     const program_node* get_dominator() const { return dominator; }
@@ -252,6 +255,8 @@ protected:
 
     bool output = false;
     uint8_t user_mark = 0;
+
+    bool optimized = false;
 
     struct fused_activation_params
     {

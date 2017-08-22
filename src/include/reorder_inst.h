@@ -34,14 +34,11 @@ public:
     decltype(auto) mean() const { return get_dependency(1); }
 
     bool has_mean() const { return !typed_desc()->mean.empty(); }
-    auto can_be_optimized() const { return optimized; }
-    void can_be_optimized(bool opt, bool req_reint = false) { optimized = opt; req_reinterpr = req_reint; }
 
     auto requires_reinterpret() const { return req_reinterpr; }
     void requires_reinterpret(bool val) { req_reinterpr = (optimized && val); }
 
 private:
-    bool optimized = false;
     bool req_reinterpr = false;
 };
 

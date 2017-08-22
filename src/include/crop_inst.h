@@ -31,11 +31,6 @@ public:
     using parent::parent;
 
     decltype(auto) input() const { return get_dependency(0); }
-    auto can_be_optimized() const { return optimized; }
-    void can_be_optimized(bool opt) { optimized = opt; }
-
-private:
-    bool optimized = false;
 };
 
 using crop_node = typed_program_node<crop>;

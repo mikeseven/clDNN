@@ -812,7 +812,8 @@ void program_impl::remove_redundant_reorders()
             continue;
 
         //mark as optimized
-        r_node.can_be_optimized(true, !ident.first);
+        r_node.can_be_optimized(true);
+        r_node.requires_reinterpret(!ident.first);
         if (ident.first) //no need of reshape
             extract_and_remove(r_node); //try to remove if possible (with respect to r_node not being marked as output)
     }
@@ -1534,15 +1535,15 @@ void program_impl::prepare_primitive_fusing()
         do_for_types<activation>(*node, [this, is_debug](activation_node& node)
         {
             
-            auto& input = node.get_dependency(0);
+            auto& input = node.input();
 
             //Restrictions:
             // - inputs cannot be padded
-            // - primitive cannot be output
+            // - primitives input cannot be output
             // - no activation additional input
-            // - activation is the last primitive in topology (or before connector)
-            if (node.has_padded_dependency() || (node.is_output() && !is_debug) || node.get_dependencies().size() != 1 ||
-                node.get_users().size() == 0 || (node.get_users().size() == 1 && node.get_users().front()->is_type<connector>()))
+            // - input was optimized
+            if (node.has_padded_dependency() || (input.is_output() && !is_debug) || node.get_dependencies().size() != 1 ||
+                input.can_be_optimized())
                 return;
             
             // - check if there is no activation fused already

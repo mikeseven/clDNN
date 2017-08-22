@@ -33,12 +33,6 @@ public:
     decltype(auto) input(size_t idx = 0) const { return get_dependency(idx); }
 
     auto inputs_count() const { return desc->input.size(); }
-
-    auto can_be_optimized() const { return optimized; }
-    void can_be_optimized(bool opt) { optimized = opt; }
-
-private:
-    bool optimized = false;
 };
 
 using concatenation_node = typed_program_node<concatenation>;
