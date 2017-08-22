@@ -1764,6 +1764,7 @@ void program_impl::backward_bfs(std::function<void(program_node&)> const& mark_f
     }
 }
 
+//TODO: break this function into number of smaller ones + add per-primitive fields (possibly use primitive_inst::to_string?)
 void program_impl::dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter) const
 {
     auto path = options.get<build_option_type::graph_dumps_dir>()->directory_path;

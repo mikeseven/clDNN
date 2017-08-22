@@ -11,7 +11,7 @@ namespace cldnn { namespace gpu {
 
 struct user_event : public base_event, public cldnn::user_event
 {
-    user_event(std::shared_ptr<gpu_toolkit> ctx, cl::UserEvent const& ev, bool auto_set = false) : base_event(ctx, ev), cldnn::user_event(auto_set)
+    user_event(std::shared_ptr<gpu_toolkit> ctx, bool auto_set = false) : base_event(ctx, cl::UserEvent(ctx->context())), cldnn::user_event(auto_set)
     {
         if (auto_set)
             user_event::set_impl();

@@ -236,7 +236,7 @@ event_impl::ptr gpu_toolkit::enqueue_kernel(cl::Kernel const& kern, cl::NDRange 
 event_impl::ptr gpu_toolkit::enqueue_marker(std::vector<event_impl::ptr> const& deps)
 {
     if (deps.empty())
-        return{ new user_event(shared_from_this(), cl::UserEvent(_context), true), false };
+        return{ new user_event(shared_from_this(), true), false };
 
     if (!_configuration.host_out_of_order)
     {

@@ -92,7 +92,7 @@ bool engine_impl::is_the_same_buffer(const memory_impl& mem1, const memory_impl&
 event_impl::ptr engine_impl::create_user_event(bool set)
 {
     try {
-        return{ new gpu::user_event(get_context(), cl::UserEvent(get_context()->context()), set), false };
+        return{ new gpu::user_event(get_context(), set), false };
     }
     catch (cl::Error const& err) {
         throw gpu::ocl_error(err);
