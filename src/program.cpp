@@ -1559,6 +1559,7 @@ void program_impl::prepare_primitive_fusing()
                 return;
 
             input.set_fused_activation(node.get_primitive()->activation_func, node.get_primitive()->additional_params);
+            input.set_output_padding(node.get_output_layout().data_padding);
 
             extract_and_remove(node);
         });
