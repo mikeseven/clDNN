@@ -51,7 +51,7 @@ namespace KernelSelector {
         std::vector<size_t> global = { out.X().v, out.Y().v, out.Feature().v*out.Batch().v };
         auto local = GetOptimalLocalWorkGroupSizes(global);
 
-        kd.gws0 = out.X().v * out.Y().v;
+        kd.gws0 = Align(out.X().v * out.Y().v, 16) / 16;
         kd.gws1 = out.Feature().v;
         kd.gws2 = out.Batch().v;
 
@@ -100,6 +100,10 @@ namespace KernelSelector {
             return false;
         }*/
         if (input.X().pad.Total() != 0 || input.Y().pad.Total() != 0 || input.Feature().pad.Total() != 0 || output.Batch().pad.Total() != 0)
+        {
+            return false;
+        }
+        if(input.Batch().v != 1 || output.Batch().v != 1)
         {
             return false;
         }
