@@ -96,6 +96,7 @@ private:
     void pre_optimize_graph();
     void post_optimize_graph();
     void compile_graph();
+    void cleanup();
 
     /*
     ** Initialization functions
@@ -137,7 +138,7 @@ private:
 
     // Inserts given program_node 'node' as an intermediate node between 'next' and it's
     //  dependency at 'prev_idx' index.
-    void add_intermediate(program_node& prim, program_node& next, size_t prev_idx);
+    void add_intermediate(program_node& node, program_node& next, size_t prev_idx, bool connect_int_node_with_old_dep = true);
 
     // Gets or creates program_node for given primitive 'prim' and inserts it as an intermediate
     // node between 'next' and it's dependency at 'prev_idx' index.
@@ -160,10 +161,15 @@ private:
 
     void rename(program_node & node, primitive_id const & new_id);
     void replace_all_usages(program_node& old_node, program_node& new_node);
-    void replace(program_node& old_node, program_node& new_node, bool invalidate_output_layout);
+
+    //old_node - node which will be replaced
+    //new_node - node which will replace the old one
+    //replace_whole_branch - if set to true, 'old_node' will be replaced with all its dependencies and new_node will retain its dependencies
+    //  old's dependencies which are post-dominates by 'old_node' will also be removed
+    void replace(program_node& old_node, program_node& new_node, bool replace_whole_branch, bool check_output_layouts_integrity = true);
 
     //returns if 'node' has been removed
-    bool remove_if_dangling(program_node& node);
+    bool remove_if_dangling(program_node& node, bool detach_whole_branch = false);
 
     //removes a node from the graph and deletes it afterwards,
     //prereq: node cannot be marked as output and has to have exactly one dependency

@@ -242,6 +242,7 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
     engine->compile_program(*this);
 
     this->dump_program("6_finished", true);
+    cleanup();
 }
 
 // TODO: Remove once we will get full support for input/output padding in all primitive implementations.
@@ -318,11 +319,8 @@ std::list<std::shared_ptr<program_node>> program_impl::get_nodes() const
     std::list<std::shared_ptr<program_node>> ret;
 
     for (auto& node : processing_order)
-        ret.push_back(nodes_map.at(node->id()));
-
-    //does not expose connector at the end of a graph
-    if (!ret.empty() && ret.back()->is_type<connector>())
-        ret.pop_back();
+        if (!node->is_type<connector>())
+            ret.push_back(nodes_map.at(node->id()));
 
     return ret;
 }
@@ -427,7 +425,7 @@ void program_impl::compile_graph()
 {
     for (auto& node : processing_order)
     {
-        if (!node->is_type<internal_primitive>())
+        if (!node->is_type<internal_primitive>() && !node->is_type<data>())
         {
             node->get_output_layout();
             node->selected_impl = node->type()->choose_impl(*engine, *node);
@@ -436,6 +434,13 @@ void program_impl::compile_graph()
 
     dump_program("4_compiled", true);
     dump_program("4_1_data_flow", false, [](program_node const& node) { return node.is_in_data_flow(); });
+}
+
+void program_impl::cleanup()
+{
+    for (auto& input : inputs)
+        if (input->dependencies.size() == 1 && input->get_dependency(0).is_type<connector>())
+            input->dependencies.clear();
 }
 
 void program_impl::set_outputs()
@@ -611,18 +616,31 @@ void program_impl::calc_dominators()
 
     //Please note that in our representation we only care for immidiate dominators which are not direct predecessors.
 
-    //Althought we don't know the input node (since we cannot distinguish image input from weights/biases), we can simply trim our graph
-    //for this analysis so it'd start with the first primitive which is used by more than one user. There are few assumptions here, though:
-    // 1. weights and biases cannot be shared (they have to have unique user)
-    // 2. the network should have exactly one input (OOO execution will not be enabled for independent paths, at the beginning, if more at than one input is provided)
-    //please note that it could be also possible to create dummy super-source so we could guarantee that the graph will have only one input,
-    //however such approach would also require us to analys all weights and biases which is not really what we want to do, hence the simplification described above.
+    //firstly find all in-data-flow inputs and create super-source if necessary
+    {
+        std::list<program_node*> data_inputs;
+        for (auto const& input : inputs)
+            if (input->is_in_data_flow())
+                data_inputs.push_back(input);
 
-    //When it comes to the multiple endpoints, we can create dummy node to gather all of them. Super-sink is not a problem since the number of endpoints
-    //is much less than inputs, due to weights and biases. Also unique endpoint is handy when dealing with dominators frontier and determinating
-    //if the node lies within a 'main' branch of the network.
+        if (data_inputs.size() > 1)
+        {
+            std::shared_ptr<program_node> node = std::make_shared<connector_node>(*this);
+            node->data_flow = true;
+            nodes_map.insert(std::make_pair(node->id(), node));
 
-    //...so firstly create super-sink, find all endpoints
+            for (auto const& input : data_inputs)
+            {
+                input->dependencies.push_back(node.get());
+                node->users.push_back(input);
+            }
+
+            node->processing_itr = processing_order.insert(processing_order.begin(), node.get());
+            node->processing_num = 0;
+        }
+    }
+
+    //...then create super-sink, find all endpoints
     {
         std::list<program_node*> endpoints;
         for (auto const& node : processing_order)
@@ -996,7 +1014,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
 
         if (new_input)
         {
-            add_intermediate(new_input, conv_node, 0);
+            auto& r_node = get_or_create(new_input);
+            add_intermediate(r_node, conv_node, 0, r_node.dependencies.empty());
             conv_node.recalc_output_layout();
         }
     };
@@ -1385,8 +1404,11 @@ void program_impl::prepare_padding()
 void program_impl::prepare_buffer_fusing()
 {
     bool is_debug = options.get<build_option_type::debug>()->enabled();
-    for (auto& node : processing_order)
+    auto itr = processing_order.begin();
+    while (itr != processing_order.end())
     {
+        auto& node = (*itr++);
+
         do_for_types<concatenation>(*node, [this, is_debug](concatenation_node& node)
         {
             //if any of this node's inputs is used by more than one primitive do not fuse buffers,
@@ -1578,13 +1600,28 @@ program_node& program_impl::get_or_create(std::shared_ptr<primitive> prim)
     return *new_node;
 }
 
-void program_impl::add_intermediate(program_node& node, program_node& next, size_t prev_idx)
+void program_impl::add_intermediate(program_node& node, program_node& next, size_t prev_idx, bool connect_int_node_with_old_dep)
 {
+    if (connect_int_node_with_old_dep && !node.dependencies.empty())
+        throw std::invalid_argument("Node which is about to be added inbetween two other nodes should not have any existing dependencies");
+
     auto& prev = next.get_dependency(prev_idx);
     //firstly add connection, later replace dependency, so 'prev' won't become dangling and therefore removed
-    add_connection(prev, node);
+    if (connect_int_node_with_old_dep)
+    {
+        add_connection(prev, node);
+        if (node.processing_itr != processing_order.end())
+            processing_order.erase(node.processing_itr);
+
+        auto itr = prev.processing_itr;
+        node.processing_itr = processing_order.insert(++itr, &node);
+        node.processing_num = prev.processing_num;
+    }
+
     next.replace_dependency(prev_idx, node);
-    node.processing_itr = processing_order.insert(next.processing_itr, &node);
+    node.constant = prev.constant;
+    node.data_flow = prev.data_flow;
+    node.main_branch = prev.main_branch;
 }
 
 void program_impl::rename(program_node & node, primitive_id const & new_id)
@@ -1616,22 +1653,27 @@ void program_impl::replace_all_usages(program_node & old_node, program_node & ne
     }
 }
 
-void program_impl::replace(program_node& old_node, program_node& new_node, bool invalidate_output_layout)
+void program_impl::replace(program_node& old_node, program_node& new_node, bool replace_whole_branch, bool check_output_layouts_integrity)
 {
-    if (!new_node.dependencies.empty() || !new_node.users.empty() || new_node.dominator || new_node.joint)
+    if ((!new_node.dependencies.empty() && !replace_whole_branch) || !new_node.users.empty() || new_node.dominator || new_node.joint)
         throw std::invalid_argument("Node which is about to replace other node should be detached");
 
     if (new_node.is_output())
         throw std::invalid_argument("Replacement node shouldn't be marked as an output since it's impossible to rename such node.");
 
     auto id = old_node.id();
+    new_node.output_layout = old_node.get_output_layout();
+    new_node.valid_output_layout = old_node.valid_output_layout;
 
-    //copy old's dependencies
-    while (!old_node.dependencies.empty())
+    if (!replace_whole_branch)
     {
-        auto& dep = old_node.dependencies.back();
-        add_connection(*dep, new_node);
-        remove_connection(*dep, old_node);
+        //copy old's dependencies
+        while (!old_node.dependencies.empty())
+        {
+            auto& dep = old_node.dependencies.back();
+            add_connection(*dep, new_node);
+            remove_connection(*dep, old_node);
+        }
     }
 
     //append users
@@ -1649,6 +1691,9 @@ void program_impl::replace(program_node& old_node, program_node& new_node, bool 
     }
 
     old_node.users.clear();
+
+    if (check_output_layouts_integrity && new_node.valid_output_layout)
+        new_node.get_output_layout();
 
     bool old_was_output = false;
     //copy node's state
@@ -1679,10 +1724,7 @@ void program_impl::replace(program_node& old_node, program_node& new_node, bool 
     if (old_news_pos != processing_order.end())
         processing_order.erase(old_news_pos);
 
-    if (invalidate_output_layout)
-        old_node.invalidate_users();
-
-    bool rem = remove_if_dangling(old_node);
+    bool rem = remove_if_dangling(old_node, replace_whole_branch);
     assert(rem && "Replaced node should have been removed");
     (void)rem;
 
@@ -1695,20 +1737,63 @@ void program_impl::replace(program_node& old_node, program_node& new_node, bool 
     }
 }
 
-bool program_impl::remove_if_dangling(program_node& node)
+bool program_impl::remove_if_dangling(program_node& node, bool detach_whole_branch)
 {
-    if (!node.users.empty() || !node.dependencies.empty())
+    if (!node.users.empty())
+        return false;
+    if (!detach_whole_branch && !node.dependencies.empty())
         return false;
 
-    if (node.is_output() && !is_debug_build())
-        return false;
+    std::list<program_node*> to_remove;
+    std::list<program_node*> marked;
+    if (detach_whole_branch)
+    {
+        node.mark();
+        std::list<program_node*> queue = { &node };
+        while (!queue.empty())
+        {
+            auto curr = queue.front();
+            queue.pop_front();
+            marked.push_back(curr);
 
-    processing_order.erase(node.processing_itr);
-    optimized_out.push_back(node.id());
-    nodes_map.erase(node.id());
-    
-    if(node.is_input())
-        inputs.remove(&node);
+            //remove only if all users also has been marked
+            bool rem = !std::any_of(curr->get_users().begin(), curr->get_users().end(), [](program_node* node) { return !node->is_marked(); });
+            if (rem)
+                to_remove.push_back(curr);
+
+            for (auto dep : curr->get_dependencies())
+            {
+                if (!dep->is_marked())
+                {
+                    dep->mark();
+                    queue.push_back(dep);
+                }
+            }
+        }
+    }
+    else
+        to_remove.push_back(&node);
+
+    for (auto n : marked)
+        n->unmark();
+
+    for (auto rem : to_remove)
+    {
+        if (!rem->is_output() || is_debug_build())
+        {
+            if (detach_whole_branch)
+            {
+                for (auto& user : rem->get_users())
+                    user->remove_dependency(*rem);
+            }
+            if (rem->is_input())
+                inputs.remove(rem);
+
+            processing_order.erase(rem->processing_itr);
+            optimized_out.push_back(rem->id());
+            nodes_map.erase(rem->id());
+        }
+    }
 
     return true;
 }
@@ -1857,6 +1942,31 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
         return{ str + 1, end };
     };
 
+    const auto extr_oformat = [](program_node* ptr)
+    {
+        std::string out = "";
+        switch (ptr->output_layout.format)
+        {
+        case format::yxfb: out = "yxfb"; break;
+        case format::byxf: out = "byxf"; break;
+        case format::bfyx: out = "bfyx"; break;
+        case format::fyxb: out = "fyxb"; break;
+        case format::os_iyx_osv16: out = "os_iyx_osv16"; break;
+        case format::bs_xs_xsv8_bsv8: out = "bs_xs_xsv8_bsv8"; break;
+        case format::bs_xs_xsv8_bsv16: out = "bs_xs_xsv8_bsv16"; break;
+        case format::bs_x_bsv16: out = "bs_x_bsv16"; break;
+        case format::any: out = "any"; break;
+        default:
+            out = "unk format";
+            break;
+        }
+
+        if (!ptr->valid_output_layout)
+            out += " (invalid)";
+
+        return out;
+    };
+
 
     std::ofstream graph(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".graph");
     graph << "digraph cldnn_program {\n";
@@ -1866,7 +1976,7 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
         if (filter && !filter(*node))
             continue;
 
-        graph << "    " << node_id(node) << "[label=\"" << node->id() << ":\\n" << extr_type(typeid(*node).name()) << "\"";
+        graph << "    " << node_id(node) << "[label=\"" << node->id() << ":\\n" << extr_type(typeid(*node).name()) << "\n out format: " + extr_oformat(node) << "\"";
         if (node->is_type<data>() || node->is_constant())
             graph << ", shape=box";
         if (node->is_type<internal_primitive>())

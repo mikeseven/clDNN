@@ -104,6 +104,7 @@ protected:
     std::shared_ptr<primitive_impl> _impl;
 
     std::vector<std::shared_ptr<primitive_inst>> _deps;
+    std::vector<std::shared_ptr<primitive_inst>> _exec_deps;
 
     //_output is optional because its initialization might be postponed (reshape_inst may either allocate it's own buffer or attach input as output
     // depending on reshape_node.is_in_place())
@@ -113,6 +114,7 @@ protected:
     bool _has_valid_input = true; //by default all primitives has valid inputs, exception is input_layout (see input_layout_inst)
 
     memory_impl::ptr allocate_output();
+    static std::vector<std::shared_ptr<primitive_inst>> build_exec_deps(std::vector<std::shared_ptr<primitive_inst>> const& mem_deps);
 
     //event function called by primitive_inst::execute after checking if primitive should rerun and before calling _impl->execute()
     //mainly for reshape (to update output memory if reshape_node.is_in_place() == true)

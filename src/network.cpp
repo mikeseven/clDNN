@@ -103,8 +103,10 @@ void network_impl::execute(const std::vector<refcounted_obj_ptr<event_impl>>& ev
     //Wait for previous execution completion
     reset_execution(false);
 
-    for(auto& inst : _exec_order)
+    for (auto& inst : _exec_order)
         execute_primitive(inst, events);
+    for (auto& dout : _data_outputs) //data primitives are not executed so if they are marked as output we need to add them valid events manually
+        _events[dout->id()] = get_engine().create_user_event(true);
 
     for (auto& prim : _primitives)
         prim.second->reset_output_change();
@@ -177,7 +179,11 @@ void network_impl::allocate_primitive_instance(program_node const& node)
     if (node.is_input())
         _inputs.push_back(inst);
     if (node.is_output())
+    {
         _outputs.push_back(inst);
+        if (node.is_type<data>())
+            _data_outputs.push_back(inst);
+    }
 }
 
 }

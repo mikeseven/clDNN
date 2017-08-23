@@ -71,6 +71,7 @@ private:
     std::vector<std::shared_ptr<primitive_inst>> _inputs;
     std::vector<std::shared_ptr<primitive_inst>> _outputs;
     std::list<std::shared_ptr<primitive_inst>> _exec_order;
+    std::list<std::shared_ptr<primitive_inst>> _data_outputs;
 
     std::unordered_map<primitive_id, event_impl::ptr> _events;
 
