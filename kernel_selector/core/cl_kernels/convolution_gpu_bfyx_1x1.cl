@@ -31,8 +31,6 @@ KERNEL(convolution_bfyx_1x1)(
     const uint b = get_global_id(2);
     const uint group_f = get_group_id(1) * 16;
 
-    //UNIT_TYPE dotProd = UNIT_VAL_ZERO;
-
     UNIT_TYPE out[16];
 
 #if BIAS_TERM
@@ -45,7 +43,6 @@ KERNEL(convolution_bfyx_1x1)(
     {
         out[i] = intel_sub_group_shuffle(biases[bias_index], i);
     }
-    //dotProd = biases[bias_index];
 #endif
 
     const int input_x = x;
