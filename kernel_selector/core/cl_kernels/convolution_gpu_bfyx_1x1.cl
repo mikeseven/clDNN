@@ -31,14 +31,21 @@ KERNEL(convolution_bfyx_1x1)(
     const uint b = get_global_id(2);
     const uint group_f = get_group_id(1) * 16;
 
-    UNIT_TYPE dotProd = UNIT_VAL_ZERO;
+    //UNIT_TYPE dotProd = UNIT_VAL_ZERO;
+
+    UNIT_TYPE out[16];
+
 #if BIAS_TERM
     #if   BIAS_PER_OUTPUT
         const uint bias_index = GET_DATA_INDEX(BIAS, b, f, y, x);
     #elif BIAS_PER_OFM
         const uint bias_index = f;
     #endif
-    dotProd = biases[bias_index];
+    for(uint i = 0; i < 16; i++)
+    {
+        out[i] = intel_sub_group_shuffle(biases[bias_index], i);
+    }
+    //dotProd = biases[bias_index];
 #endif
 
     const int input_x = x;
@@ -51,12 +58,6 @@ KERNEL(convolution_bfyx_1x1)(
 #endif
     const uint filter_offset = f*FILTER_OFM_PITCH;
     const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
-
-    UNIT_TYPE out[16];
-    for(uint i = 0; i < 16; i++)
-    {
-        out[i] = dotProd;
-    }
 
     for (uint k = 0; k < FILTER_IFM_NUM; ++k)
     {
