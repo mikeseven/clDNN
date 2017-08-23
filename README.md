@@ -53,6 +53,8 @@ Accelerate Deep Learning Inference with Intel® Processor Graphics whitepaper [l
 	- dynamic pruning for sparse fc layers
 	- reorder optimization
 	- concatenation optimization
+	- eltwise optimization
+	- activation fusing 
 
 ### Drop 3.0
 	Added:
