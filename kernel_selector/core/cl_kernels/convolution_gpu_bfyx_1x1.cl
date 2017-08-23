@@ -14,6 +14,7 @@
 
 #include "include/include_all.cl"
 
+__attribute__((intel_reqd_sub_group_size(16)))
 KERNEL(convolution_bfyx_1x1)(
     __global INPUT0_TYPE* input, 
     __global OUTPUT_TYPE* output, 
@@ -26,8 +27,8 @@ KERNEL(convolution_bfyx_1x1)(
     const uint xy = get_global_id(0);
     const uint x = xy % OUTPUT_SIZE_X;
     const uint y = xy / OUTPUT_SIZE_Y;
-    const uint f = get_global_id(2) % OUTPUT_FEATURE_NUM;
-    const uint b = get_global_id(2) / OUTPUT_FEATURE_NUM;
+    const uint f = get_global_id(1);
+    const uint b = get_global_id(2);
 
     UNIT_TYPE dotProd = UNIT_VAL_ZERO;
 #if BIAS_TERM
@@ -52,10 +53,7 @@ KERNEL(convolution_bfyx_1x1)(
 
     for (uint k = 0; k < FILTER_IFM_NUM; ++k)
     {
-            const int input_offset_y = input_y;
-            const int input_offset_x = input_x;
-
-            uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH + k*INPUT0_FEATURE_PITCH;
+            uint input_idx = input_offset + xy + k*INPUT0_FEATURE_PITCH;
             uint filter_idx = filter_offset + k*FILTER_IFM_PITCH;
             dotProd += input[input_idx]*weights[filter_idx];
     }
