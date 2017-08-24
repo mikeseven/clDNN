@@ -17,7 +17,7 @@
 
 #pragma once
 
-#include "power_intrumentation.h"
+#include "power_instrumentation.h"
 #include "instrumentation.h"
 
 #include "api/CPP/topology.hpp"

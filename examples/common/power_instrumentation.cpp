@@ -11,7 +11,7 @@ Include supplier trademarks or logos as supplier requires Intel to use, preceded
 Unless otherwise agreed by Intel in writing, you may not remove or alter this notice or any other notice embedded in Materials by Intel or Intel’s suppliers or licensors in any way.
 */
 
-#include "power_intrumentation.h"
+#include "power_instrumentation.h"
 #include <string>
 
 #ifdef _WIN32
