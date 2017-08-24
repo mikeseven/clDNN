@@ -180,7 +180,7 @@ namespace {
             node.remove_dependency(begin_offset + 1);
 
         auto& data_node = node.get_dependency(begin_offset).as<data>();
-        data_node.attach_memory(*data_to_allocate);
+        data_node.attach_memory(*data_to_allocate, false);
     }
 
     //helper function for getting target layout used in depthwise sep optimization
@@ -1693,7 +1693,7 @@ void program_impl::replace(program_node& old_node, program_node& new_node, bool 
     old_node.users.clear();
 
     if (check_output_layouts_integrity && new_node.valid_output_layout)
-        new_node.get_output_layout();
+        new_node.recalc_output_layout();
 
     bool old_was_output = false;
     //copy node's state
@@ -1840,7 +1840,7 @@ void program_impl::replace_data_with_optimized(std::map<primitive_id, memory_imp
         auto& node = *nodes_map.at(result.first);
         assert(node.is_type<data>() && "Optimized primitive is not a cldnn::data");
         assert(result.second != nullptr && "Memory which handles result of optimization should not be nullptr");
-        node.as<data>().attach_memory(*result.second);
+        node.as<data>().attach_memory(*result.second, false);
     }
 }
 

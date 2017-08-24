@@ -45,7 +45,13 @@ namespace {
 data_node::typed_program_node(const std::shared_ptr<data> dprim, program_impl& prog)
     : parent(dprim, prog), mem(api_cast(dprim->mem.get()))
 {
-    program_node::recalc_output_layout(false);
+    recalc_output_layout(false);
+}
+
+void data_node::attach_memory(memory_impl& new_mem, bool invalidate_users_if_changed)
+{
+    mem = &new_mem;
+    recalc_output_layout(invalidate_users_if_changed);
 }
 
 std::string data_inst::to_string(data_node const& node)

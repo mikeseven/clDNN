@@ -103,7 +103,14 @@ protected:
 
     std::shared_ptr<primitive_impl> _impl;
 
+    //this is a set of dependencies in terms of memory, if execution of this primitive requires data from another one, it should be added to this set
     std::vector<std::shared_ptr<primitive_inst>> _deps;
+
+    //this is a set of dependencies in terms of execution
+    // execution of all primitives from this set should be enough to guarantee that all memory deps (see _deps)
+    // will be valid when executing this primitive. Most of the time this set will be equal to the _deps minus all cldnn::data (which don't need to be execued) -- this is default,
+    // but it is also possible to have, for example, only one fused primitive which will calculate multiple outputs (for example device enqueue can work in such manner)
+    // in general - this member is introduced to relax logical connection between primitives which have to be executed and memories which are used by this primitive
     std::vector<std::shared_ptr<primitive_inst>> _exec_deps;
 
     //_output is optional because its initialization might be postponed (reshape_inst may either allocate it's own buffer or attach input as output
