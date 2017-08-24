@@ -42,8 +42,6 @@ public:
         auto ew_params = get_default_params<kernel_selector::eltwise_params>(arg, 1);
         auto ew_optional_params = get_default_optional_params<kernel_selector::eltwise_optional_params>(arg.get_program());
 
-        convert_fused_activation_func_params(arg, ew_params);
-
         ew_params.eltwiseParams.operations.push_back({{ kernel_selector::eltwise_params::InputType::Buffer(0) }, kernel_selector::eltwise_mode::ASSIGN });
 
         const auto& input_layout = arg.input().get_output_layout();

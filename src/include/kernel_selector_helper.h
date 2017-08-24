@@ -410,6 +410,8 @@ inline params_t get_default_params(const arg_t& arg, uint32_t split = 1)
 
     params.layerID = arg.id();
 
+    convert_fused_activation_func_params(arg, params);
+
     return params;
 }
 

@@ -47,8 +47,6 @@ public:
         auto reorder_params = get_default_params<kernel_selector::reorder_base_params>(arg);
         auto reorder_optional_params = get_default_optional_params<kernel_selector::reorder_optional_params>(arg.get_program());
 
-        convert_fused_activation_func_params(arg, reorder_params);
-
         auto& kernel_selector = kernel_selector::reshape_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(reorder_params, reorder_optional_params);
 

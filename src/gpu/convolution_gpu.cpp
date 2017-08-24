@@ -88,8 +88,6 @@ public:
 
         if(primitive->with_activation)
             convert_activation_func_params(primitive, conv_params);
-        else
-            convert_fused_activation_func_params(arg, conv_params);
 
         conv_params.convParams.depthwiseSeparableOpt = depthwise_separable_opt;
 

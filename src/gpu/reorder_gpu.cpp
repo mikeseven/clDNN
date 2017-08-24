@@ -54,8 +54,6 @@ public:
         auto reorder_params = get_default_params<kernel_selector::reorder_params>(arg);
         auto reorder_optional_params = get_default_optional_params<kernel_selector::reorder_optional_params>(arg.get_program());
 
-        convert_fused_activation_func_params(arg, reorder_params);
-
         if (arg.has_mean())
         {
             const auto& mean_layout = arg.mean().get_output_layout();

@@ -34,8 +34,6 @@ struct permute_gpu : typed_primitive_gpu_impl<permute>
         auto reorder_params = get_default_params<kernel_selector::permute_params>(arg);
         auto reorder_optional_params = get_default_optional_params<kernel_selector::reorder_optional_params>(arg.get_program());
 
-        convert_fused_activation_func_params(arg, reorder_params);
-
         uint16_t max_input_index = (uint16_t)(reorder_params.inputs[0].GetDims().size() - 1);
         const auto& permute_order = arg.get_primitive()->permute_order;
         for (size_t i = 0; i < permute_order.size(); i++)

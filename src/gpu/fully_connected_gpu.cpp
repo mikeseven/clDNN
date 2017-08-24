@@ -87,8 +87,6 @@ public:
 
         if(arg.get_primitive()->with_activation)
             convert_activation_func_params(arg.get_primitive(), fc_params);
-        else
-            convert_fused_activation_func_params(arg, fc_params);
 
         fc_params.output = fc_params.output.FlattenFeatureAndSpatials();
 

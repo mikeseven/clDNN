@@ -85,8 +85,6 @@ struct pooling_gpu : typed_primitive_gpu_impl<pooling>
         auto pool_params            = get_default_params<kernel_selector::pooling_params>(arg);
         auto pool_optional_params   = get_default_optional_params<kernel_selector::pooling_optional_params>(arg.get_program());
 
-        convert_fused_activation_func_params(arg, pool_params);
-
         const auto primitive        = arg.get_primitive();
         const auto& stride          = primitive->stride;
         const auto& input_offset    = primitive->input_offset;

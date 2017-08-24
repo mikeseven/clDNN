@@ -48,8 +48,6 @@ public:
         auto norm_params = get_default_params<kernel_selector::normalize_params>(arg);
         auto norm_optional_params = get_default_optional_params<kernel_selector::normalize_optional_params>(arg.get_program());
 
-        convert_fused_activation_func_params(arg, norm_params);
-
         const auto& scale_layout  = arg.scale().get_output_layout();
 
         norm_params.normParams.normMode = 
