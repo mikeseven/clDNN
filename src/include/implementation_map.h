@@ -41,6 +41,7 @@ struct reshape;
 struct data;
 struct input_layout;
 struct prior_box;
+struct split;
 
 struct primitive_impl;
 
@@ -132,6 +133,16 @@ struct implementation_key<prior_box>
 {
     typedef cldnn::engine_types type;
     type operator()(engine_types engine_type, const typed_program_node<prior_box>&)
+    {
+        return engine_type;
+    }
+};
+
+template<>
+struct implementation_key<split>
+{
+    typedef cldnn::engine_types type;
+    type operator()(engine_types engine_type, const typed_program_node<split>&)
     {
         return engine_type;
     }

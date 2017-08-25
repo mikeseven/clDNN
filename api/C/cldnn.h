@@ -290,6 +290,13 @@ typedef struct
     size_t size;       ///< Size (in uint16_t) of the array.
 } cldnn_uint16_t_arr;
 
+/// @brief Represents reference to an array of tensor.
+typedef struct
+{
+    const cldnn_tensor* data; ///< Pointer to tensor array.
+    size_t size;       ///< Size (in tensor) of the array.
+} cldnn_tensor_arr;
+
 /// @brief Globally unique primitive's type id
 typedef const struct cldnn_primitive_type* cldnn_primitive_type_id;
 

@@ -305,6 +305,14 @@ inline cldnn_uint16_t_arr uint16_t_vector_to_arr(const std::vector<uint16_t>& st
     return{ stor.data(), stor.size() };
 }
 
+///
+/// \brief Converts std::vector<tensor> to C API tensor_array
+///
+inline cldnn_tensor_arr tensor_vector_to_arr(const std::vector<cldnn_tensor>& stor)
+{
+    return cldnn_tensor_arr{ stor.data(), stor.size() };
+}
+
 /// @}
 
 /// @endcond
