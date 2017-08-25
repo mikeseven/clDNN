@@ -79,15 +79,19 @@ KERNEL(convolution_bfyx_1x1)(
 #endif
     uint split_idx)
 {
-    const uint xy = get_group_id(0) * 8 + get_sub_group_local_id();
+    const uint xy = get_group_id(0) * 16 + get_sub_group_local_id();
+    const uint xy2 = xy + 8;
+
     const uint x = xy % OUTPUT_SIZE_X;
     const uint y = xy / OUTPUT_SIZE_X;
+    const uint x2 = xy2 % OUTPUT_SIZE_X;
+    const uint y2 = xy2 / OUTPUT_SIZE_X;
     const uint f = get_global_id(1);
     const uint b = get_global_id(2);
     const uint group_f = get_group_id(1) * 8;
 
-    UNIT_TYPE out[8];
     MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC00;
+    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC01;
 
 #if BIAS_TERM
     #if   BIAS_PER_OUTPUT
@@ -97,7 +101,8 @@ KERNEL(convolution_bfyx_1x1)(
     #endif
     for(uint i = 0; i < 8; i++)
     {
-        blockC00[i] = biases[bias_index];
+        blockC00[i] = intel_sub_group_shuffle(biases[bias_index], i);
+        blockC01[i] = intel_sub_group_shuffle(biases[bias_index], i);
     }
 #endif
 
@@ -114,20 +119,27 @@ KERNEL(convolution_bfyx_1x1)(
     {
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA00;
 
+        MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA01;
+
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockB00;
 
         uint input_idx = input_offset + xy + k*8*INPUT0_FEATURE_PITCH;
         uint filter_idx = filter_offset + k*8*FILTER_IFM_PITCH;
 
+        uint input_idx2 = input_offset + xy2 + k*8*INPUT0_FEATURE_PITCH;
         for(uint i = 0; i < 8; i++)
         {
             blockA00[i] = input[input_idx];
             input_idx += INPUT0_FEATURE_PITCH;
             blockB00[i] = weights[filter_idx];
             filter_idx += FILTER_IFM_PITCH;
+
+            blockA01[i] = input[input_idx2];
+            input_idx2 += INPUT0_FEATURE_PITCH;
         }
 
          MULTIPLY_BLOCKS_8x8(blockC00, blockB00, blockA00);
+         MULTIPLY_BLOCKS_8x8(blockC01, blockB00, blockA01);
     }
 
     if(xy >= INPUT0_SIZE_X * INPUT0_SIZE_Y)
@@ -141,4 +153,14 @@ KERNEL(convolution_bfyx_1x1)(
         const uint dst_index = GET_DATA_INDEX(OUTPUT, b, group_f+i, y, x) + out_split_offset;     
         output[dst_index] = ACTIVATION(blockC00[i], NL_M, NL_N);
     }
+
+    if(xy2 >= INPUT0_SIZE_X * INPUT0_SIZE_Y)
+        return;
+
+    for(uint i = 0; i < 8; i++)
+    {
+        const uint dst_index = GET_DATA_INDEX(OUTPUT, b, group_f+i, y2, x2) + out_split_offset;     
+        output[dst_index] = ACTIVATION(blockC01[i], NL_M, NL_N);
+    }
+
 }
