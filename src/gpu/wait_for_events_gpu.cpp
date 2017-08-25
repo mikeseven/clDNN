@@ -17,7 +17,6 @@
 #include "primitive_inst.h"
 #include "data_inst.h"
 #include "prior_box_inst.h"
-#include "split_inst.h"
 #include "input_layout_inst.h"
 #include "implementation_map.h"
 
@@ -52,12 +51,6 @@ public:
         // This primitive is being executed on CPU during network compilation.
         return new wait_for_events_gpu(prior_box);
     }
-
-    static primitive_impl* create_split(const split_node& split)
-    {
-        // This primitive is being optimized at graph level
-        return new wait_for_events_gpu(split);
-    }
 };
 
 namespace {
@@ -73,10 +66,6 @@ namespace {
 
             implementation_map<prior_box>::add({
                 { engine_types::ocl, wait_for_events_gpu::create_prior_box }
-            });
-
-            implementation_map<split>::add({
-                { engine_types::ocl, wait_for_events_gpu::create_split }
             });
         }
         ~attach() {}

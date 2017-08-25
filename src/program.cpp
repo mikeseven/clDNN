@@ -448,7 +448,7 @@ void program_impl::cleanup()
 }
 void program_impl::split_nodes_pre()
 {
-    auto itr = nodes_map.begin(); //note we need to use iterators since currently processed element can be removed
+    auto itr = nodes_map.begin();
     while (itr != nodes_map.end())
     {
         auto node_itr = itr++;
@@ -467,9 +467,8 @@ void program_impl::split_nodes_pre()
                 primitive_id output_id = node.id() + ":" + split_prim->output_ids[i];
 
                 //create dummy crop primitive and add it to nodes map
-                auto crop_prim = crop(output_id, input_id, { 1,1,1,1 }, split_prim->output_offsets[i]);
-                auto crop_prim_dto = crop_prim.get_dto();
-                get_or_create(crop_prim_dto->type->from_dto(crop_prim_dto));
+                auto crop_prim = std::make_shared<crop>(output_id, input_id, tensor{ 1,1,1,1 }, split_prim->output_offsets[i]);
+                get_or_create(crop_prim);
             }
         });
     }
@@ -488,7 +487,7 @@ void program_impl::split_nodes_post()
         {
             //check if split is not used by any primitive, as it will be optimized
             if (node.get_users().size() != 0)
-                throw std::logic_error("Split layer cannot be used directly! Please use split output \"<split_prim_id>:<split_output_id>\"!");
+                throw std::logic_error("Split layer cannot be used directly! Please use split output \"" + node.id() + ":<split_output_id>\"!");
 
             //get_output size and validate split primitive inputs
             auto output_layout = node.get_output_layout();
@@ -509,10 +508,10 @@ void program_impl::split_nodes_post()
                 tensor reference_input_size;
 
                 for (decltype(split_num) j = 0; j < i; j++)
-                    reference_input_size = reference_input_size + split_prim->output_offsets[j + 1] - split_prim->output_offsets[j];
+                    reference_input_size += split_prim->output_offsets[j + 1] - split_prim->output_offsets[j];
 
                 for (decltype(split_num) j = i; j < split_num - 1; j++)
-                    reference_input_size = reference_input_size + split_prim->output_offsets[j + 1] - split_prim->output_offsets[j];
+                    reference_input_size += split_prim->output_offsets[j + 1] - split_prim->output_offsets[j];
 
                 reference_input_size = output_layout_size - reference_input_size;
 
