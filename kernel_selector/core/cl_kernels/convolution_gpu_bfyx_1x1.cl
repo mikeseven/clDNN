@@ -86,12 +86,14 @@ KERNEL(convolution_bfyx_1x1)(
     const uint y = xy / OUTPUT_SIZE_X;
     const uint x2 = xy2 % OUTPUT_SIZE_X;
     const uint y2 = xy2 / OUTPUT_SIZE_X;
-    const uint f = get_global_id(1);
+    const uint f = get_group_id(1) * 16 + get_sub_group_local_id();//get_global_id(1);
     const uint b = get_global_id(2);
-    const uint group_f = get_group_id(1) * 8;
+    const uint group_f = get_group_id(1) * 16;
 
     MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC00;
     MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC01;
+    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC10;
+    MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockC11;
 
 #if BIAS_TERM
     #if   BIAS_PER_OUTPUT
@@ -103,6 +105,8 @@ KERNEL(convolution_bfyx_1x1)(
     {
         blockC00[i] = intel_sub_group_shuffle(biases[bias_index], i);
         blockC01[i] = intel_sub_group_shuffle(biases[bias_index], i);
+        blockC10[i] = intel_sub_group_shuffle(biases[bias_index+8], i);
+        blockC11[i] = intel_sub_group_shuffle(biases[bias_index+8], i);
     }
 #endif
 
@@ -113,20 +117,22 @@ KERNEL(convolution_bfyx_1x1)(
 #endif
     const uint filter_offset = f*FILTER_OFM_PITCH;
     const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
-
+    const uint filter_offset2 = (f+8)*FILTER_OFM_PITCH;
 
     for (uint k = 0; k < FILTER_IFM_NUM / 8; ++k)
     {
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA00;
-
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA01;
 
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockB00;
+        MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockB01;
 
         uint input_idx = input_offset + xy + k*8*INPUT0_FEATURE_PITCH;
         uint filter_idx = filter_offset + k*8*FILTER_IFM_PITCH;
 
         uint input_idx2 = input_offset + xy2 + k*8*INPUT0_FEATURE_PITCH;
+        uint filter_idx2 = filter_offset2 + k*8*FILTER_IFM_PITCH;
+
         for(uint i = 0; i < 8; i++)
         {
             blockA00[i] = input[input_idx];
@@ -136,10 +142,16 @@ KERNEL(convolution_bfyx_1x1)(
 
             blockA01[i] = input[input_idx2];
             input_idx2 += INPUT0_FEATURE_PITCH;
+            blockB01[i] = weights[filter_idx2];
+            filter_idx2 += FILTER_IFM_PITCH;
         }
 
          MULTIPLY_BLOCKS_8x8(blockC00, blockB00, blockA00);
          MULTIPLY_BLOCKS_8x8(blockC01, blockB00, blockA01);
+
+         MULTIPLY_BLOCKS_8x8(blockC10, blockB01, blockA00);
+         MULTIPLY_BLOCKS_8x8(blockC11, blockB01, blockA01);
+
     }
 
     if(xy >= INPUT0_SIZE_X * INPUT0_SIZE_Y)
@@ -154,6 +166,12 @@ KERNEL(convolution_bfyx_1x1)(
         output[dst_index] = ACTIVATION(blockC00[i], NL_M, NL_N);
     }
 
+    for(uint i = 0; i < 8; i++)
+    {
+        const uint dst_index = GET_DATA_INDEX(OUTPUT, b, group_f+i+8, y, x) + out_split_offset;     
+        output[dst_index] = ACTIVATION(blockC10[i], NL_M, NL_N);
+    }
+
     if(xy2 >= INPUT0_SIZE_X * INPUT0_SIZE_Y)
         return;
 
@@ -161,6 +179,12 @@ KERNEL(convolution_bfyx_1x1)(
     {
         const uint dst_index = GET_DATA_INDEX(OUTPUT, b, group_f+i, y2, x2) + out_split_offset;     
         output[dst_index] = ACTIVATION(blockC01[i], NL_M, NL_N);
+    }
+
+    for(uint i = 0; i < 8; i++)
+    {
+        const uint dst_index = GET_DATA_INDEX(OUTPUT, b, group_f+i+8, y2, x2) + out_split_offset;     
+        output[dst_index] = ACTIVATION(blockC11[i], NL_M, NL_N);
     }
 
 }
