@@ -18,6 +18,8 @@
 #include "api/CPP/primitive.hpp"
 #include "internal_primitive.h"
 
+#include "to_string_utils.h"
+#include "json_object.h"
 #include "meta_utils.h"
 
 namespace cldnn
@@ -93,6 +95,7 @@ public:
     program_node* get_next() { auto itr = processing_itr; return (*++itr); }
     const program_node* get_next() const { auto itr = processing_itr; return (*++itr); }
 
+    json_composite desc_to_json() const;
     //do not modify primitive directly to keep synchronisation wit graph
     std::shared_ptr<const primitive> get_primitive() const { return desc; }
 
@@ -135,6 +138,9 @@ public:
     auto is_endpoint() const { return users.empty(); }
     auto set_output(bool out) { output = out; }
     auto is_output() const { return output; }
+
+    auto is_valid_output_layout() const { return valid_output_layout; }
+    auto get_processing_num() const { return processing_num; }
 
     uint8_t mark(uint8_t val = 1) { uint8_t ret = user_mark; user_mark = val; return ret; }
     void unmark() { user_mark = 0; }

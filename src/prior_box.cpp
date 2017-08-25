@@ -17,6 +17,7 @@
 #include "prior_box_inst.h"
 #include "primitive_type_base.h"
 #include "error_handler.h"
+#include "json_object.h"
 
 #include <cmath>
 
@@ -212,8 +213,8 @@ std::string vector_to_string(std::vector<float> vec)
 std::string prior_box_inst::to_string(prior_box_node const& node)
 {
     std::stringstream               primitive_description;
+    auto node_info                  = node.desc_to_json();
     auto desc                       = node.get_primitive();
-    auto in_layout                  = node.input().get_output_layout();
     auto flip                       = desc->flip ? "true" : "false";
     auto clip                       = desc->clip ? "true" : "false";
     std::string str_min_sizes       = vector_to_string(desc->min_sizes);
@@ -221,18 +222,29 @@ std::string prior_box_inst::to_string(prior_box_node const& node)
     std::string str_aspect_ratio    = vector_to_string(desc->aspect_ratios);
     std::string str_variance        = vector_to_string(desc->variance);
 
-    primitive_description << "id: " << desc->id << ", type: normalization" <<
-        "\n\tinput: "        << "id: " << node.get_primitive()->input[0] << ", count: " << in_layout.count() << ", size: " << in_layout.size <<
-        "\n\timage size: "   << desc->img_size <<
-        "\n\tmin_sizes: "    << str_min_sizes << ", max sizes: " << str_max_sizes <<
-        "\n\taspect_ratio: " << str_aspect_ratio <<
-        "\n\tflip: "         << flip << "clip: " << clip <<
-        "\n\tstep_width: "   << desc->step_width << ", step_height: " << desc->step_height << ", offset: " << desc->offset <<
-        "\n\tstr_variance: " << str_variance <<
-        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
-        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
-        "\n\toutput: size: " << node.get_output_layout().size << '\n';
+    json_composite prior_info;
+    prior_info.add("input id", node.input().id());
+    prior_info.add("iamge size", desc->img_size);
+    prior_info.add("variance", str_variance);
 
+    json_composite box_sizes_info;
+    box_sizes_info.add("min sizes", str_min_sizes);
+    box_sizes_info.add("max sizes", str_max_sizes);
+    prior_info.add("box sizes", box_sizes_info);
+
+    prior_info.add("aspect_ratio", str_aspect_ratio);
+    prior_info.add("flip", flip);
+    prior_info.add("clip", clip);
+    
+    json_composite step_info;
+    step_info.add("step width", desc->step_width);
+    step_info.add("step height", desc->step_height);
+    step_info.add("offset", desc->offset);
+    prior_info.add("step", step_info);
+
+    node_info.add("prior box info", prior_info);
+    node_info.dump(primitive_description);
+    
     return primitive_description.str();
 }
 

@@ -26,6 +26,7 @@
 #include <iostream>
 #include <numeric>
 #include <algorithm>
+#include <sstream>
 
 namespace cldnn
 {
@@ -406,29 +407,35 @@ public:
 
     friend std::ostream& operator<<(std::ostream& os, const tensor& tensor)
     {
-        os << "[b:";
-        for (size_t i = 0; i < tensor.batch.size(); ++i)
-        {
-            os << tensor.batch[i];
-            i != (tensor.batch.size() - 1) ? os << "," : os << "";
-        }
-        os << ", f:";
-        for (size_t i = 0; i < tensor.feature.size(); ++i)
-        {
-            os << tensor.feature[i];
-            i != (tensor.feature.size() - 1) ? os << "," : os << "";
-        }
-
-        std::vector<std::string> spatials = { ", x", ", y", ", z", ", w" };
-        for (size_t i = 0; i < tensor.spatial.size(); ++i)
-        {
-            os  << spatials[i] << ":" << tensor.spatial[i];
-        }
-        os << "]";
-
+        os << tensor.to_string();
         return os;
     }
 
+    std::string to_string() const
+    {
+        std::stringstream out;
+        out << "[b:";
+        for (size_t i = 0; i < batch.size(); ++i)
+        {
+            out << batch[i];
+            i != (batch.size() - 1) ? out << "," : out << "";
+        }
+        out << ", f:";
+        for (size_t i = 0; i < feature.size(); ++i)
+        {
+            out << feature[i];
+            i != (feature.size() - 1) ? out << "," : out << "";
+        }
+
+        std::vector<std::string> spatials = { ", x", ", y", ", z", ", w" };
+        for (size_t i = 0; i < spatial.size(); ++i)
+        {
+            out << spatials[i] << ":" << spatial[i];
+        }
+        out << "]";
+
+        return out.str();
+    }
 
     /// @brief Returns a tensor with all negated elements.
     tensor negate() const

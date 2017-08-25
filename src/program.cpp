@@ -48,6 +48,7 @@
 #include "scale_inst.h"
 #include "softmax_inst.h"
 #include "split_inst.h"
+#include "program_dump_graph.h"
 #include "upsampling_inst.h"
 
 #include "network_impl.h"
@@ -2211,264 +2212,30 @@ void program_impl::backward_bfs(std::function<void(program_node&)> const& mark_f
 //TODO: break this function into number of smaller ones + add per-primitive fields (possibly use primitive_inst::to_string?)
 void program_impl::dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter) const
 {
-    auto path = options.get<build_option_type::graph_dumps_dir>()->directory_path;
+    auto path = get_dir_path(options);
     if (path.empty())
+    {
         return;
-
+    }
     if (path.back() != '/' && path.back() != '\\')
+    {
         path += "/";
-
-    const auto node_id = [](program_node* ptr)
-    {
-        return "node_" + std::to_string(reinterpret_cast<uintptr_t>(ptr));
-    };
-
-    const auto extr_type = [](const char* str) -> std::string
-    {
-        if (!str)
-            return{};
-
-        while (*str && *str != '<')
-            ++str;
-        if (!*str)
-            return{};
-
-        auto end = str;
-        while (*end && *end != '>')
-            ++end;
-        if (!*end)
-            return{};
-
-        return{ str + 1, end };
-    };
-
-    const auto extr_oformat = [](program_node* ptr)
-    {
-        std::string out = "";
-        switch (ptr->output_layout.format)
-        {
-        case format::yxfb: out = "yxfb"; break;
-        case format::byxf: out = "byxf"; break;
-        case format::bfyx: out = "bfyx"; break;
-        case format::fyxb: out = "fyxb"; break;
-        case format::os_iyx_osv16: out = "os_iyx_osv16"; break;
-        case format::bs_xs_xsv8_bsv8: out = "bs_xs_xsv8_bsv8"; break;
-        case format::bs_xs_xsv8_bsv16: out = "bs_xs_xsv8_bsv16"; break;
-        case format::bs_x_bsv16: out = "bs_x_bsv16"; break;
-        case format::any: out = "any"; break;
-        default:
-            out = "unk format";
-            break;
-        }
-
-        if (!ptr->valid_output_layout)
-            out += " (invalid)";
-
-        return out;
-    };
-
+    }
 
     std::ofstream graph(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".graph");
-    graph << "digraph cldnn_program {\n";
-    for (auto& pair : nodes_map)
-    {
-        auto node = pair.second.get();
-        if (filter && !filter(*node))
-            continue;
-
-        graph << "    " << node_id(node) << "[label=\"" << node->id() << ":\\n" << extr_type(typeid(*node).name()) << "\\n out format: " + extr_oformat(node) << "\"";
-        if (node->is_type<data>() || node->is_constant())
-            graph << ", shape=box";
-        if (node->is_type<internal_primitive>())
-            graph << ", color=blue";
-        if (node->is_in_data_flow())
-            graph << ", group=data_flow";
-        graph << "];\n";
-
-        for (auto& user : node->get_users())
-        {
-            if (filter && !filter(*user))
-                continue;
-
-            bool doubled = true;
-            if (std::find(user->dependencies.begin(), user->dependencies.end(), node) == user->dependencies.end())
-                doubled = false;
-
-            graph << "    " << node_id(node) << " -> " << node_id(user);
-
-            bool data_flow = node->is_in_data_flow() && user->is_in_data_flow();
-            if (data_flow)
-            {
-                if (doubled)
-                    graph << " [color=red]";
-                else
-                    graph << " [color=red, style=dashed, label=\"usr\"]";
-            }
-            else
-            {
-                if (!doubled)
-                    graph << " [style=dashed, label=\"usr\"]";
-            }
-            graph << ";\n";
-        }
-
-        for (auto& dep : node->get_dependencies())
-        {
-            if (filter && !filter(*dep))
-                continue;
-
-            if (std::find(dep->users.begin(), dep->users.end(), node) != dep->users.end())
-                continue;
-
-            graph << "   " << node_id(node) << " -> " << node_id(dep) << " [style=dashed, label=\"dep\", constraint=false];\n";
-        }
-
-        if (node->dominator && (!filter || filter(*node->dominator)))
-            graph << "    " << node_id(node) << " -> " << node_id(node->dominator) << " [style=dotted, label=\"dom\", constraint=false];\n";
-        if (node->joint && (!filter || filter(*node->joint)))
-            graph << "    " << node_id(node) << " -> " << node_id(node->joint) << " [style=dotted, label=\"p-dom\", constraint=false];\n";
-    }
-
-    graph << "}\n";
-    graph.flush();
-    graph.close();
+    dump_graph_init(graph, *this, filter);
 
     if (!with_full_info)
+    {
         return;
-
-    graph.open(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".info");
-
-    const auto dt_to_str = [](data_types dt) -> std::string
-    {
-        switch (dt)
-        {
-        case data_types::i8: return "i8";
-        case data_types::f16: return "f16";
-        case data_types::f32: return "f32";
-        default:
-            return "unk (" + std::to_string(std::underlying_type_t<data_types>(dt)) + ")";
-        }
-    };
-
-    const auto fmt_to_str = [](format fmt) -> std::string
-    {
-        switch (fmt.value)
-        {
-        case format::bfyx: return "bfyx";
-        case format::byxf: return "byxf";
-        case format::yxfb: return "yxfb";
-        case format::fyxb: return "fyxb";
-        case format::bs_x_bsv16: return "bs_x_bsv16";
-        case format::bs_xs_xsv8_bsv8: return "bs_xs_xsv8_bsv8";
-        case format::bs_xs_xsv8_bsv16: return "bs_xs_xsv8_bsv16";
-        case format::os_iyx_osv16: return "os_iyx_osv16";
-        default:
-            return "unk (" + std::to_string(fmt.value) + ")";
-        }
-    };
-
-    auto const dump_full_node = [&dt_to_str, &fmt_to_str, &extr_type](std::ostream& out, program_node* node)
-    {
-        out << "ptr: " << reinterpret_cast<uintptr_t>(node) << ",\n";
-        out << "id: " << node->id() << ",\n";
-        out << "type: " << extr_type(typeid(*node).name()) << ",\n";
-        out << "internal: " << (node->is_type<internal_primitive>() ? "yes" : "no") << ",\n";
-        out << "valid output layout: " << (node->valid_output_layout ? "yes" : "no") << ",\n";
-        out << "output layout: {\n"
-            << "    data_type: " << dt_to_str(node->output_layout.data_type) << ",\n"
-            << "    format: " << fmt_to_str(node->output_layout.format) << ",\n"
-            << "    size: " << node->output_layout.size << ",\n"
-            << "    padding: {\n"
-            << "        lower size: " << node->output_layout.data_padding.lower_size() << ",\n"
-            << "        upper size: " << node->output_layout.data_padding.upper_size() << ",\n"
-            << "    }\n"
-            << "},\n";
-        out << "processing number: " << node->processing_num << ",\n";
-        out << "constant: " << (node->constant ? "yes" : "no") << ",\n";
-        out << "in data flow: " << (node->data_flow ? "yes" : "no") << ",\n";
-        out << "main branch: " << (node->main_branch ? "yes" : "no") << ",\n";
-        out << "dominator: " << reinterpret_cast<uintptr_t>(node->dominator) << ",\n";
-        out << "join: " << reinterpret_cast<uintptr_t>(node->joint) << ",\n";
-        out << "output: " << (node->output ? "yes" : "no") << ",\n";
-        out << "dependencies: [";
-        {
-            bool empty = true;
-            auto itr = node->dependencies.begin();
-            while (itr != node->dependencies.end())
-            {
-                if (empty)
-                {
-                    out << " ";
-                    empty = false;
-                }
-                else
-                    out << ", ";
-
-                out << reinterpret_cast<uintptr_t>(*itr++);
-            }
-
-            if (!empty)
-                out << " ";
-        }
-        out << "],\n";
-        out << "users: [";
-        {
-            bool empty = true;
-            auto itr = node->users.begin();
-            while (itr != node->users.end())
-            {
-                if (empty)
-                {
-                    out << " ";
-                    empty = false;
-                }
-                else
-                    out << ", ";
-
-                out << reinterpret_cast<uintptr_t>(*itr++);
-            }
-
-            if (!empty)
-                out << " ";
-        }
-        out << "],\n";
-        if (!node->selected_impl)
-            out << "implementation: null\n";
-        else
-        {
-            out << "implementation: {\n";
-            out << "    name: " << typeid(*node->selected_impl.get()).name() << ",\n";
-            out << "    kernels: [\n";
-            out << "        //todo: add proper impl dump\n";
-            out << "    ]\n";
-            out << "}\n";
-        }
-    };
-
-    for (auto& pair : nodes_map)
-    {
-        auto node = pair.second.get();
-        if (filter && !filter(*node))
-            continue;
-
-        dump_full_node(graph, node);
-        graph << std::endl << std::endl;
     }
 
-    graph.flush();
-    graph.close();
+    graph.open(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".info");
+    dump_graph_info(graph, *this, filter);
 
     graph.open(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".order");
-    for (auto node : processing_order)
-        graph << reinterpret_cast<uintptr_t>(node) << " (" << node->id() << ")\n";
-    graph << '\n';
-    graph.flush();
-    graph.close();
+    dump_graph_processing_order(graph, *this);
 
     graph.open(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".optimized");
-    for (auto& prim_id : optimized_out)
-        graph << prim_id << "\n";
-    graph << '\n';
-    graph.flush();
-    graph.close();
+    dump_graph_optimized(graph, *this);
 }

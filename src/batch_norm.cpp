@@ -17,6 +17,7 @@
 #include "batch_norm_inst.h"
 #include "primitive_type_base.h"
 #include "error_handler.h"
+#include "json_object.h"
 
 namespace cldnn
 {
@@ -34,19 +35,18 @@ layout batch_norm_inst::calc_output_layout(batch_norm_node const& node)
 std::string batch_norm_inst::to_string(batch_norm_node const& node)
 {
     std::stringstream               primitive_description;
+    auto node_info                  = node.desc_to_json();
     auto desc                       = node.get_primitive();
-    auto& input                     = node.input();
     auto& mean                      = node.mean();
     auto& variance                  = node.variance();
 
-    primitive_description << "id: " << desc->id << ", type: batch_norm" << 
-        "\n\tinput id: " << input.id() << ", size: " << node.input().get_output_layout().count() << ",  size: " << input.get_output_layout().size <<
-        "\n\tmean id: " << mean.id() << ", size: " << mean.get_output_layout().count() << ",  size: " << mean.get_output_layout().size <<
-        "\n\tvariance id: " << variance.id() << ", size: " << variance.get_output_layout().count() << ",  size: " << variance.get_output_layout().size <<
-        "\n\tepsilon: " << desc->epsilon << 
-        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
-        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
-        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+    json_composite batch_norm_info;
+    batch_norm_info.add("mean_id", mean.id());
+    batch_norm_info.add("variance_id", variance.id());
+    batch_norm_info.add("epsilon", desc->epsilon);
+
+    node_info.add("batch norm info", batch_norm_info);
+    node_info.dump(primitive_description);
 
     return primitive_description.str();
 }

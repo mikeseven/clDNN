@@ -51,6 +51,7 @@ struct primitive_impl
 
     // TODO: added a derived class for weights reordering (maybe for all static data reordering)
     const kernel_selector::weights_reorder_params _weights_reorder_params;
+
 };
 
 /*

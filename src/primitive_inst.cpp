@@ -21,6 +21,7 @@
 #include "memory_impl.h"
 #include "error_handler.h"
 #include "data_inst.h"
+#include "json_object.h"
 
 namespace cldnn
 {
@@ -76,8 +77,9 @@ std::vector<std::shared_ptr<primitive_inst>> primitive_inst::build_exec_deps(std
 
 std::string primitive_inst::generic_to_string(program_node const& node, const char* type_name)
 {
-    std::stringstream primitive_description;
-    std::stringstream ss_inputs;
+    std::stringstream       primitive_description;
+    auto node_info          = node.desc_to_json();
+    std::stringstream       ss_inputs;
     for (size_t i = 0; i < node.get_dependencies().size(); ++i)
     {
         auto& in = node.get_dependency(i);
@@ -86,14 +88,13 @@ std::string primitive_inst::generic_to_string(program_node const& node, const ch
         i != (node.get_dependencies().size() - 1) ? ss_inputs << ", " : ss_inputs << "";
     }
 
-    auto&& out_layout = node.get_output_layout();
+    json_composite generic_info;
+    generic_info.add("type_name", type_name);
+    generic_info.add("deps count", node.get_dependencies().size());
+    generic_info.add("deps", ss_inputs.str());
 
-    primitive_description << "id: " << node.id() << ", type: " << type_name <<
-        "\n\tdeps count: " << node.get_dependencies().size() <<
-        "\n\tdeps: " << ss_inputs.str() <<
-        "\n\toutput: count: " << out_layout.count() << ",  size: " << out_layout.size <<
-        "\n\toutput padding lower size: " << out_layout.data_padding.lower_size() <<
-        "\n\toutput padding upper size: " << out_layout.data_padding.upper_size() << '\n';
+    node_info.add("generic info", generic_info);
+    node_info.dump(primitive_description);
 
     return primitive_description.str();
 }

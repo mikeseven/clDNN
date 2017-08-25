@@ -18,6 +18,7 @@
 #include "reorder_inst.h"
 #include "primitive_type_base.h"
 #include "error_handler.h"
+#include "json_object.h"
 
 #include <algorithm>
 
@@ -46,17 +47,21 @@ layout reorder_inst::calc_output_layout(reorder_node const& node)
 std::string reorder_inst::to_string(reorder_node const& node)
 {
     std::stringstream           primitive_description;
+    auto node_info              = node.desc_to_json();
     auto desc                   = node.get_primitive();
     auto& input                 = node.input();
-    auto output_layout_data     = desc->output_data_type == data_types::f16 ? "f16" : "f32";
-    auto mean = desc->mean;
+    auto mean                   = desc->mean;
 
-    primitive_description << "id: " << desc->id << ", type: reorder" 
-        "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ", size: " << input.get_output_layout().size <<
-        "\n\tmean: "  << mean <<
-        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
-        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
-        "\n\toutput: data_type:" << output_layout_data <<", count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+    json_composite reorder_info;
+    reorder_info.add("input id", input.id());
+    reorder_info.add("mean", mean);
+    if (desc->subtract_per_feature.size() > 0)
+    {
+        reorder_info.add("subtract per feature", desc->subtract_per_feature);
+    } 
+
+    node_info.add("reorder info", reorder_info);
+    node_info.dump(primitive_description);
 
     return primitive_description.str();
 }

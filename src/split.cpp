@@ -18,6 +18,7 @@
 #include "primitive_type_base.h"
 #include "memory_impl.h"
 #include "error_handler.h"
+#include "json_object.h"
 
 namespace cldnn
 {
@@ -56,18 +57,19 @@ layout split_inst::calc_output_layout(split_node const& node)
 std::string split_inst::to_string(split_node const& node)
 {
     std::stringstream               primitive_description;
+    auto node_info                  = node.desc_to_json();
     auto desc                       = node.get_primitive();
     auto& input                     = node.input();
     auto output_ids                 = desc->output_ids;
     auto output_offsets             = desc->output_offsets;
     
-    primitive_description << "id: " << desc->id << ", type: split" << 
-        "\n\tinput: " << input.id() << ", count: " << input.get_output_layout().count() << ",  size: " << input.get_output_layout().size <<
-        "\n\toutput_ids count: " << output_ids.size() <<
-        "\n\toffsets count: " << output_offsets.size() <<
-        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
-        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
-        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+    json_composite split_info;
+    split_info.add("input id", input.id());
+    split_info.add("output ids count", output_ids.size());
+    split_info.add("offset count", output_offsets.size());
+    
+    node_info.add("split info", split_info);
+    node_info.dump(primitive_description);
 
     return primitive_description.str();
 }

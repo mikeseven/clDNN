@@ -17,6 +17,7 @@
 #include "concatenation_inst.h"
 #include "primitive_type_base.h"
 #include "error_handler.h"
+#include "json_object.h"
 
 namespace cldnn
 {
@@ -50,6 +51,7 @@ layout concatenation_inst::calc_output_layout(concatenation_node const& node)
 std::string concatenation_inst::to_string(concatenation_node const& node)
 {
     std::stringstream           primitive_description;
+    auto node_info              = node.desc_to_json();
     auto desc                   = node.get_primitive();
     std::stringstream           ss_inputs;
     for (size_t i = 0; i < node.inputs_count(); ++i)
@@ -59,13 +61,14 @@ std::string concatenation_inst::to_string(concatenation_node const& node)
         i != (node.inputs_count() - 1) ? ss_inputs << ", " : ss_inputs << "";
     }
 
-    primitive_description << "id: " << desc->id << ", type: depth_concatenate" << 
-        "\n\tconcat axis: " << desc->axis <<
-        "\n\tinputs count: " << node.inputs_count() << 
-        "\n\tinputs: " << ss_inputs.str() << 
-        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
-        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
-        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+    json_composite concat_info;
+    concat_info.add("concat axis", desc->axis);
+    concat_info.add("inputs counts", node.inputs_count());
+    concat_info.add("inputs", ss_inputs.str());
+    concat_info.dump(primitive_description);
+
+    node_info.add("concat info", concat_info);
+    node_info.dump(primitive_description);
 
     return primitive_description.str();
 }

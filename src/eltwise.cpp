@@ -18,6 +18,7 @@
 #include "eltwise_inst.h"
 #include "primitive_type_base.h"
 #include "error_handler.h"
+#include "json_object.h"
 
 namespace cldnn
 {
@@ -35,6 +36,7 @@ layout eltwise_inst::calc_output_layout(eltwise_node const& node)
 std::string eltwise_inst::to_string(eltwise_node const& node)
 {
     std::stringstream           primitive_description;
+    auto node_info              = node.desc_to_json();
     auto desc                   = node.get_primitive();
     auto& input_1               = node.input();
     auto& input_2               = node.input2();
@@ -59,14 +61,17 @@ std::string eltwise_inst::to_string(eltwise_node const& node)
             break;
     }
 
-    primitive_description << "id: " << desc->id << ", type: eltwise" << 
-        "\n\tinput_1: " << input_1.id() << ", count: " << input_1.get_output_layout().count() << ",  size: " << input_1.get_output_layout().size <<
-        "\n\tinput_2: " << input_2.id() << ", count: " << input_2.get_output_layout().count() << ",  size: " << input_2.get_output_layout().size <<
-        "\n\tmode: " << str_mode <<
-        "\n\twith activation: " << activation << ", slope: " << desc->activation_negative_slope << 
-        "\n\toutput padding lower size: " << desc->output_padding.lower_size() <<
-        "\n\toutput padding upper size: " << desc->output_padding.upper_size() <<
-        "\n\toutput: count: " << node.get_output_layout().count() << ",  size: " << node.get_output_layout().size << '\n';
+    json_composite eltwise_info;
+    eltwise_info.add("input_1", input_1.id());
+    eltwise_info.add("input_2", input_2.id());
+    eltwise_info.add("mode", str_mode);
+    if (desc->with_activation)
+    {
+        eltwise_info.add("with activation", activation);
+        eltwise_info.add("slope", desc->activation_negative_slope);
+    }
+    node_info.add("eltwise info", eltwise_info);
+    node_info.dump(primitive_description);
 
     return primitive_description.str();
 }

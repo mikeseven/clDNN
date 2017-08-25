@@ -57,13 +57,9 @@ void data_node::attach_memory(memory_impl& new_mem, bool invalidate_users_if_cha
 
 std::string data_inst::to_string(data_node const& node)
 {
-    std::stringstream           primitive_description;
-    auto desc                   = node.get_primitive();
-    auto count                  = node.get_output_layout().count();
-
-    primitive_description << "id: " << desc->id << ", type: data" <<
-        "\n\tcount: "     << count <<", size: " << node.get_output_layout().size <<'\n';
-
+    std::stringstream primitive_description;
+    auto node_info    = node.desc_to_json();
+    node_info.dump(primitive_description);
     return primitive_description.str();
 }
 

@@ -49,7 +49,8 @@ public:
     bool is_debug_build() const { return options.get<build_option_type::debug>()->enabled(); }
 
     std::list<std::shared_ptr<program_node>> get_nodes() const;
-
+    auto get_processing_order() const { return processing_order; }
+    auto get_optimized_out() const { return optimized_out; }
     auto& get_node(primitive_id const& id) 
     {
         try 
