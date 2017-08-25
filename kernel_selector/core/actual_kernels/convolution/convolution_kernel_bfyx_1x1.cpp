@@ -52,11 +52,11 @@ namespace KernelSelector {
         auto local = GetOptimalLocalWorkGroupSizes(global);
 
         kd.gws0 = Align(out.X().v * out.Y().v, 16) / 16;
-        kd.gws1 = out.Feature().v / 2;
+        kd.gws1 = out.Feature().v;
         kd.gws2 = out.Batch().v;
 
         kd.lws0 = 1;
-        kd.lws1 = 8;
+        kd.lws1 = 16;
         kd.lws2 = 1;
 
         return kd;
