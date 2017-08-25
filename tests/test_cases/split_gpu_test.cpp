@@ -44,9 +44,9 @@ std::vector<T> generate_random_input(size_t b, size_t f, size_t y, size_t x, int
 template<typename T>
 void check_feature_map(cldnn::pointer<T> output_ptr, std::vector<T> &input_vec, size_t batch_num, size_t feature_num, size_t y_size, size_t x_size, size_t feature_id, size_t factor)
 {
-    for (int b = 0; b < batch_num; ++b) { //B
-        for (int y = 0; y < y_size; ++y) { //Y
-            for (int x = 0; x < x_size; ++x) { //X
+    for (size_t b = 0; b < batch_num; ++b) { //B
+        for (size_t y = 0; y < y_size; ++y) { //Y
+            for (size_t x = 0; x < x_size; ++x) { //X
                 auto linear_id = x + x_size * (y + y_size * (feature_id + feature_num * b));
                 auto output_linear_id = x + x_size * (y + y_size * b);
                 EXPECT_EQ(output_ptr[output_linear_id], input_vec[linear_id] * factor);
@@ -90,9 +90,9 @@ TEST(split_gpu, basic_in2x3x2x2_split_feature_bfyx) {
 
     auto outputs = network.execute();
 
-    EXPECT_EQ(outputs.size(), 3);
+    EXPECT_EQ(outputs.size(), size_t(3));
 
-    for (int i = 0; i < 3; i++)
+    for (unsigned int i = 0; i < 3; i++)
     {
         auto split_id = "split:out" + std::to_string(i);
         auto output = outputs.at(split_id).get_memory();
@@ -156,9 +156,9 @@ TEST(split_gpu, basic_in2x3x2x2_split_scale_feature_bfyx) {
 
     auto outputs = network.execute();
 
-    EXPECT_EQ(outputs.size(), 3);
+    EXPECT_EQ(outputs.size(), size_t(3));
 
-    for (int i = 0; i < 3; i++)
+    for (unsigned int i = 0; i < 3; i++)
     {
         auto split_id = "scale" + std::to_string(i);
         auto output = outputs.at(split_id).get_memory();
