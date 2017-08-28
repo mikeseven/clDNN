@@ -59,6 +59,10 @@ namespace KernelSelector {
         kd.lws1 = 16;
         kd.lws2 = 1;
 
+        if(kd.gws1 % 32 == 0)
+        {
+            kd.lws1 = 32;
+        }
         return kd;
     }
 
@@ -135,6 +139,12 @@ namespace KernelSelector {
         }
 
         auto cldnn_jit = GetJitConstants(newParams, runInfo);
+        
+        const auto& in = orgParams.inputs[0];
+
+        cldnn_jit.AddConstant(MakeJitConstant("SIMDS_PER_OFM", (in.Feature().v % 32 == 0) ? 2 : 1));
+
+
         auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 

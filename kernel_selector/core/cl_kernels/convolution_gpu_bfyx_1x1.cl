@@ -23,6 +23,7 @@
 // Creates vector type.
 #define MAKE_VECTOR_TYPE(elem_type, size) CONCAT_TOKEN(elem_type, size)
 
+#define ALIGNED_BLOCK_READ8(ptr, byte_offset) as_half8(intel_sub_group_block_read_us8((const __global ushort*)(ptr) + (byte_offset)))
 
 #if FP16_UNIT_USED
     #define TRANSPOSE_BLOCK_16_FP16( _block ) \
@@ -147,8 +148,8 @@ KERNEL(convolution_bfyx_1x1)(
 #else
     const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
 #endif
-    const uint filter_offset = f*FILTER_OFM_PITCH;
-    const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
+    const uint filter_offset = group_f *FILTER_IFM_NUM;//f*FILTER_OFM_PITCH;
+    const uint input_offset = in_split_offset + xy * 16 * INPUT0_FEATURE_NUM;//b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
 
     for (uint k = 0; k < FILTER_IFM_NUM / 8; ++k)
     {
@@ -159,14 +160,16 @@ KERNEL(convolution_bfyx_1x1)(
         uint input_idx = input_offset + xy + k*8*INPUT0_FEATURE_PITCH;
         uint filter_idx = filter_offset + k*8*FILTER_IFM_PITCH;
 
-        for(uint i = 0; i < 8; i++)
+/*        for(uint i = 0; i < 8; i++)
         {
             blockA00[i] = input[input_idx];
             input_idx += INPUT0_FEATURE_PITCH;
             blockB00[i] = weights[filter_idx];
             filter_idx += FILTER_IFM_PITCH;
-        }
+        }*/
 
+         blockA00 = ALIGNED_BLOCK_READ8(input, input_idx);
+         blockB00 = ALIGNED_BLOCK_READ8(weights, filter_idx);
          MULTIPLY_BLOCKS_16x8_8x16(blockC00, blockB00, blockA00);
     }
 
