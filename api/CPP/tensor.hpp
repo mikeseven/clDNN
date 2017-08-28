@@ -479,6 +479,22 @@ public:
         return add(rhs.negate());
     }
 
+    /// @brief Assign and add
+    tensor& operator+=(const tensor& rhs)
+    {
+        for (size_t i = 0; i < CLDNN_TENSOR_DIM_MAX; i++)
+            _sizes[i] += rhs._sizes[i];
+        return *this;
+    }
+
+    /// @brief Assign and subtract
+    tensor& operator-=(const tensor& rhs)
+    {
+        for (size_t i = 0; i < CLDNN_TENSOR_DIM_MAX; i++)
+            _sizes[i] -= rhs._sizes[i];
+        return *this;
+    }
+
     /// @brief Returns a vector of tensors values, ordered regarding to @p format.
     std::vector<value_type> sizes(cldnn::format fmt) const {
         auto output_order = fmt.order();

@@ -46,6 +46,7 @@
 #include "reshape_inst.h"
 #include "scale_inst.h"
 #include "softmax_inst.h"
+#include "split_inst.h"
 
 #include "kernel_selector_helper.h"
 #include "sliding_window_utils.h"
@@ -334,6 +335,8 @@ void program_impl::init_graph(topology_impl const& topology)
         inputs.push_back(&n);
     }
 
+    split_nodes_pre();
+
     for (auto itr = inputs.begin(); itr != inputs.end(); )
     {
         auto node_itr = itr++;
@@ -360,6 +363,7 @@ void program_impl::init_graph(topology_impl const& topology)
         inputs.erase(node_itr);
     }
 
+    split_nodes_post();
     set_outputs();
     calc_processing_order();
 
@@ -441,6 +445,90 @@ void program_impl::cleanup()
     for (auto& input : inputs)
         if (input->dependencies.size() == 1 && input->get_dependency(0).is_type<connector>())
             input->dependencies.clear();
+}
+void program_impl::split_nodes_pre()
+{
+    auto itr = nodes_map.begin();
+    while (itr != nodes_map.end())
+    {
+        auto node_itr = itr++;
+        auto& node = (*node_itr);
+
+        //find split primitives and create crop primitives out of them
+        do_for_types<split>(*node.second, [this](split_node& node)
+        {
+            auto split_prim = node.get_primitive();
+            primitive_id input_id = split_prim->input[0];
+            auto split_num = split_prim->output_offsets.size();
+
+            //create crop for each split ouptut provided
+            for (decltype(split_num) i = 0; i < split_num; i++)
+            {
+                primitive_id output_id = node.id() + ":" + split_prim->output_ids[i];
+
+                //create dummy crop primitive and add it to nodes map
+                auto crop_prim = std::make_shared<crop>(output_id, input_id, tensor{ 1,1,1,1 }, split_prim->output_offsets[i]);
+                get_or_create(crop_prim);
+            }
+        });
+    }
+}
+
+void program_impl::split_nodes_post()
+{
+    auto itr = nodes_map.begin(); //note we need to use iterators since currently processed element can be removed
+    while (itr != nodes_map.end())
+    {
+        auto node_itr = itr++;
+        auto& node = (*node_itr);
+
+        //find split primitives and create crop primitives out of them
+        do_for_types<split>(*node.second, [this](split_node& node)
+        {
+            //check if split is not used by any primitive, as it will be optimized
+            if (node.get_users().size() != 0)
+                throw std::logic_error("Split layer cannot be used directly! Please use split output \"" + node.id() + ":<split_output_id>\"!");
+
+            //get_output size and validate split primitive inputs
+            auto output_layout = node.get_output_layout();
+            auto output_layout_size = output_layout.size;
+
+            auto split_prim = node.get_primitive();
+            primitive_id input_id = split_prim->input[0];
+            auto split_num = split_prim->output_offsets.size();
+
+            //create crop for each split ouptut provided
+            for (decltype(split_num) i = 0; i < split_num; i++)
+            {
+                primitive_id output_id = node.id() + ":" + split_prim->output_ids[i];
+
+                auto node_ptr = nodes_map.find(output_id)->second;
+
+                //calculate crop reference input size
+                tensor reference_input_size;
+
+                for (decltype(split_num) j = 0; j < i; j++)
+                    reference_input_size += split_prim->output_offsets[j + 1] - split_prim->output_offsets[j];
+
+                for (decltype(split_num) j = i; j < split_num - 1; j++)
+                    reference_input_size += split_prim->output_offsets[j + 1] - split_prim->output_offsets[j];
+
+                reference_input_size = output_layout_size - reference_input_size;
+
+                //update crop primitive and add connections
+                node_ptr->set_output_padding(output_layout.data_padding);
+                auto crop_prim = node_ptr->as<crop>().typed_desc();
+                crop_prim->reference_input = reference_input_size;
+
+                add_connection(node.get_dependency(0), *node_ptr);
+            }
+
+            //remove input->split connection and remove original split node
+            remove_connection(node.get_dependency(0), node);
+            optimized_out.push_back(node.id());
+            nodes_map.erase(node.id());
+        });
+    }
 }
 
 void program_impl::set_outputs()
