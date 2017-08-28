@@ -158,9 +158,6 @@ gpu_toolkit::gpu_toolkit(const configuration& config)
                      _device,
                      (config.enable_profiling
                         ? cl::QueueProperties::Profiling
-                        : cl::QueueProperties::None) | 
-                     (config.host_out_of_order
-                        ? cl::QueueProperties::OutOfOrder
                         : cl::QueueProperties::None))
     , _engine_info(*this)
     , _kernels_cache(*this)
