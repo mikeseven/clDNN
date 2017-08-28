@@ -219,7 +219,7 @@ def getRegressions(sessionIds):
                     else:
                         # Currently there is no way to determine regression without performance status field.
                         testStatus = 'UNKNOWN (task: {0})'.format(regression['task_id'])
-                        isRegression = False
+                        isRegression = True
 
                     testMessage = 'Test:        {0}\nTest status: {1}\n\nTest change: {2} -> {3} [diff: {4}]' \
                         .format(regression['cmd_line'], testStatus, regression['prev_result'], regression['result'],
