@@ -379,6 +379,7 @@ void program_impl::init_graph(topology_impl const& topology)
 
     dump_program("0_init", true);
 
+    calc_prior_boxes();
     mark_constants();
     mark_data_flow();
     calc_dominators();
@@ -460,6 +461,7 @@ void program_impl::cleanup()
         if (input->dependencies.size() == 1 && input->get_dependency(0).is_type<connector>())
             input->dependencies.clear();
 }
+
 void program_impl::replace_nodes_pre()
 {
     auto itr = nodes_map.begin();
@@ -487,6 +489,7 @@ void program_impl::replace_nodes_pre()
         });
     }
 }
+
 
 void program_impl::replace_nodes_post()
 {
@@ -705,6 +708,28 @@ void program_impl::calc_processing_order()
     {
         node->processing_num = ++idx;
         node->unmark();
+    }
+}
+
+void program_impl::calc_prior_boxes()
+{
+    auto itr = processing_order.begin();
+    while (itr != processing_order.end())
+    {
+        auto& node = (*itr++);
+        if (!node->is_type<prior_box>())
+            continue;
+
+        auto& pb_node = node->as<prior_box>();
+
+        pb_node.calc_result();
+        remove_connection(pb_node.input(), pb_node);
+
+        auto& result = pb_node.get_result_buffer();
+        auto cpp_mem = details::memory_c_to_cpp_converter::convert(api_cast(&result));
+
+        auto& data_node = get_or_create(std::make_shared<data>("_cldnn_tmp_" + pb_node.id() + "_result", cpp_mem));
+        replace(pb_node, data_node, false, false);
     }
 }
 

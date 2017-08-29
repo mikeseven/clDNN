@@ -104,6 +104,7 @@ private:
     */
     void set_outputs();
     void calc_processing_order();
+    void calc_prior_boxes();
 
     /*
     ** Analysis functions
