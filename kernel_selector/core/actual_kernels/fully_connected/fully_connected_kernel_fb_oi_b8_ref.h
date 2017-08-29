@@ -31,6 +31,6 @@ namespace KernelSelector {
 
     protected:
         bool Validate(const Params& p, const OptionalParams& o) const override;
-        DispatchData SetDefault(const FullyConnectedParams& arg) const override;
+        std::unique_ptr<FullyConnectedKernelBase::DispatchData> SetDefault(const FullyConnectedParams& arg) const override;
     };
 }

@@ -31,7 +31,7 @@ namespace KernelSelector {
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
-        virtual DispatchData SetDefault(const FullyConnectedParams& params) const override;
+        std::unique_ptr<DispatchData> SetDefault(const FullyConnectedParams& params) const override;
         virtual JitConstants GetJitConstants(const FullyConnectedParams& params, const DispatchData& kd) const override;
     };
 }
