@@ -1271,8 +1271,15 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
 
             for (auto& reorder : reorders)
             {
+                //instert new generic_layer node to topology
                 this->add_intermediate(reorder.first, node, dep_idx);
+                //set generic_layer's node output layout and implementation
+                auto& g_node = node.get_dependency(dep_idx);
+                g_node.get_output_layout();
+                g_node.selected_impl = g_node.type()->choose_impl(*engine, g_node);
             }
+            //set the old output layout and do not invalidate users as change of weights will not affect output layout
+            node.set_output_layout(output_layout, false);
         }
     };
 
