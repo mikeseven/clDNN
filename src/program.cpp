@@ -1028,8 +1028,12 @@ void program_impl::trim_to_outputs()
     //all not-marked nodes should be removed
     std::list<program_node*> to_rem;
     for (auto node : processing_order)
-        if (!node->is_marked())
+    {
+        if (node->is_type<input_layout>()) //input layout may become disconnected during prior boxes calculations so it may have not been marked at this place but we don't want to remove it
+            node->mark();
+        else if (!node->is_marked())
             to_rem.push_back(node);
+    }
 
     for (auto const& node : to_rem)
     {
