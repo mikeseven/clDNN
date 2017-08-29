@@ -1271,7 +1271,7 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
 
             for (auto& reorder : reorders)
             {
-                //instert new generic_layer node to topology
+                //insert new generic_layer node to topology
                 this->add_intermediate(reorder.first, node, dep_idx);
                 //set generic_layer's node output layout and implementation
                 auto& g_node = node.get_dependency(dep_idx);
