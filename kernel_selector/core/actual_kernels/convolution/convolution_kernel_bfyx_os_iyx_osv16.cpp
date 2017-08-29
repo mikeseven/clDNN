@@ -98,6 +98,22 @@ namespace KernelSelector
         return std::make_pair(input_block_array_size, input_block_read_width);
     }
 
+    static void shrink_blocks_to_output_size(size_t output_x, size_t output_y, size_t &block_x, size_t &block_y)
+    {
+        // how many elements we will compute in each dimension
+        size_t computed_x = Align(output_x, block_x);
+        size_t computed_y = Align(output_y, block_y);
+        // how many simds we need in each dimension
+        size_t simds_x = computed_x / block_x;
+        size_t simds_y = computed_y / block_y;
+        // how many unused values we have in each dimension
+        size_t unused_x = computed_x - output_x;
+        size_t unused_y = computed_y - output_y;
+
+        block_x -= unused_x / simds_x;
+        block_y -= unused_y / simds_y;
+    }
+
     ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_os_iyx_osv16::SetDefaultInternal(const ConvolutionParams& arg, const size_t blockWidth, const size_t blockHeight, const size_t prefetch) const
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
@@ -164,6 +180,13 @@ namespace KernelSelector
             runInfo.cldnnStyle.blockHeight = blockHeight;
             runInfo.cldnnStyle.prefetch = prefetch;
         }     
+
+        // if this is not 1x1 batch1 case then shrink filters, other way we're memory bound and it's best to use 16x1 block sizes
+        if(arg.convParams.filterSize.x != 1 || arg.convParams.filterSize.y != 1 || arg.output.Batch().v != 1)
+        {
+            shrink_blocks_to_output_size(arg.output.X().v, arg.output.Y().v,
+                runInfo.cldnnStyle.blockWidth, runInfo.cldnnStyle.blockHeight);
+        }
 
         auto input_block_dims = get_bfyx_req_input_block_dims(
             runInfo.cldnnStyle.blockWidth, 
