@@ -991,22 +991,63 @@ void program_impl::calc_dominators()
 
 void program_impl::trim_to_outputs()
 {
-    backward_bfs(nullptr, [this](program_node& node) {
-        if (!node.is_marked() && !node.is_type<internal_primitive>())
-        {
-            processing_order.erase(node.processing_itr);
-            optimized_out.push_back(node.id());
+    size_t actual_nodes = processing_order.size();
+    if (!actual_nodes) //degenerated case but can happen
+        return;
 
-            if (node.is_input())
+    if (processing_order.front()->is_type<connector>())
+        --actual_nodes;
+    if (processing_order.back()->is_type<connector>())
+        --actual_nodes;
+
+    if (outputs.size() == actual_nodes)
+        return;
+
+    //do backward bfs starting from all outputs
+    std::list<const std::vector<program_node*>*> stack = { &outputs };
+    while (!stack.empty())
+    {
+        auto nodes_list = stack.front();
+        stack.pop_front();
+
+        for (auto node : *nodes_list)
+        {
+            if (!node->is_marked())
             {
-                inputs.remove(&node);
+                node->mark();
+                if (!node->get_dependencies().empty())
+                    stack.push_back(&node->get_dependencies());
             }
         }
-    });
+    }
 
-    for (auto const& opt : optimized_out)
+    //mark connector at the end so it won't be removed
+    if (processing_order.back()->is_type<connector>())
+        processing_order.back()->mark();
+
+    //all not-marked nodes should be removed
+    std::list<program_node*> to_rem;
+    for (auto node : processing_order)
+        if (!node->is_marked())
+            to_rem.push_back(node);
+
+    for (auto const& node : to_rem)
     {
-        nodes_map.erase(opt);
+        if (node->is_input())
+            inputs.remove(node);
+        else
+        {
+            for (auto dep : node->dependencies)
+                if (dep->is_marked())
+                    dep->users.remove(node);
+        }
+
+        for (auto user : node->users)
+            if (user->is_marked())
+                user->dependencies.erase(std::remove(user->dependencies.begin(), user->dependencies.end(), node), user->dependencies.end());
+        
+        optimized_out.push_back(node->id());
+        nodes_map.erase(node->id());
     }
 }
 
@@ -1931,6 +1972,8 @@ void program_impl::replace(program_node& old_node, program_node& new_node, bool 
     }
     if (new_node.is_input())
         inputs.push_back(&new_node);
+    if (old_node.is_input())
+        inputs.remove(&old_node);
 
     new_node.dominator = old_node.dominator;
     if (old_node.dominator && old_node.dominator->joint == &old_node)
@@ -1950,12 +1993,12 @@ void program_impl::replace(program_node& old_node, program_node& new_node, bool 
     new_node.processing_num = old_node.processing_num;
     if (old_news_pos != processing_order.end())
         processing_order.erase(old_news_pos);
+    if (old_node.processing_itr != processing_order.end())
+        processing_order.erase(old_node.processing_itr);
 
-    bool rem = remove_if_dangling(old_node, replace_whole_branch);
-    assert(rem && "Replaced node should have been removed");
-    (void)rem;
-
+    nodes_map.erase(id);
     rename(new_node, id);
+
     //mark new node as an output after renaming
     if (old_was_output)
     {
@@ -2022,7 +2065,6 @@ bool program_impl::remove_if_dangling(program_node& node, bool detach_whole_bran
         }
     }
 
-    return true;
     return true;
 }
 
@@ -2204,7 +2246,7 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
         if (filter && !filter(*node))
             continue;
 
-        graph << "    " << node_id(node) << "[label=\"" << node->id() << ":\\n" << extr_type(typeid(*node).name()) << "\n out format: " + extr_oformat(node) << "\"";
+        graph << "    " << node_id(node) << "[label=\"" << node->id() << ":\\n" << extr_type(typeid(*node).name()) << "\\n out format: " + extr_oformat(node) << "\"";
         if (node->is_type<data>() || node->is_constant())
             graph << ", shape=box";
         if (node->is_type<internal_primitive>())
