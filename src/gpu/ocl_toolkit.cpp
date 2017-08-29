@@ -316,7 +316,7 @@ void gpu_toolkit::sync_events(std::vector<event_impl::ptr> const & deps)
     if (!_configuration.host_out_of_order)
         return;
 
-    bool needs_barrier = true;
+    bool needs_barrier = false;
     for (auto& dep : deps)
     {
         auto* ocl_ev = dynamic_cast<base_event*>(dep.get());
