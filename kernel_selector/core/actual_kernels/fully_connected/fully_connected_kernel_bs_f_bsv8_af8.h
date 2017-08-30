@@ -24,10 +24,9 @@ namespace KernelSelector {
     {
     public:
         FullyConnected_bs_f_bsv8_af8() : FullyConnectedBlockKernelBase("fully_connected_gpu_bs_f_bsv8_af8_vload") {}
-        virtual ~FullyConnected_bs_f_bsv8_af8() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
-        virtual ParamsKey GetSupportedKey() const override;
+        KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        ParamsKey GetSupportedKey() const override;
     
     protected:
         bool Validate(const Params& p, const OptionalParams& o) const override;

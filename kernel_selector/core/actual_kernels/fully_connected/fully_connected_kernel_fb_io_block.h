@@ -24,10 +24,9 @@ namespace KernelSelector {
     {
     public:
         FullyConnected_fb_io_block() : FullyConnectedKernelBase("fully_connected_gpu_fb_io_block_fp16") {}
-        virtual ~FullyConnected_fb_io_block() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
-        virtual ParamsKey GetSupportedKey() const override;
+        KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        ParamsKey GetSupportedKey() const override;
 
     protected:
         struct DispatchData : public FullyConnectedKernelBase::DispatchData

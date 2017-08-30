@@ -35,7 +35,7 @@ namespace KernelSelector
         virtual std::unique_ptr<DispatchData> SetDefault(const FullyConnectedParams& params) const;
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& optParams, DataLayout dl, std::vector<WeightsLayout> wl, float estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE) const;
 
-        virtual bool Validate(const Params& p, const OptionalParams&) const override
+        bool Validate(const Params& p, const OptionalParams&) const override
         {
             if (p.GetType() != KernelType::FULLY_CONNECTED)
             {

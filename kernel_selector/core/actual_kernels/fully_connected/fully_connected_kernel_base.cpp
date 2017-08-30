@@ -27,22 +27,22 @@ namespace KernelSelector
 
     std::unique_ptr<FullyConnectedKernelBase::DispatchData> FullyConnectedKernelBase::SetDefault(const FullyConnectedParams& params) const
     {
-        std::unique_ptr<DispatchData> d = std::make_unique<DispatchData>();
-        d->fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
+        std::unique_ptr<DispatchData> dispatchData = std::make_unique<DispatchData>();
+        dispatchData->fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 
         // Determine global work sizes.
-        d->gws0 = params.output.LogicalSize();
-        d->gws1 = d->gws2 = 1;
+        dispatchData->gws0 = params.output.LogicalSize();
+        dispatchData->gws1 = dispatchData->gws2 = 1;
 
         // Find largest positive local work size that is divider for global work size.
-        d->lws0 = std::min(std::max(d->gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
-        while (d->gws0 % d->lws0 != 0)
+        dispatchData->lws0 = std::min(std::max(dispatchData->gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
+        while (dispatchData->gws0 % dispatchData->lws0 != 0)
         {
-            --d->lws0;
+            --dispatchData->lws0;
         }
-        d->lws1 = d->lws2 = 1;
+        dispatchData->lws1 = dispatchData->lws2 = 1;
 
-        return d;
+        return dispatchData;
     }
 
     KernelsData FullyConnectedKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, DataLayout dl, std::vector<WeightsLayout> wl, float estimated_time) const
