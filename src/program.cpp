@@ -1582,7 +1582,6 @@ void program_impl::prepare_buffer_fusing()
                 auto format = node.get_output_layout().format;
                 auto crop_prim = node.get_primitive();
                 auto input_layout = node.get_dependency(0).get_output_layout();
-                auto in_place_layout = node.get_output_layout();
                 auto out_padd = node.get_output_layout().data_padding;
                 if (format == format::bfyx &&
                     crop_prim->reference_input.batch[0] == input_layout.size.batch[0] &&
@@ -1613,7 +1612,7 @@ void program_impl::prepare_buffer_fusing()
 
                     node.set_output_padding(padding(
                     { out_padd.lower_size().batch[0], crop_prim->offsets.feature[0], out_padd.lower_size().spatial[0], out_padd.lower_size().spatial[1] },
-                    { out_padd.upper_size().batch[0], in_place_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_prim->reference_input.feature[0],
+                    { out_padd.upper_size().batch[0], input_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_prim->reference_input.feature[0],
                         out_padd.upper_size().spatial[0], out_padd.upper_size().spatial[1] }));
                     node.can_be_optimized(true);
                 }
