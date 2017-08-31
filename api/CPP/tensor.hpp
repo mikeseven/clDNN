@@ -88,6 +88,8 @@ struct format
                                                          ///< \n \image html bs_xs_xsv8_bsv16.jpg
         bs_x_bsv16 = cldnn_format_bs_x_bsv16, ///< format used only for fully connected weights fp16 batch=1 : bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx).
                                               ///< \n \image html bs_x_bsv16.jpg
+        winograd_2x3_s1_data,       //< format used for input for winograd convolution, F(2,3) -- filter 3x3 with stride 1
+        winograd_2x3_s1_weights,    //< format used for weights for winograd convolution, F(2,3) -- filter 3x3 with stride 1
         format_num = cldnn_format_format_num, ///< number of format types
         any = cldnn_format_any,
     };
@@ -101,10 +103,12 @@ struct format
             { byxf,{ 1, 1, 2, "byxf", "bfxy" } },
             { bfyx,{ 1, 1, 2, "bfyx", "bfxy" } },
             { fyxb,{ 1, 1, 2, "fyxb", "bfxy" } },
-            { os_iyx_osv16, { 1, 1, 2, "bfyx", "bfxy" }},
-            { bs_xs_xsv8_bsv8, { 1, 1, 1, "bx", "b?x?" }},
+            { os_iyx_osv16, { 1, 1, 2, "bfyx", "bfxy" } },
+            { bs_xs_xsv8_bsv8, { 1, 1, 1, "bx", "b?x?" } },
             { bs_xs_xsv8_bsv16,{ 1, 1, 1, "bx", "b?x?" } },
-            { bs_x_bsv16, { 1, 1, 1, "bx", "b?x?" }}
+            { bs_x_bsv16, { 1, 1, 1, "bx", "b?x?" } },
+            { winograd_2x3_s1_data, { 1, 1, 2, "bxyf", "bfxy" } },
+            { winograd_2x3_s1_weights, { 1, 1, 2, "xyfb", "bfxy" } }
         };
         return traits.at(fmt);
     }
@@ -121,6 +125,8 @@ struct format
     static const std::string& internal_order(type fmt) { return traits(fmt).internal_order; }
     /// @brief Returns number of dimensions contained within a @p format
     static size_t dimension(type fmt) { return order(fmt).size(); }
+    /// @brief Checks if @p format is a winograd format
+    static bool is_winograd(type fmt) { return (fmt == winograd_2x3_s1_data || fmt == winograd_2x3_s1_weights); }
 
     /// @brief Returns number of batch dimensions.
     size_t batch_num() const { return traits(value).batch_num; }
@@ -134,6 +140,8 @@ struct format
     const std::string& internal_order() const { return traits(value).internal_order; }
     /// @brief Returns number of dimensions contained within this format
     size_t dimension() const { return order(value).size(); }
+    /// @brief Checks if @p format is a winograd format
+    bool is_winograd() const { return is_winograd(value); }
 
     type value;
     /// @brief Implicit conversion from format::type.

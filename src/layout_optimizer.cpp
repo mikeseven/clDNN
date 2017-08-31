@@ -28,6 +28,26 @@
 
 using namespace cldnn;
 
+namespace {
+    bool should_use_winograd_2x3_s1(std::shared_ptr<const convolution> const& prim, layout const& input_layout, layout const& weights_layout)
+    {
+        //cases when NOT to use winograd
+        if (input_layout.size.feature[0] % 32 != 0       //current algorithm requires ifm to be multiply of 32
+            || weights_layout.size.spatial[0] != 3          //weights have to be 3x3 by definiton
+            || weights_layout.size.spatial[1] != 3          //weights have to be 3x3 by definition
+            || weights_layout.size.batch[0] % 32 != 0       //current algorithm requires ofm to be multiply of 32
+            || prim->stride != tensor{ 1 }                  //stride has to be 1x1 by definition
+            || prim->dilation != tensor{ 1 }                //no support for dilation
+            || prim->split() != 1                           //no support for splitted convolutions
+            || prim->with_output_size)                      //no support for convolutions with user-specified output size
+        {
+            return false;
+        }
+
+        return true;
+    }
+}
+
 layout_optimizer::layout_optimizer(bool output_size_handling_enabled)
     : _optimization_attributes()
     , _output_size_handling_enabled(output_size_handling_enabled)
@@ -57,18 +77,16 @@ bool layout_optimizer::convolution_bfyx_opt(layout const& output_layout, const l
     return false;
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, boost::optional<layout> const& output_layout)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, layout const& output_or_weights_layout)
 {
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
     auto expected_format = current_layout.format;
 
-    if (output_layout && (type == data_type::weights || type == data_type::bias))
+    if (type == data_type::weights || type == data_type::bias)
     {
-        expected_data_type = output_layout.get().data_type;
+        expected_data_type = output_or_weights_layout.data_type;
     }
-    else if (type != data_type::input)
-        CLDNN_ERROR_MESSAGE(prim->id, "'output_layout' is required parameter for weights/bias optimization");
 
     switch (type)
     {
@@ -80,7 +98,10 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     case data_type::input: //convolution input
 
         CLDNN_ERROR_NOT_EQUAL(prim->id, "Convolution input dimension", current_layout.format.dimension(), "expected dimension", static_cast<size_t>(4), "");
-        if (layout_optimizer::convolution_bfyx_opt(current_layout, output_layout.get(), prim)
+        if (should_use_winograd_2x3_s1(prim, current_layout, output_or_weights_layout))
+            return layout(expected_data_type, format::winograd_2x3_s1_data, expected_tensor);
+
+        if (layout_optimizer::convolution_bfyx_opt(current_layout, output_or_weights_layout, prim)
             || (_output_size_handling_enabled && prim->with_output_size))
         {
             expected_tensor = current_layout.size;
@@ -101,18 +122,16 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_format, expected_tensor);
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, boost::optional<layout> const& output_layout)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, layout const& output_or_weights_layout)
 {
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
     auto expected_format = current_layout.format;
 
-    if (output_layout)
+    if (type == data_type::weights || type == data_type::bias)
     {
-        expected_data_type = output_layout.get().data_type;
+        expected_data_type = output_or_weights_layout.data_type;
     }
-    else if (type != data_type::input)
-        CLDNN_ERROR_MESSAGE(prim->id, "'output_layout' is required parameter for weights/bias optimization");
 
     switch (type)
     {
@@ -128,18 +147,16 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_format, expected_tensor);
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const deconvolution> prim, boost::optional<layout> const& output_layout)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const deconvolution> prim, layout const& output_or_weights_layout)
 {
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
     auto expected_format = current_layout.format;
 
-    if (output_layout)
+    if (type == data_type::weights || type == data_type::bias)
     {
-        expected_data_type = output_layout.get().data_type;
+        expected_data_type = output_or_weights_layout.data_type;
     }
-    else if (type != data_type::input)
-        CLDNN_ERROR_MESSAGE(prim->id, "'output_layout' is required parameter for weights/bias optimization");
 
     switch (type)
     {
@@ -149,25 +166,20 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         break;
 
     default:
-        throw std::runtime_error("Unsupported data type in layout_optimizer::get_expected_layout for convolution primitive");
+        throw std::runtime_error("Unsupported data type in layout_optimizer::get_expected_layout for deconvolution primitive");
     }
 
     return layout(expected_data_type, expected_format, expected_tensor);
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const detection_output> prim, boost::optional<layout> const& output_layout)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const detection_output> prim, layout const& /*output_or_weights_layout*/)
 {
     auto expected_tensor = current_layout.size;
     auto expected_data_type = data_types::f32;
     auto expected_format = current_layout.format;
 
     if (type != data_type::input)
-        CLDNN_ERROR_MESSAGE(prim->id, "'output_layout' is required parameter for weights/bias optimization");
-
-    if (output_layout)
-    {
-        expected_data_type = output_layout.get().data_type;
-    }
+        CLDNN_ERROR_MESSAGE(prim->id, "detection_output only supports optimization of its output (no weights/biases)");
 
     return layout(expected_data_type, expected_format, expected_tensor);
 }

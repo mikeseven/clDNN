@@ -32,6 +32,14 @@ namespace err_details
     void cldnn_print_error_message(std::string file, int line, std::string instance_id, std::stringstream &msg, std::string add_msg = "");
 }
 
+template <class T1, class T2>
+std::ostream& operator <<(std::ostream& left, std::pair<T1, T2> const& right)
+{
+    left << "{ " << right.first << ", " << right.second << " }";
+    return left;
+}
+
+
 template<typename N1, typename N2>
 inline void error_on_not_equal(std::string file, int line, std::string instance_id, std::string number_id, N1 number, std::string compare_to_id, N2 number_to_compare_to, std::string additional_message = "")
 {

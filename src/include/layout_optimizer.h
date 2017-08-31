@@ -104,10 +104,10 @@ private:
     std::map<cache_key, std::shared_ptr<reorder>> _cached_reorders;
     std::map<cache_key, std::shared_ptr<generic_layer>> _cached_generic_layers;
 
-    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, boost::optional<layout> const& output_layout);
-    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, boost::optional<layout> const& output_layout);
-    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const deconvolution> prim, boost::optional<layout> const& output_layout);
-    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const detection_output> prim, boost::optional<layout> const& output_layout);
+    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, layout const& output_or_weights_layout);
+    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, layout const& output_or_weights_layout);
+    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const deconvolution> prim, layout const& output_or_weights_layout);
+    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const detection_output> prim, layout const& output_or_weights_layout);
 
     bool convolution_bfyx_opt(const layout& output_layout, const layout& weights_layout, std::shared_ptr<const convolution> conv);
 
@@ -138,7 +138,7 @@ public:
                      primitive_id const& id,
                      data_type type,
                      std::shared_ptr<const T> user,
-                     boost::optional<layout> user_layout = boost::optional<layout>())
+                     layout const& user_layout)
         -> std::enable_if_t<
             meta::is_any_of_v<T, convolution, fully_connected, deconvolution, detection_output>,
             meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>
@@ -154,7 +154,7 @@ public:
                      primitive_id const& id,
                      data_type type,
                      std::shared_ptr<const T> user,
-                     boost::optional<layout> user_layout = boost::optional<layout>())
+                     layout const& user_layout)
         -> std::enable_if_t<
             !meta::is_any_of_v<T, convolution, fully_connected, deconvolution, detection_output>,
             meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>

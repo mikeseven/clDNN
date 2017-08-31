@@ -31,6 +31,7 @@
 #include <iostream>
 #include <iomanip>
 #include <thread>
+#include <fstream>
 #include <api/CPP/reorder.hpp>
 
 using namespace cldnn;
@@ -100,6 +101,138 @@ float float_round(float x, size_t fraction_precision = 15) {
     reinterpret_cast<uint32_t&>(x) &= mask;
     return x;
 }
+
+void dump_buffer(memory const& mem, std::string const& name)
+{
+    std::ofstream out(name);
+    auto size = mem.get_layout().get_buffer_size();
+    auto ptr = mem.pointer<const float>();
+    auto pitches = mem.get_layout().get_pitches();
+    out << "Data size: " << mem.get_layout().size << "\n";
+    out << "Lower padding: " << mem.get_layout().data_padding.lower_size() << "\n";
+    out << "Upper padding: " << mem.get_layout().data_padding.upper_size() << "\n";
+    out << "\n";
+
+    for (int b = 0; b < size.batch[0]; ++b)
+    {
+        out << " ================ BATCH " << b << " =================\n\n";
+        for (int f = 0; f < size.feature[0]; ++f)
+        {
+            out << "feature " << f << ":\n";
+            for (int y = 0; y < size.spatial[1]; ++y)
+            {
+                for (int x = 0; x < size.spatial[0]; ++x)
+                {
+                    size_t idx = b * pitches.batch[0] + f * pitches.feature[0] + y * pitches.spatial[1] + x * pitches.spatial[0];
+                    out << ptr[idx] << " ";
+                }
+                out << "\n";
+            }
+
+            out << "\n";
+        }
+
+        out << "\n";
+    }
+}
+
+TEST(convolution_f32_fw_gpu, winograd)
+{
+    engine engine;
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 32, 3, 3 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::yxfb, { 32, 32, 3, 3 } });
+    auto bias = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 32, 1 } });
+    tensor input_offset = { 0, 0, -1, -1 };
+
+    set_random_values<float>(input, 1.0f, 10.0f);
+    set_random_values<float>(weights, -5.0f, 5.0f);
+    set_random_values<float>(bias, 1.0f, 1.0f);
+
+    topology tpl;
+    tpl.add(input_layout("in", input.get_layout()));
+    tpl.add(data("weights", weights));
+    tpl.add(data("bias", bias));
+    tpl.add(convolution("conv", "in", { "weights" }, { "bias" }, { 1, 1, 1, 1 }, { 0, 0, -1, -1 }, { 1, 1, 1, 1 }, true));
+
+    build_options opts;
+    opts.set_option(build_option::debug(true));
+    opts.set_option(build_option::optimize_data(true));
+    opts.set_option(build_option::graph_dumps_dir("cldnn_dumps"));
+    network net(engine, tpl, opts);
+    net.set_input_data("in", input);
+
+    auto out = net.execute();
+    ASSERT_TRUE(out.count("conv") == 1);
+
+    auto out_mem = out.at("conv").get_memory();
+    EXPECT_EQ(out_mem.get_layout().size.spatial[0], 2);
+    EXPECT_EQ(out_mem.get_layout().size.spatial[1], 2);
+
+    auto winograd_weights = out.at("_winograd_weights_weights").get_memory();
+    auto trans_to_mem = out.at("reorder_0_in").get_memory();
+    auto winograd_mem = out.at("_winograd_conv").get_memory();
+    auto padded_in = out.at("reorder_in").get_memory();
+
+    dump_buffer(padded_in, "buffer_in_standard_padded");
+    dump_buffer(input, "buffer_in_standard");
+    dump_buffer(weights, "buffer_weights_standard");
+    dump_buffer(out_mem, "buffer_out_standard");
+    dump_buffer(trans_to_mem, "buffer_in_winograd");
+    dump_buffer(winograd_weights, "buffer_weights_winograd");
+    dump_buffer(winograd_mem, "buffer_out_winograd");
+
+    auto trans_to_mem_ptr = trans_to_mem.pointer<float>();
+    auto winograd_mem_ptr = winograd_mem.pointer<float>();
+
+    auto out_ptr = out_mem.pointer<float>();
+    auto in_ptr = input.pointer<float>();
+    auto w_ptr = weights.pointer<float>();
+    auto bias_ptr = bias.pointer<float>();
+
+    auto&& input_pitches = input.get_layout().get_pitches();
+    auto&& weights_pitches = weights.get_layout().get_pitches();
+    auto&& output_pitches = out_mem.get_layout().get_pitches();
+
+    constexpr int stride_x = 1;
+    constexpr int stride_y = 1;
+    for (int b = 0; b < out_mem.get_layout().size.batch[0]; ++b)
+    {
+        for (int ofm = 0; ofm < out_mem.get_layout().size.feature[0]; ++ofm)
+        {
+            for (int x = 0; x < out_mem.get_layout().size.spatial[0]; ++x)
+            {
+                for (int y = 0; y < out_mem.get_layout().size.spatial[1]; ++y)
+                {
+                    float ref = 0.0f;
+                    size_t in_idx = input.get_layout().get_linear_offset({ b, 0, x * stride_x, y * stride_y });
+                    for (int wx = 0; wx < weights.get_layout().size.spatial[0]; ++wx)
+                    {
+                        for (int wy = 0; wy < weights.get_layout().size.spatial[1]; ++wy)
+                        {
+                            for (int ifm = 0; ifm < input.get_layout().size.feature[0]; ++ifm)
+                            {
+                                int in_x = x * stride_x + input_offset.spatial[0] + wx;
+                                int in_y = y * stride_y + input_offset.spatial[1] + wy;
+
+                                if (in_x < 0 || in_x >= input.get_layout().size.spatial[0] || in_y < 0 || in_y >= input.get_layout().size.spatial[1])
+                                    continue;
+
+                                size_t in_idx = input.get_layout().get_linear_offset({ b, ifm, in_x, in_y });
+                                size_t w_idx = weights.get_layout().get_linear_offset({ ofm, ifm, wx, wy });
+                                ref += in_ptr[in_idx] * w_ptr[w_idx];
+                            }
+                        }
+                    }
+                    ref += bias_ptr[ofm];
+                    ref = (ref >= 0 ? ref : 0);
+                    size_t out_idx = out_mem.get_layout().get_linear_offset({ b, ofm, x, y });
+                    EXPECT_NEAR(ref, out_ptr[out_idx], 1e-3);
+                }
+            }
+        }
+    }
+}
+
 TEST(convolution_f32_fw_gpu, basic_convolution_no_bias) {
     //  Filter : 2x3
     //  Stride : 2x1

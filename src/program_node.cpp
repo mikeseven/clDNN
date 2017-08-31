@@ -202,9 +202,7 @@ layout program_node::get_output_layout() const
 
 bool program_node::set_output_layout(layout new_layout, bool invalidate_users_if_changed)
 {
-    //TODO: after merging padding into layout, calc_output_layout can now return padding as well
-    // for now just ignore it and preserve already set padding value - in future we should probably take care of this
-    // situation however.
+    merge_output_padding(new_layout.data_padding);
     new_layout.data_padding = output_layout.data_padding;
     bool changed = (new_layout != output_layout);
     if (changed && invalidate_users_if_changed) //output_layout has changed! invalidate users

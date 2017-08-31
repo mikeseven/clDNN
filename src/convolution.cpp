@@ -59,6 +59,37 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
 //     CLDNN_ERROR_GREATER_THAN(node.id(), "Negate input offset spatial X", -input_offset.spatial[0], "input window size spatial X", filter_size.spatial[0], "First convolution is outside of image. please reduce input offset X");
 //     CLDNN_ERROR_GREATER_THAN(node.id(), "Negate input offset spatial Y", -input_offset.spatial[1], "input window size spatial Y", filter_size.spatial[1], "First convolution is outside of image. please reduce input offset Y");
 
+    if (input_layout.format == format::winograd_2x3_s1_weights)
+        CLDNN_ERROR_MESSAGE(node.id(), "Input for convolution should not be in windograd_2x3_s1_weights format - it is reserved for weights only");
+
+    if (input_layout.format == format::winograd_2x3_s1_data)
+    {
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "convolution split", split, "expected value", 1, "Convolution with winograd input only supports split == 1");
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "stride spatial X", stride.spatial[0], "expected value", 1, "Convolution's input in winograd_2x3_s1_data format can only be used with stride 1x1");
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "stride spatial Y", stride.spatial[1], "expected value", 1, "Convolution's input in winograd_2x3_s1_data format can only be used with stride 1x1");
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "Dilatation spatial X", dilation.spatial[0], "expected value", 1, "Winograd 2x3 convolution does not support dilatation");
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "Dilatation spatial Y", dilation.spatial[1], "expected value", 1, "Winograd 2x3 convolution does not support dilatation");
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "weights format", weights_layout.format, "expected value", format::winograd_2x3_s1_weights, "Winograd 2x3 convolution should have weights passed in winograd_2x3_s1_weights format");
+        if (input_layout.size.feature[0] % 32 != 0)
+            CLDNN_ERROR_MESSAGE(node.id(), "Input for winograd 2x3 convolution should have features count divisable by 32");
+        if (weights_layout.size.batch[0] % 32 != 0)
+            CLDNN_ERROR_MESSAGE(node.id(), "Number of filters (OFM) for winograd 2x3 convolution should be divisable by 32");
+
+        if (node.get_primitive()->with_activation)
+            CLDNN_ERROR_MESSAGE(node.id(), "Winograd 2x3 convolution should not have activation fused - activation should be performed at transformation from winograd domain stage");
+
+        constexpr tensor::value_type output_tile_width = 2; //by definition of F(2,3)
+        constexpr tensor::value_type filter_width = 3; //by definition of F(2,3)
+        constexpr tensor::value_type filter_height = 3; //by definition of format::winograd_2x3_s1_data (our assumption)
+        constexpr tensor::value_type filter_stride = 1; //by definition of format::winograd_2x3_s1_data (our assumption)
+
+        constexpr tensor::value_type input_tile_width = filter_width + (output_tile_width - 1) * filter_stride; //input tile should be large enought to hold data for computations of output tile (for given filter size and stride)
+        constexpr tensor::value_type winograd_filter_width = input_tile_width; //by definition of the winograd algorithm
+        constexpr tensor::value_type winograd_filter_height = filter_height; //for this format, winograd filter is considered to be a set of 1d filters so its height should remain the same as original filter's
+
+        return layout{ input_layout.data_type, input_layout.format, tensor{ input_layout.size.batch[0], weights_layout.size.batch[0], input_layout.size.spatial[0], input_layout.size.spatial[1] - winograd_filter_height + 1 }, input_layout.data_padding };
+    }
+
     // get output feature map from weights. It should be the same as number of biases. Will be verifed in convolution::create()
     auto number_of_features = weights_layout.size.batch[0] * static_cast<int32_t>(split);
 

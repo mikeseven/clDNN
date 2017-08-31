@@ -54,6 +54,7 @@
 #include "network_impl.h"
 #include "kernel_selector_helper.h"
 #include "sliding_window_utils.h"
+#include "error_handler.h"
 
 #include <fstream>
 
@@ -448,6 +449,10 @@ void program_impl::post_optimize_graph()
 
 void program_impl::cleanup()
 {
+    for (auto& node : processing_order)
+        if (!node->is_type<internal_primitive>())
+            node->get_output_layout();
+
     for (auto& input : inputs)
         if (input->dependencies.size() == 1 && input->get_dependency(0).is_type<connector>())
             input->dependencies.clear();
@@ -628,23 +633,6 @@ void program_impl::replace_nodes_post()
 void program_impl::set_outputs()
 {
     auto outputs_option = options.get<build_option_type::outputs>();
-
-    // in debug mode select all primitives as output
-    if (options.get<build_option_type::debug>()->enabled())
-    {
-        for (auto& node : nodes_map)
-        {
-            //do not add cldnn::data as output
-            if (node.second->type() == data::type_id())
-                continue;
-
-            node.second->set_output(true);
-            outputs.push_back(node.second.get());
-        }
-
-        return;
-    }
-
     if (!outputs_option->outputs.empty())
     {
         for (auto const& output : outputs_option->outputs)
@@ -1173,15 +1161,15 @@ void program_impl::reorder_nodes_for_parallel_execution()
 
 void program_impl::reorder_inputs(layout_optimizer& lo)
 {
-    //first pass to set layout optimization_attributes for topology
-    for (auto& p : nodes_map)
-    {
-        auto& prim = *p.second;
-        if (prim.type() == cldnn::convolution::type_id())
-        {
-            if (prim.as<convolution>().get_primitive()->split() > 1)
-                lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::splitted_convolution, 1);
-        }
+    ////first pass to set layout optimization_attributes for topology
+    //for (auto& p : nodes_map)
+    //{
+    //    auto& prim = *p.second;
+    //    if (prim.type() == cldnn::convolution::type_id())
+    //    {
+    //        if (prim.as<convolution>().get_primitive()->split() > 1)
+    //            lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::splitted_convolution, 1);
+    //    }
 
         //list of layers that do not support yxfb or perform worse than bfyx
         if (prim.type() == cldnn::detection_output::type_id() || prim.type() == cldnn::proposal::type_id() ||
@@ -1194,62 +1182,67 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
     {
         auto conv_prim = conv_node.get_primitive();
         auto& input_node = conv_node.get_dependency(0);
-        auto weights_layout = conv_node.weights(0).get_output_layout();
+        auto&& weights_layout = conv_node.weights(0).get_output_layout();
+        auto&& input_layout = input_node.get_output_layout();
 
         std::shared_ptr<reorder> new_input = nullptr;
 
-        if (input_node.type() == reorder::type_id()) //convolution's input is a reorder
+        new_input = lo.get_reorder(
+            input_layout,
+            input_node.id(),
+            layout_optimizer::data_type::input,
+            conv_prim,
+            weights_layout).first;
+
+        if (new_input && new_input->output_format == format::winograd_2x3_s1_data)
         {
-            auto reorder_prim = input_node.as<reorder>().typed_desc();
-            auto& reorder_input = input_node.get_dependency(0);
-            auto reorder_layout = reorder_input.get_output_layout();
-            reorder_layout.data_type = reorder_prim->output_data_type;
-            new_input = lo.get_reorder(
-                reorder_layout,
-                reorder_prim->id,
-                layout_optimizer::data_type::input,
-                conv_prim,
-                weights_layout).first;
+            //I'm not sure if thats checked anywhere, if it's, it can be removed from here
+            CLDNN_ERROR_LESS_THAN(conv_node.id(), "input width", input_layout.size.spatial[0], "filter width", 3, "Convolution input is smaller than weights");
+            CLDNN_ERROR_LESS_THAN(conv_node.id(), "input height", input_layout.size.spatial[0], "filter height", 3, "Convolution input is smaller than weights");
 
-            if (new_input) //output format is not optimal
+            auto lower_size = (conv_prim->input_offset.negate() + input_layout.size);
+
+            tensor upper_input_padding = tensor{ 0 };
+            upper_input_padding.spatial[0] = (2 - (lower_size.spatial[0] % 2)) % 2;          //winograd conv requires input's x to be in form 4 + 2n, with restriction that x >= 3, we can shortage it to x % 2 == 0
+            upper_input_padding.spatial[1] = (8 - ((lower_size.spatial[1] - 2) % 8)) % 8;    //for y, y - 2 % 8 == 0 must hold
+
+            apply_needed_padding(conv_node, input_node, padding{ conv_prim->input_offset.negate().sizes(), upper_input_padding.sizes() });
+
+            auto weights_reorder = std::make_shared<reorder>("_winograd_weights_" + conv_node.weights(0).id(), conv_node.weights().id(), format::winograd_2x3_s1_weights, input_layout.data_type);
+            auto& wr_node = get_or_create(weights_reorder);
+            add_intermediate(wr_node, conv_node, 1);
+
+            auto winograd_output = std::make_shared<reorder>("_winograd_" + conv_node.id(), conv_node.id(), input_layout.format, input_layout.data_type, std::vector<float>{}, conv_node.output_layout.data_padding);
+            conv_node.output_layout.data_padding = padding{};
+            auto& back_node = get_or_create(winograd_output);
+            back_node.processing_itr = processing_order.insert(std::next(conv_node.processing_itr), &back_node);
+            if (conv_prim->with_activation)
             {
-                auto reorder_input_layout = reorder_input.get_output_layout();
-
-                auto opt_layout = layout(new_input->output_data_type, new_input->output_format, reorder_input_layout.size);
-                if (reorder_input_layout == opt_layout) //reorder 'breaks' optimal format
-                {
-                    if (reorder_prim->subtract_per_feature.empty() &&
-                        reorder_prim->mean.empty() &&
-                        !reorder_prim->output_padding) //just plain reorder
-                    {
-                        conv_node.replace_dependency(0, reorder_input);
-                        new_input = nullptr;
-                    }
-                    else //change reorder's output layout
-                    {
-                        reorder_prim->output_format = opt_layout.format;
-                        reorder_prim->output_data_type = opt_layout.data_type;
-                        new_input = nullptr;
-                    }
-                }
-                else //current reorder gives bad output, simply change it
-                {
-                    reorder_prim->output_format = opt_layout.format;
-                    reorder_prim->output_data_type = opt_layout.data_type;
-                    new_input = nullptr;
-                }
+                conv_node.typed_desc()->with_activation = false;
+                back_node.set_fused_activation(activation_relu_negative_slope, cldnn_activation_additional_params_t{ conv_prim->activation_negative_slope });
             }
 
-            input_node.recalc_output_layout();
-        }
-        else
-        {
-            new_input = lo.get_reorder(
-                input_node.get_output_layout(),
-                input_node.id(),
-                layout_optimizer::data_type::input,
-                conv_prim,
-                weights_layout).first;
+            conv_node.invalidate_users();
+            replace_all_usages(conv_node, back_node);
+            add_connection(conv_node, back_node);
+
+            auto& r_node = get_or_create(new_input);
+            r_node.as<reorder>().set_input_offset(conv_prim->input_offset);
+
+            swap_names(conv_node, back_node);
+            if (conv_node.is_output())
+            {
+                conv_node.set_output(false);
+                back_node.set_output(true);
+                for (auto& output : outputs)
+                {
+                    if (output == &conv_node)
+                    {
+                        output = &back_node;
+                        break;
+                    }
+                }
+            }
         }
 
         if (new_input)
@@ -1271,7 +1264,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 input.get_output_layout(),
                 input.id(),
                 layout_optimizer::data_type::input,
-                detection_output_prim).first;
+                detection_output_prim,
+                layout{ data_types::f32, format::bfyx, tensor{} }).first;
 
             if (new_input)
             {
@@ -2222,6 +2216,8 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
         path += "/";
     }
 
+        case format::winograd_2x3_s1_data: out = "winograd_2x3_s1_data"; break;
+        case format::winograd_2x3_s1_weights: out = "winograd_2x3_s1_weights"; break;
     std::ofstream graph(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".graph");
     dump_graph_init(graph, *this, filter);
 
