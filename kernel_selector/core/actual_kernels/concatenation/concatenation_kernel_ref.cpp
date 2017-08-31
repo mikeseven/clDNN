@@ -54,18 +54,23 @@ namespace KernelSelector
     KernelsData ConcatenationKernelRef::GetKernelsData(const Params& params, const OptionalParams& optParams) const
     {
         KernelsData kd = GetCommonKernelsData(params, optParams);
-        for (int i = 0; i < (int)kd[0].kernels.size(); i++)
-        {
-            auto& kernel = kd[0].kernels[i];
 
-            // to avoid cases when we execute with local work sizes 1x1x1
-            if (kernel.workGroups.local[0] == 1 &&
-                kernel.workGroups.global[1] != 1)
+        if (!kd.empty())
+        {
+            for (int i = 0; i < (int)kd[0].kernels.size(); i++)
             {
-                kernel.workGroups.global[1] = Align(kernel.workGroups.global[1], 32);
-                kernel.workGroups.local[1] = 32;
+                auto& kernel = kd[0].kernels[i];
+
+                // to avoid cases when we execute with local work sizes 1x1x1
+                if (kernel.workGroups.local[0] == 1 &&
+                    kernel.workGroups.global[1] != 1)
+                {
+                    kernel.workGroups.global[1] = Align(kernel.workGroups.global[1], 32);
+                    kernel.workGroups.local[1] = 32;
+                }
             }
         }
+
         return kd;
     }
 }

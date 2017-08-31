@@ -48,11 +48,6 @@ namespace KernelSelector
             return false;
         }
 
-        if (params.activationFunc != ActivationFunction::NONE)
-        {
-            return false;
-        }
-
         return true; 
     }
 
