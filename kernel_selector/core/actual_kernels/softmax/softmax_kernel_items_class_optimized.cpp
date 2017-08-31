@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "softmax_kernel_ref.h"
+#include "softmax_kernel_items_class_optimized.h"
 #include "kernel_selector_utils.h" 
  
 namespace KernelSelector 
 {
-    ParamsKey SoftmaxKernelRef::GetSupportedKey() const
+    ParamsKey SoftmaxKerneItemsClassOptimized::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
@@ -43,43 +43,61 @@ namespace KernelSelector
         return k;
     }
 
-    SoftmaxKernelRef::Parent::DispatchData SoftmaxKernelRef::SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const
+    SoftmaxKerneItemsClassOptimized::Parent::DispatchData SoftmaxKerneItemsClassOptimized::SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const
     {
         auto runInfo = Parent::SetDefault(params, optParams);
 
         const auto& out = params.output;
+        auto& input = params.inputs[0];
+
         std::vector<size_t> global;
         switch (params.smParams.dim)
         {
         case SoftmaxDim::X:
             global = { out.Y().v, out.Feature().v, out.Batch().v };
+            runInfo.leftovers = input.X().v % 16;
             break;
         case SoftmaxDim::Y:
             global = { out.X().v, out.Feature().v, out.Batch().v };
+            runInfo.leftovers = input.Y().v % 16;
             break;
         case SoftmaxDim::FEATURE:
             global = { out.X().v, out.Y().v, out.Batch().v };
+            runInfo.leftovers = input.Feature().v % 16;
             break;
         default:
             break;
         }
 
-        auto local = GetOptimalLocalWorkGroupSizes(global);
-
         runInfo.gws0 = global[0];
-        runInfo.gws1 = global[1];
+        runInfo.gws1 = global[1] * 16;
         runInfo.gws2 = global[2];
 
-        runInfo.lws0 = local[0];
-        runInfo.lws1 = local[1];
-        runInfo.lws2 = local[2];
+        runInfo.lws0 = 1;
+        runInfo.lws1 = 16;
+        runInfo.lws2 = 1;
 
-        runInfo.effiency = DONT_USE_IF_HAVE_SOMETHING_ELSE;
-
+        switch(params.smParams.dim)
+        {
+        case SoftmaxDim::X:
+            if (input.X().v >= 32)
+                runInfo.effiency = FORCE_PRIORITY_7;
+            break;
+        case SoftmaxDim::Y:
+            if (input.Y().v >= 32)
+                runInfo.effiency = FORCE_PRIORITY_7;
+            break;
+        case SoftmaxDim::FEATURE:
+            if (input.Feature().v >= 32)
+                runInfo.effiency = FORCE_PRIORITY_7;
+        default:
+            runInfo.effiency = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+            break;
+        }
         return runInfo;
     }
 
-    JitConstants SoftmaxKernelRef::GetJitConstants(const SoftmaxParams& params, DispatchData kd) const
+    JitConstants SoftmaxKerneItemsClassOptimized::GetJitConstants(const SoftmaxParams& params, DispatchData kd) const
     {
         auto jit = Parent::GetJitConstants(params, kd);
 
@@ -131,7 +149,7 @@ namespace KernelSelector
         return jit;
     }
 
-    KernelsData SoftmaxKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData SoftmaxKerneItemsClassOptimized::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         return GetCommonKernelsData(params, options);
     }
