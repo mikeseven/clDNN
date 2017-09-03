@@ -173,19 +173,19 @@ namespace KernelSelector
             	runInfo.cldnnStyle.prefetch = 5;
                 //run_info.effiency = FORCE_PRIORITY_7; // GEMM is better
             }
+
+            // if this is not 1x1 batch1 case then shrink filters, other way we're memory bound and it's best to use 16x1 block sizes
+            if (arg.convParams.filterSize.x != 1 || arg.convParams.filterSize.y != 1 || arg.output.Batch().v != 1)
+            {
+                shrink_blocks_to_output_size(arg.output.X().v, arg.output.Y().v,
+                    runInfo.cldnnStyle.blockWidth, runInfo.cldnnStyle.blockHeight);
+            }
         }
         else // Auto-tuner case
         {
             runInfo.cldnnStyle.blockWidth = blockWidth;
             runInfo.cldnnStyle.blockHeight = blockHeight;
             runInfo.cldnnStyle.prefetch = prefetch;
-        }     
-
-        // if this is not 1x1 batch1 case then shrink filters, other way we're memory bound and it's best to use 16x1 block sizes
-        if(arg.convParams.filterSize.x != 1 || arg.convParams.filterSize.y != 1 || arg.output.Batch().v != 1)
-        {
-            shrink_blocks_to_output_size(arg.output.X().v, arg.output.Y().v,
-                runInfo.cldnnStyle.blockWidth, runInfo.cldnnStyle.blockHeight);
         }
 
         auto input_block_dims = get_bfyx_req_input_block_dims(
