@@ -538,6 +538,8 @@ namespace KernelSelector
         bool bFP64Support = false;
         uint64_t maxWorkGroupSize = 0;
         uint64_t maxLocalMemSize = 0;
+        std::string deviceId = "";
+        std::string driverVersion = "";
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -548,7 +550,22 @@ namespace KernelSelector
         virtual ~Params() {}
 
         KernelType GetType() const { return kType; }
-        virtual ParamsKey GetParamsKey() const = 0;
+        virtual ParamsKey GetParamsKey() const
+        {
+            ParamsKey k;
+
+            if (engineInfo.bSubGroupSupport)
+            {
+                k.EnableSubGroup();
+            }
+
+            if (engineInfo.bSubGroupShortSupport)
+            {
+                k.EnableSubGroupShort();
+            }
+
+            return k;
+        }
 
     protected:
         Params(KernelType kt, const std::string& id) : kType(kt), layerID(id) {}
@@ -556,6 +573,7 @@ namespace KernelSelector
 
     public:
         std::string layerID;
+        EngineInfo engineInfo;
 
         virtual std::string to_string() const;
     };
@@ -570,15 +588,13 @@ namespace KernelSelector
         ActivationFunction  activationFunc = ActivationFunction::NONE;
         NonLinearParams     activationParams;
         MultiDataTensor     inputs;
-        DataTensor          output;
-        // TODO: I've still not sure it's the right place for engineInfo
-        EngineInfo          engineInfo;
+        DataTensor          output;        
 
         virtual std::string to_string() const;
 
         virtual ParamsKey GetParamsKey() const
         {
-            ParamsKey k;
+            ParamsKey k = Params::GetParamsKey();
 
             bool bBatching = false;
             bool bPitches = false;
@@ -621,16 +637,6 @@ namespace KernelSelector
                 output.GetFirstElementOffset() != 0)
             {
                 k.EnableTensorOffset();
-            }
-
-            if (engineInfo.bSubGroupSupport)
-            {
-                k.EnableSubGroup();
-            }
-
-            if (engineInfo.bSubGroupShortSupport)
-            {
-                k.EnableSubGroupShort();
             }
 
             if (!engineInfo.bFP16Support &&

@@ -403,6 +403,8 @@ inline params_t get_default_params(const arg_t& arg, uint32_t split = 1)
     params.engineInfo.bFP64Support          = context->extension_supported("cl_khr_fp64");
     params.engineInfo.maxWorkGroupSize      = engine_info.max_work_group_size;
     params.engineInfo.maxLocalMemSize       = engine_info.max_local_mem_size;
+    params.engineInfo.deviceId              = engine_info.dev_id;
+    params.engineInfo.driverVersion         = engine_info.driver_version;
     
     const auto& input_layout    = arg.input().get_output_layout();
     const auto& output_layout   = arg.get_output_layout();

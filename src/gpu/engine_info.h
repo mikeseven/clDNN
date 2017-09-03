@@ -46,6 +46,8 @@ struct engine_info_internal : cldnn::engine_info
     configurations configuration;
     models model;
     architectures architecture;
+    std::string dev_id;
+    std::string driver_version;
 private:
     friend class gpu_toolkit;
     explicit engine_info_internal(const gpu_toolkit& context);

@@ -33,6 +33,8 @@
  
 namespace KernelSelector {
 
+    AutoTuner KernelSelctorBase::autoTuner;
+
 #ifdef ENABLE_ENV
     std::string strip(const std::string str)
     {
@@ -139,44 +141,6 @@ namespace KernelSelector {
         return kernelsData;
     }
 
-    std::map<std::string, std::tuple<std::string, int>> KernelSelctorBase::LoadTunedKernels(const std::string& cacheFilePath) const
-    {
-        std::map<std::string, std::tuple<std::string, int>> cachedKernels;
-        std::ifstream cachedKernelsFile(cacheFilePath);
-        std::string hash;
-        std::string cachedkernelName;
-        int autoTuneIndex;
-        if (cachedKernelsFile)
-        {
-            while (cachedKernelsFile.good())
-            {
-                cachedKernelsFile >> hash;
-                if (!cachedKernelsFile.good())
-                {
-                    break;
-                }
-                cachedKernelsFile >> cachedkernelName;
-                if (!cachedKernelsFile.good())
-                {
-                    break;
-                }
-                cachedKernelsFile >> autoTuneIndex;
-                cachedKernels[hash] = std::make_tuple(cachedkernelName, autoTuneIndex);
-            }
-        }
-        cachedKernelsFile.close();
-        return cachedKernels;
-    }
-
-    void KernelSelctorBase::StoreTunedKernel(const std::string hash, const std::string name, const int autoTuneIndex, const std::string& cacheFilePath) const
-    {
-        std::ofstream cachedKernelsFile(cacheFilePath, std::ofstream::out | std::ofstream::app);
-        cachedKernelsFile << hash << " ";
-        cachedKernelsFile << name << " ";
-        cachedKernelsFile << autoTuneIndex << "\n";
-        cachedKernelsFile.close();
-    }
-
     KernelsData KernelSelctorBase::GetAutoTuneBestKernel(const Params& params, const OptionalParams& options, KernelType kType) const
     {
         assert(options.tuningParams.mode != TuningMode::TUNING_DISABLED);
@@ -188,16 +152,15 @@ namespace KernelSelector {
         if (params.GetType() == kType &&
             options.GetType() == kType)
         {
-            auto cachedKernels = LoadTunedKernels(options.tuningParams.cacheFilePath);
             std::string hash = std::to_string(std::hash<std::string>{}(params.to_string()));
-
-            bool hashFoundInCache = cachedKernels.find(hash) != cachedKernels.end();
+            
+            auto cachedKernelConfig = autoTuner.LoadKernel(options.tuningParams.mode, options.tuningParams.cacheFilePath, params.engineInfo.deviceId, params.engineInfo.driverVersion, hash);
+            bool hashFoundInCache = !std::get<0>(cachedKernelConfig).empty();
 
             if (hashFoundInCache)
             {
-                std::tuple<std::string, int> cachedKernel = cachedKernels[hash];
-                std::string cachedkernelName = std::get<0>(cachedKernel);
-                int autoTuneIndex = std::get<1>(cachedKernel);
+                std::string cachedkernelName = std::get<0>(cachedKernelConfig);
+                int autoTuneIndex = std::get<1>(cachedKernelConfig);
 
                 for (const auto& implementation : implementations)
                 {
@@ -263,7 +226,7 @@ namespace KernelSelector {
             {
                 kernelsData[0].kernelName = kernelName;
                 kernelsData[0].kernels[0].layerID = params.layerID;
-                StoreTunedKernel(hash, kernelName, kernelsData[0].autoTuneIndex, options.tuningParams.cacheFilePath);
+                autoTuner.StoreKernel(options.tuningParams.cacheFilePath, hash, kernelName, kernelsData[0].autoTuneIndex);
             }
         } 
 
