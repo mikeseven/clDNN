@@ -77,6 +77,9 @@ eltwise_inst::typed_primitive_inst(network_impl& network, eltwise_node const& no
     auto input_layout = input_memory(0).get_layout();
     auto input2_layout = input_memory(1).get_layout();
 
+    // layout should be the same except padding, which can be different
+    input_layout.data_padding = input2_layout.data_padding = {};
+
     CLDNN_ERROR_LAYOUT_MISMATCH(node.id(), "input layout", input_layout, "input_2 layout", input2_layout, "Different layouts of eltwise's inputs");
 }
 }
