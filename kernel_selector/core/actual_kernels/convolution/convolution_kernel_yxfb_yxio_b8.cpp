@@ -31,7 +31,6 @@ namespace KernelSelector
         k.EnableInputLayout(DataLayout::yxfb);
         k.EnableOutputLayout(DataLayout::yxfb);
         k.EnableTensorOffset();
-        k.EnableTensorPitches();
         k.EnableBiasPerFeature();
         k.EnableNonBiasTerm();
         k.EnableBatching();
