@@ -145,6 +145,7 @@ inline data_types from_data_type(kernel_selector::data_type dt)
     switch (dt)
     {
     case kernel_selector::data_type::INT8:   return cldnn::data_types::i8;
+    case kernel_selector::data_type::UINT8:   return cldnn::data_types::u8;
     case kernel_selector::data_type::F16:    return cldnn::data_types::f16;
     case kernel_selector::data_type::F32:    return cldnn::data_types::f32;
     default:
