@@ -31,6 +31,7 @@ namespace KernelSelector
         k.EnableInputLayout(DataLayout::yxfb);
         k.EnableOutputLayout(DataLayout::yxfb);
         k.EnableTensorOffset();
+        k.EnableTensorPitches();
         k.EnableBiasPerFeature();
         k.EnableNonBiasTerm();
         k.EnableBatching();
@@ -99,6 +100,9 @@ namespace KernelSelector
         {
             return false;
         }
+
+        if (params.output.PitchesDifferFromLogicalDims())
+            return false;
 
         return true;
     }

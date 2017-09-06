@@ -132,9 +132,6 @@ namespace KernelSelector
             {
                 return false;
             }
-
-            if (params.output.PitchesDifferFromLogicalDims())
-                return false;
         }
 
         return true;
