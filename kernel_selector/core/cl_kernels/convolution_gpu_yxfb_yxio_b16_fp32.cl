@@ -127,7 +127,7 @@ KERNEL(convolution_gpu_yxfb_yxio_b16)(
 
     for(uint s = 0; s < BATCHES_PER_WORK_ITEM; s++)
     {
-        uint _out_id = out_id + s * LOCAL_WORK_GROUP_SIZE;
+        uint _out_id = OUTPUT_VIEW_OFFSET + out_id + s * LOCAL_WORK_GROUP_SIZE;
         output[_out_id] = _data[s].s0; _out_id += OUTPUT_FEATURE_PITCH;
         output[_out_id] = _data[s].s1; _out_id += OUTPUT_FEATURE_PITCH;
         output[_out_id] = _data[s].s2; _out_id += OUTPUT_FEATURE_PITCH;
