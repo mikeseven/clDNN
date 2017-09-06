@@ -31,7 +31,7 @@ namespace KernelSelector
         ParamsKey GetSupportedKey() const override;
 
     protected:
-        JitConstants SoftmaxKerneItemsClassOptimized::GetJitConstants(const SoftmaxParams& params, DispatchData kd) const override;
+        JitConstants GetJitConstants(const SoftmaxParams& params, DispatchData kd) const override;
         DispatchData SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const override;
     };
 }
