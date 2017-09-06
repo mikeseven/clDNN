@@ -43,6 +43,10 @@ intel_config_flag_apply_settings(
 set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
     CLDNN_EXPORTS
     EXPORT_NEURAL_SYMBOLS
+    "CLDNN_VERSION_MAJOR=${CLDNN__VERSION_MAJOR}"
+    "CLDNN_VERSION_MINOR=${CLDNN__VERSION_MINOR}"
+    "CLDNN_VERSION_BUILD=${CLDNN__VERSION_BUILD}"
+    "CLDNN_VERSION_REVISION=${CLDNN__VERSION_REVISION}"
   )
 
 # ========================================= Source/Header files ========================================
