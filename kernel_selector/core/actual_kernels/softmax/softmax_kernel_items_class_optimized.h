@@ -16,22 +16,22 @@
 
 #pragma once
 
-#include "softmax_kernel_base.h"
+#include "softmax_items_class_kernel_base.h"
  
 namespace KernelSelector 
 {    
-    class SoftmaxKerneItemsClassOptimized : public SoftmaxKernelBase
+    class SoftmaxKerneItemsClassOptimized : public SoftmaxItemsClassKernelBase
     {
     public:
-        using Parent = SoftmaxKernelBase;
+        using Parent = SoftmaxItemsClassKernelBase;
         SoftmaxKerneItemsClassOptimized() : Parent("softmax_gpu_items_class_optimized") {}
         virtual ~SoftmaxKerneItemsClassOptimized() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
-        virtual ParamsKey GetSupportedKey() const override;
+        KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        ParamsKey GetSupportedKey() const override;
 
     protected:
-        JitConstants GetJitConstants(const SoftmaxParams& params, DispatchData kd) const override;
+        JitConstants SoftmaxKerneItemsClassOptimized::GetJitConstants(const SoftmaxParams& params, DispatchData kd) const override;
         DispatchData SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const override;
     };
 }

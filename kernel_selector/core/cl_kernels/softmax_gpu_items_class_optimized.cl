@@ -18,7 +18,8 @@
 
 #include "include/include_all.cl"
 
-#define DATA_PER_WORKITEM ((INPUT0_CLASS_NUM+15)/16)
+#define DATA_PER_WORKITEM ( (INPUT0_CLASS_NUM + (WORKITEMS_PER_CLASSES - 1) ) / WORKITEMS_PER_CLASSES)
+#define FULL_ITERATIONS_NUM (INPUT0_CLASS_NUM / WORKITEMS_PER_CLASSES)
 
 __attribute__((intel_reqd_sub_group_size(16)))
 KERNEL(softmax_items_class_optimized)(__global INPUT0_TYPE* input, __global OUTPUT_TYPE* output)
@@ -36,12 +37,12 @@ KERNEL(softmax_items_class_optimized)(__global INPUT0_TYPE* input, __global OUTP
 
     // PART 1. Calculate MAX value
     uint input_idx = in_depth_offset + simd_lane * INPUT0_CLASS_PITCH;
-    for (uint cls = 0; cls < INPUT0_CLASS_NUM/16; cls++)
+    for (uint cls = 0; cls < FULL_ITERATIONS_NUM; cls++)
     {
         UNIT_TYPE in = input[input_idx];
         max_value = max(max_value, in);
         data[cls] = in;
-        input_idx += 16*INPUT0_CLASS_PITCH;
+        input_idx += WORKITEMS_PER_CLASSES*INPUT0_CLASS_PITCH;
     }
     if(simd_lane < LEFTOVERS)
     {
@@ -54,7 +55,7 @@ KERNEL(softmax_items_class_optimized)(__global INPUT0_TYPE* input, __global OUTP
     // PART 2. Calculate DENOMINATOR
     // TODO: currently we calculate on float32 because it's lot of "add" operation and it stuck on the value "8192.0f"
     ACCUMULATOR_TYPE denominator = 0.0;
-    for (uint cls = 0; cls < INPUT0_CLASS_NUM/16; cls++)
+    for (uint cls = 0; cls < FULL_ITERATIONS_NUM; cls++)
     {
         data[cls] = native_exp(data[cls] - max_value);
         denominator += data[cls];
@@ -69,11 +70,11 @@ KERNEL(softmax_items_class_optimized)(__global INPUT0_TYPE* input, __global OUTP
 
     // PART 3. Write out results
     uint output_idx = out_depth_offset + simd_lane * OUTPUT_CLASS_PITCH;
-    for (uint cls = 0; cls < INPUT0_CLASS_NUM/16; cls++)
+    for (uint cls = 0; cls < FULL_ITERATIONS_NUM; cls++)
     {
         const UNIT_TYPE res = data[cls] / (UNIT_TYPE)denominator;
         output[output_idx] = ACTIVATION(res, NL_M, NL_N);
-        output_idx += 16 * OUTPUT_CLASS_PITCH;
+        output_idx += WORKITEMS_PER_CLASSES * OUTPUT_CLASS_PITCH;
     }
     if(simd_lane < LEFTOVERS)
     {
@@ -81,4 +82,6 @@ KERNEL(softmax_items_class_optimized)(__global INPUT0_TYPE* input, __global OUTP
         output[output_idx] = ACTIVATION(res, NL_M, NL_N);
     }
 }
+
+#undef FULL_ITERATIONS_NUM
 #undef DATA_PER_WORKITEM
