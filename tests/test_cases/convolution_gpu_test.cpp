@@ -2334,11 +2334,6 @@ public:
             {
                 for (cldnn::format weights_format : weights_formats)
                 {
-                    if ((input_format == cldnn::format::yxfb) && (weights_format == cldnn::format::bfyx) && (data_type == cldnn::data_types::f16))
-                    {
-                        // yxfb oiyx convolution not supported in FP16.
-                        continue;
-                    }
                     cldnn::build_options network_build_options;
                     if (input_format == cldnn::format::bfyx)
                     {
@@ -2367,12 +2362,6 @@ public:
         {
             for (tests::test_params* test_param : all_generic_params)
             {
-                const cldnn::convolution* convolution = (cldnn::convolution*)layer_param;
-                if ((test_param->fmt == cldnn::format::yxfb) && (convolution->input[0] == "reorder0"))
-                {
-                    // Input padding not support in yxfb convolution.
-                    continue;
-                }
                 all_test_params.push_back(std::make_tuple(test_param, layer_param));
             }
         }

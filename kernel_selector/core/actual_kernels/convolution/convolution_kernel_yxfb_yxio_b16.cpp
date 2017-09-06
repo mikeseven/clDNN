@@ -93,11 +93,6 @@ namespace KernelSelector
         }
         const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
 
-        if (!CheckPitchForSplitOnly(params))
-        {
-            return false;
-        }
-
         const auto filter_ofm_num = params.weights.OFM().v;
         const auto batch_size = params.output.Batch().v;
         const uint32_t min_lws = 16;
