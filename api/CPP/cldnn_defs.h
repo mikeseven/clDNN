@@ -187,6 +187,23 @@ inline void check_status<void>(std::string err_msg, std::function<void(status_t*
 
 /// @}
 
+/// @defgroup cpp_version Version Information
+/// @{
+
+using version_t = ::cldnn_version;
+
+/// @brief Get information about version of clDNN.
+inline version_t get_version()
+{
+    return check_status<version_t>("get_version: fetching version information failed",
+                                   [](status_t* status)
+                                   {
+                                       return ::cldnn_get_version(status);
+                                   });
+}
+
+/// @}
+
 /// @cond CPP_HELPERS
 
 /// @defgroup cpp_helpers Helpers

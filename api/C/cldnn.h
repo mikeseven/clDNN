@@ -59,6 +59,8 @@
 
 /// @defgroup c_error Error Handling
 
+/// @defgroup c_version Version Information
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -76,6 +78,18 @@ extern "C" {
 
 /// @brief Represents errors status for all API calls
 typedef int32_t cldnn_status;
+/// @}
+
+/// @addtogroup c_version
+/// @{
+/// @brief Represents version information of API.
+typedef struct
+{
+    int32_t major;    ///< Major version component (major version of clDNN API interface).
+    int32_t minor;    ///< Minor version component (minor version of API interface - correlated with IE API version).
+    int32_t build;    ///< Build version component (version/revision of official Open Source drop of clDNN library).
+    int32_t revision; ///< Revision version component (incremental identifier of current build/compilation).
+} cldnn_version;
 /// @}
 
 /// @ingroup c_engine
@@ -385,6 +399,12 @@ typedef struct cldnn_activation_additional_params_t
 CLDNN_BEGIN_PRIMITIVE_DESC(primitive)
 CLDNN_END_PRIMITIVE_DESC(primitive)
 
+/// @}
+
+/// @addtogroup c_version
+/// @{
+/// @brief Get information about version of clDNN.
+CLDNN_API cldnn_version cldnn_get_version(cldnn_status* status);
 /// @}
 
 /// @addtogroup c_topology

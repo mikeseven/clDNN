@@ -63,6 +63,31 @@ auto init_external_from_internal(T& obj_ref)
 extern "C"
 {
 
+#ifndef CLDNN_VERSION_MAJOR
+    #define CLDNN_VERSION_MAJOR (0)
+#endif
+
+#ifndef CLDNN_VERSION_MINOR
+    #define CLDNN_VERSION_MINOR (0)
+#endif
+
+#ifndef CLDNN_VERSION_BUILD
+    #define CLDNN_VERSION_BUILD (0)
+#endif
+
+#ifndef CLDNN_VERSION_REVISION
+    #define CLDNN_VERSION_REVISION (0)
+#endif
+
+cldnn_version cldnn_get_version(cldnn_status* status)
+{
+    return exception_handler<cldnn_version>(CLDNN_ERROR, status, {}, []() -> cldnn_version
+    {
+        return { CLDNN_VERSION_MAJOR, CLDNN_VERSION_MINOR, CLDNN_VERSION_BUILD, CLDNN_VERSION_REVISION };
+    });
+}
+
+
 cldnn_topology cldnn_create_topology(cldnn_status* status)
 {
     return exception_handler<cldnn_topology>(CLDNN_ERROR, status, nullptr, [&]()

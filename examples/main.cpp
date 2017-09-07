@@ -242,9 +242,13 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
 
     // ----------------------------------------------------------------------------------------------------------------
     // Version message.
+    auto ver = cldnn::get_version();
+
     std::ostringstream version_msg_out;
     version_msg_out << exec_info->file_name_wo_ext() << "   (version: "
         << (app_version >> 16) << "." << ((app_version >> 8) & 0xFF) << "." << (app_version & 0xFF)
+        << "; clDNN version: "
+        << ver.major << "." << ver.minor << "." << ver.build << "." << ver.revision
         << ")";
 
     // ----------------------------------------------------------------------------------------------------------------
