@@ -87,6 +87,45 @@
     // Block read - currently block is 4 bytes aligned.
     #define ALIGNED_BLOCK_READ8(ptr, byte_offset) as_float8(intel_sub_group_block_read8((const __global uint*)(ptr) + (byte_offset)))
 
+        #define TRANSPOSE_BLOCK_16_FP16( _block ) \
+        (float16)( intel_sub_group_shuffle( _block, 0 ), \
+                  intel_sub_group_shuffle( _block, 1 ), \
+                  intel_sub_group_shuffle( _block, 2 ), \
+                  intel_sub_group_shuffle( _block, 3 ), \
+                  intel_sub_group_shuffle( _block, 4 ), \
+                  intel_sub_group_shuffle( _block, 5 ), \
+                  intel_sub_group_shuffle( _block, 6 ), \
+                  intel_sub_group_shuffle( _block, 7 ), \
+                  intel_sub_group_shuffle( _block, 8 ), \
+                  intel_sub_group_shuffle( _block, 9 ), \
+                  intel_sub_group_shuffle( _block, 10 ), \
+                  intel_sub_group_shuffle( _block, 11 ), \
+                  intel_sub_group_shuffle( _block, 12 ), \
+                  intel_sub_group_shuffle( _block, 13 ), \
+                  intel_sub_group_shuffle( _block, 14 ), \
+                  intel_sub_group_shuffle( _block, 15 ) \
+                   );
+
+    #define MULTIPLY_BLOCKS_16x8_8x16(_result, _blockA, _blockB) \
+    { \
+        const half16 acol0 = TRANSPOSE_BLOCK_16( _blockA.s0 ); \
+        const half16 acol1 = TRANSPOSE_BLOCK_16( _blockA.s1 ); \
+        const half16 acol2 = TRANSPOSE_BLOCK_16( _blockA.s2 ); \
+        const half16 acol3 = TRANSPOSE_BLOCK_16( _blockA.s3 ); \
+        const half16 acol4 = TRANSPOSE_BLOCK_16( _blockA.s4 ); \
+        const half16 acol5 = TRANSPOSE_BLOCK_16( _blockA.s5 ); \
+        const half16 acol6 = TRANSPOSE_BLOCK_16( _blockA.s6 ); \
+        const half16 acol7 = TRANSPOSE_BLOCK_16( _blockA.s7 ); \
+        _result = fma( _blockB.s0, acol0, _result ); \
+        _result = fma( _blockB.s1, acol1, _result ); \
+        _result = fma( _blockB.s2, acol2, _result ); \
+        _result = fma( _blockB.s3, acol3, _result ); \
+        _result = fma( _blockB.s4, acol4, _result ); \
+        _result = fma( _blockB.s5, acol5, _result ); \
+        _result = fma( _blockB.s6, acol6, _result ); \
+        _result = fma( _blockB.s7, acol7, _result ); \
+    }
+
     #define MULTIPLY_BLOCKS_8x8(_result, _blockA, _blockB)  \
     {   \
         const float8 acol0 = TRANSPOSE_BLOCK_8( _blockA.s0 ); \

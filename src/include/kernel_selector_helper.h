@@ -196,6 +196,7 @@ inline kernel_selector::data_layout to_data_layout(format f)
     case format::bs_x_bsv16:        return kernel_selector::data_layout::bs_f_bsv16__af8;
     case format::bs_xs_xsv8_bsv8:   return kernel_selector::data_layout::bs_f_bsv8__af8;
     case format::bs_xs_xsv8_bsv16:  return kernel_selector::data_layout::bs_f_bsv16__af8;
+    case format::f8_xy16:           return kernel_selector::data_layout::f8_xy16;
     case format::winograd_2x3_s1_data:  return kernel_selector::data_layout::winograd_2x3_s1_data;
 //     case format::brfyx:          return kernel_selector::data_layout::brfyx;
     default:
@@ -215,6 +216,7 @@ static inline cldnn::format from_data_layout(kernel_selector::data_layout l)
     case kernel_selector::data_layout::fyxb:              return cldnn::format::fyxb;
     case kernel_selector::data_layout::bs_f_bsv8__af8:    return cldnn::format::bs_xs_xsv8_bsv8;
     case kernel_selector::data_layout::bs_f_bsv16__af8:   return cldnn::format::bs_x_bsv16;
+    case kernel_selector::data_layout::f8_xy16:           return cldnn::format::f8_xy16;
     case kernel_selector::data_layout::brfyx:             return cldnn::format::bfyx;
     case kernel_selector::data_layout::winograd_2x3_s1_data:   return cldnn::format::winograd_2x3_s1_data;
     default:

@@ -347,6 +347,11 @@ struct layout
         {
             sizes[0] = align_to(sizes[0], 16);
         }
+        else if (this->format == cldnn::format::f8_xy16 && !(is_aligned_to(sizes[1], 8) && is_aligned_to(sizes[2], 16)))
+        {
+            sizes[1] = align_to(sizes[1], 8);
+            sizes[2] = align_to(sizes[2], 16);
+        }
         return std::accumulate(
             sizes.begin(),
             sizes.end(),

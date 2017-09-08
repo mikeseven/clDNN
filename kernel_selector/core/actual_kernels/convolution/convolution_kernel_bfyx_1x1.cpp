@@ -28,8 +28,8 @@ namespace KernelSelector {
         k.EnableOutputDataType(Datatype::F32);
         k.EnableInputWeightsType(WeightsType::F16);
         k.EnableInputWeightsType(WeightsType::F32);
-        k.EnableInputLayout(DataLayout::bfyx);
-        k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableInputLayout(DataLayout::f8_xy16);
+        k.EnableOutputLayout(DataLayout::f8_xy16);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableDilation();
@@ -51,9 +51,14 @@ namespace KernelSelector {
         std::vector<size_t> global = { out.X().v, out.Y().v, out.Feature().v*out.Batch().v };
         auto local = GetOptimalLocalWorkGroupSizes(global);
 
-        kd.gws0 = Align(out.X().v * out.Y().v, 16) / 16;
-        kd.gws1 = out.Feature().v;
-        kd.gws2 = out.Batch().v;
+        auto x = out.X().v;
+        auto y = out.Y().v;
+        auto f = out.Feature().v;
+        auto b = out.Batch().v;
+
+        kd.gws0 = Align(x * y, 16) / 16;
+        kd.gws1 = f;
+        kd.gws2 = b;
 
         kd.lws0 = 1;
         kd.lws1 = 16;
@@ -77,37 +82,12 @@ namespace KernelSelector {
 
         const auto &input = params.inputs[0];
         const auto &output = params.output;
-        if (input.GetLayout() != DataLayout::bfyx ||
-            output.GetLayout() != DataLayout::bfyx)
-        {
-            return false;
-        }
-        if (output.Feature().v % 16)
-        {
-            return false;
-        }
 
-        if (params.convParams.stride.x != 1 || params.convParams.stride.y != 1)
-        {
-            return false;
-        }
-        if (params.convParams.padding.x != 0 || params.convParams.padding.y != 0)
-        {
-            return false;
-        }
         if(output.X().v != input.X().v || output.Y().v != input.Y().v)
         {
             return false;
         }
-/*        if(output.X().pad.Total() != 0 || output.Y().pad.Total() != 0 || output.Feature().pad.Total() != 0 || output.Batch().pad.Total() != 0)
-        {
-            return false;
-        }*/
         if (input.X().pad.Total() != 0 || input.Y().pad.Total() != 0 || input.Feature().pad.Total() != 0 || output.Batch().pad.Total() != 0)
-        {
-            return false;
-        }
-        if(input.Batch().v != 1 || output.Batch().v != 1)
         {
             return false;
         }
@@ -126,7 +106,7 @@ namespace KernelSelector {
         DispatchData runInfo = SetDefault(orgParams);
         KernelData kd = KernelData::Default<ConvolutionParams>(params);
         ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
-        
+
         bool succeed = UpdateWeightsParams(
             newParams,
             options,
@@ -144,7 +124,6 @@ namespace KernelSelector {
 
         cldnn_jit.AddConstant(MakeJitConstant("SIMDS_PER_OFM", (in.Feature().v % 32 == 0) ? 2 : 1));
 
-
         auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
         auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
@@ -155,7 +134,7 @@ namespace KernelSelector {
         kd.estimatedTime = runInfo.effiency;
         if((orgParams.weights.X().v == 1) && (orgParams.weights.Y().v == 1))
         {
-            kd.estimatedTime = FORCE_PRIORITY_1;
+            kd.estimatedTime = FORCE_PRIORITY_9;
         }
         return{ kd };
     }

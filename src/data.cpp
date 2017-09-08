@@ -55,13 +55,6 @@ void data_node::attach_memory(memory_impl& new_mem, bool invalidate_users_if_cha
     recalc_output_layout(invalidate_users_if_changed);
 }
 
-void data_node::attach_memory(memory_impl& new_mem)
-{
-    mem = &new_mem;
-    output_layout = mem->get_layout();
-    //recalc_output_layout();
-}
-
 std::string data_inst::to_string(data_node const& node)
 {
     auto node_info = node.desc_to_json();
