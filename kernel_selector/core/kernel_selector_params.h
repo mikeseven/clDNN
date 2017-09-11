@@ -540,6 +540,7 @@ namespace KernelSelector
         uint64_t maxLocalMemSize = 0;
         std::string deviceId = "";
         std::string driverVersion = "";
+        std::string hostVersion = "";
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -264,6 +264,13 @@ inline kernel_selector::tuning_mode to_tuning_mode(cldnn::tuning_mode mode)
     }
 }
 
+inline std::string to_host_version(const cldnn::version_t& version)
+{
+    std::stringstream ss;
+    ss << version.major << "." << version.minor << "." << version.build << "." << version.revision;
+    return ss.str();
+}
+
 inline kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_t split = 1, const tensor view_offset = {})
 {
     const auto& pad = l.data_padding;
@@ -405,6 +412,7 @@ inline params_t get_default_params(const arg_t& arg, uint32_t split = 1)
     params.engineInfo.maxLocalMemSize       = engine_info.max_local_mem_size;
     params.engineInfo.deviceId              = engine_info.dev_id;
     params.engineInfo.driverVersion         = engine_info.driver_version;
+    params.engineInfo.hostVersion           = to_host_version(cldnn::get_version());
     
     const auto& input_layout    = arg.input().get_output_layout();
     const auto& output_layout   = arg.get_output_layout();

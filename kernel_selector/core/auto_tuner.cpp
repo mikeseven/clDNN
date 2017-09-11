@@ -22,7 +22,7 @@
  
 namespace KernelSelector 
 {
-    std::tuple<std::string, int> AutoTuner::LoadKernel(const TuningMode tuning_mode, const std::string& tuningFilePath, const std::string& deviceID, const std::string& driverVersion, const std::string& hash)
+    std::tuple<std::string, int> AutoTuner::LoadKernel(const TuningMode tuningMode, const std::string& tuningFilePath, const std::string& deviceID, const std::string& driverVersion, const std::string& hostVersion, const std::string& hash)
     {
         std::lock_guard<std::mutex> lock(mutex);
 
@@ -36,6 +36,7 @@ namespace KernelSelector
             std::ifstream tuningFile(tuningFilePath);
             std::string cachedDeviceId;
             std::string cachedDriverVersion;
+            std::string cachedHostVersion;
             std::string cachedhash;
             std::string cachedkernelName;
             int cachedIndex;
@@ -55,6 +56,13 @@ namespace KernelSelector
                 if (!tuningFile.good() || (cachedDriverVersion.compare(driverVersion) != 0))
                 {
                     throw std::runtime_error("Tuning file bad structure or wrong driver version. Re-generate cache in TUNE_AND_CACHE mode.");
+                }
+
+                // Read host version
+                tuningFile >> cachedHostVersion;
+                if (!tuningFile.good() || (cachedHostVersion.compare(hostVersion) != 0))
+                {
+                    throw std::runtime_error("Tuning file bad structure or wrong host version. Re-generate cache in TUNE_AND_CACHE mode.");
                 }
 
                 // Read optimal kernel/config data 
@@ -79,7 +87,7 @@ namespace KernelSelector
             }
             else // Tuning file doesn't exist
             {
-                if (tuning_mode == TuningMode::TUNING_USE_CACHE)
+                if (tuningMode == TuningMode::TUNING_USE_CACHE)
                 {
                     throw std::runtime_error("Tuning file: " + tuningFilePath + " could not be read! Must provide a valid cache file in USE_CACHE mode.");
                 }
@@ -89,6 +97,7 @@ namespace KernelSelector
 
                 newTuningFile << deviceID << "\n";
                 newTuningFile << driverVersion << "\n";
+                newTuningFile << hostVersion << "\n";
             }
         }
 

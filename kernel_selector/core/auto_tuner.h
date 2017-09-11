@@ -31,7 +31,7 @@ namespace KernelSelector
 
     public:
         AutoTuner() = default;
-        std::tuple<std::string, int> LoadKernel(const TuningMode tuning_mode, const std::string& tuningFilePath, const std::string& deviceID, const std::string& driverVersion, const std::string& hash);
+        std::tuple<std::string, int> LoadKernel(const TuningMode tuningMode, const std::string& tuningFilePath, const std::string& deviceID, const std::string& driverVersion, const std::string& hostVersion, const std::string& hash);
         void StoreKernel(const std::string& tuningFilePath, const std::string& hash, const std::string& implementationName, const int tuneIndex);
 
     private:    

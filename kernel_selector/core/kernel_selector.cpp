@@ -153,8 +153,9 @@ namespace KernelSelector {
             options.GetType() == kType)
         {
             std::string hash = std::to_string(std::hash<std::string>{}(params.to_string()));
+            const ParamsKey requireKey = params.GetParamsKey().Merge(options.GetSupportedKey());
             
-            auto cachedKernelConfig = autoTuner.LoadKernel(options.tuningParams.mode, options.tuningParams.cacheFilePath, params.engineInfo.deviceId, params.engineInfo.driverVersion, hash);
+            auto cachedKernelConfig = autoTuner.LoadKernel(options.tuningParams.mode, options.tuningParams.cacheFilePath, params.engineInfo.deviceId, params.engineInfo.driverVersion, params.engineInfo.hostVersion, hash);
             bool hashFoundInCache = !std::get<0>(cachedKernelConfig).empty();
 
             if (hashFoundInCache)
@@ -164,10 +165,11 @@ namespace KernelSelector {
 
                 for (const auto& implementation : implementations)
                 {
+                    // TODO: make sure kernel names are unique.
                     if (implementation->GetName().compare(cachedkernelName) == 0)
                     {            
                         KernelsData kds = implementation->GetTunedKernelsDataByIndex(params, options, autoTuneIndex);
-                        if (kds.size() && kds[0].kernels.size())
+                        if (kds.size() && kds[0].kernels.size() && implementation->GetSupportedKey().Support(requireKey))
                         {
                             kernelsData = kds;
                             kernelsData[0].kernelName = cachedkernelName;
@@ -183,7 +185,7 @@ namespace KernelSelector {
                 }
             }
 
-            if( hashFoundInCache || // Cache is not valid - hash exists in cache but kernelsData was empty.
+            if( hashFoundInCache || // Cache is not valid - hash exists in cache but kernelsData was empty or kernel doesn't support the required key.
                 (options.tuningParams.mode == TuningMode::TUNING_USE_CACHE) || // Cache only mode - on-line tuning is not allowed.
                 !options.tuningParams.runner ) // Runner is invalid - can't run on-line tuning
             {
@@ -194,7 +196,6 @@ namespace KernelSelector {
             // Start on-line tuning
             assert(options.tuningParams.runner);
 
-            const ParamsKey requireKey = params.GetParamsKey().Merge(options.GetSupportedKey());
             for (const auto& implementation : implementations)
             {
                 const ParamsKey implKey = implementation->GetSupportedKey();
