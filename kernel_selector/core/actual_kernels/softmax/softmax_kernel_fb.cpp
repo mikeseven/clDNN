@@ -51,7 +51,7 @@ namespace KernelSelector
         // Combining device execution and local memory restrictions to compute maximum possible LWS.
         auto max_lws = std::min(params.engineInfo.maxWorkGroupSize, params.engineInfo.maxLocalMemSize / local_mem_per_wi);
 
-        kd.lws0 = kd.dataSetsCount;
+        kd.lws0 = std::min(kd.dataSetsCount, max_lws);
         // Compute maximum possible LWS that does not exceed device capabilities and optimizes number of global memory reads.
         while ((kd.itemsNum > 32 || kd.lws0 < kd.itemsNum) && (2 * kd.lws0 <= max_lws))
         {
