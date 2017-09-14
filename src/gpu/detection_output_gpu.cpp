@@ -25,6 +25,10 @@
 #include <string>
 #include <type_traits>
 #include <xmmintrin.h>
+#include <omp.h>
+#define PARALLELIZE_ACROSS_ALL_THREADS_IF_NOT_ALREADY_IN_PARALLEL() \
+        int num_available_threads = omp_get_max_threads(); \
+        int num_threads_to_use = (omp_in_parallel() == 0) ? num_available_threads : 1;
 
 namespace cldnn { namespace gpu {
 
@@ -215,7 +219,9 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
             const std::vector<std::vector<bounding_box> >& bboxes_per_image = all_bboxes[image];
             std::vector<std::vector<std::pair<float,int>>>& conf_per_image = confidences[image];
             int num_det = 0;
-            for (uint32_t cls = 0; cls < args.num_classes; ++cls)
+			PARALLELIZE_ACROSS_ALL_THREADS_IF_NOT_ALREADY_IN_PARALLEL()
+			#pragma omp parallel for num_threads(num_threads_to_use/2) reduction(+:num_det)
+		    for (int cls = 0; cls < (int)args.num_classes; ++cls)
             {
                 if ((int)cls == args.background_label_id)
                 {
