@@ -53,13 +53,8 @@ public:
             { kernel_selector::eltwise_params::InputType::Buffer(0), kernel_selector::eltwise_params::InputType::Buffer(1) },
             kernel_selector::eltwise_mode::SUB });
 
-        const float epsilon =
-            (arg.input().get_output_layout().data_type == data_types::f16) ?
-            0.f : arg.get_primitive()->epsilon;
-        
-        // TODO: why do we ignore epsilon in case of FP16?
         ew_params.eltwiseParams.operations.push_back({
-            { kernel_selector::eltwise_params::InputType::Buffer(2), kernel_selector::eltwise_params::InputType::Scalar(epsilon) },
+            { kernel_selector::eltwise_params::InputType::Buffer(2), kernel_selector::eltwise_params::InputType::Scalar(arg.get_primitive()->epsilon) },
             kernel_selector::eltwise_mode::ADD });
 
         ew_params.eltwiseParams.operations.push_back({
