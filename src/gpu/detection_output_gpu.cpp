@@ -222,10 +222,10 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
             std::vector<std::vector<std::pair<float,int>>>& conf_per_image = confidences[image];
             int num_det = 0;
 #ifdef OPENMP_FOUND
-			PARALLELIZE_ACROSS_ALL_THREADS_IF_NOT_ALREADY_IN_PARALLEL()
-			#pragma omp parallel for num_threads(num_threads_to_use/2) reduction(+:num_det)
+            PARALLELIZE_ACROSS_ALL_THREADS_IF_NOT_ALREADY_IN_PARALLEL()
+            #pragma omp parallel for num_threads(num_threads_to_use/2) reduction(+:num_det)
 #endif
-		    for (int cls = 0; cls < (int)args.num_classes; ++cls)
+            for (int cls = 0; cls < (int)args.num_classes; ++cls)
             {
                 if ((int)cls == args.background_label_id)
                 {
