@@ -45,6 +45,10 @@ public:
     { 
         auto ew_params = get_default_params<kernel_selector::eltwise_params>(arg);
         auto ew_optional_params = get_default_optional_params<kernel_selector::eltwise_optional_params>(arg.get_program());
+        const float epsilon =
+            (arg.input().get_output_layout().data_type == data_types::f16) ?
+            std::max(0.00007f, arg.get_primitive()->epsilon) : // prevent underflow if the epsilon is too small for fp16
+            arg.get_primitive()->epsilon;
 
         ew_params.inputs.push_back(convert_data_tensor(arg.mean().get_output_layout()));
         ew_params.inputs.push_back(convert_data_tensor(arg.variance().get_output_layout()));
@@ -54,7 +58,7 @@ public:
             kernel_selector::eltwise_mode::SUB });
 
         ew_params.eltwiseParams.operations.push_back({
-            { kernel_selector::eltwise_params::InputType::Buffer(2), kernel_selector::eltwise_params::InputType::Scalar(arg.get_primitive()->epsilon) },
+            { kernel_selector::eltwise_params::InputType::Buffer(2), kernel_selector::eltwise_params::InputType::Scalar(epsilon) },
             kernel_selector::eltwise_mode::ADD });
 
         ew_params.eltwiseParams.operations.push_back({
