@@ -30,7 +30,8 @@
 #define ENV_PRINTF(...) 
 #endif // ENABLE_ENV_PRINT
 
- 
+#define ENABLE_OFFLINE_TUNING_CACHE 1
+
 namespace KernelSelector {
 
     AutoTuner KernelSelctorBase::autoTuner;
@@ -143,11 +144,8 @@ namespace KernelSelector {
 
     KernelsData KernelSelctorBase::GetAutoTuneBestKernel(const Params& params, const OptionalParams& options, KernelType kType) const
     {
-        assert(options.tuningParams.mode != TuningMode::TUNING_DISABLED);
-
         KernelsData kernelsData;
         std::string kernelName;
-        std::string cacheFile;
 
         if (params.GetType() == kType &&
             options.GetType() == kType)
@@ -155,7 +153,19 @@ namespace KernelSelector {
             std::string hash = std::to_string(std::hash<std::string>{}(params.to_string()));
             const ParamsKey requireKey = params.GetParamsKey().Merge(options.GetSupportedKey());
             
-            auto cachedKernelConfig = autoTuner.LoadKernel(options.tuningParams.mode, options.tuningParams.cacheFilePath, params.engineInfo.deviceId, params.engineInfo.driverVersion, params.engineInfo.hostVersion, hash);
+            std::tuple<std::string, int> cachedKernelConfig;
+            if (options.tuningParams.mode == TuningMode::TUNING_DISABLED) // Try to load kernel/config from offline cache
+            {
+#if ENABLE_OFFLINE_TUNING_CACHE
+                cachedKernelConfig = autoTuner.LoadKernelOffline(params.engineInfo.deviceId, hash);
+#else
+                return  GetNaiveBestKernel(params, options, kType);
+#endif
+            }
+            else // Try to load kernel/config from on-line cache
+            {
+                cachedKernelConfig = autoTuner.LoadKernelOnline(options.tuningParams.mode, options.tuningParams.cacheFilePath, params.engineInfo.deviceId, params.engineInfo.driverVersion, params.engineInfo.hostVersion, hash);
+            }       
             bool hashFoundInCache = !std::get<0>(cachedKernelConfig).empty();
 
             if (hashFoundInCache)
@@ -186,7 +196,7 @@ namespace KernelSelector {
             }
 
             if( hashFoundInCache || // Cache is not valid - hash exists in cache but kernelsData was empty or kernel doesn't support the required key.
-                (options.tuningParams.mode == TuningMode::TUNING_USE_CACHE) || // Cache only mode - on-line tuning is not allowed.
+                (options.tuningParams.mode != TuningMode::TUNING_TUNE_AND_CACHE) || // On-line tuning is not allowed.
                 !options.tuningParams.runner ) // Runner is invalid - can't run on-line tuning
             {
                 // Fall back to the default path.
