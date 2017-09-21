@@ -252,7 +252,7 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
 
     engine->compile_program(*this);
 
-    this->dump_program("6_finished", true);
+    this->dump_program("12_finished", true);
     cleanup();
 }
 
@@ -379,21 +379,17 @@ void program_impl::init_graph(topology_impl const& topology)
 
     dump_program("0_init", true);
 
-    calc_prior_boxes();
+    calc_prior_boxes(); dump_program("1_calculated_prior_boxes", true);
     mark_constants();
     mark_data_flow();
     calc_dominators();
 
-    dump_program("1_analyzed_graph", true);
-    dump_program("1_1_data_flow", false, [](program_node const& node){ return node.is_in_data_flow(); });
-    dump_program("1_2_constants", false, [](program_node const& node){ return node.is_constant(); });
+    dump_program("2_analyzed_graph", true);
 }
 
 void program_impl::pre_optimize_graph()
 {
-    trim_to_outputs();
-
-    dump_program("2_trimmed", true);
+    trim_to_outputs(); dump_program("3_trimmed", true);
 
     if (get_engine().configuration().enable_parallelisation)
         reorder_nodes_for_parallel_execution();
@@ -406,13 +402,14 @@ void program_impl::pre_optimize_graph()
         reorder_inputs(lo);
         // this code should move to post compilation after kernel selector will support handling reorder bias
         pre_optimize_bias(lo);
+        dump_program("4_reordered_inputs", true);
     }
 
-    remove_redundant_reorders();
+    remove_redundant_reorders(); dump_program("5_removed_redundant_reorders", true);
     prepare_padding();
     prepare_depthwise_sep_opt();
 
-    propagate_constants();
+    propagate_constants(); dump_program("6_propagated_constants", true);
 
     //try to fuse buffers (i.e. depth_concat in bfyx format) after padding calculations
     if (options.get<build_option_type::optimize_data>()->enabled())
@@ -421,22 +418,7 @@ void program_impl::pre_optimize_graph()
         prepare_primitive_fusing();
     }
 
-    dump_program("3_pre_optimized", true);
-    dump_program("3_1_data_flow", false, [](program_node const& node) { return node.is_in_data_flow(); });
-    dump_program("3_2_constants", false, [](program_node const& node) { return node.is_constant(); });
-}
-
-void program_impl::post_optimize_graph()
-{
-    layout_optimizer lo;
-    post_optimize_weights(lo);
-    remove_redundant_reorders(); //TODO: do we need it at this place also?
-    propagate_constants();
-    //prepare_padding(); - TODO: padding should be prepare according to the kernels needs
-
-    dump_program("5_post_optimized", true);
-    dump_program("5_1_data_flow", false, [](program_node const& node) { return node.is_in_data_flow(); });
-    dump_program("5_2_constants", false, [](program_node const& node) { return node.is_constant(); });
+    dump_program("7_pre_optimized", true);
 }
 
 void program_impl::compile_graph()
@@ -451,8 +433,15 @@ void program_impl::compile_graph()
         }
     }
 
-    dump_program("4_compiled", true);
-    dump_program("4_1_data_flow", false, [](program_node const& node) { return node.is_in_data_flow(); });
+    dump_program("8_compiled", true);
+}
+
+void program_impl::post_optimize_graph()
+{
+    layout_optimizer lo;
+    post_optimize_weights(lo); dump_program("9_reordered_weights", true);
+    remove_redundant_reorders(); dump_program("10_removed_redundant_reorders", true); //TODO: do we need it at this place also?
+    propagate_constants(); dump_program("11_propagated_constants", true);
 }
 
 void program_impl::cleanup()
@@ -460,6 +449,19 @@ void program_impl::cleanup()
     for (auto& input : inputs)
         if (input->dependencies.size() == 1 && input->get_dependency(0).is_type<connector>())
             input->dependencies.clear();
+
+    //in debug build, at the end, mark all nodes as outputs so user can query for buffers of all not-optimized nodes, including internal ones etc.
+    if (is_debug_build())
+    {
+        for (auto& node : processing_order)
+        {
+            if (!node->is_output())
+            {
+                node->set_output(true);
+                outputs.push_back(node);
+            }
+        }
+    }
 }
 
 void program_impl::replace_nodes_pre()
@@ -1395,7 +1397,7 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
             this->add_intermediate(reorder.first, node, dep_idx);
             //set generic_layer's node output layout and implementation
             auto& g_node = node.get_dependency(dep_idx);
-            g_node.get_output_layout();
+            g_node.get_output_layout(false);
             g_node.selected_impl = g_node.type()->choose_impl(*engine, g_node);
         }
         //set the old output layout and do not invalidate users as change of weights will not affect output layout
@@ -1912,6 +1914,20 @@ void program_impl::rename(program_node & node, primitive_id const & new_id)
         reinterpret_cast<details::internal_program_node_base&>(node).internal_id = new_id;
 }
 
+void program_impl::swap_names(program_node& node1, program_node& node2)
+{
+    const auto _extract_id = [](program_node& node) -> primitive_id&
+    {
+        if (!node.is_type<internal_primitive>())
+            return const_cast<primitive_id&>(node.desc->id);
+        else
+            return reinterpret_cast<details::internal_program_node_base&>(node).internal_id;
+    };
+
+    nodes_map.at(node1.id()).swap(nodes_map.at(node2.id()));
+    std::swap(_extract_id(node1), _extract_id(node2));
+}
+
 void program_impl::replace_all_usages(program_node & old_node, program_node & new_node)
 {
     auto itr = old_node.users.begin();
@@ -2098,6 +2114,13 @@ bool program_impl::extract_and_remove(program_node& node)
     auto& input = node.get_dependency(0);
     node.dependencies.clear();
     input.users.remove(&node);
+
+    if (node.constant_frontier)
+    {
+        assert(node.constant && "Constant frontier should also, by definition, be constant");
+        assert(input.constant && "Input for constant forontier should, by definition, be constant");
+        input.constant_frontier = true;
+    }
 
     if (!node.is_endpoint())
         replace_all_usages(node, input);

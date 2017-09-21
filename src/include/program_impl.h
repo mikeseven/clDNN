@@ -165,6 +165,7 @@ private:
     }
 
     void rename(program_node & node, primitive_id const & new_id);
+    void swap_names(program_node& node1, program_node& node2);
     void replace_all_usages(program_node& old_node, program_node& new_node);
 
     //old_node - node which will be replaced
