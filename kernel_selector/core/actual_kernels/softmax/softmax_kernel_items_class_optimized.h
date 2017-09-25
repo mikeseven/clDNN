@@ -20,17 +20,18 @@
  
 namespace KernelSelector 
 {    
-    class SoftmaxKernelRef : public SoftmaxItemsClassKernelBase
+    class SoftmaxKerneItemsClassOptimized : public SoftmaxItemsClassKernelBase
     {
     public:
         using Parent = SoftmaxItemsClassKernelBase;
-        SoftmaxKernelRef() : Parent("softmax_gpu_ref") {}
-        virtual ~SoftmaxKernelRef() {}
+        SoftmaxKerneItemsClassOptimized() : Parent("softmax_gpu_items_class_optimized") {}
+        virtual ~SoftmaxKerneItemsClassOptimized() {}
 
         KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         ParamsKey GetSupportedKey() const override;
 
     protected:
+        JitConstants GetJitConstants(const SoftmaxParams& params, DispatchData kd) const override;
         DispatchData SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const override;
     };
 }

@@ -16,21 +16,19 @@
 
 #pragma once
 
-#include "softmax_items_class_kernel_base.h"
- 
+#include "softmax_kernel_base.h"
+
 namespace KernelSelector 
-{    
-    class SoftmaxKernelRef : public SoftmaxItemsClassKernelBase
+{
+    class SoftmaxItemsClassKernelBase : public SoftmaxKernelBase
     {
     public:
-        using Parent = SoftmaxItemsClassKernelBase;
-        SoftmaxKernelRef() : Parent("softmax_gpu_ref") {}
-        virtual ~SoftmaxKernelRef() {}
-
-        KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
-        ParamsKey GetSupportedKey() const override;
+        using SoftmaxKernelBase::SoftmaxKernelBase;
+        virtual ~SoftmaxItemsClassKernelBase() {}
 
     protected:
-        DispatchData SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const override;
+        JitConstants GetJitConstants(const SoftmaxParams& params, DispatchData kd) const override;
+        static ParamsKey GetDefaultSupportedKey();
+        static std::vector<size_t> GetSoftmaxDimGlobalSizes(SoftmaxDim dim, const DataTensor& output);
     };
 }

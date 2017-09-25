@@ -65,11 +65,12 @@ namespace KernelSelector
 
         assert(kd.itemsNum > 0 && kd.lws0 && kd.gws0 > 0);
 
+        kd.effiency = FORCE_PRIORITY_6;
         return kd;
     }
 
     KernelsData SoftmaxKernel_fb::GetKernelsData(const Params& params, const OptionalParams& optParams) const
     {
-        return GetCommonKernelsData(params, optParams, FORCE_PRIORITY_6);
+        return GetCommonKernelsData(params, optParams);
     }
 }

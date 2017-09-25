@@ -22,16 +22,16 @@
  
 namespace KernelSelector 
 {
-    std::tuple<std::string, int> AutoTuner::LoadKernel(const TuningMode tuningMode, const std::string& tuningFilePath, const std::string& deviceID, const std::string& driverVersion, const std::string& hostVersion, const std::string& hash)
+    std::tuple<std::string, int> AutoTuner::LoadKernelOnline(const TuningMode tuningMode, const std::string& tuningFilePath, const std::string& deviceID, const std::string& driverVersion, const std::string& hostVersion, const std::string& hash)
     {
         std::lock_guard<std::mutex> lock(mutex);
 
         //First, check if the tuning file has been already loaded to cache
-        auto const& tuningFileCache = tuningCache.find(tuningFilePath);
-        if (tuningFileCache == tuningCache.end())
+        auto const& tuningFileCache = onlineCache.find(tuningFilePath);
+        if (tuningFileCache == onlineCache.end())
         {
             // Load tuning file to cache
-            tuningCache[tuningFilePath] = {};
+            onlineCache[tuningFilePath] = {};
 
             std::ifstream tuningFile(tuningFilePath);
             std::string cachedDeviceId;
@@ -80,7 +80,7 @@ namespace KernelSelector
                     }
 
                     // Update tuning cache 
-                    tuningCache[tuningFilePath].hashToKernelConfig[cachedhash] = std::make_tuple(cachedkernelName, cachedIndex);
+                    onlineCache[tuningFilePath].hashToKernelConfig[cachedhash] = std::make_tuple(cachedkernelName, cachedIndex);
                 }
 
                 tuningFile.close();
@@ -102,7 +102,7 @@ namespace KernelSelector
         }
 
         // Tuning file is loaded
-        auto const& tuningFileData = tuningCache[tuningFilePath];
+        auto const& tuningFileData = onlineCache[tuningFilePath];
         auto const& hashData = tuningFileData.hashToKernelConfig.find(hash);
         if (hashData != tuningFileData.hashToKernelConfig.end())
         {
@@ -123,7 +123,7 @@ namespace KernelSelector
         std::lock_guard<std::mutex> lock(mutex);
 
         // Add the new tuning data to cache
-        tuningCache[tuningFilePath].hashToKernelConfig[hash] = std::make_tuple(implementationName, tuneIndex);
+        onlineCache[tuningFilePath].hashToKernelConfig[hash] = std::make_tuple(implementationName, tuneIndex);
 
         // Add the new tuning data to tuning file
         std::ofstream cachedKernelsFile(tuningFilePath, std::ofstream::out | std::ofstream::app);
@@ -135,5 +135,24 @@ namespace KernelSelector
         cachedKernelsFile << implementationName << " ";
         cachedKernelsFile << tuneIndex << "\n";
         cachedKernelsFile.close();
+    }
+
+    std::tuple<std::string, int> AutoTuner::LoadKernelOffline(const std::string& deviceID, const std::string& hash)
+    {
+        auto const& deviceCache = offlineCache.find(deviceID);
+        if (deviceCache == offlineCache.end())
+        {
+            return std::make_pair("", 0);
+        }
+        auto const& deviceCacheData = deviceCache->second.hashToKernelConfig;
+        auto const& hashData = deviceCacheData.find(hash);
+        if (hashData == deviceCacheData.end())
+        {
+            return std::make_pair("", 0);
+        }
+        else
+        {
+            return hashData->second;
+        }
     }
 }

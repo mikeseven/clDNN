@@ -235,6 +235,12 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
     prog_id = ++id_gen;
     assert(prog_id != 0);
 
+    if ((options.get<build_option_type::tuning_config>()->config.mode == tuning_mode::tuning_tune_and_cache) &&
+        !engine->configuration().enable_profiling)
+    {
+        throw std::invalid_argument("Engine must be created with profiling enabled in tune_and_cache mode!");
+    }
+
     init_graph(topology);
     pre_optimize_graph();
     compile_graph();
