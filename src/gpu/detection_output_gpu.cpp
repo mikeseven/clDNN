@@ -27,9 +27,6 @@
 #include <xmmintrin.h>
 #ifdef OPENMP_FOUND
 #include <omp.h>
-#define PARALLELIZE_ACROSS_ALL_THREADS_IF_NOT_ALREADY_IN_PARALLEL() \
-        int num_available_threads = omp_get_max_threads(); \
-        int num_threads_to_use = (omp_in_parallel() == 0) ? num_available_threads : 1;
 #endif
 
 namespace cldnn { namespace gpu {
@@ -222,8 +219,10 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
             std::vector<std::vector<std::pair<float,int>>>& conf_per_image = confidences[image];
             int num_det = 0;
 #ifdef OPENMP_FOUND
-            PARALLELIZE_ACROSS_ALL_THREADS_IF_NOT_ALREADY_IN_PARALLEL()
-            #pragma omp parallel for num_threads(num_threads_to_use/2) reduction(+:num_det)
+            int num_available_threads = omp_get_max_threads();
+            //half available threads usage shows the best perf results for both SKL (4c8t) and APL (4c4t) for this part of detection output
+            int num_threads_to_use = (omp_in_parallel() == 0) ? num_available_threads/2 : 1;
+            #pragma omp parallel for num_threads(num_threads_to_use) reduction(+:num_det)
 #endif
             for (int cls = 0; cls < (int)args.num_classes; ++cls)
             {
