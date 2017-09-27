@@ -65,7 +65,7 @@ namespace instrumentation {
                     --exp;
                 }
                 mantissa = (mantissa << 1) & 0x7FFFFFU;
-                exp = (exp - 1U) << 23;
+                exp <<= 23;
             }
         }
         else
