@@ -51,6 +51,9 @@
 .PARAMETER Force
     Overwrite dump files, even if they already exist.
 
+.PARAMETER Verify
+    Only verify whether weights are correctly located and metadata is correctly calculated.
+
 #>
 
 [CmdletBinding()]
@@ -68,7 +71,9 @@ param(
     [Parameter(ValueFromPipelineByPropertyName = $true)]
     [switch] $BiasesOnly,
     [Parameter()]
-    [switch] $Force
+    [switch] $Force,
+    [Parameter()]
+    [switch] $Verify
 )
 begin
 {
@@ -125,10 +130,28 @@ begin
         return [BitConverter]::ToSingle($_retBytes, 0);
     }
 
-    function Reinterpret-ByteToSByte([byte] $val)
+    function Reinterpret-ByteToSByte([byte] $Val)
     {
-        return [sbyte]([sbyte]($val -band 0x7F) -bor [sbyte]-($val -band 0x80))
+        return [sbyte]([sbyte]($Val -band 0x7F) -bor [sbyte]-($Val -band 0x80))
     }
+
+    function Normalize-Size([long] $Val, [switch] $AllowZero)
+    {
+        if (($Val -gt 0) -or ($AllowZero.IsPresent -and ($Val -eq 0)))
+        {
+            return $Val;
+        }
+        elseif ($AllowZero.IsPresent)
+        {
+            return [long] 0
+        }
+        else
+        {
+            return [long] 1;
+        }
+    }
+
+    $_normPattern = '.*(?:batchnorm|scale|shift|norm).*';
 }
 process
 {
@@ -224,31 +247,53 @@ process
         $_input0Dims  = @($_.ParentNode.input.port)[0];
         $_output0Dims = @($_.ParentNode.output.port)[0];
 
-        $_width  = @(Select-Xml '*/@kernel-x' -Xml $_.ParentNode);
-        $_height = @(Select-Xml '*/@kernel-y' -Xml $_.ParentNode);
-        if ($_width.Count -gt 0)
+        if ($_primType -match $_normPattern)
         {
-            $_width = [long] $_width[0].Node.value;
+            $_width        = [long] 1;
+            $_height       = [long] 1;
+            $_inFeatCount  = [long] 1;
         }
         else
         {
-            $_width = [long] @($_input0Dims.dim)[-1];
+            $_width        = @(Select-Xml '*/@kernel-x' -Xml $_.ParentNode);        
+            if ($_width.Count -gt 0)
+            {
+                $_width = [long] $_width[0].Node.value;
+            }
+            else
+            {
+                $_width = [long] @($_input0Dims.dim)[-1];
+            }
+
+            $_height       = @(Select-Xml '*/@kernel-y' -Xml $_.ParentNode);
+            if ($_height.Count -gt 0)
+            {
+                $_height = [long] $_height[0].Node.value;
+            }
+            else
+            {
+                $_height = Normalize-Size ([long] @($_input0Dims.dim)[-2]);
+            }
+
+            $_inFeatCount  = Normalize-Size ([long] @($_input0Dims.dim)[-3]);
         }
-        if ($_height.Count -gt 0)
+
+        $_outFeatCount = @(Select-Xml '*/@out-size' -Xml $_.ParentNode);
+        if ($_outFeatCount.Count -gt 0)
         {
-            $_height = [long] $_height[0].Node.value;
+            $_outFeatCount = [long] $_outFeatCount[0].Node.value;
         }
         else
         {
-            $_height = [long] @($_input0Dims.dim)[-2];
+            $_outFeatCount = Normalize-Size ([long] @($_output0Dims.dim)[-3]);
         }
 
         return New-Object PSObject -Property @{
                DumpFileName = ('{0}__weights{1}.txt' -f $_primName, $_dumpNameCounters[$_primName]);
                DataOffset   = [long] $_.offset;
                DataSize     = [long] $_.size;
-               InputFeaturesCount  = [long] @($_input0Dims.dim)[-3];
-               OutputFeaturesCount = [long] @($_output0Dims.dim)[-3];
+               InputFeaturesCount  = $_inFeatCount;
+               OutputFeaturesCount = $_outFeatCount;
                Width               = $_width;
                Height              = $_height;
                Type                = $_primType;
@@ -276,14 +321,28 @@ process
 
         $_output0Dims = @($_.ParentNode.output.port)[0];
 
+        $_width        = [long] 1;
+        $_height       = [long] 1;
+        $_inFeatCount  = [long] 1;
+
+        $_outFeatCount = @(Select-Xml '*/@out-size' -Xml $_.ParentNode);
+        if ($_outFeatCount.Count -gt 0)
+        {
+            $_outFeatCount = [long] $_outFeatCount[0].Node.value;
+        }
+        else
+        {
+            $_outFeatCount = Normalize-Size ([long] @($_output0Dims.dim)[-3]);
+        }
+
         return New-Object PSObject -Property @{
                DumpFileName = ('{0}__biases{1}.txt' -f $_primName, $_dumpNameCounters[$_primName]);
                DataOffset   = [long] $_.offset;
                DataSize     = [long] $_.size;
-               InputFeaturesCount  = [long] 1;
-               OutputFeaturesCount = [long] @($_output0Dims.dim)[-3];
-               Width               = [long] 1;
-               Height              = [long] 1;
+               InputFeaturesCount  = $_inFeatCount;
+               OutputFeaturesCount = $_outFeatCount;
+               Width               = $_width;
+               Height              = $_height;
                Type                = $_primType;
                Kind                = 'biases';
                DataType            = $_.ParentNode.precision;
@@ -319,6 +378,10 @@ process
         }
 
         Write-Verbose (' - "{0}"' -f $_.DumpFileName);
+        if ($Verify.IsPresent)
+        {
+            return;
+        }
 
         $_dataReader.BaseStream.Seek($_.DataOffset, [System.IO.SeekOrigin]::Begin) | Out-Null;
         $_dumpData = $_dataReader.ReadBytes($_.DataSize);
