@@ -32,9 +32,8 @@ namespace KernelSelector
         {
             return GetKernelsData(params, options);
         }
-        virtual KernelsData GetTunedKernelsDataByIndex(const Params& params, const OptionalParams& options, int autoTuneIndex) const
+        virtual KernelsData GetTunedKernelsDataByIndex(const Params& params, const OptionalParams& options, int /*autoTuneIndex*/) const
         {
-            UNUSED(autoTuneIndex);
             return GetKernelsData(params, options);
         }
 
