@@ -88,11 +88,13 @@ void chapter_6(engine& engine)
     // Ready to go.
     auto outputs = network.execute();
 
+    auto executed_primitives = network.get_executed_primitives();
+
     // Now, we want to check what is the time of execution of each primitive:
     std::vector<cldnn::instrumentation::profiling_info> profiling_table;
-    for (auto& p : outputs)
+    for (auto& p : executed_primitives)
     {
-        profiling_table.push_back({ p.first, p.second.get_event().get_profiling_info() });
+        profiling_table.push_back({ p.first, p.second.get_profiling_info() });
     }
 
     // We have table of profiling metrics.

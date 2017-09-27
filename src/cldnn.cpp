@@ -505,6 +505,48 @@ void cldnn_get_network_output_names(cldnn_network network, char* names, size_t s
     });
 }
 
+void cldnn_get_network_executed_primitive_names(cldnn_network network, char* names, size_t size, size_t* size_ret, cldnn_status* status)
+{
+    exception_handler(CLDNN_ERROR, status, [&]()
+    {
+        auto primitives_size = api_cast(network)->get_executed_primitive_ids().size();
+        SHOULD_NOT_BE_NULL(network, "Network");
+        SHOULD_NOT_EQUAL_0(primitives_size, "Primitives size");
+        auto&& primitive_ids = api_cast(network)->get_executed_primitive_ids();
+        *size_ret = std::accumulate(
+            std::begin(primitive_ids),
+            std::end(primitive_ids),
+            size_t(1), // final zero symbol
+            [](size_t acc, const cldnn::primitive_id& id)
+        {
+            return acc + id.size() + 1; // plus zero symbol
+        });
+
+        if (size < *size_ret)
+        {
+            if (status) *status = CLDNN_INVALID_ARG;
+            return;
+        }
+
+        size_t i = 0;
+        for (auto& id : primitive_ids)
+        {
+            // workaround for Microsoft VC++
+#if defined _MSC_VER
+#pragma warning(push)
+#pragma warning(disable: 4996)
+#endif
+            i += id.copy(names + i, size - i - 2);
+#if defined _MSC_VER
+#pragma warning(pop)
+#endif
+            names[i++] = 0; // plus zero symbol
+            assert(i < size);
+        }
+        names[i] = 0; // final zero symbol
+    });
+}
+
 void cldnn_execute_network(cldnn_network network, cldnn_event* dependencies, size_t deps_num, cldnn_status* status)
 {
     exception_handler(CLDNN_ERROR, status, [&]()
@@ -548,6 +590,19 @@ cldnn_memory cldnn_get_network_output_memory(cldnn_network network, const char* 
         cldnn::primitive_id id(name);
         auto& mem_result = api_cast(network)->get_primitive(id)->output_memory();
         return init_external_from_internal(mem_result);
+    });
+}
+
+cldnn_event cldnn_get_network_output_event(cldnn_network network, const char* name, cldnn_status* status)
+{
+    cldnn_event error_result = nullptr;
+    return exception_handler<cldnn_event>(CLDNN_ERROR, status, error_result, [&]() -> cldnn_event
+    {
+        SHOULD_NOT_BE_NULL(network, "Network");
+        SHOULD_NOT_BE_NULL(name, "ID of primitive");
+        cldnn::primitive_id id(name);
+        auto event = api_cast(network)->get_primitive_event(id);
+        return init_external_from_internal(event);
     });
 }
 

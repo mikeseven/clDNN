@@ -556,6 +556,14 @@ CLDNN_API        cldnn_program cldnn_get_network_program(cldnn_network network, 
 /// @param[out] size_ret Required size (in chars) to store result.
 CLDNN_API                 void cldnn_get_network_output_names(cldnn_network network, char* names, size_t size, size_t* size_ret, cldnn_status* status);
 
+/// @brief Returns names of executed primitives.
+/// @details Function fills user provided buffer by primitive names. Each name is followed by '\0'.
+/// Empty name "\0\0" means end of data.
+/// @param[in] names Pointer to user-allocated buffer to store names.
+/// @param[in] size Size (in chars) of the buffer.
+/// @param[out] size_ret Required size (in chars) to store result.
+CLDNN_API                 void cldnn_get_network_executed_primitive_names(cldnn_network network, char* names, size_t size, size_t* size_ret, cldnn_status* status);
+
 /// @brief Executes network.
 /// @details User should call cldnn_set_network_input() for every @p input_layout defined in tho source @p topology.
 /// Function returns immediately, even if @p dependencies are not set yet.
@@ -576,6 +584,12 @@ CLDNN_API cldnn_network_output cldnn_get_network_output(cldnn_network network, c
 /// @param name Output name to get the result.
 /// @returns @ref cldnn_memory structure with the output information.
 CLDNN_API cldnn_memory cldnn_get_network_output_memory(cldnn_network network, const char* name, cldnn_status* status);
+
+/// @brief Returns @ref event corresponding to output with @p name.
+/// @details User can call this function even before calling cldnn_execute_network(), but then content of memory is uninitialized.
+/// @param name Output name to get the result.
+/// @returns @ref cldnn_event structure with the output information.
+CLDNN_API cldnn_event cldnn_get_network_output_event(cldnn_network network, const char* name, cldnn_status* status);
 /// @}
 
 /// @addtogroup c_memory
