@@ -237,48 +237,42 @@ endfunction()
 
 
 # Expressing CMake setting for current build configuration as option and providing a way to correct it (treat as case-insensitive).
-if(NOT CLDNN_BUILT_FROM_OPENVX)
-  if(DEFINED CMAKE_BUILD_TYPE)
-    string(TOLOWER "${CMAKE_BUILD_TYPE}" __CLDNN_BuildType)
-    string(STRIP "${__CLDNN_BuildType}" __CLDNN_BuildType)
+if(DEFINED CMAKE_BUILD_TYPE)
+  string(TOLOWER "${CMAKE_BUILD_TYPE}" __CLDNN_BuildType)
+  string(STRIP "${__CLDNN_BuildType}" __CLDNN_BuildType)
 
-    if(__CLDNN_BuildType MATCHES "^release$")
-      set(__CLDNN_BuildType "Release")
-    elseif(__CLDNN_BuildType MATCHES "^debug$")
-      set(__CLDNN_BuildType "Debug")
-    else()
-      set(__CLDNN_BuildType "Debug")
-      if(NOT CLDNN__MULTI_CFG_GEN)
-        message(WARNING "[clDNN] CMAKE_BUILD_TYPE: Unknown build configuration. The following configurations are available: ${CMAKE_CONFIGURATION_TYPES}.
-            The \"${__CLDNN_BuildType}\" configuration will be used.
-
-            This value has meaning only for single-configuration generators (like Make). It will be ignored for MSVC/XCode."
-          )
-      endif()
-    endif()
+  if(__CLDNN_BuildType MATCHES "^release$")
+    set(__CLDNN_BuildType "Release")
+  elseif(__CLDNN_BuildType MATCHES "^debug$")
+    set(__CLDNN_BuildType "Debug")
   else()
     set(__CLDNN_BuildType "Debug")
     if(NOT CLDNN__MULTI_CFG_GEN)
-      message(WARNING "[clDNN] CMAKE_BUILD_TYPE: No build configuration specified. The following configurations are available: ${CMAKE_CONFIGURATION_TYPES}.
+      message(WARNING "[clDNN] CMAKE_BUILD_TYPE: Unknown build configuration. The following configurations are available: ${CMAKE_CONFIGURATION_TYPES}.
           The \"${__CLDNN_BuildType}\" configuration will be used.
 
           This value has meaning only for single-configuration generators (like Make). It will be ignored for MSVC/XCode."
         )
     endif()
   endif()
-  set(CMAKE_BUILD_TYPE "${__CLDNN_BuildType}")
-  unset(__CLDNN_BuildType)
+else()
+  set(__CLDNN_BuildType "Debug")
+  if(NOT CLDNN__MULTI_CFG_GEN)
+    message(WARNING "[clDNN] CMAKE_BUILD_TYPE: No build configuration specified. The following configurations are available: ${CMAKE_CONFIGURATION_TYPES}.
+        The \"${__CLDNN_BuildType}\" configuration will be used.
+
+        This value has meaning only for single-configuration generators (like Make). It will be ignored for MSVC/XCode."
+      )
+  endif()
 endif()
+set(CMAKE_BUILD_TYPE "${__CLDNN_BuildType}")
+unset(__CLDNN_BuildType)
 
 # ======================================================================================================
 
 # Detecting, setting and validating target architecture for compilation.
 
-if(CLDNN_BUILT_FROM_OPENVX)
-  set(__CLDNN_RequestedArch __ARCH)
-else()
-  set(__CLDNN_RequestedArch "")
-endif()
+set(__CLDNN_RequestedArch "")
 
 intel_arch_detect(__CLDNN_DetectedArch_Target __CLDNN_DetectedArch_Host __CLDNN_RequestedArch)
 intel_arch_validate(__CLDNN_DetectedArchValid_Target "${__CLDNN_DetectedArch_Target}")
@@ -369,10 +363,8 @@ endif()
 # ======================================================================================================
 
 # Current build configuration (only for single-configuration generators).
-if(NOT CLDNN_BUILT_FROM_OPENVX)
-  set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING "Current build configuration (only for single-configuration generators)." FORCE)
-  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES})
-endif()
+set(CMAKE_BUILD_TYPE "${CMAKE_BUILD_TYPE}" CACHE STRING "Current build configuration (only for single-configuration generators)." FORCE)
+set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS ${CMAKE_CONFIGURATION_TYPES})
 
 # ======================================================================================================
 
@@ -388,9 +380,6 @@ endif()
 if(DEFINED CLDNN__OUTPUT_DIR)
   set(CLDNN__OUTPUT_BIN_DIR "${CLDNN__OUTPUT_DIR}" CACHE PATH "Output directory path where the final exetuables, examples and tests will be stored.")
   set(CLDNN__OUTPUT_LIB_DIR "${CLDNN__OUTPUT_DIR}" CACHE PATH "Output directory path where the final libraries will be stored.")
-elseif(CLDNN_BUILT_FROM_OPENVX)
-  set(CLDNN__OUTPUT_BIN_DIR "${CMAKE_BIN_DIR}/${CMAKE_BUILD_TYPE}" CACHE PATH "Output directory path where the final exetuables, examples and tests will be stored.")
-  set(CLDNN__OUTPUT_LIB_DIR "${CMAKE_LIB_DIR}/${CMAKE_BUILD_TYPE}" CACHE PATH "Output directory path where the final libraries will be stored.")
 else()
   # Output directory path where the final libraries, examples and tests will be stored.
   if(CLDNN__MULTI_CFG_GEN)
@@ -452,12 +441,6 @@ mark_as_advanced(CLDNN__INCLUDE_KERNEL_SELECTOR)
 # Include and build: Tests (unit tests and small acceptance tests) for clDNN framework.
 set(CLDNN__INCLUDE_TESTS ON CACHE BOOL "Include and build: clDNN framework's tests.")
 mark_as_advanced(CLDNN__INCLUDE_TESTS)
-
-# ======================================================================================================
-
-# Include and build: Tests (unit tests and small acceptance tests) for clDNN framework.
-set(CLDNN__INCLUDE_COST_MODEL ON CACHE BOOL "Include and build: clDNN cost model.")
-mark_as_advanced(CLDNN__INCLUDE_COST_MODEL)
 
 # ======================================================================================================
 
@@ -646,10 +629,7 @@ set(Boost_NO_SYSTEM_PATHS ON)
 set(Boost_USE_STATIC_LIBS    ON)
 set(Boost_USE_DEBUG_RUNTIME  ON)
 set(Boost_USE_STATIC_RUNTIME ${CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME})
-set(CLDNN_BOOST_USAGE system date_time program_options)
-if(NOT CLDNN_BUILT_FROM_OPENVX)
-  set(CLDNN_BOOST_USAGE ${CLDNN_BOOST_USAGE} filesystem)
-endif()
+set(CLDNN_BOOST_USAGE system date_time program_options filesystem)
 find_package(Boost "${CLDNN__BOOST_VERSION}" EXACT REQUIRED
       COMPONENTS ${CLDNN_BOOST_USAGE}
     )
@@ -768,7 +748,6 @@ message(STATUS "[clDNN]  - Include/Build cldnn core:      ${CLDNN__INCLUDE_CORE}
 message(STATUS "[clDNN]  - Include/Build kernel selector: ${CLDNN__INCLUDE_KERNEL_SELECTOR}")
 message(STATUS "[clDNN]  - Include/Build examples:        ${CLDNN__INCLUDE_EXAMPLES}")
 message(STATUS "[clDNN]  - Include/Build tests:           ${CLDNN__INCLUDE_TESTS}")
-message(STATUS "[clDNN]  - Include/Build cost_model:      ${CLDNN__INCLUDE_COST_MODEL}")
 message(STATUS "[clDNN]  - Include/Build tutorial:        ${CLDNN__INCLUDE_TUTORIAL}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Run tests:                     ${CLDNN__RUN_TESTS}")
@@ -864,12 +843,7 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/CMakeCompilerLinkerOpts.txt" NO_POLICY_SCOP
 
 # ======================================= Handle C++14 Stuffs ==========================================
 
-if(CLDNN_BUILT_FROM_OPENVX)
-  # currently OpenVX Klockwork doesn't support c++14
-  set(__CLDNN_UseCxx14 OFF)
-else()
-  set(__CLDNN_UseCxx14 ${CLDNN__COMPILER_SUPPORTS_CXX14})
-endif()
+set(__CLDNN_UseCxx14 ${CLDNN__COMPILER_SUPPORTS_CXX14})
 
 if(NOT __CLDNN_UseCxx14)
   if(CLDNN__INCLUDE_CORE OR CLDNN__INCLUDE_TESTS)
@@ -956,23 +930,7 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
         )
     endif()
   elseif(CMAKE_COMPILER_IS_INTEL)
-    if (CLDNN_BUILT_FROM_OPENVX)
-      intel_config_flag_apply_settings(
-          CompilerOptions
-          "${__CLDNN_CompilerFlagName}"
-          ALL_PATTERN ""
-          SET_RAW
-            -Wno-error=missing-field-initializers
-            -Wno-error=unused-parameter
-            -Wno-error=unused-function
-            -wd11074
-            -wd11076
-            -fPIC
-            -Wl,--no-undefined
-        )
-    else()
-      message(FATAL_ERROR "TODO Support native ICC")
-    endif()
+    message(FATAL_ERROR "TODO Support native ICC")
   # Adding needed settings specific to GCC.
   # NOTE: Following options can be needed in the future (although some not recommended: NR):
   # [NR] -fno-short-enums
@@ -1206,12 +1164,6 @@ elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
   )
 endif()
 
-if(CLDNN_BUILT_FROM_OPENVX)
-    set_property(DIRECTORY APPEND PROPERTY COMPILE_DEFINITIONS
-        CLDNN_BUILT_FROM_OPENVX
-      )
-endif()
-
 # ===================================== Include/Link directories =======================================
 
 include_directories(
@@ -1239,9 +1191,6 @@ if(CLDNN__INCLUDE_TESTS)
 endif()
 if(CLDNN__INCLUDE_KERNEL_SELECTOR)
   add_subdirectory(kernel_selector)
-endif()
-if(CLDNN__INCLUDE_COST_MODEL)
-  add_subdirectory(cost_model)
 endif()
 if(CLDNN__INCLUDE_TUTORIAL)
   add_subdirectory(tutorial)

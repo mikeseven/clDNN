@@ -90,7 +90,6 @@ namespace KernelSelector {
 
     KernelsData FullyConnected_bf_io_GEMM::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        // TODO: handle padding per in x/y (for openvx)
         return GetCommonKernelsData(params, options, DataLayout::bf, { WeightsLayout::oiyx }, FORCE_PRIORITY_6);
     }
 }
