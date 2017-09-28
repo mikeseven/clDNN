@@ -12,14 +12,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-if(CLDNN_BUILT_FROM_OPENVX)
-  FIND_PACKAGE(OpenCL)
-  if (NOT OpenCL_FOUND)
-    message(STATUS "Couldn't build clDNN library. Skip plugin build." )
-    return( )
-  endif( )
-endif( )
-
 # =================================== Name / Output settings from parent ===============================
 
 set(CLDNN_BUILD__PROJ             "cldnn_kernel_selector")
@@ -84,25 +76,6 @@ file(GLOB_RECURSE __CLDNN_Sources__actual_kernels
     "${__CLDNN_Directory__actual_kernels}/*.cpp"
   )
 
-# ============================= OpenVX Adapter Start =============================
-set(__CLDNN_Directory__vx_adapter   "${__CLDNN_Directory__main}/vx_adapter")
-set(__CLDNN_Label__vx_adapter       "vx_adapter")
-file(GLOB __CLDNN_Sources__vx_adapter 
-    "${__CLDNN_Directory__vx_adapter}/api/*.h"
-    "${__CLDNN_Directory__vx_adapter}/*.h"
-    "${__CLDNN_Directory__vx_adapter}/*.hpp"
-    "${__CLDNN_Directory__vx_adapter}/*.cpp"
-  )
-
-set(__CLDNN_Directory__vx_adapter_cache           "${__CLDNN_Directory__vx_adapter}/cache")
-set(__CLDNN_Label__vx_adapter_cache               "${__CLDNN_Label__vx_adapter}\\cache")
-file(GLOB __CLDNN_Sources__vx_adapter_cache
-    "${__CLDNN_Directory__vx_adapter_cache}/*.h"
-    "${__CLDNN_Directory__vx_adapter_cache}/*.hpp"
-    "${__CLDNN_Directory__vx_adapter_cache}/*.cpp"
-  )
-# =============================  OpenVX Adapter End  =============================
-
 set(__CLDNN_Directory__cl_kernels      "${__CLDNN_Directory__core}/cl_kernels")
 set(__CLDNN_Label__cl_kernels          "${__CLDNN_Label__core}\\cl_kernels")
 file(GLOB_RECURSE __CLDNN_Sources__cl_kernels
@@ -126,10 +99,6 @@ set(__CLDNN_AllSources
     ${__CLDNN_Sources__actual_kernels}
     ${__CLDNN_Sources__cl_kernels}
     ${__CLDNN_Sources__cg_cache}
-# ============================= OpenVX Adapter Start =============================
-    ${__CLDNN_Sources__vx_adapter}
-    ${__CLDNN_Sources__vx_adapter_cache}
-# =============================  OpenVX Adapter End  =============================
   )
 # Helping with some generators.
 set_property(SOURCE ${__CLDNN_Sources__cg_cache} PROPERTY GENERATED TRUE)
@@ -143,10 +112,6 @@ source_group("${__CLDNN_Label__core_common}"      FILES ${__CLDNN_Sources__core_
 source_group("${__CLDNN_Label__actual_kernels}"   FILES ${__CLDNN_Sources__actual_kernels})
 source_group("${__CLDNN_Label__cl_kernels}"       FILES ${__CLDNN_Sources__cl_kernels})
 source_group("${__CLDNN_Label__cg_cache}"         FILES ${__CLDNN_Sources__cg_cache})
-# ============================= OpenVX Adapter Start =============================
-source_group("${__CLDNN_Label__vx_adapter}"      FILES ${__CLDNN_Sources__vx_adapter})
-source_group("${__CLDNN_Label__vx_adapter_cache}" FILES ${__CLDNN_Sources__vx_adapter_cache})
-# =============================  OpenVX Adapter End  =============================
 
 # ===================================== Include/Link directories =======================================
 
@@ -169,15 +134,9 @@ set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY PROJECT_LABEL "${CLDNN_BUILD
 set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD__PROJ_OUTPUT_NAME}")
 
 
-if(CLDNN_BUILT_FROM_OPENVX)
-    target_link_libraries("${CLDNN_BUILD__PROJ}" 
-        ${OpenCL_LIBRARIES} 
-      )
-else()
-    target_link_libraries("${CLDNN_BUILD__PROJ}"
-        OpenCL
-      )
-endif()
+target_link_libraries("${CLDNN_BUILD__PROJ}"
+    OpenCL
+  )
 
 if(WIN32)
   target_link_libraries("${CLDNN_BUILD__PROJ}" setupapi)
