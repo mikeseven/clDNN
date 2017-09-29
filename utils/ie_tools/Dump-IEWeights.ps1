@@ -151,7 +151,19 @@ begin
         }
     }
 
-    $_normPattern = '.*(?:batchnorm|scale|shift|norm).*';
+    function Extract-Dim([System.Xml.XmlNode] $PortNode, [int] $Dim, [int] $Version = 1, [switch] $AllowZero, [switch] $ResetBatchDim)
+    {
+        $_portDims = @($PortNode.dim | % { [long] $_ });
+        if ($ResetBatchDim.IsPresent -and ($Version -gt 1))
+        {
+            $_portDims[0] = 0; # In versions 2+, the first position is always batch. 
+        }
+
+        # They are in reverse order.
+        return Normalize-Size ($_portDims[-$Dim-1]) -AllowZero:$AllowZero.IsPresent;
+    }
+
+    $_normPattern = '.*(?:batchnorm|scale|shift|norm|relu).*';
 }
 process
 {
@@ -205,14 +217,26 @@ process
     Write-Verbose ('Scanning topology file for weights and biases entries: "{0}".' -f $_modelTopologyPath);
     try
     {
-        $_weightNodes = @(Select-Xml -LiteralPath $_modelTopologyPath '/net/layers/layer/weights' -ErrorAction Stop);
-        $_biasNodes   = @(Select-Xml -LiteralPath $_modelTopologyPath '/net/layers/layer/biases' -ErrorAction Stop);
+        $_weightNodes    = @(Select-Xml -LiteralPath $_modelTopologyPath '/net/layers/layer/weights' -ErrorAction Stop);
+        $_biasNodes      = @(Select-Xml -LiteralPath $_modelTopologyPath '/net/layers/layer/biases' -ErrorAction Stop);
+        $_netVersionNode = @(Select-Xml -LiteralPath $_modelTopologyPath '/net/@version' -ErrorAction SilentlyContinue);
     }
     catch
     {
         Write-Error ('Selected model topology file ("{0}") is invalid (not XML).' -f $_modelTopologyPath);
         return;
     }
+
+    if ($_netVersionNode.Count -gt 0)
+    {
+        $_netVersionNode = [int] $_netVersionNode[0].Node.value;
+    }
+    else
+    {
+        $_netVersionNode = 1;
+    }
+
+    Write-Verbose ('Analyzing topology file "{0}" (version: {1}).' -f $_modelTopologyPath, $_netVersionNode);
 
     if ($Filter.Count -eq 0)
     {
@@ -249,43 +273,61 @@ process
 
         if ($_primType -match $_normPattern)
         {
-            $_width        = [long] 1;
-            $_height       = [long] 1;
-            $_inFeatCount  = [long] 1;
+            $_width       = [long] 1;
+            $_height      = [long] 1;
+            $_inFeatCount = [long] 1;
+            $_groupCount  = [long] 1;
+
+            # 4D/2D support.
+            $_outFeatCount = Extract-Dim $_output0Dims 2 -Version $_netVersionNode -ResetBatchDim -AllowZero;
+            if ($_outFeatCount -eq 0)
+            {
+                $_outFeatCount = Extract-Dim $_output0Dims 0 -Version $_netVersionNode -ResetBatchDim;
+            }
         }
         else
         {
-            $_width        = @(Select-Xml '*/@kernel-x' -Xml $_.ParentNode);        
+            $_width        = @(Select-Xml '*[contains(name(), ''_data'')]/@kernel-x' -Xml $_.ParentNode);        
             if ($_width.Count -gt 0)
             {
                 $_width = [long] $_width[0].Node.value;
             }
             else
             {
-                $_width = [long] @($_input0Dims.dim)[-1];
+                $_width = Extract-Dim $_input0Dims 0 -Version $_netVersionNode -ResetBatchDim -AllowZero;
             }
 
-            $_height       = @(Select-Xml '*/@kernel-y' -Xml $_.ParentNode);
+            $_height       = @(Select-Xml '*[contains(name(), ''_data'')]/@kernel-y' -Xml $_.ParentNode);
             if ($_height.Count -gt 0)
             {
                 $_height = [long] $_height[0].Node.value;
             }
             else
             {
-                $_height = Normalize-Size ([long] @($_input0Dims.dim)[-2]);
+                $_height = Extract-Dim $_input0Dims 1 -Version $_netVersionNode -ResetBatchDim;
             }
 
-            $_inFeatCount  = Normalize-Size ([long] @($_input0Dims.dim)[-3]);
-        }
+            $_inFeatCount  = Extract-Dim $_input0Dims 2 -Version $_netVersionNode -ResetBatchDim;
 
-        $_outFeatCount = @(Select-Xml '*/@out-size' -Xml $_.ParentNode);
-        if ($_outFeatCount.Count -gt 0)
-        {
-            $_outFeatCount = [long] $_outFeatCount[0].Node.value;
-        }
-        else
-        {
-            $_outFeatCount = Normalize-Size ([long] @($_output0Dims.dim)[-3]);
+            $_groupCount   = @(Select-Xml '*[contains(name(), ''_data'')]/@group' -Xml $_.ParentNode);
+            if ($_groupCount.Count -gt 0)
+            {
+                $_groupCount = [long] $_groupCount[0].Node.value;
+            }
+            else
+            {
+                $_groupCount = [long] 1;
+            }
+
+            $_outFeatCount = @(Select-Xml '*[contains(name(), ''_data'')]/@out-size' -Xml $_.ParentNode);
+            if ($_outFeatCount.Count -gt 0)
+            {
+                $_outFeatCount = [long] $_outFeatCount[0].Node.value;
+            }
+            else
+            {
+                $_outFeatCount = Extract-Dim $_output0Dims 2 -Version $_netVersionNode -ResetBatchDim;
+            }
         }
 
         return New-Object PSObject -Property @{
@@ -294,6 +336,7 @@ process
                DataSize     = [long] $_.size;
                InputFeaturesCount  = $_inFeatCount;
                OutputFeaturesCount = $_outFeatCount;
+               GroupCount          = $_groupCount;
                Width               = $_width;
                Height              = $_height;
                Type                = $_primType;
@@ -324,15 +367,28 @@ process
         $_width        = [long] 1;
         $_height       = [long] 1;
         $_inFeatCount  = [long] 1;
+        $_groupCount   = [long] 1;
 
-        $_outFeatCount = @(Select-Xml '*/@out-size' -Xml $_.ParentNode);
-        if ($_outFeatCount.Count -gt 0)
+        if ($_primType -match $_normPattern)
         {
-            $_outFeatCount = [long] $_outFeatCount[0].Node.value;
+            # 4D/2D support.
+            $_outFeatCount = Extract-Dim $_output0Dims 2 -Version $_netVersionNode -ResetBatchDim -AllowZero;
+            if ($_outFeatCount -eq 0)
+            {
+                $_outFeatCount = Extract-Dim $_output0Dims 0 -Version $_netVersionNode -ResetBatchDim;
+            }
         }
         else
         {
-            $_outFeatCount = Normalize-Size ([long] @($_output0Dims.dim)[-3]);
+            $_outFeatCount = @(Select-Xml '*[contains(name(), ''_data'')]/@out-size' -Xml $_.ParentNode);
+            if ($_outFeatCount.Count -gt 0)
+            {
+                $_outFeatCount = [long] $_outFeatCount[0].Node.value;
+            }
+            else
+            {
+                $_outFeatCount = Extract-Dim $_output0Dims 2 -Version $_netVersionNode -ResetBatchDim;
+            }
         }
 
         return New-Object PSObject -Property @{
@@ -341,6 +397,7 @@ process
                DataSize     = [long] $_.size;
                InputFeaturesCount  = $_inFeatCount;
                OutputFeaturesCount = $_outFeatCount;
+               GroupCount          = $_groupCount;
                Width               = $_width;
                Height              = $_height;
                Type                = $_primType;
@@ -350,8 +407,11 @@ process
     });
 
     Write-Verbose ('Writing dump files for: "{0}".' -f $_modelTopologyPath);
-    $_dataStream = (gi -LiteralPath $_modelDataPath).OpenRead();
-    $_dataReader = New-Object System.IO.BinaryReader $_dataStream;
+    $_dataFile     = gi -LiteralPath $_modelDataPath;
+    $_dataFileSize = $_dataFile.Length;
+    $_dataStream   = $_dataFile.OpenRead();
+    $_dataReader   = New-Object System.IO.BinaryReader $_dataStream;
+
     $_allMeta = @($_weightMeta; $_biasMeta);
     $_allMeta | % {
         switch ($_.DataType)
@@ -365,20 +425,45 @@ process
             default { Write-Error ('Unknown data format ({0}).' -f $_); return; }
         }
 
-        $_calcSize = $_.OutputFeaturesCount * $_.InputFeaturesCount * $_.Width * $_.Height * $_dataSize;
-        if ($_calcSize -ne $_.DataSize)
+        $_calcMod = [long] 0;
+        $_calcSize = [Math]::DivRem($_.OutputFeaturesCount * $_.InputFeaturesCount * $_.Width * $_.Height * $_dataSize, $_.GroupCount, [ref] $_calcMod);
+        if (($_calcSize -ne $_.DataSize) -and (($_.Kind -ne 'biases') -or ($_.DataSize -ne 0)))
         {
-            Write-Warning ('Calculated size of weights/biases is different than stored size ({0}B != {1}B).' -f $_calcSize, $_.DataSize);
+            Write-Warning ('"{2}": Calculated size of weights/biases is different than stored size ({0}B != {1}B).' -f $_calcSize, $_.DataSize, $_.DumpFileName);
 
             if ($_calcSize -gt $_.DataSize)
             {
-                Write-Error 'Stored size of data is not sufficient to dump all required weights/biases.';
+                Write-Error ('"{0}": Declared size of data is not sufficient to dump all required weights/biases.' -f $_.DumpFileName);
                 return;
             }
         }
 
+        if ($_dataFileSize -lt ($_.DataOffset + $_.DataSize))
+        {
+            Write-Error ('"{0}": Physical size of data ({1}B) is not sufficient to dump all required weights/biases.' -f $_.DumpFileName, $_dataSize);
+            return;
+        }
+
+        $_inputFeaturesCount  = [Math]::DivRem($_.InputFeaturesCount, $_.GroupCount, [ref] $_calcMod);
+        if ($_calcMod -ne 0)
+        {
+            Write-Warning ('"{2}": Declared number of input features/channels ({0}) cannot be split into declared number of groups ({1}).' -f $_.InputFeaturesCount, $_.GroupCount, $_.DumpFileName);
+        }
+        $_outputFeaturesCount = [Math]::DivRem($_.OutputFeaturesCount, $_.GroupCount, [ref] $_calcMod);
+        if ($_calcMod -ne 0)
+        {
+            Write-Warning ('"{2}": Declared number of output features/channels ({0}) cannot be split into declared number of groups ({1}).' -f $_.OutputFeaturesCount, $_.GroupCount, $_.DumpFileName);
+        }
+
+
         Write-Verbose (' - "{0}"' -f $_.DumpFileName);
         if ($Verify.IsPresent)
+        {
+            return;
+        }
+
+        # No biases -> do not dump anything.
+        if (($_.Kind -eq 'biases') -and ($_.DataSize -eq 0))
         {
             return;
         }
@@ -397,56 +482,60 @@ process
         $_dumpWriter.WriteLine('  "kind":       "{0}",', $_.Kind);
         $_dumpWriter.WriteLine('  "data_type":  "{0}",', $_dataTypeName);
         $_dumpWriter.WriteLine('  "user_type":  "{0}",', $_.Type);
-        $_dumpWriter.WriteLine('  "dimensions": {{"of": {0}, "if": {1}, "h": {2}, "w": {3}}},', $_.OutputFeaturesCount, $_.InputFeaturesCount, $_.Height, $_.Width);
+        $_dumpWriter.WriteLine('  "dimensions": {{"grp": {0}, "of": {1}, "if": {2}, "h": {3}, "w": {4}}},', $_.GroupCount, $_outputFeaturesCount, $_inputFeaturesCount, $_.Height, $_.Width);
         $_dumpWriter.WriteLine('  "range":      {{"start": {0}, "size": {1}}},', $_.DataOffset, $_.DataSize);
         $_dumpWriter.WriteLine();
         $_dumpWriter.WriteLine('  "values": [');
         $_dumpWriter.ToString() | Out-File $_dumpFile -Encoding utf8 -Width 65536 -NoNewline; $_dumpWriter.GetStringBuilder().Clear() | Out-Null;
-        for ([long] $ofi = 0; $ofi -lt $_.OutputFeaturesCount; ++$ofi)
+        for ([long] $gi = 0; $gi -lt $_.GroupCount; ++$gi)
         {
-            $_dumpWriter.WriteLine('    {');
-            $_dumpWriter.WriteLine('      "of_index": {0}', $ofi);
-            $_dumpWriter.WriteLine('      "values": [');
-            for ([long] $ifi = 0; $ifi -lt $_.InputFeaturesCount; ++$ifi)
+            for ([long] $ofi = 0; $ofi -lt $_outputFeaturesCount; ++$ofi)
             {
-                $_dumpWriter.WriteLine('        {');
-                $_dumpWriter.WriteLine('          "if_index": {0}', $ifi);
-                $_dumpWriter.Write('          "values": [');
-                $_sepH = $_dumpWriter.NewLine;
-                for ([long] $hi = 0; $hi -lt $_.Height; ++$hi)
+                $_dumpWriter.WriteLine('    {');
+                $_dumpWriter.WriteLine('      "grp_index": {0}', $gi);
+                $_dumpWriter.WriteLine('      "of_index":  {0}', $ofi);
+                $_dumpWriter.WriteLine('      "values": [');
+                for ([long] $ifi = 0; $ifi -lt $_inputFeaturesCount; ++$ifi)
                 {
-                    $_dumpWriter.Write($_sepH);
-                    $_sepH = ",$($_dumpWriter.NewLine)";
-
-                    $_dumpWriter.Write('            [ ');
-                    $_sepW = '';
-                    for ([long] $wi = 0; $wi -lt $_.Width; ++$wi)
+                    $_dumpWriter.WriteLine('        {');
+                    $_dumpWriter.WriteLine('          "if_index": {0}', $ifi);
+                    $_dumpWriter.Write('          "values": [');
+                    $_sepH = $_dumpWriter.NewLine;
+                    for ([long] $hi = 0; $hi -lt $_.Height; ++$hi)
                     {
-                        $_dumpWriter.Write($_sepW);
-                        $_sepW = ', ';
+                        $_dumpWriter.Write($_sepH);
+                        $_sepH = ",$($_dumpWriter.NewLine)";
 
-                        & $_dataPrint $_dumpData $_dumpDataPos $_dumpWriter;
-                        $_dumpDataPos += $_dataSize;
-                        ++$_dumpDataElemPos;
+                        $_dumpWriter.Write('            [ ');
+                        $_sepW = '';
+                        for ([long] $wi = 0; $wi -lt $_.Width; ++$wi)
+                        {
+                            $_dumpWriter.Write($_sepW);
+                            $_sepW = ', ';
+
+                            & $_dataPrint $_dumpData $_dumpDataPos $_dumpWriter;
+                            $_dumpDataPos += $_dataSize;
+                            ++$_dumpDataElemPos;
+                        }
+                        $_dumpWriter.Write(' ]');
                     }
-                    $_dumpWriter.Write(' ]');
+                    $_dumpWriter.WriteLine();
+                    $_dumpWriter.WriteLine('          ]');
+                    $_dumpWriter.Write('        }');
+
+                    if ($ifi + 1 -ne $_inputFeaturesCount) { $_dumpWriter.WriteLine(','); } else { $_dumpWriter.WriteLine(''); }
                 }
-                $_dumpWriter.WriteLine();
-                $_dumpWriter.WriteLine('          ]');
-                $_dumpWriter.Write('        }');
+                $_dumpWriter.WriteLine('      ]');
+                $_dumpWriter.Write('    }');
 
-                if ($ifi + 1 -ne $_.InputFeaturesCount) { $_dumpWriter.WriteLine(','); } else { $_dumpWriter.WriteLine(''); }
-            }
-            $_dumpWriter.WriteLine('      ]');
-            $_dumpWriter.Write('    }');
+                if (($gi + 1 -ne $_.GroupCount) -or ($ofi + 1 -ne $_outputFeaturesCount)) { $_dumpWriter.WriteLine(','); } else { $_dumpWriter.WriteLine(''); }
 
-            if ($ofi + 1 -ne $_.OutputFeaturesCount) { $_dumpWriter.WriteLine(','); } else { $_dumpWriter.WriteLine(''); }
-
-            # Write larger dump chunks.
-            if ($_dumpDataElemPos -gt 100000)
-            {
-                $_dumpWriter.ToString() | Out-File $_dumpFile -Encoding utf8 -Width 65536 -NoNewline -Append; $_dumpWriter.GetStringBuilder().Clear() | Out-Null;
-                $_dumpDataElemPos = 0;
+                # Write larger dump chunks.
+                if ($_dumpDataElemPos -gt 100000)
+                {
+                    $_dumpWriter.ToString() | Out-File $_dumpFile -Encoding utf8 -Width 65536 -NoNewline -Append; $_dumpWriter.GetStringBuilder().Clear() | Out-Null;
+                    $_dumpDataElemPos = 0;
+                }
             }
         }
         $_dumpWriter.WriteLine('  ]');
