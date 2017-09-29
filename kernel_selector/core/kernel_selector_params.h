@@ -103,6 +103,11 @@ namespace KernelSelector
                             uint32_t kernelPerInput : 1;
                             uint32_t oneKernel : 1;
                         } concat;
+                        struct upsample_t
+                        {
+                            uint32_t nearest : 1;
+                            uint32_t bilinear : 1;
+                        } upsample;
                     } dedicated;
                 } val;
                 uint64_t raw;
@@ -480,6 +485,21 @@ namespace KernelSelector
                 break;
             case ConcatAxis::BATCH:
                 key.restrict.val.dedicated.concat.axisBatch = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
+        void EnableUpSamplingSampleType(SampleType a)
+        {
+            switch (a)
+            {
+            case SampleType::NEAREST:
+                key.restrict.val.dedicated.upsample.nearest = 1;
+                break;
+            case SampleType::BILINEAR:
+                key.restrict.val.dedicated.upsample.bilinear = 1;
                 break;
             default:
                 break;
@@ -1138,6 +1158,43 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // AssignPatchParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct AssignPatchParams : public BaseParams
+    {
+        AssignPatchParams() : BaseParams(KernelType::ASSIGN_PATCH) {}
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            return BaseParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // UpSamplingParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct UpSamplingParams : public BaseParams
+    {
+        UpSamplingParams() : BaseParams(KernelType::UPSAMPLING) {}
+
+        struct DedicatedParams
+        {
+            float scale = 1.f;
+            uint32_t num_filter = 0;
+            SampleType sampleType = SampleType::NEAREST;
+        };
+
+        DedicatedParams usParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            auto k = BaseParams::GetParamsKey();
+            k.EnableUpSamplingSampleType(usParams.sampleType);
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Auto tuner parameters
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class KernelRunnerInterface;
@@ -1319,5 +1376,21 @@ namespace KernelSelector
 
             return k;
         }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // UpSamplingOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct UpSamplingOptionalParams : OptionalParams
+    {
+        UpSamplingOptionalParams() : OptionalParams(KernelType::UPSAMPLING) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // AssignPatchOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct AssignPatchOptionalParams : OptionalParams
+    {
+        AssignPatchOptionalParams() : OptionalParams(KernelType::ASSIGN_PATCH) {}
     };
 }

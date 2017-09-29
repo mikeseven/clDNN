@@ -35,6 +35,8 @@
 #include "permute/permute_kernel_selector.h"
 #include "reshape/reshape_kernel_selector.h"
 #include "concatenation/concatenation_kernel_selector.h"
+#include "assign_patch/assign_patch_kernel_selector.h"
+#include "upsampling/upsampling_kernel_selector.h"
 #include "jitter.h"
 
 using namespace cldnn;
@@ -67,6 +69,7 @@ namespace kernel_selector
     using mean_subtruct_mode                = KernelSelector::MeanSubtractMode;
     using concat_axis                       = KernelSelector::ConcatAxis;
     using tuning_mode                       = KernelSelector::TuningMode;
+    using sample_type                       = KernelSelector::SampleType;
 
     using data_tensor                       = KernelSelector::DataTensor;
     using weights_tensor                    = KernelSelector::WeightsTensor;
@@ -94,6 +97,8 @@ namespace kernel_selector
     using concatenation_params              = KernelSelector::ConcatenationParams;
     using weights_reorder_params            = KernelSelector::WeightsReorderParams;
     using generic_kernel_params             = KernelSelector::GenericKernelParams;
+    using assign_patch_params               = KernelSelector::AssignPatchParams;
+    using upsampling_params                 = KernelSelector::UpSamplingParams;
 
     using optional_params                   = KernelSelector::OptionalParams;
     using weights_bias_optional_params      = KernelSelector::WeightsBiasOptionalParams;
@@ -109,6 +114,8 @@ namespace kernel_selector
     using eltwise_optional_params           = KernelSelector::EltwiseOptionalParams;
     using reorder_optional_params           = KernelSelector::ReorderOptionalParams;
     using concatenation_optional_params     = KernelSelector::ConcatenationOptionalParams;
+    using upsampling_optional_params        = KernelSelector::UpSamplingOptionalParams;
+    using assign_patch_optional_params      = KernelSelector::AssignPatchOptionalParams;
 
     using convolution_kernel_selector       = KernelSelector::ConvolutionKernelSelctor;
     using deconvolution_kernel_selector     = KernelSelector::DeconvolutionKernelSelctor;
@@ -124,6 +131,8 @@ namespace kernel_selector
     using reshape_kernel_selector           = KernelSelector::ReshapeKernelSelctor;
     using permute_kernel_selector           = KernelSelector::PermuteKernelSelctor;
     using concatenation_kernel_selector     = KernelSelector::ConcatenationKernelSelctor;
+    using assign_patch_kernel_selector      = KernelSelector::AssignPatchKernelSelector;
+    using upsampling_kernel_selector        = KernelSelector::UpSamplingKernelSelector;
 }
 
 inline kernel_selector::data_type to_data_type(data_types dt)

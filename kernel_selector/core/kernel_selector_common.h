@@ -460,6 +460,16 @@ namespace KernelSelector {
         }
     }
 
+    inline std::string toString(SampleType type)
+    {
+        switch (type)
+        {
+        case SampleType::NEAREST: return "SAMPLE_TYPE_NEAREST";
+        case SampleType::BILINEAR: return "SAMPLE_TYPE_BILINEAR";
+        default: return "";
+        }
+    }
+
     inline std::string toString(NonLinearParams params)
     {
         std::stringstream s;
