@@ -30,24 +30,23 @@
 extern "C" {
 #endif
 
-/// @brief Select mode for upsampling layer ( @CLDNN_PRIMITIVE_DESC{upsampling} ​).
+/// @brief Sample mode for upsampling layer ( @CLDNN_PRIMITIVE_DESC{upsampling} ​).
 typedef enum /*:int32_t*/
 {
-    /// @brief upsampling sum.
+    /// @brief upsampling nearest neighbor.
     cldnn_upsampling_nearest,
-    /// @brief upsampling subtract.
+    /// @brief upsampling bilinear.
     cldnn_upsampling_bilinear,
 } cldnn_upsampling_sample_type;
 
-/// @brief Performs elementwise operations (sum, subtract, max or product) on two input primitives
-/// Also supports built-in Relu @CLDNN_PRIMITIVE_DESC{activation} available by setting it in arguments.
-/// @notes
-/// - both inputs have to have equal sizes in all dimensions
-/// - format of both inputs has to be the same
+/// @brief Performs nearest neighbor/bilinear upsampling
+/// Also supports built-in Relu @ref activation available by setting it in arguments.
 CLDNN_BEGIN_PRIMITIVE_DESC(upsampling)
-float scale;
+/// @param scale Upsampling scale.
+uint32_t scale;
+/// @param num_filter Input filter. Only used by bilinear sample_type.
 uint32_t num_filter;
-/// @brief upsampling mode. See #cldnn_upsampling_mode.
+/// @param sample_type Upsampling method (nearest neighbor/bilinear).
 int32_t sample_type; /*cldnn_sample_type*/
 /// @brief Enables Relu activation.
 uint32_t with_activation;

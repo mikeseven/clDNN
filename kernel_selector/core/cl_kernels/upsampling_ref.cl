@@ -42,11 +42,9 @@ KERNEL (upsampling_gpu_ref)(__global UNIT_TYPE* input, __global UNIT_TYPE* outpu
 
     const uint dst_index = batch*OUTPUT_BATCH_PITCH + feature*OUTPUT_FEATURE_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH + OUTPUT_OFFSET;
 
-#if defined SAMPLE_TYPE_NEAREST
     const uint src_x = floor(x * X_RATIO);
     const uint src_y = floor(y * Y_RATIO);
     const uint src_index = batch*INPUT0_BATCH_PITCH + feature*INPUT0_FEATURE_PITCH + src_y*INPUT0_Y_PITCH + src_x*INPUT0_X_PITCH + INPUT0_OFFSET;
     output[dst_index] = input[src_index];
-#endif
 
 }

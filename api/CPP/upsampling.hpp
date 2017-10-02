@@ -28,20 +28,17 @@ namespace cldnn
 /// @addtogroup cpp_primitives Primitives
 /// @{
 
-/// @brief Select mode for the @ref upsampling layer.
+/// @brief Sample mode for the @ref upsampling layer.
 enum class upsampling_sample_type : int32_t
 {
-    /// @brief upsampling sum.
+    /// @brief upsampling nearest neighbor.
     nearest = cldnn_upsampling_nearest,
-    /// @brief upsampling subtract.
+    /// @brief upsampling bilinear.
     bilinear = cldnn_upsampling_bilinear,
 };
 
-/// @brief Performs elementwise operations (sum, subtract, max or product) on two input primitives
+/// @brief Performs nearest neighbor/bilinear upsampling
 /// Also supports built-in Relu @ref activation available by setting it in arguments.
-/// @notes
-/// - both inputs have to have equal sizes in all dimensions
-/// - format of both inputs has to be the same
 struct upsampling : public primitive_base<upsampling, CLDNN_PRIMITIVE_DESC(upsampling)>
 {
     CLDNN_DECLATE_PRIMITIVE(upsampling)
@@ -49,14 +46,15 @@ struct upsampling : public primitive_base<upsampling, CLDNN_PRIMITIVE_DESC(upsam
     /// @brief Constructs upsampling primitive.
     /// @param id This primitive id.
     /// @param input Input primitive id.
-    /// @param input2 Second input primitive id with values needed for upsampling computation.
-    /// @param mode upsampling mode.
+    /// @param scale Upsampling scale.
+    /// @param num_filter Input filter. Only used by bilinear sample_type.
+    /// @param sample_type Upsampling method (nearest neighbor/bilinear).
     /// @param with_activation Enables Relu activation.
     /// @param activation_slp Relu activation slope.
     upsampling(
         const primitive_id& id,
         const primitive_id& input,
-        float scale,
+        uint32_t scale,
         uint32_t num_filter,
         upsampling_sample_type sample_type,
         bool with_activation = false,
@@ -83,9 +81,11 @@ struct upsampling : public primitive_base<upsampling, CLDNN_PRIMITIVE_DESC(upsam
     {
     }
 
-    float scale;
+    /// @param scale Upsampling scale.
+    uint32_t scale;
+    /// @param num_filter Input filter. Only used by bilinear sample_type.
     uint32_t num_filter;
-    /// @param mode upsampling mode.
+    /// @param sample_type Upsampling method (nearest neighbor/bilinear).
     upsampling_sample_type sample_type;
     /// @brief Enables Relu activation.
     bool with_activation;

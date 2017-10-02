@@ -29,6 +29,7 @@
 #include "api/CPP/roi_pooling.hpp"
 
 #include "activation_inst.h"
+#include "assign_patch_inst.h"
 #include "batch_norm_inst.h"
 #include "internal_primitive.h"
 #include "internal_primitive_type_base.h"
@@ -47,6 +48,7 @@
 #include "scale_inst.h"
 #include "softmax_inst.h"
 #include "split_inst.h"
+#include "upsampling_inst.h"
 
 #include "kernel_selector_helper.h"
 #include "sliding_window_utils.h"
@@ -341,7 +343,7 @@ void program_impl::init_graph(topology_impl const& topology)
         inputs.push_back(&n);
     }
 
-    split_nodes_pre();
+    replace_nodes_pre();
 
     for (auto itr = inputs.begin(); itr != inputs.end(); )
     {
@@ -369,7 +371,7 @@ void program_impl::init_graph(topology_impl const& topology)
         inputs.erase(node_itr);
     }
 
-    split_nodes_post();
+    replace_nodes_post();
     set_outputs();
     calc_processing_order();
 
@@ -452,7 +454,7 @@ void program_impl::cleanup()
         if (input->dependencies.size() == 1 && input->get_dependency(0).is_type<connector>())
             input->dependencies.clear();
 }
-void program_impl::split_nodes_pre()
+void program_impl::replace_nodes_pre()
 {
     auto itr = nodes_map.begin();
     while (itr != nodes_map.end())
@@ -480,7 +482,7 @@ void program_impl::split_nodes_pre()
     }
 }
 
-void program_impl::split_nodes_post()
+void program_impl::replace_nodes_post()
 {
     auto itr = nodes_map.begin(); //note we need to use iterators since currently processed element can be removed
     while (itr != nodes_map.end())
@@ -533,6 +535,76 @@ void program_impl::split_nodes_post()
             remove_connection(node.get_dependency(0), node);
             optimized_out.push_back(node.id());
             nodes_map.erase(node.id());
+        });
+
+        //find upsampling primitives with bilinear filtering and create deconvolution with proper weights instead
+        do_for_types<upsampling>(*node.second, [this](upsampling_node& node)
+        {
+            auto upsampling_prim = node.get_primitive();
+
+            if(upsampling_prim->sample_type != upsampling_sample_type::bilinear)
+                return;
+
+            //check if num_filter is not 0 (required for bilinear upsampling)
+            if (upsampling_prim->num_filter == 0)
+                throw std::logic_error("num_filter in upsampling cannot be 0 in bilinear filtering mode in \"" + node.id() + "\"!");
+
+            primitive_id upsampling_id = node.id();
+            auto output_layout = node.get_output_layout();
+            auto& input_node = node.get_dependency(0);
+
+            primitive_id input_id = upsampling_prim->input[0];
+            auto num_filter = upsampling_prim->num_filter;
+
+            //setting deconvolution parameters based on upsampling input
+            auto scale = static_cast<tensor::value_type>(upsampling_prim->scale);
+            tensor stride(1, 1, scale, scale);
+            auto offset = static_cast<tensor::value_type>(ceil((scale - 1) / 2.f));
+            tensor input_offset(0, 0, -offset, -offset);
+
+            //setting weights for deconvolution
+            auto kernel_size = static_cast<tensor::value_type>((2 * scale) - (scale % 2));
+            layout weights_layout(data_types::f32, format::bfyx, tensor( num_filter, 1, kernel_size, kernel_size ));
+
+            memory_impl::ptr data_to_allocate = engine->allocate_buffer(weights_layout);
+            mem_lock<float> dst{ data_to_allocate };
+            float *dst_data = dst.data();
+            //initialize with bilinear weights data
+            auto f = static_cast<uint32_t>(std::ceil(kernel_size / 2.0f));
+            float c = (2 * f - 1 - f % 2) / (2.f * f);
+            for (size_t i = 0; i < weights_layout.count(); ++i) {
+                float x = static_cast<float>(i % kernel_size);
+                float y = static_cast<float>((i / kernel_size) % kernel_size);
+                dst_data[i] = (1 - std::abs(x / f - c)) * (1 - std::abs(y / f - c));
+            }
+
+            //remove upsampling node, rename it and move to the optimized list
+            remove_connection(node.get_dependency(0), node);
+            auto rename_id = upsampling_id + "_tmp";
+            rename(node, rename_id);
+            optimized_out.push_back(rename_id);
+            nodes_map.erase(rename_id);
+
+            //create weights primitive, with dummy memory which will be replaced in firther step
+            primitive_id weights_id = upsampling_id + "_deconvolution_weights";
+            layout dummy_layout(data_types::f32, format::bfyx, tensor(1, 1, 1, 1));
+            float zero = 0.f;
+            auto weights_prim = std::make_shared<data>(weights_id, memory::attach(dummy_layout, &zero, 1));
+            get_or_create(weights_prim);
+            //create deconvolution primitive
+            auto deconv_prim = std::make_shared<deconvolution>(upsampling_id, input_id, std::vector<primitive_id>{ weights_id }, stride, input_offset);
+            get_or_create(deconv_prim);
+
+            auto weights_node_ptr = nodes_map.find(weights_id)->second;
+            auto deconv_node_ptr = nodes_map.find(upsampling_id)->second;
+
+            //attach weights buffer
+            auto& data_node = weights_node_ptr->as<data>();
+            data_node.attach_memory(*data_to_allocate, false);
+
+            //add connections input->deconvolution and weights->deconvolution
+            add_connection(input_node, *deconv_node_ptr);
+            add_connection(*weights_node_ptr, *deconv_node_ptr);
         });
     }
 }
@@ -1027,7 +1099,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
 
         //list of layers that do not support yxfb or perform worse than bfyx
         if (prim.type() == cldnn::detection_output::type_id() || prim.type() == cldnn::proposal::type_id() ||
-            prim.type() == cldnn::roi_pooling::type_id() || prim.type() == cldnn::deconvolution::type_id())
+            prim.type() == cldnn::roi_pooling::type_id() || prim.type() == cldnn::deconvolution::type_id() ||
+            prim.type() == cldnn::upsampling::type_id() || prim.type() == cldnn::assign_patch::type_id())
             lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::bfyx_only_layer, 1);
     }
 
@@ -1681,7 +1754,7 @@ void program_impl::prepare_primitive_fusing()
                  !input.is_type<fully_connected>() && !input.is_type<lrn>() && !input.is_type<normalize>() &&
                  !input.is_type<permute>() && !input.is_type<pooling>() && !input.is_type<reorder>() &&
                  !input.is_type<reshape>() && !input.is_type<roi_pooling>() && !input.is_type<scale>() &&
-                 !input.is_type<softmax>()))
+                 !input.is_type<softmax>() && !input.is_type<upsampling>() && !input.is_type<assign_patch>()))
                 return;
 
             input.set_fused_activation(node.get_primitive()->activation_func, node.get_primitive()->additional_params);

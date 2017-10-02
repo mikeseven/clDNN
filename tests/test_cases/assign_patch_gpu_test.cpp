@@ -30,28 +30,20 @@ using namespace cldnn;
 using namespace tests;
 
 TEST(assign_patch_gpu, basic_in1x2x4x2) {
-    //  Mean   : 3x2x2
-    //  Input  : 2x3x2x2
-    //  Output : 2x3x2x2
+    //  Input  : 1x2x3x2
+    //  NN     : 1x1x2x2
+    //  Output : 2x2x6x4
 
     //  Input:
-    //  f0: b0:  1    2  -10   b1:   0    0     -11
-    //  f0: b0:  3    4  -14   b1:   0.5 -0.5   -15  
-    //  f1: b0:  5    6  -12   b1:   1.5  5.2   -13     
-    //  f1: b0:  7    8  -16   b1:   12   9     -17
+    //  f0:  1    2  -10 
+    //  f0:  3    4  -14 
+    //  f1:  5    6  -12    
+    //  f1:  7    8  -16 
     //
-    //  Mean
-    //  f0: -3.3333
-    //  f1: -0.3583
-    //
-    //  Variance
-    //  f0: 44.9305
-    //  f1: 107.0624
-
 
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 2, 4, 3 } });
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 2, 3, 2 } });
     auto nn = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 1, 2, 2 } });
 
     topology topology;
@@ -60,12 +52,10 @@ TEST(assign_patch_gpu, basic_in1x2x4x2) {
     topology.add(assign_patch("assign_patch", "input", "nn"));
 
     set_values(input, {
-        1.f, 0.f, 5.f, 1.5f,
-        2.f, 0.f, 6.f, 5.2f,
-        -10.f, -11.f, -12.f, -13.f,
-        3.f, 0.5f, 7.f, 12.f,
-        4.f, -0.5f, 8.f, 9.f,
-        -14.f, -15.f, -16.f, -17.f
+        1.f, 2.f, -10.f,
+        3.f, 4.f, -14.f,
+        5.f, 6.f, -12.f,
+        7.f, 8.f, -16.f,
     });
 
     set_values(nn, { 0.f, 0.f, 0.f, 0.f });
@@ -79,14 +69,22 @@ TEST(assign_patch_gpu, basic_in1x2x4x2) {
     auto output = outputs.at("assign_patch").get_memory();
     auto output_ptr = output.pointer<float>();
 
-    std::vector<float> out;
+    //TODO: verify correctness of this patching
+    float answers[24] = {
+        1.f, 3.f, 2.f, -10.f,
+        -6.f, 6.f, 6.f, -20.f,
+        -21.f, 3.f, 4.f, -10.f,
+        -9.f, 11.f, 6.f, -12.f,
+        0.f, 18.f, 14.f, -20.f,
+        -21.f, 7.f, 8.f, -8.f
+    };
 
     for (int j = 0; j < 2; ++j) { //F
-            for (int k = 0; k < 4; ++k) { //Y
-                for (int l = 0; l < 5; ++l) { //X
-                    auto output_linear_id = l + k * 5 + j * 4 * 5;
-                    out.push_back(output_ptr[output_linear_id]);
-                }
+        for (int k = 0; k < 3; ++k) { //Y
+            for (int l = 0; l < 4; ++l) { //X
+                auto output_linear_id = l + k * 4 + j * 3 * 4;
+                EXPECT_TRUE(are_equal(answers[output_linear_id], output_ptr[output_linear_id]));
             }
+        }
     }
 }

@@ -30,11 +30,10 @@
 extern "C" {
 #endif
 
-/// @brief Performs elementwise operations (sum, subtract, max or product) on two input primitives
-/// Also supports built-in Relu @CLDNN_PRIMITIVE_DESC{activation} available by setting it in arguments.
+/// @brief Performs custom patching algorithm from mxnet
+/// Also supports built-in Relu @ref activation available by setting it in arguments.
 /// @notes
-/// - both inputs have to have equal sizes in all dimensions
-/// - format of both inputs has to be the same
+/// See: https://github.com/zhaw/neural_style/blob/master/fast_mrf_cnn/symbol.py
 CLDNN_BEGIN_PRIMITIVE_DESC(assign_patch)
 /// @brief Enables Relu activation.
 uint32_t with_activation;

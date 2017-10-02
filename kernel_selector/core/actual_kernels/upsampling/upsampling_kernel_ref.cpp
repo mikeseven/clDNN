@@ -31,7 +31,6 @@ namespace KernelSelector {
         k.EnableTensorPitches();
         k.EnableBatching();
         k.EnableUpSamplingSampleType(SampleType::NEAREST);
-        k.EnableUpSamplingSampleType(SampleType::BILINEAR);
         return k;
     }
 

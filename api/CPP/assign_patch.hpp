@@ -28,11 +28,10 @@ namespace cldnn
 /// @addtogroup cpp_primitives Primitives
 /// @{
 
-/// @brief Performs elementwise operations (sum, subtract, max or product) on two input primitives
+/// @brief Performs custom patching algorithm from mxnet
 /// Also supports built-in Relu @ref activation available by setting it in arguments.
 /// @notes
-/// - both inputs have to have equal sizes in all dimensions
-/// - format of both inputs has to be the same
+/// See: https://github.com/zhaw/neural_style/blob/master/fast_mrf_cnn/symbol.py
 struct assign_patch : public primitive_base<assign_patch, CLDNN_PRIMITIVE_DESC(assign_patch)>
 {
     CLDNN_DECLATE_PRIMITIVE(assign_patch)
@@ -40,8 +39,7 @@ struct assign_patch : public primitive_base<assign_patch, CLDNN_PRIMITIVE_DESC(a
     /// @brief Constructs assign_patch primitive.
     /// @param id This primitive id.
     /// @param input Input primitive id.
-    /// @param input2 Second input primitive id with values needed for assign_patch computation.
-    /// @param mode assign_patch mode.
+    /// @param nn Second input primitive id with values needed for assign_patch computation.
     /// @param with_activation Enables Relu activation.
     /// @param activation_slp Relu activation slope.
     assign_patch(

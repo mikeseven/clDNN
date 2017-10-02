@@ -1179,7 +1179,7 @@ namespace KernelSelector
 
         struct DedicatedParams
         {
-            float scale = 1.f;
+            uint32_t scale = 1;
             uint32_t num_filter = 0;
             SampleType sampleType = SampleType::NEAREST;
         };

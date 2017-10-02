@@ -76,5 +76,7 @@ std::string upsampling_inst::to_string(upsampling_node const& node)
 upsampling_inst::typed_primitive_inst(network_impl& network, upsampling_node const& node)
     :parent(network, node)
 {
+    if(argument.sample_type == upsampling_sample_type::bilinear)
+        CLDNN_ERROR_MESSAGE(node.id(), "Upsampling primitive instance with bilinear filtering should be replaced by deconvolution!");
 }
 }

@@ -112,8 +112,8 @@ private:
     void calc_dominators();
     // TODO: Remove once we will get full support for input/output padding in all primitive implementations.
     void analyze_output_size_handling_need();
-    void split_nodes_pre();
-    void split_nodes_post();
+    void replace_nodes_pre();
+    void replace_nodes_post();
 
     /*
     ** Optimization functions
