@@ -550,7 +550,6 @@ void program_impl::replace_nodes_post()
                 throw std::logic_error("num_filter in upsampling cannot be 0 in bilinear filtering mode in \"" + node.id() + "\"!");
 
             primitive_id upsampling_id = node.id();
-            auto output_layout = node.get_output_layout();
             auto& input_node = node.get_dependency(0);
 
             primitive_id input_id = upsampling_prim->input[0];
@@ -559,7 +558,7 @@ void program_impl::replace_nodes_post()
             //setting deconvolution parameters based on upsampling input
             auto scale = static_cast<tensor::value_type>(upsampling_prim->scale);
             tensor stride(1, 1, scale, scale);
-            auto offset = static_cast<tensor::value_type>(ceil((scale - 1) / 2.f));
+            auto offset = static_cast<tensor::value_type>(std::ceil((scale - 1) / 2.f));
             tensor input_offset(0, 0, -offset, -offset);
 
             //setting weights for deconvolution
