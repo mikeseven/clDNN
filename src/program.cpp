@@ -728,6 +728,7 @@ void program_impl::calc_prior_boxes()
         remove_connection(pb_node.input(), pb_node);
 
         auto& result = pb_node.get_result_buffer();
+        result.add_ref(); // need to inc ref count since we will be assigning this memory as cldnn_memory in next line that is not ref_count_obj
         auto cpp_mem = details::memory_c_to_cpp_converter::convert(api_cast(&result));
 
         auto& data_node = get_or_create(std::make_shared<data>("_cldnn_tmp_" + pb_node.id() + "_result", cpp_mem));
