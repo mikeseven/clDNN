@@ -16,26 +16,35 @@
 
 #pragma once
 
-#include "convolution_kernel_base.h"
+#include "activation_kernel_base.h"
  
+// Step 0: 
+//
+// 1. choose a tutorial mode
+// 2. modify activation_tutorial.cl as well
+
+#define ADVANCED_TUTORIAL       // simple runnable example with explanations
+#ifndef ADVANCED_TUTORIAL
+#define BASIC_TUTORIAL          // Skeleton to add a new kernel
+#endif
+
 namespace KernelSelector {
     
-    class ConvolutionKernel_bfyx_Direct_10_10_12 : public ConvolutionKernelBase
+    class ActivationKernel_Tutorial : public ActivationKernelBase
     {
     public:
-        using Parent = ConvolutionKernelBase;
-        ConvolutionKernel_bfyx_Direct_10_10_12() : ConvolutionKernelBase("convolution_gpu_bfyx_direct_10_12_16") {}
-        virtual ~ConvolutionKernel_bfyx_Direct_10_10_12() {}
+        using Parent = ActivationKernelBase;
+        ActivationKernel_Tutorial() : Parent("activation_tutorial") {}
+        virtual ~ActivationKernel_Tutorial() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
-        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const ConvolutionParams&) const override { return{ WeightsLayout::i_yxs_os_yxsv2_osv16 }; }
-
-        JitConstants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const override;
-        bool Validate(const Params& p, const OptionalParams& o) const override;
-        bool NeedPaddedInput() const override { return true; }
-        DispatchData SetDefault(const ConvolutionParams& arg, int autoTuneIndex = -1) const override;
+#ifdef ADVANCED_TUTORIAL
+        virtual DispatchData SetDefault(const ActivationParams& arg) const override;
+        virtual bool Validate(const Params& p, const OptionalParams& o) const override;
+        virtual JitConstants GetJitConstants(const ActivationParams& params, DispatchData) const override;
+#endif
     };
 }

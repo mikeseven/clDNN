@@ -44,6 +44,7 @@ namespace KernelSelector {
 #define FORCE_PRIORITY_8 (0.0000008f)
 #define FORCE_PRIORITY_9 (0.0000009f)
 #define DONT_USE_IF_HAVE_SOMETHING_ELSE (1000000.f)
+#define TUTORIAL_PRIORITY (DONT_USE_IF_HAVE_SOMETHING_ELSE + 1.f)
 #define NOT_SUPPORTED (FLT_MAX)
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
