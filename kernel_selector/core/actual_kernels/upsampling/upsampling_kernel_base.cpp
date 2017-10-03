@@ -56,7 +56,6 @@ namespace KernelSelector
         auto cldnn_jit = GetJitConstants(newParams);
         std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
-        //const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
 
         const auto& out = newParams.output;

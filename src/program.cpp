@@ -571,9 +571,11 @@ void program_impl::replace_nodes_post()
             //initialize with bilinear weights data
             auto f = static_cast<uint32_t>(std::ceil(kernel_size / 2.0f));
             float c = (2 * f - 1 - f % 2) / (2.f * f);
+            float x = 0.f;
+            float y = 0.f;
             for (size_t i = 0; i < weights_layout.count(); ++i) {
-                float x = static_cast<float>(i % kernel_size);
-                float y = static_cast<float>((i / kernel_size) % kernel_size);
+                x = static_cast<float>(i % kernel_size);
+                y = static_cast<float>((i / kernel_size) % kernel_size);
                 dst_data[i] = (1 - std::abs(x / f - c)) * (1 - std::abs(y / f - c));
             }
 
@@ -581,8 +583,6 @@ void program_impl::replace_nodes_post()
             remove_connection(node.get_dependency(0), node);
             auto rename_id = upsampling_id + "_tmp";
             rename(node, rename_id);
-            optimized_out.push_back(rename_id);
-            nodes_map.erase(rename_id);
 
             //create weights primitive, with dummy memory which will be replaced in firther step
             primitive_id weights_id = upsampling_id + "_deconvolution_weights";
@@ -596,6 +596,10 @@ void program_impl::replace_nodes_post()
 
             auto weights_node_ptr = nodes_map.find(weights_id)->second;
             auto deconv_node_ptr = nodes_map.find(upsampling_id)->second;
+
+            replace_all_usages(node, *deconv_node_ptr);
+            optimized_out.push_back(rename_id);
+            nodes_map.erase(rename_id);
 
             //attach weights buffer
             auto& data_node = weights_node_ptr->as<data>();

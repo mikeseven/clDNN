@@ -29,6 +29,7 @@ namespace KernelSelector {
         k.EnableAllOutputLayout();
         k.EnableTensorOffset();
         k.EnableTensorPitches();
+        k.EnableBatching();
         return k;
     }
 
