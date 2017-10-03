@@ -101,7 +101,7 @@ scale_inst::typed_primitive_inst(network_impl& network, scale_node const& node)
         for (size_t i = 0; i < bias_memory().get_layout().size.raw.size(); ++i)
         {
             if (scale_memory().get_layout().size.raw[i] != bias_raw_sizes[i])
-                CLDNN_ERROR_MESSAGE(node.id(), "Scale input size do not match bias size! Size index:" + i);
+                CLDNN_ERROR_MESSAGE(node.id(), "Scale input size do not match bias size! Size index:" + std::to_string(i));
         }
     }
 }

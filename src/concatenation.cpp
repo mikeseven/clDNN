@@ -91,7 +91,7 @@ concatenation_inst::typed_primitive_inst(network_impl& network, concatenation_no
                 concat_count += input_mem_size.raw[dim];
             else
             {
-                CLDNN_ERROR_NOT_EQUAL(node.id(), "Input size dim: " + dim, input_size.raw[dim], "input memory dim: " + dim, input_mem_size.raw[dim], "Every input must have the same size");
+                CLDNN_ERROR_NOT_EQUAL(node.id(), "Input size dim: " + std::to_string(dim), input_size.raw[dim], "input memory dim: " + std::to_string(dim), input_mem_size.raw[dim], "Every input must have the same size");
             }
         }
     }
@@ -102,11 +102,11 @@ concatenation_inst::typed_primitive_inst(network_impl& network, concatenation_no
     {
         if (dim == node.get_primitive()->axis)
         {
-            CLDNN_ERROR_NOT_EQUAL(node.id(), "Concat count", concat_count, "output size dim:" + dim, output_size.raw[dim], "Output size in concatenated dimension mismatch sum of inputs!");
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Concat count", concat_count, "output size dim:" + std::to_string(dim), output_size.raw[dim], "Output size in concatenated dimension mismatch sum of inputs!");
         }
         else
         {
-            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input size dim: " + dim, input_size.raw[dim], "output size dim:" + dim, output_size.raw[dim], "Output size in non-concatenated dimension mistmatch input");
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input size dim: " + std::to_string(dim), input_size.raw[dim], "output size dim:" + std::to_string(dim), output_size.raw[dim], "Output size in non-concatenated dimension mistmatch input");
         }
     }
 
