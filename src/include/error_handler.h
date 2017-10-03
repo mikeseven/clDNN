@@ -98,7 +98,7 @@ template<typename ptr>
 inline void error_on_nullptr(std::string file, int line, std::string instance_id, std::string condition_id, ptr condition, std::string additional_message = "")
 {
     std::stringstream error_msg;
-    if (condition = nullptr)
+    if (condition == nullptr)
     {
         error_msg << condition_id << " should not be null" << std::endl;
         err_details::cldnn_print_error_message(file, line, instance_id, error_msg, additional_message);

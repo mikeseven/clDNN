@@ -22,26 +22,58 @@ namespace cldnn { namespace gpu {
 class gpu_toolkit;
 struct engine_info_internal : cldnn::engine_info
 {
+    #ifdef GPU_CONFIGURATION
+        #undef GPU_CONFIGURATION
+    #endif
+    #ifdef GPU_MODEL
+        #undef GPU_MODEL
+    #endif
+    #ifdef GPU_ARCHITECTURE
+        #undef GPU_ARCHITECTURE
+    #endif
+
+
     enum configurations
     {
-        GT0 = 0,
-        GT1,
-        GT2,
-        GT3,
-        GT4,
-        GT_UNKNOWN,
+        #define GPU_CONFIGURATION(enum_name, enum_value) enum_name = enum_value,
+        #define GPU_MODEL(enum_name, enum_value)
+        #define GPU_ARCHITECTURE(enum_name, enum_value)
+        #include "gpu_enums.inc"
+        #undef GPU_CONFIGURATION
+        #undef GPU_MODEL
+        #undef GPU_ARCHITECTURE
         GT_COUNT
     };
 
+    
+
     enum models
     {
-        HD500_505, HD5XX, HD6XX, FUTURE
+        #define GPU_CONFIGURATION(enum_name, enum_value)
+        #define GPU_MODEL(enum_name, enum_value) enum_name = enum_value,
+        #define GPU_ARCHITECTURE(enum_name, enum_value)
+        #include "gpu_enums.inc"
+        #undef GPU_CONFIGURATION
+        #undef GPU_MODEL
+        #undef GPU_ARCHITECTURE
     };
+
+    
 
     enum architectures
     {
-        GEN9, GEN_UNKNOWN, GEN_COUNT
+        #define GPU_CONFIGURATION(enum_name, enum_value)
+        #define GPU_MODEL(enum_name, enum_value)
+        #define GPU_ARCHITECTURE(enum_name, enum_value) enum_name = enum_value,
+        #include "gpu_enums.inc"
+        #undef GPU_CONFIGURATION
+        #undef GPU_MODEL
+        #undef GPU_ARCHITECTURE
+        GEN_COUNT
     };
+
+    #undef GPU_CONFIGURATION
+
 
     configurations configuration;
     models model;
