@@ -854,14 +854,14 @@ TEST(reorder_gpu_opt, basic_remove_redundant)
     };
 
     build_options opts;
-    opts.set_option(build_option::debug(true)); //to enable query for optimized memory
     opts.set_option(build_option::optimize_data(true));
 
     network net(eng, tpl, opts);
     net.set_input_data("in", in);
     auto outputs = net.execute();
+    auto executed_primitives = net.get_executed_primitives();
 
-    EXPECT_TRUE(outputs.count("r1") == 0);
+    EXPECT_TRUE(executed_primitives.count("r1") == 0);
     ASSERT_TRUE(outputs.count("r2") == 1);
     EXPECT_TRUE(outputs.at("r2").get_memory().get_layout().format == format::yxfb);
 }
@@ -880,16 +880,17 @@ TEST(reorder_gpu_opt, basic_remove_redundant_due_to_implicit_reorders)
     };
 
     build_options opts;
-    opts.set_option(build_option::debug(true)); //to enable query for optimized memory
     opts.set_option(build_option::optimize_data(true));
 
     network net(eng, tpl, opts);
     net.set_input_data("in", in);
     auto outputs = net.execute();
+    auto executed_primitives = net.get_executed_primitives();
 
-    EXPECT_TRUE(outputs.count("r1") == 0);
-    ASSERT_TRUE(outputs.count("conv") == 1);
-    EXPECT_TRUE(outputs.at("conv").get_memory().get_layout().format == format::bfyx);
+    //remove redundant reorder optimization should replace redundant reorder node with convolution
+    EXPECT_TRUE(executed_primitives.count("conv") == 0);
+    ASSERT_TRUE(outputs.count("r1") == 1);
+    EXPECT_TRUE(outputs.at("r1").get_memory().get_layout().format == format::bfyx);
 }
 
 TEST(reorder_gpu_opt, basic_remove_redundant_output_due_to_implicit_reorders)
@@ -932,17 +933,17 @@ TEST(reorder_gpu_opt, non_trivial_remove_redundant)
 
     build_options opts;
 
-    opts.set_option(build_option::debug(true));
     opts.set_option(build_option::optimize_data(true));
 
     network net(eng, tpl, opts);
     net.set_input_data("in", in);
     auto outputs = net.execute();
+    auto executed_primitives = net.get_executed_primitives();
 
-    ASSERT_TRUE(outputs.count("in") == 1);
+    ASSERT_TRUE(executed_primitives.count("in") == 1);
+    ASSERT_TRUE(executed_primitives.count("r1") == 1);
+    EXPECT_TRUE(executed_primitives.at("r1") == executed_primitives.at("in"));
     ASSERT_TRUE(outputs.count("r1") == 1);
-    EXPECT_TRUE(outputs.at("r1").get_memory().is_the_same_buffer(outputs.at("in").get_memory()));
-    EXPECT_TRUE(outputs.at("in").get_memory().get_layout().format == format::yxfb);
     EXPECT_TRUE(outputs.at("r1").get_memory().get_layout().format == format::bfyx);
 }
 

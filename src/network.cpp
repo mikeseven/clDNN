@@ -126,6 +126,15 @@ std::vector<primitive_id> network_impl::get_output_ids() const
     return ret;
 }
 
+std::vector<primitive_id> network_impl::get_executed_primitive_ids() const
+{
+    std::vector<primitive_id> ret;
+    ret.reserve(_exec_order.size());
+    for (auto const& executed_primitive : _exec_order)
+        ret.push_back(executed_primitive->id());
+    return ret;
+}
+
 std::shared_ptr<primitive_inst> network_impl::get_primitive(const primitive_id& id)
 {
     if (!_primitives.count(id))
