@@ -52,6 +52,7 @@ namespace KernelSelector
         runInfo.itemsNum = 0;
         runInfo.normIndex = 0;
         runInfo.dataSetsCount = 0;
+        runInfo.dataSetSize = 0;
 
         return runInfo;
     }

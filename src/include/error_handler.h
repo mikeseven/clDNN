@@ -119,6 +119,7 @@ inline void error_on_not_proper_enum_values(std::string file, int line, std::str
         {
             return mode == 0 ? "cldnn_lrn_norm_region_across_channel" : "cldnn_lrn_norm_region_within_channel";
         }
+        return "error during error parsing";
     };
     const std::array<const M, sizeof...(Ms)> modes{ std::forward<Ms>(modes_to_compare_to)... };
     if (std::all_of(modes.begin(), modes.end(), [&](const M& m)->int {return mode != m; }))
