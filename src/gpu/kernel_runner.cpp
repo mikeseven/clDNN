@@ -139,7 +139,7 @@ std::vector<uint64_t> kernel_runner::run_kernels(const KernelSelector::KernelsDa
                 
             context->queue().finish();
 
-            for (auto event : events)
+            for (auto& event : events)
             {
                 if (event.get() != NULL)
                 {

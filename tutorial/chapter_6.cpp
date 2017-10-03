@@ -32,9 +32,9 @@
 * In this chapter we will learn how to add a new Convolution kernel into clDNN kernel selector.
 * 
 * Please take a look in the files:
-*   "convolution_kernel_tutorial1.cpp"
-*   "convolution_kernel_tutorial1.h"
-*   "convolution_tutorial1.cl"
+*   "convolution_kernel_tutorial.cpp"
+*   "convolution_kernel_tutorial.h"
+*   "convolution_tutorial.cl"
 *
 * @include chapter_6.cpp
 *

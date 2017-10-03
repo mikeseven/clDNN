@@ -18,26 +18,43 @@
 
 #include "convolution_kernel_base.h"
 
-namespace KernelSelector {
+// Step 0: 
+//
+// 1. choose a tutorial mode
+// 2. modify convolution_tutorial.cl as well
 
-    class ConvolutionKernel_yxfb_Ref : public ConvolutionKernelBase
+#define ADVANCED_TUTORIAL       // simple runnable example with explanations
+#ifndef ADVANCED_TUTORIAL
+#define BASIC_TUTORIAL          // Skeleton to add a new kernel
+#endif
+ 
+namespace KernelSelector {
+    
+    class ConvolutionKernel_Tutorial : public ConvolutionKernelBase
     {
     public:
-        ConvolutionKernel_yxfb_Ref() : ConvolutionKernelBase("convolution_gpu_yxfb_ref") {}
-        virtual ~ConvolutionKernel_yxfb_Ref() {}
+        using Parent = ConvolutionKernelBase;
+        ConvolutionKernel_Tutorial() : Parent("convolution_tutorial") {}
+        virtual ~ConvolutionKernel_Tutorial() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
-    
+
     protected:
         virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const ConvolutionParams&) const override
-        { 
-            return{ 
+        {
+            return{
+                WeightsLayout::oiyx,
                 WeightsLayout::yxio,
                 WeightsLayout::iyxo,
                 WeightsLayout::oyxi,
-                WeightsLayout::oiyx,
-            }; 
+            };
         }
+
+#ifdef ADVANCED_TUTORIAL
+        bool         Validate(const Params& p, const OptionalParams& o)                 const override;
+        JitConstants GetJitConstants(const ConvolutionParams& params, DispatchData kd)  const override;
+        DispatchData SetDefault(const ConvolutionParams& arg, int autoTuneIndex = -1)   const override;
+#endif
     };
 }

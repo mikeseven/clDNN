@@ -2014,7 +2014,7 @@ bool program_impl::extract_and_remove(program_node& node)
 
 void program_impl::replace_data_with_optimized(std::map<primitive_id, memory_impl::ptr> const & replace_map)
 {
-    for (auto result : replace_map)
+    for (auto& result : replace_map)
     {
         auto& node = *nodes_map.at(result.first);
         assert(node.is_type<data>() && "Optimized primitive is not a cldnn::data");
