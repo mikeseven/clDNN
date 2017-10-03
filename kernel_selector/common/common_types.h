@@ -39,7 +39,6 @@ namespace KernelSelector
         TABLE_LOOKUP,
         REORDER,
         CONCATENATION,
-        ASSIGN_PATCH,
         UPSAMPLING
     };
 

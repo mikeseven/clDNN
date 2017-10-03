@@ -29,7 +29,6 @@
 #include "api/CPP/roi_pooling.hpp"
 
 #include "activation_inst.h"
-#include "assign_patch_inst.h"
 #include "batch_norm_inst.h"
 #include "internal_primitive.h"
 #include "internal_primitive_type_base.h"
@@ -1103,7 +1102,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
         //list of layers that do not support yxfb or perform worse than bfyx
         if (prim.type() == cldnn::detection_output::type_id() || prim.type() == cldnn::proposal::type_id() ||
             prim.type() == cldnn::roi_pooling::type_id() || prim.type() == cldnn::deconvolution::type_id() ||
-            prim.type() == cldnn::upsampling::type_id() || prim.type() == cldnn::assign_patch::type_id())
+            prim.type() == cldnn::upsampling::type_id())
             lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::bfyx_only_layer, 1);
     }
 
@@ -1757,7 +1756,7 @@ void program_impl::prepare_primitive_fusing()
                  !input.is_type<fully_connected>() && !input.is_type<lrn>() && !input.is_type<normalize>() &&
                  !input.is_type<permute>() && !input.is_type<pooling>() && !input.is_type<reorder>() &&
                  !input.is_type<reshape>() && !input.is_type<roi_pooling>() && !input.is_type<scale>() &&
-                 !input.is_type<softmax>() && !input.is_type<upsampling>() && !input.is_type<assign_patch>()))
+                 !input.is_type<softmax>() && !input.is_type<upsampling>()))
                 return;
 
             input.set_fused_activation(node.get_primitive()->activation_func, node.get_primitive()->additional_params);
