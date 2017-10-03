@@ -42,7 +42,6 @@ struct engine_info_internal : cldnn::engine_info
         #undef GPU_CONFIGURATION
         #undef GPU_MODEL
         #undef GPU_ARCHITECTURE
-        GT_COUNT
     };
 
     
@@ -69,7 +68,6 @@ struct engine_info_internal : cldnn::engine_info
         #undef GPU_CONFIGURATION
         #undef GPU_MODEL
         #undef GPU_ARCHITECTURE
-        GEN_COUNT
     };
 
     #undef GPU_CONFIGURATION
