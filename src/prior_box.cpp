@@ -146,7 +146,7 @@ void prior_box_node::calc_result()
     CLDNN_ERROR_LESS_OR_EQUAL_THAN(id(), "Argument min size", argument.min_sizes.size(), "not proper size", 0, "Must provide at least one min size.");
 
     for (size_t i = 0; i < argument.min_sizes.size(); i++) {
-        CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(), "Min size value at index: " + std::to_string(i), argument.min_sizes[i], "less or equal than 0", 0, "Min size must be positive.");
+        CLDNN_ERROR_LESS_OR_EQUAL_THAN(id(), "Min size value at index: " + std::to_string(i), argument.min_sizes[i], "less or equal than 0", 0, "Min size must be positive.");
     }
     if (argument.max_sizes.size() > 0) {
         CLDNN_ERROR_NOT_EQUAL(id(), "Argument min sizes", argument.min_sizes.size(), "argument max sizes", argument.max_sizes.size(), "Number of min sizes must be equal to number of max sizes.");
@@ -157,7 +157,7 @@ void prior_box_node::calc_result()
     if (argument.variance.size() > 1) {
         CLDNN_ERROR_NOT_EQUAL(id(), "Argument variance size", argument.variance.size(), "not proper size", 4, "Must provide 4 variances.");
         for (size_t i = 0; i < argument.variance.size(); i++) {
-            CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(), "Varaiance value at index: " + std::to_string(i), argument.variance[i], "value", 0, "Variance must be positive.");
+            CLDNN_ERROR_LESS_OR_EQUAL_THAN(id(), "Varaiance value at index: " + std::to_string(i), argument.variance[i], "value", 0, "Variance must be positive.");
         }
     }
     else if (argument.variance.size() == 1) {
