@@ -564,6 +564,22 @@ CLDNN_API                 void cldnn_get_network_output_names(cldnn_network netw
 /// @param[out] size_ret Required size (in chars) to store result.
 CLDNN_API                 void cldnn_get_network_executed_primitive_names(cldnn_network network, char* names, size_t size, size_t* size_ret, cldnn_status* status);
 
+/// @brief Returns names of all primitives in network.
+/// @details Function fills user provided buffer by primitive names. Each name is followed by '\0'.
+/// Empty name "\0\0" means end of data.
+/// @param[in] names Pointer to user-allocated buffer to store names.
+/// @param[in] size Size (in chars) of the buffer.
+/// @param[out] size_ret Required size (in chars) to store result.
+CLDNN_API                 void cldnn_get_network_all_primitive_names(cldnn_network network, char* names, size_t size, size_t* size_ret, cldnn_status* status);
+
+/// @brief Returns names of all primitives in network before graph optimization.
+/// @details Function fills user provided buffer by primitive names. Each name is followed by '\0'.
+/// Empty name "\0\0" means end of data.
+/// @param[in] names Pointer to user-allocated buffer to store names.
+/// @param[in] size Size (in chars) of the buffer.
+/// @param[out] size_ret Required size (in chars) to store result.
+CLDNN_API                 void cldnn_get_network_all_primitive_org_names(cldnn_network network, char* names, size_t size, size_t* size_ret, cldnn_status* status);
+
 /// @brief Executes network.
 /// @details User should call cldnn_set_network_input() for every @p input_layout defined in tho source @p topology.
 /// Function returns immediately, even if @p dependencies are not set yet.

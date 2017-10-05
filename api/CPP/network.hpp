@@ -151,6 +151,18 @@ struct network
         return get_prim_ids(cldnn_get_network_executed_primitive_names);
     }
 
+    /// @brief Returns the list of all primitives ids in network.
+    std::vector<primitive_id> get_all_primitive_ids() const
+    {
+        return get_prim_ids(cldnn_get_network_all_primitive_names);
+    }
+
+    /// @brief Returns the list of all primitives ids in network before graph optimization.
+    std::vector<primitive_id> get_all_primitive_org_ids() const
+    {
+        return get_prim_ids(cldnn_get_network_all_primitive_org_names);
+    }
+
     /// @brief Returns the list of available network outputs.
     std::vector<primitive_id> get_output_ids() const
     {
@@ -194,10 +206,35 @@ struct network
     std::map<primitive_id, event> get_executed_primitives() const
     {
         auto primitive_ids = get_executed_primitive_ids();
+        auto all_primitive_ids = get_all_primitive_ids();
+        auto all_primitive_org_ids = get_all_primitive_org_ids();
+        //Get list of optimized prmitives
+        std::vector<primitive_id> optimized_primitives;
+        for (decltype(all_primitive_org_ids.size()) i = 0; i < all_primitive_org_ids.size(); i++)
+        {
+            if (all_primitive_ids[i] == "_optimized_")
+                optimized_primitives.push_back(all_primitive_org_ids[i]);
+        }
         std::map<primitive_id, event> result;
         for (auto& id : primitive_ids)
         {
-            result.emplace(id, get_primitive_event(id));
+            if(std::find(optimized_primitives.begin(), optimized_primitives.end(), id) == optimized_primitives.end())
+                result.emplace(id, get_primitive_event(id));
+        }
+        return result;
+    }
+
+    /// @brief Returns the list of primitive ids before and after graph optimization.
+    /// @details If primitive was not optimized, the old and actual id will be the same.
+    /// @n If primitive was optimized during graph optimization, the actual id will be "_optimized_".
+    std::map<primitive_id, primitive_id> get_all_primitives() const
+    {
+        auto primitive_ids = get_all_primitive_ids();
+        auto primitive_org_ids = get_all_primitive_org_ids();
+        std::map<primitive_id, primitive_id> result;
+        for (decltype(primitive_org_ids.size()) i = 0; i < primitive_org_ids.size(); i++)
+        {
+            result.emplace(primitive_org_ids[i], primitive_ids[i]);
         }
         return result;
     }

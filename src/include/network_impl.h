@@ -55,6 +55,8 @@ public:
 
     std::vector<primitive_id> get_output_ids() const;
     std::vector<primitive_id> get_executed_primitive_ids() const;
+    std::vector<primitive_id> get_all_primitive_ids() const;
+    std::vector<primitive_id> get_all_primitive_org_ids() const;
     void execute(const std::vector<event_impl::ptr>& events);
 
     // Implementation specific calls

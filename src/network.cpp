@@ -135,6 +135,27 @@ std::vector<primitive_id> network_impl::get_executed_primitive_ids() const
     return ret;
 }
 
+std::vector<primitive_id> network_impl::get_all_primitive_ids() const
+{
+    std::vector<primitive_id> ret;
+    ret.reserve(_primitives.size());
+    for (auto const& primitive : _primitives)
+        if(primitive.second->can_be_optimized())
+            ret.push_back("_optimized_");
+        else
+            ret.push_back(primitive.second->id());
+    return ret;
+}
+
+std::vector<primitive_id> network_impl::get_all_primitive_org_ids() const
+{
+    std::vector<primitive_id> ret;
+    ret.reserve(_primitives.size());
+    for (auto const& primitive : _primitives)
+        ret.push_back(primitive.second->org_id());
+    return ret;
+}
+
 std::shared_ptr<primitive_inst> network_impl::get_primitive(const primitive_id& id)
 {
     if (!_primitives.count(id))

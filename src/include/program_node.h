@@ -161,6 +161,9 @@ public:
     auto can_be_optimized() const { return optimized; }
     void can_be_optimized(bool opt) { optimized = opt; }
 
+    primitive_id get_org_primitive_id() const { return org_id; }
+    void set_org_primitive_id(primitive_id org_prim_id) { org_id = org_prim_id; }
+
     // returns immidiate dominator of this node if it's not its direct predecessor, otherwise returns nullptr
     program_node* get_dominator() { return dominator; }
     const program_node* get_dominator() const { return dominator; }
@@ -243,6 +246,8 @@ protected:
     uint8_t user_mark = 0;
 
     bool optimized = false;
+
+    primitive_id org_id = "";
 
     struct fused_activation_params
     {

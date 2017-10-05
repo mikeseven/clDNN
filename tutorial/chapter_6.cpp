@@ -88,6 +88,7 @@ void chapter_6(engine& engine)
     // Ready to go.
     auto outputs = network.execute();
 
+    // Get primitives that were executed and their events needed for profiling
     auto executed_primitives = network.get_executed_primitives();
 
     // Now, we want to check what is the time of execution of each primitive:

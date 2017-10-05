@@ -77,6 +77,8 @@ public:
     size_t inputs_memory_count() const { return _node.get_primitive()->input.size(); }
     primitive_type_id type() const { return _node.type(); }
     primitive_id id() const { return _node.id(); }
+    primitive_id org_id() const { return _node.get_org_primitive_id(); }
+    bool can_be_optimized() const { return _node.can_be_optimized(); }
     const auto desc() const { return _node.get_primitive(); }
     network_impl& get_network() const { return _network; }
     

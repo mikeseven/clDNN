@@ -1865,6 +1865,7 @@ program_node& program_impl::get_or_create(std::shared_ptr<primitive> prim)
         return *itr->second;
 
     auto new_node = prim->type->create_node(*this, prim);
+    new_node->set_org_primitive_id(new_node->id());
     nodes_map.insert(itr, { prim->id, new_node });
     return *new_node;
 }
