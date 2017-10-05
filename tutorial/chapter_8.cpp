@@ -148,6 +148,17 @@ void chapter_8(engine& engine)
     auto all_primitives_2 = network_2.get_all_primitives();
 
     //Print list of primitives with orginal ids, and profiling info
+    //Expected output from all_primitives_2 in this case will be:
+    //Org_primitive_id, Primitive_id_after_optimization
+    //    crop1, _optimized_
+    //    crop2, _optimized_
+    //    input, input
+    //    relu1, relu1
+    //    relu2, relu2
+    //    upsampling, upsampling
+    //
+    //As mentioned before, "relu" is not on the list as upsampling will perform built-in relu. Crop primitives are marked as _optimized_.
+    //Profiling data from executed_primitives_2 should contain 4 primitives - input, relu1, relu2 and upsampling
     std::cout << std::endl << "Primitives list and profiling info for network with optimize data build option." << std::endl;
     print_info(all_primitives_2, executed_primitives_2);
 

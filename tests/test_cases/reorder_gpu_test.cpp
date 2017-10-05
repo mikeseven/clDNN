@@ -939,10 +939,11 @@ TEST(reorder_gpu_opt, non_trivial_remove_redundant)
     net.set_input_data("in", in);
     auto outputs = net.execute();
     auto executed_primitives = net.get_executed_primitives();
+    auto all_primitives = net.get_all_primitives();
 
     ASSERT_TRUE(executed_primitives.count("in") == 1);
-    ASSERT_TRUE(executed_primitives.count("r1") == 1);
-    EXPECT_TRUE(executed_primitives.at("r1") == executed_primitives.at("in"));
+    ASSERT_TRUE(all_primitives.at("r1") == "_optimized_");
+    EXPECT_TRUE(executed_primitives.at("in") == outputs.at("r1").get_event());
     ASSERT_TRUE(outputs.count("r1") == 1);
     EXPECT_TRUE(outputs.at("r1").get_memory().get_layout().format == format::bfyx);
 }
