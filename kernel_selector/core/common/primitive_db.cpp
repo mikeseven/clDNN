@@ -41,7 +41,7 @@ std::vector<code> primitive_db::get(const primitive_id & id) const
             auto end = kernel_file.tellg();
             kernel_file.seekg(0, std::ios::beg);
 
-            ret.resize(end - beg);
+            ret.resize((size_t)(end - beg));
             kernel_file.read(&ret[0], (size_t)(end - beg));
 
             return{ std::move(ret) };
