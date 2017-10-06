@@ -51,6 +51,7 @@ public:
 
     static primitive_impl* create(const reorder_node& arg)
     {
+        //TODO: move this logic to kernel selector
         auto&& input_layout = arg.input().get_output_layout();
         auto&& input_size = input_layout.size;
         auto&& output_layout = arg.get_output_layout();

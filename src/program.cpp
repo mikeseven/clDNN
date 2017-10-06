@@ -1189,12 +1189,59 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
 
         std::shared_ptr<reorder> new_input = nullptr;
 
-        new_input = lo.get_reorder(
-            input_layout,
-            input_node.id(),
-            layout_optimizer::data_type::input,
-            conv_prim,
-            weights_layout).first;
+        if (input_node.type() == reorder::type_id()) //convolution's input is a reorder
+        {
+            auto reorder_prim = input_node.as<reorder>().typed_desc();
+            auto& reorder_input = input_node.get_dependency(0);
+            auto reorder_layout = reorder_input.get_output_layout();
+            reorder_layout.data_type = reorder_prim->output_data_type;
+            new_input = lo.get_reorder(
+                reorder_layout,
+                reorder_prim->id,
+                layout_optimizer::data_type::input,
+                conv_prim,
+                weights_layout).first;
+
+            if (new_input && new_input->output_format != format::winograd_2x3_s1_data) //output format is not optimal
+            {
+                auto reorder_input_layout = reorder_input.get_output_layout();
+
+                auto opt_layout = layout(new_input->output_data_type, new_input->output_format, reorder_input_layout.size);
+                if (reorder_input_layout == opt_layout) //reorder 'breaks' optimal format
+                {
+                    if (reorder_prim->subtract_per_feature.empty() &&
+                        reorder_prim->mean.empty() &&
+                        !reorder_prim->output_padding) //just plain reorder
+                    {
+                        conv_node.replace_dependency(0, reorder_input);
+                        new_input = nullptr;
+                    }
+                    else //change reorder's output layout
+                    {
+                        reorder_prim->output_format = opt_layout.format;
+                        reorder_prim->output_data_type = opt_layout.data_type;
+                        new_input = nullptr;
+                    }
+                }
+                else //current reorder gives bad output, simply change it
+                {
+                    reorder_prim->output_format = opt_layout.format;
+                    reorder_prim->output_data_type = opt_layout.data_type;
+                    new_input = nullptr;
+                }
+            }
+
+            input_node.recalc_output_layout();
+        }
+        else
+        {
+            new_input = lo.get_reorder(
+                input_node.get_output_layout(),
+                input_node.id(),
+                layout_optimizer::data_type::input,
+                conv_prim,
+                weights_layout).first;
+        }
 
         if (new_input && new_input->output_format == format::winograd_2x3_s1_data)
         {
