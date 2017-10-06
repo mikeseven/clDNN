@@ -477,25 +477,25 @@ void program_impl::replace_nodes_pre()
     while (itr != nodes_map.end())
     {
         auto node_itr = itr++;
-        auto& node = (*node_itr);
+        auto& node = (*node_itr).second;
 
         //find split primitives and create crop primitives out of them
-        do_for_types<split>(*node.second, [this](split_node& node)
+        if (node->is_type<split>())
         {
-            auto split_prim = node.get_primitive();
+            auto split_prim = node->as<split>().typed_desc();
             primitive_id input_id = split_prim->input[0];
             auto split_num = split_prim->output_offsets.size();
 
             //create crop for each split ouptut provided
             for (decltype(split_num) i = 0; i < split_num; i++)
             {
-                primitive_id output_id = node.id() + ":" + split_prim->output_ids[i];
+                primitive_id output_id = node->id() + ":" + split_prim->output_ids[i];
 
                 //create dummy crop primitive and add it to nodes map
                 auto crop_prim = std::make_shared<crop>(output_id, input_id, tensor{ 1,1,1,1 }, split_prim->output_offsets[i]);
                 get_or_create(crop_prim);
             }
-        });
+        }
     }
 }
 
@@ -506,27 +506,27 @@ void program_impl::replace_nodes_post()
     while (itr != nodes_map.end())
     {
         auto node_itr = itr++;
-        auto& node = (*node_itr);
+        auto& node = (*node_itr).second;
 
         //find split primitives and create crop primitives out of them
-        do_for_types<split>(*node.second, [this](split_node& node)
+        if(node->is_type<split>())
         {
             //check if split is not used by any primitive, as it will be optimized
-            if (node.get_users().size() != 0)
-                throw std::logic_error("Split layer cannot be used directly! Please use split output \"" + node.id() + ":<split_output_id>\"!");
+            if (node->get_users().size() != 0)
+                throw std::logic_error("Split layer cannot be used directly! Please use split output \"" + node->id() + ":<split_output_id>\"!");
 
             //get_output size and validate split primitive inputs
-            auto output_layout = node.get_output_layout();
+            auto output_layout = node->get_output_layout();
             auto output_layout_size = output_layout.size;
 
-            auto split_prim = node.get_primitive();
+            auto split_prim = node->as<split>().typed_desc();
             primitive_id input_id = split_prim->input[0];
             auto split_num = split_prim->output_offsets.size();
 
             //create crop for each split ouptut provided
             for (decltype(split_num) i = 0; i < split_num; i++)
             {
-                primitive_id output_id = node.id() + ":" + split_prim->output_ids[i];
+                primitive_id output_id = node->id() + ":" + split_prim->output_ids[i];
 
                 auto node_ptr = nodes_map.find(output_id)->second;
 
@@ -546,29 +546,30 @@ void program_impl::replace_nodes_post()
                 auto crop_prim = node_ptr->as<crop>().typed_desc();
                 crop_prim->reference_input = reference_input_size;
 
-                add_connection(node.get_dependency(0), *node_ptr);
+                add_connection(node->get_dependency(0), *node_ptr);
             }
 
             //remove input->split connection and remove original split node
-            remove_connection(node.get_dependency(0), node);
-            optimized_out.push_back(node.id());
-            nodes_map.erase(node.id());
-        });
+            remove_connection(node->get_dependency(0), *node);
+            optimized_out.push_back(node->id());
+            nodes_map.erase(node->id());
+            continue;
+        }
 
         //find upsampling primitives with bilinear filtering and create deconvolution with proper weights instead
-        do_for_types<upsampling>(*node.second, [this](upsampling_node& node)
+        if (node->is_type<upsampling>())
         {
-            auto upsampling_prim = node.get_primitive();
+            auto upsampling_prim = node->as<upsampling>().typed_desc();
 
             if(upsampling_prim->sample_type != upsampling_sample_type::bilinear)
-                return;
+                continue;
 
             //check if num_filter is not 0 (required for bilinear upsampling)
             if (upsampling_prim->num_filter == 0)
-                throw std::logic_error("num_filter in upsampling cannot be 0 in bilinear filtering mode in \"" + node.id() + "\"!");
+                throw std::logic_error("num_filter in upsampling cannot be 0 in bilinear filtering mode in \"" + node->id() + "\"!");
 
-            primitive_id upsampling_id = node.id();
-            auto& input_node = node.get_dependency(0);
+            primitive_id upsampling_id = node->id();
+            auto& input_node = node->get_dependency(0);
 
             primitive_id input_id = upsampling_prim->input[0];
             auto num_filter = upsampling_prim->num_filter;
@@ -598,9 +599,9 @@ void program_impl::replace_nodes_post()
             }
 
             //remove upsampling node, rename it and move to the optimized list
-            remove_connection(node.get_dependency(0), node);
+            remove_connection(node->get_dependency(0), *node);
             auto rename_id = upsampling_id + "_tmp";
-            rename(node, rename_id);
+            rename(*node, rename_id);
 
             //create weights primitive, with dummy memory which will be replaced in firther step
             primitive_id weights_id = upsampling_id + "_deconvolution_weights";
@@ -615,7 +616,7 @@ void program_impl::replace_nodes_post()
             auto weights_node_ptr = nodes_map.find(weights_id)->second;
             auto deconv_node_ptr = nodes_map.find(upsampling_id)->second;
 
-            replace_all_usages(node, *deconv_node_ptr);
+            replace_all_usages(*node, *deconv_node_ptr);
             optimized_out.push_back(rename_id);
             nodes_map.erase(rename_id);
 
@@ -626,7 +627,8 @@ void program_impl::replace_nodes_post()
             //add connections input->deconvolution and weights->deconvolution
             add_connection(input_node, *deconv_node_ptr);
             add_connection(*weights_node_ptr, *deconv_node_ptr);
-        });
+            continue;
+        }
     }
 }
 
