@@ -29,7 +29,7 @@ primitive_type_id batch_norm_type_id()
 
 layout batch_norm_inst::calc_output_layout(batch_norm_node const& node)
 {
-    return node.input().get_output_layout();
+    return node.input().get_non_padded_output_layout();
 }
 
 std::string batch_norm_inst::to_string(batch_norm_node const& node)

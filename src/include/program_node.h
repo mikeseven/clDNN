@@ -119,6 +119,8 @@ public:
     layout get_output_layout(bool invalidate_users_if_changed = true);
     //returns cached output layout if valid, otherwise throws an exception
     layout get_output_layout() const;
+    //returns result of get_output_layout without padding
+    layout get_non_padded_output_layout(bool invalidate_users_if_changed = true);
 
     //sets cached output layout to an arbitrary value, invalidates users if new layout differs from previous one and @p invalidate_users_if_changed is set to true
     //returns whether output layout has changed

@@ -33,7 +33,7 @@ layout split_inst::calc_output_layout(split_node const& node)
     auto output_ids = node.get_primitive()->output_ids;
     auto output_offsets = node.get_primitive()->output_offsets;
     auto param_num = output_ids.size();
-    auto input_sizes = node.get_dependency(0).get_output_layout().size;
+    auto input_sizes = node.get_dependency(0).get_non_padded_output_layout().size;
 
     //check if output_ids count equals output_offsets count
     CLDNN_ERROR_NOT_EQUAL(node.id(), "Output_ids count", param_num, "output_offsets count", output_offsets.size(), "Output_ids count/ output_offsets count mismatch");
@@ -51,7 +51,7 @@ layout split_inst::calc_output_layout(split_node const& node)
         CLDNN_ERROR_TENSOR_SIZES_LESS_THAN(node.id(), "Output_offsets", output_offsets[i], "0 value", { 0, 0, 0, 0 }, "Invalid output_offsets: dims cannot be less than 0");
     }
 
-    return node.input().get_output_layout();
+    return node.input().get_non_padded_output_layout();
 }
 
 std::string split_inst::to_string(split_node const& node)

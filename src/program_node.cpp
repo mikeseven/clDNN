@@ -200,6 +200,13 @@ layout program_node::get_output_layout() const
     return output_layout;
 }
 
+layout program_node::get_non_padded_output_layout(bool invalidate_users_if_changed)
+{
+    auto out_layout = get_output_layout(invalidate_users_if_changed);
+    auto result = layout({ out_layout.data_type, out_layout.format, out_layout.size });
+    return result;
+}
+
 bool program_node::set_output_layout(layout new_layout, bool invalidate_users_if_changed)
 {
     merge_output_padding(new_layout.data_padding);

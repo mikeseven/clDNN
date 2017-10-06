@@ -42,7 +42,7 @@ std::vector<code> primitive_db::get(const primitive_id & id) const
             kernel_file.seekg(0, std::ios::beg);
 
             ret.resize(end - beg);
-            kernel_file.read(&ret[0], end - beg);
+            kernel_file.read(&ret[0], (size_t)(end - beg));
 
             return{ std::move(ret) };
         }

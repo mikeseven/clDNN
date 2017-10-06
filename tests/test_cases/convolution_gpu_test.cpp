@@ -136,7 +136,7 @@ void dump_buffer(memory const& mem, std::string const& name)
     }
 }
 
-TEST(convolution_f32_fw_gpu, winograd)
+TEST(DISABLED_convolution_f32_fw_gpu, winograd)
 {
     engine engine;
     auto input = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 32, 3, 3 } });
@@ -189,10 +189,6 @@ TEST(convolution_f32_fw_gpu, winograd)
     auto w_ptr = weights.pointer<float>();
     auto bias_ptr = bias.pointer<float>();
 
-    auto&& input_pitches = input.get_layout().get_pitches();
-    auto&& weights_pitches = weights.get_layout().get_pitches();
-    auto&& output_pitches = out_mem.get_layout().get_pitches();
-
     constexpr int stride_x = 1;
     constexpr int stride_y = 1;
     for (int b = 0; b < out_mem.get_layout().size.batch[0]; ++b)
@@ -204,7 +200,6 @@ TEST(convolution_f32_fw_gpu, winograd)
                 for (int y = 0; y < out_mem.get_layout().size.spatial[1]; ++y)
                 {
                     float ref = 0.0f;
-                    size_t in_idx = input.get_layout().get_linear_offset({ b, 0, x * stride_x, y * stride_y });
                     for (int wx = 0; wx < weights.get_layout().size.spatial[0]; ++wx)
                     {
                         for (int wy = 0; wy < weights.get_layout().size.spatial[1]; ++wy)

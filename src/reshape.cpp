@@ -32,7 +32,7 @@ primitive_type_id reshape_type_id()
 
 layout reshape_inst::calc_output_layout(reshape_node const& node)
 {
-    auto input_layout = node.input().get_output_layout();
+    auto input_layout = node.input().get_non_padded_output_layout();
     input_layout.size = node.get_primitive()->output_shape;
     return input_layout;
 }

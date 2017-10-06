@@ -29,7 +29,7 @@ primitive_type_id normalize_type_id()
 
 layout normalize_inst::calc_output_layout(normalize_node const& node)
 {
-    return node.input().get_output_layout();
+    return node.input().get_non_padded_output_layout();
 }
 
 std::string normalize_inst::to_string(normalize_node const& node)

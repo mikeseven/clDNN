@@ -1161,15 +1161,15 @@ void program_impl::reorder_nodes_for_parallel_execution()
 
 void program_impl::reorder_inputs(layout_optimizer& lo)
 {
-    ////first pass to set layout optimization_attributes for topology
-    //for (auto& p : nodes_map)
-    //{
-    //    auto& prim = *p.second;
-    //    if (prim.type() == cldnn::convolution::type_id())
-    //    {
-    //        if (prim.as<convolution>().get_primitive()->split() > 1)
-    //            lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::splitted_convolution, 1);
-    //    }
+    //first pass to set layout optimization_attributes for topology
+    for (auto& p : nodes_map)
+    {
+        auto& prim = *p.second;
+        if (prim.type() == cldnn::convolution::type_id())
+        {
+            if (prim.as<convolution>().get_primitive()->split() > 1)
+                lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::splitted_convolution, 1);
+        }
 
         //list of layers that do not support yxfb or perform worse than bfyx
         if (prim.type() == cldnn::detection_output::type_id() || prim.type() == cldnn::proposal::type_id() ||

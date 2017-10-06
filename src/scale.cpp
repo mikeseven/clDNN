@@ -29,9 +29,9 @@ primitive_type_id scale_type_id()
 
 layout scale_inst::calc_output_layout(scale_node const& node)
 {
-    auto result = node.input().get_output_layout();
+    auto result = node.input().get_non_padded_output_layout();
 
-    auto scale_sizes = node.scale_in().get_output_layout().size;
+    auto scale_sizes = node.scale_in().get_non_padded_output_layout().size;
     auto input_sizes = result.size;
 
     auto scale_x_size = scale_sizes.spatial[0];

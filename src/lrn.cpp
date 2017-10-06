@@ -29,7 +29,7 @@ primitive_type_id lrn_type_id()
 
 layout lrn_inst::calc_output_layout(lrn_node const& node)
 {
-    return node.input().get_output_layout();
+    return node.input().get_non_padded_output_layout();
 }
 
 std::string lrn_inst::to_string(lrn_node const& node)

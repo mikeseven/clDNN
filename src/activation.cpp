@@ -29,7 +29,7 @@ primitive_type_id activation_type_id()
 
 layout activation_inst::calc_output_layout(activation_node const& node)
 {
-    return node.input().get_output_layout();
+    return node.input().get_non_padded_output_layout();
 }
 
 std::string activation_inst::to_string(activation_node const& node)
