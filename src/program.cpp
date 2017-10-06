@@ -1196,10 +1196,6 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
 
         if (new_input && new_input->output_format == format::winograd_2x3_s1_data)
         {
-            //I'm not sure if thats checked anywhere, if it's, it can be removed from here
-            CLDNN_ERROR_LESS_THAN(conv_node.id(), "input width", input_layout.size.spatial[0], "filter width", 3, "Convolution input is smaller than weights");
-            CLDNN_ERROR_LESS_THAN(conv_node.id(), "input height", input_layout.size.spatial[0], "filter height", 3, "Convolution input is smaller than weights");
-
             auto lower_size = (conv_prim->input_offset.negate() + input_layout.size);
 
             tensor upper_input_padding = tensor{ 0 };

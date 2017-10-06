@@ -78,6 +78,9 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
         if (node.get_primitive()->with_activation)
             CLDNN_ERROR_MESSAGE(node.id(), "Winograd 2x3 convolution should not have activation fused - activation should be performed at transformation from winograd domain stage");
 
+        CLDNN_ERROR_LESS_THAN(node.id(), "input width", input_layout.size.spatial[0], "filter width", 3, "Convolution input is smaller than weights");
+        CLDNN_ERROR_LESS_THAN(node.id(), "input height", input_layout.size.spatial[1], "filter height", 3, "Convolution input is smaller than weights");
+
         constexpr tensor::value_type output_tile_width = 2; //by definition of F(2,3)
         constexpr tensor::value_type filter_width = 3; //by definition of F(2,3)
         constexpr tensor::value_type filter_height = 3; //by definition of format::winograd_2x3_s1_data (our assumption)
