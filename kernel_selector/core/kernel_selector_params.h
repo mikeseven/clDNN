@@ -16,6 +16,7 @@
 
 #pragma once
 
+#include <string>
 #include <cstddef>
 #include <memory>
 #include "common_types.h"
@@ -685,7 +686,7 @@ namespace KernelSelector
         WeightsTensor weights;
         MultiDataTensor bias;
 
-        virtual ParamsKey GetParamsKey() const
+        virtual ParamsKey GetParamsKey() const override
         {
             ParamsKey k = BaseParams::GetParamsKey();
 
@@ -735,7 +736,7 @@ namespace KernelSelector
 
         virtual std::string to_string() const override;
 
-        virtual ParamsKey GetParamsKey() const
+        virtual ParamsKey GetParamsKey() const override
         {
             ParamsKey k = WeightBiasParams::GetParamsKey();
 
@@ -780,7 +781,7 @@ namespace KernelSelector
 
         virtual std::string to_string() const override;
 
-        virtual ParamsKey GetParamsKey() const
+        virtual ParamsKey GetParamsKey() const override
         {
             ParamsKey k = WeightBiasParams::GetParamsKey();
 

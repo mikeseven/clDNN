@@ -50,6 +50,7 @@
 #include "split_inst.h"
 #include "upsampling_inst.h"
 
+#include "network_impl.h"
 #include "kernel_selector_helper.h"
 #include "sliding_window_utils.h"
 

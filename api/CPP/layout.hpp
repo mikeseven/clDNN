@@ -17,6 +17,8 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "tensor.hpp"
+#include <cmath>
+#include <stdlib.h>
 
 namespace cldnn
 {
@@ -221,11 +223,11 @@ private:
 struct layout
 {
     /// Constructs layout based on @p data_type and @p size information described by @ref tensor
-    layout(data_types data_type, cldnn::format fmt, tensor size, padding padding = padding())
+    layout(data_types data_type, cldnn::format fmt, tensor size, padding apadding = padding())
         : data_type(data_type)
         , format(fmt)
         , size(size)
-        , data_padding(padding)
+        , data_padding(apadding)
     {}
 
     /// Construct C++ layout based on C API @p cldnn_layout

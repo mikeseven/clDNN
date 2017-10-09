@@ -421,7 +421,7 @@ set_property(CACHE CLDNN__BOOST_VERSION PROPERTY STRINGS ${__CLDNN_BoostVersions
 # ======================================================================================================
 
 # Include and build: Examples of usage of clDNN framework.
-set(CLDNN__INCLUDE_EXAMPLES ON CACHE BOOL "Include and build: clDNN framework's usage examples.")
+set(CLDNN__INCLUDE_EXAMPLES OFF CACHE BOOL "Include and build: clDNN framework's usage examples.")
 mark_as_advanced(CLDNN__INCLUDE_EXAMPLES)
 
 # ======================================================================================================
@@ -457,7 +457,7 @@ mark_as_advanced(CLDNN__RUN_TESTS)
 # ======================================================================================================
 
 # Compile / Link: Use static C++ Runtime library.
-set(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME OFF CACHE BOOL "Compile / Link: Use static version of C++ Runtime library instead of shared one.")
+set(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME ON CACHE BOOL "Compile / Link: Use static version of C++ Runtime library instead of shared one.")
 mark_as_advanced(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME)
 
 # ======================================================================================================
@@ -975,25 +975,48 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
           -Wl,--no-undefined
       )
   elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
-    intel_config_flag_apply_settings(
-        CompilerOptions
-        "${__CLDNN_CompilerFlagName}"
-        ALL_PATTERN ""
-        SET_RAW
-          -pipe
-          -fvisibility=hidden
-          -fvisibility-inlines-hidden
-          -Wall
-          -Wcovered-switch-default
-          -Wextra
-          -Wno-unused-parameter
-          -Wno-gnu
-          -pedantic
-          -finline
-          -finline-functions
-          -fkeep-inline-functions
-          -msse4.2
-      )
+    if(ANDROID)
+      intel_config_flag_apply_settings(
+          CompilerOptions
+          "${__CLDNN_CompilerFlagName}"
+          ALL_PATTERN ""
+          SET_RAW
+            -pipe
+            -fvisibility=hidden
+            -fvisibility-inlines-hidden
+            -Wall
+            -Wno-covered-switch-default
+            -Wextra
+            -Wno-unused-parameter
+            -Wno-gnu
+            -pedantic
+            -finline
+            -finline-functions
+            -Wno-nested-anon-types
+            -msse4.2
+	    -Wno-potentially-evaluated-expression
+        )
+    else()
+      intel_config_flag_apply_settings(
+          CompilerOptions
+          "${__CLDNN_CompilerFlagName}"
+          ALL_PATTERN ""
+          SET_RAW
+            -pipe
+            -fvisibility=hidden
+            -fvisibility-inlines-hidden
+            -Wall
+            -Wno-covered-switch-default
+            -Wextra
+            -Wno-unused-parameter
+            -Wno-gnu
+            -pedantic
+            -finline
+            -finline-functions
+            -fkeep-inline-functions
+            -msse4.2
+        )
+    endif()
   endif()
 endforeach()
 
@@ -1125,6 +1148,16 @@ if((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^C
         -Wl,-undefined,dynamic_lookup
         -Wl,-headerpad_max_install_names
     )
+
+  if(ANDROID)
+    intel_config_flag_apply_settings(
+        LinkerOptions
+        CMAKE_EXE_LINKER_FLAGS 
+        ALL_PATTERN ""
+        SET
+          DeadCodePreserve
+    )
+  endif()
 endif()
 
 unset(__CLDNN_LinkerFlagName)

@@ -216,7 +216,7 @@ void cldnn_release_engine(cldnn_engine engine, cldnn_status* status)
 
 cldnn_engine_info cldnn_get_engine_info(cldnn_engine engine, cldnn_status* status)
 {
-    return exception_handler<cldnn_engine_info>(CLDNN_ERROR, status, { 0, 0, 0, 0, 0, 0 }, [&]() -> cldnn_engine_info
+    return exception_handler<cldnn_engine_info>(CLDNN_ERROR, status, { 0, 0, 0, 0, 0, 0, 0 }, [&]() -> cldnn_engine_info
     {
         SHOULD_NOT_BE_NULL(engine, "Engine");
         auto info = api_cast(engine)->get_engine_info();

@@ -43,7 +43,7 @@ class typed_primitive_inst;
 */
 struct primitive_impl
 {
-    primitive_impl() = default;
+    primitive_impl() { };
     primitive_impl(const kernel_selector::weights_reorder_params& params) : _weights_reorder_params(params) {}
     virtual ~primitive_impl() = default;
 
