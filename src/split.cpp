@@ -56,13 +56,14 @@ layout split_inst::calc_output_layout(split_node const& node)
 
 std::string split_inst::to_string(split_node const& node)
 {
-    std::stringstream               primitive_description;
-    auto node_info                  = node.desc_to_json();
-    auto desc                       = node.get_primitive();
-    auto& input                     = node.input();
-    auto output_ids                 = desc->output_ids;
-    auto output_offsets             = desc->output_offsets;
+    auto desc           = node.get_primitive();
+    auto node_info      = node.desc_to_json();
+    auto output_ids     = desc->output_ids;
+    auto output_offsets = desc->output_offsets;
+    auto& input         = node.input();
     
+    std::stringstream primitive_description;
+
     json_composite split_info;
     split_info.add("input id", input.id());
     split_info.add("output ids count", output_ids.size());

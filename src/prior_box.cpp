@@ -212,15 +212,17 @@ std::string vector_to_string(std::vector<float> vec)
 
 std::string prior_box_inst::to_string(prior_box_node const& node)
 {
-    std::stringstream               primitive_description;
-    auto node_info                  = node.desc_to_json();
-    auto desc                       = node.get_primitive();
-    auto flip                       = desc->flip ? "true" : "false";
-    auto clip                       = desc->clip ? "true" : "false";
-    std::string str_min_sizes       = vector_to_string(desc->min_sizes);
-    std::string str_max_sizes       = vector_to_string(desc->max_sizes);
-    std::string str_aspect_ratio    = vector_to_string(desc->aspect_ratios);
-    std::string str_variance        = vector_to_string(desc->variance);
+    auto desc      = node.get_primitive();
+    auto flip      = desc->flip ? "true" : "false";
+    auto clip      = desc->clip ? "true" : "false";
+    auto node_info = node.desc_to_json();
+    
+    std::string str_min_sizes    = vector_to_string(desc->min_sizes);
+    std::string str_max_sizes    = vector_to_string(desc->max_sizes);
+    std::string str_variance     = vector_to_string(desc->variance);
+    std::string str_aspect_ratio = vector_to_string(desc->aspect_ratios);
+    
+    std::stringstream primitive_description;
 
     json_composite prior_info;
     prior_info.add("input id", node.input().id());

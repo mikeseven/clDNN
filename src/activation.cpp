@@ -33,10 +33,11 @@ layout activation_inst::calc_output_layout(activation_node const& node)
 }
 
 std::string activation_inst::to_string(activation_node const& node)
-{    
-    std::stringstream            primitive_description;
-    auto node_info               = node.desc_to_json();
-    auto desc                    = node.get_primitive();
+{   
+    auto node_info = node.desc_to_json();
+    auto desc      = node.get_primitive();
+       
+    std::stringstream primitive_description;
 
     json_composite activation_info;
     activation_info.add("activation_func", desc->activation_func);

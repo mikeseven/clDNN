@@ -43,9 +43,10 @@ layout softmax_inst::calc_output_layout(softmax_node const& node)
 
 std::string softmax_inst::to_string(softmax_node const& node)
 {
-    std::stringstream    primitive_description;
-    auto node_info       = node.desc_to_json();
-    auto desc            = node.get_primitive();
+    auto desc      = node.get_primitive();
+    auto node_info = node.desc_to_json();
+
+    std::stringstream primitive_description;
 
     node_info.dump(primitive_description);
 

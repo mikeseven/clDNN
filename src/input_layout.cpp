@@ -55,8 +55,9 @@ void input_layout_inst::set_data(memory_impl& mem)
 
 std::string input_layout_inst::to_string(input_layout_node const& node)
 {
-    std::stringstream  primitive_description;
-    auto node_info     = node.desc_to_json();
+    auto node_info = node.desc_to_json();
+
+    std::stringstream primitive_description;
 
     node_info.dump(primitive_description);
 

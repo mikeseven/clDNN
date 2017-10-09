@@ -65,13 +65,15 @@ layout deconvolution_inst::calc_output_layout(deconvolution_node const& node)
 
 std::string deconvolution_inst::to_string(deconvolution_node const& node)
 {
-    std::stringstream           primitive_description;
-    auto node_info              = node.desc_to_json();
-    auto desc                   = node.get_primitive();
-    auto strd                   = desc->stride;
-    auto split                  = desc->split();
-    auto activation             = desc->with_activation ? " true" : "false";
-    std::stringstream           ss_weights, ss_biases;
+    auto desc       = node.get_primitive();
+    auto strd       = desc->stride;
+    auto split      = desc->split();
+    auto node_info  = node.desc_to_json();
+    auto activation = desc->with_activation ? " true" : "false";
+
+    std::stringstream primitive_description;
+    std::stringstream ss_weights, ss_biases;
+
     for (size_t i = 0; i < desc->weights.size(); ++i)
     {
         ss_weights << node.weights(i).id();

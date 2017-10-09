@@ -34,13 +34,14 @@ layout normalize_inst::calc_output_layout(normalize_node const& node)
 
 std::string normalize_inst::to_string(normalize_node const& node)
 {
-    std::stringstream           primitive_description;
-    auto node_info              = node.desc_to_json();
-    auto desc                   = node.get_primitive();
-    auto& input                 = node.input();
-    auto& scale_input           = node.scale();
-    auto epsilon                = desc->epsilon;
-    auto norm_region             = desc->across_spatial ? "across spatial" : "within spatial";
+    auto node_info    = node.desc_to_json();
+    auto desc         = node.get_primitive();
+    auto epsilon      = desc->epsilon;
+    auto norm_region  = desc->across_spatial ? "across spatial" : "within spatial";
+    auto& input       = node.input();
+    auto& scale_input = node.scale();
+    
+    std::stringstream primitive_description;
 
     json_composite normalize_info;
     normalize_info.add("input id", input.id());

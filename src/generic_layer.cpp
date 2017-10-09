@@ -36,8 +36,9 @@ generic_layer_inst::typed_primitive_inst(network_impl& network, generic_layer_no
 
 std::string generic_layer_inst::to_string(generic_layer_node const& node)
 {
-    std::stringstream       primitive_description;
-    auto node_info          = node.desc_to_json();
+    auto node_info = node.desc_to_json();
+
+    std::stringstream primitive_description;
 
     node_info.dump(primitive_description);
 

@@ -121,7 +121,7 @@ json_composite program_node::desc_to_json() const
         }
 
     }
-    node_info.add("dependecies", deps_ptrs);
+    node_info.add("dependencies", deps_ptrs);
 
     std::vector<std::string> users_ptrs;
     {

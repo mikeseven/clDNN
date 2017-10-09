@@ -31,17 +31,19 @@ primitive_type_id custom_gpu_primitive_type_id()
 
 std::string custom_gpu_primitive_inst::to_string(custom_gpu_primitive_node const& node)
 {
-    std::stringstream    primitive_description;
-    auto node_info       = node.desc_to_json();
-    auto desc            = node.get_primitive();
+    auto desc      = node.get_primitive();
+    auto node_info = node.desc_to_json();
+    
+    std::stringstream primitive_description;
 
     json_composite custom_gpu_prim_info;
-    custom_gpu_prim_info.add("entry point", desc->kernel_entry_point);
+    custom_gpu_prim_info.add("entry point",   desc->kernel_entry_point);
+    custom_gpu_prim_info.add("kernels code",  desc->kernels_code.ref());
     custom_gpu_prim_info.add("build options", desc->build_options);
     custom_gpu_prim_info.add("gws", desc->gws);
     custom_gpu_prim_info.add("lws", desc->lws);
     // TODO: consider printing more information here
-    node_info.add("custom gpu info", custom_gpu_prim_info);
+    node_info.add("custom primitive info", custom_gpu_prim_info);
     node_info.dump(primitive_description);
 
     return primitive_description.str();

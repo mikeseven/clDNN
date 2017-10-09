@@ -34,11 +34,12 @@ layout batch_norm_inst::calc_output_layout(batch_norm_node const& node)
 
 std::string batch_norm_inst::to_string(batch_norm_node const& node)
 {
-    std::stringstream               primitive_description;
-    auto node_info                  = node.desc_to_json();
-    auto desc                       = node.get_primitive();
-    auto& mean                      = node.mean();
-    auto& variance                  = node.variance();
+    auto desc      = node.get_primitive();
+    auto node_info = node.desc_to_json();
+    auto& mean     = node.mean();
+    auto& variance = node.variance();
+
+    std::stringstream primitive_description;
 
     json_composite batch_norm_info;
     batch_norm_info.add("mean_id", mean.id());

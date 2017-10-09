@@ -71,12 +71,13 @@ layout pooling_inst::calc_output_layout(parent::typed_node const& node)
 
 std::string pooling_inst::to_string(pooling_node const& node)
 {
-    std::stringstream    primitive_description;
-    auto node_info       = node.desc_to_json();
-    auto desc            = node.get_primitive();
-    auto strd            = desc->stride;
-    auto kernel_size     = desc->size;
-    auto mode            = desc->mode == pooling_mode::max ? "max" : "average";
+    auto desc        = node.get_primitive();
+    auto strd        = desc->stride;
+    auto mode        = desc->mode == pooling_mode::max ? "max" : "average";
+    auto node_info   = node.desc_to_json();
+    auto kernel_size = desc->size;
+
+    std::stringstream primitive_description;
 
     json_composite pooling_info;
     pooling_info.add("mode", mode);

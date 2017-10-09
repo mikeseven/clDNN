@@ -194,8 +194,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Dump results only for this specified feature.")
         ("dump_graphs", bpo::bool_switch(),
             "Dump informations about stages of graph compilation to files in .graph format.\n"
-            "Dump informations about primitives in graph in .info format.\n"
-            "GraphViz is needed for dumping .graph files to pdf format. (example command line in cldnn_dumps folder: dot -Tpdf cldnn_program_1_0_init.graph -o outfile.pdf\n")
+            "Dump informations about primitives in graph to .info format.\n"
+            "GraphViz is needed for converting .graph files to pdf format. (example command line in cldnn_dumps folder: dot -Tpdf cldnn_program_1_0_init.graph -o outfile.pdf\n")
         ("log_engine", bpo::bool_switch(),
             "Log engine actions during execution of a network.")
         ("dump_sources", bpo::bool_switch(),

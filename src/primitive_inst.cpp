@@ -77,9 +77,11 @@ std::vector<std::shared_ptr<primitive_inst>> primitive_inst::build_exec_deps(std
 
 std::string primitive_inst::generic_to_string(program_node const& node, const char* type_name)
 {
-    std::stringstream       primitive_description;
-    auto node_info          = node.desc_to_json();
-    std::stringstream       ss_inputs;
+    auto node_info = node.desc_to_json();
+
+    std::stringstream primitive_description;
+    std::stringstream ss_inputs;
+
     for (size_t i = 0; i < node.get_dependencies().size(); ++i)
     {
         auto& in = node.get_dependency(i);

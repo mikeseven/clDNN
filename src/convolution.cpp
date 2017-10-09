@@ -81,26 +81,27 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
 }
 
 std::string convolution_inst::to_string(convolution_node const& node)
-{
-    std::stringstream           primitive_description;
-    auto node_info              = node.desc_to_json();
-    auto desc                   = node.get_primitive();
-    auto strd                   = desc->stride;
-    auto activation             = desc->with_activation ? " true" : "false";
-    auto split                  = node.get_split();
-    auto dilation               = desc->dilation;
+{    
+    auto desc       = node.get_primitive();
+    auto strd       = desc->stride;
+    auto split      = node.get_split();
+    auto dilation   = desc->dilation;
+    auto node_info  = node.desc_to_json();
+    auto activation = desc->with_activation ? " true" : "false";
+
+    std::stringstream primitive_description;
 
     json_composite conv_info;
     conv_info.add("stride", strd.to_string());
     conv_info.add("split", split);
-    conv_info.add("diltion", dilation.to_string());
+    conv_info.add("dilation", dilation.to_string());
     conv_info.add("with activation", activation);
     conv_info.add("slope", desc->activation_negative_slope);
     if (desc->with_output_size)
     {
         json_composite ud_out_size_info;
         ud_out_size_info.add("size", desc->output_size.to_string());
-        conv_info.add("with_user_defined_output_size", ud_out_size_info);
+        conv_info.add("with user defined output size", ud_out_size_info);
     }
 
     node_info.add("convolution info", conv_info);

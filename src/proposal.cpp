@@ -72,10 +72,11 @@ static std::string stringify_port(const program_node & p)
 
 std::string proposal_inst::to_string(proposal_node const& node)
 {
-    std::stringstream                   primitive_description;
-    auto node_info                      = node.desc_to_json();
-    auto desc                           = node.get_primitive();
-    auto scales_parm                    = desc->scales;
+    auto desc         = node.get_primitive();
+    auto node_info    = node.desc_to_json();
+    auto scales_parm  = desc->scales;
+
+    std::stringstream primitive_description;
 
     json_composite proposal_info;
     proposal_info.add("cls score", stringify_port(node.cls_score()));

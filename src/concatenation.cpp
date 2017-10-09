@@ -50,10 +50,12 @@ layout concatenation_inst::calc_output_layout(concatenation_node const& node)
 
 std::string concatenation_inst::to_string(concatenation_node const& node)
 {
-    std::stringstream           primitive_description;
-    auto node_info              = node.desc_to_json();
-    auto desc                   = node.get_primitive();
-    std::stringstream           ss_inputs;
+    auto node_info = node.desc_to_json();
+    auto desc      = node.get_primitive();
+     
+    std::stringstream ss_inputs;
+    std::stringstream primitive_description;
+
     for (size_t i = 0; i < node.inputs_count(); ++i)
     {
         ss_inputs << node.input(i).id();
@@ -63,7 +65,7 @@ std::string concatenation_inst::to_string(concatenation_node const& node)
 
     json_composite concat_info;
     concat_info.add("concat axis", desc->axis);
-    concat_info.add("inputs counts", node.inputs_count());
+    concat_info.add("inputs count", node.inputs_count());
     concat_info.add("inputs", ss_inputs.str());
     concat_info.dump(primitive_description);
 

@@ -39,10 +39,11 @@ layout reshape_inst::calc_output_layout(reshape_node const& node)
 
 std::string reshape_inst::to_string(reshape_node const& node)
 {
-    std::stringstream           primitive_description;
-    auto node_info              = node.desc_to_json();
-    auto desc                   = node.get_primitive();
-    auto& input                 = node.input();
+    auto desc      = node.get_primitive();
+    auto node_info = node.desc_to_json();
+    auto& input    = node.input();
+
+    std::stringstream primitive_description;
 
     json_composite reshape_info;
     reshape_info.add("input id", input.id());

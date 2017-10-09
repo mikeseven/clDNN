@@ -82,12 +82,13 @@ layout fully_connected_inst::calc_output_layout(fully_connected_node const& node
 
 std::string fully_connected_inst::to_string(fully_connected_node const& node)
 {
-    std::stringstream           primitive_description;
-    auto node_info              = node.desc_to_json();
-    auto desc                   = node.get_primitive();
-    auto weights_id             = desc->weights;
-    auto bias_id                = desc->bias != "" ? desc->bias : "no bias";
-    auto activation             = desc->with_activation ? " true" : "false";
+    auto desc       = node.get_primitive();
+    auto node_info  = node.desc_to_json();
+    auto bias_id    = desc->bias != "" ? desc->bias : "no bias";
+    auto weights_id = desc->weights;
+    auto activation = desc->with_activation ? " true" : "false";
+
+    std::stringstream primitive_description;
 
     json_composite fc_info;
     fc_info.add("weights id", weights_id);

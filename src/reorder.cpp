@@ -46,11 +46,12 @@ layout reorder_inst::calc_output_layout(reorder_node const& node)
 
 std::string reorder_inst::to_string(reorder_node const& node)
 {
-    std::stringstream           primitive_description;
-    auto node_info              = node.desc_to_json();
-    auto desc                   = node.get_primitive();
-    auto& input                 = node.input();
-    auto mean                   = desc->mean;
+    auto desc      = node.get_primitive();
+    auto mean      = desc->mean;
+    auto node_info = node.desc_to_json();
+    auto& input    = node.input();
+
+    std::stringstream  primitive_description;
 
     json_composite reorder_info;
     reorder_info.add("input id", input.id());

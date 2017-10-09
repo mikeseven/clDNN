@@ -54,11 +54,12 @@ layout scale_inst::calc_output_layout(scale_node const& node)
 
 std::string scale_inst::to_string(scale_node const& node)
 {
-    std::stringstream    primitive_description;
-    auto node_info       = node.desc_to_json();
-    auto desc            = node.get_primitive();
-    auto& input          = node.input();
-    auto& scale_input    = node.scale_in();
+    auto desc         = node.get_primitive();
+    auto node_info    = node.desc_to_json();
+    auto& input       = node.input();
+    auto& scale_input = node.scale_in();
+
+    std::stringstream primitive_description;
 
     json_composite scale_info;
     scale_info.add("input", input.id());

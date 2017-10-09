@@ -57,7 +57,7 @@ inline std::string dt_to_str(data_types dt)
     case data_types::f16: return "f16";
     case data_types::f32: return "f32";
     default:
-        return "unk (" + std::to_string(std::underlying_type_t<data_types>(dt)) + ")";
+        return "unknown (" + std::to_string(std::underlying_type_t<data_types>(dt)) + ")";
     }
 }
 
@@ -74,7 +74,7 @@ inline std::string fmt_to_str(format fmt)
     case format::bs_xs_xsv8_bsv16: return "bs_xs_xsv8_bsv16";
     case format::os_iyx_osv16: return "os_iyx_osv16";
     default:
-        return "unk (" + std::to_string(fmt.value) + ")";
+        return "unknown (" + std::to_string(fmt.value) + ")";
     }
 }
 

@@ -35,13 +35,15 @@ layout eltwise_inst::calc_output_layout(eltwise_node const& node)
 
 std::string eltwise_inst::to_string(eltwise_node const& node)
 {
-    std::stringstream           primitive_description;
-    auto node_info              = node.desc_to_json();
-    auto desc                   = node.get_primitive();
-    auto& input_1               = node.input();
-    auto& input_2               = node.input2();
-    auto activation             = desc->with_activation ? " true" : "false";
-    std::string                 str_mode;
+    auto node_info  = node.desc_to_json();
+    auto desc       = node.get_primitive();
+    auto activation = desc->with_activation ? " true" : "false";
+    auto& input_1   = node.input();
+    auto& input_2   = node.input2();
+
+    std::stringstream primitive_description;
+    std::string       str_mode;
+
     switch(desc->mode)
     {
     case eltwise_mode::sum:

@@ -37,14 +37,15 @@ layout crop_inst::calc_output_layout(crop_node const& node)
 
 std::string crop_inst::to_string(crop_node const& node)
 {
-    std::stringstream               primitive_description;
-    auto node_info                  = node.desc_to_json();
-    auto desc                       = node.get_primitive();
-    auto ref_input                  = desc->reference_input;
-    auto offsets                    = desc->offsets;
+    auto desc       = node.get_primitive();
+    auto offsets    = desc->offsets;
+    auto node_info  = node.desc_to_json();
+    auto ref_input  = desc->reference_input;
     
+    std::stringstream primitive_description;
+
     json_composite crop_info;
-    crop_info.add("referencei input", ref_input.to_string());
+    crop_info.add("reference input", ref_input.to_string());
     crop_info.add("offset", offsets.to_string());    
 
     node_info.add("crop info", crop_info);

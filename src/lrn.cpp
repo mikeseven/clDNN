@@ -34,15 +34,16 @@ layout lrn_inst::calc_output_layout(lrn_node const& node)
 
 std::string lrn_inst::to_string(lrn_node const& node)
 {
-    std::stringstream           primitive_description;
-    auto node_info              = node.desc_to_json();
-    auto desc                   = node.get_primitive();
-    auto& input                 = node.input();
-    auto norm_size              = desc->size;
-    auto k                      = desc->k;
-    auto alpha                  = desc->alpha;
-    auto beta                   = desc->beta;
-    auto norm_region            = desc->norm_region == cldnn_lrn_norm_region::cldnn_lrn_norm_region_across_channel ? "across channel" : "within channel";
+    auto node_info   = node.desc_to_json();
+    auto desc        = node.get_primitive();
+    auto norm_size   = desc->size;
+    auto k           = desc->k;
+    auto alpha       = desc->alpha;
+    auto beta        = desc->beta;
+    auto norm_region = desc->norm_region == cldnn_lrn_norm_region::cldnn_lrn_norm_region_across_channel ? "across channel" : "within channel";
+    auto& input      = node.input();
+
+    std::stringstream primitive_description;
 
     json_composite lrn_info;
     lrn_info.add("input id", input.id());
