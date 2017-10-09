@@ -401,6 +401,7 @@ namespace KernelSelector {
         case KernelDividerMode::DONT_CARE:  return "DONT_CARE";
         case KernelDividerMode::FIXED:      return "FIXED";
         case KernelDividerMode::DYNAMIC:    return "DYNAMIC";
+        case KernelDividerMode::DYNAMIC_WITH_PADDING:    return "DYNAMIC_WITH_PADDING";
         default: return "";
         }
     }
