@@ -80,6 +80,7 @@ namespace KernelSelector
                             uint32_t ceil : 1;
                             uint32_t fixedKenrelDivider : 1;
                             uint32_t dynamicKenrelDivider : 1;
+                            uint32_t dynamicKenrelDividerWithPadding : 1;
                         } pooling;
                         struct conv_t 
                         {
@@ -401,6 +402,9 @@ namespace KernelSelector
                 break;
             case KernelDividerMode::DYNAMIC:
                 key.restrict.val.dedicated.pooling.dynamicKenrelDivider = 1;
+                break;
+            case KernelDividerMode::DYNAMIC_WITH_PADDING:
+                key.restrict.val.dedicated.pooling.dynamicKenrelDividerWithPadding = 1;
                 break;
             default:
                 break;
