@@ -18,7 +18,7 @@
 #pragma once
 #include "tensor.hpp"
 #include <cmath>
-#include <stdlib.h>
+#include <cstdlib>
 
 namespace cldnn
 {

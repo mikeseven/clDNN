@@ -14,3 +14,6 @@
 
 #include "../public/gpu_enums.inc"
 
+GPU_MODEL(HD4XX,       499)
+
+GPU_ARCHITECTURE(GEN8,          80)

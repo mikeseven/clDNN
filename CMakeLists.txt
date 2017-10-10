@@ -421,7 +421,11 @@ set_property(CACHE CLDNN__BOOST_VERSION PROPERTY STRINGS ${__CLDNN_BoostVersions
 # ======================================================================================================
 
 # Include and build: Examples of usage of clDNN framework.
-set(CLDNN__INCLUDE_EXAMPLES OFF CACHE BOOL "Include and build: clDNN framework's usage examples.")
+if(ANDROID)
+  set(CLDNN__INCLUDE_EXAMPLES OFF CACHE BOOL "Include and build: clDNN framework's usage examples.")
+else()
+  set(CLDNN__INCLUDE_EXAMPLES ON CACHE BOOL "Include and build: clDNN framework's usage examples.")
+endif()
 mark_as_advanced(CLDNN__INCLUDE_EXAMPLES)
 
 # ======================================================================================================
@@ -457,7 +461,11 @@ mark_as_advanced(CLDNN__RUN_TESTS)
 # ======================================================================================================
 
 # Compile / Link: Use static C++ Runtime library.
-set(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME ON CACHE BOOL "Compile / Link: Use static version of C++ Runtime library instead of shared one.")
+if(ANDROID)
+  set(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME ON CACHE BOOL "Compile / Link: Use static version of C++ Runtime library instead of shared one.")
+else()
+  set(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME OFF CACHE BOOL "Compile / Link: Use static version of C++ Runtime library instead of shared one.")
+endif()
 mark_as_advanced(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME)
 
 # ======================================================================================================

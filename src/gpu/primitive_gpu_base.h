@@ -130,8 +130,8 @@ protected:
                 args.split = i;
 
                 for (const auto& m : _intermediates_memory)
-		{
-		  args.intermediates.push_back(static_cast<memory_impl::cptr>(m));		 
+                {
+                    args.intermediates.push_back(m);
                 }
 
                 auto event = _kernels[k].run(_kernel_data.kernels[k], tmp_events, args);
