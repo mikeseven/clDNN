@@ -204,7 +204,7 @@ target_link_libraries("${CLDNN_BUILD__PROJ}"
 
 if(WIN32)
   target_link_libraries("${CLDNN_BUILD__PROJ}" setupapi)
-elseif(UNIX)
+elseif((Not ANDROID) AND (UNIX))
   target_link_libraries("${CLDNN_BUILD__PROJ}" pthread)
 endif()
 

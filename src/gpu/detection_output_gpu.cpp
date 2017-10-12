@@ -19,6 +19,7 @@
 #include "kd_selector.h"
 #include "network_impl.h"
 #include "implementation_map.h"
+#include "math_utils.h"
 
 #include <algorithm>
 #include <stdexcept>
