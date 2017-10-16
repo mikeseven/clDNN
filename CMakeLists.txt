@@ -15,6 +15,12 @@
 cmake_minimum_required (VERSION 3.1 FATAL_ERROR)
 include(CheckCXXCompilerFlag)
 
+# Save initial compiler flags for the IE submodule
+if(CLDNN__INCLUDE_GENERIC_SAMPLE)
+  set(INITIAL_CXX_FLAGS ${CMAKE_CXX_FLAGS})
+  set(INITIAL_C_FLAGS ${CMAKE_C_FLAGS})
+endif()
+
 # Register Intel helper modules.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/utils/build/cmake/modules")
 include(IntelHelpers)
@@ -481,6 +487,12 @@ set(CLDNN__CMAKE_DEBUG OFF CACHE BOOL "CMake: Enables debug trace messages in cl
 mark_as_advanced(CLDNN__CMAKE_DEBUG)
 
 # ======================================================================================================
+
+# Include and build: Validation sample using IE
+set(CLDNN__INCLUDE_GENERIC_SAMPLE OFF CACHE BOOL "Include and build: IE generic sample.")
+mark_as_advanced(CLDNN__INCLUDE_GENERIC_SAMPLE)
+
+# ======================================================================================================
 # ======================================================================================================
 
 # Minimum versions of compilers.
@@ -757,6 +769,7 @@ message(STATUS "[clDNN]  - Include/Build kernel selector: ${CLDNN__INCLUDE_KERNE
 message(STATUS "[clDNN]  - Include/Build examples:        ${CLDNN__INCLUDE_EXAMPLES}")
 message(STATUS "[clDNN]  - Include/Build tests:           ${CLDNN__INCLUDE_TESTS}")
 message(STATUS "[clDNN]  - Include/Build tutorial:        ${CLDNN__INCLUDE_TUTORIAL}")
+message(STATUS "[clDNN]  - Include/Build generic_sample:  ${CLDNN__INCLUDE_GENERIC_SAMPLE}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Run tests:                     ${CLDNN__RUN_TESTS}")
 message(STATUS "[clDNN]")
@@ -1238,6 +1251,14 @@ if(CLDNN__INCLUDE_TUTORIAL)
 endif()
 
 add_subdirectory(docs)
+
+if(CLDNN__INCLUDE_GENERIC_SAMPLE)
+  if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/inference_engine/dpd_vcp_dl-scoring_engine/CMakeLists.txt")
+    message(FATAL_ERROR "IE Submodule CMakeLists.txt not found!\nPlease use: git submodule update --init --recursive --force")
+  else()
+    add_subdirectory(inference_engine)
+  endif()
+endif()
 
 # ======================================================================================================
 # ======================================================================================================
