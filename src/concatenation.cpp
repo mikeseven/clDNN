@@ -83,8 +83,6 @@ concatenation_inst::typed_primitive_inst(network_impl& network, concatenation_no
     {
         auto& input_mem = i->output_memory();
         auto input_mem_size = input_mem.get_layout().size;
-        if (input_mem.get_layout().fused_format() != input_format)
-            CLDNN_ERROR_MESSAGE(node.id(), "Every input must have the same format!");
         for (int dim = concatenation::along_b; dim <= concatenation::along_y; ++dim)
         {
             if (dim == node.get_primitive()->axis)
