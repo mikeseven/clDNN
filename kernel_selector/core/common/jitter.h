@@ -714,8 +714,27 @@ inline JitConstants MakeConcatenationJitConstants(const ConcatenationParams& par
 {
     JitConstants jit = MakeBaseParamsJitConstants(params);
 
+    auto input_format = params.inputs[0].GetLayout();
+    auto output_format = params.output.GetLayout();
+
+    //default values when input_format = output_format
+    std::vector<uint32_t> dim_index = { 0, 1, 2, 3 };
+
+    //case for input == bfyx, output == yxfb and input == yxfb, output == bfyx
+    if (input_format != output_format)
+    {
+        dim_index[0] = 3;
+        dim_index[1] = 2;
+        dim_index[2] = 0;
+        dim_index[3] = 1;
+    }
+
     jit.AddConstants({
         MakeJitConstant("CONCAT_" + toString(params.concatParams.axis), 1),
+        MakeJitConstant("DIM_0", dim_index[0]),
+        MakeJitConstant("DIM_1", dim_index[1]),
+        MakeJitConstant("DIM_2", dim_index[2]),
+        MakeJitConstant("DIM_3", dim_index[3]),
     });
 
     return jit;
