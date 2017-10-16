@@ -136,6 +136,7 @@ typedef struct
     uint32_t enable_parallelisation;   ///< Enables parallel execution of primitives which don't depend on each other. Disabled by default.
     const char* engine_log;            ///< Specifies a file to which engine log should be dumped. Null/empty values means no logging.
     const char* sources_dumps_dir;     ///< Specifies a directory where sources of cldnn::program objects should be dumped. Null/empty values means no loggins.
+    uint32_t priority_mode;            ///< Placeholder for priority mode (support of priority hints in command queue). Currently ignored.
 }  cldnn_engine_configuration;
 
 /// @brief Information about the engine returned by cldnn_get_engine_info().
