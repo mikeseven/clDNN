@@ -87,15 +87,21 @@ TEST(depth_concatenate_f32_gpu, test01) {
 }
 
 TEST(depth_concatenate_f32_gpu, test02) {
-    //  Input count : 2
+    //  Input count : 3 (yxfb, yxfb, bfyx)
     //  Input1 : 2x 1x1 x 2
     //  Input2 : 2x 1x1 x 3
+    //  Input3 : 2x 1x1 x 3
     //
-    //  Input1:
+    //  Input1 (yxfb):
     //  0.5  0.7  :f0
     //  0.2  0.4  :f1
     //
-    //  Input2:
+    //  Input2 (yxfb):
+    //  1    0.1  :f0
+    //  0.3 -0.5  :f1
+    //  0   -0.2  :f2
+    //
+    //  Input3 (bfyx):
     //  1    0.1  :f0
     //  0.3 -0.5  :f1
     //  0   -0.2  :f2
@@ -106,6 +112,9 @@ TEST(depth_concatenate_f32_gpu, test02) {
     //  1    0.1  :f2
     //  0.3 -0.5  :f3
     //  0   -0.2  :f4
+    //  1    0.1  :f5
+    //  0.3 -0.5  :f6
+    //  0   -0.2  :f7
     //
 
     engine engine;
