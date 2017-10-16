@@ -207,7 +207,7 @@ std::vector<std::string> ParseFlagList(const std::vector<std::string>& args, con
     return result;
 }
 
-
+#ifndef _WIN32
 double get_rapl_energy_info(unsigned int power_domain, unsigned int node)
 {
     int          err;
@@ -233,7 +233,7 @@ double get_rapl_energy_info(unsigned int power_domain, unsigned int node)
 
     return total_energy_consumed;
 }
-
+#endif
 /**
 * \brief The main function of inference engine sample application
 * @param argc - The number of arguments
