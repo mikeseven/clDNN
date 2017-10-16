@@ -16,6 +16,9 @@ include(../ie_outputs.cmake)
 include(../ie_imports.cmake)
 set (TARGET_NAME "generic_sample")
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC -fPIE")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fPIC -fPIE")
+
 if (ENABLE_SAMPLES)
 
 file (GLOB MAIN_SRC
@@ -50,7 +53,6 @@ add_executable(${TARGET_NAME} ${MAIN_SRC} ${MAIN_HEADERS})
 
 add_dependencies(${TARGET_NAME} gflags clDNNPlugin)
 
-set_target_properties(${TARGET_NAME} PROPERTIES "CMAKE_CXX_FLAGS" "${CMAKE_CXX_FLAGS} -fPIE")
 
 target_link_libraries(${TARGET_NAME} format_reader inference_engine gflags)
 
