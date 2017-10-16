@@ -731,10 +731,10 @@ inline JitConstants MakeConcatenationJitConstants(const ConcatenationParams& par
 
     jit.AddConstants({
         MakeJitConstant("CONCAT_" + toString(params.concatParams.axis), 1),
-        MakeJitConstant("DIM_0", dim_index[0]),
-        MakeJitConstant("DIM_1", dim_index[1]),
-        MakeJitConstant("DIM_2", dim_index[2]),
-        MakeJitConstant("DIM_3", dim_index[3]),
+        MakeJitConstant("INPUT_DIM_0", dim_index[0]),
+        MakeJitConstant("INPUT_DIM_1", dim_index[1]),
+        MakeJitConstant("INPUT_DIM_2", dim_index[2]),
+        MakeJitConstant("INPUT_DIM_3", dim_index[3]),
     });
 
     return jit;
