@@ -201,7 +201,6 @@ TEST(NegativeDepthConcatenateTest, DISABLED_TestAll) {
     auto od = data_types::f16;
 
     auto f = format::bfyx;
-    auto of = format::yxfb;
 
     std::vector<int> t { 1, 2, 3, 4 };
     std::vector<int> t0 { 7, 2, 3, 4 };
