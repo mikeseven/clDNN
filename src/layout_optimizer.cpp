@@ -44,7 +44,7 @@ namespace {
             return false;
         }
 
-        return false;
+        return true;
     }
 }
 
