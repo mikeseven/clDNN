@@ -19,10 +19,6 @@ if(CLDNN__INCLUDE_GENERIC_SAMPLE)
   set(KEEP_OLD_CXX_FLAGS ${CMAKE_CXX_FLAGS})
   set(KEEP_OLD_C_FLAGS ${CMAKE_C_FLAGS})
 
-  ## Change to the IE build flags
-  #set(CMAKE_CXX_FLAGS "-std=c++11 /DWIN32 /D_WINDOWS /W3 /GR /EHsc D_SCL_SECURE_NO_WARNINGS /FS")
-  #set(CMAKE_C_FLAGS "/DWIN32 /D_WINDOWS /W3 /FS")
-
   # Reset the build flags to the initial set
   set(CMAKE_CXX_FLAGS ${INITIAL_CXX_FLAGS})
   set(CMAKE_C_FLAGS ${INITIAL_C_FLAGS})
@@ -31,6 +27,7 @@ if(CLDNN__INCLUDE_GENERIC_SAMPLE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Zi")
   else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fPIC")
+    set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -fPIC")
   endif()
   
   set(IE_SUBMODULE_IN_CLDNN ON)
