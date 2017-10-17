@@ -537,6 +537,7 @@ int main(int argc, char *argv[]) {
         uint32_t niter = FLAGS_ni;
 #ifndef _WIN32 
         double packageEnergySum = get_rapl_energy_info(0, 0);
+        double old = 0.0;
         double gpuEnergySum = old = get_rapl_energy_info(2, 0);
         double newenergy = 0.0;
         std::cout << "Package: " << packageEnergySum << "   gpu: " << gpuEnergySum << std::endl;
