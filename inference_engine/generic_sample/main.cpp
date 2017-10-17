@@ -33,14 +33,14 @@
 #include <inference_engine.hpp>
 #include <sys/stat.h>
 #include <cmath>
-#include "../../examples/common/power_instrumentation.h"
 #include <locale>
 #include <codecvt>
-
 #ifdef _WIN32
 #include "../dpd_vcp_dl-scoring_engine/samples/common/os/windows/w_dirent.h"
+#include "../../examples/common/power_instrumentation.h"
 #else
 #include <dirent.h>
+#include "rapl.h"
 #endif
 
 using namespace InferenceEngine::details;
@@ -58,14 +58,14 @@ static const char model_message[] = "Required. Path to an .xml file with a train
 DEFINE_string(m, "", model_message);
 
 static const char plugin_message[] = "Plugin name. For example MKLDNNPlugin. If this parameter is pointed, " \
-                                     "the sample will look for this plugin only";
+"the sample will look for this plugin only";
 DEFINE_string(p, "", plugin_message);
 
 static const char plugin_path_message[] = "Path to a plugin folder.";
 DEFINE_string(pp, DEFAULT_PATH_P, plugin_path_message);
 
 static const char target_device_message[] = "Specify the target device to infer on; CPU or GPU is acceptable. " \
-                                            "Sample will look for a suitable plugin for device specified";
+"Sample will look for a suitable plugin for device specified";
 DEFINE_string(d, "", target_device_message);
 
 static const char ni_message[] = "number of running iterations";
@@ -105,7 +105,7 @@ static const char tuning_message[] = "tuning file to be used/created";
 DEFINE_string(tuning, "", tuning_message);
 
 static const char scale_message[] = "scale output for comparison";
-DEFINE_double (scale, 1.0, scale_message);
+DEFINE_double(scale, 1.0, scale_message);
 
 extern "C" {
 #include "md5.h"  // taken from http://openwall.info/wiki/people/solar/software/public-domain-source-code/md5
@@ -171,8 +171,8 @@ std::vector<std::string> CollectImageNames(const std::vector<std::string>& files
 }
 
 /**
- * \brief This function show a help message
- */
+* \brief This function show a help message
+*/
 static void showUsage() {
     std::cout << std::endl;
     std::cout << "generic_sample [OPTION] [OPTION] ..." << std::endl;
@@ -204,13 +204,45 @@ std::vector<std::string> ParseFlagList(const std::vector<std::string>& args, con
     return result;
 }
 
+#ifndef _WIN32
+
+extern double MAX_ENERGY_STATUS_JOULES;
+extern double MAX_THROTTLED_TIME_SECONDS;
+
+double get_rapl_energy_info(unsigned int power_domain, unsigned int node)
+{
+    int          err;
+    double       total_energy_consumed = 0.0;
+
+    switch (power_domain) {
+    case PKG:
+        err = get_pkg_total_energy_consumed(node, &total_energy_consumed);
+        break;
+    case PP0:
+        err = get_pp0_total_energy_consumed(node, &total_energy_consumed);
+        break;
+    case PP1:
+        err = get_pp1_total_energy_consumed(node, &total_energy_consumed);
+        break;
+    case DRAM:
+        err = get_dram_total_energy_consumed(node, &total_energy_consumed);
+        break;
+    default:
+        err = MY_ERROR;
+        break;
+    }
+
+    return total_energy_consumed;
+}
+#endif
 /**
- * \brief The main function of inference engine sample application
- * @param argc - The number of arguments
- * @param argv - Arguments
- * @return 0 if all good
- */
+* \brief The main function of inference engine sample application
+* @param argc - The number of arguments
+* @param argv - Arguments
+* @return 0 if all good
+*/
 int main(int argc, char *argv[]) {
+    
     std::cout << "InferenceEngine: " << InferenceEngine::GetInferenceEngineVersion() << "\n";
     std::string commandLine;
     for (int i = 0; i < argc; i++) {
@@ -240,7 +272,7 @@ int main(int argc, char *argv[]) {
 #ifndef OS_LIB_FOLDER
 # define OS_LIB_FOLDER "/"
 #endif
-    
+
     try {
         // Load plugin
         InferenceEngine::InferenceEnginePluginPtr _plugin(
@@ -267,11 +299,13 @@ int main(int argc, char *argv[]) {
         }
 
         // Power gadget
+#ifndef _WIN32
+        // Always intialize the power_gov library first
+        init_rapl();
+#else
         CIntelPowerGadgetLib energyLib;
         if (!FLAGS_pi.empty()) {
-#ifndef _WIN32
-            THROW_IE_EXCEPTION << "Power instrumentation is supported only on Windows!";
-#endif
+
             std::ofstream outFile(FLAGS_pi);
             if (!outFile.is_open()) {
                 THROW_IE_EXCEPTION << "Can't open " << FLAGS_pi << " for writing!";
@@ -281,6 +315,9 @@ int main(int argc, char *argv[]) {
                 FLAGS_pi.clear();
             }
         }
+#endif
+
+
 
         // Read network
         InferenceEngine::CNNNetReader network;
@@ -326,11 +363,12 @@ int main(int argc, char *argv[]) {
             THROW_IE_EXCEPTION << "input files aren't a multiple of the network's inputs";
         }
         size_t batchSize = inputNames.size() / (networkInputs.size() - (FLAGS_im_info ? 1 : 0));
-        if (FLAGS_im_info){
+        if (FLAGS_im_info) {
             if (batchSize != 1) {
                 THROW_IE_EXCEPTION << "im_info only supported for batch size 1";//cant override changes in batch sizes along the network in these types of networks
             }
-        } else {
+        }
+        else {
             network.getNetwork().setBatchSize(batchSize);
         }
         // read images
@@ -369,11 +407,11 @@ int main(int argc, char *argv[]) {
 
             // merge images (assume b0[in0 in1 ...] b1[in0 in1 ...] ...
             std::shared_ptr<unsigned char> batchImageData;
-            batchImageData.reset(new unsigned char[inputSizes[imIndex]*batchSize], std::default_delete<unsigned char[]>());
+            batchImageData.reset(new unsigned char[inputSizes[imIndex] * batchSize], std::default_delete<unsigned char[]>());
             size_t offset = 0;
             for (size_t b = 0; b < batchSize; b++) {
                 auto imData = readImages[imIndex + (b*inputSizes.size())];
-                for (size_t i = 0; i < inputSizes[imIndex]; i++, offset++){
+                for (size_t i = 0; i < inputSizes[imIndex]; i++, offset++) {
                     batchImageData.get()[offset] = imData.get()[i];
                 }
             }
@@ -383,7 +421,7 @@ int main(int argc, char *argv[]) {
 
             // convert from byxf(rgb) to bfyx
             InferenceEngine::ConvertImageToInput(batchImageData.get(), inputSizes[imIndex] * batchSize, *inputBlob);
-           
+
             // set the blobs
             inputBlobs[netInput.first] = inputBlob;
             imIndex++;
@@ -408,8 +446,8 @@ int main(int argc, char *argv[]) {
         auto configFiles = ParseFlagList(args, "-custom");
         for (const auto& xml : configFiles) {
             sts = _plugin->SetConfig({ { PluginConfigParams::KEY_CONFIG_FILE, xml } }, &dsc);
-            if (sts!=OK){
-                THROW_IE_EXCEPTION <<"Configuration could not be loaded: "<< dsc.msg;
+            if (sts != OK) {
+                THROW_IE_EXCEPTION << "Configuration could not be loaded: " << dsc.msg;
             }
             else {
                 std::cout << "[INFO] Loaded configuration file: " << xml << std::endl;
@@ -438,27 +476,30 @@ int main(int argc, char *argv[]) {
             if (sts == InferenceEngine::OK) {
                 sts = net->CreateInferRequest(req, &dsc);
             }
-        } else {
+        }
+        else {
             sts = _plugin->LoadNetwork(network.getNetwork(), &dsc);
         }
         if (sts == InferenceEngine::GENERAL_ERROR) {
             THROW_IE_EXCEPTION << dsc.msg;
-        } else if (sts == InferenceEngine::NOT_IMPLEMENTED) {
+        }
+        else if (sts == InferenceEngine::NOT_IMPLEMENTED) {
             THROW_IE_EXCEPTION << "Model cannot be loaded! Plugin doesn't support this model!";
         }
 
         InferenceEngine::BlobMap outputBlobs;
         if (FLAGS_newapi) {
             THROW_IE_EXCEPTION << "NewAPI option is currently broken!";
-//             sts = req->SetInput(inputBlobs, &dsc);
-//             if (sts != InferenceEngine::OK) {
-//                 THROW_IE_EXCEPTION << "Error setting inputs." << dsc.msg;
-//             }
-//             sts = req->GetOutput(outputBlobs, &dsc);
-//             if (sts != InferenceEngine::OK) {
-//                 THROW_IE_EXCEPTION << "Error getting outputs." << dsc.msg;
-//             }
-        } else {
+            //sts = req->SetInput(inputBlobs, &dsc);
+            //if (sts != InferenceEngine::OK) {
+            //    THROW_IE_EXCEPTION << "Error setting inputs." << dsc.msg;
+            //}
+            //sts = req->GetOutput(outputBlobs, &dsc);
+            //if (sts != InferenceEngine::OK) {
+            //    THROW_IE_EXCEPTION << "Error getting outputs." << dsc.msg;
+            //}
+        }
+        else {
             InferenceEngine::OutputsDataMap out;
             out = network.getNetwork().getOutputsInfo();
             for (auto &&item : out) {
@@ -471,13 +512,14 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // Start measuring power
+        // Start measuring power Windows
+#ifdef _WIN32
         if (!FLAGS_pi.empty()) {
             std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
             std::wstring pi_filename = converter.from_bytes(FLAGS_pi);
             energyLib.StartLog((wchar_t*)pi_filename.c_str());
         }
-
+#endif
         // Infer model
         auto pos = FLAGS_m.find_last_of("\\/");
         std::string modelName = FLAGS_m.substr(pos >= FLAGS_m.length() ? 0 : pos + 1);
@@ -487,12 +529,19 @@ int main(int argc, char *argv[]) {
         typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
         typedef std::chrono::duration<float> fsec;
         double total = 0.0;
+        double framesPerSecond = 0.0;
         uint32_t niter = FLAGS_ni;
+#ifndef _WIN32 
+        double packageEnergySum = get_rapl_energy_info(0, 0);
+        double gpuEnergySum = get_rapl_energy_info(2, 0);
+#endif
         for (uint32_t i = 0; i < niter; ++i) {
+
             auto t0 = Time::now();
             if (FLAGS_newapi) {
                 sts = req->Infer(&dsc);
-            } else {
+            }
+            else {
                 sts = _plugin->Infer(inputBlobs, outputBlobs, &dsc);
             }
             auto t1 = Time::now();
@@ -500,25 +549,47 @@ int main(int argc, char *argv[]) {
             ms d = std::chrono::duration_cast<ms>(fs);
             total += static_cast<double>(d.count());
             if (!FLAGS_pi.empty()) {
+#ifdef _WIN32
                 if (i < (niter - 1)) {
                     energyLib.ReadSample();
-                } else {
+                }
+                else {
                     energyLib.StopLog();
                 }
+#endif
             }
+
         }
 
         std::cout << "Average running time of one iteration: " << total / static_cast<double>(niter) << " ms" << std::endl;
+        framesPerSecond = (static_cast<double>(batchSize) * 1000.0) / (total / static_cast<double>(niter));
+        std::cout << "FPS: " << framesPerSecond << std::endl;
+
+#ifndef _WIN32
+        packageEnergySum = get_rapl_energy_info(0, 0) - packageEnergySum;
+        gpuEnergySum = get_rapl_energy_info(2, 0) - gpuEnergySum;
+        if (packageEnergySum < 0) packageEnergySum += MAX_ENERGY_STATUS_JOULES;
+        if (gpuEnergySum < 0) gpuEnergySum += MAX_ENERGY_STATUS_JOULES;
+        double packagePower = packageEnergySum / (total / 1000.0);
+        double gpuPower = gpuEnergySum / (total / 1000.0);
+        std::cout << "Total Package Power [W]: " << packagePower << std::endl;
+        std::cout << "Total Gpu Power [W]: " << gpuPower << std::endl;
+        std::cout << "FPS/Package Power [FPS/W]: " << framesPerSecond / packagePower << std::endl;
+        std::cout << "FPS/Gpu Power [FPS/W]: " << framesPerSecond / gpuPower << std::endl;
+        terminate_rapl();
+#endif
 
         // Check errors
         if (sts == InferenceEngine::GENERAL_ERROR) {
             THROW_IE_EXCEPTION << "Scoring failed! Critical error: " << dsc.msg;
-        } else if (sts == InferenceEngine::NOT_IMPLEMENTED) {
+        }
+        else if (sts == InferenceEngine::NOT_IMPLEMENTED) {
             THROW_IE_EXCEPTION << "Scoring failed! Input data is incorrect and not supported!";
-        } else if (sts == InferenceEngine::NETWORK_NOT_LOADED) {
+        }
+        else if (sts == InferenceEngine::NETWORK_NOT_LOADED) {
             THROW_IE_EXCEPTION << "Scoring failed! " << dsc.msg;
         }
-        
+
         // output hashes
         std::cout << "Input/Output Hashes" << std::endl;
         for (auto& in : inputBlobs) {
@@ -534,7 +605,8 @@ int main(int argc, char *argv[]) {
             // Get perfomance counts
             if (FLAGS_newapi) {
                 req->GetPerformanceCounts(perfomanceMap, nullptr);
-            } else {
+            }
+            else {
                 _plugin->GetPerformanceCounts(perfomanceMap, nullptr);
             }
             // Print perfomance counts
@@ -573,7 +645,7 @@ int main(int argc, char *argv[]) {
             for (auto& output : outputBlobs) {
                 outFile << std::endl << "Output " << output.first << ": [";
                 auto dims = output.second->dims();
-                for (const auto& d: dims) {
+                for (const auto& d : dims) {
                     outFile << d << ",";
                 }
                 outFile << "] " << BlobMD5(output.second) << std::endl;
@@ -610,7 +682,7 @@ int main(int argc, char *argv[]) {
 
             // open the csv file
             std::ofstream csvFile;
-            if (!FLAGS_csv.empty()) 
+            if (!FLAGS_csv.empty())
             {
                 csvFile.open(FLAGS_csv);
                 if (csvFile.is_open())
@@ -642,7 +714,7 @@ int main(int argc, char *argv[]) {
                 while (!refFile.eof()) {
                     refFile.clear();//clear flags
                     while (getline(refFile, line) && (line.compare(0, std::string("Output").length(), "Output") != 0));
-                    
+
                     if (!refFile.eof()) {
                         // handle one output
 
@@ -674,14 +746,14 @@ int main(int argc, char *argv[]) {
                 }
 
                 // compare layer by layer - check existence
-                for (auto& output: outputBlobs)
+                for (auto& output : outputBlobs)
                 {
                     if (refOutputs.find(output.first) == refOutputs.end())
                     {
                         std::cout << "[WARNING] Output " << output.first << " was not found in reference dump!\n";
                     }
                     else if (output.second->size() != refOutputs.at(output.first).size()) {
-                        std::cout << "[WARNING] Output " << output.first << " has different size than the reference: output(" 
+                        std::cout << "[WARNING] Output " << output.first << " has different size than the reference: output("
                             << output.second->size() << ") ref(" << refOutputs.at(output.first).size() << ")\n";
                     }
                     else {
@@ -725,9 +797,9 @@ int main(int argc, char *argv[]) {
                             std::cout << "  Error magnitude >1e-" << i << " values:" << std::setprecision(1) << std::setw(5) << std::fixed << std::right
                                 << 100.0f * diffBins[i] / numValues << "%\n";
                         }
-                        std::cout << std::setprecision(10) << "  Max absolute difference: " << maxDiff 
+                        std::cout << std::setprecision(10) << "  Max absolute difference: " << maxDiff
                             << " (output: " << maxDiffOutput << ", reference: " << maxDiffReference << ")\n";
-                        
+
                         // output to csv
                         if (csvFile.is_open())
                         {
@@ -743,9 +815,10 @@ int main(int argc, char *argv[]) {
             }
         }
 
-    } catch (InferenceEngineException ex) {
+        }
+    catch (InferenceEngineException ex) {
         std::cerr << ex.what() << std::endl;
         return 3;
     }
     return 0;
-}
+    }
