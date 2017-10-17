@@ -409,7 +409,7 @@ int main(int argc, char *argv[]) {
             imageDims = dims;//save in case of im_info
 
 
-                             // merge images (assume b0[in0 in1 ...] b1[in0 in1 ...] ...
+            // merge images (assume b0[in0 in1 ...] b1[in0 in1 ...] ...
             std::shared_ptr<unsigned char> batchImageData;
             batchImageData.reset(new unsigned char[inputSizes[imIndex] * batchSize], std::default_delete<unsigned char[]>());
             size_t offset = 0;
@@ -494,14 +494,14 @@ int main(int argc, char *argv[]) {
         InferenceEngine::BlobMap outputBlobs;
         if (FLAGS_newapi) {
             THROW_IE_EXCEPTION << "NewAPI option is currently broken!";
-            //             sts = req->SetInput(inputBlobs, &dsc);
-            //             if (sts != InferenceEngine::OK) {
-            //                 THROW_IE_EXCEPTION << "Error setting inputs." << dsc.msg;
-            //             }
-            //             sts = req->GetOutput(outputBlobs, &dsc);
-            //             if (sts != InferenceEngine::OK) {
-            //                 THROW_IE_EXCEPTION << "Error getting outputs." << dsc.msg;
-            //             }
+            //sts = req->SetInput(inputBlobs, &dsc);
+            //if (sts != InferenceEngine::OK) {
+            //    THROW_IE_EXCEPTION << "Error setting inputs." << dsc.msg;
+            //}
+            //sts = req->GetOutput(outputBlobs, &dsc);
+            //if (sts != InferenceEngine::OK) {
+            //    THROW_IE_EXCEPTION << "Error getting outputs." << dsc.msg;
+            //}
         }
         else {
             InferenceEngine::OutputsDataMap out;
@@ -535,22 +535,10 @@ int main(int argc, char *argv[]) {
         double total = 0.0;
         double framesPerSecond = 0.0;
         uint32_t niter = FLAGS_ni;
-#ifndef _WIN32       
-        double *energyConsumptionPackage = new double[niter + 1];
-        //double *energyConsumptionCpu= new double[niter]; for CPU energy consumption
-        double *energyConsumptionGpu = new double[niter + 1];
-        //double *energyConsumptionDram = new double[niter]; for DRAM energy consumption
-        double *timeConsumption = new double[niter];
-        double gpuSum = 0.0;
-        double packageSum = 0.0;
-        double iterationPower = 0.0;
-        energyConsumptionPackage[0] = get_rapl_energy_info(0, 0);
-        //energyConsumptionCpu[0] = get_rapl_energy_info(1, 0); CPU
-        energyConsumptionGpu[0] = get_rapl_energy_info(2, 0);
-        //energyConsumptionDram[0] = get_rapl_energy_info(3, 0); DRAM
+#ifndef _WIN32 
+        double packageEnergySum = get_rapl_energy_info(0, 0);
+        double gpuEnergySum = get_rapl_energy_info(2, 0);
 #endif
-        //for (uint32_t i = 1; i <= niter; ++i) {
-
         for (uint32_t i = 0; i < niter; ++i) {
 
             auto t0 = Time::now();
@@ -565,17 +553,7 @@ int main(int argc, char *argv[]) {
             ms d = std::chrono::duration_cast<ms>(fs);
             total += static_cast<double>(d.count());
             if (!FLAGS_pi.empty()) {
-#ifndef _WIN32
-                if (i < niter) {
-                    energyConsumptionPackage[i+1] = get_rapl_energy_info(0, 0);
-                    //energyConsumptionCpu[i+1] = get_rapl_energy_info(1, 0); for CPU energy consumption
-                    energyConsumptionGpu[i+1] = get_rapl_energy_info(2, 0);
-                    //energyConsumptionDram[i+1] = get_rapl_energy_info(3, 0); for DRAM energy consumption
-                    timeConsumption[i] = static_cast<double>(d.count());
-                    packageSum += (energyConsumptionPackage[i+1] - energyConsumptionPackage[i]) / (timeConsumption[i] / 1000.0);
-                    gpuSum += (energyConsumptionGpu[i+1] - energyConsumptionGpu[i]) / (timeConsumption[i] / 1000.0);
-                }
-#else
+#ifdef _WIN32
                 if (i < (niter - 1)) {
                     energyLib.ReadSample();
                 }
@@ -592,16 +570,15 @@ int main(int argc, char *argv[]) {
         std::cout << "FPS: " << framesPerSecond << std::endl;
 
 #ifndef _WIN32
-        double packagePower = packageSum / static_cast<double>(niter);
-        double gpuPower = gpuSum / static_cast<double>(niter);
+        packageEnergySum = get_rapl_energy_info(0, 0) - packageEnergySum;
+        gpuEnergySum = get_rapl_energy_info(2, 0) - gpuEnergySum;
+        double packagePower = packageEnergySum / (total * 1000.0);
+        double gpuPower = gpuEnergySum / (total * 1000.0);
         std::cout << "Total Package Power [W]: " << packagePower << std::endl;
         std::cout << "Total Gpu Power [W]: " << gpuPower << std::endl;
         std::cout << "FPS/Package Power [FPS/W]: " << framesPerSecond / packagePower << std::endl;
         std::cout << "FPS/Gpu Power [FPS/W]: " << framesPerSecond / gpuPower << std::endl;
-        delete[] energyConsumptionPackage;
-        //delete[] energyConsumptionCpu;
-        delete[] energyConsumptionGpu;
-        //delete[] energyConsumptionDram;
+        terminate_rapl();
 #endif
 
         // Check errors
