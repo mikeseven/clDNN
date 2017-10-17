@@ -537,7 +537,8 @@ int main(int argc, char *argv[]) {
         uint32_t niter = FLAGS_ni;
 #ifndef _WIN32 
         double packageEnergySum = get_rapl_energy_info(0, 0);
-        double gpuEnergySum = get_rapl_energy_info(2, 0);
+        double gpuEnergySum = old = get_rapl_energy_info(2, 0);
+        double newenergy = 0.0;
         std::cout << "Package: " << packageEnergySum << "   gpu: " << gpuEnergySum << std::endl;
 #endif
         for (uint32_t i = 0; i < niter; ++i) {
@@ -553,6 +554,9 @@ int main(int argc, char *argv[]) {
             fsec fs = t1 - t0;
             ms d = std::chrono::duration_cast<ms>(fs);
             total += static_cast<double>(d.count());
+            newenergy = get_rapl_energy_info(2, 0);
+            std::cout << "iterenergy: " << newenergy - old << std::endl;
+            old = newenergy;
             if (!FLAGS_pi.empty()) {
 #ifdef _WIN32
                 if (i < (niter - 1)) {
