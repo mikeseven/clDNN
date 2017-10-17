@@ -107,9 +107,6 @@ DEFINE_string(tuning, "", tuning_message);
 static const char scale_message[] = "scale output for comparison";
 DEFINE_double(scale, 1.0, scale_message);
 
-extern double MAX_ENERGY_STATUS_JOULES;
-extern double MAX_THROTTLED_TIME_SECONDS;
-
 extern "C" {
 #include "md5.h"  // taken from http://openwall.info/wiki/people/solar/software/public-domain-source-code/md5
 }
@@ -208,6 +205,10 @@ std::vector<std::string> ParseFlagList(const std::vector<std::string>& args, con
 }
 
 #ifndef _WIN32
+
+extern double MAX_ENERGY_STATUS_JOULES;
+extern double MAX_THROTTLED_TIME_SECONDS;
+
 double get_rapl_energy_info(unsigned int power_domain, unsigned int node)
 {
     int          err;
@@ -515,9 +516,8 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        // Start measuring power
-#ifndef _WIN32
-#else
+        // Start measuring power Windows
+#ifdef _WIN32
         if (!FLAGS_pi.empty()) {
             std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
             std::wstring pi_filename = converter.from_bytes(FLAGS_pi);
@@ -548,11 +548,11 @@ int main(int argc, char *argv[]) {
         //energyConsumptionCpu[0] = get_rapl_energy_info(1, 0); CPU
         energyConsumptionGpu[0] = get_rapl_energy_info(2, 0);
         //energyConsumptionDram[0] = get_rapl_energy_info(3, 0); DRAM
-
-        for (uint32_t i = 1; i <= niter; ++i) {
-#else 
-        for (uint32_t i = 0; i < niter; ++i) {
 #endif
+        //for (uint32_t i = 1; i <= niter; ++i) {
+
+        for (uint32_t i = 0; i < niter; ++i) {
+
             auto t0 = Time::now();
             if (FLAGS_newapi) {
                 sts = req->Infer(&dsc);
@@ -566,14 +566,14 @@ int main(int argc, char *argv[]) {
             total += static_cast<double>(d.count());
             if (!FLAGS_pi.empty()) {
 #ifndef _WIN32
-                if (i <= niter) {
-                    energyConsumptionPackage[i] = get_rapl_energy_info(0, 0);
-                    //energyConsumptionCpu[i] = get_rapl_energy_info(1, 0); for CPU energy consumption
-                    energyConsumptionGpu[i] = get_rapl_energy_info(2, 0);
-                    //energyConsumptionDram[i] = get_rapl_energy_info(3, 0); for DRAM energy consumption
+                if (i < niter) {
+                    energyConsumptionPackage[i+1] = get_rapl_energy_info(0, 0);
+                    //energyConsumptionCpu[i+1] = get_rapl_energy_info(1, 0); for CPU energy consumption
+                    energyConsumptionGpu[i+1] = get_rapl_energy_info(2, 0);
+                    //energyConsumptionDram[i+1] = get_rapl_energy_info(3, 0); for DRAM energy consumption
                     timeConsumption[i] = static_cast<double>(d.count());
-                    packageSum += (energyConsumptionPackage[i] - energyConsumptionPackage[i - 1]) / (timeConsumption[i] / 1000.0);
-                    gpuSum += (energyConsumptionGpu[i] - energyConsumptionGpu[i - 1]) / (timeConsumption[i] / 1000.0);
+                    packageSum += (energyConsumptionPackage[i+1] - energyConsumptionPackage[i]) / (timeConsumption[i] / 1000.0);
+                    gpuSum += (energyConsumptionGpu[i+1] - energyConsumptionGpu[i]) / (timeConsumption[i] / 1000.0);
                 }
 #else
                 if (i < (niter - 1)) {
