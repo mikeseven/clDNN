@@ -538,6 +538,7 @@ int main(int argc, char *argv[]) {
 #ifndef _WIN32 
         double packageEnergySum = get_rapl_energy_info(0, 0);
         double gpuEnergySum = get_rapl_energy_info(2, 0);
+        std::cout << "Package: " << packageEnergySum << "   gpu: " << gpuEnergySum << std::endl;
 #endif
         for (uint32_t i = 0; i < niter; ++i) {
 
@@ -572,6 +573,10 @@ int main(int argc, char *argv[]) {
 #ifndef _WIN32
         packageEnergySum = get_rapl_energy_info(0, 0) - packageEnergySum;
         gpuEnergySum = get_rapl_energy_info(2, 0) - gpuEnergySum;
+        std::cout << "Package: " << packageEnergySum << "   gpu: " << gpuEnergySum << std::endl << "   time: " << total << std::endl;
+        if (packageEnergySum < 0) packageEnergySum += MAX_ENERGY_STATUS_JOULES;
+        if (gpuEnergySum < 0) gpuEnergySum += MAX_ENERGY_STATUS_JOULES;
+        std::cout << "Package: " << packageEnergySum << "   gpu: " << gpuEnergySum << std::endl << "   time: " << total << std::endl;
         double packagePower = packageEnergySum / (total * 1000.0);
         double gpuPower = gpuEnergySum / (total * 1000.0);
         std::cout << "Total Package Power [W]: " << packagePower << std::endl;
