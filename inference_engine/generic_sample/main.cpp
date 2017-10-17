@@ -242,11 +242,7 @@ double get_rapl_energy_info(unsigned int power_domain, unsigned int node)
 * @return 0 if all good
 */
 int main(int argc, char *argv[]) {
-
-
-    // Always intialize the power_gov library first
-
-
+    
     std::cout << "InferenceEngine: " << InferenceEngine::GetInferenceEngineVersion() << "\n";
     std::string commandLine;
     for (int i = 0; i < argc; i++) {
@@ -537,10 +533,7 @@ int main(int argc, char *argv[]) {
         uint32_t niter = FLAGS_ni;
 #ifndef _WIN32 
         double packageEnergySum = get_rapl_energy_info(0, 0);
-        double old = 0.0;
-        double gpuEnergySum = old = get_rapl_energy_info(2, 0);
-        double newenergy = 0.0;
-        std::cout << "Package: " << packageEnergySum << "   gpu: " << gpuEnergySum << std::endl;
+        double gpuEnergySum = get_rapl_energy_info(2, 0);
 #endif
         for (uint32_t i = 0; i < niter; ++i) {
 
@@ -555,9 +548,6 @@ int main(int argc, char *argv[]) {
             fsec fs = t1 - t0;
             ms d = std::chrono::duration_cast<ms>(fs);
             total += static_cast<double>(d.count());
-            newenergy = get_rapl_energy_info(2, 0);
-            std::cout << "iterenergy: " << newenergy - old << " time: " << total << std::endl;
-            old = newenergy;
             if (!FLAGS_pi.empty()) {
 #ifdef _WIN32
                 if (i < (niter - 1)) {
@@ -578,10 +568,8 @@ int main(int argc, char *argv[]) {
 #ifndef _WIN32
         packageEnergySum = get_rapl_energy_info(0, 0) - packageEnergySum;
         gpuEnergySum = get_rapl_energy_info(2, 0) - gpuEnergySum;
-        std::cout << "Package: " << packageEnergySum << "   gpu: " << gpuEnergySum << std::endl << "   time: " << total << std::endl;
         if (packageEnergySum < 0) packageEnergySum += MAX_ENERGY_STATUS_JOULES;
         if (gpuEnergySum < 0) gpuEnergySum += MAX_ENERGY_STATUS_JOULES;
-        std::cout << "Package: " << packageEnergySum << "   gpu: " << gpuEnergySum << std::endl << "   time: " << total << std::endl;
         double packagePower = packageEnergySum / (total / 1000.0);
         double gpuPower = gpuEnergySum / (total / 1000.0);
         std::cout << "Total Package Power [W]: " << packagePower << std::endl;
