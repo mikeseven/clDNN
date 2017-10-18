@@ -15,9 +15,14 @@
 
 # ========================================= Name / Output settings =====================================
 
-set(CLDNN_BUILD__PROJ             "examples")
-set(CLDNN_BUILD__PROJ_LABEL       "${CLDNN_BUILD__PROJ}")
-set(CLDNN_BUILD__PROJ_OUTPUT_NAME "${CLDNN_BUILD__PROJ}${CLDNN__OUT_CPU_SUFFIX}")
+set(CLDNN_BUILD__PROJ             "power_measurement_util")
+set(CLDNN_BUILD__PROJ_LABEL       "power measurement")
+set(CLDNN_BUILD__PROJ_FOLDER      "utils")
+set(CLDNN_BUILD__PROJ_OUTPUT_NAME "pmeasure_util${CLDNN__OUT_CPU_SUFFIX}")
+
+# Published to parent scope.
+set(CLDNN_UTILS__POWER_MEASUREMENT_INCDIRS "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(CLDNN_UTILS__POWER_MEASUREMENT_LIBDIRS "")
 
 # =========================================== Compiler options =========================================
 
@@ -30,76 +35,50 @@ intel_config_flag_apply_settings(CompilerOptions CMAKE_CXX_FLAGS ALL_PATTERN ""
 
 # ========================================= Source/Header files ========================================
 
-set(__CLDNN_Label__main                "")
+set(__CLDNN_Label__main        "")
 file(GLOB __CLDNN_Sources__main
     "${CMAKE_CURRENT_SOURCE_DIR}/*.h"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/*.cpp"
   )
 
-set(__CLDNN_Directory__common          "${CMAKE_CURRENT_SOURCE_DIR}/common")
-set(__CLDNN_Label__common              "common")
-file(GLOB __CLDNN_Sources__common
-    "${__CLDNN_Directory__common}/*.h"
-    "${__CLDNN_Directory__common}/*.hpp"
-    "${__CLDNN_Directory__common}/*.cpp"
+set(__CLDNN_Directory__include "${CMAKE_CURRENT_SOURCE_DIR}/include")
+set(__CLDNN_Label__include     "include")
+file(GLOB __CLDNN_Sources__include
+    "${__CLDNN_Directory__include}/*.h"
+    "${__CLDNN_Directory__include}/*.hpp"
   )
-
 
 set(__CLDNN_AllSources
     ${__CLDNN_Sources__main}
-    ${__CLDNN_Sources__common}
+    ${__CLDNN_Sources__include}
   )
 
 # =============================================== Filters ==============================================
 
-source_group("${__CLDNN_Label__main}"   FILES ${__CLDNN_Sources__main})
-source_group("${__CLDNN_Label__common}" FILES ${__CLDNN_Sources__common})
+source_group("${__CLDNN_Label__main}"    FILES ${__CLDNN_Sources__main})
+source_group("${__CLDNN_Label__include}" FILES ${__CLDNN_Sources__include})
 
 # ===================================== Include/Link directories =======================================
 
 include_directories(
-    "${CLDNN__MAIN_DIR}"
-    "${CMAKE_CURRENT_SOURCE_DIR}"
+    ${CLDNN_UTILS__POWER_MEASUREMENT_INCDIRS}
   )
 
 # =================================== Link targets and dependencies ====================================
 
-# Examples executable.
-add_executable("${CLDNN_BUILD__PROJ}"
+# Power measurement utility library (static).
+add_library("${CLDNN_BUILD__PROJ}" STATIC
     ${__CLDNN_AllSources}
   )
 set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY PROJECT_LABEL "${CLDNN_BUILD__PROJ_LABEL}")
+set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY FOLDER        "${CLDNN_BUILD__PROJ_FOLDER}")
 set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD__PROJ_OUTPUT_NAME}")
 
-target_link_libraries("${CLDNN_BUILD__PROJ}"
-    "${CLDNN_BUILD__PROJ__clDNN}"
-    FreeImage
-    Boost::filesystem
-    Boost::program_options
-    Boost::system
-    power_measurement_util
-  )
+# ======================================================================================================
 
-# =================================== Custom pre- and post-steps =======================================
-
-set(__CLDNN_FindLibSuffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
-set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_SHARED_LIBRARY_SUFFIX}")
-find_library(CLDNN_FIND__FREEIMAGE_SHLPATH
-  NAMES FreeImage
-  PATHS ${CLDNN__FREEIMAGE_LIBDIRS}
-  NO_CMAKE_FIND_ROOT_PATH
-)
-set(CMAKE_FIND_LIBRARY_SUFFIXES ${__CLDNN_FindLibSuffixes})
-
-if(CLDNN_FIND__FREEIMAGE_SHLPATH)
-  add_custom_command(TARGET "${CLDNN_BUILD__PROJ}" POST_BUILD
-      COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CLDNN_FIND__FREEIMAGE_SHLPATH}" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/"
-      COMMENT "Copying FreeImage shared library to output..."
-    )
-endif()
-
-unset(CLDNN_FIND__FREEIMAGE_SHLPATH CACHE)
-unset(__CLDNN_FindLibSuffixes)
+# Publishing some information to parent scope.
+set(CLDNN_UTILS__POWER_MEASUREMENT_INCDIRS ${CLDNN_UTILS__POWER_MEASUREMENT_INCDIRS} PARENT_SCOPE)
+set(CLDNN_UTILS__POWER_MEASUREMENT_LIBDIRS ${CLDNN_UTILS__POWER_MEASUREMENT_LIBDIRS} PARENT_SCOPE)
 
 # ======================================================================================================
