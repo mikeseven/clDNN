@@ -24,9 +24,8 @@ namespace cldnn
 {
 namespace
 {
-    void flush_and_close_stream(std::ofstream& graph)
+    void close_stream(std::ofstream& graph)
     {
-        graph.flush();
         graph.close();
     }
 
@@ -148,7 +147,7 @@ namespace
                 graph << "    " << get_node_id(node.get()) << " -> " << get_node_id(node->get_joint()) << " [style=dotted, label=\"p-dom\", constraint=false];\n";
         }
         graph << "}\n";
-        flush_and_close_stream(graph);
+        close_stream(graph);
     }
 
 
@@ -157,7 +156,7 @@ namespace
         for (auto node : program.get_processing_order())
             graph << reinterpret_cast<uintptr_t>(node) << " (" << node->id() << ")\n";
         graph << '\n';
-        flush_and_close_stream(graph);
+        close_stream(graph);
     }
 
     void dump_graph_optimized(std::ofstream& graph, const program_impl& program)
@@ -165,7 +164,7 @@ namespace
         for (auto& prim_id : program.get_optimized_out())
             graph << prim_id << "\n";
         graph << '\n';
-        flush_and_close_stream(graph);
+        close_stream(graph);
     }
 
     void dump_graph_info(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter)
@@ -178,7 +177,7 @@ namespace
             dump_full_node(graph, node.get());
             graph << std::endl << std::endl;
         }
-        flush_and_close_stream(graph);
+        close_stream(graph);
     }
 }
 
