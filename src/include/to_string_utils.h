@@ -20,6 +20,15 @@
 namespace cldnn
 {
 
+inline std::string bool_to_str(const bool condi)
+{
+	if (condi)
+	{
+		return "true";
+	}
+	return "false";
+};
+
 inline std::string get_extr_type(const char* str)
 {
     if (!str)

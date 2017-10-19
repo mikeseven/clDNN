@@ -17,6 +17,7 @@
 #include "program_node.h"
 #include "program_impl.h"
 #include "primitive_inst.h"
+#include "to_string_utils.h"
 
 using namespace cldnn;
 
@@ -71,15 +72,6 @@ void program_node::remove_dependency(size_t idx)
 
 json_composite program_node::desc_to_json() const
 {
-    auto bool_to_str = [](const auto condi) -> std::string
-    {
-        if (condi)
-        {
-            return "yes";
-        }
-        return "no";
-    };
-
     json_composite node_info;
     node_info.add("ptr", "node_" + std::to_string(reinterpret_cast<uintptr_t>(this)));
     node_info.add("id", id());
@@ -119,7 +111,10 @@ json_composite program_node::desc_to_json() const
             }
             deps_ptrs.push_back(std::to_string(reinterpret_cast<uintptr_t>(*itr++)));
         }
-
+		if (deps_ptrs.empty())
+		{
+			deps_ptrs.push_back("null");
+		}
     }
     node_info.add("dependencies", deps_ptrs);
 
@@ -135,6 +130,10 @@ json_composite program_node::desc_to_json() const
             }
             users_ptrs.push_back(std::to_string(reinterpret_cast<uintptr_t>(*itr++)));
         }
+		if (users_ptrs.empty())
+		{
+			users_ptrs.push_back("null");
+		}
     }
     node_info.add("users", users_ptrs);
 

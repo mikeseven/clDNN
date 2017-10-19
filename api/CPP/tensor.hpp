@@ -414,23 +414,27 @@ public:
     std::string to_string() const
     {
         std::stringstream out;
+		const char* delim = "";
+
         out << "[b:";
         for (size_t i = 0; i < batch.size(); ++i)
         {
-            out << batch[i];
-            i != (batch.size() - 1) ? out << "," : out << "";
+            out << delim << batch[i];
+			delim = ",";
         }
-        out << ", f:";
-        for (size_t i = 0; i < feature.size(); ++i)
-        {
-            out << feature[i];
-            i != (feature.size() - 1) ? out << "," : out << "";
-        }
+		delim = "";
 
-        std::vector<std::string> spatials = { ", x", ", y", ", z", ", w" };
+        out << ", f:";
+		for (size_t i = 0; i < feature.size(); ++i)
+		{
+			out << delim << feature[i];
+			delim = ",";
+		}
+
+        std::vector<std::string> spatial_dim_names = { ", x", ", y", ", z", ", w" };
         for (size_t i = 0; i < spatial.size(); ++i)
         {
-            out << spatials[i] << ":" << spatial[i];
+            out << spatial_dim_names[i] << ":" << spatial[i];
         }
         out << "]";
 

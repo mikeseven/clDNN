@@ -18,7 +18,6 @@
 #include <type_traits>
 #include <unordered_map>
 #include <map>
-#include <unordered_map>
 #include <algorithm>
 #include <iostream>
 #include <memory>
@@ -33,7 +32,7 @@ namespace cldnn
     class json_base
     {
     public:
-        virtual void dump(std::ostream&, int) = 0;
+        virtual void dump(std::ostream& out, int offset) = 0;
     };
 
     template<class Type>
@@ -42,10 +41,11 @@ namespace cldnn
     private:
         Type value;
     public:
-        json_leaf(Type val) : value(val) {}
+		json_leaf(const Type& val) : value(val) {}
+		json_leaf(Type&& val) : value(std::move(val)) {}
         void dump(std::ostream& out, int) override
         {
-            out << value << "\n";
+            out << value << ",\n";
         }
     };
 
@@ -55,18 +55,17 @@ namespace cldnn
     private:
         std::vector<Type> values;
     public:
-        json_basic_array(std::vector<Type> arr) : values(arr) {}
+		json_basic_array(const std::vector<Type>& arr) : values(arr) {}
+		json_basic_array(std::vector<Type>&& arr) : value(std::move(arr)) {}
         void dump(std::ostream& out, int) override
         {
+			const char* delim = "";
             for (size_t i = 0; i < values.size(); i++)
             {       
-                out << values[i];
-                if (i != values.size() - 1)
-                {
-                    out << ", ";
-                }
+                out << delim << values[i];
+				delim = ",";
             }
-            out << "\n";
+            out << ",\n";
         }
     };
 
@@ -93,12 +92,18 @@ namespace cldnn
                 out << spaces << it.first << " : ";
                 it.second->dump(out, offset);
             };
-            out << spaces << "}\n";
-            if (offset > 0)
-            {
-                offset--;
+			
+            if (offset > 0)         
+			{
+				out << spaces << "},\n";
+				offset--;
             }
+			else
+			{
+				out << spaces << "}\n";
+			}
         }
+
         template<class Type>
         void add(json_key key, Type value)
         {
@@ -109,9 +114,9 @@ namespace cldnn
             children[key] = std::make_shared<json_composite>(comp);
         }
         template<class Type>
-        void add(json_key key, std::vector<Type> f_array)
+        void add(json_key key, std::vector<Type> array)
         {
-            children[key] = std::make_shared<json_basic_array<Type>>(f_array);
+            children[key] = std::make_shared<json_basic_array<Type>>(array);
         }
     };
 
