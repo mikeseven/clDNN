@@ -56,7 +56,7 @@ namespace cldnn
         std::vector<Type> values;
     public:
 		json_basic_array(const std::vector<Type>& arr) : values(arr) {}
-		json_basic_array(std::vector<Type>&& arr) : value(std::move(arr)) {}
+		json_basic_array(std::vector<Type>&& arr) : values(std::move(arr)) {}
         void dump(std::ostream& out, int) override
         {
 			const char* delim = "";
