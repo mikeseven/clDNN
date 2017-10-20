@@ -24,12 +24,10 @@ if (ENABLE_SAMPLES)
 file (GLOB MAIN_SRC
         ${CMAKE_CURRENT_SOURCE_DIR}/*.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/*.c
-		${CMAKE_CURRENT_SOURCE_DIR}/../../examples/common/power_instrumentation.cpp
         )
 
 file (GLOB MAIN_HEADERS
         ${CMAKE_CURRENT_SOURCE_DIR}/*.h
-		${CMAKE_CURRENT_SOURCE_DIR}/../../examples/common/power_instrumentation.h
         )
 
 if (UNIX)
@@ -54,7 +52,7 @@ add_executable(${TARGET_NAME} ${MAIN_SRC} ${MAIN_HEADERS})
 add_dependencies(${TARGET_NAME} gflags clDNNPlugin)
 
 
-target_link_libraries(${TARGET_NAME} format_reader inference_engine gflags)
+target_link_libraries(${TARGET_NAME} format_reader inference_engine gflags power_measurement_util)
 
 if(UNIX)
     target_link_libraries( ${TARGET_NAME} ${LIB_DL} pthread)

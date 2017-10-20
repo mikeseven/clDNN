@@ -37,7 +37,7 @@
 #include <codecvt>
 #ifdef _WIN32
 #include "../dpd_vcp_dl-scoring_engine/samples/common/os/windows/w_dirent.h"
-#include "../../examples/common/power_instrumentation.h"
+#include "power_instrumentation.h"
 #else
 #include <dirent.h>
 #include "rapl.h"
