@@ -70,6 +70,8 @@
 *  - Network - compiled Topology with memory allocations. Can be executed. During compilation, buidling parameters triggers special optimizations like fusing, data reordering.
 *
 *  <B> Execution Steps: </B>
+*
+* \image html workflow.jpg
 * -# Create Engine
 * -# Declare or define primitives parameters (weights and biases) if needed.
 * -# Create primitives. Each primitive requires to provide input name. This is a name of primitive which output will be input to current one. Name can be used before primitive definition.
