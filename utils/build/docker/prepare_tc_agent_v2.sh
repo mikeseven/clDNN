@@ -43,7 +43,7 @@ fi
 ${PKG_MGR} -y update
 
 # Ensure that basic tools are installed.
-${PKG_MGR} -y install tar xz python p7zip unzip
+${PKG_MGR} -y install tar xz python unzip
 
 # Compilers and standard libraries.
 ${PKG_MGR} -y install gcc gcc-c++ clang make glibc-static glibc-devel libstdc++-static libstdc++-devel libstdc++ libgcc libX11-devel \
@@ -52,7 +52,11 @@ ${PKG_MGR} -y install gcc gcc-c++ clang make glibc-static glibc-devel libstdc++-
 # Development toolset (version 4, 6 and 7).
 if [[ $DISTRO == 'centos' ]]; then
     ${PKG_MGR} -y install centos-release-scl
-    ${PKG_MGR} -y install devtoolset-4-toolchain devtoolset-6-toolchain devtoolset-7-toolchain
+    ${PKG_MGR} clean all
+    ${PKG_MGR} -y swap fakesystemd systemd
+    ${PKG_MGR} -y install devtoolset-4-toolchain
+    ${PKG_MGR} -y install devtoolset-6-toolchain
+    ${PKG_MGR} -y install devtoolset-7-toolchain
 else
     ${PKG_MGR} -y install dnf-plugins-core
     ${PKG_MGR} -y copr enable mlampe/devtoolset-4
@@ -66,12 +70,12 @@ ${PKG_MGR} -y install git
 # Build generators and build utilities.
 if [[ $DISTRO == 'centos' ]]; then
     ${PKG_MGR} -y install epel-release
-    ${PKG_MGR} -y install cmake3 python34
+    ${PKG_MGR} -y install p7zip cmake3 python34
     /usr/sbin/alternatives --install /usr/bin/cmake cmake /usr/bin/cmake3 50
     git clone --depth 1 --branch v1.7.1 https://github.com/ninja-build/ninja.git
     pushd ninja; ./configure.py --bootstrap; cp ninja /usr/local/bin; popd; rm -r ninja
 else
-    ${PKG_MGR} -y install cmake ninja-build
+    ${PKG_MGR} -y install p7zip cmake ninja-build
 fi
 
 # Clang package (version 3.8.0).
