@@ -92,27 +92,5 @@ else
     ${PKG_MGR} -y install java-1.8.0-openjdk-headless
 fi
 
-useradd -m -g users $TC_AGENT_USER
-curl -k $TC_SERVER_URL/update/buildAgent.zip > /home/$TC_AGENT_USER/buildAgent.zip
-unzip /home/$TC_AGENT_USER/buildAgent.zip -d /home/$TC_AGENT_USER/buildAgent
-cat /home/$TC_AGENT_USER/buildAgent/conf/buildAgent.dist.properties | sed '
-/^\s*serverUrl\s*=/ { c\
-serverUrl='"$TC_SERVER_URL"'
-}
-/^\s*name\s*=/ { c\
-name='"$TC_AGENT_NAME"'
-}
-/^\s*ownPort\s*=\s*[0-9]*/ { c\
-ownPort='"$TC_AGENT_PORT"'
-}' > /home/$TC_AGENT_USER/buildAgent/conf/buildAgent.properties
-chown $TC_AGENT_USER:users /home/$TC_AGENT_USER/buildAgent.zip
-chown -R $TC_AGENT_USER:users /home/$TC_AGENT_USER/buildAgent
-chmod 755 /home/$TC_AGENT_USER/buildAgent/bin/*.sh
-
-
-mkdir /home/$TC_AGENT_USER/.ssh
-if [[ $DISTRO == 'fedora' ]]; then echo -e "HostkeyAlgorithms=+ssh-dss" >> /home/$TC_AGENT_USER/.ssh/config; fi
-echo -e "UserKnownHostsFile=/dev/null\nStrictHostKeyChecking=no" >> /home/$TC_AGENT_USER/.ssh/config
-
 # Cleanup dnf cache
 ${PKG_MGR} clean all
