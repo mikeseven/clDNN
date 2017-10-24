@@ -80,7 +80,50 @@
 * -# Build Network from topology
 * -# Set Inputs data 
 * -# Execute Network
-
+*
+*
+* @section graph_compilation Graph compilation
+*
+* During program creation - explicit or implicit over network creation, clDNN perform some graph optimizations as follows:
+* * <B> Stage 0: Graph initiation:</B>
+*  * build nodes from primitives
+*  * node replacement: 
+*   * replace each split node with serie of crop nodes 
+*   * replace upsampling node with deconvolution node
+*  * set outputs - mark nodes that are defined by user as output (blocks fusing etc)
+*  * calculate processing order - using dfs on graph to establish processing order
+* * <B> Stage 1: Priorboxes:</B>
+*  * priorbox is primitive that can be executed over network compilation. This stage performs its code and remove execution from graph.
+* * <B> Stage 2: Graph analysis:</B>
+*  * mark constatns
+*  * mark data flow 
+*  * mark dominators
+* * <B> Stage 3: Trimming:</B>
+*  * apply backward bfs on each output to find unnecessary nodes/branches, than remove those. 
+* * <B> Stage 4: Inputs and biases:</B>
+*  * reorder input - format of convolution is being selected. 
+*  * reorder biases for conv,fc and deconv nodes
+* * <B> Stage 5: Redundant reorders:</B>
+*  * previouse stages can provides additional reorders due to format changes per primitive. This stage removes redundant and fuses series of reorders into one.  
+* * <B> Stage 6: Constant propagation:</B>
+*  * prepare padding - goes thru all primitves and check if its user require padding, if so set output padding.
+*  * prepare depthwise separable opt - if split param is greater than 16 in conv or deconv, this stage change execution of split from multi kernels into one.
+*  * constant propagation - replace constant nodes, that are not outputs with data type nodes.
+* * <B> Stage 7: Fusing:</B>
+*  * buffer fusing
+*   * concat - if concatenation is the only user of its dependencies than remove concat node and set proper output paddings in every user. 
+*   * crop - if crop has only one dependecy, and its users doesn't require padding, remove crop and set proper output padding in its user.
+*   * reorder - if primitive before reorder supports different input vs output type reorder can be fused with previouse node.
+*  * primitive fusing - right now this stage fuses activation node with previouse node only. 
+* * <B> Stage 8: Compile graph:</B>
+*  * at this stage using kernel selector, graph chooses the best kernel implementation for each node.
+* * <B> Stage 9: reorder weights:</B>
+*  * at this stage weights are converted into format suitable for selected kernel implementation.
+* * <B> Stage 10 & 11: Redundant reorders and constant propagation:</B>
+*  * check again if whole graph compilation didn't provide any redundant reorders and constants.
+* * <B> Stage 12: Compile program:</B>
+*  * at this stage engine compiles cl_kernels. 
+*
 * @section example C++ API Example MNIST network
 * @include example_cldnn.cpp
 */
