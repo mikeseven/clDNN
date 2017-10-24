@@ -26,17 +26,18 @@ ENV http_proxy=http://proxy-chain.intel.com:911 \
     no_proxy=intel.com,.intel.com,10.0.0.0/8,192.168.0.0/16,localhost,127.0.0.0/8,134.134.0.0/16,::1
 
 ARG USE_ORACLE_JAVA=y
+
+COPY prepare_tc_agent_v2.sh configure_tc_agent_v2.sh /tmp/
+RUN chmod 755 /tmp/prepare_tc_agent_v2.sh /tmp/configure_tc_agent_v2.sh
+RUN /tmp/prepare_tc_agent_v2.sh
+ENV PATH="/opt/clang+llvm-3.8.0-linux-x86_64-centos6/bin:${PATH}"
+
 ARG TC_SERVER_URL
 ARG TC_AGENT_USER=teamcity
 ARG TC_AGENT_NAME
 ARG TC_AGENT_PORT=9090
 ARG TC_AGENT_PROPS
 
-
-COPY prepare_tc_agent_v2.sh configure_tc_agent_v2.sh /tmp/
-RUN chmod 755 /tmp/prepare_tc_agent_v2.sh /tmp/configure_tc_agent_v2.sh
-RUN /tmp/prepare_tc_agent_v2.sh
-ENV PATH="/opt/clang+llvm-3.8.0-linux-x86_64-centos6/bin:${PATH}"
 RUN /tmp/configure_tc_agent_v2.sh
 COPY ssh_creds/* /home/$TC_AGENT_USER/.ssh/
 
