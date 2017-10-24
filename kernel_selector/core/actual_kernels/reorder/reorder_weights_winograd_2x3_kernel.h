@@ -14,20 +14,19 @@
 // limitations under the License.
 */
 
-#include "reorder_weights_kernel_selector.h"
-#include "reorder_weights_kernel.h"
-#include "reorder_weights_winograd_2x3_kernel.h"
+#pragma once
+
+#include "reorder_kernel_base.h"
  
-namespace KernelSelector {
-
-    ReorderWeightsKernelSelctor::ReorderWeightsKernelSelctor()
+namespace KernelSelector 
+{    
+    class ReorderWeightsWinograd2x3Kernel : public ReorderKernelBase
     {
-        Attach<ReorderWeightsKernel>();
-        Attach<ReorderWeightsWinograd2x3Kernel>();
-    }
+    public:
+        ReorderWeightsWinograd2x3Kernel() : ReorderKernelBase("reorder_weights_winograd_2x3_s1") {}
 
-    KernelsData ReorderWeightsKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
-    {
-        return GetNaiveBestKernel(params, options, KernelType::REORDER);
-    }
+        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual ParamsKey GetSupportedKey() const override;
+        virtual DispatchData SetDefault(const ReorderWeightsParams& arg) const override;
+    };
 }

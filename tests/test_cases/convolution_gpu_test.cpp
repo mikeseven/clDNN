@@ -168,7 +168,7 @@ TEST(convolution_f32_fw_gpu, winograd)
     EXPECT_EQ(out_mem.get_layout().size.spatial[0], 2);
     EXPECT_EQ(out_mem.get_layout().size.spatial[1], 2);
 
-    auto winograd_weights = out.at("_winograd_weights_weights").get_memory();
+    auto winograd_weights = out.at("generic_layer_0_weights").get_memory();
     auto trans_to_mem = out.at("reorder_0_in").get_memory();
     auto winograd_mem = out.at("_winograd_conv").get_memory();
     auto padded_in = out.at("reorder_in").get_memory();

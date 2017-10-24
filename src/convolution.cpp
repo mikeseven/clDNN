@@ -69,7 +69,6 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
         CLDNN_ERROR_NOT_EQUAL(node.id(), "stride spatial Y", stride.spatial[1], "expected value", 1, "Convolution's input in winograd_2x3_s1_data format can only be used with stride 1x1");
         CLDNN_ERROR_NOT_EQUAL(node.id(), "Dilatation spatial X", dilation.spatial[0], "expected value", 1, "Winograd 2x3 convolution does not support dilatation");
         CLDNN_ERROR_NOT_EQUAL(node.id(), "Dilatation spatial Y", dilation.spatial[1], "expected value", 1, "Winograd 2x3 convolution does not support dilatation");
-        CLDNN_ERROR_NOT_EQUAL(node.id(), "weights format", weights_layout.format, "expected value", format::winograd_2x3_s1_weights, "Winograd 2x3 convolution should have weights passed in winograd_2x3_s1_weights format");
         if (input_layout.size.feature[0] % 32 != 0)
             CLDNN_ERROR_MESSAGE(node.id(), "Input for winograd 2x3 convolution should have features count divisable by 32");
         if (weights_layout.size.batch[0] % 32 != 0)

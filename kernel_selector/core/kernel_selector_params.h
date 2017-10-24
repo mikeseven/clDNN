@@ -46,6 +46,8 @@ namespace KernelSelector
             key.outputWeightsType.raw = 0;
             key.inputLayout = 0;
             key.outputLayout = 0;
+            key.weightsInputLayout = 0;
+            key.weightsOutputLayout = 0;
         }
 
         struct Key
@@ -110,6 +112,10 @@ namespace KernelSelector
                             uint32_t nearest : 1;
                             uint32_t bilinear : 1;
                         } upsample;
+                        struct reorder_t
+                        {
+                            uint32_t winograd : 1;
+                        } reorder;
                     } dedicated;
                 } val;
                 uint64_t raw;
@@ -150,6 +156,8 @@ namespace KernelSelector
             DataTypesKey outputWeightsType;
             uint32_t inputLayout;
             uint32_t outputLayout;
+            uint32_t weightsInputLayout;
+            uint32_t weightsOutputLayout;
         };
 
         void EnableInputDataType(Datatype dt)
@@ -302,6 +310,26 @@ namespace KernelSelector
         void EnableAllOutputLayout()
         {
             key.outputLayout = 0xffffffff;
+        }
+
+        void EnableInputWeightsLayout(WeightsLayout l)
+        {
+            key.weightsInputLayout |= (1 << l);
+        }
+
+        void EnableAllInputWeightsLayout()
+        {
+            key.weightsInputLayout = 0xffffffff;
+        }
+
+        void EnableOutputWeightsLayout(WeightsLayout l)
+        {
+            key.weightsOutputLayout |= (1 << l);
+        }
+
+        void EnableAllOutputWeightsLayout()
+        {
+            key.weightsOutputLayout = 0xffffffff;
         }
 
         void EnableTensorOffset()
@@ -457,6 +485,11 @@ namespace KernelSelector
             key.restrict.val.dedicated.conv.depthwiseSeparableOpt = 1;
         }
 
+        void EnableWinogradReorder()
+        {
+            key.restrict.val.dedicated.reorder.winograd = 1;
+        }
+
         void EnableSoftmaxDim(SoftmaxDim d)
         {
             switch (d)
@@ -531,7 +564,9 @@ namespace KernelSelector
                 ((key.inputWeightsType.raw & k.key.inputWeightsType.raw) == k.key.inputWeightsType.raw) &&
                 ((key.outputWeightsType.raw & k.key.outputWeightsType.raw) == k.key.outputWeightsType.raw) &&
                 ((key.inputLayout & k.key.inputLayout) != 0 || key.inputLayout == k.key.inputLayout) &&
-                ((key.outputLayout & k.key.outputLayout) != 0 || key.outputLayout == k.key.outputLayout);
+                ((key.outputLayout & k.key.outputLayout) != 0 || key.outputLayout == k.key.outputLayout) &&
+                ((key.weightsInputLayout & k.key.weightsInputLayout) != 0 || key.weightsInputLayout == k.key.weightsInputLayout) &&
+                ((key.weightsOutputLayout & k.key.weightsOutputLayout) != 0 || key.weightsOutputLayout == k.key.weightsOutputLayout);
         }
 
         ParamsKey Merge(const ParamsKey& k) const
@@ -545,6 +580,8 @@ namespace KernelSelector
             ret.key.outputWeightsType.raw = key.outputWeightsType.raw | k.key.outputWeightsType.raw;
             ret.key.inputLayout = key.inputLayout | k.key.inputLayout;
             ret.key.outputLayout = key.outputLayout | k.key.outputLayout;
+            ret.key.weightsInputLayout = key.weightsInputLayout | k.key.weightsInputLayout;
+            ret.key.weightsOutputLayout = key.weightsOutputLayout | k.key.weightsOutputLayout;
             return ret;
         }
 
@@ -732,6 +769,10 @@ namespace KernelSelector
             uSize    stride;
             uSize    dilation;
             uSize    padding;
+            uint32_t winograd_tile_n;
+            uint32_t winograd_tile_m;
+            uint32_t winograd_input_tile_width;
+            uint32_t winograd_input_tile_height;
             uint32_t split = 1;
             bool     depthwiseSeparableOpt = false;
         };
@@ -1093,13 +1134,23 @@ namespace KernelSelector
             MeanSubtractMode    mode = MeanSubtractMode::NONE;
             std::vector<float>  meanValues;
             DataTensor          mean;
+            uint32_t            winograd_input_offset_x;
+            uint32_t            winograd_input_offset_y;
+            uint32_t            winograd_nr_tiles_x;
+            bool                winograd = false;
         };
 
         DedicatedParams reorderParams;
 
         virtual ParamsKey GetParamsKey() const
         {
-            return ReorderBaseParams::GetParamsKey();
+            auto k = ReorderBaseParams::GetParamsKey();
+
+            if (reorderParams.winograd)
+            {
+                k.EnableWinogradReorder();
+            }
+            return k;
         }
     };
 
@@ -1114,6 +1165,7 @@ namespace KernelSelector
         {
             WeightsTensor input;
             WeightsTensor output;
+            bool winograd = false;
         };
 
         DedicatedParams reorderParams;
@@ -1125,6 +1177,8 @@ namespace KernelSelector
             const auto& output = reorderParams.output;
             k.EnableInputWeightsType(input.GetDType());
             k.EnableOutputWeightsType(output.GetDType());
+            k.EnableInputWeightsLayout(input.GetLayout());
+            k.EnableOutputWeightsLayout(output.GetLayout());
 
             if (input.PitchesDifferFromLogicalDims() ||
                 output.PitchesDifferFromLogicalDims())
@@ -1135,6 +1189,11 @@ namespace KernelSelector
             if (input.GetFirstElementOffset() != 0 || output.GetFirstElementOffset() != 0)
             {
                 k.EnableTensorOffset();
+            }
+
+            if (reorderParams.winograd)
+            {
+                k.EnableWinogradReorder();
             }
             return k;
         }

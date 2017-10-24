@@ -14,20 +14,21 @@
 // limitations under the License.
 */
 
-#include "reorder_kernel_fast_b1.h"
+#include "reorder_from_winograd_2x3_kernel.h"
 #include "kernel_selector_utils.h"
  
 namespace KernelSelector 
 {
-    ParamsKey ReorderKernelFastBatch1::GetSupportedKey() const
+    ParamsKey ReorderFromWinograd2x3Kernel::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
         k.EnableInputDataType(Datatype::F32);
         k.EnableOutputDataType(Datatype::F16);
         k.EnableOutputDataType(Datatype::F32);
+        k.EnableInputLayout(DataLayout::winograd_2x3_s1_data);
+        k.EnableWinogradReorder();
         k.EnableDifferentTypes();
-        k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
         k.EnableTensorOffset();
         k.EnableTensorPitches();
@@ -35,53 +36,40 @@ namespace KernelSelector
         return k;
     }
 
-    JitConstants ReorderKernelFastBatch1::GetJitConstants(const ReorderParams& params) const
+    JitConstants ReorderFromWinograd2x3Kernel::GetJitConstants(const ReorderParams& params) const
     {
         auto jit = ReorderKernelBase::GetJitConstants(params);
-        jit.Merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
 
-        KernelData kd = KernelData::Default<ReorderParams>(params);
-        ReorderParams& newParams = *static_cast<ReorderParams*>(kd.params.get());
+        constexpr auto output_tile_width = 2; //by definition of F(2,3)
 
-        const auto& input = newParams.inputs[0];
-        jit.AddConstant(MakeJitConstant("ELEMENTS_COUNT", input.LogicalSize()));
+        if (params.output.X().v % output_tile_width != 0)
+            jit.AddConstant(MakeJitConstant("LEFTOVERS", 1));
 
         return jit;
     }
 
-    ReorderKernelFastBatch1::DispatchData ReorderKernelFastBatch1::SetDefault(const ReorderParams& params) const
+    ReorderFromWinograd2x3Kernel::DispatchData ReorderFromWinograd2x3Kernel::SetDefault(const ReorderParams& params) const
     {
         DispatchData kd;
 
+        constexpr auto output_tile_width = 2; //by definition of F(2,3)
         const auto& input = params.inputs[0];
+        const auto& output = params.output;
 
-        unsigned int gws = (unsigned int)input.LogicalSize();
+        kd.gws0 = static_cast<size_t>(output.Feature().v * output.Batch().v);
+        kd.gws1 = static_cast<size_t>(output.X().v / output_tile_width);
+        kd.gws2 = static_cast<size_t>(output.Y().v);
 
-        kd.gws0 = Align(gws, 32);
-        kd.gws1 = 1;
-        kd.gws2 = 1;
-
-        kd.lws0 = 32;
+        kd.lws0 = input.Feature().v > 32 ? 32 : static_cast<size_t>(input.Feature().v);
         kd.lws1 = 1;
         kd.lws2 = 1;
 
         return kd;
     }
 
-    KernelsData ReorderKernelFastBatch1::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ReorderFromWinograd2x3Kernel::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        assert(params.GetType() == KernelType::REORDER);
-
         const ReorderParams& orgParams = static_cast<const ReorderParams&>(params);
-
-        const auto& input = orgParams.inputs[0];
-        const auto& output = orgParams.output;
-
-        auto estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
-
-        if (input.Batch().v == 1 && output.Batch().v == 1)
-            estimatedTime = FORCE_PRIORITY_6;
-
-        return GetCommonKernelsData(orgParams, options, estimatedTime);
+        return GetCommonKernelsData(orgParams, options, FORCE_PRIORITY_6);
     }
 }

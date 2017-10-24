@@ -26,6 +26,7 @@
 #include "convolution_kernel_yxfb_yxio_b1_block_multiple_x.h"
 #include "convolution_kernel_tutorial.h"
 #include "convolution_kernel_bfyx_3x3_dw_opt.h"
+#include "convolution_kernel_winograd_2x3_s1.h"
 #include <iostream>
  
 namespace KernelSelector 
@@ -42,6 +43,7 @@ namespace KernelSelector
         //Attach<ConvolutionKernel_yxfb_yxio_b1_block>(); // TODO: need to finish integration
         Attach<ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x>();
         Attach<ConvolutionKernel_bfyx_3x3_dw_opt>();
+        Attach<ConvolutionKernel_Winograd_2x3_s1>();
         Attach<ConvolutionKernel_Tutorial>();
     }
 

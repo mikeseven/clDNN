@@ -1253,10 +1253,6 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
 
             apply_needed_padding(conv_node, input_node, padding{ conv_prim->input_offset.negate().sizes(), upper_input_padding.sizes() });
 
-            auto weights_reorder = std::make_shared<reorder>("_winograd_weights_" + conv_node.weights(0).id(), conv_node.weights().id(), format::winograd_2x3_s1_weights, input_layout.data_type);
-            auto& wr_node = get_or_create(weights_reorder);
-            add_intermediate(wr_node, conv_node, 1);
-
             auto winograd_output = std::make_shared<reorder>("_winograd_" + conv_node.id(), conv_node.id(), input_layout.format, input_layout.data_type, std::vector<float>{}, conv_node.output_layout.data_padding);
             conv_node.output_layout.data_padding = padding{};
             auto& back_node = get_or_create(winograd_output);

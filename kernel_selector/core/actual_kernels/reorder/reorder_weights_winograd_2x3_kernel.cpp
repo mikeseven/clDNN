@@ -14,13 +14,12 @@
 // limitations under the License.
 */
 
-#include "kernel_selector_common.h"
-#include "reorder_weights_kernel.h"
-#include "kernel_selector_utils.h" 
+#include "reorder_weights_winograd_2x3_kernel.h"
+#include "kernel_selector_utils.h"
  
 namespace KernelSelector 
 {
-    ParamsKey ReorderWeightsKernel::GetSupportedKey() const
+    ParamsKey ReorderWeightsWinograd2x3Kernel::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputWeightsType(WeightsType::F16);
@@ -28,16 +27,34 @@ namespace KernelSelector
         k.EnableOutputWeightsType(WeightsType::F16);
         k.EnableOutputWeightsType(WeightsType::F32);
         k.EnableAllInputWeightsLayout();
-        k.EnableAllOutputWeightsLayout();
+        k.EnableOutputWeightsLayout(WeightsLayout::winograd_2x3_s1_weights);
+        k.EnableWinogradReorder();
         k.EnableDifferentTypes();
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         return k;
     }
 
-    KernelsData ReorderWeightsKernel::GetKernelsData(const Params& params, const OptionalParams& options) const
+    ReorderWeightsWinograd2x3Kernel::DispatchData ReorderWeightsWinograd2x3Kernel::SetDefault(const ReorderWeightsParams& params) const
+    {
+        DispatchData kd;
+
+        const auto& input = params.reorderParams.input;
+
+        kd.gws0 = 1;
+        kd.gws1 = 3;
+        kd.gws2 = static_cast<size_t>(input.IFM().v * input.OFM().v);
+
+        kd.lws0 = 1;
+        kd.lws1 = 1;
+        kd.lws2 = 32;
+
+        return kd;
+    }
+
+    KernelsData ReorderWeightsWinograd2x3Kernel::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         const ReorderWeightsParams& orgParams = static_cast<const ReorderWeightsParams&>(params);
-        return GetCommonKernelsData(orgParams, options, DONT_USE_IF_HAVE_SOMETHING_ELSE);
+        return GetCommonKernelsData(orgParams, options, FORCE_PRIORITY_4);
     }
 }
