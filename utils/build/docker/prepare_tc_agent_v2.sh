@@ -41,6 +41,11 @@ fi
 
 # Update package information.
 ${PKG_MGR} -y update
+if [[ $DISTRO == 'centos' ]]; then
+    ${PKG_MGR} clean all
+    ${PKG_MGR} -y swap fakesystemd systemd
+    ${PKG_MGR} -y update
+fi
 
 # Ensure that basic tools are installed.
 ${PKG_MGR} -y install tar xz python unzip
@@ -53,7 +58,6 @@ ${PKG_MGR} -y install gcc gcc-c++ clang make glibc-static glibc-devel libstdc++-
 if [[ $DISTRO == 'centos' ]]; then
     ${PKG_MGR} -y install centos-release-scl
     ${PKG_MGR} clean all
-    ${PKG_MGR} -y swap fakesystemd systemd
     ${PKG_MGR} -y install devtoolset-4-toolchain
     ${PKG_MGR} -y install devtoolset-6-toolchain
     ${PKG_MGR} -y install devtoolset-7-toolchain
