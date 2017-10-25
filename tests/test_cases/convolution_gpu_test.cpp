@@ -136,7 +136,7 @@ void dump_buffer(memory const& mem, std::string const& name)
     }
 }
 
-TEST(convolution_f32_fw_gpu, winograd)
+TEST(DISABLED_convolution_f32_fw_gpu, winograd)
 {
     engine engine;
     auto input = memory::allocate(engine, { data_types::f32, format::bfyx, { 1, 32, 3, 3 } });

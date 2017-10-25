@@ -29,7 +29,7 @@
 using namespace cldnn;
 
 namespace {
-    bool should_use_winograd_2x3_s1(std::shared_ptr<const convolution> const& prim, layout const& input_layout, layout const& weights_layout)
+    bool should_use_winograd_2x3_s1(std::shared_ptr<const convolution> const& prim, layout const& input_layout, layout const& weights_layout, bool output_size_handling_enabled)
     {
         //cases when NOT to use winograd
         if (input_layout.size.feature[0] % 32 != 0       //current algorithm requires ifm to be multiply of 32
@@ -39,13 +39,13 @@ namespace {
             || prim->stride != tensor{ 1 }                  //stride has to be 1x1 by definition
             || prim->dilation != tensor{ 1 }                //no support for dilation
             || prim->split() != 1                           //no support for splitted convolutions
-            || prim->with_output_size                       //no support for convolutions with user-specified output size
+            || (output_size_handling_enabled && prim->with_output_size) //no support for convolutions with user-specified output size
             || input_layout.data_type == data_types::f16)   //no support for fp16 at this point
         {
             return false;
         }
 
-        return true;
+        return false;
     }
 }
 
@@ -99,7 +99,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     case data_type::input: //convolution input
 
         CLDNN_ERROR_NOT_EQUAL(prim->id, "Convolution input dimension", current_layout.format.dimension(), "expected dimension", static_cast<size_t>(4), "");
-        if (should_use_winograd_2x3_s1(prim, current_layout, output_or_weights_layout))
+        if (should_use_winograd_2x3_s1(prim, current_layout, output_or_weights_layout, _output_size_handling_enabled))
             return layout(expected_data_type, format::winograd_2x3_s1_data, expected_tensor);
 
         if (layout_optimizer::convolution_bfyx_opt(current_layout, output_or_weights_layout, prim)
