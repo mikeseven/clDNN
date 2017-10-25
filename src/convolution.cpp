@@ -80,13 +80,7 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
         CLDNN_ERROR_LESS_THAN(node.id(), "input width", input_layout.size.spatial[0], "filter width", 3, "Convolution input is smaller than weights");
         CLDNN_ERROR_LESS_THAN(node.id(), "input height", input_layout.size.spatial[1], "filter height", 3, "Convolution input is smaller than weights");
 
-        constexpr tensor::value_type output_tile_width = 2; //by definition of F(2,3)
-        constexpr tensor::value_type filter_width = 3; //by definition of F(2,3)
         constexpr tensor::value_type filter_height = 3; //by definition of format::winograd_2x3_s1_data (our assumption)
-        constexpr tensor::value_type filter_stride = 1; //by definition of format::winograd_2x3_s1_data (our assumption)
-
-        constexpr tensor::value_type input_tile_width = filter_width + (output_tile_width - 1) * filter_stride; //input tile should be large enought to hold data for computations of output tile (for given filter size and stride)
-        constexpr tensor::value_type winograd_filter_width = input_tile_width; //by definition of the winograd algorithm
         constexpr tensor::value_type winograd_filter_height = filter_height; //for this format, winograd filter is considered to be a set of 1d filters so its height should remain the same as original filter's
 
         return layout{ input_layout.data_type, input_layout.format, tensor{ input_layout.size.batch[0], weights_layout.size.batch[0], input_layout.size.spatial[0], input_layout.size.spatial[1] - winograd_filter_height + 1 }, input_layout.data_padding };

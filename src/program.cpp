@@ -2257,8 +2257,6 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
         path += "/";
     }
 
-        case format::winograd_2x3_s1_data: out = "winograd_2x3_s1_data"; break;
-        case format::winograd_2x3_s1_weights: out = "winograd_2x3_s1_weights"; break;
     std::ofstream graph(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".graph");
     dump_graph_init(graph, *this, filter);
 

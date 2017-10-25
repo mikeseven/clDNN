@@ -39,7 +39,8 @@ namespace {
             || prim->stride != tensor{ 1 }                  //stride has to be 1x1 by definition
             || prim->dilation != tensor{ 1 }                //no support for dilation
             || prim->split() != 1                           //no support for splitted convolutions
-            || prim->with_output_size)                      //no support for convolutions with user-specified output size
+            || prim->with_output_size                       //no support for convolutions with user-specified output size
+            || input_layout.data_type == data_types::f16)   //no support for fp16 at this point
         {
             return false;
         }
