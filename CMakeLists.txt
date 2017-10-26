@@ -1012,7 +1012,6 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
             -Wno-gnu
             -pedantic
             -finline
-            -finline-functions
             -Wno-nested-anon-types
             -msse4.2
             -Wno-potentially-evaluated-expression
@@ -1033,8 +1032,6 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
             -Wno-gnu
             -pedantic
             -finline
-            -finline-functions
-            -fkeep-inline-functions
             -msse4.2
             -stdlib=libc++
         )
