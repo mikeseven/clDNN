@@ -277,7 +277,7 @@ elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES
 
       GROUP NAME DebugInfoFormat    "-g(dwardf-[2-4]?)?"
       GROUP NAME Exceptions         "-f(no-)?exceptions"
-      GROUP NAME Optimization       "-O([0-3]?|fast|s|z)?"
+      GROUP NAME Optimization       "-O([0-4]?|fast|s|z)?"
       GROUP NAME Rtti               "-f(no-)?rtti"
       GROUP NAME TreatWarnAsError   "-Werror"
       GROUP NAME Standard           "-std=[^ ]+"
@@ -296,12 +296,12 @@ elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES
       ALIAS ExceptionsDisabled         Exceptions REMOVE_GROUP
       ALIAS ExceptionsEnabled          "-fexceptions"
       ALIAS FaviorSize                 "-Os"
-      ALIAS FaviorSpeed                "-O3"
+      ALIAS FaviorSpeed                "-O4"
       ALIAS MultiProcessorCompilation
       ALIAS OptimizeDisabled           "-O0"
       ALIAS OptimizeSize               "-Os"
       ALIAS OptimizeSpeed              "-O2"
-      ALIAS OptimizeFull               "-03"
+      ALIAS OptimizeFull               "-04"
       ALIAS RtMultiThreadedStatic
       ALIAS RtMultiThreadedShared
       ALIAS RtMultiThreadedStaticDebug

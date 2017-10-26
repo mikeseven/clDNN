@@ -1015,7 +1015,7 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
             -finline-functions
             -Wno-nested-anon-types
             -msse4.2
-	    -Wno-potentially-evaluated-expression
+            -Wno-potentially-evaluated-expression
         )
     else()
       intel_config_flag_apply_settings(
@@ -1036,6 +1036,7 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
             -finline-functions
             -fkeep-inline-functions
             -msse4.2
+            -stdlib=libc++
         )
     endif()
   endif()
