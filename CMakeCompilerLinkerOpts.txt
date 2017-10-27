@@ -328,6 +328,20 @@ elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES
       ALIAS DeadCodePreserve
       ALIAS StackProtector 
     )
+
+  if(CLDNN__COMPILE_LINK_ALLOW_UNSAFE_SIZE_OPT)
+    if(NOT APPLE)
+      intel_flag_register_settings(
+          CompilerOptions
+
+          GROUP NAME EmitDataSec "-fdata-sections"
+          GROUP NAME EmitFuncSec "-ffunction-sections"
+
+          ALIAS DeadCodeEliminate  "-fdata-sections" "-ffunction-sections"
+          ALIAS DeadCodePreserve   EmitDataSec EmitFuncSec REMOVE_GROUP
+        )
+    endif()
+  endif()
 else()
   message(FATAL_ERROR "[clDNN] Unknown compiler. Please define support for it or use different compiler.")
 endif()
@@ -377,14 +391,25 @@ else()
           ALIAS DeadCodePreserve   GcSections REMOVE_GROUP
         )
     elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
-      intel_flag_register_settings(
-          LinkerOptions
+      if(APPLE)
+        intel_flag_register_settings(
+            LinkerOptions
 
-          GROUP NAME DeadStrip "-Wl,-dead_strip"
+            GROUP NAME DeadStrip "-Wl,-dead_strip"
 
-          ALIAS DeadCodeEliminate  "-Wl,-dead_strip"
-          ALIAS DeadCodePreserve   DeadStrip REMOVE_GROUP
-        )
+            ALIAS DeadCodeEliminate  "-Wl,-dead_strip"
+            ALIAS DeadCodePreserve   DeadStrip REMOVE_GROUP
+          )
+      else()
+        intel_flag_register_settings(
+            LinkerOptions
+
+            GROUP NAME GcSections "-Wl,--gc-sections"
+
+            ALIAS DeadCodeEliminate  "-Wl,--gc-sections"
+            ALIAS DeadCodePreserve   GcSections REMOVE_GROUP
+          )
+      endif()
     endif()
   endif()
 endif()
