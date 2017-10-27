@@ -63,7 +63,7 @@ public:
 
     bool bias_term() const
     {
-        if (get_primitive()->bias.size() != 0)
+        if (this->get_dependencies().size() > 1 + this->get_split())
             return true;
         else
             return false;
@@ -106,7 +106,7 @@ public:
 
     bool bias_term() const
     {
-        if (argument.bias.size() != 0)
+        if(node.get_dependencies().size() > 1 + node.get_split())
             return true;
         else
             return false;

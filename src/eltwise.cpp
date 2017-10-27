@@ -84,9 +84,20 @@ eltwise_inst::typed_primitive_inst(network_impl& network, eltwise_node const& no
     auto input_layout = input_memory(0).get_layout();
     auto input2_layout = input_memory(1).get_layout();
 
-    // layout should be the same except padding, which can be different
-    input_layout.data_padding = input2_layout.data_padding = {};
+    auto batch_size = input_memory(0).get_layout().size.batch[0];
+    auto feature_size = input_memory(0).get_layout().size.feature[0];
 
-    CLDNN_ERROR_LAYOUT_MISMATCH(node.id(), "input layout", input_layout, "input_2 layout", input2_layout, "Different layouts of eltwise's inputs");
+    auto input_batch_size = input_memory(0).get_layout().size.batch[0];
+    auto input_feature_size = input_memory(0).get_layout().size.feature[0];
+
+    if (batch_size != 1)
+    {
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "Eltwise batch size", batch_size, "input batch size", input_batch_size, "");
+    }
+
+    if (feature_size != 1)
+    {
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "Eltwise feature size", feature_size, "input feature size", input_feature_size, "");
+    }
 }
 }

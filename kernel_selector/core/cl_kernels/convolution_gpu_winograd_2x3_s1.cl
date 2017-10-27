@@ -40,9 +40,6 @@ KERNEL(convolution_gpu_winograd_2x3_s1)
     const __global UNIT_TYPE *signalw,
           __global UNIT_TYPE *outputw,
     const __global UNIT_TYPE *filterw,
-#ifdef BIAS_TERM
-    const __global UNIT_TYPE* bias,
-#endif
     uint split_idx)
 {
     const int INPUT0_SIZE_Y_PITCH_UNIT_4 = INPUT0_PITCH_SIZE_Y / VEC_SIZE; //for bxyf -> INPUT0_PITCH_SIZE_Y is equal to input features count, since ifm % 32 == 0, division by VEC_SIZE is ok
@@ -178,56 +175,6 @@ KERNEL(convolution_gpu_winograd_2x3_s1)
 
         src0 += TILE_K / VEC_SIZE;
     }
-    
-#ifdef BIAS_TERM
-#if BIAS_PER_OUTPUT
-    //if bias value is defined per output value, for each tile we need to add appropriate bias to m1 and m4 values (m1 will be used to alter value at (x=0,y=0) coordinates of output tile and m4 will be used for (x=1, y=0) element)
-    if (in_tile_idx == 0 || in_tile_idx == 3)
-    {
-		const int standard_out_x = (tile_idx_x * WINOGRAD_OUTPUT_TILE_WIDTH) + (in_tile_idx == 0 ? 0 : 1);
-        uint bias_idx = f_idx * BIAS_FEATURE_PITCH +
-                              y_idx * BIAS_Y_PITCH +
-                              standard_out_x * BIAS_X_PITCH;       
-							  
-        UNIT_TYPE_4 bias0; bias0.x = bias[bias_idx]; bias0.y = bias[bias_idx + BIAS_FEATURE_PITCH]; bias0.z = bias[bias_idx + 2 * BIAS_FEATURE_PITCH]; bias0.w = bias[bias_idx + 3 * BIAS_FEATURE_PITCH]; bias_idx += BIAS_Y_PITCH; //move to the next row
-        UNIT_TYPE_4 bias1; bias1.x = bias[bias_idx]; bias1.y = bias[bias_idx + BIAS_FEATURE_PITCH]; bias1.z = bias[bias_idx + 2 * BIAS_FEATURE_PITCH]; bias1.w = bias[bias_idx + 3 * BIAS_FEATURE_PITCH]; bias_idx += BIAS_Y_PITCH; //move to the next row
-        UNIT_TYPE_4 bias2; bias2.x = bias[bias_idx]; bias2.y = bias[bias_idx + BIAS_FEATURE_PITCH]; bias2.z = bias[bias_idx + 2 * BIAS_FEATURE_PITCH]; bias2.w = bias[bias_idx + 3 * BIAS_FEATURE_PITCH]; bias_idx += BIAS_Y_PITCH; //move to the next row
-        UNIT_TYPE_4 bias3; bias3.x = bias[bias_idx]; bias3.y = bias[bias_idx + BIAS_FEATURE_PITCH]; bias3.z = bias[bias_idx + 2 * BIAS_FEATURE_PITCH]; bias3.w = bias[bias_idx + 3 * BIAS_FEATURE_PITCH]; bias_idx += BIAS_Y_PITCH; //move to the next row
-        UNIT_TYPE_4 bias4; bias4.x = bias[bias_idx]; bias4.y = bias[bias_idx + BIAS_FEATURE_PITCH]; bias4.z = bias[bias_idx + 2 * BIAS_FEATURE_PITCH]; bias4.w = bias[bias_idx + 3 * BIAS_FEATURE_PITCH]; bias_idx += BIAS_Y_PITCH; //move to the next row
-        UNIT_TYPE_4 bias5; bias5.x = bias[bias_idx]; bias5.y = bias[bias_idx + BIAS_FEATURE_PITCH]; bias5.z = bias[bias_idx + 2 * BIAS_FEATURE_PITCH]; bias5.w = bias[bias_idx + 3 * BIAS_FEATURE_PITCH]; bias_idx += BIAS_Y_PITCH; //move to the next row
-        UNIT_TYPE_4 bias6; bias6.x = bias[bias_idx]; bias6.y = bias[bias_idx + BIAS_FEATURE_PITCH]; bias6.z = bias[bias_idx + 2 * BIAS_FEATURE_PITCH]; bias6.w = bias[bias_idx + 3 * BIAS_FEATURE_PITCH]; bias_idx += BIAS_Y_PITCH; //move to the next row
-        UNIT_TYPE_4 bias7; bias7.x = bias[bias_idx]; bias7.y = bias[bias_idx + BIAS_FEATURE_PITCH]; bias7.z = bias[bias_idx + 2 * BIAS_FEATURE_PITCH]; bias7.w = bias[bias_idx + 3 * BIAS_FEATURE_PITCH];
-        
-        c0 += bias0;
-        c1 += bias1;
-        c2 += bias2;
-        c3 += bias3;
-        c4 += bias4;
-        c5 += bias5;
-        c6 += bias6;
-        c7 += bias7;
-    }
-#else
-    //output is 4 elements wide (x-dim) and we schedule 4*batch_size WIs in z-dim so each WI with global_id(Z) % 4 == 1 will produce m2 values of winograd tile --> this is the value we need to alter with bias, if the bias is per feature map
-    if (in_tile_idx == 1)
-    {
-        UNIT_TYPE_4 bias_per_ofm;
-        bias_per_ofm.x = bias[f_idx];
-        bias_per_ofm.y = bias[f_idx+1];
-        bias_per_ofm.z = bias[f_idx+2];
-        bias_per_ofm.w = bias[f_idx+3];
-        
-        c0 += bias_per_ofm;
-        c1 += bias_per_ofm;
-        c2 += bias_per_ofm;
-        c3 += bias_per_ofm;
-        c4 += bias_per_ofm;
-        c5 += bias_per_ofm;
-        c6 += bias_per_ofm;
-        c7 += bias_per_ofm;
-    }
-#endif
-#endif //BIAS_TERM
     
     dst[0] = c0; dst += OUTPUT_SIZE_Y_PITCH_UNIT_4;
     dst[0] = c1; dst += OUTPUT_SIZE_Y_PITCH_UNIT_4;

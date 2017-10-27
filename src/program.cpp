@@ -50,6 +50,7 @@
 #include "split_inst.h"
 #include "program_dump_graph.h"
 #include "upsampling_inst.h"
+#include "eltwise_inst.h"
 
 #include "network_impl.h"
 #include "kernel_selector_helper.h"
@@ -1257,10 +1258,28 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
             conv_node.output_layout.data_padding = padding{};
             auto& back_node = get_or_create(winograd_output);
             back_node.processing_itr = processing_order.insert(std::next(conv_node.processing_itr), &back_node);
+            
+            auto bias_term = conv_node.bias_term();
+            //create additional eltwise node after reorder to compute bias
+            if (bias_term)
+            {
+                auto& bias_node = conv_node.get_dependency(2);
+                auto winograd_output_biases = std::make_shared<eltwise>(back_node.id() + "_bias", back_node.id(), bias_node.id(),
+                    cldnn::eltwise_mode::sum, conv_prim->with_activation, conv_prim->activation_negative_slope, 
+                    back_node.output_layout.data_padding);
+                back_node.output_layout.data_padding = padding{};
+                auto& back_bias_node = get_or_create(winograd_output_biases);
+                back_bias_node.processing_itr = processing_order.insert(std::next(back_node.processing_itr), &back_bias_node);
+                replace_all_usages(back_node, back_bias_node);
+                add_connection(back_node, back_bias_node);
+                add_connection(bias_node, back_bias_node);
+            }
+
             if (conv_prim->with_activation)
             {
                 conv_node.typed_desc()->with_activation = false;
-                back_node.set_fused_activation(activation_relu_negative_slope, cldnn_activation_additional_params_t{ conv_prim->activation_negative_slope });
+                if (!bias_term)
+                    back_node.set_fused_activation(activation_relu_negative_slope, cldnn_activation_additional_params_t{ conv_prim->activation_negative_slope });
             }
 
             conv_node.invalidate_users();
@@ -1270,17 +1289,39 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
             auto& r_node = get_or_create(new_input);
             r_node.as<reorder>().set_input_offset(conv_prim->input_offset);
 
-            swap_names(conv_node, back_node);
-            if (conv_node.is_output())
+            if (!bias_term)
             {
-                conv_node.set_output(false);
-                back_node.set_output(true);
-                for (auto& output : outputs)
+                swap_names(conv_node, back_node);
+                if (conv_node.is_output())
                 {
-                    if (output == &conv_node)
+                    conv_node.set_output(false);
+                    back_node.set_output(true);
+                    for (auto& output : outputs)
                     {
-                        output = &back_node;
-                        break;
+                        if (output == &conv_node)
+                        {
+                            output = &back_node;
+                            break;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                conv_node.remove_dependency(2);
+                auto& back_bias_node = *nodes_map.find(back_node.id() + "_bias")->second;
+                swap_names(conv_node, back_bias_node);
+                if (conv_node.is_output())
+                {
+                    conv_node.set_output(false);
+                    back_bias_node.set_output(true);
+                    for (auto& output : outputs)
+                    {
+                        if (output == &conv_node)
+                        {
+                            output = &back_bias_node;
+                            break;
+                        }
                     }
                 }
             }
