@@ -21,6 +21,9 @@
 #include <cstring>
 #include <string>
 
+#include "meta_utils.hpp"
+
+
 namespace cldnn {
 
 /// @addtogroup cpp_api C++ API
@@ -161,8 +164,13 @@ private:
     size_t _size;
 };
 
-template<typename Char>
-size_t basic_strlen(const Char* str) = delete;
+// NOTE: It seems that clang before version 3.9 has bug that treates non-member template function with deleted function
+//       body as non-template or non-specializable (specializations are treated as redefinitions).
+//template<typename Char> size_t basic_strlen(const Char* str) = delete;
+template<typename Char> size_t basic_strlen(const Char*)
+{
+    static_assert(meta::always_false<Char>::value, "basic_strlen<Char> for selected Char type is deleted.");
+}
 
 template<>
 inline size_t basic_strlen(const char* str) { return std::strlen(str); }
