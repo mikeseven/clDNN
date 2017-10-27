@@ -1035,7 +1035,6 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
             -msse4.2
             -fPIE
             -fPIC
-            -Wl,--no-undefined
         )
     endif()
   endif()
