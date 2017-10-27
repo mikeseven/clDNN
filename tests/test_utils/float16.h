@@ -23,7 +23,7 @@ struct FLOAT16
     union
     {
         uint16_t v = 0;
-        struct // added this struct for the .natvis file (for debug)
+        struct representation // added this struct for the .natvis file (for debug)
         {
             uint16_t significand : 10;
             uint16_t exponent : 5;
