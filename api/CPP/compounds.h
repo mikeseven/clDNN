@@ -165,10 +165,10 @@ template<typename Char>
 size_t basic_strlen(const Char* str) = delete;
 
 template<>
-inline size_t basic_strlen<char>(const char* str) { return std::strlen(str); }
+inline size_t basic_strlen(const char* str) { return std::strlen(str); }
 
 template<>
-inline size_t basic_strlen<wchar_t>(const wchar_t* str) { return std::wcslen(str); }
+inline size_t basic_strlen(const wchar_t* str) { return std::wcslen(str); }
 
 template<typename Char>
 class basic_string_ref
