@@ -93,7 +93,7 @@ namespace KernelSelector
         kd->in_chunk_prefetch_size      = 2;
         kd->filter_chunk_prefetch_size  = responses_per_sg_exec;
 
-        return run_info;
+        return std::move(run_info);
     }
 
     KernelsData FullyConnected_bs_f_bsv16_b1::GetKernelsData(const Params& params, const OptionalParams& optParams) const
