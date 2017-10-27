@@ -1033,7 +1033,6 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
             -pedantic
             -finline
             -msse4.2
-            -stdlib=libc++
         )
     endif()
   endif()
@@ -1092,10 +1091,10 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
     )
 endif()
 
-# NOTE: When compiling with Clang, use the flags below for C++ files. These flags cannot be enabled when compiliing
+# NOTE: When compiling with Clang, use the flags below for C++ files. These flags cannot be enabled when compiling
 #       C files.
 if((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
-  if(LLVM_ON_DARWIN)
+  if(NOT ANDROID)
     intel_config_flag_apply_settings(
         CompilerOptions
         CMAKE_CXX_FLAGS
