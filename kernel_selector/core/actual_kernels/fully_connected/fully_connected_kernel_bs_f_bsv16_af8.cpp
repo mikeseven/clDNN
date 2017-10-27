@@ -46,7 +46,7 @@ namespace KernelSelector
         kd->lws0 = 16;
         kd->lws1 = 1;
 
-        return kd;
+        return std::move(kd);
     }
     
     static bool check_input_layout(const DataTensor& t)

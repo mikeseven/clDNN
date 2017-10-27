@@ -55,7 +55,7 @@ namespace KernelSelector
         runInfo->lws1 = local[1];
         runInfo->lws2 = 1;
 
-        return runInfo;
+        return std::move(runInfo);
     }
 
     KernelsData FullyConnected_bfyx_Ref::GetKernelsData(const Params& params, const OptionalParams& options) const
