@@ -144,8 +144,15 @@ json_composite program_node::desc_to_json() const
     }
     else
     {
+        #ifdef __clang__
+            #pragma clang diagnostic push
+            #pragma clang diagnostic ignore "-Wpotentially-evaluated-expression"
+        #endif
         //todo: add proper impl dump\n";
         impls.push_back(typeid(*selected_impl.get()).name());
+        #ifdef __clang__
+            #pragma clang diagnostic pop
+        #endif
     }
     node_info.add("implementation", impls);
 

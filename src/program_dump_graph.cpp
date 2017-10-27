@@ -89,7 +89,15 @@ namespace
             {
                 continue;
             }
+            #ifdef __clang__
+                #pragma clang diagnostic push
+                #pragma clang diagnostic ignore "-Wpotentially-evaluated-expression"
+            #endif
             graph << "    " << get_node_id(node.get()) << "[label=\"" << node->id() << ":\\n" << get_extr_type(typeid(*node).name()) << "\n out format: " + extr_oformat(node.get()) << "\"";
+            #ifdef __clang__
+                #pragma clang diagnostic pop
+            #endif
+
             if (node->is_type<data>() || node->is_constant())
                 graph << ", shape=box";
             if (node->is_type<internal_primitive>())
