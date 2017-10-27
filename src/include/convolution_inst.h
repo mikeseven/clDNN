@@ -63,7 +63,7 @@ public:
 
     bool bias_term() const
     {
-        if (this->get_dependencies().size() > 1 + this->get_split())
+        if (static_cast<uint32_t>(this->get_dependencies().size()) > static_cast<uint32_t>(1 + this->get_split()))
             return true;
         else
             return false;
@@ -106,7 +106,7 @@ public:
 
     bool bias_term() const
     {
-        if(node.get_dependencies().size() > 1 + node.get_split())
+        if(static_cast<uint32_t>(node.get_dependencies().size()) > static_cast<uint32_t>(1 + node.get_split()))
             return true;
         else
             return false;

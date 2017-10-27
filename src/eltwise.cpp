@@ -81,9 +81,6 @@ std::string eltwise_inst::to_string(eltwise_node const& node)
 eltwise_inst::typed_primitive_inst(network_impl& network, eltwise_node const& node)
     :parent(network, node)
 {
-    auto input_layout = input_memory(0).get_layout();
-    auto input2_layout = input_memory(1).get_layout();
-
     auto batch_size = input_memory(0).get_layout().size.batch[0];
     auto feature_size = input_memory(0).get_layout().size.feature[0];
 
