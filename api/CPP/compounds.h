@@ -170,6 +170,7 @@ private:
 template<typename Char> size_t basic_strlen(const Char*)
 {
     static_assert(meta::always_false<Char>::value, "basic_strlen<Char> for selected Char type is deleted.");
+    return 0;
 }
 
 template<>
