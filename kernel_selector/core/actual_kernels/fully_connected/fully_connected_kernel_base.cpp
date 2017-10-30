@@ -42,7 +42,7 @@ namespace KernelSelector
         }
         dispatchData->lws1 = dispatchData->lws2 = 1;
 
-        return dispatchData;
+        return std::move(dispatchData);
     }
 
     KernelsData FullyConnectedKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, DataLayout dl, std::vector<WeightsLayout> wl, float estimated_time) const

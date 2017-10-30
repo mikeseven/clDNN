@@ -60,7 +60,7 @@ namespace KernelSelector
             }
         }
 
-        return kd;
+        return std::move(kd);
     }
 
     bool FullyConnected_bf_io_input_spatial::Validate(const Params& p, const OptionalParams& o) const
