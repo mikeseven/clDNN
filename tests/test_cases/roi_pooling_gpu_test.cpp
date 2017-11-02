@@ -244,7 +244,7 @@ public:
     {        
         std::vector<int> test_rois_sizes = { 1, 20 };          
         
-        for (cldnn::data_types data_type : test_data_types)
+        for (cldnn::data_types data_type : test_data_types())
         for (int batch_size : { 1 } /*test_batch_sizes*/)
         for (int feature_size : test_feature_sizes)
         for (tensor input_size : test_input_sizes)
@@ -555,7 +555,7 @@ private:
 std::vector<cldnn::primitive*> roi_pooling_test::all_layer_params = {};
 std::vector<tests::test_params*> roi_pooling_test::all_generic_params = {};
 
-TEST_P(roi_pooling_test, test_all) 
+TEST_P(roi_pooling_test, ROI_POOLING)
 {
     run_single_test();
 }

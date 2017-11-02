@@ -1084,6 +1084,9 @@ void program_impl::remove_redundant_reorders()
         if (!ident.second)
             continue;
 
+        if (ident.first && ident.second && r_node.is_output() && r_node.get_dependency(0).is_input()) //do not optimize when reorder is output and layer before is input
+            continue;
+
         //mark as optimized
         r_node.can_be_optimized(true);
         r_node.requires_reinterpret(!ident.first);

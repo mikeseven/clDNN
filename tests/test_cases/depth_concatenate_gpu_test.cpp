@@ -270,7 +270,7 @@ public:
     {
         std::vector<tests::test_params*> all_generic_params;
 
-        for (cldnn::data_types dt : test_data_types)
+        for (cldnn::data_types dt : test_data_types())
         for (int32_t b : test_batch_sizes)
         for (tensor & t : test_input_sizes)
         {
@@ -464,12 +464,12 @@ private:
 std::vector<cldnn::primitive*> depth_concatenate_test::all_layer_params = {};
 std::vector<tests::test_params*> depth_concatenate_test::all_generic_params = {};
 
-TEST_P(depth_concatenate_test, DISABLED_TestAll)
+TEST_P(depth_concatenate_test, DEPTHCONCATENATE)
 {
     run_single_test();
 }
  
-INSTANTIATE_TEST_CASE_P(DEPTHCONCATENATE,
+INSTANTIATE_TEST_CASE_P(DISABLED_DEPTHCONCATENATE,
     depth_concatenate_test,
     ::testing::ValuesIn(depth_concatenate_test::generate_all_test_params()),
     depth_concatenate_test::custom_param_name);

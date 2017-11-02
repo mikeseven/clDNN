@@ -892,12 +892,12 @@ private:
 std::vector<cldnn::primitive*> lrn_test::all_layer_params = {};
 std::vector<tests::test_params*> lrn_test::all_generic_params = {};
 
-TEST_P(lrn_test, DISABLED_test_all)
+TEST_P(lrn_test, LRN)
 {
     run_single_test();
 }
 
-INSTANTIATE_TEST_CASE_P(LRN, 
+INSTANTIATE_TEST_CASE_P(DISABLED_LRN, 
                         lrn_test, 
                         ::testing::Combine(::testing::ValuesIn(lrn_test::generate_generic_test_params()),
                                            ::testing::ValuesIn(lrn_test::generate_specific_test_params())), 

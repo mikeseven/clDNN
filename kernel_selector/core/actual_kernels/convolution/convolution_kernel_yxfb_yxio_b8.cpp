@@ -61,6 +61,9 @@ namespace KernelSelector
 
         runInfo.gws0 = filterOfmNum * batchSize / (runInfo.cldnnStyle.ofmPerWorkItem * runInfo.cldnnStyle.batchesPerWorkItem);
 
+        runInfo.lws1 = 1;
+        runInfo.lws2 = 1;
+
         runInfo.effiency = FORCE_PRIORITY_9;
         
         return runInfo;

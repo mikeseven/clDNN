@@ -227,8 +227,8 @@ public:
         const int gss = group_sz * group_sz;
 
 
-        for (cldnn::data_types data_type : test_data_types)
-//        for (int batch_size : test_batch_sizes)
+        for (cldnn::data_types data_type : test_data_types())
+        //for (int batch_size : test_batch_sizes)
         for (int feature_size : { gss, 3 * gss })
         for (tensor input_size : test_input_sizes)
         for (int num_rois : test_rois_sizes)
@@ -519,7 +519,7 @@ private:
 std::vector<cldnn::primitive*> psroi_pooling_test::all_layer_params = {};
 std::vector<tests::test_params*> psroi_pooling_test::all_generic_params = {};
 
-TEST_P(psroi_pooling_test, test_all) 
+TEST_P(psroi_pooling_test, PSROI_POOLING)
 {
     run_single_test();
 }

@@ -723,12 +723,12 @@ std::vector<tests::test_params*> activation_prelu_test::all_generic_params = {};
 std::vector<cldnn::primitive*> activation_prelu_test::all_layer_params = {};
 std::vector<std::tuple<tests::test_params*, cldnn::primitive*>> activation_prelu_test::all_test_params = {};
 
-TEST_P(activation_prelu_test, DISABLED_test_all)
+TEST_P(activation_prelu_test, PRELU)
 {
     run_single_test();
 }
 
-INSTANTIATE_TEST_CASE_P(PRELU, 
+INSTANTIATE_TEST_CASE_P(DISABLED_PRELU, 
                         activation_prelu_test, 
                         ::testing::ValuesIn(activation_prelu_test::generate_all_test_params()),
                         tests::generic_test::custom_param_name_functor());

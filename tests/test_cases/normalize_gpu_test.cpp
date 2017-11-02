@@ -45,7 +45,7 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial)
     auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 7, 10, 17, 13 } });
     auto scale = memory::allocate(engine, { data_types::f32, GetParam(),{ 1, 1, 1, 1 } });
 
-    tests::set_random_values<float>(input, -100, 100);
+    tests::set_random_values<float>(input, true, 8, 100);
 
     std::vector<float> scale_input_vec = { 1.f };
     set_values(scale, scale_input_vec);
@@ -107,7 +107,7 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial_scale_channels_shared)
     auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 12, 5, 7, 2 } });
     auto scale = memory::allocate(engine, { data_types::f32, GetParam(),{ 1, 1, 1, 1 } });
 
-    tests::set_random_values<float>(input, -100, 100);
+    tests::set_random_values<float>(input, true, 8, 100);
 
     std::vector<float> scale_input_vec = { 5.2f };
     set_values(scale, scale_input_vec);
@@ -169,7 +169,7 @@ TEST_P(normalize_gpu_test, normalize_test_across_spatial_scale_channels_not_shar
     auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 12, 5, 7, 2 } });
     auto scale = memory::allocate(engine, { data_types::f32, GetParam(),{ 1, 1, 5, 1 } });
 
-    tests::set_random_values<float>(input, -100, 100);
+    tests::set_random_values<float>(input, true, 8, 100);
 
     std::vector<float> scale_input_vec = { 3.4f, 3.4f, 3.4f, 3.4f, 3.4f };
     set_values(scale, scale_input_vec);
@@ -232,7 +232,7 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial)
     auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 5, 7, 19, 12 } });
     auto scale = memory::allocate(engine, { data_types::f32, GetParam(),{ 1, 1, 1, 1 } });
 
-    tests::set_random_values<float>(input, -100, 100);
+    tests::set_random_values<float>(input, true, 8, 100);
 
     std::vector<float> scale_input_vec = { 1.f };
     set_values(scale, scale_input_vec);
@@ -294,7 +294,7 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial_scale_channels_shared)
     auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 9, 4, 18, 23 } });
     auto scale = memory::allocate(engine, { data_types::f32, GetParam(),{ 1, 1, 1, 1 } });
 
-    tests::set_random_values<float>(input, -100, 100);
+    tests::set_random_values<float>(input, true, 8, 100);
 
     std::vector<float> scale_input_vec = { 3.2f };
     set_values(scale, scale_input_vec);
@@ -356,7 +356,7 @@ TEST_P(normalize_gpu_test, normalize_test_within_spatial_scale_channels_not_shar
     auto input = memory::allocate(engine, { data_types::f32, GetParam(),{ 9, 4, 18, 23 } });
     auto scale = memory::allocate(engine, { data_types::f32, GetParam(),{ 1, 1, 4, 1 } });
 
-    tests::set_random_values<float>(input, -100, 100);
+    tests::set_random_values<float>(input, true, 8, 100);
 
     std::vector<float> scale_input_vec = { 7.2f, 7.2f, 7.2f, 7.2f };
     set_values(scale, scale_input_vec);
@@ -531,7 +531,7 @@ public:
     {
         // Update scale values.
         auto scale_input = inputs[1];
-        tests::set_random_values<Type>(scale_input, -2, 2);
+        tests::set_random_values<Type>(scale_input, true, 2);
     }
 
 
@@ -669,12 +669,12 @@ std::vector<tests::test_params*> normalize_test::all_generic_params_scale_per_ch
 std::vector<cldnn::primitive*> normalize_test::all_layer_params = {};
 std::vector<std::tuple<tests::test_params*, cldnn::primitive*>> normalize_test::all_test_params = {};
 
-TEST_P(normalize_test, DISABLED_test_all)
+TEST_P(normalize_test, NORMALIZE)
 {
     run_single_test();
 }
 
-INSTANTIATE_TEST_CASE_P(NORMALIZE, 
+INSTANTIATE_TEST_CASE_P(DISABLED_NORMALIZE,
                         normalize_test, 
                         ::testing::ValuesIn(normalize_test::generate_all_test_params()),
                         tests::generic_test::custom_param_name_functor());
