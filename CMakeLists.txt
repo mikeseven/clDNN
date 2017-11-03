@@ -21,6 +21,11 @@ if(CLDNN__INCLUDE_GENERIC_SAMPLE)
   set(INITIAL_C_FLAGS ${CMAKE_C_FLAGS})
 endif()
 
+if(CMAKE_VERSION VERSION_LESS 3.9)
+  # Register module overrides for boost package if cmake is too old.
+  list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/common/boost/cmake/modules")
+endif()
+
 # Register Intel helper modules.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/utils/build/cmake/modules")
 include(IntelHelpers)
