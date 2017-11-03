@@ -28,8 +28,8 @@ namespace KernelSelector {
         k.EnableOutputDataType(Datatype::F32);
         k.EnableInputWeightsType(WeightsType::F16);
         k.EnableInputWeightsType(WeightsType::F32);
-        k.EnableInputLayout(DataLayout::f8_xy16);
-        k.EnableOutputLayout(DataLayout::f8_xy16);
+        k.EnableInputLayout(DataLayout::bf8_xy16);
+        k.EnableOutputLayout(DataLayout::bfyx);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableDilation();
@@ -42,7 +42,7 @@ namespace KernelSelector {
         return k;
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_1x1::SetDefault(const ConvolutionParams& params) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_1x1::SetDefault(const ConvolutionParams& params, int) const
     {
         DispatchData kd = ConvolutionKernelBase::SetDefault(params);
 
@@ -64,10 +64,8 @@ namespace KernelSelector {
         kd.lws1 = 16;
         kd.lws2 = 1;
 
-        if(kd.gws1 % 32 == 0)
-        {
-            kd.lws1 = 32;
-        }
+        kd.effiency = FORCE_PRIORITY_3;
+
         return kd;
     }
 
@@ -94,48 +92,19 @@ namespace KernelSelector {
         return true;
     }
 
+    JitConstants ConvolutionKernel_bfyx_1x1::GetJitConstants(const ConvolutionParams& params, DispatchData runInfo) const
+    {
+        auto jit = Parent::GetJitConstants(params, runInfo);
+
+        const auto& in = params.inputs[0];
+
+        jit.AddConstant(MakeJitConstant("SIMDS_PER_OFM", (in.Feature().v % 32 == 0) ? 2 : 1));
+
+        return jit;
+    }
+
     KernelsData ConvolutionKernel_bfyx_1x1::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        if (!Validate(params, options))
-        {
-            return{};
-        }
-
-        const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
-
-        DispatchData runInfo = SetDefault(orgParams);
-        KernelData kd = KernelData::Default<ConvolutionParams>(params);
-        ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
-
-        bool succeed = UpdateWeightsParams(
-            newParams,
-            options,
-            GetSupportedWeightLayouts(),
-            kd.weightsReorderParams);
-
-        if (!succeed)
-        {
-            return{};
-        }
-
-        auto cldnn_jit = GetJitConstants(newParams, runInfo);
-        
-        const auto& in = orgParams.inputs[0];
-
-        cldnn_jit.AddConstant(MakeJitConstant("SIMDS_PER_OFM", (in.Feature().v % 32 == 0) ? 2 : 1));
-
-        auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
-        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
-
-        auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, ROUND_ROBIN, true, !newParams.bias.empty());
-        kernel.arguments.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
-
-        kd.estimatedTime = runInfo.effiency;
-        if((orgParams.weights.X().v == 1) && (orgParams.weights.Y().v == 1))
-        {
-            kd.estimatedTime = FORCE_PRIORITY_9;
-        }
-        return{ kd };
+        return GetCommonKernelsData(params, options);
     }
 }

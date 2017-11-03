@@ -41,14 +41,12 @@
         ((b) / (sub_group_size))*CAT(prefix, _BATCH_PITCH)              \
     )
 
-#define GET_DATA_F8_XY16_INDEX(prefix, f, y, x)  \
-    CAT(prefix, _OFFSET) +                                              \
-    ((f) % (8)) +                                          \
-    (8)*(                                                  \
-        (x)*CAT(prefix, _X_PITCH) +                                     \
-        (y)*CAT(prefix, _Y_PITCH) +                                     \
-        ((f) / (8))*CAT(prefix, _FEATURE_PITCH)              \
-    )
+#define GET_DATA_BF8_XY16_INDEX(prefix, b, f, y, x)         \
+    CAT(prefix, _OFFSET) +                                  \
+    (x)*CAT(prefix, _X_PITCH) +                             \
+    (y)*CAT(prefix, _Y_PITCH) +                             \
+    (f)*(((CAT(prefix, _FEATURE_PITCH) + 16 - 1) / 16) * 16) +     \
+    (b)*(((CAT(prefix, _BATCH_PITCH) + 8 - 1) / 8) * 8)
 
 #define GET_FILTER_INDEX(prefix, o, i, y, x)    \
     CAT(prefix, _OFFSET) +                      \

@@ -43,7 +43,7 @@ namespace KernelSelector
             fyxb,               // 3D+batch
             bs_f_bsv8__af8,     // for optimized FC
             bs_f_bsv16__af8,    // for optimized FC
-            f8_xy16,            // for optimized conv1x1
+            bf8_xy16,           // for optimized conv1x1
             // TODO: most of the kernel doesn't support ROI. we need to handle it correctly.
             brfyx,              // 4D+batch
             winograd_2x3_s1_data, //winograd convolution input, F(2,3) -- filter 3x3 with stride 1
@@ -129,7 +129,7 @@ namespace KernelSelector
                 { DataLayout::fyxb,             {  1, 2, 3,-1, 0 } },
                 { DataLayout::bs_f_bsv8__af8,   { -1,-1, 0,-1, 1 } },
                 { DataLayout::bs_f_bsv16__af8,  { -1,-1, 0,-1, 1 } },
-                { DataLayout::f8_xy16,          {  0,-1, 1,-1,-1 } },
+                { DataLayout::bf8_xy16,         {  0, 1, 2,-1, 3 } },
                 { DataLayout::brfyx,            {  0, 1, 2, 3, 4 } },
                 { DataLayout::winograd_2x3_s1_data, {  2, 1, 0,-1, 3 } },
             };

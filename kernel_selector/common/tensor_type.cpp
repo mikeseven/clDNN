@@ -39,10 +39,11 @@ namespace KernelSelector
                 newDims[0] = RoundUp(newDims[0], 8);
                 newDims[1] = RoundUp(newDims[1], 16);
                 break;
-            case f8_xy16:
-                assert(newDims.size() == 2);
-                newDims[0] = RoundUp(newDims[0], 16);
+            case bf8_xy16:
+                assert(newDims.size() == 4);
                 newDims[1] = RoundUp(newDims[1], 8);
+                newDims[3] = RoundUp(newDims[2] * newDims[3], 16);
+                newDims[2] = 1;
                 break;
             default:
                 break;

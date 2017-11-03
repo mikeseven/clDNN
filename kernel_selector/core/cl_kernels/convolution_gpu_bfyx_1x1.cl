@@ -23,57 +23,19 @@
 // Creates vector type.
 #define MAKE_VECTOR_TYPE(elem_type, size) CONCAT_TOKEN(elem_type, size)
 
-#define ALIGNED_BLOCK_READ8(ptr, byte_offset) as_half8(intel_sub_group_block_read_us8((const __global ushort*)(ptr) + (byte_offset)))
-
 #if FP16_UNIT_USED
-    #define TRANSPOSE_BLOCK_16_FP16( _block ) \
-        (half16)( intel_sub_group_shuffle( _block, 0 ), \
-                  intel_sub_group_shuffle( _block, 1 ), \
-                  intel_sub_group_shuffle( _block, 2 ), \
-                  intel_sub_group_shuffle( _block, 3 ), \
-                  intel_sub_group_shuffle( _block, 4 ), \
-                  intel_sub_group_shuffle( _block, 5 ), \
-                  intel_sub_group_shuffle( _block, 6 ), \
-                  intel_sub_group_shuffle( _block, 7 ), \
-                  intel_sub_group_shuffle( _block, 8 ), \
-                  intel_sub_group_shuffle( _block, 9 ), \
-                  intel_sub_group_shuffle( _block, 10 ), \
-                  intel_sub_group_shuffle( _block, 11 ), \
-                  intel_sub_group_shuffle( _block, 12 ), \
-                  intel_sub_group_shuffle( _block, 13 ), \
-                  intel_sub_group_shuffle( _block, 14 ), \
-                  intel_sub_group_shuffle( _block, 15 ) \
-                   );
-
+    #define ALIGNED_BLOCK_READ8(ptr, byte_offset) as_half8(intel_sub_group_block_read_us8((const __global ushort*)(ptr) + (byte_offset)))
+    
     #define MULTIPLY_BLOCKS_16x8_8x16(_result, _blockA, _blockB) \
     { \
-        const half16 acol0 = TRANSPOSE_BLOCK_16_FP16( _blockA.s0 ); \
-        const half16 acol1 = TRANSPOSE_BLOCK_16_FP16( _blockA.s1 ); \
-        const half16 acol2 = TRANSPOSE_BLOCK_16_FP16( _blockA.s2 ); \
-        const half16 acol3 = TRANSPOSE_BLOCK_16_FP16( _blockA.s3 ); \
-        const half16 acol4 = TRANSPOSE_BLOCK_16_FP16( _blockA.s4 ); \
-        const half16 acol5 = TRANSPOSE_BLOCK_16_FP16( _blockA.s5 ); \
-        const half16 acol6 = TRANSPOSE_BLOCK_16_FP16( _blockA.s6 ); \
-        const half16 acol7 = TRANSPOSE_BLOCK_16_FP16( _blockA.s7 ); \
-        _result = fma( _blockB.s0, acol0, _result ); \
-        _result = fma( _blockB.s1, acol1, _result ); \
-        _result = fma( _blockB.s2, acol2, _result ); \
-        _result = fma( _blockB.s3, acol3, _result ); \
-        _result = fma( _blockB.s4, acol4, _result ); \
-        _result = fma( _blockB.s5, acol5, _result ); \
-        _result = fma( _blockB.s6, acol6, _result ); \
-        _result = fma( _blockB.s7, acol7, _result ); \
-    }
-    #define MULTIPLY_BLOCKS_8x8(_result, _blockA, _blockB)  \
-    {   \
-        const half8 acol0 = TRANSPOSE_BLOCK_8_FP16( _blockA.s0 ); \
-        const half8 acol1 = TRANSPOSE_BLOCK_8_FP16( _blockA.s1 ); \
-        const half8 acol2 = TRANSPOSE_BLOCK_8_FP16( _blockA.s2 ); \
-        const half8 acol3 = TRANSPOSE_BLOCK_8_FP16( _blockA.s3 ); \
-        const half8 acol4 = TRANSPOSE_BLOCK_8_FP16( _blockA.s4 ); \
-        const half8 acol5 = TRANSPOSE_BLOCK_8_FP16( _blockA.s5 ); \
-        const half8 acol6 = TRANSPOSE_BLOCK_8_FP16( _blockA.s6 ); \
-        const half8 acol7 = TRANSPOSE_BLOCK_8_FP16( _blockA.s7 ); \
+        const half16 acol0 = TRANSPOSE_BLOCK_16_FP16_HALF_TYPE( _blockA.s0 ); \
+        const half16 acol1 = TRANSPOSE_BLOCK_16_FP16_HALF_TYPE( _blockA.s1 ); \
+        const half16 acol2 = TRANSPOSE_BLOCK_16_FP16_HALF_TYPE( _blockA.s2 ); \
+        const half16 acol3 = TRANSPOSE_BLOCK_16_FP16_HALF_TYPE( _blockA.s3 ); \
+        const half16 acol4 = TRANSPOSE_BLOCK_16_FP16_HALF_TYPE( _blockA.s4 ); \
+        const half16 acol5 = TRANSPOSE_BLOCK_16_FP16_HALF_TYPE( _blockA.s5 ); \
+        const half16 acol6 = TRANSPOSE_BLOCK_16_FP16_HALF_TYPE( _blockA.s6 ); \
+        const half16 acol7 = TRANSPOSE_BLOCK_16_FP16_HALF_TYPE( _blockA.s7 ); \
         _result = fma( _blockB.s0, acol0, _result ); \
         _result = fma( _blockB.s1, acol1, _result ); \
         _result = fma( _blockB.s2, acol2, _result ); \
@@ -87,35 +49,16 @@
     // Block read - currently block is 4 bytes aligned.
     #define ALIGNED_BLOCK_READ8(ptr, byte_offset) as_float8(intel_sub_group_block_read8((const __global uint*)(ptr) + (byte_offset)))
 
-        #define TRANSPOSE_BLOCK_16_FP16( _block ) \
-        (float16)( intel_sub_group_shuffle( _block, 0 ), \
-                  intel_sub_group_shuffle( _block, 1 ), \
-                  intel_sub_group_shuffle( _block, 2 ), \
-                  intel_sub_group_shuffle( _block, 3 ), \
-                  intel_sub_group_shuffle( _block, 4 ), \
-                  intel_sub_group_shuffle( _block, 5 ), \
-                  intel_sub_group_shuffle( _block, 6 ), \
-                  intel_sub_group_shuffle( _block, 7 ), \
-                  intel_sub_group_shuffle( _block, 8 ), \
-                  intel_sub_group_shuffle( _block, 9 ), \
-                  intel_sub_group_shuffle( _block, 10 ), \
-                  intel_sub_group_shuffle( _block, 11 ), \
-                  intel_sub_group_shuffle( _block, 12 ), \
-                  intel_sub_group_shuffle( _block, 13 ), \
-                  intel_sub_group_shuffle( _block, 14 ), \
-                  intel_sub_group_shuffle( _block, 15 ) \
-                   );
-
     #define MULTIPLY_BLOCKS_16x8_8x16(_result, _blockA, _blockB) \
     { \
-        const half16 acol0 = TRANSPOSE_BLOCK_16( _blockA.s0 ); \
-        const half16 acol1 = TRANSPOSE_BLOCK_16( _blockA.s1 ); \
-        const half16 acol2 = TRANSPOSE_BLOCK_16( _blockA.s2 ); \
-        const half16 acol3 = TRANSPOSE_BLOCK_16( _blockA.s3 ); \
-        const half16 acol4 = TRANSPOSE_BLOCK_16( _blockA.s4 ); \
-        const half16 acol5 = TRANSPOSE_BLOCK_16( _blockA.s5 ); \
-        const half16 acol6 = TRANSPOSE_BLOCK_16( _blockA.s6 ); \
-        const half16 acol7 = TRANSPOSE_BLOCK_16( _blockA.s7 ); \
+        const float16 acol0 = TRANSPOSE_BLOCK_16( _blockA.s0 ); \
+        const float16 acol1 = TRANSPOSE_BLOCK_16( _blockA.s1 ); \
+        const float16 acol2 = TRANSPOSE_BLOCK_16( _blockA.s2 ); \
+        const float16 acol3 = TRANSPOSE_BLOCK_16( _blockA.s3 ); \
+        const float16 acol4 = TRANSPOSE_BLOCK_16( _blockA.s4 ); \
+        const float16 acol5 = TRANSPOSE_BLOCK_16( _blockA.s5 ); \
+        const float16 acol6 = TRANSPOSE_BLOCK_16( _blockA.s6 ); \
+        const float16 acol7 = TRANSPOSE_BLOCK_16( _blockA.s7 ); \
         _result = fma( _blockB.s0, acol0, _result ); \
         _result = fma( _blockB.s1, acol1, _result ); \
         _result = fma( _blockB.s2, acol2, _result ); \
@@ -124,26 +67,6 @@
         _result = fma( _blockB.s5, acol5, _result ); \
         _result = fma( _blockB.s6, acol6, _result ); \
         _result = fma( _blockB.s7, acol7, _result ); \
-    }
-
-    #define MULTIPLY_BLOCKS_8x8(_result, _blockA, _blockB)  \
-    {   \
-        const float8 acol0 = TRANSPOSE_BLOCK_8( _blockA.s0 ); \
-        const float8 acol1 = TRANSPOSE_BLOCK_8( _blockA.s1 ); \
-        const float8 acol2 = TRANSPOSE_BLOCK_8( _blockA.s2 ); \
-        const float8 acol3 = TRANSPOSE_BLOCK_8( _blockA.s3 ); \
-        const float8 acol4 = TRANSPOSE_BLOCK_8( _blockA.s4 ); \
-        const float8 acol5 = TRANSPOSE_BLOCK_8( _blockA.s5 ); \
-        const float8 acol6 = TRANSPOSE_BLOCK_8( _blockA.s6 ); \
-        const float8 acol7 = TRANSPOSE_BLOCK_8( _blockA.s7 ); \
-        _result = mad( _blockB.s0, acol0, _result ); \
-        _result = mad( _blockB.s1, acol1, _result ); \
-        _result = mad( _blockB.s2, acol2, _result ); \
-        _result = mad( _blockB.s3, acol3, _result ); \
-        _result = mad( _blockB.s4, acol4, _result ); \
-        _result = mad( _blockB.s5, acol5, _result ); \
-        _result = mad( _blockB.s6, acol6, _result ); \
-        _result = mad( _blockB.s7, acol7, _result ); \
     }
 #endif
 
@@ -158,12 +81,8 @@ KERNEL(convolution_bfyx_1x1)(
     uint split_idx)
 {
     const uint xy = get_group_id(0) * 16 + get_sub_group_local_id();
-    const uint xy2 = xy + 8;
-
     const uint x = xy % OUTPUT_SIZE_X;
     const uint y = xy / OUTPUT_SIZE_X;
-    const uint x2 = xy2 % OUTPUT_SIZE_X;
-    const uint y2 = xy2 / OUTPUT_SIZE_X;
     const uint f = get_group_id(1) * 16 + get_sub_group_local_id();//get_global_id(1);
     const uint b = get_global_id(2);
     const uint group_f = get_group_id(1) * 16;
@@ -187,40 +106,31 @@ KERNEL(convolution_bfyx_1x1)(
 #else
     const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
 #endif
-    const uint filter_offset = group_f *FILTER_IFM_NUM;//f*FILTER_OFM_PITCH;
+    const uint filter_offset = group_f * FILTER_IFM_NUM;//f*FILTER_OFM_PITCH;
     const uint input_offset = in_split_offset + xy * 16 * INPUT0_FEATURE_NUM;//b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
 
-    for (uint k = 0; k < FILTER_IFM_NUM / 8; ++k)
+    for (uint k = 0; k < (FILTER_IFM_NUM + 8 - 1) / 8; ++k)
     {
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA00;
 
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockB00;
 
-        uint input_idx = input_offset + xy + k*8*INPUT0_FEATURE_PITCH;
-        uint filter_idx = filter_offset + k*8*FILTER_IFM_PITCH;
+        uint input_idx = input_offset + xy + k*8*((INPUT0_FEATURE_PITCH + 16 - 1) / 16) * 16;
+        uint filter_idx = filter_offset + k*8*((FILTER_OFM_PITCH + 8 - 1) / 8) * 8;
 
-/*        for(uint i = 0; i < 8; i++)
-        {
-            blockA00[i] = input[input_idx];
-            input_idx += INPUT0_FEATURE_PITCH;
-            blockB00[i] = weights[filter_idx];
-            filter_idx += FILTER_IFM_PITCH;
-        }*/
-
-         blockA00 = ALIGNED_BLOCK_READ8(input, input_idx);
-         blockB00 = ALIGNED_BLOCK_READ8(weights, filter_idx);
-         MULTIPLY_BLOCKS_16x8_8x16(blockC00, blockB00, blockA00);
+        blockA00 = ALIGNED_BLOCK_READ8(input, input_idx);
+        blockB00 = ALIGNED_BLOCK_READ8(weights, filter_idx);
+        MULTIPLY_BLOCKS_16x8_8x16(blockC00, blockB00, blockA00);
     }
 
-    if(xy >= INPUT0_SIZE_X * INPUT0_SIZE_Y)
+    if(xy > INPUT0_SIZE_X * INPUT0_SIZE_Y)
         return;
     
     const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * OUTPUT_FEATURE_NUM;
 
-
     for(uint i = 0; i < 16; i++)
     {
-        const uint dst_index = GET_DATA_INDEX(OUTPUT, b, group_f+i, y, x) + out_split_offset;     
-        output[dst_index] = ACTIVATION(blockC00[i], NL_M, NL_N);
+        const uint dst_index = GET_DATA_INDEX(OUTPUT, b, group_f+i, y, x) + out_split_offset;
+        output[dst_index] = ACTIVATION(blockC00[i], NL_M, NL_N);   
     }
 }

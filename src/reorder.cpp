@@ -112,7 +112,7 @@ layout reorder_inst::calc_output_layout(reorder_node const& node)
         CLDNN_ERROR_MESSAGE(node.id(), "Conversion of weights from winograd to standard domain is currently unsupported");
     }
 
-    if(ofmt == format::bs_xs_xsv8_bsv8 || ofmt == format::bs_xs_xsv8_bsv16 || ofmt == format::bs_x_bsv16 || ofmt == format::f8_xy16))
+    if(ofmt == format::bs_xs_xsv8_bsv8 || ofmt == format::bs_xs_xsv8_bsv16 || ofmt == format::bs_x_bsv16)
         return layout(odt, ofmt, input_layout.size.transform(ofmt, 1), op);
     else
         return layout(odt, ofmt, input_layout.size, op);

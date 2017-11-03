@@ -88,8 +88,9 @@ struct format
                                                          ///< \n \image html bs_xs_xsv8_bsv16.jpg
         bs_x_bsv16 = cldnn_format_bs_x_bsv16, ///< format used only for fully connected weights fp16 batch=1 : bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx).
                                               ///< \n \image html bs_x_bsv16.jpg
-        f8_xy16 = cldnn_format_f8_xy16, ///< format used only for fully connected weights fp16 batch=1 : bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx).
-                                              ///< \n \image html bs_x_bsv16.jpg        winograd_2x3_s1_data,       //< format used for input for winograd convolution, F(2,3) -- filter 3x3 with stride 1
+        bf8_xy16 = cldnn_format_bf8_xy16, ///< format used only for fully connected weights fp16 batch=1 : bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx).
+                                              ///< \n \image html bs_x_bsv16.jpg
+        winograd_2x3_s1_data,       //< format used for input for winograd convolution, F(2,3) -- filter 3x3 with stride 1
         winograd_2x3_s1_weights,    //< format used for weights for winograd convolution, F(2,3) -- filter 3x3 with stride 1
         format_num = cldnn_format_format_num, ///< number of format types
         any = cldnn_format_any,
@@ -108,7 +109,7 @@ struct format
             { bs_xs_xsv8_bsv8, { 1, 1, 1, "bx", "b?x?" } },
             { bs_xs_xsv8_bsv16,{ 1, 1, 1, "bx", "b?x?" } },
             { bs_x_bsv16, { 1, 1, 1, "bx", "b?x?" } },
-            { f8_xy16, { 1, 1, 1, "fx", "?fx?" }},
+            { bf8_xy16, { 1, 1, 2, "bfyx", "bfxy" }},
             { winograd_2x3_s1_data, { 1, 1, 2, "bxyf", "bfxy" } },
             { winograd_2x3_s1_weights, { 1, 1, 2, "xyfb", "bfxy" } }        };
         return traits.at(fmt);
@@ -585,8 +586,7 @@ public:
         {
             auto c = val_order[i];
             //skip f or b and y for the formats that do not have it
-            if ((((new_fmt == format::bs_xs_xsv8_bsv8) || (new_fmt == format::bs_xs_xsv8_bsv16) || (new_fmt == format::bs_x_bsv16)) && ((c == 'f') || (c == 'y'))) ||
-                (new_fmt == format::f8_xy16 && ((c == 'b') || (c == 'y'))))
+            if (((new_fmt == format::bs_xs_xsv8_bsv8) || (new_fmt == format::bs_xs_xsv8_bsv16) || (new_fmt == format::bs_x_bsv16)) && ((c == 'f') || (c == 'y')))
             {
                 if (new_order[i] == '?')
                     new_sizes[i] = default_size;
@@ -613,12 +613,6 @@ public:
                     new_sizes[new_pos] *= tmp;
                 }
             }
-        }
-        //add additional alignment if needed
-        if (new_fmt == format::f8_xy16)
-        {
-            new_sizes[1] = align_to(new_sizes[1], 8);
-            new_sizes[2] = align_to(new_sizes[2], 16);
         }
 
         return { new_sizes };
@@ -654,12 +648,14 @@ public:
             my_sizes[0] = align_to(my_sizes[0], 16);
             adjusted_coords[0] = align_to(adjusted_coords[0], 16);
         }
-        else if (fmt == cldnn::format::f8_xy16 && !(is_aligned_to(my_sizes[0], 8) && is_aligned_to(my_sizes[1], 16)))
+        else if (fmt == cldnn::format::bf8_xy16 && !(is_aligned_to(my_sizes[1], 8) && is_aligned_to(my_sizes[2]*my_sizes[3], 16)))
         {
-            my_sizes[0] = align_to(my_sizes[0], 8);
-            my_sizes[1] = align_to(my_sizes[1], 16);
-            adjusted_coords[0] = align_to(adjusted_coords[0], 8);
-            adjusted_coords[1] = align_to(adjusted_coords[1], 16);
+            my_sizes[1] = align_to(my_sizes[1], 8);
+            my_sizes[2] = 1;
+            my_sizes[3] = align_to(my_sizes[2] * my_sizes[3], 16);
+            adjusted_coords[1] = align_to(adjusted_coords[1], 8);
+            adjusted_coords[2] = 1;
+            adjusted_coords[3] = align_to(adjusted_coords[3], 16);
         }
 
         assert(my_sizes.size() == adjusted_coords.size());

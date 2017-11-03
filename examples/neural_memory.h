@@ -30,7 +30,7 @@ struct neural_memory
             os_iyx_osv16_f32, // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
             bs_xs_xsv8_bsv8_f32, // format used only for Fully connected: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice, xsv - 8 values of single slice 
             bs_x_bsv16_f32,      // format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx)
-            f8_xy16_f32,      // format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx)
+            bf8_xy16_f32,      // format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx)
 
             // FP16 (half precision float)
             bias_x_f16=19,
@@ -45,7 +45,7 @@ struct neural_memory
             os_iyx_osv16_f16,  // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
             bs_xs_xsv8_bsv8_f16, // format used only for Fully connected: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice, xsv - 8 values of single slice
             bs_x_bsv16_f16,    // format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx)
-            f8_xy16_f16,
+            bf8_xy16_f16,
 
             format_num,
             any = static_cast<uint8_t>(-1),
@@ -89,7 +89,7 @@ struct neural_memory
         case cldnn::format::os_iyx_osv16: return format::type::os_iyx_osv16_f32;
         case cldnn::format::bs_xs_xsv8_bsv8: return format::type::bs_xs_xsv8_bsv8_f32;
         case cldnn::format::bs_x_bsv16: return format::type::bs_x_bsv16_f32;
-        case cldnn::format::f8_xy16: return format::type::f8_xy16_f32;
+        case cldnn::format::bf8_xy16: return format::type::bf8_xy16_f32;
         default: throw std::invalid_argument("unsupported format");
         }
     }
@@ -133,7 +133,7 @@ struct neural_memory
         case format::type::os_iyx_osv16_f32: return cldnn::format::os_iyx_osv16;
         case format::type::bs_xs_xsv8_bsv8_f32: return cldnn::format::bs_xs_xsv8_bsv8;
         case format::type::bs_x_bsv16_f32: return cldnn::format::bs_x_bsv16;
-        case format::type::f8_xy16_f32: return cldnn::format::f8_xy16;
+        case format::type::bf8_xy16_f32: return cldnn::format::bf8_xy16;
         default: throw std::invalid_argument("unsupported format");
         }
     }

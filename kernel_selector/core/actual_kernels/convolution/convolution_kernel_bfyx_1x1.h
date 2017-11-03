@@ -23,6 +23,8 @@ namespace KernelSelector {
     class ConvolutionKernel_bfyx_1x1 : public ConvolutionKernelBase
     {
     public:
+        using Parent = ConvolutionKernelBase;
+
         ConvolutionKernel_bfyx_1x1() : ConvolutionKernelBase("convolution_gpu_bfyx_1x1") {}
         virtual ~ConvolutionKernel_bfyx_1x1() {}
 
@@ -30,16 +32,14 @@ namespace KernelSelector {
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
-        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts() const override
+        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const ConvolutionParams&) const override
         {
             return{
-                WeightsLayout::oiyx,
-                WeightsLayout::yxio,
-                WeightsLayout::iyxo,
-                WeightsLayout::oyxi,
+                WeightsLayout::os_iyx_osv16,
             };
         }
         bool Validate(const Params& p, const OptionalParams& o) const override;
-        DispatchData SetDefault(const ConvolutionParams& arg) const override;
+        DispatchData SetDefault(const ConvolutionParams& arg, int autoTuneIndex = -1) const override;
+        JitConstants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const override;
     };
 }
