@@ -161,7 +161,7 @@ Download [clDNN source code](https://github.com/01org/cldnn/archive/master.zip)
 or clone the repository to your system:
 
 ```
-    git clone https://github.com/01org/cldnn.git
+    git clone  https://github.com/intel/cldnn.git
 ```
 
 Satisfy all software dependencies and ensure that the versions are correct before building.
