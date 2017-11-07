@@ -29,6 +29,7 @@ namespace KernelSelector {
         k.EnableInputWeightsType(WeightsType::F16);
         k.EnableInputWeightsType(WeightsType::F32);
         k.EnableInputLayout(DataLayout::bf8_xy16);
+        k.EnableInputLayout(DataLayout::bfyx);
         k.EnableOutputLayout(DataLayout::bfyx);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
@@ -57,14 +58,14 @@ namespace KernelSelector {
         auto b = out.Batch().v;
 
         kd.gws0 = Align(x * y, 16) / 16;
-        kd.gws1 = f;
+        kd.gws1 = Align(f, 16);
         kd.gws2 = b;
 
         kd.lws0 = 1;
         kd.lws1 = 16;
         kd.lws2 = 1;
 
-        kd.effiency = FORCE_PRIORITY_3;
+        kd.effiency = FORCE_PRIORITY_2;
 
         return kd;
     }
@@ -81,14 +82,16 @@ namespace KernelSelector {
         const auto &input = params.inputs[0];
         const auto &output = params.output;
 
-        if(output.X().v != input.X().v || output.Y().v != input.Y().v)
+        const bool bOutputSizes = output.X().v != input.X().v || output.Y().v != input.Y().v;
+        const bool bPad = input.X().pad.Total() != 0 || input.Y().pad.Total() != 0 || input.Feature().pad.Total() != 0 || output.Batch().pad.Total() != 0;
+        const bool bFilterSize = params.convParams.filterSize.x != 1 || params.convParams.filterSize.y != 1;
+        const bool bStride = params.convParams.stride.x != 1 || params.convParams.stride.y != 1;
+
+        if(bOutputSizes || bPad || bFilterSize || bStride)
         {
             return false;
         }
-        if (input.X().pad.Total() != 0 || input.Y().pad.Total() != 0 || input.Feature().pad.Total() != 0 || output.Batch().pad.Total() != 0)
-        {
-            return false;
-        }
+
         return true;
     }
 
@@ -99,6 +102,8 @@ namespace KernelSelector {
         const auto& in = params.inputs[0];
 
         jit.AddConstant(MakeJitConstant("SIMDS_PER_OFM", (in.Feature().v % 32 == 0) ? 2 : 1));
+        if (params.output.Feature().v % 16)
+            jit.AddConstant(MakeJitConstant("LEFTOVERS", 1));
 
         return jit;
     }

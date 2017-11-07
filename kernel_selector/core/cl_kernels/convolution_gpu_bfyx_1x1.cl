@@ -106,31 +106,35 @@ KERNEL(convolution_bfyx_1x1)(
 #else
     const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
 #endif
-    const uint filter_offset = group_f * FILTER_IFM_NUM;//f*FILTER_OFM_PITCH;
-    const uint input_offset = in_split_offset + xy * 16 * INPUT0_FEATURE_NUM;//b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
+    const uint filter_offset = group_f * ((FILTER_OFM_PITCH + 8 - 1) / 8) * 8;//f*FILTER_OFM_PITCH;
+    const uint xy_block_num = (INPUT0_FEATURE_PITCH + 16 - 1) / 16;
+    const uint f_block_num = (INPUT0_FEATURE_NUM + 8 - 1) / 8;
+    const uint input_offset = in_split_offset + xy * 8 + b * xy_block_num * f_block_num * 128;//b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
 
     for (uint k = 0; k < (FILTER_IFM_NUM + 8 - 1) / 8; ++k)
     {
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockA00;
-
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockB00;
-
-        uint input_idx = input_offset + xy + k*8*((INPUT0_FEATURE_PITCH + 16 - 1) / 16) * 16;
+    
+        uint input_idx = input_offset + k * 8 * xy_block_num * 16;
         uint filter_idx = filter_offset + k*8*((FILTER_OFM_PITCH + 8 - 1) / 8) * 8;
-
+    
         blockA00 = ALIGNED_BLOCK_READ8(input, input_idx);
         blockB00 = ALIGNED_BLOCK_READ8(weights, filter_idx);
         MULTIPLY_BLOCKS_16x8_8x16(blockC00, blockB00, blockA00);
     }
 
-    if(xy > INPUT0_SIZE_X * INPUT0_SIZE_Y)
+    if(xy >= INPUT0_SIZE_X * INPUT0_SIZE_Y)
         return;
-    
+
     const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * OUTPUT_FEATURE_NUM;
 
     for(uint i = 0; i < 16; i++)
     {
         const uint dst_index = GET_DATA_INDEX(OUTPUT, b, group_f+i, y, x) + out_split_offset;
+    #if LEFTOVERS
+        if(group_f+i < OUTPUT_FEATURE_NUM)
+    #endif
         output[dst_index] = ACTIVATION(blockC00[i], NL_M, NL_N);   
     }
 }

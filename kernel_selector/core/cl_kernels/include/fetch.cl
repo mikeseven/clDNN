@@ -41,12 +41,26 @@
         ((b) / (sub_group_size))*CAT(prefix, _BATCH_PITCH)              \
     )
 
-#define GET_DATA_BF8_XY16_INDEX(prefix, b, f, y, x)         \
-    CAT(prefix, _OFFSET) +                                  \
-    (x)*CAT(prefix, _X_PITCH) +                             \
-    (y)*CAT(prefix, _Y_PITCH) +                             \
-    (f)*(((CAT(prefix, _FEATURE_PITCH) + 16 - 1) / 16) * 16) +     \
-    (b)*(((CAT(prefix, _BATCH_PITCH) + 8 - 1) / 8) * 8)
+inline uint FUNC(get_bf8_xy16_index)(uint b, uint f, uint y, uint x, uint x_size, uint y_size, uint f_size, uint offset)
+{
+    const uint xy_idx = x + y * x_size;
+    const uint xy_offset = (xy_idx % 16) + (xy_idx / 16) * 16 * 8;
+    const uint xy_block_num = (x_size * y_size + 16 - 1) / 16;
+    const uint f_offset = (f % 8) * 16 + (f / 8) * xy_block_num * 16 * 8;
+    const uint f_block_num = (f_size + 8 - 1) / 8;
+    const uint b_offset = b * f_block_num * xy_block_num * 128;
+
+    const size_t idx = offset + xy_offset + f_offset + b_offset;
+
+    return idx;
+}
+
+#define GET_DATA_BF8_XY16_INDEX(prefix, b, f, y, x)     \
+    FUNC_CALL(get_bf8_xy16_index)(                      \
+        b, f, y, x, CAT(prefix, _SIZE_X ),              \
+        CAT(prefix, _SIZE_Y),                           \
+        CAT(prefix, _FEATURE_NUM),                      \
+        CAT(prefix, _OFFSET))
 
 #define GET_FILTER_INDEX(prefix, o, i, y, x)    \
     CAT(prefix, _OFFSET) +                      \
