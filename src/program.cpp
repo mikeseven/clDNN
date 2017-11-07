@@ -1901,7 +1901,7 @@ void program_impl::prepare_buffer_fusing()
             //Optimization only available in case of layers that support different input and output formats.
             //todo: new api needs to be created to read such caps
             if (!(input.is_type<pooling>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb)) &&
-				!(input.is_type<convolution>() && input.get_output_layout().format == format::bf8_xy16))
+                !(input.is_type<convolution>() && input.get_output_layout().format == format::bf8_xy16))
                 return;
 
             if (input.get_users().size() != 1)
