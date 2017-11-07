@@ -1875,15 +1875,16 @@ void program_impl::prepare_buffer_fusing()
         do_for_types<reorder>(*node, [this](reorder_node& node)
         {
             auto& input = node.input();
+            auto output_layout = node.get_output_layout();
             //Optimization only available in case of layers that support different input and output formats.
             //todo: new api needs to be created to read such caps
-            if (!input.is_type<pooling>())
+            if (!(input.is_type<pooling>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb)))
                 return;
 
             if (input.get_users().size() != 1)
                 return;
 
-            input.set_output_layout(node.get_output_layout());
+            input.set_output_layout(output_layout);
 
             node.can_be_optimized(true);
             extract_and_remove(node); //try to remove redundant reorders
