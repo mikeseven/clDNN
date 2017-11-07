@@ -36,7 +36,7 @@ Accelerate Deep Learning Inference with Intel® Processor Graphics whitepaper [l
 
 ## Changelog
 
-### Drop 4.0
+### Drop 5.0
 	New features:
 	- split primitive
 	- upsampling primitive
