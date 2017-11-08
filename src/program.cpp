@@ -1334,15 +1334,9 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
 
         if (new_input && new_input->output_format == format::bf8_xy16)
         {
-            auto conv1x1_output = std::make_shared<reorder>("_bf8_xy16_" + conv_node.id(), conv_node.id(), input_layout.format, input_layout.data_type, std::vector<float>{}, conv_node.output_layout.data_padding);
-            conv_node.output_layout.data_padding = padding{};
+            auto conv1x1_output = std::make_shared<reorder>("_bf8_xy16_" + conv_node.id(), conv_node.id(), input_layout.format, input_layout.data_type);
             auto& back_node = get_or_create(conv1x1_output);
             back_node.processing_itr = processing_order.insert(std::next(conv_node.processing_itr), &back_node);
-            if (conv_prim->with_activation)
-            {
-                conv_node.typed_desc()->with_activation = false;
-                back_node.set_fused_activation(activation_relu_negative_slope, cldnn_activation_additional_params_t{ conv_prim->activation_negative_slope });
-            }
 
             conv_node.invalidate_users();
             replace_all_usages(conv_node, back_node);

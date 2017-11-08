@@ -99,9 +99,6 @@ namespace KernelSelector {
     {
         auto jit = Parent::GetJitConstants(params, runInfo);
 
-        const auto& in = params.inputs[0];
-
-        jit.AddConstant(MakeJitConstant("SIMDS_PER_OFM", (in.Feature().v % 32 == 0) ? 2 : 1));
         if (params.output.Feature().v % 16)
             jit.AddConstant(MakeJitConstant("LEFTOVERS", 1));
 

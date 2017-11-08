@@ -117,10 +117,11 @@ KERNEL(convolution_bfyx_1x1)(
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockB00;
     
         uint input_idx = input_offset + k * 8 * xy_block_num * 16;
-        uint filter_idx = filter_offset + k*8*((FILTER_OFM_PITCH + 8 - 1) / 8) * 8;
+        uint filter_idx = filter_offset + k*8*((FILTER_OFM_PITCH + 8 - 1) / 8);
     
         blockA00 = ALIGNED_BLOCK_READ8(input, input_idx);
         blockB00 = ALIGNED_BLOCK_READ8(weights, filter_idx);
+
         MULTIPLY_BLOCKS_16x8_8x16(blockC00, blockB00, blockA00);
     }
 
@@ -138,3 +139,10 @@ KERNEL(convolution_bfyx_1x1)(
         output[dst_index] = ACTIVATION(blockC00[i], NL_M, NL_N);   
     }
 }
+
+#undef ALIGNED_BLOCK_READ8
+#undef MULTIPLY_BLOCKS_16x8_8x16
+#undef CONCAT_TOKEN
+#undef CONCAT_TOKEN_HANDLER1
+#undef MULTIPLY_BLOCKS_16x16
+#undef MAKE_VECTOR_TYPE
