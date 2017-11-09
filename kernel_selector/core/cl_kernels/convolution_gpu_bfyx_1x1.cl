@@ -117,7 +117,7 @@ KERNEL(convolution_bfyx_1x1)(
         MAKE_VECTOR_TYPE(UNIT_TYPE, 8) blockB00;
     
         uint input_idx = input_offset + k * 8 * xy_block_num * 16;
-        uint filter_idx = filter_offset + k*8*((FILTER_OFM_PITCH + 8 - 1) / 8);
+        uint filter_idx = filter_offset + k * 8 * 16;
     
         blockA00 = ALIGNED_BLOCK_READ8(input, input_idx);
         blockB00 = ALIGNED_BLOCK_READ8(weights, filter_idx);
