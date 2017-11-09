@@ -83,7 +83,7 @@ namespace KernelSelector {
         const auto &output = params.output;
 
         const bool bOutputSizes = output.X().v != input.X().v || output.Y().v != input.Y().v;
-        const bool bPad = input.X().pad.Total() != 0 || input.Y().pad.Total() != 0 || input.Feature().pad.Total() != 0 || output.Batch().pad.Total() != 0;
+        const bool bPad = input.X().pad.Total() != 0 || input.Y().pad.Total() != 0 || input.Feature().pad.Total() != 0 || input.Batch().pad.Total() != 0;
         const bool bFilterSize = params.convParams.filterSize.x != 1 || params.convParams.filterSize.y != 1;
         const bool bStride = params.convParams.stride.x != 1 || params.convParams.stride.y != 1;
 

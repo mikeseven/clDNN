@@ -1667,7 +1667,7 @@ void program_impl::prepare_padding()
         auto conv_layout = node.get_output_layout();
 
         // right now output padding optimization is only available for bfyx format and data type = float32
-        if (conv_layout.format != cldnn::format::bfyx)
+        if (conv_layout.format != cldnn::format::bfyx && conv_layout.format != cldnn::format::bf8_xy16)
         {
             continue;
         }
@@ -1898,10 +1898,7 @@ void program_impl::prepare_buffer_fusing()
                 !(input.is_type<convolution>() && input.get_output_layout().format == format::bf8_xy16))
                 return;
 
-            if (input.get_users().size() != 1)
-                return;
-
-            input.set_output_layout(output_layout);
+            input.set_output_layout(output_layout, false);
 
             node.can_be_optimized(true);
             extract_and_remove(node); //try to remove redundant reorders
