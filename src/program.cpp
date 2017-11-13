@@ -215,6 +215,8 @@ namespace {
             return{ false, false };
         if (l1.get_linear_size() != l2.get_linear_size())
             return{ false, false };
+        if (l1.format == format::bf8_xy16 || l2.format == format::bf8_xy16)
+            return{ false, false };
 
         auto l1_pitch = l1.get_pitches();
         auto l2_pitch = l2.get_pitches();
