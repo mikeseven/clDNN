@@ -449,8 +449,20 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     catch (const cldnn::error &err)
     {
         std::cout << "ERROR: " << err.what() << std::endl;
-        if (err.status() == CLDNN_OUT_OF_RESOURCES)
+        switch (err.status())
+        {
+        case CLDNN_OUT_OF_RESOURCES:
             std::cout << "HINT: Try to use smaller batch size" << std::endl;
+            break;
+        case CLDNN_ALLOC_SIZE_EXCEEDED:
+            std::cout << "HINT: Try to use smaller buffers. Max memory alloc size per object (CL_DEVICE_MAX_MEM_ALLOC_SIZE) is " << engine.get_info().max_alloc_mem_size << " in bytes." << std::endl;
+            break;
+        case CLDNN_GLOBAL_SIZE_EXCEEDED:
+            std::cout << "HINT: Try to use smaller amount of data. Size of global device memory (CL_DEVICE_GLOBAL_MEM_SIZE) is " << engine.get_info().max_global_mem_size << " in bytes." << std::endl;
+            break;
+        default:
+            break;
+        }
         throw;
     }
     catch (...)

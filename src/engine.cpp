@@ -44,10 +44,22 @@ gpu_toolkit_config convert_configuration(const engine_configuration conf)
 engine_impl::engine_impl(const engine_configuration& conf)
     : _configuration(conf)
     , _context(gpu_toolkit::create(convert_configuration(conf)))
+    ,_global_memory_used(0)
 {}
 
 memory_impl::ptr engine_impl::allocate_buffer(layout layout)
 {
+    if (layout.bytes_count() > _context->get_engine_info().max_alloc_mem_size)
+    {
+        throw error("exceeded max size of memory object allocation", CLDNN_ALLOC_SIZE_EXCEEDED);
+    }
+
+    _global_memory_used += layout.bytes_count();
+    if (_global_memory_used > _context->get_engine_info().max_global_mem_size)
+    {
+        throw error("exceeded global device memory", CLDNN_GLOBAL_SIZE_EXCEEDED);
+    }
+
     try {
         return{ new gpu::gpu_buffer(this, layout), false };
     }

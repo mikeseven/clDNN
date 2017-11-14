@@ -75,6 +75,8 @@ extern "C" {
 #define CLDNN_UNSUPPORTED_SIZE      -5
 #define CLDNN_UNSUPPORTED_FORMAT    -6
 #define CLDNN_DIMENSION_MISMATCH    -7
+#define CLDNN_ALLOC_SIZE_EXCEEDED   -8
+#define CLDNN_GLOBAL_SIZE_EXCEEDED  -9
 
 /// @brief Represents errors status for all API calls
 typedef int32_t cldnn_status;
@@ -145,8 +147,10 @@ typedef struct
     uint32_t cores_count;              ///< Number of available HW cores.
     uint32_t core_frequency;           ///< Clock frequency in MHz.
 
-    uint64_t max_work_group_size;
-    uint64_t max_local_mem_size;
+    uint64_t max_work_group_size;      ///< Maximum number of work-items in a work-group executing a kernel using the data parallel execution model.
+    uint64_t max_local_mem_size;       ///< Maximum size of local memory arena in bytes.
+    uint64_t max_global_mem_size;      ///< Maximum size of global device memory in bytes.
+    uint64_t max_alloc_mem_size;       ///< Maximum size of memory object allocation in bytes.
 
     // Flags (for layout compatibility fixed size types are used).
     uint8_t supports_fp16;             ///< Does engine support FP16.
