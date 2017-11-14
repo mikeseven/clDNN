@@ -80,6 +80,7 @@ target_link_libraries("${CLDNN_BUILD__PROJ}"
     Boost::system
     power_measurement_util
   )
+target_link_libraries("${CLDNN_BUILD__PROJ}" ${CLDNN__SYSTEM_LINK_LIBRARIES})
 
 # =================================== Custom pre- and post-steps =======================================
 
