@@ -1205,7 +1205,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 conv_prim,
                 weights_layout).first;
 
-            if (new_input && new_input->output_format != format::winograd_2x3_s1_data) //output format is not optimal
+            if (new_input && new_input->output_format != format::winograd_2x3_s1_data&& new_input->output_format != format::bf8_xy16) //output format is not optimal
             {
                 auto reorder_input_layout = reorder_input.get_output_layout();
 
