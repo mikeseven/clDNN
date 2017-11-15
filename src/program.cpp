@@ -402,6 +402,12 @@ void program_impl::pre_optimize_graph()
 
     analyze_output_size_handling_need();
 
+    for (auto& node : processing_order)
+    {
+        if (!node->is_type<internal_primitive>() && !node->is_type<data>())
+            node->get_output_layout();
+    }
+
     if (options.get<build_option_type::optimize_data>()->enabled())
     {
         layout_optimizer lo(output_size_handling_enabled);
