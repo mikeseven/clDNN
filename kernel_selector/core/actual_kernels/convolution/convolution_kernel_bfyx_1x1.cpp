@@ -31,6 +31,7 @@ namespace KernelSelector {
         k.EnableInputLayout(DataLayout::bf8_xy16);
         k.EnableInputLayout(DataLayout::bfyx);
         k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::yxfb);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableDilation();
