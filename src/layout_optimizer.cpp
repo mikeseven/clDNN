@@ -59,7 +59,8 @@ bool layout_optimizer::convolution_bfyx_opt(layout const& output_layout, const l
 {
     //A set of rules that define when bfyx mem format has better performance than yxfb
     if (output_layout.size.batch[0] % 16 != 0 || output_layout.data_type != data_types::f16 || weights_layout.size.batch[0] % 16 != 0 ||
-        !((weights_layout.size.spatial[0] >= 5 && weights_layout.size.spatial[1] >= 5) ||
+        !((weights_layout.size.spatial[0] == 1 && weights_layout.size.spatial[1] == 1) ||
+        (weights_layout.size.spatial[0] >= 5 && weights_layout.size.spatial[1] >= 5) ||
             (conv->stride.spatial[0] > 1 && conv->stride.spatial[1] > 1) ||
             (weights_layout.size.feature[0] <= 32 && output_layout.size.spatial[0] < 224 && output_layout.size.spatial[1] < 224) ||
             (weights_layout.size.feature[0] <= 64 && output_layout.size.spatial[0] < 112 && output_layout.size.spatial[1] < 112) ||
@@ -104,7 +105,8 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         if (layout_optimizer::convolution_bfyx_opt(current_layout, output_or_weights_layout, prim)
             || (_output_size_handling_enabled && prim->with_output_size))
         {
-            if (current_layout.size.batch[0] % 16 == 0 &&
+            if (current_layout.data_type == data_types::f32 &&
+                current_layout.size.batch[0] % 16 == 0 &&
                 current_layout.format == format::bfyx &&
                 output_or_weights_layout.size.spatial[0] == 1 && output_or_weights_layout.size.spatial[1] == 1 &&
                 prim->stride.spatial[0] == 1 && prim->stride.spatial[1] == 1 &&
