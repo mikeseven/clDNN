@@ -1273,6 +1273,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 replace_all_usages(back_node, back_bias_node);
                 add_connection(back_node, back_bias_node);
                 add_connection(bias_node, back_bias_node);
+                conv_node.invalidate_users();
+                replace_all_usages(conv_node, back_bias_node);
             }
 
             if (conv_prim->with_activation)
@@ -1282,8 +1284,11 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                     back_node.set_fused_activation(activation_relu_negative_slope, cldnn_activation_additional_params_t{ conv_prim->activation_negative_slope });
             }
 
-            conv_node.invalidate_users();
-            replace_all_usages(conv_node, back_node);
+            if (!bias_term)
+            {
+                conv_node.invalidate_users();
+                replace_all_usages(conv_node, back_node);
+            }
             add_connection(conv_node, back_node);
 
             auto& r_node = get_or_create(new_input);
