@@ -1211,7 +1211,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 conv_prim,
                 weights_layout).first;
 
-            if (new_input && new_input->output_format != format::winograd_2x3_s1_data&& new_input->output_format != format::bf8_xy16) //output format is not optimal
+            if (new_input && new_input->output_format != format::winograd_2x3_s1_data && new_input->output_format != format::bf8_xy16) //output format is not optimal
             {
                 auto reorder_input_layout = reorder_input.get_output_layout();
 
@@ -1900,13 +1900,25 @@ void program_impl::prepare_buffer_fusing()
         {
             auto& input = node.input();
             auto output_layout = node.get_output_layout();
+            //This is WA for topologies that due to additional reorders added perform worse with conv1x1 optimization
+            auto remove_bf8_xy_opt = ((input.is_type<pooling>() || input.is_type<concatenation>()) &&
+                output_layout.format == format::bf8_xy16 && input.get_users().size() == 1);
             //Optimization only available in case of layers that support different input and output formats.
             //todo: new api needs to be created to read such caps
             if (!(input.is_type<pooling>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb)) &&
+                !remove_bf8_xy_opt &&
                 !(input.is_type<convolution>() && input.get_output_layout().format == format::bf8_xy16))
                 return;
 
-            input.set_output_layout(output_layout, false);
+            if (remove_bf8_xy_opt)
+            {
+                auto users_user_layout = node.get_users().front()->get_users().front()->get_output_layout();
+                auto input_layout = input.get_output_layout();
+                auto target_layout = layout(input_layout.data_type, users_user_layout.format, input_layout.size, input_layout.data_padding);
+                input.set_output_layout(target_layout, false);
+            }
+            else
+                input.set_output_layout(output_layout, false);
 
             node.can_be_optimized(true);
             extract_and_remove(node); //try to remove redundant reorders

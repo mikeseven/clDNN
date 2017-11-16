@@ -70,6 +70,7 @@ namespace
             case format::bs_xs_xsv8_bsv8: out = "bs_xs_xsv8_bsv8"; break;
             case format::bs_xs_xsv8_bsv16: out = "bs_xs_xsv8_bsv16"; break;
             case format::bs_x_bsv16: out = "bs_x_bsv16"; break;
+            case format::bf8_xy16: out = "bf8_xy16"; break;
             case format::any: out = "any"; break;
             default:
                 out = "unk format";
