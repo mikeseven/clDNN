@@ -1,0 +1,50 @@
+﻿# Test for section BEGIN/END
+
+Expected(1)
+Expected(2)
+Expected(3)
+Expected(4)
+Expected(5)
+  Expected(6) Indent(1)
+    Expected(7) Indent(2)
+
+
+# Test for section ELSE
+
+
+Expected(1) Indent(0)
+
+  Expected(2) Indent(1)
+      Expected(3) Indent(3)
+      Expected(4) Indent(3)
+    Expected(4) Indent(2)
+    Expected(5) Indent(2)
+
+
+      Expected(6) Indent(3)
+    Expected(7) Indent(2)
+  Expected(8) Indent(1)
+Expected(9)
+# ExpectedComment(1)
+## ExpectedComment(2)
+Expected(10)
+Expected(11)
+
+Expected(12)
+  Expected(13) Indent(1)
+
+Expected(14)
+      Expected(15) Indent(3)
+
+Expected(16)
+      Expected(17) Indent(3)
+    Expected(18) Indent(2)
+    ## PPC   ExpectedComment(3)
+Expected(19)
+# ExpectedComment(4)
+## ExpectedComment(5)
+## PPC ExpectedComment(6)
+Expected(20)
+## PPC ExpectedComment(7)
+
+

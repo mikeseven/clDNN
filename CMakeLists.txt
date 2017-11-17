@@ -15,12 +15,14 @@
 cmake_minimum_required (VERSION 3.1 FATAL_ERROR)
 include(CheckCXXCompilerFlag)
 
+## PROCESS PPC BEGIN (GenericSample)
 # Save initial compiler flags for the IE submodule
 if(CLDNN__INCLUDE_GENERIC_SAMPLE)
   set(INITIAL_CXX_FLAGS ${CMAKE_CXX_FLAGS})
   set(INITIAL_C_FLAGS ${CMAKE_C_FLAGS})
 endif()
 
+## PROCESS PPC END
 if(CMAKE_VERSION VERSION_LESS 3.9)
   # Register module overrides for boost package if cmake is too old.
   list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/common/boost/cmake/modules")
@@ -92,9 +94,11 @@ set(CLDNN__KERNEL_SELECTOR_DIR       "${CMAKE_CURRENT_SOURCE_DIR}/kernel_selecto
 # Path which points to directory with binaries for Intel OpenCL SDK ICD (Installable Client Driver).
 set(CLDNN__IOCL_ICD_DIR  "${CLDNN__COMMON_DIR}/intel_ocl_icd")
 
+## PROCESS PPC BEGIN (FreeImage)
 # Path which points to directory with FreeImage and FreeImagePlus libraries.
 set(CLDNN__FREEIMAGE_DIR "${CLDNN__COMMON_DIR}/FreeImage")
 
+## PROCESS PPC END
 # Path which points to directory with boost libraries (only selection).
 set(CLDNN__BOOST_DIR     "${CLDNN__COMMON_DIR}/boost")
 
@@ -184,7 +188,7 @@ function(cldnn_locate_component_versions retVarNameVersions retVarNamePaths retV
     set("${retVarNameDefaultVersion}" "0" PARENT_SCOPE)
     return()
   endif()
-                                         
+
   # Detecting all versions of added component in the project.
   file(GLOB __CLDNN_F_CompVersionPaths RELATIVE "${componentBaseDir}" "${componentBaseDir}/[0-9rRvV]*")
   set(__CLDNN_F_CompVersions "")
@@ -334,6 +338,7 @@ if(__CLDNN_IOclIcdDefaultVersion VERSION_EQUAL "0")
 endif()
 
 # ======================================================================================================
+## PROCESS PPC BEGIN (FreeImage)
 
 # Detecting all versions of added FreeImage library in the project.
 if(NOT EXISTS "${CLDNN__FREEIMAGE_DIR}")
@@ -352,6 +357,7 @@ if(__CLDNN_FreeImageDefaultVersion VERSION_EQUAL "0")
 endif()
 
 # ======================================================================================================
+## PROCESS PPC END
 
 # Detecting all versions of added boost package in the project.
 if(NOT EXISTS "${CLDNN__BOOST_DIR}")
@@ -416,6 +422,7 @@ set(CLDNN__IOCL_ICD_USE_EXTERNAL OFF CACHE BOOL "Intel OpenCL SDK ICD: Try to us
 mark_as_advanced(CLDNN__IOCL_ICD_USE_EXTERNAL)
 
 # ======================================================================================================
+## PROCESS PPC BEGIN (FreeImage)
 
 # FreeImage/FreeImagePlus library: Version of library used to build clDNN.
 set(CLDNN__FREEIMAGE_VERSION "${__CLDNN_FreeImageDefaultVersion}" CACHE STRING "FreeImage/FreeImagePlus library: Version of library used to build clDNN framework.")
@@ -423,6 +430,7 @@ mark_as_advanced(CLDNN__FREEIMAGE_VERSION)
 set_property(CACHE CLDNN__FREEIMAGE_VERSION PROPERTY STRINGS ${__CLDNN_FreeImageVersions})
 
 # ======================================================================================================
+## PROCESS PPC END
 
 # boost libraries (filesystem subset): Version of libraries used to build clDNN.
 set(CLDNN__BOOST_VERSION "${__CLDNN_BoostDefaultVersion}" CACHE STRING "boost libraries (filesystem subset): Version of libraries used to build clDNN framework.")
@@ -430,24 +438,31 @@ mark_as_advanced(CLDNN__BOOST_VERSION)
 set_property(CACHE CLDNN__BOOST_VERSION PROPERTY STRINGS ${__CLDNN_BoostVersions})
 
 # ======================================================================================================
+## PROCESS PPC BEGIN (Examples)
 
 # Include and build: Examples of usage of clDNN framework.
+  ## PROCESS PPC BEGIN (Android)
 if(ANDROID)
   set(CLDNN__INCLUDE_EXAMPLES OFF CACHE BOOL "Include and build: clDNN framework's usage examples.")
 else()
+  ## PROCESS PPC ELSE INDENT BACK 1
   set(CLDNN__INCLUDE_EXAMPLES ON CACHE BOOL "Include and build: clDNN framework's usage examples.")
+  ## PROCESS PPC END
+  ## PROCESS PPC BEGIN (Android)
 endif()
+  ## PROCESS PPC END
 mark_as_advanced(CLDNN__INCLUDE_EXAMPLES)
 
 # ======================================================================================================
+## PROCESS PPC END
 
-# Include and build: Examples of usage of clDNN framework.
+# Include and build: Core of clDNN framework.
 set(CLDNN__INCLUDE_CORE ON CACHE BOOL "Include and build: clDNN core.")
 mark_as_advanced(CLDNN__INCLUDE_CORE)
 
 # ======================================================================================================
 
-# Include and build: Examples of usage of clDNN framework.
+# Include and build: Kernel selector for clDNN framework.
 set(CLDNN__INCLUDE_KERNEL_SELECTOR ON CACHE BOOL "Include and build: clDNN kernel selector.")
 mark_as_advanced(CLDNN__INCLUDE_KERNEL_SELECTOR)
 
@@ -472,11 +487,16 @@ mark_as_advanced(CLDNN__RUN_TESTS)
 # ======================================================================================================
 
 # Compile / Link: Use static C++ Runtime library.
+## PROCESS PPC BEGIN (Android)
 if(ANDROID)
   set(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME ON CACHE BOOL "Compile / Link: Use static version of C++ Runtime library instead of shared one.")
 else()
+## PROCESS PPC ELSE INDENT BACK 1
   set(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME OFF CACHE BOOL "Compile / Link: Use static version of C++ Runtime library instead of shared one.")
+## PROCESS PPC END
+## PROCESS PPC BEGIN (Android)
 endif()
+## PROCESS PPC END
 mark_as_advanced(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME)
 
 # ======================================================================================================
@@ -492,12 +512,14 @@ set(CLDNN__CMAKE_DEBUG OFF CACHE BOOL "CMake: Enables debug trace messages in cl
 mark_as_advanced(CLDNN__CMAKE_DEBUG)
 
 # ======================================================================================================
+## PROCESS PPC BEGIN (GenericSample)
 
 # Include and build: Validation sample using IE
 set(CLDNN__INCLUDE_GENERIC_SAMPLE OFF CACHE BOOL "Include and build: IE generic sample.")
 mark_as_advanced(CLDNN__INCLUDE_GENERIC_SAMPLE)
 
 # ======================================================================================================
+## PROCESS PPC END
 # ======================================================================================================
 
 # Minimum versions of compilers.
@@ -547,11 +569,16 @@ else()
 endif()
 
 if((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
+## PROCESS PPC BEGIN (Android)
   if(NOT ANDROID)
+## PROCESS PPC ELSE INDENT BACK 1
     set(__CLDNN_TargetCompilerDir "clang")
+## PROCESS PPC END
+## PROCESS PPC BEGIN (Android)
   else()
     set(__CLDNN_TargetCompilerDir ".")
   endif()
+## PROCESS PPC END
 else()
   set(__CLDNN_TargetCompilerDir ".")
 endif()
@@ -631,6 +658,7 @@ unset(__CLDNN_IOclIcdVersionIdx)
 
 
 # ======================================================================================================
+## PROCESS PPC BEGIN (FreeImage)
 
 # Selecting FreeImage/FreeImagePlus library version and path.
 list(FIND __CLDNN_FreeImageVersions "${CLDNN__FREEIMAGE_VERSION}" __CLDNN_FreeImageVersionIdx)
@@ -645,6 +673,7 @@ set(CLDNN__FREEIMAGE_INCDIRS "${CLDNN__FREEIMAGE_ROOT}/include" CACHE INTERNAL "
 set(CLDNN__FREEIMAGE_LIBDIRS "${CLDNN__FREEIMAGE_ROOT}/${__CLDNN_TargetOs}/${__CLDNN_TargetCpuDir}" CACHE INTERNAL "Paths to libraries to link for FreeImage/FreeImagePlus.")
 
 # ======================================================================================================
+## PROCESS PPC END
 
 # Selecting boost libraries version and path.
 list(FIND __CLDNN_BoostVersions "${CLDNN__BOOST_VERSION}" __CLDNN_BoostVersionIdx)
@@ -664,9 +693,9 @@ set(Boost_NO_SYSTEM_PATHS ON)
 set(Boost_USE_STATIC_LIBS    ON)
 set(Boost_USE_DEBUG_RUNTIME  ON)
 set(Boost_USE_STATIC_RUNTIME ${CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME})
-set(CLDNN_BOOST_USAGE system date_time program_options filesystem)
+set(CLDNN__BOOST_USAGE system date_time program_options filesystem)
 find_package(Boost "${CLDNN__BOOST_VERSION}" EXACT REQUIRED
-      COMPONENTS ${CLDNN_BOOST_USAGE}
+      COMPONENTS ${CLDNN__BOOST_USAGE}
     )
 
 
@@ -773,19 +802,25 @@ message(STATUS "[clDNN]")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN] Advanced:")
 if (CLDNN__IOCL_ICD_USE_EXTERNAL)
-  message(STATUS "[clDNN]  - ICD version used to build:   N/A (installed externally)")
+  message(STATUS "[clDNN]  - ICD version used to build:     N/A (installed externally)")
 else()
-  message(STATUS "[clDNN]  - ICD version used to build:   ${CLDNN__IOCL_ICD_VERSION}")
+  message(STATUS "[clDNN]  - ICD version used to build:     ${CLDNN__IOCL_ICD_VERSION}")
 endif()
+## PROCESS PPC BEGIN (FreeImage)
 message(STATUS "[clDNN]  - FreeImage v. used to build:    ${CLDNN__FREEIMAGE_VERSION}")
+## PROCESS PPC END
 message(STATUS "[clDNN]  - boost ver. used to build:      ${CLDNN__BOOST_VERSION}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Include/Build cldnn core:      ${CLDNN__INCLUDE_CORE}")
 message(STATUS "[clDNN]  - Include/Build kernel selector: ${CLDNN__INCLUDE_KERNEL_SELECTOR}")
+## PROCESS PPC BEGIN (Examples)
 message(STATUS "[clDNN]  - Include/Build examples:        ${CLDNN__INCLUDE_EXAMPLES}")
+## PROCESS PPC END
 message(STATUS "[clDNN]  - Include/Build tests:           ${CLDNN__INCLUDE_TESTS}")
 message(STATUS "[clDNN]  - Include/Build tutorial:        ${CLDNN__INCLUDE_TUTORIAL}")
+## PROCESS PPC BEGIN (GenericSample)
 message(STATUS "[clDNN]  - Include/Build generic_sample:  ${CLDNN__INCLUDE_GENERIC_SAMPLE}")
+## PROCESS PPC END
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Run tests:                     ${CLDNN__RUN_TESTS}")
 message(STATUS "[clDNN]")
@@ -801,11 +836,13 @@ message(STATUS "[clDNN]     + Static libs:  ${CLDNN__IOCL_ICD_STLDIRS}")
 message(STATUS "[clDNN]     + Shared libs:  ${CLDNN__IOCL_ICD_SHLDIRS}")
 message(STATUS "[clDNN]     + Libs to link: ${CLDNN__IOCL_ICD_LIBDIRS}")
 message(STATUS "[clDNN]")
+## PROCESS PPC BEGIN (FreeImage)
 message(STATUS "[clDNN] FreeImage/FreeImagePlus:")
 message(STATUS "[clDNN]  - Root:            ${CLDNN__FREEIMAGE_ROOT}")
 message(STATUS "[clDNN]     + Headers:      ${CLDNN__FREEIMAGE_INCDIRS}")
 message(STATUS "[clDNN]     + Libs to link: ${CLDNN__FREEIMAGE_LIBDIRS}")
 message(STATUS "[clDNN]")
+## PROCESS PPC END
 message(STATUS "[clDNN] boost libraries:")
 message(STATUS "[clDNN]  - Root:            ${CLDNN__BOOST_ROOT}")
 message(STATUS "[clDNN]     + Headers:      ${Boost_INCLUDE_DIRS}")
@@ -836,11 +873,16 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CLDNN__OUTPUT_BIN_DIR}")
 
 
 # Main targets' output names.
+## PROCESS PPC BEGIN (Android)
 if(ANDROID)
   set(CLDNN__OUT_CPU_SUFFIX "")
 else()
+## PROCESS PPC ELSE INDENT BACK 1
   intel_arch_get_cpu(CLDNN__OUT_CPU_SUFFIX "${CLDNN__ARCHITECTURE_TARGET}")
+## PROCESS PPC END
+## PROCESS PPC BEGIN (Android)
 endif()
+## PROCESS PPC END
 
 set(CLDNN_BUILD__PROJ_OUTPUT_NAME__clDNN "clDNN${CLDNN__OUT_CPU_SUFFIX}")
 
@@ -886,9 +928,11 @@ if(NOT __CLDNN_UseCxx14)
   if(CLDNN__INCLUDE_CORE OR CLDNN__INCLUDE_TESTS)
     message(WARNING "Due to lack of support of c++14 switch cldnn_core/examples/tests projects will not be included in created solution")
   endif()
-  
+
   set(CLDNN__INCLUDE_CORE OFF CACHE BOOL "" FORCE)
+## PROCESS PPC BEGIN (Examples)
   set(CLDNN__INCLUDE_EXAMPLES OFF CACHE BOOL "" FORCE)
+## PROCESS PPC END
   set(CLDNN__INCLUDE_TESTS OFF CACHE BOOL "" FORCE)
 endif()
 
@@ -1012,6 +1056,7 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
           -Wl,--no-undefined
       )
   elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
+## PROCESS PPC BEGIN (Android)
     if(ANDROID)
       intel_config_flag_apply_settings(
           CompilerOptions
@@ -1033,6 +1078,7 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
             -Wno-potentially-evaluated-expression
         )
     else()
+## PROCESS PPC ELSE INDENT BACK 1
       intel_config_flag_apply_settings(
           CompilerOptions
           "${__CLDNN_CompilerFlagName}"
@@ -1052,7 +1098,10 @@ foreach(__CLDNN_CompilerFlagName IN ITEMS "CMAKE_CXX_FLAGS" "CMAKE_C_FLAGS")
             -fPIE
             -fPIC
         )
+## PROCESS PPC END
+## PROCESS PPC BEGIN (Android)
     endif()
+## PROCESS PPC END
   endif()
 endforeach()
 
@@ -1085,10 +1134,13 @@ endif()
 unset(__CLDNN_UseCxx14)
 
 
+## PROCESS PPC BEGIN (Android)
 # NOTE: [WA] Workaround for possible crash problem (double destruction of static objects on bionic).
 #            This switch is not conformant with C++ standard (order of destruction of static elements is not met) but
 #            it is used in Android build system (possibliy due to Android bionic __cxa_atexit limitations).
+## PROCESS PPC END
 if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
+## PROCESS PPC BEGIN (Android)
   if(ANDROID)
     intel_config_flag_apply_settings(
         CompilerOptions
@@ -1098,6 +1150,7 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
           -fno-use-cxa-atexit
       )
   endif()
+## PROCESS PPC END
   intel_config_flag_apply_settings(
       CompilerOptions
       CMAKE_CXX_FLAGS
@@ -1112,7 +1165,9 @@ endif()
 # NOTE: When compiling with Clang, use the flags below for C++ files. These flags cannot be enabled when compiling
 #       C files.
 if((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
+## PROCESS PPC BEGIN (Android)
   if(NOT ANDROID)
+## PROCESS PPC ELSE INDENT BACK 1
     intel_config_flag_apply_settings(
         CompilerOptions
         CMAKE_CXX_FLAGS
@@ -1120,7 +1175,10 @@ if((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^C
         SET_RAW
           -stdlib=libc++
       )
+## PROCESS PPC END
+## PROCESS PPC BEGIN (Android)
   endif()
+## PROCESS PPC END
 endif()
 
 unset(__CLDNN_RtType)
@@ -1165,6 +1223,7 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
         SET_RAW
           -Wl,-z,noexecstack,-z,relro,-z,now
       )
+## PROCESS PPC BEGIN (Android)
 
   if(ANDROID)
     intel_config_flag_apply_settings(
@@ -1175,6 +1234,7 @@ if(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
           -static
       )
   endif()
+## PROCESS PPC END
 endif()
 
 if((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
@@ -1188,6 +1248,7 @@ if((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^C
         -Wl,-headerpad_max_install_names
     )
 
+## PROCESS PPC BEGIN (Android)
   if(ANDROID)
     intel_config_flag_apply_settings(
         LinkerOptions
@@ -1197,8 +1258,12 @@ if((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^C
           DeadCodePreserve
     )
   else()
+## PROCESS PPC ELSE INDENT BACK 1
     list(APPEND CLDNN__SYSTEM_LINK_LIBRARIES "c++" "c++abi" "supc++")
+## PROCESS PPC END
+## PROCESS PPC BEGIN (Android)
   endif()
+## PROCESS PPC END
 endif()
 
 unset(__CLDNN_LinkerFlagName)
@@ -1242,14 +1307,18 @@ endif()
 
 include_directories(
     ${CLDNN__IOCL_ICD_INCDIRS}
+## PROCESS PPC BEGIN (FreeImage)
     ${CLDNN__FREEIMAGE_INCDIRS}
+## PROCESS PPC END
     "${CLDNN__KHR_CLHPP_DIR}"
     ${Boost_INCLUDE_DIRS}
     "${CLDNN__CODEGEN_INCDIR}"
   )
 link_directories(
     ${CLDNN__IOCL_ICD_LIBDIRS}
+## PROCESS PPC BEGIN (FreeImage)
     ${CLDNN__FREEIMAGE_LIBDIRS}
+## PROCESS PPC END
   )
 
 # =================================== Link targets and dependencies ====================================
@@ -1257,14 +1326,18 @@ if(CLDNN__INCLUDE_CORE)
   add_subdirectory(src)
   add_subdirectory(api_test_builds)
 endif()
+## PROCESS PPC BEGIN (Examples, GenericSample)
 if(CLDNN__INCLUDE_EXAMPLES OR CLDNN__INCLUDE_GENERIC_SAMPLE)
   add_subdirectory(utils/power_measurement)
   include_directories(${CLDNN_UTILS__POWER_MEASUREMENT_INCDIRS})
   link_directories(${CLDNN_UTILS__POWER_MEASUREMENT_LIBDIRS})
 endif()
+## PROCESS PPC END
+## PROCESS PPC BEGIN (Examples)
 if(CLDNN__INCLUDE_EXAMPLES)
   add_subdirectory(examples)
 endif()
+## PROCESS PPC END
 if(CLDNN__INCLUDE_TESTS)
   add_subdirectory(tests)
 endif()
@@ -1277,6 +1350,7 @@ endif()
 
 add_subdirectory(docs)
 
+## PROCESS PPC BEGIN (GenericSample)
 if(CLDNN__INCLUDE_GENERIC_SAMPLE)
   if (NOT EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/inference_engine/dpd_vcp_dl-scoring_engine/CMakeLists.txt")
     message(FATAL_ERROR "IE Submodule CMakeLists.txt not found!\nPlease use: git submodule update --init --recursive --force")
@@ -1284,6 +1358,7 @@ if(CLDNN__INCLUDE_GENERIC_SAMPLE)
     add_subdirectory(inference_engine)
   endif()
 endif()
+## PROCESS PPC END
 
 # ======================================================================================================
 # ======================================================================================================
