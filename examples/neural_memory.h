@@ -30,7 +30,7 @@ struct neural_memory
             os_iyx_osv16_f32, // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
             bs_xs_xsv8_bsv8_f32, // format used only for Fully connected: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice, xsv - 8 values of single slice 
             bs_x_bsv16_f32,      // format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx)
-            bf8_xy16_f32,      // format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx)
+            bf8_xy16_f32,        // format used only for convolution 1x1 input, xy aligned to 16, f aligned to 8
 
             // FP16 (half precision float)
             bias_x_f16=19,
@@ -45,7 +45,7 @@ struct neural_memory
             os_iyx_osv16_f16,  // format used only for weights: os - output feature maps slice, i - input feature maps, yx - spatials, sv16 - 16 values of single slice
             bs_xs_xsv8_bsv8_f16, // format used only for Fully connected: bs - batch slice, xs - x slice, bsv8 - 8 values of single slice, xsv - 8 values of single slice
             bs_x_bsv16_f16,    // format used only for fully connected: bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx)
-            bf8_xy16_f16,
+            bf8_xy16_f16,      // format used only for convolution 1x1 input, xy aligned to 16, f aligned to 8
 
             format_num,
             any = static_cast<uint8_t>(-1),

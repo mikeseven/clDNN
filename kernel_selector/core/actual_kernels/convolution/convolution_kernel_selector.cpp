@@ -34,6 +34,7 @@ namespace KernelSelector
 {
     ConvolutionKernelSelctor::ConvolutionKernelSelctor()
     {
+        Attach<ConvolutionKernel_bfyx_Ref>();
         Attach<ConvolutionKernel_bfyx_GEMMLike>();
         Attach<ConvolutionKernel_bfyx_Direct_10_10_12>();
         Attach<ConvolutionKernel_bfyx_os_iyx_osv16>();
