@@ -75,6 +75,8 @@ set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY PROJECT_LABEL "${CLDNN_BUILD
 set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY FOLDER        "${CLDNN_BUILD__PROJ_FOLDER}")
 set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD__PROJ_OUTPUT_NAME}")
 
+target_link_libraries("${CLDNN_BUILD__PROJ}" ${CLDNN__SYSTEM_LINK_LIBRARIES})
+
 # ======================================================================================================
 
 # Publishing some information to parent scope.

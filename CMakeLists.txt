@@ -21,6 +21,11 @@ if(CLDNN__INCLUDE_GENERIC_SAMPLE)
   set(INITIAL_C_FLAGS ${CMAKE_C_FLAGS})
 endif()
 
+if(CMAKE_VERSION VERSION_LESS 3.9)
+  # Register module overrides for boost package if cmake is too old.
+  list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/common/boost/cmake/modules")
+endif()
+
 # Register Intel helper modules.
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/utils/build/cmake/modules")
 include(IntelHelpers)
@@ -541,6 +546,16 @@ else()
   set(__CLDNN_TargetCpuDir "${__CLDNN_TargetCpu}")
 endif()
 
+if((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
+  if(NOT ANDROID)
+    set(__CLDNN_TargetCompilerDir "clang")
+  else()
+    set(__CLDNN_TargetCompilerDir ".")
+  endif()
+else()
+  set(__CLDNN_TargetCompilerDir ".")
+endif()
+
 # ======================================================================================================
 
 # Selecting Intel OpenCL SDK version and path.
@@ -643,7 +658,7 @@ set(CLDNN__BOOST_ROOT "${CLDNN__BOOST_ROOT}" CACHE INTERNAL "Path to boost libra
 # Setting paths for find_package.
 set(BOOST_ROOT            "${CLDNN__BOOST_ROOT}")
 set(BOOST_INCLUDEDIR      "${CLDNN__BOOST_ROOT}")
-set(BOOST_LIBRARYDIR      "${CLDNN__BOOST_ROOT}/${__CLDNN_TargetOs}/${__CLDNN_TargetCpuDir}/lib")
+set(BOOST_LIBRARYDIR      "${CLDNN__BOOST_ROOT}/${__CLDNN_TargetOs}/${__CLDNN_TargetCpuDir}/${__CLDNN_TargetCompilerDir}/lib")
 set(Boost_NO_SYSTEM_PATHS ON)
 # Setting preferred types of libraries.
 set(Boost_USE_STATIC_LIBS    ON)
@@ -671,6 +686,7 @@ cldnn_dmsg("")
 unset(__CLDNN_TargetOs)
 unset(__CLDNN_TargetCpu)
 unset(__CLDNN_TargetCpuDir)
+unset(__CLDNN_TargetCompilerDir)
 
 # ====================================== Version Calculation ===========================================
 
@@ -1113,6 +1129,9 @@ unset(__CLDNN_CompilerFlagName)
 
 # ======================================== Generic linker options ======================================
 
+# Additional libraries that needs to be linked to shared objects/executables.
+set(CLDNN__SYSTEM_LINK_LIBRARIES)
+
 foreach(__CLDNN_LinkerFlagName IN ITEMS "CMAKE_EXE_LINKER_FLAGS" "CMAKE_SHARED_LINKER_FLAGS")
   # Change some generic settings of linker.
   # NOTE: Debug info generation is enabled for all build configuration, because it is separate on Windows
@@ -1172,11 +1191,13 @@ if((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^C
   if(ANDROID)
     intel_config_flag_apply_settings(
         LinkerOptions
-        CMAKE_EXE_LINKER_FLAGS 
+        CMAKE_EXE_LINKER_FLAGS
         ALL_PATTERN ""
         SET
           DeadCodePreserve
     )
+  else()
+    list(APPEND CLDNN__SYSTEM_LINK_LIBRARIES "c++" "c++abi" "supc++")
   endif()
 endif()
 
