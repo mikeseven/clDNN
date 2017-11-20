@@ -40,7 +40,7 @@ Accelerate Deep Learning Inference with Intel® Processor Graphics whitepaper [l
 	New features:
 	- split primitive
 	- upsampling primitive
-	- add CLK support
+	- add preliminary Coffe Lake support
 	- uint8 weights support
 	- versioning
 	- offline autotuner cache
