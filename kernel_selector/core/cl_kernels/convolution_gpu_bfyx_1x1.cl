@@ -87,9 +87,6 @@ KERNEL(convolution_bfyx_1x1)(
     const uint b = get_global_id(2);
     const uint group_f = get_group_id(1) * 16;
 
-    if(xy >= INPUT0_SIZE_X * INPUT0_SIZE_Y)
-        return;
-
     MAKE_VECTOR_TYPE(UNIT_TYPE, 16) blockC00;
 
 #if BIAS_TERM
@@ -127,6 +124,9 @@ KERNEL(convolution_bfyx_1x1)(
 
         MULTIPLY_BLOCKS_16x8_8x16(blockC00, blockB00, blockA00);
     }
+
+    if(xy >= INPUT0_SIZE_X * INPUT0_SIZE_Y)
+        return;
 
     const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * OUTPUT_FEATURE_NUM;
 
