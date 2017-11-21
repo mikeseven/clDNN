@@ -244,8 +244,8 @@ typedef enum /*:int32_t*/
                                   ///< \n \image html bs_xs_xsv8_bsv16.jpg
     cldnn_format_bs_x_bsv16,    ///< format used only for fully connected weights fp16 batch=1 : bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx).
                                 ///< \n \image html bs_x_bsv16.jpg
-    cldnn_format_bf8_xy16,    ///< format used only for fully connected weights fp16 batch=1 : bs - batch slice (responses slice), bsv16 - 16 values of single batch slice, x - flattened plane of (fyx).
-                                ///< \n \image html bs_x_bsv16.jpg
+    cldnn_format_bf8_xy16,      ///< format used only for convolution 1x1 input, xy aligned to 16, f aligned to 8
+                                ///< \n \image html bf8_xy16.jpg
     cldnn_format_format_num,    ///< number of format types
     cldnn_format_any = -1
 } cldnn_format_type;
