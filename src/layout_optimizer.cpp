@@ -274,9 +274,14 @@ std::vector<std::pair<std::shared_ptr<primitive>, bool>> layout_optimizer::get_g
 
     auto new_dtype = from_weights_type(reorder_params.dtype);
     const auto bpp = data_type_traits::size_of(new_dtype);
+    tensor expected_size = { 1,1,1,(tensor::value_type)(reorder_params.newBufferSize / bpp) };
+    
+    if (reorder_params.toImageType)
+        expected_size = old_layout.size;
+    
     layout expected_layout = {
-        new_dtype, format::bfyx, // simple linear format (flatten to x channel)
-        { 1,1,1,(tensor::value_type)(reorder_params.newBufferSize / bpp) }
+        new_dtype, reorder_params.toImageType ? from_weights_layout(reorder_params.destLayout) : format::bfyx, // simple linear format (flatten to x channel)
+        expected_size
     };
     auto reorder = create_reorder_from_given_source(input_id, expected_layout, reorder_params);
     if (reorder.first)

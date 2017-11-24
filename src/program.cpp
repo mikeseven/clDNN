@@ -1487,12 +1487,13 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
     {
         auto* impl = node.get_selected_impl().get();
         auto output_layout = node.get_output_layout();
+        auto weights_layout = node.get_dependency(1).get_output_layout();
         const auto weights_type = layout_optimizer::data_type::weights;
 
         auto reorders = lo.get_generic_layer(
             impl->_weights_reorder_params,
             weights.id(),
-            output_layout,
+            weights_layout,
             weights_type);
 
         for (auto& reorder : reorders)

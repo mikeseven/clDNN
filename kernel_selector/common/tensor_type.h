@@ -67,6 +67,7 @@ namespace KernelSelector
             i_yxs_os_yxsv2_osv16,
             iy_xs_os_xsv2_osv16__ao32,
             iy_xs_os_xsv2_osv8__ao32,
+            image_weights_fyx_b,           // image type fyx_b
             winograd_2x3_s1_weights, //winograd convolution weights, F(2, 3) --filter 3x3 with stride 1
         };
 
@@ -149,6 +150,7 @@ namespace KernelSelector
                 { WeightsLayout::i_yxs_os_yxsv2_osv16,          {  1, 2, 3, 0 } },
                 { WeightsLayout::iy_xs_os_xsv2_osv16__ao32,     {  1, 2, 3, 0 } },
                 { WeightsLayout::iy_xs_os_xsv2_osv8__ao32,      {  1, 2, 3, 0 } },
+                { WeightsLayout::image_weights_fyx_b,           {  0, 1, 2, 3 } },
                 { WeightsLayout::winograd_2x3_s1_weights,       {  3, 2, 1, 0 } },
             };
 
@@ -216,6 +218,7 @@ namespace KernelSelector
                 case WeightsLayout::oyxi:
                 case WeightsLayout::iyxo:
                 case WeightsLayout::yxio:
+                case WeightsLayout::image_weights_fyx_b:
                     return true;
                 default:
                     return false;

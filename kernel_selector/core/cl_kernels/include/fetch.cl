@@ -157,3 +157,13 @@ inline uint FUNC(get_iy_xs_os_xsv2_osv_index)(uint o, uint i, uint y, uint x, ui
         CAT(prefix, _X_PITCH),                                                  \
         CAT(prefix, _OFFSET),                                                   \
         sub_group_size)
+
+#define DECLARE_SAMPLER const sampler_t imageSampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST
+
+#if FP16_UNIT_USED
+    #define IMAGE_READ(image, coord) read_imageh((image), imageSampler, (coord))
+    #define IMAGE_WRITE(image, coord, val) write_imageh((image), (coord), (val))
+#else
+    #define IMAGE_READ(image, coord) read_imagef((image), imageSampler, (coord))
+    #define IMAGE_WRITE(image, coord, val) write_imagef((image), (coord), (val))
+#endif

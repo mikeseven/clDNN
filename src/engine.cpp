@@ -61,7 +61,10 @@ memory_impl::ptr engine_impl::allocate_buffer(layout layout)
     }
 
     try {
-        return{ new gpu::gpu_buffer(this, layout), false };
+        if(layout.format.is_image_weights_fyx_b())
+            return{ new gpu::gpu_image2d(this, layout), false };
+        else
+            return{ new gpu::gpu_buffer(this, layout), false };
     }
     catch (const cl::Error& clErr)
     {
@@ -83,8 +86,17 @@ memory_impl::ptr engine_impl::reinterpret_buffer(const memory_impl& memory, layo
     if (memory.get_engine() != this)
         throw error("trying to reinterpret buffer allocated by a different engine", CLDNN_ERROR);
 
+    if (new_layout.format.is_image() && !memory.get_layout().format.is_image())
+        throw error("trying to reinterpret non-image buffer as image", CLDNN_ERROR);
+
+    if (!new_layout.format.is_image() && memory.get_layout().format.is_image())
+        throw error("trying to reinterpret image buffer as non-image buffer", CLDNN_ERROR);
+
     try {
-        return{ new gpu::gpu_buffer(this, new_layout, reinterpret_cast<const gpu::gpu_buffer&>(memory).get_buffer()), false };
+        if (new_layout.format.is_image_weights_fyx_b())
+            return{ new gpu::gpu_image2d(this, new_layout, reinterpret_cast<const gpu::gpu_image2d&>(memory).get_buffer()), false };
+        else
+            return{ new gpu::gpu_buffer(this, new_layout, reinterpret_cast<const gpu::gpu_buffer&>(memory).get_buffer()), false };
     }
     catch (cl::Error const& err) {
         throw gpu::ocl_error(err);

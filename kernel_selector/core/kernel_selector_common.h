@@ -205,6 +205,8 @@ namespace KernelSelector {
     {
         size_t newBufferSize = 0;
         WeightsType dtype = WeightsType::F16;
+        WeightsLayout destLayout = WeightsLayout::oiyx;
+        bool toImageType = false;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -446,6 +448,7 @@ namespace KernelSelector {
         case WeightsLayout::i_yxs_os_yxsv2_osv16:       return "I_YXS_OS_YXSV2_OSV16";
         case WeightsLayout::iy_xs_os_xsv2_osv16__ao32:  return "IY_XS_OS_XSV2_OSV16__AO32";
         case WeightsLayout::iy_xs_os_xsv2_osv8__ao32:   return "IY_XS_OS_XSV2_OSV8__AO32";
+        case WeightsLayout::image_weights_fyx_b:        return "IMAGE_WEIGHTS_FYX_B";
         case WeightsLayout::winograd_2x3_s1_weights:    return "WINOGRAD_2x3_S1_WEIGHTS";
         default:
             return "";

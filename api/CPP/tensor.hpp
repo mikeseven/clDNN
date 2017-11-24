@@ -90,6 +90,7 @@ struct format
                                               ///< \n \image html bs_x_bsv16.jpg
         bf8_xy16 = cldnn_format_bf8_xy16, ///< format used only for convolution 1x1 input, xy aligned to 16, f aligned to 8
                                           ///< \n \image html bf8_xy16.jpg
+        image_weights_fyx_b = cldnn_format_image_weights_fyx_b, ///< image format for weights, width size is f*y*x/4 (4-channels filled with fyx data), height is b
         winograd_2x3_s1_data,       ///< format used for input for winograd convolution, F(2,3) -- filter 3x3 with stride 1
         winograd_2x3_s1_weights,    ///< format used for weights for winograd convolution, F(2,3) -- filter 3x3 with stride 1
         format_num = cldnn_format_format_num, ///< number of format types
@@ -110,6 +111,7 @@ struct format
             { bs_xs_xsv8_bsv16,{ 1, 1, 1, "bx", "b?x?" } },
             { bs_x_bsv16, { 1, 1, 1, "bx", "b?x?" } },
             { bf8_xy16, { 1, 1, 2, "bfyx", "bfxy" }},
+            { image_weights_fyx_b, { 1, 1, 2, "bfyx", "bfxy" } },
             { winograd_2x3_s1_data, { 1, 1, 2, "bxyf", "bfxy" } },
             { winograd_2x3_s1_weights, { 1, 1, 2, "xyfb", "bfxy" } }        };
         return traits.at(fmt);
@@ -129,6 +131,10 @@ struct format
     static size_t dimension(type fmt) { return order(fmt).size(); }
     /// @brief Checks if @p format is a winograd format
     static bool is_winograd(type fmt) { return (fmt == winograd_2x3_s1_data || fmt == winograd_2x3_s1_weights); }
+    /// @brief Checks if @p format is of image weights type fyx_b
+    static bool is_image_weights_fyx_b(type fmt) { return  fmt == image_weights_fyx_b; }
+    /// @brief Checks if @p format is of image type
+    static bool is_image(type fmt) { return (is_image_weights_fyx_b(fmt)); }
 
     /// @brief Returns number of batch dimensions.
     size_t batch_num() const { return traits(value).batch_num; }
@@ -144,6 +150,10 @@ struct format
     size_t dimension() const { return order(value).size(); }
     /// @brief Checks if @p format is a winograd format
     bool is_winograd() const { return is_winograd(value); }
+    /// @brief Checks if @p format is of image weights type fyx_b
+    bool is_image_weights_fyx_b() const { return is_image_weights_fyx_b(value); }
+    /// @brief Checks if @p format is of image type
+    bool is_image() const { return is_image(value); }
 
     type value;
     /// @brief Implicit conversion from format::type.

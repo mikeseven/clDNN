@@ -172,7 +172,9 @@ namespace KernelSelector { namespace
             weightsReorderParams.clKernel = std::make_shared<clKernelData>(kernels_data[0].kernels[0]);
             weightsReorderParams.newBufferSize = r_params.reorderParams.output.PhysicalSizeInBytes();
             weightsReorderParams.dtype = dtype;
-
+            weightsReorderParams.destLayout = r_params.reorderParams.output.GetLayout();
+            weightsReorderParams.toImageType = r_params.reorderParams.output.GetLayout() == WeightsLayout::image_weights_fyx_b;
+            
             newParams.weights = r_params.reorderParams.output;
         }
 

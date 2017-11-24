@@ -237,7 +237,8 @@ inline kernel_selector::weights_layout to_weights_layout(format f)
     case format::bs_xs_xsv8_bsv8:   return kernel_selector::weights_layout::os_i_osv8__ai8;
     case format::bs_xs_xsv8_bsv16:  return kernel_selector::weights_layout::os_i_osv16__ai8;
     case format::bs_x_bsv16:        return kernel_selector::weights_layout::os_i_osv16;
-    case format::winograd_2x3_s1_weights:        return kernel_selector::weights_layout::winograd_2x3_s1_weights;
+    case format::image_weights_fyx_b:     return kernel_selector::weights_layout::image_weights_fyx_b;
+    case format::winograd_2x3_s1_weights: return kernel_selector::weights_layout::winograd_2x3_s1_weights;
     default:
         return kernel_selector::weights_layout::oi;
     }
@@ -257,6 +258,7 @@ static inline cldnn::format from_weights_layout(kernel_selector::weights_layout 
     case kernel_selector::weights_layout::os_i_osv16:         return cldnn::format::bs_x_bsv16;
     case kernel_selector::weights_layout::os_i_osv8__ai8:     return cldnn::format::bs_xs_xsv8_bsv8;
     case kernel_selector::weights_layout::os_i_osv16__ai8:    return cldnn::format::bs_xs_xsv8_bsv16;
+    case kernel_selector::weights_layout::image_weights_fyx_b:        return cldnn::format::image_weights_fyx_b;
     case kernel_selector::weights_layout::winograd_2x3_s1_weights:    return cldnn::format::winograd_2x3_s1_weights;
     default:
         return cldnn::format::bfyx;

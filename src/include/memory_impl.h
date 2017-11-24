@@ -35,6 +35,8 @@ struct memory_impl : refcounted_obj<memory_impl>
     virtual bool is_allocated_by(const engine_impl& engine) const { return &engine == _engine.get(); }
     const refcounted_obj_ptr<engine_impl>& get_engine() const { return _engine; }
     const layout& get_layout() const { return _layout; }
+    virtual size_t get_image_row_pitch() = 0;
+    virtual size_t get_image_slice_pitch() = 0;
 protected:
     const engine_impl::ptr _engine;
     const layout _layout;
@@ -49,6 +51,8 @@ struct simple_attached_memory : memory_impl
 
     void* lock() override { return _pointer; }
     void unlock() override {}
+    size_t get_image_row_pitch() override { return 0; };
+    size_t get_image_slice_pitch() override { return 0; };
 private:
     void* _pointer;
 };
