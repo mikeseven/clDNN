@@ -244,7 +244,7 @@ inline kernel_selector::weights_layout to_weights_layout(format f)
     }
 }
 
-static inline cldnn::format from_weights_layout(kernel_selector::weights_layout l)
+static inline cldnn::format::type from_weights_layout(kernel_selector::weights_layout l)
 {
     switch (l)
     {

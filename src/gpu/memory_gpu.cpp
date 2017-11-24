@@ -69,7 +69,7 @@ gpu_image2d::gpu_image2d(const refcounted_obj_ptr<engine_impl>& engine, const la
     , _mapped_ptr(nullptr)
 {
     void* ptr = gpu_image2d::lock();
-    for(uint64_t y = 0; y < layout.size.batch[0]; y++)
+    for(uint64_t y = 0; y < static_cast<uint64_t>(layout.size.batch[0]); y++)
         memset(ptr, 0, static_cast<size_t>(y*_row_pitch));
     gpu_image2d::unlock();
 }

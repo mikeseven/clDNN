@@ -59,7 +59,8 @@ T* arr_end(T* buf, size_t count) { return buf + count; }
 #endif
 
 struct gpu_buffer : public memory_impl {
-    friend struct engine_impl;
+    gpu_buffer(const refcounted_obj_ptr<engine_impl>& engine, const layout& layout);
+    gpu_buffer(const refcounted_obj_ptr<engine_impl>& engine, const layout& new_layout, const cl::Buffer& buffer);
     void* lock() override;
     void unlock() override;
     size_t get_image_row_pitch() override { return 0; };
@@ -70,8 +71,6 @@ struct gpu_buffer : public memory_impl {
     }
 
 private:
-    gpu_buffer(const refcounted_obj_ptr<engine_impl>& engine, const layout& layout);
-    gpu_buffer(const refcounted_obj_ptr<engine_impl>& engine, const layout& new_layout, const cl::Buffer& buffer);
     std::shared_ptr<gpu_toolkit> _context;
     std::mutex _mutex;
     unsigned _lock_count;
@@ -80,7 +79,8 @@ private:
 };
 
 struct gpu_image2d : public memory_impl {
-    friend struct engine_impl;
+    gpu_image2d(const refcounted_obj_ptr<engine_impl>& engine, const layout& layout);
+    gpu_image2d(const refcounted_obj_ptr<engine_impl>& engine, const layout& new_layout, const cl::Image2D& buffer);
     void* lock() override;
     void unlock() override;
     size_t get_image_row_pitch() override { return _row_pitch; };
@@ -91,8 +91,6 @@ struct gpu_image2d : public memory_impl {
     }
 
 private:
-    gpu_image2d(const refcounted_obj_ptr<engine_impl>& engine, const layout& layout);
-    gpu_image2d(const refcounted_obj_ptr<engine_impl>& engine, const layout& new_layout, const cl::Image2D& buffer);
     std::shared_ptr<gpu_toolkit> _context;
     std::mutex _mutex;
     unsigned _lock_count;
