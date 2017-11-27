@@ -63,8 +63,6 @@ struct gpu_buffer : public memory_impl {
     gpu_buffer(const refcounted_obj_ptr<engine_impl>& engine, const layout& new_layout, const cl::Buffer& buffer);
     void* lock() override;
     void unlock() override;
-    size_t get_image_row_pitch() override { return 0; };
-    size_t get_image_slice_pitch() override { return 0; };
     const cl::Buffer& get_buffer() const {
         assert(0 == _lock_count);
         return _buffer;
@@ -83,8 +81,6 @@ struct gpu_image2d : public memory_impl {
     gpu_image2d(const refcounted_obj_ptr<engine_impl>& engine, const layout& new_layout, const cl::Image2D& buffer);
     void* lock() override;
     void unlock() override;
-    size_t get_image_row_pitch() override { return _row_pitch; };
-    size_t get_image_slice_pitch() override { return 0; };
     const cl::Image2D& get_buffer() const {
         assert(0 == _lock_count);
         return _buffer;

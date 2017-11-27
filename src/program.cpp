@@ -175,7 +175,7 @@ namespace {
     //helper function for merging the weights/biases buffers on cpu side for depthwise separable convolution optimization
     void merge_buffers(engine_impl::ptr engine, program_node &node, layout target_layout, size_t begin_offset, size_t end_offset)
     {
-        memory_impl::ptr data_to_allocate = engine->allocate_buffer(target_layout);
+        memory_impl::ptr data_to_allocate = engine->allocate_memory(target_layout);
 
         for (size_t i = begin_offset; i < end_offset; i++)
         {
@@ -594,7 +594,7 @@ void program_impl::replace_nodes_post()
             auto kernel_size = static_cast<tensor::value_type>((2 * scale) - (scale % 2));
             layout weights_layout(data_types::f32, format::bfyx, tensor( num_filter, 1, kernel_size, kernel_size ));
 
-            memory_impl::ptr data_to_allocate = engine->allocate_buffer(weights_layout);
+            memory_impl::ptr data_to_allocate = engine->allocate_memory(weights_layout);
             mem_lock<float> dst{ data_to_allocate };
             float *dst_data = dst.data();
             //initialize with bilinear weights data

@@ -51,7 +51,7 @@ public:
 
     engine_types type() const { return engine_types::ocl; }
 
-    refcounted_obj_ptr<memory_impl> allocate_buffer(layout layout);
+    refcounted_obj_ptr<memory_impl> allocate_memory(layout layout);
     refcounted_obj_ptr<memory_impl> reinterpret_buffer(const memory_impl& memory, layout new_layout);
     bool is_the_same_buffer(const memory_impl& mem1, const memory_impl& mem2);
 

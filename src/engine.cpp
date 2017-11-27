@@ -47,7 +47,7 @@ engine_impl::engine_impl(const engine_configuration& conf)
     ,_global_memory_used(0)
 {}
 
-memory_impl::ptr engine_impl::allocate_buffer(layout layout)
+memory_impl::ptr engine_impl::allocate_memory(layout layout)
 {
     if (layout.bytes_count() > _context->get_engine_info().max_alloc_mem_size)
     {

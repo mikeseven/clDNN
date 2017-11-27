@@ -703,7 +703,7 @@ cldnn_memory cldnn_allocate_memory(cldnn_engine engine, cldnn_layout layout, cld
             layout.data_type != cldnn_data_type::cldnn_u8)
             throw std::invalid_argument("Unknown data_type of layout.");
 
-        return init_external_from_internal(api_cast(engine)->allocate_buffer(layout));
+        return init_external_from_internal(api_cast(engine)->allocate_memory(layout));
     });
 }
 
