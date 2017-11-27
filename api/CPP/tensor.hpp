@@ -91,6 +91,7 @@ struct format
         bf8_xy16 = cldnn_format_bf8_xy16, ///< format used only for convolution 1x1 input, xy aligned to 16, f aligned to 8
                                           ///< \n \image html bf8_xy16.jpg
         image_weights_fyx_b = cldnn_format_image_weights_fyx_b, ///< image format for weights, width size is f*y*x/4 (4-channels filled with fyx data), height is b
+                                                                ///< \n \image html image_fyx_b.jpg
         winograd_2x3_s1_data,       ///< format used for input for winograd convolution, F(2,3) -- filter 3x3 with stride 1
         winograd_2x3_s1_weights,    ///< format used for weights for winograd convolution, F(2,3) -- filter 3x3 with stride 1
         format_num = cldnn_format_format_num, ///< number of format types

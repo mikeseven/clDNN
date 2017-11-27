@@ -55,6 +55,8 @@ namespace KernelSelector
         runInfo->lws1 = local[1];
         runInfo->lws2 = 1;
 
+        runInfo->effiency = TUTORIAL_PRIORITY;
+
         return std::move(runInfo);
     }
 
