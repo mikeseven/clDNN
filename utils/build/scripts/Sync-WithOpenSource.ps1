@@ -14,8 +14,12 @@
          -- "copy"
          -- "update_version"
          -- "process_file"
-         -- "format_file"  (not supported yet)
-         -- "chmod_staged" (not supported yet)
+         -- "format_file"
+         -- "chmod_staged" (change mode of files in VCS - stages files if necessary)
+        Any other member is ignored.
+
+        See sample Sync-WithOpenSource.config.template for details which sections are allowed
+        in each member. 
 
     .PARAMETER SrcPath
         Path to source repository (usually internal code repository). It should point to
@@ -44,6 +48,72 @@
         Updates version files at source repository as well. It is implied when
         source and destination are the same.
 
+    .PARAMETER VcsServer
+        URL/URI to server/port/entrypoint of version control system.
+
+        This parameter is used only by "chmod_staged" section in configuration; otherwise,
+        it is ignored.
+
+        This parameter is only used by specific types of VCS and ignored by the rest.
+
+    .PARAMETER VcsCredential
+        Credentials for accessing server/port/entrypoint of version control system.
+
+        This parameter is used only by "chmod_staged" section in configuration; otherwise,
+        it is ignored.
+
+        This parameter is only used by specific types of VCS and ignored by the rest.
+
+        When this parameter is specified and non-null, the -PromptVcsCredential is ignored.
+
+    .PARAMETER PromptVcsCredential
+        Prompts for credentials for accessing server/port/entrypoint of version
+        control system. Usually it is in the form of dialog with default user name for VCS
+        specified.
+
+        This parameter is used only by "chmod_staged" section in configuration; otherwise,
+        it is ignored.
+
+        This parameter is only used by specific types of VCS and ignored by the rest.
+
+        When VcsCredential parameter is specified and non-null, current parameter is ignored.
+
+    .PARAMETER VcsWorkspace
+        Expected workspace in VCS. If it is specified, the destination location is
+        checked to see whether it is contained in specified workspace. If location
+        is outside workspace or workspace is absent in VCS, the confirmation dialog
+        will be shown (whether to continue).
+
+        This parameter is used only by "chmod_staged" section in configuration; otherwise,
+        it is ignored.
+
+        This parameter is only used by specific types of VCS and ignored by the rest.
+
+    .PARAMETER VcsBranch
+        Expected branch/stream in VCS. If it is specified, the destination location is
+        checked to see whether it is switch to selected branch/stream. If location
+        is not set to use specified branch/stream or branch/stream is absent in VCS,
+        the confirmation dialog will be shown (whether to continue).
+
+        This parameter is used only by "chmod_staged" section in configuration; otherwise,
+        it is ignored.
+
+        This parameter is only used by specific types of VCS and ignored by the rest.
+
+    .PARAMETER VcsChangelist
+        Changelist where to stage files in VCS.
+
+        If 'New' is selected, the new changelist will be created for staged files.
+        If 'Default' is selected, any files will be staged in default changelist.
+        If number is specified, the files will be staged on selected changelist.
+
+        Allowed values: 'New', 'Default', <any non-negative integral number>
+
+        This parameter is used only by "chmod_staged" section in configuration; otherwise,
+        it is ignored.
+
+        This parameter is only used by specific types of VCS and ignored by the rest.
+
     .PARAMETER PassThru
         Return list of files to synchronize. Each item has at least following members:
         -- 'SyncWosMode'           - how the file should be/was synchronized.
@@ -54,6 +124,9 @@
     .PARAMETER Force
         Force overwrite/removal of destination items (even if they are read-only, hidden
         or write-protected).
+        
+        Also forces file staging even if selected workspace/branch is different than selected
+        (for "chmod_staged" sections).
                 
     .PARAMETER Silent
         Suppresses any confirmation. Implies -Force.
@@ -78,6 +151,27 @@ param(
     [string] $CfgPath = '',
     [Parameter(Mandatory = $false)]
     [switch] $UpdateSrcVersion,
+
+    [Parameter(Mandatory = $false)]
+    [Alias('Server')]
+    [string] $VcsServer = '',
+    [Parameter(Mandatory = $false)]
+    [Alias('Credential')]
+    [System.Management.Automation.PSCredential] $VcsCredential = $null,
+    [Parameter(Mandatory = $false)]
+    [Alias('PromptCredential')]
+    [switch] $PromptVcsCredential,
+    [Parameter(Mandatory = $false)]
+    [Alias('Workspace')]
+    [string] $VcsWorkspace = '',
+    [Parameter(Mandatory = $false)]
+    [Alias('Branch', 'VcsStream', 'Stream')]
+    [string] $VcsBranch = '',
+    [Parameter(Mandatory = $false)]
+    [ValidatePattern('^(?:[0-9]+|Default|New)$')]
+    [Alias('Changelist', 'VcsChange', 'Change')]
+    [string] $VcsChangelist = 'New',
+
     [Parameter(Mandatory = $false)]
     [switch] $PassThru,
     [Parameter(Mandatory = $false)]
@@ -627,7 +721,7 @@ begin
             try
             {
                 Push-Location -LiteralPath $LiteralPath;
-                $_locationPushed = $true;
+                $_locationPushed = $?;
 
                 # Get rooted path information.
                 $_allItems = @($_allItems | % {
@@ -653,7 +747,7 @@ begin
                 try
                 {
                     Push-Location -LiteralPath $_dstPrefixPath;
-                    $_locationPushed = $true;
+                    $_locationPushed = $?;
 
                     # Get rooted path information.
                     $_allDstItems = @($_allDstItems | % {
@@ -687,7 +781,7 @@ begin
             try
             {
                 Push-Location -LiteralPath $_srcPrefixPath;
-                $_locationPushed = $true;
+                $_locationPushed = $?;
 
                 # Get relative destination path information (calculated).
                 $_allItems = @($_allItems | % {
@@ -906,7 +1000,10 @@ begin
                     <process_key> - token to identify group of sections to process (see ProcessKey parameter).
                     <levels>      - positive integral number with number of levels to indent or indent back.
                 If section is excluded and contains ELSE, the lines between BEGIN and ELSE are excluded,
-                and lines between ELSE and END are either indented
+                and lines between ELSE and END are either indented, intended back or special comments are
+                uncommented.
+
+                UTF8 content is assumed. Written items are written using UTF8 encoding (BOM is not written).
 
             .PARAMETER SrcPath
                 Path to source item. Path must be valid and must point to (non-container) item which exists.
@@ -916,6 +1013,8 @@ begin
             .PARAMETER DstPath
                 Paths to destination items (non-container). If the item exists, it will be overwritten with updated content
                 from source item. If it does not exists, it will be created.
+
+                Written items are written using UTF8 encoding (BOM is not written).
 
                 Wildcards are NOT allowed. Please use -Force switch, if you want to overwrite read-only files.
 
@@ -1344,6 +1443,1271 @@ begin
         }
         end {}
     }
+
+    # done
+    $_process_FormatItem_anyNewLine = New-Object regex '\r\n|[\v\r\f\n\x85\p{Zl}\p{Zp}]', 'Compiled';
+    # Trim replace patterns.
+    $_process_FormatItem_trimLinePattern_CMake = New-Object regex '(?<!(?:^|[^\\])(?:\\\\)*\\)\s+$', 'Compiled';
+    $_process_FormatItem_trimLineReplace_CMake = '';
+    $_process_FormatItem_trimLinePattern_Cxx   = $_process_FormatItem_trimLinePattern_CMake;
+    $_process_FormatItem_trimLineReplace_Cxx   = $_process_FormatItem_trimLineReplace_CMake;
+    function _process-FormatItem
+    {
+        <#
+            .SYNOPSIS
+                Process text-like items by formatting them line by line.
+
+            .DESCRIPTION
+                Process selected source item (usually text file) and formats it line by line and reformats
+                them sligtly by:
+                 -- removing trailing white-spaces from each line (if needed)
+                 -- unifying/normalizing indent
+                 -- changing and unifying EOL characters
+
+                 UTF8 content is assumed. Written items are written using UTF8 encoding (BOM is not written).
+
+            .PARAMETER SrcPath
+                Path to source item. Path must be valid and must point to (non-container) text item which exists.
+
+                Wildcards are NOT allowed.
+
+            .PARAMETER DstPath
+                Paths to destination items (non-container). If the item exists, it will be overwritten with updated content
+                from source item. If it does not exists, it will be created.
+
+                Written items are written using UTF8 encoding (BOM is not written).
+
+                Wildcards are NOT allowed. Please use -Force switch, if you want to overwrite read-only files.
+
+            .PARAMETER ItemType
+                Type of processing item (type of file which will be formatted).
+
+                Allowed values: 'CMake', 'Cxx'.
+
+            .PARAMETER TrimWhitespace
+                Removes excess/unnecessary whitespace from the end of each line.
+
+            .PARAMETER NormalizeIndent
+                Normalizes indent by converting them to spaces or tabulations.
+
+                If 'Preserve' is selected, an indent is not normalized. If 'AlignedSpaces' or 'AlignedTabs'
+                is selected, an indent is realigned to mutiply of tab size (for spaces) or only using tabulations
+                (for tabs). Otherwise, if line is misaligned, an indent misalignment will be preserved (may
+                result in intermingled tabs and spaces for 'Tabs').
+
+                Allowed values: 'AlignedSpaces', 'AlignedTabs', 'Spaces', 'Tabs', 'Preserve'.
+
+            .PARAMETER TabSize
+                Number of spaces used as one tab (for replacing tab with spaces on indentations).
+
+                Allowed range: 1 - 1024.
+
+            .PARAMETER EolConvention
+                End-of-line convention used to write/overwrite destination items (formatted content).
+
+                New lines will be written as:
+                 -- <LF>     for 'Unix'
+                 -- <CR><LF> for 'Windows'
+                 -- <CR>     for 'Mac'
+
+                Allowed values: 'Unix', 'Windows', 'Mac'.
+
+            .PARAMETER Force
+                Force overwrite destination items (even if they are read-only).
+                
+            .PARAMETER Silent
+                Suppresses any confirmation. Implies -Force.
+        #>
+
+        [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Low')]
+        [OutputType([void])]
+        param(
+            [Parameter(Position = 0, Mandatory = $true,
+                       ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+            [string] $SrcPath,
+            [Parameter(Position = 1, Mandatory = $true,
+                       ValueFromPipelineByPropertyName = $true)]
+            [string[]] $DstPath,
+            [Parameter(Mandatory = $false,
+                       ValueFromPipelineByPropertyName = $true)]
+            [ValidateSet('CMake', 'Cxx')]
+            [Alias('Type')]
+            [string] $ItemType = 'Cxx',
+            [Parameter(Mandatory = $false,
+                       ValueFromPipelineByPropertyName = $true)]
+            [Alias('TrimWs', 'Trim')]
+            [switch] $TrimWhitespace,
+            [Parameter(Mandatory = $false,
+                       ValueFromPipelineByPropertyName = $true)]
+            [ValidateSet('AlignedSpaces', 'AlignedTabs', 'Spaces', 'Tabs', 'Preserve')]
+            [string] $NormalizeIndent = 'Preserve',
+            [Parameter(Mandatory = $false,
+                       ValueFromPipelineByPropertyName = $true)]
+            [ValidateRange(1, 1024)]
+            [int] $TabSize = 2,
+            [Parameter(Mandatory = $false,
+                       ValueFromPipelineByPropertyName = $true)]
+            [ValidateSet('Unix', 'Windows', 'Mac')]
+            [string] $EolConvention = 'Unix',
+            [Parameter(Mandatory = $false,
+                       ValueFromPipelineByPropertyName = $true)]
+            [switch] $Force,
+            [Parameter(Mandatory = $false,
+                       ValueFromPipelineByPropertyName = $true)]
+            [Alias('Quiet')]
+            [switch] $Silent
+        );
+        begin
+        {
+            $_anyNewLine = $_process_FormatItem_anyNewLine;
+
+            $_trimLinePattern_CMake = $_process_FormatItem_trimLinePattern_CMake;
+            $_trimLineReplace_CMake = $_process_FormatItem_trimLineReplace_CMake;
+            $_trimLinePattern_Cxx   = $_process_FormatItem_trimLinePattern_Cxx;
+            $_trimLineReplace_Cxx   = $_process_FormatItem_trimLineReplace_Cxx;
+
+            $_indentAlignedPatternT = '(?:^|\G)(?:[ ]{{1,{0}}}|\t)'; # realign everything to proper multiply of spaces (result is always aligned to TabSize or using only tabs).
+            $_indentMixedPatternT   = '(?<=^\s*)(?:[ ]{{{0}}}|\t)';  # only realign matching multiply of spaces (so e.g. after leading tabs, there can be spaces not aligned to TabSize or tabs are
+                                                                     # intermingled with spaces).
+        }
+        process
+        {
+            # Selecting special comment prefix.
+            switch -Exact ($ItemType)
+            {
+                'CMake' { $_trimLinePattern = $_trimLinePattern_CMake; $_trimLineReplace = $_trimLineReplace_CMake; }
+                'Cxx'   { $_trimLinePattern = $_trimLinePattern_Cxx;   $_trimLineReplace = $_trimLineReplace_Cxx;   }
+            }
+
+            # Selecting indent normalization..
+            switch -Exact ($NormalizeIndent)
+            {
+                'AlignedSpaces' { $_normalizeIndent = $true;  $_indentPatternS = $_indentAlignedPatternT -f $TabSize; $_indentReplace = ' ' * $TabSize; }
+                'AlignedTabs'   { $_normalizeIndent = $true;  $_indentPatternS = $_indentAlignedPatternT -f $TabSize; $_indentReplace = "`t"; }
+                'Spaces'        { $_normalizeIndent = $true;  $_indentPatternS = $_indentMixedPatternT   -f $TabSize; $_indentReplace = ' ' * $TabSize; }
+                'Tabs'          { $_normalizeIndent = $true;  $_indentPatternS = $_indentMixedPatternT   -f $TabSize; $_indentReplace = "`t"; }
+                'Preserve'      { $_normalizeIndent = $false; $_indentPatternS = '';                                  $_indentReplace = '';   }
+            }
+            $_indentPattern = New-Object regex $_indentPatternS, 'Compiled';
+
+            # Selecting EOL.
+            switch -Exact ($EolConvention)
+            {
+                'Unix'    { $_eolChar = "`n";   }
+                'Windows' { $_eolChar = "`r`n"; }
+                'Mac'     { $_eolChar = "`r";   }
+            }
+
+            # Checking for source file.
+            if (!(Test-Path -LiteralPath $SrcPath -PathType Leaf))
+            {
+                Write-Error ('Cannot find the file for formatting: "{0}"' -f $SrcPath);
+                return; 
+            }
+
+            Write-Verbose ('Starting formatting content of file: "{0}".' -f $SrcPath);
+            $_processedContent = @($_anyNewLine.Split((Get-Content -Encoding UTF8 -LiteralPath $SrcPath -Force -Raw)) | % {
+                    ++$_line;
+                    $_processedLine = $_;
+                    if ($TrimWhitespace.IsPresent) { $_processedLine = $_trimLinePattern.Replace($_processedLine, $_trimLineReplace); }
+                    if ($_normalizeIndent)         { $_processedLine = $_indentPattern.Replace($_processedLine, $_indentReplace); }
+                    return $_processedLine;
+                } -End {
+                    Write-Verbose ("Formatted file: `"{0}`"`n -- processed {1} lines." -f $SrcPath, $_line);
+                });
+
+
+            # Checking and writing output.
+            $DstPath | ? { [string]::IsNullOrEmpty($_) -or !(Test-Path -LiteralPath $_ -PathType Leaf -IsValid) -or (Test-Path -LiteralPath $_ -PathType Container) } | % {
+                Write-Error ('Destination path where formatted file should be written is invalid: "{0}"' -f $_);
+            }
+            [string[]] $_dstPath = @($DstPath | ? { ![string]::IsNullOrEmpty($_) -and (Test-Path -LiteralPath $_ -PathType Leaf -IsValid) -and !(Test-Path -LiteralPath $_ -PathType Container) } | Sort-Object -Unique);
+            if ($_dstPath.Count -le 0)
+            {
+                Write-Error ('There is no valid destination path for formatted file: "{0}"' -f $SrcPath);
+                return;
+            }
+
+            if ($Silent.IsPresent -or $PSCmdlet.ShouldProcess(($_dstPath  -join ', '),  'Format content of files'))
+            {
+                $_force = $Silent.IsPresent -or $Force.IsPresent;
+                $_dstPath = @($_dstPath | % {
+                        if ($_force -or !(Test-Path -LiteralPath $_ -PathType Leaf) -or $PSCmdlet.ShouldContinue(('Overwrite existing file: "{0}"' -f $_), 'Overwrite file', [ref] $_owDstYesToAll, [ref] $_owDstNoToAll)) { return $_; }
+                    });
+
+                if ($_dstPath.Count -gt 0)
+                {
+                    $_dstPath | % { $_dstDir = Split-Path -Parent $_; if (![string]::IsNullOrEmpty($_dstDir) -and !(Test-Path -LiteralPath $_dstDir)) { mkdir $_dstDir -Force:$_force -Confirm:$false | Out-Null; } };
+
+                    Write-Verbose ("Formatting content of files:`n{0}" -f (@($_dstPath | % { ' -- "{0}"' -f $_ }) -join "`n"));
+                    # Saved to variable to enable writing to the same file.
+                    Set-Content ([System.Text.Encoding]::UTF8.GetBytes($_processedContent -join $_eolChar)) -LiteralPath $_dstPath -Encoding Byte -NoNewline -Force:$_force -Confirm:$false;
+                }
+            }
+        }
+        end {}
+    }
+
+    # done
+    <#
+        .SYNOPSIS
+            Extracts user name from fully qualified domain name (FQDN).
+
+        .PARAMETER DomainQualName
+            Fully qualified domain name. Both standard forms are supported:
+             -- <dom>\<username>
+             -- <username>@dom
+
+            If name is not qualified, the returned name is the same as input name.
+    #>
+    function _extract-UserName([string] $DomainQualName) { return $DomainQualName.Trim() -replace '^.*\\([^\\]+)$|^([^@]+)@.*$', '$1$2'; }
+
+    # done
+    function _get-VcsDefaultUser
+    {
+        <#
+            .SYNOPSIS
+                Returns name of default user for selected version control system.
+
+            .PARAMETER VcsType
+                Type of version control system used.
+
+                Allowed values: 'Git', 'Perforce'.
+        #>
+
+        [CmdletBinding()]
+        [OutputType([string])]
+        param(
+            [Parameter(Position = 0, Mandatory = $false)]
+            [ValidateSet('Git', 'Perforce')]
+            [Alias('Type', 'Vcs')]
+            [string] $VcsType = 'Git'
+        );
+
+        switch -Exact ($VcsType)
+        {
+            'Perforce' { if (![string]::IsNullOrWhiteSpace($env:P4USER)) { return $env:P4USER.Trim(); } }
+        }
+
+        try
+        {
+            $_domainQualName = [System.Security.Principal.WindowsIdentity]::GetCurrent().Name;
+            return _extract-UserName $_domainQualName;
+        }
+        catch
+        {
+            return $env:USERNAME.Trim();
+        }
+    }
+
+    # done
+    function _get-VcsDefaultServer
+    {
+        <#
+            .SYNOPSIS
+                Returns name of default server (port) for selected version control system.
+
+            .PARAMETER VcsType
+                Type of version control system used.
+
+                Allowed values: 'Git', 'Perforce'.
+        #>
+
+        [CmdletBinding()]
+        [OutputType([string])]
+        param(
+            [Parameter(Position = 0, Mandatory = $false)]
+            [ValidateSet('Git', 'Perforce')]
+            [Alias('Type', 'Vcs')]
+            [string] $VcsType = 'Git'
+        );
+
+        switch -Exact ($VcsType)
+        {
+            'Perforce' { if (![string]::IsNullOrWhiteSpace($env:P4PORT)) { return $env:P4PORT.Trim(); } }
+        }
+        return '';
+    }
+
+    # done
+    function _login-Vcs
+    {
+        <#
+            .SYNOPSIS
+                Log into selected version control system.
+
+            .DESCRIPTION
+                Tries to log into selected (local) VCS. Uses server URL and credentials, if VCS
+                supports these parameters.
+
+            .PARAMETER VcsType
+                Type of version control system used.
+
+                Allowed values: 'Git', 'Perforce'.
+
+            .PARAMETER VcsServer
+                URL/URI to server/port/entrypoint of version control system.
+
+                This parameter is only used by specific types of VCS and ignored by the rest.
+
+            .PARAMETER VcsCredential
+                Credentials for accessing server/port/entrypoint of version control system.
+
+                This parameter is only used by specific types of VCS and ignored by the rest.
+
+                When this parameter is specified and non-null, the -PromptVcsCredential is ignored.
+
+            .PARAMETER PromptVcsCredential
+                Prompts for credentials for accessing server/port/entrypoint of version
+                control system. Usually it is in the form of dialog with default user name for VCS
+                specified.
+
+                This parameter is only used by specific types of VCS and ignored by the rest.
+
+                When VcsCredential parameter is specified and non-null, current parameter is ignored.
+
+            .PARAMETER VcsWorkspace
+                Expected workspace in VCS. If it is specified, the destination location is
+                checked to see whether it is contained in specified workspace. If location
+                is outside workspace or workspace is absent in VCS, the confirmation dialog
+                will be shown (whether to continue).
+
+                This parameter is only used by specific types of VCS and ignored by the rest.
+
+            .PARAMETER VcsBranch
+                Expected branch/stream in VCS. If it is specified, the destination location is
+                checked to see whether it is switch to selected branch/stream. If location
+                is not set to use specified branch/stream or branch/stream is absent in VCS,
+                the confirmation dialog will be shown (whether to continue).
+
+                This parameter is only used by specific types of VCS and ignored by the rest.
+
+            .PARAMETER VcsChangelist
+                Changelist where to stage files in VCS.
+
+                If 'New' is selected, the new changelist will be created for staged files.
+                If 'Default' is selected, any files will be staged in default changelist.
+                If number is specified, the files will be staged on selected changelist.
+
+                Allowed values: 'New', 'Default', <any non-negative integral number>
+
+                This parameter is only used by specific types of VCS and ignored by the rest.
+
+            .OUTPUTS
+                [PSObject] - VCS token (login token to version control system).
+
+                Token contains information whether operation failed or not. Also it contains
+                required properties and currently selected configuration.
+        #>
+
+        [CmdletBinding()]
+        [OutputType([PSObject])]
+        param(
+            [Parameter(Position = 0, Mandatory = $false)]
+            [ValidateSet('Git', 'Perforce')]
+            [Alias('Type', 'Vcs')]
+            [string] $VcsType = 'Git',
+
+            [Parameter(Mandatory = $false)]
+            [Alias('Server')]
+            [string] $VcsServer = '',
+            [Parameter(Mandatory = $false)]
+            [Alias('Credential')]
+            [System.Management.Automation.PSCredential] $VcsCredential = $null,
+            [Parameter(Mandatory = $false)]
+            [Alias('PromptCredential')]
+            [switch] $PromptVcsCredential,
+            [Parameter(Mandatory = $false)]
+            [Alias('Workspace')]
+            [string] $VcsWorkspace = '',
+            [Parameter(Mandatory = $false)]
+            [Alias('Branch', 'VcsStream', 'Stream')]
+            [string] $VcsBranch = '',
+            [Parameter(Mandatory = $false)]
+            [ValidatePattern('^(?:[0-9]+|Default|New)$')]
+            [Alias('Changelist', 'VcsChange', 'Change')]
+            [string] $VcsChangelist = 'New'
+        );
+
+        $_success    = $false;
+        $_aborted    = $false;
+        $_state      = New-Object 'System.Collections.Generic.HashSet`1[[string]]';
+        $_toolParams = @();
+
+        $_propsType       = @{'Git' = 'Git'; 'Perforce' = 'Perforce'}[$VcsType]; # Cannonize.
+        $_propsTool       = @{'Git' = 'git'; 'Perforce' = 'p4'}[$_propsType];
+        $_propsServer     = $VcsServer.Trim();
+        $_propsUser       = _get-VcsDefaultUser $_propsType;
+        $_propsCredential = $VcsCredential;
+        $_propsWorkspace  = $VcsWorkspace.Trim();
+        $_propsBranch     = $VcsBranch.Trim();
+        $_propsChange     = $VcsChangelist.Trim().ToLowerInvariant();
+
+        if ([string]::IsNullOrEmpty($_propsServer))
+        {
+            $_propsServer = _get-VcsDefaultServer $_propsType;
+        }
+
+        if (($_propsCredential -eq $null) -and $PromptVcsCredential.IsPresent)
+        {
+            $_propsCredential = Get-Credential -UserName $_propsUser -Message ('Provide login/password for {0} VCS: "{1}"' -f $_propsType, $_propsServer);
+        }
+        if ($_propsCredential -eq $null)
+        {
+            $_propsCredential = New-object 'System.Management.Automation.PSCredential' $_propsUser, (New-Object 'System.Security.SecureString');
+        }
+
+        $_propsUser = _extract-UserName $_propsCredential.UserName;
+
+
+        $_toolInfo = @(Get-Command $_propsTool -ErrorAction Ignore);
+        if ($_toolInfo.Count -gt 0)
+        {
+            $_success = $true;
+        }
+        else
+        {
+            Write-Error ('VCS: {0}: Command-line tool for {0} VCS is not available. Please make it available in PATH: "{1}".' -f $_propsType, $_propsTool);
+        }
+
+        $_props = New-Object PSObject |
+            Add-Member 'Type'       $_propsType       -PassThru |
+            Add-Member 'Tool'       $_propsTool       -PassThru |
+            Add-Member 'Server'     $_propsServer     -PassThru |
+            Add-Member 'User'       $_propsUser       -PassThru |
+            Add-Member 'Credential' $_propsCredential -PassThru |
+            Add-Member 'Workspace'  $_propsWorkspace  -PassThru |
+            Add-Member 'Branch'     $_propsBranch     -PassThru |
+            Add-Member 'Change'     $_propsChange     -PassThru;
+
+        switch -Exact ($_props.Type)
+        {
+            'Git'      {} # No login required.
+            'Perforce' {
+                    if (![string]::IsNullOrEmpty($_props.Server)) { $_cmdServer = @('-p', $_props.Server); } else { $_cmdServer = @(); }
+                    if (![string]::IsNullOrEmpty($_props.User))   { $_cmdUser   = @('-u', $_props.User); }   else { $_cmdUser = @(); }
+
+                    $_cmdAll = @($_cmdServer; $_cmdUser);
+
+                    if ($_success)
+                    {
+                        Write-Verbose ('VCS: {0}: Logging into "{1}" as "{2}".' -f $_props.Type, $_props.Server, $_props.User); 
+                        # Command: p4 <opts> login
+                        $_props.Credential.GetNetworkCredential().Password | & $_props.Tool $_cmdAll 'login' 2>&1 | Out-Null;
+                        $_success = $? -and ($LASTEXITCODE -eq 0);
+                    }
+
+                    if ($_success) { $_toolParams = $_cmdAll; }
+                    else
+                    {
+                        Write-Error ('VCS: {0}: Failed to log into selected VCS: "{1}".' -f $_props.Type, $_props.Server);
+                    }
+                }
+        }
+
+        $_state.Add('Login') | Out-Null;
+        return New-Object PSObject |
+            Add-Member 'Success'    $_success    -PassThru |
+            Add-Member 'Aborted'    $_aborted    -PassThru |
+            Add-Member 'State'      $_state      -PassThru |
+            Add-Member 'ToolParams' $_toolParams -PassThru |
+            Add-Member 'Props'      $_props      -PassThru;
+    }
+
+    # done
+    function _set-VcsWorkspace
+    {
+        <#
+            .SYNOPSIS
+                Select workspace in version control system.
+
+            .DESCRIPTION
+                If workspace is specified (during logging in) and VCS supports workspace selection,
+                the VCS is checked for workspace existence at currrent directory. If it not specified or
+                VCS does not support workspace, current directory is checked whether it is mapped in VCS.
+
+                If workspace is specified during loging and it does not exist in VCS, the failed token
+                is returned. If workspace exists, the current directory is checked whether it is mapped
+                to selected workspace. If it not, continue confirmation is presented. Depending on it
+                successfull or failed token is returned.
+
+                If workspace is not specified, the workspace is selected based on
+                current directory mappings (current directory is checked whether it is mapped into VCS
+                and into which workspace - first is selected). If workspace cannot be selected, the
+                failed token is returned.
+
+                If workspace is not supported by VCS, only current directory is checked whether it
+                is mapped into VCS. If current directory is not mapped, the failed token is returned.
+            
+            .PARAMETER VcsToken
+                Token from _login-Vcs.
+
+            .PARAMETER Force
+                Force operation (even if the expected workspace does not match mapped workspace for
+                current directory).
+                
+            .PARAMETER Silent
+                Suppresses any confirmation. Implies -Force.
+
+            .OUTPUTS
+                [PSObject] - Updated VCS token.
+
+                Token contains information whether operation failed or not. Also it contains
+                required properties and currently selected configuration.
+        #>
+
+        [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Low')]
+        [OutputType([PSObject])]
+        param(
+            [Parameter(Position = 0, Mandatory = $true)]
+            [Alias('Token')]
+            [PSObject] $VcsToken,
+            [Parameter(Mandatory = $false)]
+            [switch] $Force,
+            [Parameter(Mandatory = $false)]
+            [Alias('Quiet')]
+            [switch] $Silent
+        );
+
+        if (($VcsToken -eq $null) -or !$VcsToken.Success)
+        {
+            Write-Error 'VCS: Failed to select workspace in VCS. VCS token is invalid.';
+            return $VcsToken;
+        }
+        if (!$VcsToken.State.Contains('Login'))
+        {
+            Write-Error 'VCS: Failed to select workspace in VCS. VCS token is invalid (not logged in).';
+            return $VcsToken;
+        }
+        if ($VcsToken.Aborted)
+        {
+            return $VcsToken;
+        }
+
+        $_success    = $true;
+        $_aborted    = $false;
+        $_state      = $VcsToken.State;
+        $_toolParams = $VcsToken.ToolParams;
+        $_props      = $VcsToken.Props;
+
+        switch -Exact ($_props.Type)
+        {
+            'Git'      {
+                    $_currentDir = (Get-Location).Path;
+                    $_cmdAll = @($_toolParams);
+
+                    Write-Verbose ('VCS: {0}: Checking current directory mapping in VCS: "{1}".' -f $_props.Type, $_currentDir); 
+                    # Command: git <opts> status
+                    & $_props.Tool $_cmdAll 'status' 2>&1 | Out-Null;
+                    $_success = $? -and ($LASTEXITCODE -eq 0);
+
+                    if (!$_success)
+                    {
+                        Write-Error ('VCS: {0}: Current directory is not mapped in VCS: "{1}".' -f $_props.Type, $_currentDir);
+                    }
+                }
+            'Perforce' {
+                    if (![string]::IsNullOrEmpty($_props.User)) { $_propsUser = $_props.User; } else { $_propsUser = _get-VcsDefaultUser $_props.Type; }
+                    $_cmdUser = @('-u', $_propsUser);
+
+                    if (![string]::IsNullOrEmpty($_props.Workspace)) { $_cmdWorkspace = @('-c', $_props.Workspace); } else { $_cmdWorkspace = @(); }
+
+                    # Enumerating workspaces.
+                    $_cmdAll      = @($_toolParams);
+                    $_cmdSpecific = @($_cmdUser);
+
+                    Write-Verbose ('VCS: {0}: Checking for available workspaces in "{1}" (user: "{2}").' -f $_props.Type, $_props.Server, $_propsUser);
+                    # Command: p4 <opts> clients -u <user>
+                    $_workspaces = @(& $_props.Tool $_cmdAll 'clients' $_cmdSpecific 2>&1 | ? { ($_ -is [string]) -and ($_ -match '^Client\s+\S+.*$') } | % { $_ -replace '^Client\s+(\S+).*$', '$1' });
+                    $_success = $? -and ($LASTEXITCODE -eq 0);
+
+                    # Checking workspace availability.
+                    if ($_success)
+                    {
+                        Write-Verbose ('VCS: {0}: Found {1} workspace(s): {2}.' -f $_props.Type, $_workspaces.Count, (@($_workspaces | % { "`"$_`"" }) -join ', '));
+
+                        if (![string]::IsNullOrEmpty($_props.Workspace) -and ($_props.Workspace -cnotin $_workspaces))
+                        {
+                            Write-Error ('VCS: {0}: Selected workspace is not available in VCS: "{1}".' -f $_props.Type, $_props.Workspace);
+                            $_success = $false;
+                        }
+                    }
+
+                    # Checking current directory for VCS workspace mapping.
+                    if ($_success)
+                    {
+                        $_currentDir = (Get-Location).Path;
+
+                        Write-Verbose ('VCS: {0}: Checking current directory mapping in VCS: "{1}" (server: "{2}", user: "{3}").' -f $_props.Type, $_currentDir, $_props.Server, $_propsUser); 
+                        $_mappedWorkspaces = @($_workspaces | ? {
+                                $_cmdAll = @($_toolParams; @('-c', $_));
+
+                                Write-Verbose ('VCS: {0}: Checking current directory mapping in VCS: "{1}" (workspace: "{2}").' -f $_props.Type, $_currentDir, $_);
+                                # Command: p4 <opts> -c <workspace> where ...
+                                & $_props.Tool $_cmdAll 'where' '...' 2>&1 | Out-Null;
+                                return $? -and ($LASTEXITCODE -eq 0);
+                            });
+                        
+                        if ($_mappedWorkspaces.Count -le 0)
+                        {
+                            Write-Error ('VCS: {0}: Current directory is not mapped in VCS: "{1}".' -f $_props.Type, $_currentDir);
+                            $_success = $false;
+                        }
+                    }
+
+                    if ($_success)
+                    {
+                        $_force = $Silent.IsPresent -or $Force.IsPresent;
+                        Write-Verbose ('VCS: {0}: Current directory is mapped in {1} workspace(s): {2}.' -f $_props.Type, $_mappedWorkspaces.Count, (@($_mappedWorkspaces | % { "`"$_`"" }) -join ', '));
+
+                        if (![string]::IsNullOrEmpty($_props.Workspace) -and ($_props.Workspace -cnotin $_mappedWorkspaces))
+                        {
+                            if ($_force -or $PSCmdlet.ShouldContinue(('Current directory "{0}" is not mapped in selected workspace: "{1}". It will be switched to "{2}". Do you want to continue?' -f $_currentDir, $_props.Workspace, $_mappedWorkspaces[0]), 'Workspace mapping'))
+                            {
+                                $_props.Workspace = $_mappedWorkspaces[0];
+                                $_cmdWorkspace = @('-c', $_props.Workspace);
+                            }
+                            else
+                            {
+                                Write-Verbose ('VCS: {0}: User aborted operation.' -f $_props.Type);
+                                $_aborted = $true;
+                                $_cmdWorkspace = @();
+                            }
+                        }
+                        elseif ([string]::IsNullOrEmpty($_props.Workspace))
+                        {
+                            $_props.Workspace = $_mappedWorkspaces[0];
+                            $_cmdWorkspace = @('-c', $_mappedWorkspaces[0]);
+                        }
+
+                        # Compile new tool parameters.
+                        if ($_state.Contains('SelectWorkspace'))
+                        {
+                            $_removeParam = $false;
+                            $_toolParams = @($_toolParams | ? { if ($_ -ceq '-c') { $_removeParam = $true; return $false; } elseif ($_removeParam) { $_removeParam = $false; return $false; } else { return $true; } });
+                        }
+                        $_toolParams = @($_toolParams; $_cmdWorkspace);
+                    }
+                }
+        }
+
+        $_state.Add('SelectWorkspace') | Out-Null;
+        $VcsToken.Success    = $_success;
+        $VcsToken.Aborted    = $_aborted;
+        $VcsToken.State      = $_state;
+        $VcsToken.ToolParams = $_toolParams;
+        $VcsToken.Props      = $_props;
+
+        return $VcsToken;
+    }
+
+    # done
+    function _set-VcsBranch
+    {
+        <#
+            .SYNOPSIS
+                Select branch/stream in version control system.
+
+            .DESCRIPTION
+                If branch/stream is specified (during logging in) and VCS supports branch/stream selection,
+                the VCS is checked for selected branch/stream at currrent directory. If it not specified or
+                VCS does not support branch/stream, no operation is done.
+
+                If branch/stream is specified during loging and it does not exist in VCS, the failed token
+                is returned. If branch/stream exists, the current directory is checked whether it is mapped
+                to selected branch/stream. If it not, continue confirmation is presented. Depending on it
+                successfull or failed token is returned.
+
+                If branch/stream is not specified, no checking/operation is done.
+            
+            .PARAMETER VcsToken
+                Token from _set-VcsWorkspace.
+
+            .PARAMETER Force
+                Force operation (even if the expected branch/stream does not match mapped branch/stream for
+                current directory).
+                
+            .PARAMETER Silent
+                Suppresses any confirmation. Implies -Force.
+
+            .OUTPUTS
+                [PSObject] - Updated VCS token.
+
+                Token contains information whether operation failed or not. Also it contains
+                required properties and currently selected configuration.
+        #>
+
+        [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Low')]
+        [OutputType([PSObject])]
+        param(
+            [Parameter(Position = 0, Mandatory = $true)]
+            [Alias('Token')]
+            [PSObject] $VcsToken,
+            [Parameter(Mandatory = $false)]
+            [switch] $Force,
+            [Parameter(Mandatory = $false)]
+            [Alias('Quiet')]
+            [switch] $Silent
+        );
+
+        if (($VcsToken -eq $null) -or !$VcsToken.Success)
+        {
+            Write-Error 'VCS: Failed to select workspace in VCS. VCS token is invalid.';
+            return $VcsToken;
+        }
+        if (!$VcsToken.State.Contains('SelectWorkspace'))
+        {
+            Write-Error 'VCS: Failed to select workspace in VCS. VCS token is invalid (no workspace selected).';
+            return $VcsToken;
+        }
+        if ($VcsToken.Aborted)
+        {
+            return $VcsToken;
+        }
+
+        $_success    = $true;
+        $_aborted    = $false;
+        $_state      = $VcsToken.State;
+        $_toolParams = $VcsToken.ToolParams;
+        $_props      = $VcsToken.Props;
+
+        switch -Exact ($_props.Type)
+        {
+            'Git'      {
+                    $_currentDir = (Get-Location).Path;
+                    $_cmdAll = @($_toolParams);
+
+                    Write-Verbose ('VCS: {0}: Checking for available branches at current directory in VCS: "{1}".' -f $_props.Type, $_currentDir); 
+                    # Command: git <opts> branch --no-color
+                    $_branches = @(& $_props.Tool $_cmdAll 'branch' '--no-color' 2>&1 | ? { ($_ -is [string]) -and ![string]::IsNullOrEmpty($_) } | % {
+                            $_trackedBranch = $_ -cmatch '^\s*\*\s*.+?\s*$';
+                            $_branchName    = $_ -creplace '^\s*(?:\*\s*)?(.+?)\s*$', '$1';
+                            return New-Object PSObject |
+                                Add-Member 'Tracked' $_trackedBranch -PassThru |
+                                Add-Member 'Name'    $_branchName    -PassThru;
+                        });
+                    $_success = $? -and ($LASTEXITCODE -eq 0);
+
+                    # Checking branch availability.
+                    if ($_success)
+                    {
+                        Write-Verbose ("VCS: {0}: Found {1} branche(s):`n{2}." -f $_props.Type, $_branches.Count, (@($_branches | % { if ($_.Tracked) { $_prefix = '=>'; } else { $_prefix = '--'; } return ' {0} "{1}"' -f $_prefix, $_.Name; }) -join "`n"));
+
+                        if (![string]::IsNullOrEmpty($_props.Branch) -and ($_props.Branch -cnotin @($_branches.Name)))
+                        {
+                            Write-Error ('VCS: {0}: Selected branch is not available in VCS: "{1}".' -f $_props.Type, $_props.Branch);
+                            $_success = $false;
+                        }
+                    }
+
+                    # Checking current directory for VCS branch mapping.
+                    if ($_success)
+                    {
+                        $_mappedBranches = @($_branches | ? { $_.Tracked } | % { $_.Name });
+   
+                        if ($_mappedBranches.Count -le 0)
+                        {
+                            Write-Error ('VCS: {0}: Current directory is not mapped in VCS: "{1}".' -f $_props.Type, $_currentDir);
+                            $_success = $false;
+                        }
+                    }
+
+                    if ($_success)
+                    {
+                        $_force = $Silent.IsPresent -or $Force.IsPresent;
+                        Write-Verbose ('VCS: {0}: Current directory is mapped in {1} branch(es): {2}.' -f $_props.Type, $_mappedBranches.Count, (@($_mappedBranches | % { "`"$_`"" }) -join ', '));
+
+                        if (![string]::IsNullOrEmpty($_props.Branch) -and ($_props.Branch -cnotin $_mappedBranches))
+                        {
+                            if ($_force -or $PSCmdlet.ShouldContinue(('Current directory "{0}" is not mapped in selected branch: "{1}". It will be switched to "{2}". Do you want to continue?' -f $_currentDir, $_props.Branch, $_mappedBranches[0]), 'Branch mapping'))
+                            {
+                                $_props.Branch = $_mappedBranches[0];
+                            }
+                            else
+                            {
+                                Write-Verbose ('VCS: {0}: User aborted operation.' -f $_props.Type);
+                                $_aborted = $true;
+                            }
+                        }
+                        elseif ([string]::IsNullOrEmpty($_props.Branch)) { $_props.Branch = $_mappedBranches[0]; }
+                    }
+                }
+            'Perforce' {
+                    # Enumerating streams in selected workspace.
+                    $_cmdAll = @($_toolParams);
+
+                    Write-Verbose ('VCS: {0}: Checking for available streams in "{1}" (workspace: "{2}").' -f $_props.Type, $_props.Server, $_props.Workspace); 
+                    # Command: p4 <opts> streams
+                    $_streams = @(& $_props.Tool $_cmdAll 'streams' 2>&1 |
+                            ? { ($_ -is [string]) -and ($_ -match '^Stream\s+\S+\s+\S+\s+\S+\s+''.*''(?:\s+.*)?$') } |
+                            % { $_ -replace '^Stream\s+\S+\s+\S+\s+\S+\s+''(.*)''(?:\s+.*)?$', '$1' }
+                        );
+                    $_success = $? -and ($LASTEXITCODE -eq 0);
+
+                    # Checking stream availability.
+                    if ($_success)
+                    {
+                        Write-Verbose ("VCS: {0}: Found {1} stream(s):`n{2}." -f $_props.Type, $_streams.Count, (@($_streams | % { " -- `"$_`"" }) -join "`n"));
+
+                        if (![string]::IsNullOrEmpty($_props.Branch) -and ($_props.Branch -cnotin $_streams))
+                        {
+                            Write-Error ('VCS: {0}: Selected stream is not available in VCS: "{1}" (workspace: "{2}").' -f $_props.Type, $_props.Branch, $_props.Workspace);
+                            $_success = $false;
+                        }
+                    }
+
+                    # Checking current workspace for VCS stream mapping (selected stream).
+                    if ($_success)
+                    {
+                        Write-Verbose ('VCS: {0}: Getting information about selected stream in current workspace in VCS: "{1}".' -f $_props.Type, $_props.Workspace); 
+                        # Command: p4 <opts> stream -o
+                        $_mappedStreams = @(& $_props.Tool $_cmdAll 'stream' '-o' 2>&1 |
+                                ? { ($_ -is [string]) -and ($_ -match '^\s*Name\s*:\s*.+?\s*$') } |
+                                % { $_ -replace '^\s*Name\s*:\s*(.+?)\s*$', '$1' }
+                            );
+                        if (!$? -or ($LASTEXITCODE -ne 0)) { $_mappedStreams = @(); }
+                        
+                        if (![string]::IsNullOrEmpty($_props.Branch) -and ($_mappedStreams.Count -le 0))
+                        {
+                            Write-Warning ('VCS: {0}: Current workspace does not contain streams or does not support streams in VCS: "{1}".' -f $_props.Type, $_props.Workspace);
+                        }
+                    }
+
+                    if ($_success)
+                    {
+                        $_force = $Silent.IsPresent -or $Force.IsPresent;
+                        Write-Verbose ('VCS: {0}: Current workspace is set to use {1} following stream(s): {2}.' -f $_props.Type, $_mappedStreams.Count, (@($_mappedStreams | % { "`"$_`"" }) -join ', '));
+
+                        if (![string]::IsNullOrEmpty($_props.Branch) -and ($_props.Branch -cnotin $_mappedStreams))
+                        {
+                            if ($_force -or $PSCmdlet.ShouldContinue(('Current workspace "{0}" is not using specified stream: "{1}". The stream named "{2}" will be used. Do you want to continue?' -f $_props.Workspace, $_props.Branch, $_mappedStreams[0]), 'Stream mapping'))
+                            {
+                                $_props.Branch = $_mappedStreams[0];
+                            }
+                            else
+                            {
+                                Write-Verbose ('VCS: {0}: User aborted operation.' -f $_props.Type);
+                                $_aborted = $true;
+                            }
+                        }
+                        elseif ([string]::IsNullOrEmpty($_props.Branch)) { $_props.Branch = $_mappedStreams[0]; }
+                    }
+                }
+        }
+
+        $_state.Add('SelectBranch') | Out-Null;
+        $VcsToken.Success    = $_success;
+        $VcsToken.Aborted    = $_aborted;
+        $VcsToken.State      = $_state;
+        $VcsToken.ToolParams = $_toolParams;
+        $VcsToken.Props      = $_props;
+
+        return $VcsToken;
+    }
+
+    # done
+    function _chmod-VcsFiles
+    {
+        <#
+            .SYNOPSIS
+                Changes mode of selected files. Stages files if necessary.
+
+            .DESCRIPTION
+                For selected files (non-existing and non-file paths are filtered out), the function
+                modifies their attributes (mode) in VCS. It stages/prepares changelist if necessary.
+            
+            .PARAMETER VcsToken
+                Token from _set-VcsWorkspace or _set-VcsBranch.
+
+            .PARAMETER DstRelFiles
+                List of relative paths to files which mode (file attributes in VCS) will be modified.
+                Files will be staged to be able to change their mode.
+                
+                For some VCS (Git) only files which are effectively modified (content or attributes) will
+                be staged. For others (Perforce), all selected files will be added to specific change list. 
+
+                List can be empty. Paths are assumed to be relative to current directory.
+
+            .PARAMETER Mode
+                File mode (attribute) to set.
+
+                Allowed values: '-x', '+x' (clear/set executive bit; for Perforce script ignores '-x').
+
+            .PARAMETER Force
+                Force operation (even if the expected branch/stream does not match mapped branch/stream for
+                current directory).
+                
+            .PARAMETER Silent
+                Suppresses any confirmation. Implies -Force.
+
+            .OUTPUTS
+                [PSObject] - Updated VCS token.
+
+                Token contains information whether operation failed or not. Also it contains
+                required properties and currently selected configuration.
+        #>
+
+        [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Low')]
+        [OutputType([PSObject])]
+        param(
+            [Parameter(Position = 0, Mandatory = $true)]
+            [Alias('Token')]
+            [PSObject] $VcsToken,
+            [Parameter(Position = 1, Mandatory = $true)]
+            [Alias('RelFiles', 'Files')]
+            [AllowEmptyCollection()]
+            [string[]] $DstRelFiles,
+            [Parameter(Mandatory = $false)]
+            [ValidatePattern('^[+-]x$', Options = 'None')]
+            [Alias('Chmod')]
+            [string] $Mode = '+x',
+            [Parameter(Mandatory = $false)]
+            [switch] $Force,
+            [Parameter(Mandatory = $false)]
+            [Alias('Quiet')]
+            [switch] $Silent
+        );
+
+        if (($VcsToken -eq $null) -or !$VcsToken.Success)
+        {
+            Write-Error 'VCS: Failed to select workspace in VCS. VCS token is invalid.';
+            return $VcsToken;
+        }
+        if (!$VcsToken.State.Contains('SelectBranch') -and !$VcsToken.State.Contains('SelectWorkspace'))
+        {
+            Write-Error 'VCS: Failed to select workspace in VCS. VCS token is invalid (no workspace and/or branch selected).';
+            return $VcsToken;
+        }
+        if ($VcsToken.Aborted)
+        {
+            return $VcsToken;
+        }
+
+        $_success    = $true;
+        $_aborted    = $false;
+        $_state      = $VcsToken.State;
+        $_toolParams = $VcsToken.ToolParams;
+        $_props      = $VcsToken.Props;
+
+        $_relFiles = @($DstRelFiles | ? {
+                if (![string]::IsNullOrEmpty($_) -and (Test-Path -LiteralPath $_ -PathType Leaf)) { return $true; }
+                Write-Warning ('VCS: {0}: Following relative path does not point to a file: "{1}"' -f $_props.Type, $_);
+            });
+        $_relFileGroups = @($_relFiles | % -Begin {
+                $_groupIdx  = 0;
+                $_fileGroup = New-Object PSObject |
+                    Add-Member 'Index'  $_groupIdx                                                       -PassThru |
+                    Add-Member 'Length' 0                                                                -PassThru |
+                    Add-Member 'List'   (New-Object 'System.Collections.Generic.LinkedList`1[[string]]') -PassThru;
+            } -Process {
+                if (($_fileGroup.List.Count -le 0) -or (($_fileGroup.Length + $_.Length + 1) -le 7168))
+                {
+                    $_fileGroup.Length += $_.Length + 1;
+                    $_fileGroup.List.AddLast($_) | Out-Null;
+                }
+                if ($_fileGroup.Length -gt 7168)
+                {
+                    Write-Output $_fileGroup;
+                    ++$_groupIdx;
+                    $_fileGroup = New-Object PSObject |
+                        Add-Member 'Index'  $_groupIdx                                                       -PassThru |
+                        Add-Member 'Length' 0                                                                -PassThru |
+                        Add-Member 'List'   (New-Object 'System.Collections.Generic.LinkedList`1[[string]]') -PassThru;
+                }
+            } -End {
+                if ($_fileGroup.Length -gt 0) { return $_fileGroup; }
+            });
+
+        # Abort on confirmation dialog (if requested).
+        $_relFilesMsg = $_relFiles[0..4] -join ",`n";
+        if ($_relFiles.Count -gt 5) { $_relFilesMsg += ("`n...`n{0}" -f $_relFiles[-1]); }
+        if (!$Silent.IsPresent -and !$PSCmdlet.ShouldProcess($_relFilesMsg, 'Modify file attributes in VCS (stage files)'))
+        {
+            $VcsToken.Aborted = $true;
+            return $VcsToken;
+        }
+
+        switch -Exact ($_props.Type)
+        {
+            'Git'      {
+                    $_currentDir = (Get-Location).Path;
+                    $_cmdAll = @($_toolParams);
+
+                    # Updating mode in index (staging files if necessary).
+                    Write-Verbose ('VCS: {0}: Updating index (mode: "{1}") for all specified files ({2} items) in current directory: "{3}".' -f $_props.Type, $Mode, $_relFiles.Count, $_currentDir);
+                    # Command (files in batches of around 7kB): git <opts> update-index --add --chmod=<mode> -- <files ...>
+                    $_relFileGroups | % {
+                        & $_props.Tool $_cmdAll 'update-index' '--add' ('--chmod={0}' -f $Mode) '--' @($_.List) 2>&1 | % { if ($_ -is [System.Management.Automation.ErrorRecord]) { Write-Error -ErrorRecord $_; } else { Write-Verbose $_; } };
+                        if (!$? -or ($LASTEXITCODE -ne 0)) { $_success = $false; }
+                    };
+                }
+            'Perforce' {
+                    $_currentDir = (Get-Location).Path;
+                    $_cmdAll = @($_toolParams);
+
+                    switch -Regex ($_props.Change)
+                    {
+                        '^new$' {
+                            $_changeNumber = @(echo "Change: new`nDescription:`n" | & $_props.Tool $_cmdAll 'change' '-i' 2>&1 |
+                                ? { ($_ -is [string]) -and ($_ -match '^\s*Change\s+[0-9]+') } |
+                                % { $_ -replace '^\s*Change\s+([0-9]+).*$', '$1' })
+                            if (!$? -or ($LASTEXITCODE -ne 0)) { $_changeNumber = @(); }
+
+                            if ($_changeNumber.Count -gt 0)
+                            {
+                                $_props.Change = $_changeNumber[0];
+                                Write-Verbose ('VCS: {0}: Creating new changelist successful: {1}' -f $_props.Type, $_props.Change);
+                            }
+                            else
+                            {
+                                Write-Error ('VCS: {0}: Creating new changelist failed.' -f $_props.Type);
+                                $_success = $false;
+                            }
+                            break;
+                        }
+                        '^[0-9]+$' {
+                            & $_props.Tool $_cmdAll 'change' '-o' $_props.Change 2>&1 | Out-Null;
+                            if (!$? -or ($LASTEXITCODE -ne 0)) { $_success = $false; }
+
+                            if (!$_success)
+                            {
+                                Write-Error ('VCS: {0}: Selected changelist does not exist: {1}' -f $_props.Type, $_props.Change);
+                            }
+                        }
+                        '^default$' {}
+                    }
+
+
+                    if ($_success)
+                    {
+                        # Adding new files.
+                        Write-Verbose ('VCS: {0}: Adding new files (CL: {1}; mode: "{2}"; {3} items) in current directory (if possible): "{4}".' -f $_props.Type, $_props.Change, $Mode, $_relFiles.Count, $_currentDir);
+                        # Command (files in batches of around 7kB): p4 <opts> add -c <changelist> <files ...>
+                        $_relFileGroups | % {
+                            & $_props.Tool $_cmdAll 'add' '-c' $_props.Change @($_.List) 2>&1 | % { if ($_ -is [System.Management.Automation.ErrorRecord]) { Write-Error -ErrorRecord $_; } else { Write-Verbose $_; } };
+                            if (!$? -or ($LASTEXITCODE -ne 0)) { $_success = $false; }
+                        };
+                    
+                        # Opening files for edit.
+                        Write-Verbose ('VCS: {0}: Opening files for edit (CL: {1}; mode: "{2}"; {3} items) in current directory (if possible): "{4}".' -f $_props.Type, $_props.Change, $Mode, $_relFiles.Count, $_currentDir);
+                        # Command (files in batches of around 7kB): p4 <opts> open -c <changelist> <files ...>
+                        $_relFileGroups | % {
+                            & $_props.Tool $_cmdAll 'open' '-c' $_props.Change @($_.List) 2>&1 | % { if ($_ -is [System.Management.Automation.ErrorRecord]) { Write-Error -ErrorRecord $_; } else { Write-Verbose $_; } };
+                            if (!$? -or ($LASTEXITCODE -ne 0)) { $_success = $false; }
+                        };
+                    }
+
+                    if ($_success)
+                    {
+                        if ($Mode -match '^[+]') { $_cmdSpecific = @('-t', $Mode); }
+                        else
+                        {
+                            Write-Warning ('VCS: {0}: Script does not support attribute removal for selected VCS. Mode will be ignored: "{1}".' -f $_props.Type, $Mode);
+                            $_cmdSpecific = @();
+                        }
+
+                        # Re-opening files in selected changelist.
+                        Write-Verbose ('VCS: {0}: Re-opening files in proper changelist (CL: {1}; mode: "{2}"; {3} items) in current directory (if possible): "{4}".' -f $_props.Type, $_props.Change, $Mode, $_relFiles.Count, $_currentDir);
+                        # Command (files in batches of around 7kB): p4 <opts> reopen -c <changelist> [-t <mode>] <files ...>
+                        $_relFileGroups | % {
+                            & $_props.Tool $_cmdAll 'reopen' '-c' $_props.Change $_cmdSpecific @($_.List) 2>&1 | % { if ($_ -is [System.Management.Automation.ErrorRecord]) { Write-Error -ErrorRecord $_; } else { Write-Verbose $_; } };
+                            if (!$? -or ($LASTEXITCODE -ne 0)) { $_success = $false; }
+                        };
+                    }
+                }
+        }
+
+        $_state.Add('ChmodStage') | Out-Null;
+        $VcsToken.Success    = $_success;
+        $VcsToken.Aborted    = $_aborted;
+        $VcsToken.State      = $_state;
+        $VcsToken.ToolParams = $_toolParams;
+        $VcsToken.Props      = $_props;
+
+        return $VcsToken;
+    }
+
+    # done
+    function _process-ChmodStaged
+    {
+        <#
+            .SYNOPSIS
+                Process text-like items by formatting them line by line.
+
+            .DESCRIPTION
+                Process selected source item (usually text file) and formats it line by line and reformats
+                them sligtly by:
+                 -- removing trailing white-spaces from each line (if needed)
+                 -- unifying/normalizing indent
+                 -- changing and unifying EOL characters
+
+                 UTF8 content is assumed. Written items are written using UTF8 encoding (BOM is not written).
+
+            .PARAMETER DstPath
+                Path to destination repository (usually Open Source repository). It should point to
+                repository root (container/directory path).
+
+                Wildcards are NOT allowed. Path must be valid, exist and point to directory (container) item.
+
+            .PARAMETER DstRelFiles
+                List of relative paths to files which mode (file attributes in VCS) will be modified.
+                Files will be staged to be able to change their mode.
+                
+                For some VCS (Git) only files which are effectively modified (content or attributes) will
+                be staged. For others (Perforce), all selected files will be added to specific change list. 
+
+                List can be empty. Paths are assumed to be relative to DstPath.
+
+            .PARAMETER Mode
+                File mode (attribute) to set.
+
+                Allowed values: '-x', '+x' (clear/set executive bit; for Perforce script ignores '-x').
+
+            .PARAMETER VcsType
+                Type of version control system used.
+
+                Allowed values: 'Git', 'Perforce'.
+
+            .PARAMETER VcsServer
+                URL/URI to server/port/entrypoint of version control system.
+
+                This parameter is only used by specific types of VCS and ignored by the rest.
+
+            .PARAMETER VcsCredential
+                Credentials for accessing server/port/entrypoint of version control system.
+
+                This parameter is only used by specific types of VCS and ignored by the rest.
+
+                When this parameter is specified and non-null, the -PromptVcsCredential is ignored.
+
+            .PARAMETER PromptVcsCredential
+                Prompts for credentials for accessing server/port/entrypoint of version
+                control system. Usually it is in the form of dialog with default user name for VCS
+                specified.
+
+                This parameter is only used by specific types of VCS and ignored by the rest.
+
+                When VcsCredential parameter is specified and non-null, current parameter is ignored.
+
+            .PARAMETER VcsWorkspace
+                Expected workspace in VCS. If it is specified, the destination location is
+                checked to see whether it is contained in specified workspace. If location
+                is outside workspace or workspace is absent in VCS, the confirmation dialog
+                will be shown (whether to continue).
+
+                This parameter is only used by specific types of VCS and ignored by the rest.
+
+            .PARAMETER VcsBranch
+                Expected branch/stream in VCS. If it is specified, the destination location is
+                checked to see whether it is switch to selected branch/stream. If location
+                is not set to use specified branch/stream or branch/stream is absent in VCS,
+                the confirmation dialog will be shown (whether to continue).
+
+                This parameter is only used by specific types of VCS and ignored by the rest.
+
+            .PARAMETER VcsChangelist
+                Changelist where to stage files in VCS.
+
+                If 'New' is selected, the new changelist will be created for staged files.
+                If 'Default' is selected, any files will be staged in default changelist.
+                If number is specified, the files will be staged on selected changelist.
+
+                Allowed values: 'New', 'Default', <any non-negative integral number>
+
+                This parameter is only used by specific types of VCS and ignored by the rest.
+
+            .PARAMETER Force
+                Force operation (even if the expected branch/stream does not match mapped branch/stream for
+                current directory).
+                
+            .PARAMETER Silent
+                Suppresses any confirmation. Implies -Force.
+        #>
+
+        [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Low')]
+        [OutputType([void])]
+        param(
+            [Parameter(Position = 0, Mandatory = $true)]
+            [Alias('DestPath', 'DestinationPath')]
+            [string] $DstPath,
+            [Parameter(Position = 1, Mandatory = $true,
+                       ValueFromPipeline = $true, ValueFromPipelineByPropertyName = $true)]
+            [Alias('RelFiles', 'Files')]
+            [AllowEmptyCollection()]
+            [string[]] $DstRelFiles,
+            [Parameter(Position = 2, Mandatory = $false,
+                       ValueFromPipelineByPropertyName = $true)]
+            [ValidatePattern('^[+-]x$', Options = 'None')]
+            [Alias('Chmod')]
+            [string] $Mode = '+x',
+
+            [Parameter(Position = 3, Mandatory = $false,
+                       ValueFromPipelineByPropertyName = $true)]
+            [ValidateSet('Git', 'Perforce')]
+            [Alias('Type', 'Vcs')]
+            [string] $VcsType = 'Git',
+
+            [Parameter(Mandatory = $false)]
+            [Alias('Server')]
+            [string] $VcsServer = '',
+            [Parameter(Mandatory = $false)]
+            [Alias('Credential')]
+            [System.Management.Automation.PSCredential] $VcsCredential = $null,
+            [Parameter(Mandatory = $false)]
+            [Alias('PromptCredential')]
+            [switch] $PromptVcsCredential,
+            [Parameter(Mandatory = $false)]
+            [Alias('Workspace')]
+            [string] $VcsWorkspace = '',
+            [Parameter(Mandatory = $false)]
+            [Alias('Branch', 'VcsStream', 'Stream')]
+            [string] $VcsBranch = '',
+            [Parameter(Mandatory = $false)]
+            [ValidatePattern('^(?:[0-9]+|Default|New)$')]
+            [Alias('Changelist', 'VcsChange', 'Change')]
+            [string] $VcsChangelist = 'New',
+
+            [Parameter(Mandatory = $false,
+                       ValueFromPipelineByPropertyName = $true)]
+            [switch] $Force,
+            [Parameter(Mandatory = $false,
+                       ValueFromPipelineByPropertyName = $true)]
+            [Alias('Quiet')]
+            [switch] $Silent
+        );
+        begin
+        {
+            $_tokens = @{}; # vcs tokens used by the pipeline.
+
+            [bool] $_locationPushed = $false;
+            Push-Location -LiteralPath $DstPath -ErrorAction Stop;
+            $_locationPushed = $?;
+        }
+        process
+        {
+            # Get existing token if possible.
+            $_token = $_tokens[$VcsType];
+
+            # If token is invalid or does not exist - create/re-create it.
+            if (($_token -eq $null) -or !$_token.Success)
+            {
+                $_token = _login-Vcs $VcsType -VcsServer $VcsServer -VcsCredential $VcsCredential -PromptVcsCredential:$PromptVcsCredential.IsPresent `
+                    -VcsWorkspace $VcsWorkspace -VcsBranch $VcsBranch -VcsChangelist $VcsChangelist;
+                $_token = _set-VcsWorkspace $_token -Force:$Force.IsPresent -Silent:$Silent.IsPresent;
+                $_token = _set-VcsBranch $_token -Force:$Force.IsPresent -Silent:$Silent.IsPresent;
+            }
+
+            # Change mode of VCS for selected files.
+            $_token = _chmod-VcsFiles $_token $DstRelFiles -Mode $Mode -Force:$Force.IsPresent -Silent:$Silent.IsPresent;
+
+            $_tokens[$VcsType] = $_token;
+        }
+        end
+        {
+            $_tokens = @{};
+            if ($_locationPushed) { Pop-Location; $_locationPushed = $false; }
+        }
+    }
 }
 process
 {
@@ -1361,6 +2725,7 @@ process
         $CfgPath = _get-ScriptConfigPath;
     }
 
+
     # Loading configuration.
     Write-Verbose ('Loading script configuration file: "{0}"' -f $CfgPath);
     [string] $_progActivity = 'Performing synchronization: "{0}" -> "{1}"' -f $SrcPath, $DstPath;
@@ -1372,19 +2737,20 @@ process
     Write-Progress -Activity $_progActivity -Status $_progStatus -PercentComplete $_progPercent;
     $_config = _load-ScriptConfig $CfgPath;
 
-    [int] $_entriesCount = 0;
-    $_configCopy            = @($_config.copy             | ? { $_ -ne $null }); $_entriesCount += $_configCopy.Count;
-    $_configUpdateVersion   = @($_config.update_version   | ? { $_ -ne $null }); $_entriesCount += $_configUpdateVersion.Count;
-    $_configProcessSections = @($_config.process_sections | ? { $_ -ne $null }); $_entriesCount += $_configProcessSections.Count;
-    $_configFormatFile      = @($_config.format_file      | ? { $_ -ne $null }); $_entriesCount += $_configFormatFile.Count;
-    $_configChmodStaged     = @($_config.chmod_staged     | ? { $_ -ne $null }); $_entriesCount += $_configChmodStaged.Count;
+    [int] $_entriesCount     = 0;
+    [int] $_postEntriesCount = 0;
+    $_configCopy            = @($_config.copy             | ? { $_ -ne $null }); $_entriesCount     += $_configCopy.Count;
+    $_configUpdateVersion   = @($_config.update_version   | ? { $_ -ne $null }); $_entriesCount     += $_configUpdateVersion.Count;
+    $_configProcessSections = @($_config.process_sections | ? { $_ -ne $null }); $_entriesCount     += $_configProcessSections.Count;
+    $_configFormatFile      = @($_config.format_file      | ? { $_ -ne $null }); $_entriesCount     += $_configFormatFile.Count;
+    $_configChmodStaged     = @($_config.chmod_staged     | ? { $_ -ne $null }); $_postEntriesCount += $_configChmodStaged.Count;
 
 
     # Preparing items for "copy" action(s).
     Write-Verbose ('Performing "copy" actions (gathering items to copy/remove): "{0}"' -f $CfgPath);
     $_progStatus   = 'Performing "copy" actions (gathering items to copy/remove)';
     $_progPercent  += $_progDelta;
-    $_progDelta    = 45;
+    $_progDelta    = 40;
     $_progItemsCP  = $_progPercent;
     $_progItemsCPD = $_progDelta / [Math]::Max($_entriesCount, 1);
     Write-Progress -Activity $_progActivity -Status $_progStatus -PercentComplete $_progPercent;
@@ -1527,8 +2893,8 @@ process
                     ++$_entryItemIdx;
 
                     $_updateVersionAction = $_ |
-                        Add-Member 'Position'$_position -PassThru |
-                        Add-Member 'Step'    $_step     -PassThru;
+                        Add-Member 'Position' $_position -PassThru |
+                        Add-Member 'Step'     $_step     -PassThru;
 
                     Write-Verbose ("Performing `"update_version`" action:`n{0}" -f (($_updateVersionAction | fl * | Out-String -Stream | ? { $_ -notmatch '^\s*$' } | % { ' -- {0}' -f $_ }) -join "`n"));
                     $_progOperation = '"update_version" entry ({0}/{1}), item ({2}/{3})' -f $_entryCategoryIndex, $_configUpdateVersion.Count, $_entryItemIdx, $_allSrcDstPairs.Count;
@@ -1645,12 +3011,12 @@ process
                     ++$_entryItemIdx;
 
                     $_processSectionsAction = $_ |
-                        Add-Member 'ExcludeSections'$_excludeSections -PassThru |
-                        Add-Member 'CommentType'    $_type            -PassThru |
-                        Add-Member 'ProcessKey'     $_key             -PassThru |
-                        Add-Member 'TabSize'        $_tabSize         -PassThru |
-                        Add-Member 'UseTab'         $_useTabs         -PassThru |
-                        Add-Member 'EolConvention'  $_eol             -PassThru;
+                        Add-Member 'ExcludeSections' $_excludeSections -PassThru |
+                        Add-Member 'CommentType'     $_type            -PassThru |
+                        Add-Member 'ProcessKey'      $_key             -PassThru |
+                        Add-Member 'TabSize'         $_tabSize         -PassThru |
+                        Add-Member 'UseTab'          $_useTabs         -PassThru |
+                        Add-Member 'EolConvention'   $_eol             -PassThru;
 
                     Write-Verbose ("Performing `"process_sections`" action:`n{0}" -f (($_processSectionsAction | fl * | Out-String -Stream | ? { $_ -notmatch '^\s*$' } | % { ' -- {0}' -f $_ }) -join "`n"));
                     $_progOperation = '"process_sections" entry ({0}/{1}), item ({2}/{3})' -f $_entryCategoryIndex, $_configProcessSections.Count, $_entryItemIdx, $_allSrcDstPairs.Count;
@@ -1662,6 +3028,126 @@ process
                     Write-Progress -Activity $_progActivity -Status $_progStatus -CurrentOperation $_progOperation -PercentComplete $_progItemsCP;
             };
         } | _process-SectionsItem -Force:$Force.IsPresent -Silent:$Silent.IsPresent;
+
+
+    # Preparing items for "format_file" action(s).
+    Write-Verbose ('Performing "format_file" actions (formatting textual content of items): "{0}"' -f $CfgPath);
+    $_progStatus   = 'Performing "format_file" actions (formatting textual content of items)';
+    $_progItemsCPD = $_progDelta / [Math]::Max($_entriesCount, 1);
+    Write-Progress -Activity $_progActivity -Status $_progStatus -PercentComplete $_progItemsCP;
+    $_entryCategoryIndex = 0;
+    $_configFormatFile | % {
+            ++$_entryCategoryIndex;
+
+            $_file            = @($_.file             | ? { ![string]::IsNullOrEmpty($_) } | _convert-AntLikeWildcard | % { New-Object regex $_, 'IgnoreCase, Compiled' });
+            $_type            = @($_.type             | ? { $_ -in @('CMake', 'Cxx') });
+            $_trim            = @($_.trim             | ? { $_ -is [bool] });
+            $_normalizeIndent = @($_.normalize_indent | ? { $_ -in @('AlignedSpaces', 'AlignedTabs', 'Spaces', 'Tabs', 'Preserve') });
+            $_tabSize         = @($_.tab_size         | ? { ($_ -is [int]) -and ($_ -gt 0) });
+            $_eol             = @($_.eol              | ? { $_ -in @('Unix', 'Windows', 'Mac') });
+
+            if ($_type.Count -le 0)
+            { 
+                $_type = 'Cxx';
+                Write-Warning ('Specified type of formatted files is invalid in "format_file" entry (#{1}). It will be set to: "{0}"' -f $_type, $_entryCategoryIndex);
+            }
+            else
+            {
+                if ($_type.Count -gt 1) { Write-Warning ('Multiple types specified in single "format_file" entry (#{1}). Only first will be used: "{0}"' -f $_type[0], $_entryCategoryIndex); }
+                $_type = $_type[0];
+            }
+
+            if ($_trim.Count -le 0)
+            { 
+                $_trim = $true;
+                Write-Warning ('Specified line-end white-space trim indicator is invalid in "format_file" entry (#{1}). It will be set to: {0}' -f $_trim, $_entryCategoryIndex);
+            }
+            else
+            {
+                if ($_trim.Count -gt 1) { Write-Warning ('Multiple line-end whitespace trim options specified in single "format_file" entry (#{1}). Only first will be used: {0}' -f $_trim[0], $_entryCategoryIndex); }
+                $_trim = $_trim[0];
+            }
+
+            if ($_normalizeIndent.Count -le 0)
+            { 
+                $_normalizeIndent = 'Spaces';
+                Write-Warning ('Specified mode of indent normalization is invalid in "format_file" entry (#{1}). It will be set to: "{0}"' -f $_normalizeIndent, $_entryCategoryIndex);
+            }
+            else
+            {
+                if ($_normalizeIndent.Count -gt 1) { Write-Warning ('Multiple modes of indent normalization in single "format_file" entry (#{1}). Only first will be used: "{0}"' -f $_normalizeIndent[0], $_entryCategoryIndex); }
+                $_normalizeIndent = $_normalizeIndent[0];
+            }
+
+            if ($_tabSize.Count -le 0)
+            { 
+                $_tabSize = 4;
+                Write-Warning ('Specified tabulation size (in spaces) is invalid in "format_file" entry (#{1}). It will be set to: {0}' -f $_tabSize, $_entryCategoryIndex);
+            }
+            else
+            {
+                if ($_tabSize.Count -gt 1) { Write-Warning ('Multiple tab sizes specified in single "format_file" entry (#{1}). Only first will be used: {0}' -f $_tabSize[0], $_entryCategoryIndex); }
+                $_tabSize = $_tabSize[0];
+            }
+
+            if ($_eol.Count -le 0)
+            { 
+                $_eol = 'Unix';
+                Write-Warning ('Specified end-of-line convention is invalid in "format_file" entry (#{1}). It will be set to: "{0}"' -f $_eol, $_entryCategoryIndex);
+            }
+            else
+            {
+                if ($_eol.Count -gt 1) { Write-Warning ('Multiple EOL conventions in single "format_file" entry (#{1}). Only first will be used: "{0}"' -f $_eol[0], $_entryCategoryIndex); }
+                $_eol = $_eol[0];
+            }
+
+            $_allSrcDstPairs = @($_allSyncItems |
+                    ? { !$_.PSIsContainer } |
+                    ? { ($_.SyncWosMode -notlike 'Remove*') -and (($_.SyncWosMode -ne 'Processed') -or !$_.SyncWosTasks.Contains('FormatFile')) } |
+                    ? { $_item = $_; ($_file.Count -gt 0) -and (@($_file | ? { $_.IsMatch($_item.SyncWosRootRelPath) }).Count -gt 0) } |
+                    % {
+                        # For processed files we need to work on file on destination.
+                        if ($_.SyncWosMode -eq 'Processed') { $_srcPath = Join-Path $DstPath $_.SyncWosDstRootRelPath; } else { $_srcPath = Join-Path $SrcPath $_.SyncWosRootRelPath; }
+                        $_dstPath = Join-Path $DstPath $_.SyncWosDstRootRelPath;
+
+                        # Prevent to process twice by the same task.
+                        $_.SyncWosMode = 'Processed';
+                        $_.SyncWosTasks.Add('FormatFile') | Out-Null;
+
+                        Write-Output (New-Object PSObject |
+                            Add-Member 'SrcPath' $_srcPath -PassThru |
+                            Add-Member 'DstPath' $_dstPath -PassThru);
+                    } | Sort-Object -Property SrcPath, DstPath -Unique | Group-Object -Property SrcPath | % { $_item = $_.Group[0]; $_item.DstPath = @($_.Group.DstPath); return $_item; });
+
+            if ($_allSrcDstPairs.Count -le 0)
+            {
+                Write-Warning ('Could not find any files to format in "format_file" entry (#{0}).' -f $_entryCategoryIndex);
+                $_progItemsCP += $_progItemsCPD;
+                return;
+            }
+
+            $_progItemsCPD /= $_allSrcDstPairs.Count;
+            $_entryItemIdx = 0;
+            $_allSrcDstPairs | % {
+                    ++$_entryItemIdx;
+
+                    $_formatFileAction = $_ |
+                        Add-Member 'ItemType'        $_type            -PassThru |
+                        Add-Member 'TrimWhitespace'  $_trim            -PassThru |
+                        Add-Member 'NormalizeIndent' $_normalizeIndent -PassThru |
+                        Add-Member 'TabSize'         $_tabSize         -PassThru |
+                        Add-Member 'EolConvention'   $_eol             -PassThru;
+
+                    Write-Verbose ("Performing `"format_file`" action:`n{0}" -f (($_formatFileAction | fl * | Out-String -Stream | ? { $_ -notmatch '^\s*$' } | % { ' -- {0}' -f $_ }) -join "`n"));
+                    $_progOperation = '"format_file" entry ({0}/{1}), item ({2}/{3})' -f $_entryCategoryIndex, $_configFormatFile.Count, $_entryItemIdx, $_allSrcDstPairs.Count;
+                    Write-Progress -Activity $_progActivity -Status $_progStatus -CurrentOperation $_progOperation -PercentComplete $_progItemsCP;
+
+                    Write-Output $_formatFileAction;
+
+                    $_progItemsCP += $_progItemsCPD;
+                    Write-Progress -Activity $_progActivity -Status $_progStatus -CurrentOperation $_progOperation -PercentComplete $_progItemsCP;
+            };
+        } | _process-FormatItem -Force:$Force.IsPresent -Silent:$Silent.IsPresent;
 
 
     # Expected modes:
@@ -1754,10 +3240,10 @@ process
     $_allLeafRemoveItems = @($_allLeafSyncItems | ? { $_.SyncWosMode -like 'Remove*' }); 
 
     Write-Verbose ('Performing "copy" actions (executing copy/remove - removing items ({1} items)): "{0}"' -f $CfgPath, $_allLeafRemoveItems.Count);
-    $_progStatus  = 'Performing "copy" actions (executing copy/remove - removing items)';
+    $_progStatus   = 'Performing "copy" actions (executing copy/remove - removing items)';
     $_progPercent += $_progDelta;
-    $_progDelta   = 10;
-    $_progItemsCP = $_progPercent;
+    $_progDelta    = 10;
+    $_progItemsCP  = $_progPercent;
     $_progItemsCPD = $_progDelta / [Math]::Max($_allLeafRemoveItems.Count, 1);
     Write-Progress -Activity $_progActivity -Status $_progStatus -PercentComplete $_progPercent;
     $_entryItemIdx = 0;
@@ -1810,6 +3296,92 @@ process
             Write-Progress -Activity $_progActivity -Status $_progStatus -CurrentOperation $_progOperation -PercentComplete $_progItemsCP;
         }
     }
+
+
+    # Preparing items for "chmod_staged" action(s).
+    Write-Verbose ('Performing "chmod_staged" actions (changing mode/attributes of files in VCS): "{0}"' -f $CfgPath);
+    $_progStatus   = 'Performing "chmod_staged" actions (changing mode/attributes of files in VCS)';
+    $_progPercent += $_progDelta;
+    $_progDelta    = 5;
+    $_progItemsCP  = $_progPercent;
+    $_progItemsCPD = $_progDelta / [Math]::Max($_postEntriesCount, 1);
+    Write-Progress -Activity $_progActivity -Status $_progStatus -PercentComplete $_progItemsCP;
+    $_entryCategoryIndex = 0;
+    $_configChmodStaged | % {
+            ++$_entryCategoryIndex;
+
+            $_file = @($_.file | ? { ![string]::IsNullOrEmpty($_) } | _convert-AntLikeWildcard | % { New-Object regex $_, 'IgnoreCase, Compiled' });
+            $_mode = @($_.mode | ? { $_ -cmatch '^[+-]x$' });
+            $_vcs  = @($_.vcs  | ? { $_ -in @('Git', 'Perforce') });
+
+            if ($_mode.Count -le 0)
+            { 
+                $_mode = '+x';
+                Write-Warning ('Specified VCS element mode/attribute is invalid in "chmod_staged" entry (#{1}). It will be set to: "{0}"' -f $_mode, $_entryCategoryIndex);
+            }
+            else
+            {
+                if ($_mode.Count -gt 1) { Write-Warning ('Multiple VCS modes/attributes specified in single "chmod_staged" entry (#{1}). Only first will be used: "{0}"' -f $_mode[0], $_entryCategoryIndex); }
+                $_mode = $_mode[0];
+            }
+
+
+            if ($_vcs.Count -le 0)
+            { 
+                $_vcs = 'Git';
+                Write-Warning ('Specified type of version control system is invalid in "chmod_staged" entry (#{1}). It will be set to: "{0}"' -f $_vcs, $_entryCategoryIndex);
+            }
+            else
+            {
+                if ($_vcs.Count -gt 1) { Write-Warning ('Multiple types of version control system specified in single "chmod_staged" entry (#{1}). Only first will be used: "{0}"' -f $_vcs[0], $_entryCategoryIndex); }
+                $_vcs = $_vcs[0];
+            }
+
+            $_allDstRelFiles = @($_allSyncItems |
+                    ? { !$_.PSIsContainer } |
+                    ? { $_.SyncWosMode -notlike 'Remove*' } |
+                    ? { $_item = $_; ($_file.Count -gt 0) -and (@($_file | ? { $_.IsMatch($_item.SyncWosRootRelPath) }).Count -gt 0) } |
+                    % {
+                        # For post-synch actions we always work on file(s) in destination.
+                        $_dstRelFile = $_.SyncWosDstRootRelPath;
+
+                        # Mark as processed by the task (but allow to process multiple times for "chmod_staged").
+                        $_.SyncWosMode = 'Processed';
+                        $_.SyncWosTasks.Add(('ChmodStaged:{0}:{1}' -f $_vcs, $_entryCategoryIndex)) | Out-Null;
+
+                        Write-Output $_dstRelFile;
+                    } | Sort-Object -Unique);
+
+            if ($_allDstRelFiles.Count -le 0)
+            {
+                Write-Warning ('Could not find any files to change mode in VCS in "chmod_staged" entry (#{0}).' -f $_entryCategoryIndex);
+                $_progItemsCP += $_progItemsCPD;
+                return;
+            }
+
+            $_allDstItems = @(New-Object PSObject | Add-Member 'DstRelFiles' $_allDstRelFiles -PassThru);
+
+            $_progItemsCPD /= $_allDstItems.Count;
+            $_entryItemIdx = 0;
+            $_allDstItems | % {
+                    ++$_entryItemIdx;
+
+                    $_chmodStagedAction = $_ |
+                        Add-Member 'Mode'    $_mode -PassThru |
+                        Add-Member 'VcsType' $_vcs  -PassThru;
+
+                    Write-Verbose ("Performing `"chmod_staged`" action:`n{0}" -f (($_chmodStagedAction | fl * | Out-String -Stream | ? { $_ -notmatch '^\s*$' } | % { ' -- {0}' -f $_ }) -join "`n"));
+                    $_progOperation = '"chmod_staged" entry ({0}/{1}), item ({2}/{3})' -f $_entryCategoryIndex, $_configChmodStaged.Count, $_entryItemIdx, $_allDstItems.Count;
+                    Write-Progress -Activity $_progActivity -Status $_progStatus -CurrentOperation $_progOperation -PercentComplete $_progItemsCP;
+
+                    Write-Output $_chmodStagedAction;
+
+                    $_progItemsCP += $_progItemsCPD;
+                    Write-Progress -Activity $_progActivity -Status $_progStatus -CurrentOperation $_progOperation -PercentComplete $_progItemsCP;
+            };
+        } | _process-ChmodStaged -DstPath $DstPath -VcsServer $VcsServer -VcsCredential $VcsCredential -PromptVcsCredential:$PromptVcsCredential.IsPresent `
+                    -VcsWorkspace $VcsWorkspace -VcsBranch $VcsBranch -VcsChangelist $VcsChangelist -Force:$Force.IsPresent -Silent:$Silent.IsPresent;
+
 
     # Finish.
     Write-Verbose ('Finishing: "{0}"' -f $CfgPath);
@@ -1878,5 +3450,16 @@ process
     #$_testVOutFile = $_testVFile + '.out.txt';
     #_process-VersionItem $_testVFile $_testVOutFile, $_testVFile -Step 1001 -Position Minor -Force -WhatIf;
     #help _process-VersionItem -Full;
+
+    #_extract-UserName 'GER\test1';
+    #_extract-UserName '\test.2';
+    #_extract-UserName 'test.3';
+    #_extract-UserName 'test.4@ger.corp.intel.com';
+    #_extract-UserName 'test.5@';
+    #help _extract-UserName -Full;
+    #_get-VcsDefaultUser;
+    #_get-VcsDefaultUser -VcsType Git;
+    #_get-VcsDefaultUser -VcsType Perforce;
+    #help _get-VcsDefaultUser -Full;
 }
 end {}
