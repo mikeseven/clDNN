@@ -34,7 +34,7 @@
     ],
     "projects": [
         {
-            "name": "VPG Solutions",
+            "name": "clDNN",
             "architecture": "x64",
             "views": [
                 {
