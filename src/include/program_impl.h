@@ -44,6 +44,8 @@ struct program_impl : public refcounted_obj<program_impl>
 public:
     program_impl(engine_impl& engine_ref, topology_impl const& topology, build_options const& options);
 
+    void dump_memory_pool() const;
+
     auto& get_engine() const { return *engine; }
     auto get_options() const { return options; }
     bool is_debug_build() const { return options.get<build_option_type::debug>()->enabled(); }
@@ -133,6 +135,15 @@ private:
     void prepare_buffer_fusing();
     void prepare_primitive_fusing();
     void prepare_depthwise_sep_opt();
+
+    /*
+    ** Memory pool functions
+    */
+    void prepare_memory_dependencies();
+    void basic_memory_dependencies();
+    void skipped_branch_memory_dependencies();
+    void oooq_memory_dependencies();
+    std::string get_memory_dependecies_string() const;
 
     /*
     ** Utilities

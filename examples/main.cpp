@@ -220,6 +220,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "2 = print topology primtives descritpion, print wrong/correct classification - used for broad correctness testing.")
         ("optimize_weights", bpo::bool_switch(),
             "Performs weights convertion to most desirable format for each network layer while building network.")
+        ("memory_opt_disable", bpo::bool_switch(),
+            "Disables memory reuse within primitves.")
         ("perf_per_watt", bpo::bool_switch(),
             "Triggers power consumption measuring and outputing frames per second per watt.")
         ("version", "Show version of the application.")
@@ -452,6 +454,7 @@ int main(int argc, char* argv[])
         ep.dump_sources = parsed_args["dump_sources"].as<bool>();
         ep.perf_per_watt = parsed_args["perf_per_watt"].as<bool>();
         ep.loop = parsed_args["loop"].as<std::uint32_t>();
+        ep.disable_mem_pool = parsed_args["memory_opt_disable"].as<bool>();
 
         std::uint32_t print = parsed_args["print_type"].as<std::uint32_t>();
         ep.print_type = (PrintType)((print >= (std::uint32_t)PrintType::PrintType_count) ? 0 : print);

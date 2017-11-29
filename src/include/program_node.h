@@ -15,6 +15,8 @@
 */
 #pragma once
 
+#include <set>
+
 #include "api/CPP/primitive.hpp"
 #include "internal_primitive.h"
 
@@ -84,6 +86,10 @@ public:
 
     void remove_dependency(size_t idx);
     void remove_dependency(program_node& node);
+
+    std::set<primitive_id> get_memory_dependencies() const;
+    void add_memory_dependency(primitive_id);
+    void add_memory_dependency(std::vector<primitive_id>);
 
     bool is_detached(bool whole_branch = false);
 
@@ -227,6 +233,15 @@ public:
         return as<To>();
     }
 
+    void set_reused_memory_color(uint32_t color) const
+    {
+        has_reused_memory = true;
+        reused_memory_color = color;
+    }
+
+    bool is_reusing_memory() { return has_reused_memory; };
+    uint32_t get_reused_memory_color() { return reused_memory_color; ; }
+
 protected:
     std::shared_ptr<primitive> desc;
     program_impl& myprog;
@@ -242,6 +257,9 @@ protected:
     std::list<program_node*>::const_iterator processing_itr;
     uint32_t processing_num = 0;
 
+    // list of primitives that can reuse same memory buffers due to execution order conflicts
+    std::set<primitive_id> memory_dependencies;  
+
     program_node* dominator = nullptr;
     program_node* joint = nullptr;
     bool constant = false;
@@ -254,6 +272,9 @@ protected:
     uint8_t user_mark = 0;
 
     bool optimized = false;
+
+    mutable bool has_reused_memory = false;
+    mutable uint32_t reused_memory_color = 0;
 
     primitive_id org_id = "";
 

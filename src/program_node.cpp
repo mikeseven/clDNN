@@ -70,6 +70,21 @@ void program_node::remove_dependency(size_t idx)
     dependencies.erase(dependencies.begin() + idx);
 }
 
+std::set<primitive_id> program_node::get_memory_dependencies() const
+{
+    return memory_dependencies;
+}
+
+void program_node::add_memory_dependency(primitive_id prim)
+{
+    memory_dependencies.insert(prim);
+}
+
+void program_node::add_memory_dependency(std::vector<primitive_id> prim_list)
+{
+    memory_dependencies.insert(prim_list.begin(),prim_list.end());
+}
+
 json_composite program_node::desc_to_json() const
 {
     json_composite node_info;

@@ -455,6 +455,7 @@ void program_impl::post_optimize_graph()
     post_optimize_weights(lo); dump_program("9_reordered_weights", true);
     remove_redundant_reorders(); dump_program("10_removed_redundant_reorders", true); //TODO: do we need it at this place also?
     propagate_constants(); dump_program("11_propagated_constants", true);
+    prepare_memory_dependencies();
 }
 
 void program_impl::cleanup()
@@ -1058,6 +1059,144 @@ void program_impl::trim_to_outputs()
         optimized_out.push_back(node->id());
         nodes_map.erase(node->id());
     }
+}
+
+void program_impl::basic_memory_dependencies()
+{
+    auto itr = processing_order.begin();
+    std::vector<primitive_id> past_outputs;
+    while (itr != processing_order.end())
+    {
+        auto& node = *itr;
+        itr++;
+
+        //data primitive can't be reused
+        if (node->is_type<data>())
+            continue;
+
+        // add my dependencies to restriction list (can share input.output buffers)
+        if (node->get_dependencies().size())
+        {
+            for (auto it = node->get_dependencies().begin(); it != node->get_dependencies().end(); it++)
+            {
+                node->add_memory_dependency((*it)->id());
+            }
+        }
+
+        // Note we iterate over processing order, it means if primitve has processing num greater than any of outputs, this output
+        // has to land on the primitve restriction list. Otherwise memory reuse can corrupt final results.
+        node->add_memory_dependency(past_outputs);
+        // if current node is an output add it to the outputs list after restriction.
+        if (node->is_output())
+            past_outputs.push_back(node->id());
+    }
+}
+
+void program_impl::skipped_branch_memory_dependencies()
+{
+    auto itr = processing_order.begin();
+    // Primitive A can't use primitive B buffer if B->processing_num < A->processing_num and any of B users processing_num > A->processing_num
+    // Otherwise it could override data that has to be used in the future. 
+    while (itr != processing_order.end())
+    {
+        auto& node = *itr;
+        itr++;
+        auto itr2 = processing_order.begin();
+        if (itr2 == itr)
+            continue;
+        while (itr2 != processing_order.end())
+        {
+            auto& node2 = *itr2;
+            itr2++;
+            if (node2->get_processing_num() < node->get_processing_num())
+            {
+                bool has_conflict = false;
+                // if at least one user will be processed after 'node', node2 has to be added to forbiden list
+                for (auto usr = node2->get_dependencies().begin();
+                    usr != node2->get_dependencies().end() && !has_conflict; usr++)
+                {
+                    if ((*usr)->get_processing_num() > node->get_processing_num())
+                    {
+                        has_conflict = true;
+                        node->add_memory_dependency(node2->id());
+                    }
+                }
+            }
+        }
+    }
+}
+
+void program_impl::oooq_memory_dependencies()
+{
+    auto itr = processing_order.begin();
+    // in oooq execution parallel execution provides risk of conflit.To avoid conflicts we depend on reorder_nodes_for_parallel_execution()
+    // call in graph pre optimization that changes execution order to BFS. This order let us build dependencies based on syncing points. 
+    // Set of nodes between two syncing points will be called sync_region.
+    // Major rules is: can't share resource with nodes in my sync_region
+    if (get_engine().configuration().enable_parallelisation)
+    {
+        uint32_t last_barrier = 0;
+        bool needs_barrier = false;
+        std::vector<cldnn::program_node*> sync_region;
+        while (itr != processing_order.end())
+        {
+            auto& node = *itr;
+            itr++;
+
+            // if any of dep has proccess num after barrier -> needs barrier
+            for (auto dep : node->get_dependencies())
+            {
+                if (dep->get_processing_num() >= last_barrier)
+                {
+                    needs_barrier = true;
+                    break;
+                }
+            }
+
+            if (needs_barrier)
+            {
+                last_barrier = node->get_processing_num();
+                needs_barrier = false;
+                // add each pair bi-direction dependency
+                for (auto nd1 = sync_region.begin(); nd1 + 1 != sync_region.end(); nd1++)
+                {
+                    for (auto nd2 = nd1 + 1; nd2 != sync_region.end(); nd2++)
+                    { 
+                        (*nd1)->add_memory_dependency((*nd2)->id());
+                        (*nd2)->add_memory_dependency((*nd1)->id());
+                    }
+                }
+                sync_region.clear();
+            }
+            sync_region.push_back(node);
+        }
+    }
+}
+
+void program_impl::prepare_memory_dependencies()
+{
+    if (!get_engine().configuration().enable_memory_pool)
+        return;
+    
+    basic_memory_dependencies();
+    skipped_branch_memory_dependencies();
+    oooq_memory_dependencies();
+}
+
+std::string program_impl::get_memory_dependecies_string() const
+{
+    std::string mem_dep = "Memory dependencies/restrictions:\n";
+    auto itr = processing_order.begin();
+    while (itr != processing_order.end())
+    {
+        auto& node = *itr;
+        itr++;
+        mem_dep = mem_dep.append("primitive: ").append(node->id()).append(" restricted list: ");
+        for (auto it : node->get_memory_dependencies())
+            mem_dep == mem_dep.append( it ).append(", ");
+        mem_dep = mem_dep.append("\n");
+    }
+    return mem_dep;
 }
 
 void program_impl::remove_redundant_reorders()
@@ -2359,6 +2498,26 @@ void program_impl::backward_bfs(std::function<void(program_node&)> const& mark_f
             unmark_func(*node.second);
         node.second->unmark();
     }
+}
+
+void program_impl::dump_memory_pool() const
+{
+    if (!get_engine().configuration().enable_memory_pool)
+        return;
+    auto path = get_dir_path(options);
+    if (path.empty())
+    {
+        return;
+    }
+    if (path.back() != '/' && path.back() != '\\')
+    {
+        path += "/";
+    }
+
+    path += "cldnn_memory_pool.log";
+    auto dep = get_memory_dependecies_string();
+    get_engine().dump_memory_pool(*this, path, dep);
+    dump_program("13_memory_pool", true);
 }
 
 //TODO: break this function into number of smaller ones + add per-primitive fields (possibly use primitive_inst::to_string?)

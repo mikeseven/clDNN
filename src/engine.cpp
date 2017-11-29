@@ -44,41 +44,19 @@ gpu_toolkit_config convert_configuration(const engine_configuration conf)
 engine_impl::engine_impl(const engine_configuration& conf)
     : _configuration(conf)
     , _context(gpu_toolkit::create(convert_configuration(conf)))
-    ,_global_memory_used(0)
-{}
+    , _memory_pool(*this)
+{ }
 
 memory_impl::ptr engine_impl::allocate_memory(layout layout)
 {
-    if (layout.bytes_count() > _context->get_engine_info().max_alloc_mem_size)
-    {
-        throw error("exceeded max size of memory object allocation", CLDNN_ALLOC_SIZE_EXCEEDED);
-    }
+    return _memory_pool.get_memory(layout);
+}
 
-    _global_memory_used += layout.bytes_count();
-    if (_global_memory_used > _context->get_engine_info().max_global_mem_size)
-    {
-        throw error("exceeded global device memory", CLDNN_GLOBAL_SIZE_EXCEEDED);
-    }
-
-    try {
-        if(layout.format.is_image_2d())
-            return{ new gpu::gpu_image2d(this, layout), false };
-        else
-            return{ new gpu::gpu_buffer(this, layout), false };
-    }
-    catch (const cl::Error& clErr)
-    {
-        switch (clErr.err())
-        {
-        case CL_MEM_OBJECT_ALLOCATION_FAILURE:
-        case CL_OUT_OF_RESOURCES:
-        case CL_OUT_OF_HOST_MEMORY:
-        case CL_INVALID_BUFFER_SIZE:
-            throw error("out of GPU resources", CLDNN_OUT_OF_RESOURCES);
-        default:
-            throw error("GPU buffer allocation failed", CLDNN_ERROR);
-        }
-    }
+memory_impl::ptr engine_impl::allocate_memory(layout layout, primitive_id id, std::set<primitive_id> dependencies, bool reusable)
+{
+    if (configuration().enable_memory_pool)
+        return _memory_pool.get_memory(layout, id, dependencies, reusable);
+    return _memory_pool.get_memory(layout);
 }
 
 memory_impl::ptr engine_impl::reinterpret_buffer(const memory_impl& memory, layout new_layout)

@@ -17,15 +17,16 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "api/CPP/memory.hpp"
-
 #include "api_impl.h"
 #include "event_impl.h"
 #include "refcounted_obj.h"
 #include "implementation_map.h"
+#include "memory_pool.h"
 
 #include "gpu/engine_info.h"
 
 #include <memory>
+#include <set>
 
 namespace cldnn {
 namespace gpu { 
@@ -52,6 +53,7 @@ public:
     engine_types type() const { return engine_types::ocl; }
 
     refcounted_obj_ptr<memory_impl> allocate_memory(layout layout);
+    refcounted_obj_ptr<memory_impl> allocate_memory(layout layout, primitive_id, std::set<primitive_id> ,bool reusable = true);
     refcounted_obj_ptr<memory_impl> reinterpret_buffer(const memory_impl& memory, layout new_layout);
     bool is_the_same_buffer(const memory_impl& mem1, const memory_impl& mem2);
 
@@ -79,10 +81,14 @@ public:
     std::shared_ptr<gpu_toolkit> get_context() const { return _context; }
     gpu::engine_info_internal get_engine_info() const;
 
+    uint64_t get_total_device_memory() const { return _memory_pool.get_total_device_memory_used(); }
+    
+    void dump_memory_pool(const program_impl& program, std::string path, std::string dependencies) { _memory_pool.dump_memory_pool(program, path, dependencies); }
+
 private:
     engine_configuration _configuration;
     std::shared_ptr<gpu_toolkit> _context;
-    uint64_t _global_memory_used;
+	memory_pool _memory_pool;
 };
 }
 

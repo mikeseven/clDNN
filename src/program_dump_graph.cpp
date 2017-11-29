@@ -19,11 +19,161 @@
 #include "program_dump_graph.h"
 #include "to_string_utils.h"
 #include <algorithm>
+#include <vector>
 
 namespace cldnn
 {
-namespace
-{
+    namespace
+    {
+        static const std::vector<std::string> colors =
+        {
+            "chartreuse",
+            "aquamarine",
+            "gold",
+            "green",
+            "blue",
+            "cyan",
+            "azure",
+            "beige",
+            "bisque",
+            "blanchedalmond",
+            "blueviolet",
+            "brown",
+            "burlywood",
+            "cadetblue",
+            "chocolate",
+            "coral",
+            "cornflowerblue",
+            "cornsilk",
+            "crimson",
+            "aliceblue",
+            "antiquewhite",
+            "deeppink",
+            "deepskyblue",
+            "dimgray",
+            "dimgrey",
+            "dodgerblue",
+            "firebrick",
+            "floralwhite",
+            "forestgreen",
+            "fuchsia",
+            "gainsboro",
+            "ghostwhite",
+            "goldenrod",
+            "gray",
+            "greenyellow",
+            "honeydew",
+            "hotpink",
+            "indianred",
+            "indigo",
+            "ivory",
+            "khaki",
+            "lavender",
+            "lavenderblush",
+            "lawngreen",
+            "lemonchiffon",
+            "lightblue",
+            "lightcoral",
+            "lightcyan",
+            "lightgoldenrodyellow",
+            "lightgray",
+            "lightgreen",
+            "lightgrey",
+            "lightpink",
+            "lightsalmon",
+            "lightseagreen",
+            "lightskyblue",
+            "lightslategray",
+            "lightslategrey",
+            "lightsteelblue",
+            "lightyellow",
+            "lime",
+            "limegreen",
+            "linen",
+            "magenta",
+            "maroon",
+            "mediumaquamarine",
+            "mediumblue",
+            "mediumorchid",
+            "mediumpurple",
+            "mediumseagreen",
+            "mediumslateblue",
+            "mediumspringgreen",
+            "mediumturquoise",
+            "mediumvioletred",
+            "midnightblue",
+            "mintcream",
+            "mistyrose",
+            "moccasin",
+            "navajowhite",
+            "navy",
+            "oldlace",
+            "olive",
+            "olivedrab",
+            "orange",
+            "orangered",
+            "orchid",
+            "palegoldenrod",
+            "palegreen",
+            "paleturquoise",
+            "palevioletred",
+            "papayawhip",
+            "peachpuff",
+            "peru",
+            "pink",
+            "plum",
+            "powderblue",
+            "purple",
+            "red",
+            "rosybrown",
+            "royalblue",
+            "saddlebrown",
+            "salmon",
+            "sandybrown",
+            "seagreen",
+            "seashell",
+            "sienna",
+            "silver",
+            "skyblue",
+            "slateblue",
+            "slategray",
+            "slategrey",
+            "snow",
+            "springgreen",
+            "steelblue",
+            "tan",
+            "teal",
+            "thistle",
+            "tomato",
+            "turquoise",
+            "violet",
+            "wheat",
+            "white",
+            "whitesmoke",
+            "yellow",
+            "yellowgreen",
+            "darkblue",
+            "darkcyan",
+            "darkgoldenrod",
+            "darkgray",
+            "darkgreen",
+            "darkgrey",
+            "darkkhaki",
+            "darkmagenta",
+            "darkolivegreen",
+            "darkorange",
+            "darkorchid",
+            "darkred",
+            "darksalmon",
+            "darkseagreen",
+            "darkslateblue",
+            "darkslategray",
+            "darkslategrey",
+            "darkturquoise",
+            "darkviolet",
+        };
+
+
     void close_stream(std::ofstream& graph)
     {
         graph.close();
@@ -96,7 +246,8 @@ namespace
                 #pragma clang diagnostic push
                 #pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
             #endif
-            graph << "    " << get_node_id(node.get()) << "[label=\"" << node->id() << ":\\n" << get_extr_type(typeid(*node).name()) << "\n out format: " + extr_oformat(node.get()) << (node->can_be_optimized() ? "\\n optimized out" : "") << "\"";
+            graph << "    " << get_node_id(node.get()) << "[label=\"" << node->id() << ":\n" << get_extr_type(typeid(*node).name()) << "\n out format: " + extr_oformat(node.get())
+                << "\\nprocessing number: "<< node->get_processing_num() << (node->can_be_optimized() ? "\\n optimized out" : "") << "\"";
             #ifdef __clang__
                 #pragma clang diagnostic pop
             #endif
@@ -107,6 +258,11 @@ namespace
                 graph << ", color=blue";
             if (node->is_in_data_flow())
                 graph << ", group=data_flow";
+            if (node->is_reusing_memory())
+            {
+                graph << ", fillcolor=\"" << colors[node->get_reused_memory_color() % colors.size()] << "\" ";
+                graph << " style=filled ";
+            }
             graph << "];\n";
 
             for (auto& user : node->get_users())

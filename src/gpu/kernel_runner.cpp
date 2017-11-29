@@ -99,7 +99,6 @@ std::vector<uint64_t> kernel_runner::run_kernels(const KernelSelector::KernelsDa
 
     KernelSelector::KernelsData::const_iterator batch_start = kernels_data.begin();
     KernelSelector::KernelsData::const_iterator batch_end;
-
     while (num_of_kernels_to_run > 0)
     {
         int current_compilation_batch = std::min(num_of_kernels_to_run, compilation_batch_size);
