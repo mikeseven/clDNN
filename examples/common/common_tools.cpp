@@ -629,7 +629,7 @@ void run_topology(const execution_params &ep)
             }
         }
 
-        return cldnn::engine_configuration(ep.profiling, ep.meaningful_kernels_names, false, "", ep.run_single_kernel_name, use_ooq, engine_log, sources_dir);
+        return cldnn::engine_configuration(ep.profiling, ep.meaningful_kernels_names, false, "", ep.run_single_kernel_name, use_ooq, engine_log, sources_dir, 0, !ep.disable_mem_pool);
     };
 
     if (ep.use_oooq)

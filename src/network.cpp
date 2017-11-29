@@ -38,6 +38,8 @@ network_impl::network_impl(const program_impl& program)
     for (auto const& node : _program->get_nodes())
         allocate_primitive_instance(*node);
 
+    _program->dump_memory_pool();
+    
     //sanity check
     //TODO: fix run single layer design (in run single layer multiple networks can be run - i.e. weights optimization, we should have better logic to decide whether to filter or not some networks/nodes)
     /*if (get_engine()->get_context()->enabled_single_kernel()

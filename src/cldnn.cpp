@@ -242,6 +242,15 @@ cldnn_engine_info cldnn_get_engine_info(cldnn_engine engine, cldnn_status* statu
     });
 }
 
+int64_t cldnn_get_total_device_memory_size(cldnn_engine engine, cldnn_status* status)
+{
+    return exception_handler<int32_t>(CLDNN_ERROR, status, cldnn_engine_ocl, [&]()
+    {
+        SHOULD_NOT_BE_NULL(engine, "Engine");
+        return static_cast<int32_t>(api_cast(engine)->get_total_device_memory());
+    });
+}
+
 cldnn_event cldnn_create_user_event(cldnn_engine engine, cldnn_status* status)
 {
     return exception_handler<cldnn_event>(CLDNN_ERROR, status, nullptr, [&]()

@@ -79,6 +79,7 @@ cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::e
         { 1, 1, 1, 1 },
         true);
 
+
     auto conv2_3x3_w = file::create({ engine, join_path(weights_dir, "conv2_3x3_weights.nnd")});
     auto conv2_3x3_b = file::create({ engine, join_path(weights_dir, "conv2_3x3_bias.nnd")});
     auto conv2_3x3 = convolution("conv2_3x3",

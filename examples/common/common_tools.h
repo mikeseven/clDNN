@@ -150,6 +150,7 @@ struct execution_params {
     size_t loop = 1; // running the same input in a loop for smoothing perf results
 
     bool perf_per_watt; // power instrumentation
+    bool disable_mem_pool; // memory optimization
 };
 
 std::vector<std::string> get_directory_images(const std::string& images_path);
