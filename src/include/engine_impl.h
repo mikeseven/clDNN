@@ -17,11 +17,11 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "api/CPP/memory.hpp"
-
 #include "api_impl.h"
 #include "event_impl.h"
 #include "refcounted_obj.h"
 #include "implementation_map.h"
+#include "memory_pool.h"
 
 #include "gpu/engine_info.h"
 
@@ -82,7 +82,7 @@ public:
 private:
     engine_configuration _configuration;
     std::shared_ptr<gpu_toolkit> _context;
-    uint64_t _global_memory_used;
+	memory_pool _memory_pool;
 };
 }
 
