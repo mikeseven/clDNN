@@ -58,9 +58,9 @@ namespace cldnn
         }
     }
 
-    memory_impl::ptr memory_pool::get_memory(layout layout, primitive_id id, std::vector<primitive_id> conflict, bool reusable)
+    memory_impl::ptr memory_pool::get_memory(layout layout, primitive_id , std::vector<primitive_id> , bool )
     {
-        layout; id; conflict; reusable;
+
         //if (reusable)
         //{
         //   // return _engine->allocate_memory(layout);
