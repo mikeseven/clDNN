@@ -66,7 +66,7 @@ namespace cldnn
         //   // return _engine->allocate_memory(layout);
         //}
 
-        return _engine->allocate_memory(layout);
+        return alloc_memory(layout);
     }
 
     void memory_pool::clear_pool()
