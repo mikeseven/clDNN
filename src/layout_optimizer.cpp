@@ -104,7 +104,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
 
         if (current_layout.data_type == data_types::f16 &&
             output_or_weights_layout.size.spatial[0] == 1 && output_or_weights_layout.size.spatial[1] == 1 &&
-            current_layout.size.feature[0] % 64 && output_or_weights_layout.size.spatial[0] % 16 &&
+            current_layout.size.feature[0] % 64 == 0 && output_or_weights_layout.size.batch[0] % 16 == 0 &&
             prim->stride.spatial[0] == 1 && prim->stride.spatial[1] == 1 &&
             prim->input_offset.spatial[0] == 0 && prim->input_offset.spatial[1] == 0)
         {
