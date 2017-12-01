@@ -1341,9 +1341,9 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
             }
         }
 
-        if (new_input && new_input->output_format == format::bf8_xy16)
+        if (new_input && (new_input->output_format == format::bf8_xy16 || new_input->output_format == format::byxf))
         {
-            auto conv1x1_output = std::make_shared<reorder>("_bf8_xy16_" + conv_node.id(), conv_node.id(), input_layout.format, input_layout.data_type);
+            auto conv1x1_output = std::make_shared<reorder>("_conv1x1_reorder_back_" + conv_node.id(), conv_node.id(), input_layout.format, input_layout.data_type);
             auto& back_node = get_or_create(conv1x1_output);
             back_node.processing_itr = processing_order.insert(std::next(conv_node.processing_itr), &back_node);
 

@@ -23,7 +23,7 @@ namespace KernelSelector
     class ReorderWeightsImage_fyx_b_Kernel : public ReorderKernelBase
     {
     public:
-        ReorderWeightsImage_fyx_b_Kernel() : ReorderKernelBase("reorder_weights_image_fyx_b") {}
+        ReorderWeightsImage_fyx_b_Kernel() : ReorderKernelBase("reorder_weights_image_2d_c4_fyx_b") {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;

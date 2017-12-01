@@ -90,8 +90,10 @@ struct format
                                               ///< \n \image html bs_x_bsv16.jpg
         bf8_xy16 = cldnn_format_bf8_xy16, ///< format used only for convolution 1x1 input, xy aligned to 16, f aligned to 8
                                           ///< \n \image html bf8_xy16.jpg
-        image_weights_fyx_b = cldnn_format_image_weights_fyx_b, ///< image format for weights, width size is f*y*x/4 (4-channels filled with fyx data), height is b
-                                                                ///< \n \image html image_fyx_b.jpg
+        image_weights_2d_c4_fyx_b = cldnn_format_image_weights_2d_c4_fyx_b, ///< image format for weights, width size is f*y*x/4 (4-channels filled with fyx data), height is b
+                                                                      ///< \n \image html image_weights_2d_c4_fyx_b.jpg
+        image_weights_2d_c1_b_fyx = cldnn_format_image_weights_2d_c1_b_fyx, ///< image format for weights, width size is b, height is f*y*x, single channel
+                                                                            ///< \n \image html _image_weights_2d_c1_b_fyx.jpg
         winograd_2x3_s1_data,       ///< format used for input for winograd convolution, F(2,3) -- filter 3x3 with stride 1
         winograd_2x3_s1_weights,    ///< format used for weights for winograd convolution, F(2,3) -- filter 3x3 with stride 1
         format_num = cldnn_format_format_num, ///< number of format types
@@ -112,7 +114,8 @@ struct format
             { bs_xs_xsv8_bsv16,{ 1, 1, 1, "bx", "b?x?" } },
             { bs_x_bsv16, { 1, 1, 1, "bx", "b?x?" } },
             { bf8_xy16, { 1, 1, 2, "bfyx", "bfxy" }},
-            { image_weights_fyx_b, { 1, 1, 2, "bfyx", "bfxy" } },
+            { image_weights_2d_c4_fyx_b, { 1, 1, 2, "bfyx", "bfxy" } },
+            { image_weights_2d_c1_b_fyx, { 1, 1, 2, "bfyx", "bfxy" } },
             { winograd_2x3_s1_data, { 1, 1, 2, "bxyf", "bfxy" } },
             { winograd_2x3_s1_weights, { 1, 1, 2, "xyfb", "bfxy" } }        };
         return traits.at(fmt);
@@ -132,10 +135,22 @@ struct format
     static size_t dimension(type fmt) { return order(fmt).size(); }
     /// @brief Checks if @p format is a winograd format
     static bool is_winograd(type fmt) { return (fmt == winograd_2x3_s1_data || fmt == winograd_2x3_s1_weights); }
-    /// @brief Checks if @p format is of image weights type fyx_b
-    static bool is_image_weights_fyx_b(type fmt) { return  fmt == image_weights_fyx_b; }
+    /// @brief Checks if @p format is of image2d type
+    static bool is_image_2d(type fmt) { return (fmt == image_weights_2d_c4_fyx_b || fmt == image_weights_2d_c1_b_fyx); }
     /// @brief Checks if @p format is of image type
-    static bool is_image(type fmt) { return (is_image_weights_fyx_b(fmt)); }
+    static bool is_image(type fmt) { return (is_image_2d(fmt)); }
+    /// @brief Returns number of channels in a @p format.
+    static size_t image_channel_count(type fmt) {
+        switch (fmt)
+        {
+        case image_weights_2d_c4_fyx_b:
+            return 4;
+        case image_weights_2d_c1_b_fyx:
+            return 1;
+        default:
+            return 0;
+        }
+    }
 
     /// @brief Returns number of batch dimensions.
     size_t batch_num() const { return traits(value).batch_num; }
@@ -151,10 +166,12 @@ struct format
     size_t dimension() const { return order(value).size(); }
     /// @brief Checks if @p format is a winograd format
     bool is_winograd() const { return is_winograd(value); }
-    /// @brief Checks if @p format is of image weights type fyx_b
-    bool is_image_weights_fyx_b() const { return is_image_weights_fyx_b(value); }
+    /// @brief Checks if @p format is of image 2d type
+    bool is_image_2d() const { return is_image_2d(value); }
     /// @brief Checks if @p format is of image type
     bool is_image() const { return is_image(value); }
+    /// @brief Returns number of channels contained within this format
+    size_t image_channel_count() const { return image_channel_count(value); }
 
     type value;
     /// @brief Implicit conversion from format::type.

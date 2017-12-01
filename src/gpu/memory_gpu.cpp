@@ -64,8 +64,10 @@ gpu_image2d::gpu_image2d(const refcounted_obj_ptr<engine_impl>& engine, const la
     : memory_impl(engine, layout)
     , _context(engine->get_context())
     , _lock_count(0)
-    , _buffer(_context->context(), CL_MEM_READ_WRITE, cl::ImageFormat(CL_RGBA, layout.data_type == data_types::f16 ? CL_HALF_FLOAT : CL_FLOAT),
-        static_cast<size_t>((layout.size.spatial[0] * layout.size.feature[0] * layout.size.spatial[1] + 3) / 4), static_cast<size_t>(layout.size.batch[0]), 0)
+    , _buffer(_context->context(), CL_MEM_READ_WRITE, cl::ImageFormat(layout.format.image_channel_count() == 4 ? CL_RGBA : CL_R,
+        layout.data_type == data_types::f16 ? CL_HALF_FLOAT : CL_FLOAT),
+        static_cast<size_t>(layout.format.image_channel_count() == 4 ? (layout.size.spatial[0] * layout.size.feature[0] * layout.size.spatial[1] + 3) / 4 : layout.size.spatial[0] * layout.size.feature[0] * layout.size.spatial[1]),
+        static_cast<size_t>(layout.size.batch[0]), 0)
     , _mapped_ptr(nullptr)
 {
     void* ptr = gpu_image2d::lock();
@@ -88,7 +90,8 @@ void* gpu_image2d::lock() {
     std::lock_guard<std::mutex> locker(_mutex);
     if (0 == _lock_count) {
         _mapped_ptr = _context->queue().enqueueMapImage(_buffer, CL_TRUE, CL_MAP_WRITE, { 0, 0, 0 },
-        { static_cast<size_t>((_layout.size.spatial[0] * _layout.size.feature[0] * _layout.size.spatial[1] + 3) / 4), static_cast<size_t>(_layout.size.batch[0]), 1 },
+        { static_cast<size_t>(_layout.format.image_channel_count() == 4 ? (_layout.size.spatial[0] * _layout.size.feature[0] * _layout.size.spatial[1] + 3) / 4 : _layout.size.spatial[0] * _layout.size.feature[0] * _layout.size.spatial[1]),
+            static_cast<size_t>(_layout.size.batch[0]), 1 },
             &_row_pitch, &_slice_pitch);
     }
     _lock_count++;

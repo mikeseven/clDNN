@@ -72,7 +72,7 @@ namespace {
             case kernel_selector::kernel_argument_types::OUTPUT:
                 if (data.output)
                 {
-                    if (data.output->get_layout().format == cldnn::format::image_weights_fyx_b)
+                    if (data.output->get_layout().format.is_image_2d())
                         status = kernel.setArg(i, dynamic_cast<const gpu::gpu_image2d&>(*data.output).get_buffer());
                     else
                         status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.output).get_buffer());
@@ -81,7 +81,7 @@ namespace {
             case kernel_selector::kernel_argument_types::WEIGHTS:
                 if (data.weights)
                 {
-                    if (data.weights->get_layout().format == cldnn::format::image_weights_fyx_b)
+                    if (data.weights->get_layout().format.is_image_2d())
                         status = kernel.setArg(i, dynamic_cast<const gpu::gpu_image2d&>(*data.weights).get_buffer());
                     else
                         status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.weights).get_buffer());

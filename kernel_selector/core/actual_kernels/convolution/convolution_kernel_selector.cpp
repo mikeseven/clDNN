@@ -28,6 +28,7 @@
 #include "convolution_kernel_bfyx_3x3_dw_opt.h"
 #include "convolution_kernel_winograd_2x3_s1.h"
 #include "convolution_kernel_bfyx_1x1.h"
+#include "convolution_kernel_bfyx_1x1_gemm_buf.h"
 #include <iostream>
  
 namespace KernelSelector 
@@ -46,6 +47,7 @@ namespace KernelSelector
         Attach<ConvolutionKernel_bfyx_3x3_dw_opt>();
         Attach<ConvolutionKernel_Winograd_2x3_s1>();
         Attach<ConvolutionKernel_bfyx_1x1>();
+        Attach<ConvolutionKernel_bfyx_1x1_gemm_buf>();
         Attach<ConvolutionKernel_Tutorial>();
     }
 
