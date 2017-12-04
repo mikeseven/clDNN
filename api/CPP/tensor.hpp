@@ -139,18 +139,6 @@ struct format
     static bool is_image_2d(type fmt) { return (fmt == image_weights_2d_c4_fyx_b || fmt == image_weights_2d_c1_b_fyx); }
     /// @brief Checks if @p format is of image type
     static bool is_image(type fmt) { return (is_image_2d(fmt)); }
-    /// @brief Returns number of channels in a @p format.
-    static size_t image_channel_count(type fmt) {
-        switch (fmt)
-        {
-        case image_weights_2d_c4_fyx_b:
-            return 4;
-        case image_weights_2d_c1_b_fyx:
-            return 1;
-        default:
-            return 0;
-        }
-    }
 
     /// @brief Returns number of batch dimensions.
     size_t batch_num() const { return traits(value).batch_num; }
@@ -170,8 +158,6 @@ struct format
     bool is_image_2d() const { return is_image_2d(value); }
     /// @brief Checks if @p format is of image type
     bool is_image() const { return is_image(value); }
-    /// @brief Returns number of channels contained within this format
-    size_t image_channel_count() const { return image_channel_count(value); }
 
     type value;
     /// @brief Implicit conversion from format::type.
