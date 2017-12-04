@@ -249,7 +249,7 @@ typedef enum /*:int32_t*/
     cldnn_format_image_weights_2d_c4_fyx_b, ///< image format for weights, image 2d, 4-channel, width size is f*y*x/4 (4-channels filled with fyx data), height is b
                                       ///< \n \image html image_weights_2d_c4_fyx_b.jpg
     cldnn_format_image_weights_2d_c1_b_fyx, ///< image format for weights, image 2d, single channel, width size is b, height is f*y*x
-                                      ///< \n \image html _image_weights_2d_c1_b_fyx.jpg
+                                      ///< \n \image html image_weights_2d_c1_b_fyx.jpg
     cldnn_format_format_num,    ///< number of format types
     cldnn_format_any = -1
 } cldnn_format_type;
