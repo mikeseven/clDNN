@@ -51,7 +51,7 @@ KERNEL(convolution_gpu_bfyx_1x1_hgemm_buf_16x1)(
 
     uint lxd4 = local_x >> 2;
     uint lxm4 = local_x % 4;
-
+    
     uint i = TILE_M * group_y + local_y * 16 + lxd4;
 
     __global const half8 *A_load = (__global const half8*)&input[batch * INPUT0_BATCH_PITCH + i*K + (lxm4<<3)];
@@ -104,70 +104,70 @@ KERNEL(convolution_gpu_bfyx_1x1_hgemm_buf_16x1)(
     __global half *C_write = &output[batch * INPUT0_BATCH_PITCH + group_x * TILE_N + y0 * N + local_x];
   
     if (group_y < NUM_WHOLE_GROUPS_Y || local_y < NUM_WHOLE_SUBGROUPS_Y) {
-        C_write[0*N] = C0.s0;
-        C_write[1*N] = C0.s1;
-        C_write[2*N] = C0.s2;
-        C_write[3*N] = C0.s3;
-        C_write[4*N] = C0.s4;
-        C_write[5*N] = C0.s5;
-        C_write[6*N] = C0.s6;
-        C_write[7*N] = C0.s7;
-        C_write[8*N] = C8.s0;
-        C_write[9*N] = C8.s1;
-        C_write[10*N] = C8.s2;
-        C_write[11*N] = C8.s3;
-        C_write[12*N] = C8.s4;
-        C_write[13*N] = C8.s5;
-        C_write[14*N] = C8.s6;
-        C_write[15*N] = C8.s7;
+        C_write[0*N] = ACTIVATION(C0.s0, NL_M, NL_N); 
+        C_write[1*N] = ACTIVATION(C0.s1, NL_M, NL_N); 
+        C_write[2*N] = ACTIVATION(C0.s2, NL_M, NL_N); 
+        C_write[3*N] = ACTIVATION(C0.s3, NL_M, NL_N); 
+        C_write[4*N] = ACTIVATION(C0.s4, NL_M, NL_N); 
+        C_write[5*N] = ACTIVATION(C0.s5, NL_M, NL_N); 
+        C_write[6*N] = ACTIVATION(C0.s6, NL_M, NL_N); 
+        C_write[7*N] = ACTIVATION(C0.s7, NL_M, NL_N); 
+        C_write[8*N] = ACTIVATION(C8.s0, NL_M, NL_N); 
+        C_write[9*N] = ACTIVATION(C8.s1, NL_M, NL_N); 
+        C_write[10*N] = ACTIVATION(C8.s2, NL_M, NL_N); 
+        C_write[11*N] = ACTIVATION(C8.s3, NL_M, NL_N); 
+        C_write[12*N] = ACTIVATION(C8.s4, NL_M, NL_N); 
+        C_write[13*N] = ACTIVATION(C8.s5, NL_M, NL_N); 
+        C_write[14*N] = ACTIVATION(C8.s6, NL_M, NL_N); 
+        C_write[15*N] = ACTIVATION(C8.s7, NL_M, NL_N); 
     } else {
 #if 0 < LAST_LOCAL_Y
-        C_write[0*N] = C0.s0;
+        C_write[0*N] = ACTIVATION(C0.s0, NL_M, NL_N); 
 #endif
 #if 1 < LAST_LOCAL_Y
-        C_write[1*N] = C0.s1;
+        C_write[1*N] = ACTIVATION(C0.s1, NL_M, NL_N); 
 #endif
 #if 2 < LAST_LOCAL_Y
-        C_write[2*N] = C0.s2;
+        C_write[2*N] = ACTIVATION(C0.s2, NL_M, NL_N); 
 #endif
 #if 3 < LAST_LOCAL_Y
-        C_write[3*N] = C0.s3;
+        C_write[3*N] = ACTIVATION(C0.s3, NL_M, NL_N); 
 #endif
 #if 4 < LAST_LOCAL_Y
-        C_write[4*N] = C0.s4;
+        C_write[4*N] = ACTIVATION(C0.s4, NL_M, NL_N); 
 #endif
 #if 5 < LAST_LOCAL_Y
-        C_write[5*N] = C0.s5;
+        C_write[5*N] = ACTIVATION(C0.s5, NL_M, NL_N); 
 #endif
 #if 6 < LAST_LOCAL_Y
-        C_write[6*N] = C0.s6;
+        C_write[6*N] = ACTIVATION(C0.s6, NL_M, NL_N); 
 #endif
 #if 7 < LAST_LOCAL_Y
-        C_write[7*N] = C0.s7;
+        C_write[7*N] = ACTIVATION(C0.s7, NL_M, NL_N); 
 #endif
 #if 8 < LAST_LOCAL_Y
-        C_write[8*N] = C8.s0;
+        C_write[8*N] = ACTIVATION(C8.s0, NL_M, NL_N); 
 #endif
 #if 9 < LAST_LOCAL_Y
-        C_write[9*N] = C8.s1;
+        C_write[9*N] = ACTIVATION(C8.s1, NL_M, NL_N); 
 #endif
 #if 10 < LAST_LOCAL_Y
-        C_write[10*N] = C8.s2;
+        C_write[10*N] = ACTIVATION(C8.s2, NL_M, NL_N); 
 #endif
 #if 11 < LAST_LOCAL_Y
-        C_write[11*N] = C8.s3;
+        C_write[11*N] = ACTIVATION(C8.s3, NL_M, NL_N); 
 #endif
 #if 12 < LAST_LOCAL_Y
-        C_write[12*N] = C8.s4;
+        C_write[12*N] = ACTIVATION(C8.s4, NL_M, NL_N); 
 #endif
 #if 13 < LAST_LOCAL_Y
-        C_write[13*N] = C8.s5;
+        C_write[13*N] = ACTIVATION(C8.s5, NL_M, NL_N); 
 #endif
 #if 14 < LAST_LOCAL_Y
-        C_write[14*N] = C8.s6;
+        C_write[14*N] = ACTIVATION(C8.s6, NL_M, NL_N); 
 #endif
 #if 15 < LAST_LOCAL_Y
-        C_write[15*N] = C8.s7;
+        C_write[15*N] = ACTIVATION(C8.s7, NL_M, NL_N); 
 #endif
     }
 }

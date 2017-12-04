@@ -33,14 +33,14 @@
 
 #define DOT8i( _result, _A, _B, i)					\
     {									\
-	_result = mad(_A.s0, sub_group_broadcast( _B.s0, i), _result);	\
-	_result = mad(_A.s1, sub_group_broadcast( _B.s1, i), _result);	\
-	_result = mad(_A.s2, sub_group_broadcast( _B.s2, i), _result);	\
-	_result = mad(_A.s3, sub_group_broadcast( _B.s3, i), _result);	\
-	_result = mad(_A.s4, sub_group_broadcast( _B.s4, i), _result);	\
-	_result = mad(_A.s5, sub_group_broadcast( _B.s5, i), _result);	\
-	_result = mad(_A.s6, sub_group_broadcast( _B.s6, i), _result);	\
-	_result = mad(_A.s7, sub_group_broadcast( _B.s7, i), _result);	\
+	_result = fma(_A.s0, sub_group_broadcast( _B.s0, i), _result);	\
+	_result = fma(_A.s1, sub_group_broadcast( _B.s1, i), _result);	\
+	_result = fma(_A.s2, sub_group_broadcast( _B.s2, i), _result);	\
+	_result = fma(_A.s3, sub_group_broadcast( _B.s3, i), _result);	\
+	_result = fma(_A.s4, sub_group_broadcast( _B.s4, i), _result);	\
+	_result = fma(_A.s5, sub_group_broadcast( _B.s5, i), _result);	\
+	_result = fma(_A.s6, sub_group_broadcast( _B.s6, i), _result);	\
+	_result = fma(_A.s7, sub_group_broadcast( _B.s7, i), _result);	\
     }
 
 #define MULTIPLY_BLOCKS_8x8( _result, _blockA, _blockB )                \

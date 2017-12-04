@@ -93,6 +93,8 @@ private:
     std::mutex _mutex;
     unsigned _lock_count;
     cl::Image2D _buffer;
+    size_t _width;
+    size_t _height;
     size_t _row_pitch;
     size_t _slice_pitch;
     void* _mapped_ptr;
