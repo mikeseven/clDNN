@@ -71,8 +71,8 @@ namespace
             case format::bs_xs_xsv8_bsv16: out = "bs_xs_xsv8_bsv16"; break;
             case format::bs_x_bsv16: out = "bs_x_bsv16"; break;
             case format::bf8_xy16: out = "bf8_xy16"; break;
-            case format::image_weights_2d_c1_b_fyx: out = "image_weights_2d_c1_b_fyx"; break;
-            case format::image_weights_2d_c4_fyx_b: out = "image_weights_2d_c4_fyx_b"; break;
+            case format::image_2d_weights_c1_b_fyx: out = "image_2d_weights_c1_b_fyx"; break;
+            case format::image_2d_weights_c4_fyx_b: out = "image_2d_weights_c4_fyx_b"; break;
             case format::any: out = "any"; break;
             default:
                 out = "unk format";

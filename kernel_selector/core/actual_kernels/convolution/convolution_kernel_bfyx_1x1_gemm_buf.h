@@ -35,7 +35,7 @@ namespace KernelSelector {
         virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const ConvolutionParams&) const override
         {
             return{
-                WeightsLayout::image_weights_2d_c1_b_fyx,
+                WeightsLayout::image_2d_weights_c1_b_fyx,
             };
         }
         bool Validate(const Params& p, const OptionalParams& o) const override;

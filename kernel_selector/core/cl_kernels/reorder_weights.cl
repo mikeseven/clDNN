@@ -30,7 +30,7 @@ inline uint FUNC(get_input_index)(uint o, uint i, uint y, uint x)
     return GET_FILTER_I_YXS_OS_YXSV2_OSV_INDEX(INPUT0, o, i, y, x, SUB_GROUP_SIZE);
 #elif defined INPUT0_LAYOUT_IY_XS_OS_XSV2_OSV16__AO32 || defined OUTPUT_LAYOUT_IY_XS_OS_XSV2_OSV8__AO32
     return GET_FILTER_IY_XS_OS_XSV2_OSV_INDEX(INPUT0, o, i, y, x, SUB_GROUP_SIZE);
-#elif defined INPUT0_LAYOUT_IMAGE_WEIGHTS_2D_C1_B_FYX
+#elif defined INPUT0_LAYOUT_IMAGE_2D_WEIGHTS_C1_B_FYX
     #error - not supported yet
 #else
 #error - not supported
@@ -52,14 +52,14 @@ inline uint FUNC(get_output_index)(uint o, uint i, uint y, uint x)
     return GET_FILTER_I_YXS_OS_YXSV2_OSV_INDEX(OUTPUT, o, i, y, x, SUB_GROUP_SIZE);
 #elif defined OUTPUT_LAYOUT_IY_XS_OS_XSV2_OSV16__AO32 || defined OUTPUT_LAYOUT_IY_XS_OS_XSV2_OSV8__AO32
     return GET_FILTER_IY_XS_OS_XSV2_OSV_INDEX(OUTPUT, o, i, y, x, SUB_GROUP_SIZE);
-#elif defined OUTPUT_LAYOUT_IMAGE_WEIGHTS_2D_C1_B_FYX
+#elif defined OUTPUT_LAYOUT_IMAGE_2D_WEIGHTS_C1_B_FYX
     return 0; //will not be used for images
 #else
 #error - not supported
 #endif
 }
 
-#if OUTPUT_LAYOUT_IMAGE_WEIGHTS_2D_C1_B_FYX
+#if OUTPUT_LAYOUT_IMAGE_2D_WEIGHTS_C1_B_FYX
 KERNEL (reorder_weights)(const __global INPUT0_TYPE* input, write_only image2d_t output)
 {
     const unsigned o = get_global_id(0);

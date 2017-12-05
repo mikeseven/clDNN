@@ -173,8 +173,8 @@ namespace KernelSelector { namespace
             weightsReorderParams.newBufferSize = r_params.reorderParams.output.PhysicalSizeInBytes();
             weightsReorderParams.dtype = dtype;
             weightsReorderParams.destLayout = r_params.reorderParams.output.GetLayout();
-            weightsReorderParams.toImageType = r_params.reorderParams.output.GetLayout() == WeightsLayout::image_weights_2d_c4_fyx_b ||
-                r_params.reorderParams.output.GetLayout() == WeightsLayout::image_weights_2d_c1_b_fyx;
+            weightsReorderParams.toImageType = r_params.reorderParams.output.GetLayout() == WeightsLayout::image_2d_weights_c4_fyx_b ||
+                r_params.reorderParams.output.GetLayout() == WeightsLayout::image_2d_weights_c1_b_fyx;
             
             newParams.weights = r_params.reorderParams.output;
         }

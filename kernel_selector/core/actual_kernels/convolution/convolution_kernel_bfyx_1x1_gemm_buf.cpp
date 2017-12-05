@@ -23,19 +23,13 @@ namespace KernelSelector {
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
-        k.EnableInputDataType(Datatype::F32);
         k.EnableOutputDataType(Datatype::F16);
         k.EnableInputWeightsType(WeightsType::F16);
         k.EnableInputLayout(DataLayout::byxf);
         k.EnableOutputLayout(DataLayout::byxf);
-        k.EnableTensorOffset();
-        k.EnableTensorPitches();
-        k.EnableDilation();
         k.EnableBiasPerFeature();
-        k.EnableBiasPerOutput();
         k.EnableNonBiasTerm();
         k.EnableBatching();
-        k.EnableDepthwiseSeparableOpt();
         return k;
     }
 

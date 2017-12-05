@@ -90,10 +90,10 @@ struct format
                                               ///< \n \image html bs_x_bsv16.jpg
         bf8_xy16 = cldnn_format_bf8_xy16, ///< format used only for convolution 1x1 input, xy aligned to 16, f aligned to 8
                                           ///< \n \image html bf8_xy16.jpg
-        image_weights_2d_c4_fyx_b = cldnn_format_image_weights_2d_c4_fyx_b, ///< image format for weights, width size is f*y*x/4 (4-channels filled with fyx data), height is b
-                                                                      ///< \n \image html image_weights_2d_c4_fyx_b.jpg
-        image_weights_2d_c1_b_fyx = cldnn_format_image_weights_2d_c1_b_fyx, ///< image format for weights, width size is b, height is f*y*x, single channel
-                                                                            ///< \n \image html image_weights_2d_c1_b_fyx.jpg
+        image_2d_weights_c4_fyx_b = cldnn_format_image_2d_weights_c4_fyx_b, ///< image format for weights, width size is f*y*x/4 (4-channels filled with fyx data), height is b
+                                                                      ///< \n \image html image_2d_weights_c4_fyx_b.jpg
+        image_2d_weights_c1_b_fyx = cldnn_format_image_2d_weights_c1_b_fyx, ///< image format for weights, width size is b, height is f*y*x, single channel
+                                                                            ///< \n \image html image_2d_weights_c1_b_fyx.jpg
         winograd_2x3_s1_data,       ///< format used for input for winograd convolution, F(2,3) -- filter 3x3 with stride 1
         winograd_2x3_s1_weights,    ///< format used for weights for winograd convolution, F(2,3) -- filter 3x3 with stride 1
         format_num = cldnn_format_format_num, ///< number of format types
@@ -114,8 +114,8 @@ struct format
             { bs_xs_xsv8_bsv16,{ 1, 1, 1, "bx", "b?x?" } },
             { bs_x_bsv16, { 1, 1, 1, "bx", "b?x?" } },
             { bf8_xy16, { 1, 1, 2, "bfyx", "bfxy" }},
-            { image_weights_2d_c4_fyx_b, { 1, 1, 2, "bfyx", "bfxy" } },
-            { image_weights_2d_c1_b_fyx, { 1, 1, 2, "bfyx", "bfxy" } },
+            { image_2d_weights_c4_fyx_b, { 1, 1, 2, "bfyx", "bfxy" } },
+            { image_2d_weights_c1_b_fyx, { 1, 1, 2, "bfyx", "bfxy" } },
             { winograd_2x3_s1_data, { 1, 1, 2, "bxyf", "bfxy" } },
             { winograd_2x3_s1_weights, { 1, 1, 2, "xyfb", "bfxy" } }        };
         return traits.at(fmt);
@@ -136,7 +136,7 @@ struct format
     /// @brief Checks if @p format is a winograd format
     static bool is_winograd(type fmt) { return (fmt == winograd_2x3_s1_data || fmt == winograd_2x3_s1_weights); }
     /// @brief Checks if @p format is of image2d type
-    static bool is_image_2d(type fmt) { return (fmt == image_weights_2d_c4_fyx_b || fmt == image_weights_2d_c1_b_fyx); }
+    static bool is_image_2d(type fmt) { return (fmt == image_2d_weights_c4_fyx_b || fmt == image_2d_weights_c1_b_fyx); }
     /// @brief Checks if @p format is of image type
     static bool is_image(type fmt) { return (is_image_2d(fmt)); }
 
