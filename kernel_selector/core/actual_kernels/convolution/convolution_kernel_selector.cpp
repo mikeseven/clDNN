@@ -27,6 +27,7 @@
 #include "convolution_kernel_tutorial.h"
 #include "convolution_kernel_bfyx_3x3_dw_opt.h"
 #include "convolution_kernel_winograd_2x3_s1.h"
+#include "convolution_kernel_winograd_fused.h"
 #include "convolution_kernel_bfyx_1x1.h"
 #include <iostream>
  
@@ -45,6 +46,7 @@ namespace KernelSelector
         Attach<ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x>();
         Attach<ConvolutionKernel_bfyx_3x3_dw_opt>();
         Attach<ConvolutionKernel_Winograd_2x3_s1>();
+		Attach<ConvolutionKernel_WinogradFused>();
         Attach<ConvolutionKernel_bfyx_1x1>();
         Attach<ConvolutionKernel_Tutorial>();
     }
@@ -53,6 +55,7 @@ namespace KernelSelector
     {
         //const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
         //std::cout << orgParams.to_string() << std::endl;
-        return GetAutoTuneBestKernel(params, options, KernelType::CONVOLUTION);
+        //return GetAutoTuneBestKernel(params, options, KernelType::CONVOLUTION);
+		return GetNaiveBestKernel(params, options, KernelType::CONVOLUTION);
     }
 }
