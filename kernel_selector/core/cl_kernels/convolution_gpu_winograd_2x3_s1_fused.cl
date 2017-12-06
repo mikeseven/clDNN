@@ -18,6 +18,7 @@
 // Output matrix dimensions: M x N
 // --------------------------------------------------------------------------------------------------------------------------------
 
+#include "include/data_types.cl"
 #include "include/activation_functions.cl"
 
 #define DOT4i( _result, _A, _B, i)					\
@@ -27,6 +28,9 @@
 	_result = mad(_A.s2, sub_group_broadcast( _B.s2, i), _result);	\
 	_result = mad(_A.s3, sub_group_broadcast( _B.s3, i), _result);	\
     }
+
+#define UNIT_TYPE_4 CAT(UNIT_TYPE, 4)
+#define UNIT_TYPE_8 CAT(UNIT_TYPE, 8)
 
 __attribute__((reqd_work_group_size(8, 1, 8)))
 __attribute__((intel_reqd_sub_group_size(8)))
@@ -41,7 +45,7 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
     uint split_idx)
 {
     //               (DxC2)x(UxWx8c)
-    __local float4 V[(4*2)*(2*16*2)]; // 8 KB
+    __local UNIT_TYPE_4 V[(4*2)*(2*16*2)]; // 8 KB
 
     /* These constants are defined as precompiler macros during compilation. */
      const uint WC = W*INPUT0_FEATURE_NUM; 
@@ -97,37 +101,37 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
     // # v
     // #
 
-    float4 M0 = (float4)(0, 0, 0, 0);
-    float4 M1 = (float4)(0, 0, 0, 0);
-    float4 M2 = (float4)(0, 0, 0, 0);
-    float4 M3 = (float4)(0, 0, 0, 0);
-    float4 M4 = (float4)(0, 0, 0, 0);
-    float4 M5 = (float4)(0, 0, 0, 0);
-    float4 M6 = (float4)(0, 0, 0, 0);
+    UNIT_TYPE_4 M0 = (UNIT_TYPE_4)(0, 0, 0, 0);
+    UNIT_TYPE_4 M1 = (UNIT_TYPE_4)(0, 0, 0, 0);
+    UNIT_TYPE_4 M2 = (UNIT_TYPE_4)(0, 0, 0, 0);
+    UNIT_TYPE_4 M3 = (UNIT_TYPE_4)(0, 0, 0, 0);
+    UNIT_TYPE_4 M4 = (UNIT_TYPE_4)(0, 0, 0, 0);
+    UNIT_TYPE_4 M5 = (UNIT_TYPE_4)(0, 0, 0, 0);
+    UNIT_TYPE_4 M6 = (UNIT_TYPE_4)(0, 0, 0, 0);
 
 
-    //const __global float4 *I_load = (const __global float4*)&I[gn*HWC + ((uint)y)*WC + ((uint)x)*C];
-	const __global float *I_load = (const __global float*)&I[gn*HWC + ((uint)y)*W + ((uint)x)];
+    //const __global UNIT_TYPE_4 *I_load = (const __global UNIT_TYPE_4*)&I[gn*HWC + ((uint)y)*WC + ((uint)x)*C];
+	const __global UNIT_TYPE *I_load = (const __global UNIT_TYPE*)&I[gn*HWC + ((uint)y)*W + ((uint)x)];
 
 
     uint lxm2 = lx % 2;
     uint lxb1 = (lx & 2)/2;
 
     //                                      
-    __local float4 *V_write = &V[lxb1*256 + lz*4 + lxd4*2 + lxm2];
-    __local const float4 *V_read = &V[lzm4*64 + lx];
+    __local UNIT_TYPE_4 *V_write = &V[lxb1*256 + lz*4 + lxd4*2 + lxm2];
+    __local const UNIT_TYPE_4 *V_read = &V[lzm4*64 + lx];
 
     int2 coordU0;
     coordU0.x = (lzm4*24 + k*12);
     coordU0.y = 0;
 
-    //const __global float *zeros4 = (const __global float *)O;
-    const __global float *I_load_0 = &I_load[0*W]; //y0_in ? &I_load[0*W] : zeros4;
-    const __global float *I_load_1 = &I_load[1*W]; //y1_in ? &I_load[1*W] : zeros4;
-    const __global float *I_load_2 = &I_load[2*W]; //y2_in ? &I_load[2*W] : zeros4;
-    const __global float *I_load_3 = &I_load[3*W]; //y3_in ? &I_load[3*W] : zeros4;
-    const __global float *I_load_4 = &I_load[4*W]; //y4_in ? &I_load[4*W] : zeros4;
-    const __global float *I_load_5 = &I_load[5*W]; //y5_in ? &I_load[5*W] : zeros4;
+    //const __global UNIT_TYPE *zeros4 = (const __global UNIT_TYPE *)O;
+    const __global UNIT_TYPE *I_load_0 = &I_load[0*W]; //y0_in ? &I_load[0*W] : zeros4;
+    const __global UNIT_TYPE *I_load_1 = &I_load[1*W]; //y1_in ? &I_load[1*W] : zeros4;
+    const __global UNIT_TYPE *I_load_2 = &I_load[2*W]; //y2_in ? &I_load[2*W] : zeros4;
+    const __global UNIT_TYPE *I_load_3 = &I_load[3*W]; //y3_in ? &I_load[3*W] : zeros4;
+    const __global UNIT_TYPE *I_load_4 = &I_load[4*W]; //y4_in ? &I_load[4*W] : zeros4;
+    const __global UNIT_TYPE *I_load_5 = &I_load[5*W]; //y5_in ? &I_load[5*W] : zeros4;
 	
     __attribute__((opencl_unroll_hint(1)))
     for (uint c = lxm4; c < C4_up16; c += 4) {
@@ -138,12 +142,12 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
         //           6x16x16 inputs -> 4x2x16x16 winograd components.
         {
             // Workgroup loads 6x16x16 inputs.
-            float4 I0 = y0_in ? (float4)(I_load_0[c*HW*4], I_load_0[c*HW*4+HW], I_load_0[c*HW*4+HW*2], I_load_0[c*HW*4+HW*3]):(float4)(0.0f,0.0f,0.0f,0.0f);
-			float4 I1 = y1_in ? (float4)(I_load_1[c*HW*4], I_load_1[c*HW*4+HW], I_load_1[c*HW*4+HW*2], I_load_1[c*HW*4+HW*3]):(float4)(0.0f,0.0f,0.0f,0.0f);
-			float4 I2 = y2_in ? (float4)(I_load_2[c*HW*4], I_load_2[c*HW*4+HW], I_load_2[c*HW*4+HW*2], I_load_2[c*HW*4+HW*3]):(float4)(0.0f,0.0f,0.0f,0.0f);
-			float4 I3 = y3_in ? (float4)(I_load_3[c*HW*4], I_load_3[c*HW*4+HW], I_load_3[c*HW*4+HW*2], I_load_3[c*HW*4+HW*3]):(float4)(0.0f,0.0f,0.0f,0.0f);
-			float4 I4 = y4_in ? (float4)(I_load_4[c*HW*4], I_load_4[c*HW*4+HW], I_load_4[c*HW*4+HW*2], I_load_4[c*HW*4+HW*3]):(float4)(0.0f,0.0f,0.0f,0.0f);
-			float4 I5 = y5_in ? (float4)(I_load_5[c*HW*4], I_load_5[c*HW*4+HW], I_load_5[c*HW*4+HW*2], I_load_5[c*HW*4+HW*3]):(float4)(0.0f,0.0f,0.0f,0.0f);
+            UNIT_TYPE_4 I0 = y0_in ? (UNIT_TYPE_4)(I_load_0[c*HW*4], I_load_0[c*HW*4+HW], I_load_0[c*HW*4+HW*2], I_load_0[c*HW*4+HW*3]):(UNIT_TYPE_4)(0.0f,0.0f,0.0f,0.0f);
+			UNIT_TYPE_4 I1 = y1_in ? (UNIT_TYPE_4)(I_load_1[c*HW*4], I_load_1[c*HW*4+HW], I_load_1[c*HW*4+HW*2], I_load_1[c*HW*4+HW*3]):(UNIT_TYPE_4)(0.0f,0.0f,0.0f,0.0f);
+			UNIT_TYPE_4 I2 = y2_in ? (UNIT_TYPE_4)(I_load_2[c*HW*4], I_load_2[c*HW*4+HW], I_load_2[c*HW*4+HW*2], I_load_2[c*HW*4+HW*3]):(UNIT_TYPE_4)(0.0f,0.0f,0.0f,0.0f);
+			UNIT_TYPE_4 I3 = y3_in ? (UNIT_TYPE_4)(I_load_3[c*HW*4], I_load_3[c*HW*4+HW], I_load_3[c*HW*4+HW*2], I_load_3[c*HW*4+HW*3]):(UNIT_TYPE_4)(0.0f,0.0f,0.0f,0.0f);
+			UNIT_TYPE_4 I4 = y4_in ? (UNIT_TYPE_4)(I_load_4[c*HW*4], I_load_4[c*HW*4+HW], I_load_4[c*HW*4+HW*2], I_load_4[c*HW*4+HW*3]):(UNIT_TYPE_4)(0.0f,0.0f,0.0f,0.0f);
+			UNIT_TYPE_4 I5 = y5_in ? (UNIT_TYPE_4)(I_load_5[c*HW*4], I_load_5[c*HW*4+HW], I_load_5[c*HW*4+HW*2], I_load_5[c*HW*4+HW*3]):(UNIT_TYPE_4)(0.0f,0.0f,0.0f,0.0f);
 
             // Compute Winograd f2x3 data transform and store components in SLM.
             V_write[0*64] = I0 - I2;
@@ -159,7 +163,7 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 
         barrier(CLK_LOCAL_MEM_FENCE);
 
-        __local const float4 *V_read_c8 = V_read;
+        __local const UNIT_TYPE_4 *V_read_c8 = V_read;
 
         __attribute__((opencl_unroll_hint(1)))
         for (int c8 = 0; c8 < 2; ++c8) {
@@ -168,16 +172,16 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 
             // Fetch 8 channels of Winograd input components, spread across subgroup.
             // row 0
-            float4 V00 = V_read_c8[0*8 + 32*0];
-            float4 V01 = V_read_c8[1*8 + 32*0];
-            float4 V02 = V_read_c8[2*8 + 32*0];
-            float4 V03 = V_read_c8[3*8 + 32*0];
+            UNIT_TYPE_4 V00 = V_read_c8[0*8 + 32*0];
+            UNIT_TYPE_4 V01 = V_read_c8[1*8 + 32*0];
+            UNIT_TYPE_4 V02 = V_read_c8[2*8 + 32*0];
+            UNIT_TYPE_4 V03 = V_read_c8[3*8 + 32*0];
 
             // row 1
-            float4 V10 = V_read_c8[0*8 + 32*1];
-            float4 V11 = V_read_c8[1*8 + 32*1];
-            float4 V12 = V_read_c8[2*8 + 32*1];
-            float4 V13 = V_read_c8[3*8 + 32*1];
+            UNIT_TYPE_4 V10 = V_read_c8[0*8 + 32*1];
+            UNIT_TYPE_4 V11 = V_read_c8[1*8 + 32*1];
+            UNIT_TYPE_4 V12 = V_read_c8[2*8 + 32*1];
+            UNIT_TYPE_4 V13 = V_read_c8[3*8 + 32*1];
 
             V_read_c8 += 256;
 			
@@ -189,27 +193,27 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
                 // Fetch 4 channels of Winograd filter components.
                 int2 coordU = coordU0;
 				uint coordU_x = coordU.x + get_sub_group_local_id();
-                float4 f0;
-				f0.s0 = *(__global float *)(&U[(coordU.y+0)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]); // as_float4(intel_sub_group_block_read4(U, coordU));
-				f0.s1 = *(__global float *)(&U[(coordU.y+1)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]); // as_float4(intel_sub_group_block_read4(U, coordU));
-				f0.s2 = *(__global float *)(&U[(coordU.y+2)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]); // as_float4(intel_sub_group_block_read4(U, coordU));
-				f0.s3 = *(__global float *)(&U[(coordU.y+3)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]); // as_float4(intel_sub_group_block_read4(U, coordU));
+                UNIT_TYPE_4 f0;
+				f0.s0 = *(__global UNIT_TYPE *)(&U[(coordU.y+0)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]); // as_UNIT_TYPE_4(intel_sub_group_block_read4(U, coordU));
+				f0.s1 = *(__global UNIT_TYPE *)(&U[(coordU.y+1)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]); // as_UNIT_TYPE_4(intel_sub_group_block_read4(U, coordU));
+				f0.s2 = *(__global UNIT_TYPE *)(&U[(coordU.y+2)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]); // as_UNIT_TYPE_4(intel_sub_group_block_read4(U, coordU));
+				f0.s3 = *(__global UNIT_TYPE *)(&U[(coordU.y+3)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]); // as_UNIT_TYPE_4(intel_sub_group_block_read4(U, coordU));
 
                 coordU.x += 8;
 				coordU_x = coordU.x + get_sub_group_local_id();
-                float4 f1;
-				f1.s0 = *(__global float *)(&U[(coordU.y+0)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
-				f1.s1 = *(__global float *)(&U[(coordU.y+1)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
-				f1.s2 = *(__global float *)(&U[(coordU.y+2)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
-				f1.s3 = *(__global float *)(&U[(coordU.y+3)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
+                UNIT_TYPE_4 f1;
+				f1.s0 = *(__global UNIT_TYPE *)(&U[(coordU.y+0)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
+				f1.s1 = *(__global UNIT_TYPE *)(&U[(coordU.y+1)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
+				f1.s2 = *(__global UNIT_TYPE *)(&U[(coordU.y+2)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
+				f1.s3 = *(__global UNIT_TYPE *)(&U[(coordU.y+3)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
 
                 coordU.x += 8;
 				coordU_x = coordU.x + get_sub_group_local_id();
-                float4 f2;
-				f2.s0 = *(__global float *)(&U[(coordU.y+0)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
-				f2.s1 = *(__global float *)(&U[(coordU.y+1)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
-				f2.s2 = *(__global float *)(&U[(coordU.y+2)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
-				f2.s3 = *(__global float *)(&U[(coordU.y+3)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
+                UNIT_TYPE_4 f2;
+				f2.s0 = *(__global UNIT_TYPE *)(&U[(coordU.y+0)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
+				f2.s1 = *(__global UNIT_TYPE *)(&U[(coordU.y+1)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
+				f2.s2 = *(__global UNIT_TYPE *)(&U[(coordU.y+2)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
+				f2.s3 = *(__global UNIT_TYPE *)(&U[(coordU.y+3)*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU_x]);
 
                 coordU0.y += 4;
 
@@ -338,7 +342,7 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 
     // Store multiplies in SLM.
     {
-        __local float4 *M_write = &V[lz*7*8 + lx];
+        __local UNIT_TYPE_4 *M_write = &V[lz*7*8 + lx];
 
         M_write[0*8] = M0;
         M_write[1*8] = M1;
@@ -354,16 +358,16 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
     if (lz < 7) 
 	{
         // Load multiplies from SLM.
-        __local const float8 *M_read = (__local float8*)&V[lz*8 + lxd4*224 + lxm4*2];
+        __local const UNIT_TYPE_8 *M_read = (__local UNIT_TYPE_8*)&V[lz*8 + lxd4*224 + lxm4*2];
         
-        float8 M0 = M_read[0*28];
-        float8 M1 = M_read[1*28];
-        float8 M2 = M_read[2*28];
-        float8 M3 = M_read[3*28];
+        UNIT_TYPE_8 M0 = M_read[0*28];
+        UNIT_TYPE_8 M1 = M_read[1*28];
+        UNIT_TYPE_8 M2 = M_read[2*28];
+        UNIT_TYPE_8 M3 = M_read[3*28];
 
         // Inverse Transform.
-        float8 S0 = M0 + M1 + M2;
-        float8 S1 = M1 - M2 - M3;
+        UNIT_TYPE_8 S0 = M0 + M1 + M2;
+        UNIT_TYPE_8 S1 = M1 - M2 - M3;
 
         // Store output to global memory.
         uint p = gy*4 + OUTPUT_PAD_BEFORE_SIZE_Y;
@@ -379,18 +383,12 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
             const unsigned bias_index0 = k;
 			const unsigned bias_index1 = bias_index0;
 		#endif
-		#else
-			float bias[1] = { 0.0f };
-	        const unsigned bias_index0 = 0;
-			const unsigned bias_index1 = 0;
 		#endif
-		//S0 = fmax(0.0f, S0 + bias[bias_index0]);
-		//S1 = fmax(0.0f, S1 + bias[bias_index1]);
 
-        __global float *O_write_0 = (__global float *)(&O[gn*PQK + k*Q*P + (p+0)*Q + q]);
-        __global float *O_write_1 = (__global float *)(&O[gn*PQK + k*Q*P + (p+1)*Q + q]);
-        __global float *O_write_2 = (__global float *)(&O[gn*PQK + k*Q*P + (p+2)*Q + q]);
-        __global float *O_write_3 = (__global float *)(&O[gn*PQK + k*Q*P + (p+3)*Q + q]);
+        __global UNIT_TYPE *O_write_0 = (__global UNIT_TYPE *)(&O[gn*PQK + k*Q*P + (p+0)*Q + q]);
+        __global UNIT_TYPE *O_write_1 = (__global UNIT_TYPE *)(&O[gn*PQK + k*Q*P + (p+1)*Q + q]);
+        __global UNIT_TYPE *O_write_2 = (__global UNIT_TYPE *)(&O[gn*PQK + k*Q*P + (p+2)*Q + q]);
+        __global UNIT_TYPE *O_write_3 = (__global UNIT_TYPE *)(&O[gn*PQK + k*Q*P + (p+3)*Q + q]);
 
         // TODO: clip output by P, Q
         bool q0_in = q < Q - OUTPUT_PAD_AFTER_SIZE_X;
@@ -399,48 +397,80 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 		if (k < FILTER_OFM_NUM) {
             if (p < P - OUTPUT_PAD_AFTER_SIZE_Y) {
                 if (q0_in) {
-                    O_write_0[0] = ACTIVATION(S0.s0 + bias[bias_index0], NL_M, NL_N);
-                    O_write_0[0+Q*P] = ACTIVATION(S0.s4 + bias[bias_index0+1], NL_M, NL_N);
+#if BIAS_TERM
+                S0.s0 += bias[bias_index0];
+                S0.s4 += bias[bias_index0+1];
+#endif
+                    O_write_0[0] = ACTIVATION(S0.s0, NL_M, NL_N);
+                    O_write_0[0+Q*P] = ACTIVATION(S0.s4, NL_M, NL_N);
                 }
                 if (q1_in) {
-                    O_write_0[1] = ACTIVATION(S0.s1 + bias[bias_index0], NL_M, NL_N);
-                    O_write_0[1+Q*P] = ACTIVATION(S0.s5 + bias[bias_index0+1], NL_M, NL_N);
+#if BIAS_TERM
+                S0.s1 += bias[bias_index0];
+                S0.s5 += bias[bias_index0+1];
+#endif
+                    O_write_0[1] = ACTIVATION(S0.s1, NL_M, NL_N);
+                    O_write_0[1+Q*P] = ACTIVATION(S0.s5, NL_M, NL_N);
                 }
             }
 
             // row 1
             if (p + 1 < P - OUTPUT_PAD_AFTER_SIZE_Y) {
                 if (q0_in) {
-                    O_write_1[0] = ACTIVATION(S1.s0 + bias[bias_index0], NL_M, NL_N);
-                    O_write_1[0+Q*P] = ACTIVATION(S1.s4 + bias[bias_index0+1], NL_M, NL_N);
+#if BIAS_TERM
+                S1.s0 += bias[bias_index0];
+                S1.s4 += bias[bias_index0+1];
+#endif
+                    O_write_1[0] = ACTIVATION(S1.s0, NL_M, NL_N);
+                    O_write_1[0+Q*P] = ACTIVATION(S1.s4, NL_M, NL_N);
                 }
+#if BIAS_TERM
+                S1.s1 += bias[bias_index0];
+                S1.s5 += bias[bias_index0+1];
+#endif
                 if (q1_in) {
-                    O_write_1[1] = ACTIVATION(S1.s1 + bias[bias_index0], NL_M, NL_N);
-                    O_write_1[1+Q*P] = ACTIVATION(S1.s5 + bias[bias_index0+1], NL_M, NL_N);
+                    O_write_1[1] = ACTIVATION(S1.s1, NL_M, NL_N);
+                    O_write_1[1+Q*P] = ACTIVATION(S1.s5, NL_M, NL_N);
                 }
             }
 
             // row 2
             if (p + 2 < P - OUTPUT_PAD_AFTER_SIZE_Y) {
                 if (q0_in) {
-                    O_write_2[0] = ACTIVATION(S0.s2 + bias[bias_index0], NL_M, NL_N);
-                    O_write_2[0+Q*P] = ACTIVATION(S0.s6 + bias[bias_index0+1], NL_M, NL_N);
+#if BIAS_TERM
+                S0.s2 += bias[bias_index0];
+                S0.s6 += bias[bias_index0+1];
+#endif
+                    O_write_2[0] = ACTIVATION(S0.s2, NL_M, NL_N);
+                    O_write_2[0+Q*P] = ACTIVATION(S0.s6, NL_M, NL_N);
                 }
                 if (q1_in) {
-                    O_write_2[1] = ACTIVATION(S0.s3 + bias[bias_index0], NL_M, NL_N);
-                    O_write_2[1+Q*P] = ACTIVATION(S0.s7 + bias[bias_index0+1], NL_M, NL_N);
+#if BIAS_TERM
+                S0.s3 += bias[bias_index0];
+                S0.s7 += bias[bias_index0+1];
+#endif
+                    O_write_2[1] = ACTIVATION(S0.s3, NL_M, NL_N);
+                    O_write_2[1+Q*P] = ACTIVATION(S0.s7, NL_M, NL_N);
                 }
             }
 
             // row 3
             if (p + 3 < P - OUTPUT_PAD_AFTER_SIZE_Y) {
                 if (q0_in) {
-                    O_write_3[0] = ACTIVATION(S1.s2 + bias[bias_index0], NL_M, NL_N);
-                    O_write_3[0+Q*P] = ACTIVATION(S1.s6 + bias[bias_index0+1], NL_M, NL_N);
+#if BIAS_TERM
+                S1.s2 += bias[bias_index0];
+                S1.s6 += bias[bias_index0+1];
+#endif
+                    O_write_3[0] = ACTIVATION(S1.s2, NL_M, NL_N);
+                    O_write_3[0+Q*P] = ACTIVATION(S1.s6, NL_M, NL_N);
                 }
                 if (q1_in) {
-                    O_write_3[1] = ACTIVATION(S1.s3 + bias[bias_index0], NL_M, NL_N);       
-                    O_write_3[1+Q*P] = ACTIVATION(S1.s7 + bias[bias_index0+1], NL_M, NL_N);      
+#if BIAS_TERM
+                S1.s3 += bias[bias_index0];
+                S1.s7 += bias[bias_index0+1];
+#endif
+                    O_write_3[1] = ACTIVATION(S1.s3, NL_M, NL_N);       
+                    O_write_3[1+Q*P] = ACTIVATION(S1.s7, NL_M, NL_N);      
                 }
             }
         }
@@ -449,3 +479,5 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
     }
 }
 
+#undef UNIT_TYPE_4
+#undef UNIT_TYPE_8

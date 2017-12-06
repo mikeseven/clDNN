@@ -29,7 +29,7 @@
 #include "convolution_kernel_winograd_2x3_s1.h"
 #include "convolution_kernel_bfyx_1x1.h"
 #include "convolution_kernel_bfyx_1x1_gemm_buf.h"
-#include "convolution_kernel_winograd_2x3_fused.h"
+#include "convolution_kernel_winograd_2x3_s1_fused.h"
 #include <iostream>
  
 namespace KernelSelector 

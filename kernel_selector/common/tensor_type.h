@@ -70,6 +70,7 @@ namespace KernelSelector
             image_2d_weights_c4_fyx_b,           // image type fyx_b
             image_2d_weights_c1_b_fyx,     // image type 2d b_fyx single channel
             winograd_2x3_s1_weights, //winograd convolution weights, F(2, 3) --filter 3x3 with stride 1
+            winograd_2x3_s1_fused_weights, //winograd convolution weights for fused kernel, F(2, 3) --filter 3x3 with stride 1
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -154,6 +155,7 @@ namespace KernelSelector
                 { WeightsLayout::image_2d_weights_c4_fyx_b,     {  0, 1, 2, 3 } },
                 { WeightsLayout::image_2d_weights_c1_b_fyx,     {  0, 1, 2, 3 } },
                 { WeightsLayout::winograd_2x3_s1_weights,       {  3, 2, 1, 0 } },
+                { WeightsLayout::winograd_2x3_s1_fused_weights, {  0, 1, 2, 3 } },
             };
 
             template <typename MapT, typename Layout, typename ChannelName>

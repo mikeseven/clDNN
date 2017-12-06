@@ -31,7 +31,7 @@ namespace KernelSelector {
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
-        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const ConvolutionParams&) const override { return{ WeightsLayout::winograd_2x3_s1_weights }; }
+        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const ConvolutionParams&) const override { return{ WeightsLayout::winograd_2x3_s1_fused_weights }; }
 
         JitConstants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const override;
         bool Validate(const Params& p, const OptionalParams& o) const override;

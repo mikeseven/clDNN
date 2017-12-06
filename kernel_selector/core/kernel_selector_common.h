@@ -451,6 +451,7 @@ namespace KernelSelector {
         case WeightsLayout::image_2d_weights_c4_fyx_b:  return "IMAGE_2D_WEIGHTS_C4_FYX_B";
         case WeightsLayout::image_2d_weights_c1_b_fyx:  return "IMAGE_2D_WEIGHTS_C1_B_FYX";
         case WeightsLayout::winograd_2x3_s1_weights:    return "WINOGRAD_2x3_S1_WEIGHTS";
+        case WeightsLayout::winograd_2x3_s1_fused_weights:    return "WINOGRAD_2x3_S1_FUSED_WEIGHTS";
         default:
             return "";
             break;

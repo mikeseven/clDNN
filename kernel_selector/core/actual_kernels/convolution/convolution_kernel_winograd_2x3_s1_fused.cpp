@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "convolution_kernel_winograd_2x3_fused.h"
+#include "convolution_kernel_winograd_2x3_s1_fused.h"
 #include "kernel_selector_utils.h"
 
 namespace KernelSelector {
@@ -44,17 +44,17 @@ namespace KernelSelector {
     {
         JitConstants jit = Parent::GetJitConstants(params, runInfo);
 
-        const uint32_t idepth = (uint32_t)params.inputs[0].Feature().v;
-        const uint32_t input_pad_y = +(uint32_t)params.inputs[0].Y().pad.before + (uint32_t)params.inputs[0].Y().pad.after;
-        const uint32_t input_pad_x = +(uint32_t)params.inputs[0].X().pad.before + (uint32_t)params.inputs[0].X().pad.after;
-        const uint32_t rows = (uint32_t)params.inputs[0].Y().v + input_pad_y;
-        const uint32_t cols = (uint32_t)params.inputs[0].X().v + input_pad_x;
+        const auto idepth = params.inputs[0].Feature().v;
+        const auto input_pad_y = params.inputs[0].Y().pad.before + params.inputs[0].Y().pad.after;
+        const auto input_pad_x = params.inputs[0].X().pad.before + params.inputs[0].X().pad.after;
+        const auto rows = params.inputs[0].Y().v + input_pad_y;
+        const auto cols = params.inputs[0].X().v + input_pad_x;
 
-        uint32_t output_pad_x_before = (uint32_t)params.output.GetDims()[0].pad.before;
-        uint32_t output_pad_y_before = (uint32_t)params.output.GetDims()[1].pad.before;
-        uint32_t output_pad_x_after = (uint32_t)params.output.GetDims()[0].pad.after;
-        uint32_t output_pad_y_after = (uint32_t)params.output.GetDims()[1].pad.after;
-        uint32_t C4_up16 = ((uint32_t)((idepth + 15) / 16) * 16) / 4;
+        auto output_pad_x_before = params.output.GetDims()[0].pad.before;
+        auto output_pad_y_before = params.output.GetDims()[1].pad.before;
+        auto output_pad_x_after = params.output.GetDims()[0].pad.after;
+        auto output_pad_y_after = params.output.GetDims()[1].pad.after;
+        auto C4_up16 = ((uint32_t)((idepth + 15) / 16) * 16) / 4;
 
         jit.AddConstants({
             MakeJitConstant("H", rows),
@@ -83,16 +83,16 @@ namespace KernelSelector {
     {
         Parent::DispatchData runInfo = Parent::SetDefault(arg);
 
-        const uint32_t odepth = (uint32_t)arg.output.Feature().v;
-        const uint32_t input_pad_y = +(uint32_t)arg.inputs[0].Y().pad.before + (uint32_t)arg.inputs[0].Y().pad.after;
-        const uint32_t input_pad_x = +(uint32_t)arg.inputs[0].X().pad.before + (uint32_t)arg.inputs[0].X().pad.after;
-        const uint32_t rows = (uint32_t)arg.inputs[0].Y().v + input_pad_y;
-        const uint32_t cols = (uint32_t)arg.inputs[0].X().v + input_pad_x;
+        const auto odepth = arg.output.Feature().v;
+        const auto input_pad_y = arg.inputs[0].Y().pad.before + arg.inputs[0].Y().pad.after;
+        const auto input_pad_x = arg.inputs[0].X().pad.before + arg.inputs[0].X().pad.after;
+        const auto rows = arg.inputs[0].Y().v + input_pad_y;
+        const auto cols = arg.inputs[0].X().v + input_pad_x;
 
-        uint32_t P = rows - 2;
-        uint32_t Q = cols - 2;
-        uint32_t K = odepth;
-        uint32_t N = 1;
+        auto P = rows - 2;
+        auto Q = cols - 2;
+        auto K = odepth;
+        auto N = 1;
 
         uint32_t global_step[3] = { 14, 4, 16 * 8 };
         uint32_t local_size[3] = { 8, 1, 8 };
@@ -119,15 +119,17 @@ namespace KernelSelector {
 
         const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
 
-        if (((uint32_t)params.weights.X().v != 3) || (uint32_t)(params.weights.Y().v != 3) ||
-            ((uint32_t)params.convParams.stride.x != 1) ||
-            ((uint32_t)params.convParams.stride.y != 1) ||
-            ((uint32_t)params.convParams.filterSize.x != 3) ||
-            ((uint32_t)params.convParams.filterSize.y != 3) ||
-            ((uint32_t)params.convParams.padding.x > 1) ||
-            ((uint32_t)params.convParams.padding.y > 1) ||
-            ((uint32_t)params.output.Feature().v % 32) ||
-            ((uint32_t)params.inputs[0].Feature().v % 32))
+        if ((params.weights.X().v != 3) || (params.weights.Y().v != 3) ||
+            (params.convParams.stride.x != 1) ||
+            (params.convParams.stride.y != 1) ||
+            (params.convParams.filterSize.x != 3) ||
+            (params.convParams.filterSize.y != 3) ||
+            (params.convParams.padding.x > 1) ||
+            (params.convParams.padding.y > 1) ||
+            (params.output.Feature().v % 32) ||
+            (params.inputs[0].Feature().v % 32) ||
+            //TODO: add support to batch > 1
+            (params.inputs[0].Batch().v != 1))
         {
             return{};
         }
