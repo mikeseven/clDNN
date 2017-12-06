@@ -29,6 +29,7 @@
 	_result = mad(_A.s3, sub_group_broadcast( _B.s3, i), _result);	\
     }
 
+#define UNIT_TYPE_2 CAT(UNIT_TYPE, 2)
 #define UNIT_TYPE_4 CAT(UNIT_TYPE, 4)
 #define UNIT_TYPE_8 CAT(UNIT_TYPE, 8)
 
@@ -109,15 +110,16 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
     UNIT_TYPE_4 M5 = (UNIT_TYPE_4)(0, 0, 0, 0);
     UNIT_TYPE_4 M6 = (UNIT_TYPE_4)(0, 0, 0, 0);
 
-
-    //const __global UNIT_TYPE_4 *I_load = (const __global UNIT_TYPE_4*)&I[gn*HWC + ((uint)y)*WC + ((uint)x)*C];
+#if OUTPUT_LAYOUT_BYXF
+    const __global UNIT_TYPE_4 *I_load = (const __global UNIT_TYPE_4*)&I[gn*HWC + ((uint)y)*WC + ((uint)x)*C];
+#else
 	const __global UNIT_TYPE *I_load = (const __global UNIT_TYPE*)&I[gn*HWC + ((uint)y)*W + ((uint)x)];
+#endif
 
 
     uint lxm2 = lx % 2;
     uint lxb1 = (lx & 2)/2;
-
-    //                                      
+                                     
     __local UNIT_TYPE_4 *V_write = &V[lxb1*256 + lz*4 + lxd4*2 + lxm2];
     __local const UNIT_TYPE_4 *V_read = &V[lzm4*64 + lx];
 
@@ -125,13 +127,21 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
     coordU0.x = (lzm4*24 + k*12);
     coordU0.y = 0;
 
-    //const __global UNIT_TYPE *zeros4 = (const __global UNIT_TYPE *)O;
+#if OUTPUT_LAYOUT_BYXF
+    const __global UNIT_TYPE *I_load_0 = &I_load[0*WC4]; //y0_in ? &I_load[0*W] : zeros4;
+    const __global UNIT_TYPE *I_load_1 = &I_load[1*WC4]; //y1_in ? &I_load[1*W] : zeros4;
+    const __global UNIT_TYPE *I_load_2 = &I_load[2*WC4]; //y2_in ? &I_load[2*W] : zeros4;
+    const __global UNIT_TYPE *I_load_3 = &I_load[3*WC4]; //y3_in ? &I_load[3*W] : zeros4;
+    const __global UNIT_TYPE *I_load_4 = &I_load[4*WC4]; //y4_in ? &I_load[4*W] : zeros4;
+    const __global UNIT_TYPE *I_load_5 = &I_load[5*WC4]; //y5_in ? &I_load[5*W] : zeros4;
+#else
     const __global UNIT_TYPE *I_load_0 = &I_load[0*W]; //y0_in ? &I_load[0*W] : zeros4;
     const __global UNIT_TYPE *I_load_1 = &I_load[1*W]; //y1_in ? &I_load[1*W] : zeros4;
     const __global UNIT_TYPE *I_load_2 = &I_load[2*W]; //y2_in ? &I_load[2*W] : zeros4;
     const __global UNIT_TYPE *I_load_3 = &I_load[3*W]; //y3_in ? &I_load[3*W] : zeros4;
     const __global UNIT_TYPE *I_load_4 = &I_load[4*W]; //y4_in ? &I_load[4*W] : zeros4;
     const __global UNIT_TYPE *I_load_5 = &I_load[5*W]; //y5_in ? &I_load[5*W] : zeros4;
+#endif
 	
     __attribute__((opencl_unroll_hint(1)))
     for (uint c = lxm4; c < C4_up16; c += 4) {
@@ -142,12 +152,21 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
         //           6x16x16 inputs -> 4x2x16x16 winograd components.
         {
             // Workgroup loads 6x16x16 inputs.
+#if OUTPUT_LAYOUT_BYXF
+            UNIT_TYPE_4 I0 = y0_in ? (UNIT_TYPE_4)(I_load_0[c]);
+			UNIT_TYPE_4 I1 = y1_in ? (UNIT_TYPE_4)(I_load_1[c]);
+			UNIT_TYPE_4 I2 = y2_in ? (UNIT_TYPE_4)(I_load_2[c]);
+			UNIT_TYPE_4 I3 = y3_in ? (UNIT_TYPE_4)(I_load_3[c]);
+			UNIT_TYPE_4 I4 = y4_in ? (UNIT_TYPE_4)(I_load_4[c]);
+			UNIT_TYPE_4 I5 = y5_in ? (UNIT_TYPE_4)(I_load_5[c]);
+#else
             UNIT_TYPE_4 I0 = y0_in ? (UNIT_TYPE_4)(I_load_0[c*HW*4], I_load_0[c*HW*4+HW], I_load_0[c*HW*4+HW*2], I_load_0[c*HW*4+HW*3]):(UNIT_TYPE_4)(0.0f,0.0f,0.0f,0.0f);
 			UNIT_TYPE_4 I1 = y1_in ? (UNIT_TYPE_4)(I_load_1[c*HW*4], I_load_1[c*HW*4+HW], I_load_1[c*HW*4+HW*2], I_load_1[c*HW*4+HW*3]):(UNIT_TYPE_4)(0.0f,0.0f,0.0f,0.0f);
 			UNIT_TYPE_4 I2 = y2_in ? (UNIT_TYPE_4)(I_load_2[c*HW*4], I_load_2[c*HW*4+HW], I_load_2[c*HW*4+HW*2], I_load_2[c*HW*4+HW*3]):(UNIT_TYPE_4)(0.0f,0.0f,0.0f,0.0f);
 			UNIT_TYPE_4 I3 = y3_in ? (UNIT_TYPE_4)(I_load_3[c*HW*4], I_load_3[c*HW*4+HW], I_load_3[c*HW*4+HW*2], I_load_3[c*HW*4+HW*3]):(UNIT_TYPE_4)(0.0f,0.0f,0.0f,0.0f);
 			UNIT_TYPE_4 I4 = y4_in ? (UNIT_TYPE_4)(I_load_4[c*HW*4], I_load_4[c*HW*4+HW], I_load_4[c*HW*4+HW*2], I_load_4[c*HW*4+HW*3]):(UNIT_TYPE_4)(0.0f,0.0f,0.0f,0.0f);
 			UNIT_TYPE_4 I5 = y5_in ? (UNIT_TYPE_4)(I_load_5[c*HW*4], I_load_5[c*HW*4+HW], I_load_5[c*HW*4+HW*2], I_load_5[c*HW*4+HW*3]):(UNIT_TYPE_4)(0.0f,0.0f,0.0f,0.0f);
+#endif
 
             // Compute Winograd f2x3 data transform and store components in SLM.
             V_write[0*64] = I0 - I2;
@@ -401,16 +420,24 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
                 S0.s0 += bias[bias_index0];
                 S0.s4 += bias[bias_index0+1];
 #endif
+#if OUTPUT_LAYOUT_BYXF
+                    O_write_0[0*QK2 + 0*K2] = (UNIT_TYPE_2)(ACTIVATION(S0.s0, NL_M, NL_N), ACTIVATION(S0.s4, NL_M, NL_N));
+#else
                     O_write_0[0] = ACTIVATION(S0.s0, NL_M, NL_N);
                     O_write_0[0+Q*P] = ACTIVATION(S0.s4, NL_M, NL_N);
+#endif 
                 }
                 if (q1_in) {
 #if BIAS_TERM
                 S0.s1 += bias[bias_index0];
                 S0.s5 += bias[bias_index0+1];
 #endif
+#if OUTPUT_LAYOUT_BYXF
+                    O_write_0[0*QK2 + 1*K2] = (UNIT_TYPE_2)(ACTIVATION(S0.s1, NL_M, NL_N), ACTIVATION(S0.s5, NL_M, NL_N));
+#else
                     O_write_0[1] = ACTIVATION(S0.s1, NL_M, NL_N);
                     O_write_0[1+Q*P] = ACTIVATION(S0.s5, NL_M, NL_N);
+#endif 
                 }
             }
 
@@ -421,16 +448,24 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
                 S1.s0 += bias[bias_index0];
                 S1.s4 += bias[bias_index0+1];
 #endif
+#if OUTPUT_LAYOUT_BYXF
+                    O_write_1[1*QK2 + 0*K2] = (UNIT_TYPE_2)(ACTIVATION(S1.s0, NL_M, NL_N), ACTIVATION(S1.s4, NL_M, NL_N));
+#else
                     O_write_1[0] = ACTIVATION(S1.s0, NL_M, NL_N);
                     O_write_1[0+Q*P] = ACTIVATION(S1.s4, NL_M, NL_N);
+#endif 
                 }
+                if (q1_in) {
 #if BIAS_TERM
                 S1.s1 += bias[bias_index0];
                 S1.s5 += bias[bias_index0+1];
 #endif
-                if (q1_in) {
+#if OUTPUT_LAYOUT_BYXF
+                    O_write_1[1*QK2 + 1*K2] = (UNIT_TYPE_2)(ACTIVATION(S1.s1, NL_M, NL_N), ACTIVATION(S1.s5, NL_M, NL_N));
+#else
                     O_write_1[1] = ACTIVATION(S1.s1, NL_M, NL_N);
                     O_write_1[1+Q*P] = ACTIVATION(S1.s5, NL_M, NL_N);
+#endif 
                 }
             }
 
@@ -441,16 +476,24 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
                 S0.s2 += bias[bias_index0];
                 S0.s6 += bias[bias_index0+1];
 #endif
+#if OUTPUT_LAYOUT_BYXF
+                    O_write_2[2*QK2 + 0*K2] = (UNIT_TYPE_2)(ACTIVATION(S0.s2, NL_M, NL_N), ACTIVATION(S0.s6, NL_M, NL_N));
+#else
                     O_write_2[0] = ACTIVATION(S0.s2, NL_M, NL_N);
                     O_write_2[0+Q*P] = ACTIVATION(S0.s6, NL_M, NL_N);
+#endif 
                 }
                 if (q1_in) {
 #if BIAS_TERM
                 S0.s3 += bias[bias_index0];
                 S0.s7 += bias[bias_index0+1];
 #endif
+#if OUTPUT_LAYOUT_BYXF
+                    O_write_2[2*QK2 + 1*K2] = (UNIT_TYPE_2)(ACTIVATION(S0.s3, NL_M, NL_N), ACTIVATION(S0.s7, NL_M, NL_N));
+#else
                     O_write_2[1] = ACTIVATION(S0.s3, NL_M, NL_N);
                     O_write_2[1+Q*P] = ACTIVATION(S0.s7, NL_M, NL_N);
+#endif 
                 }
             }
 
@@ -461,16 +504,24 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
                 S1.s2 += bias[bias_index0];
                 S1.s6 += bias[bias_index0+1];
 #endif
+#if OUTPUT_LAYOUT_BYXF
+                    O_write_3[3*QK2 + 0*K2] = (UNIT_TYPE_2)(ACTIVATION(S1.s2, NL_M, NL_N), ACTIVATION(S1.s6, NL_M, NL_N));
+#else
                     O_write_3[0] = ACTIVATION(S1.s2, NL_M, NL_N);
                     O_write_3[0+Q*P] = ACTIVATION(S1.s6, NL_M, NL_N);
+#endif
                 }
                 if (q1_in) {
 #if BIAS_TERM
                 S1.s3 += bias[bias_index0];
                 S1.s7 += bias[bias_index0+1];
 #endif
+#if OUTPUT_LAYOUT_BYXF
+                    O_write_3[3*QK2 + 1*K2] = (UNIT_TYPE_2)(ACTIVATION(S1.s3, NL_M, NL_N), ACTIVATION(S1.s7, NL_M, NL_N));
+#else
                     O_write_3[1] = ACTIVATION(S1.s3, NL_M, NL_N);       
-                    O_write_3[1+Q*P] = ACTIVATION(S1.s7, NL_M, NL_N);      
+                    O_write_3[1+Q*P] = ACTIVATION(S1.s7, NL_M, NL_N);   
+#endif   
                 }
             }
         }
@@ -478,6 +529,6 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 
     }
 }
-
+#undef UNIT_TYPE_2
 #undef UNIT_TYPE_4
 #undef UNIT_TYPE_8
