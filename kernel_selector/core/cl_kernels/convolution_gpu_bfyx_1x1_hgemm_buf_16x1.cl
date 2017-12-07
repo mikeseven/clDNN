@@ -101,7 +101,7 @@ KERNEL(convolution_gpu_bfyx_1x1_hgemm_buf_16x1)(
     }
 
     uint y0 = group_y * TILE_M + (local_y << 4);
-    __global half *C_write = &output[batch * INPUT0_BATCH_PITCH + group_x * TILE_N + y0 * N + local_x];
+    __global half *C_write = &output[batch * OUTPUT_BATCH_PITCH + group_x * TILE_N + y0 * N + local_x];
   
     if (group_y < NUM_WHOLE_GROUPS_Y || local_y < NUM_WHOLE_SUBGROUPS_Y) {
         C_write[0*N] = ACTIVATION(C0.s0, NL_M, NL_N); 
