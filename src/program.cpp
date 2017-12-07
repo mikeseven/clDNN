@@ -2105,11 +2105,17 @@ void program_impl::prepare_buffer_fusing()
             //This is WA for topologies that due to additional reorders added perform worse with conv1x1 optimization
             auto remove_bf8_xy_opt = ((input.is_type<pooling>() || input.is_type<concatenation>()) &&
                 output_layout.format == format::bf8_xy16 && input.get_users().size() == 1);
+            //Remove reorder from convolution 1x1 to bfyx in some conditions
+            auto remove_byxf_opt = (input.is_type<convolution>() &&
+                input.get_users().size() == 1 &&
+                input.get_output_layout().format == format::byxf);
             //Optimization only available in case of layers that support different input and output formats.
             //todo: new api needs to be created to read such caps
-            if (!(input.is_type<pooling>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb)) &&
+            if (!(input.is_type<pooling>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb || output_layout.format == format::byxf)) &&
                 !remove_bf8_xy_opt &&
-                !(input.is_type<convolution>() && input.get_output_layout().format == format::bf8_xy16))
+                !(input.is_type<convolution>() && input.get_output_layout().format == format::bf8_xy16) &&
+                !(input.is_type<eltwise>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb || output_layout.format == format::byxf)) &&
+                !(remove_byxf_opt && node.get_users().front()->is_type<eltwise>()))
                 return;
 
             if (remove_bf8_xy_opt)
@@ -2118,6 +2124,14 @@ void program_impl::prepare_buffer_fusing()
                 auto input_layout = input.get_output_layout();
                 auto target_layout = layout(input_layout.data_type, users_user_layout.format, input_layout.size, input_layout.data_padding);
                 input.set_output_layout(target_layout, false);
+            }
+            else if (remove_byxf_opt)
+            {
+                auto user = node.get_users().front();
+                auto users_user = node.get_users().front()->get_users().front();
+                auto input_layout = input.get_output_layout();
+                if(!(users_user->is_type<convolution>() && users_user->get_output_layout().format == format::bfyx))
+                    user->set_output_layout(input_layout, false);
             }
             else
                 input.set_output_layout(output_layout, false);
@@ -2546,6 +2560,7 @@ void program_impl::dump_memory_pool() const
 void program_impl::dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter) const
 {
     auto path = get_dir_path(options);
+    //std::string path = "C:\\git\\clDNN\\DEBUG_Generic\\graph\\";
     if (path.empty())
     {
         return;

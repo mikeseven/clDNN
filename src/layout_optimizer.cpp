@@ -102,7 +102,16 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         if (should_use_winograd_2x3_s1(prim, current_layout, output_or_weights_layout, _output_size_handling_enabled))
             return layout(expected_data_type, format::winograd_2x3_s1_data, expected_tensor);
 
-        if (layout_optimizer::convolution_bfyx_opt(current_layout, output_or_weights_layout, prim)
+        if (current_layout.data_type == data_types::f16 &&
+            output_or_weights_layout.size.spatial[0] == 1 && output_or_weights_layout.size.spatial[1] == 1 &&
+            current_layout.size.feature[0] % 64 == 0 && output_or_weights_layout.size.batch[0] % 64 == 0 &&
+            prim->stride.spatial[0] == 1 && prim->stride.spatial[1] == 1 &&
+            prim->input_offset.spatial[0] == 0 && prim->input_offset.spatial[1] == 0)
+        {
+            expected_tensor = current_layout.size;
+            expected_format = cldnn::format::byxf;
+        }
+        else if (layout_optimizer::convolution_bfyx_opt(current_layout, output_or_weights_layout, prim)
             || (_output_size_handling_enabled && prim->with_output_size))
         {
             if (current_layout.data_type == data_types::f32 &&
@@ -128,7 +137,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         else
         {
             expected_tensor = current_layout.size;
-            expected_format = cldnn::format::yxfb;
+            expected_format = cldnn::format::bfyx;
         }
 
         break;

@@ -72,7 +72,7 @@ namespace KernelSelector
 
         kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 
-        if (output.GetLayout() == DataLayout::bfyx)
+        if (output.GetLayout() == DataLayout::bfyx || output.GetLayout() == DataLayout::byxf)
         {
             // Determine global work sizes.
             kd.gws2 = output.Batch().v * output.Feature().v;    // B, F
