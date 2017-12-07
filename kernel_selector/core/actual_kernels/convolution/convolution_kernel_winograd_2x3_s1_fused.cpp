@@ -128,6 +128,8 @@ namespace KernelSelector {
             (params.convParams.padding.y > 1) ||
             (params.output.Feature().v % 32) ||
             (params.inputs[0].Feature().v % 32) ||
+            (params.output.Feature().pad.before != 0) || (params.output.Feature().pad.after != 0) ||
+            (params.output.Batch().pad.before != 0) || (params.output.Batch().pad.after != 0) ||
             //TODO: add support to batch > 1
             (params.inputs[0].Batch().v != 1))
         {
