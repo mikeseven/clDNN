@@ -105,7 +105,7 @@ namespace KernelSelector {
         runInfo.lws1 = local_size[1];
         runInfo.lws2 = local_size[2];
 
-        runInfo.effiency = FORCE_PRIORITY_1;
+        runInfo.effiency = FORCE_PRIORITY_5;
 
         return runInfo;
     }
