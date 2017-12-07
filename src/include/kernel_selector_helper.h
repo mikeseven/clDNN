@@ -30,6 +30,7 @@
 #include "fully_connected/fully_connected_kernel_selector.h"
 #include "activation/activation_kernel_selector.h"
 #include "softmax/softmax_kernel_selector.h"
+#include "region_yolo/region_yolo_kernel_selector.h"
 #include "eltwise/eltwise_kernel_selector.h"
 #include "reorder/reorder_kernel_selector.h"
 #include "permute/permute_kernel_selector.h"
@@ -88,6 +89,7 @@ namespace kernel_selector
     using fully_connected_params            = KernelSelector::FullyConnectedParams;
     using activation_params                 = KernelSelector::ActivationParams;
     using softmax_params                    = KernelSelector::SoftmaxParams;
+    using region_yolo_params                = KernelSelector::RegionYoloParams;
     using eltwise_params                    = KernelSelector::EltwiseParams;
     using reorder_base_params               = KernelSelector::ReorderBaseParams;
     using permute_params                    = KernelSelector::PermuteParams;
@@ -109,6 +111,7 @@ namespace kernel_selector
     using fully_connected_optional_params   = KernelSelector::FullyConnectedOptionalParams;
     using activation_optional_params        = KernelSelector::ActivationOptionalParams;
     using softmax_optional_params           = KernelSelector::SoftmaxOptionalParams;
+    using region_yolo_optional_params       = KernelSelector::RegionYoloOptionalParams;
     using eltwise_optional_params           = KernelSelector::EltwiseOptionalParams;
     using reorder_optional_params           = KernelSelector::ReorderOptionalParams;
     using concatenation_optional_params     = KernelSelector::ConcatenationOptionalParams;
@@ -123,6 +126,7 @@ namespace kernel_selector
     using fully_connected_kernel_selector   = KernelSelector::FullyConnectedKernelSelctor;
     using activation_kernel_selector        = KernelSelector::ActivationKernelSelctor;
     using softmax_kernel_selector           = KernelSelector::SoftmaxKernelSelctor;
+    using region_yolo_kernel_selector       = KernelSelector::RegionYoloKernelSelctor;
     using eltwise_kernel_selector           = KernelSelector::EltwiseKernelSelctor;
     using reorder_kernel_selector           = KernelSelector::ReorderKernelSelctor;
     using reshape_kernel_selector           = KernelSelector::ReshapeKernelSelctor;

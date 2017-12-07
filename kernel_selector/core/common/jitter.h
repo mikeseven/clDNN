@@ -548,7 +548,24 @@ inline JitConstants MakeSoftmaxJitConstants(const SoftmaxParams& params)
     const auto& sm = params.smParams;
 
     jit.AddConstants({
-        MakeJitConstant("ALONG_" + toString(sm.dim), ""),
+        MakeJitConstant("ALONG_" + toString(sm.dim), "")
+    });
+
+    return jit;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MakeRegionYoloJitConstants
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+inline JitConstants MakeRegionYoloJitConstants(const RegionYoloParams& params)
+{
+    JitConstants jit = MakeBaseParamsJitConstants(params);
+
+    const auto& ry = params.ryParams;
+
+    jit.AddConstants({
+        MakeJitConstant("CLASSES_",  ry.classes),
+        MakeJitConstant("NUM_", ry.num)
     });
 
     return jit;

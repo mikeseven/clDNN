@@ -98,6 +98,14 @@ namespace KernelSelector
                             uint32_t dimY : 1;
                             uint32_t dimFeature : 1;
                         } softmax;
+                        struct region_yolo_t
+                        {
+                            uint32_t dimX : 1;
+                            uint32_t dimY : 1;
+                            uint32_t dimFeature : 1;
+                            uint32_t classes : 1;
+                            uint32_t num : 1;
+                        } region_yolo;
                         struct concat_t
                         {
                             uint32_t axisX : 1;
@@ -1022,6 +1030,27 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // RegionYoloParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct RegionYoloParams : public BaseParams
+    {
+        RegionYoloParams() : BaseParams(KernelType::REGION_YOLO) {}
+
+        struct DedicatedParams
+        {
+            uint32_t classes;
+            uint32_t num;
+        };
+
+        struct DedicatedParams ryParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            auto k = BaseParams::GetParamsKey();
+            return k;
+        }
+    };
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // EltwiseParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct EltwiseParams : public BaseParams
@@ -1378,6 +1407,14 @@ namespace KernelSelector
     struct SoftmaxOptionalParams : OptionalParams
     {
         SoftmaxOptionalParams() : OptionalParams(KernelType::SOFT_MAX) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // RegionYoloOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct RegionYoloOptionalParams : OptionalParams
+    {
+        RegionYoloOptionalParams() : OptionalParams(KernelType::REGION_YOLO) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
