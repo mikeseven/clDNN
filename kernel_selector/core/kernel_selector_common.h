@@ -1,4 +1,4 @@
-﻿/*
+/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -325,6 +325,7 @@ namespace KernelSelector {
         case KernelType::FULLY_CONNECTED:   return "FULLY_CONNECTED";
         case KernelType::ACTIVATION:        return "ACTIVATION";
         case KernelType::SOFT_MAX:          return "SOFT_MAX";
+        case KernelType::REGION_YOLO:       return "REGION_YOLO";
         case KernelType::ELTWISE:           return "ELTWISE";
         case KernelType::REORDER:           return "REORDER";
         default:

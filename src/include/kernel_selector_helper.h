@@ -30,6 +30,7 @@
 #include "fully_connected/fully_connected_kernel_selector.h"
 #include "activation/activation_kernel_selector.h"
 #include "softmax/softmax_kernel_selector.h"
+#include "region_yolo/region_yolo_kernel_selector.h"
 #include "eltwise/eltwise_kernel_selector.h"
 #include "reorder/reorder_kernel_selector.h"
 #include "permute/permute_kernel_selector.h"
@@ -88,6 +89,7 @@ namespace kernel_selector
     using fully_connected_params            = KernelSelector::FullyConnectedParams;
     using activation_params                 = KernelSelector::ActivationParams;
     using softmax_params                    = KernelSelector::SoftmaxParams;
+    using region_yolo_params                = KernelSelector::RegionYoloParams;
     using eltwise_params                    = KernelSelector::EltwiseParams;
     using reorder_base_params               = KernelSelector::ReorderBaseParams;
     using permute_params                    = KernelSelector::PermuteParams;
@@ -109,6 +111,7 @@ namespace kernel_selector
     using fully_connected_optional_params   = KernelSelector::FullyConnectedOptionalParams;
     using activation_optional_params        = KernelSelector::ActivationOptionalParams;
     using softmax_optional_params           = KernelSelector::SoftmaxOptionalParams;
+    using region_yolo_optional_params       = KernelSelector::RegionYoloOptionalParams;
     using eltwise_optional_params           = KernelSelector::EltwiseOptionalParams;
     using reorder_optional_params           = KernelSelector::ReorderOptionalParams;
     using concatenation_optional_params     = KernelSelector::ConcatenationOptionalParams;
@@ -123,6 +126,7 @@ namespace kernel_selector
     using fully_connected_kernel_selector   = KernelSelector::FullyConnectedKernelSelctor;
     using activation_kernel_selector        = KernelSelector::ActivationKernelSelctor;
     using softmax_kernel_selector           = KernelSelector::SoftmaxKernelSelctor;
+    using region_yolo_kernel_selector       = KernelSelector::RegionYoloKernelSelctor;
     using eltwise_kernel_selector           = KernelSelector::EltwiseKernelSelctor;
     using reorder_kernel_selector           = KernelSelector::ReorderKernelSelctor;
     using reshape_kernel_selector           = KernelSelector::ReshapeKernelSelctor;
@@ -237,6 +241,7 @@ inline kernel_selector::weights_layout to_weights_layout(format f)
     case format::bs_xs_xsv8_bsv8:   return kernel_selector::weights_layout::os_i_osv8__ai8;
     case format::bs_xs_xsv8_bsv16:  return kernel_selector::weights_layout::os_i_osv16__ai8;
     case format::bs_x_bsv16:        return kernel_selector::weights_layout::os_i_osv16;
+    case format::image_weights_fyx_b:     return kernel_selector::weights_layout::image_weights_fyx_b;
     case format::image_2d_weights_c4_fyx_b:     return kernel_selector::weights_layout::image_2d_weights_c4_fyx_b;
     case format::image_2d_weights_c1_b_fyx:     return kernel_selector::weights_layout::image_2d_weights_c1_b_fyx;
     case format::winograd_2x3_s1_weights:       return kernel_selector::weights_layout::winograd_2x3_s1_weights;
@@ -260,6 +265,7 @@ static inline cldnn::format::type from_weights_layout(kernel_selector::weights_l
     case kernel_selector::weights_layout::os_i_osv16:         return cldnn::format::bs_x_bsv16;
     case kernel_selector::weights_layout::os_i_osv8__ai8:     return cldnn::format::bs_xs_xsv8_bsv8;
     case kernel_selector::weights_layout::os_i_osv16__ai8:    return cldnn::format::bs_xs_xsv8_bsv16;
+    case kernel_selector::weights_layout::image_weights_fyx_b:        return cldnn::format::image_weights_fyx_b;
     case kernel_selector::weights_layout::image_2d_weights_c4_fyx_b:        return cldnn::format::image_2d_weights_c4_fyx_b;
     case kernel_selector::weights_layout::image_2d_weights_c1_b_fyx:        return cldnn::format::image_2d_weights_c1_b_fyx;
     case kernel_selector::weights_layout::winograd_2x3_s1_weights:          return cldnn::format::winograd_2x3_s1_weights;
