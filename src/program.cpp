@@ -2109,9 +2109,19 @@ void program_impl::prepare_buffer_fusing()
             auto remove_byxf_opt = (input.is_type<convolution>() &&
                 input.get_users().size() == 1 &&
                 input.get_output_layout().format == format::byxf);
+            //check if all inputs user have the same format
+            auto all_users_same_format = true;
+            for (auto const& user : input.get_users())
+            {
+                if (user->get_output_layout().format != input.get_users().front()->get_output_layout().format)
+                {
+                    all_users_same_format = false;
+                    break;
+                }
+            }
             //Optimization only available in case of layers that support different input and output formats.
             //todo: new api needs to be created to read such caps
-            if (!(input.is_type<pooling>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb || output_layout.format == format::byxf)) &&
+            if (!(input.is_type<pooling>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb || output_layout.format == format::byxf) && all_users_same_format) &&
                 !remove_bf8_xy_opt &&
                 !(input.is_type<convolution>() && input.get_output_layout().format == format::bf8_xy16) &&
                 !(input.is_type<eltwise>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb || output_layout.format == format::byxf)) &&
@@ -2130,7 +2140,7 @@ void program_impl::prepare_buffer_fusing()
                 auto user = node.get_users().front();
                 auto users_user = node.get_users().front()->get_users().front();
                 auto input_layout = input.get_output_layout();
-                if(!(users_user->is_type<convolution>() && users_user->get_output_layout().format == format::bfyx))
+                if(!((users_user->is_type<convolution>() || users_user->is_type<deconvolution>()) && users_user->get_output_layout().format == format::bfyx))
                     user->set_output_layout(input_layout, false);
             }
             else
@@ -2560,7 +2570,6 @@ void program_impl::dump_memory_pool() const
 void program_impl::dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter) const
 {
     auto path = get_dir_path(options);
-    //std::string path = "C:\\git\\clDNN\\DEBUG_Generic\\graph\\";
     if (path.empty())
     {
         return;
