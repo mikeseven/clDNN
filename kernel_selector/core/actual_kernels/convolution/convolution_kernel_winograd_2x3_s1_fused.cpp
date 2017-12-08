@@ -124,8 +124,6 @@ namespace KernelSelector {
             (params.convParams.stride.y != 1) ||
             (params.convParams.filterSize.x != 3) ||
             (params.convParams.filterSize.y != 3) ||
-            (params.convParams.padding.x > 1) ||
-            (params.convParams.padding.y > 1) ||
             (params.output.Feature().v % 32) ||
             (params.inputs[0].Feature().v % 32) ||
             (params.output.Feature().pad.before != 0) || (params.output.Feature().pad.after != 0) ||
