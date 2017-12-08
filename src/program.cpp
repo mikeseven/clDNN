@@ -2124,7 +2124,7 @@ void program_impl::prepare_buffer_fusing()
             if (!(input.is_type<pooling>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb || output_layout.format == format::byxf) && all_users_same_format) &&
                 !remove_bf8_xy_opt &&
                 !(input.is_type<convolution>() && input.get_output_layout().format == format::bf8_xy16) &&
-                !(input.is_type<eltwise>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb || output_layout.format == format::byxf)) &&
+                !(input.is_type<eltwise>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb || output_layout.format == format::byxf) && all_users_same_format) &&
                 !(remove_byxf_opt && node.get_users().front()->is_type<eltwise>()))
                 return;
 
@@ -2138,9 +2138,19 @@ void program_impl::prepare_buffer_fusing()
             else if (remove_byxf_opt)
             {
                 auto user = node.get_users().front();
-                auto users_user = node.get_users().front()->get_users().front();
+                auto users_users = node.get_users().front()->get_users();
+                
+                for (auto const& users_user : users_users)
+                {
+                    if (users_user->get_output_layout().format != format::byxf && !users_user->is_type<eltwise>())
+                    {
+                        remove_byxf_opt = false;
+                        break;
+                    }
+                }
+
                 auto input_layout = input.get_output_layout();
-                if(!((users_user->is_type<convolution>() || users_user->is_type<deconvolution>()) && users_user->get_output_layout().format == format::bfyx))
+                if(remove_byxf_opt)
                     user->set_output_layout(input_layout, false);
             }
             else
