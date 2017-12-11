@@ -2157,7 +2157,7 @@ begin
         }
         if (!$VcsToken.State.Contains('SelectWorkspace'))
         {
-            Write-Error 'VCS: Failed to select workspace in VCS. VCS token is invalid (no workspace selected).';
+            Write-Error 'VCS: Failed to select branch in VCS. VCS token is invalid (no workspace selected).';
             return $VcsToken;
         }
         if ($VcsToken.Aborted)
@@ -2375,7 +2375,7 @@ begin
         }
         if (!$VcsToken.State.Contains('SelectBranch') -and !$VcsToken.State.Contains('SelectWorkspace'))
         {
-            Write-Error 'VCS: Failed to select workspace in VCS. VCS token is invalid (no workspace and/or branch selected).';
+            Write-Error 'VCS: Failed to change mode of files in VCS. VCS token is invalid (no workspace and/or branch selected).';
             return $VcsToken;
         }
         if ($VcsToken.Aborted)
