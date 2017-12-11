@@ -148,7 +148,9 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
             return layout(expected_data_type, format::winograd_2x3_s1_data, expected_tensor);
 
         if (layout_optimizer::convolution_byxf_opt(current_layout, output_or_weights_layout, prim) &&
-            (node.get_dependency(0).get_output_layout().format == cldnn::format::byxf || users_for_convolution_byxf_opt(node)))
+            (node.get_dependency(0).get_output_layout().format == cldnn::format::byxf || users_for_convolution_byxf_opt(node)) &&
+            //TODO: remove this condition when yxfb optimizations will be disabled
+            current_layout.format != cldnn::format::yxfb)
         {
             expected_tensor = current_layout.size;
             expected_format = cldnn::format::byxf;
@@ -179,7 +181,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         else
         {
             expected_tensor = current_layout.size;
-            expected_format = cldnn::format::bfyx;
+            expected_format = cldnn::format::yxfb;
         }
 
         break;
