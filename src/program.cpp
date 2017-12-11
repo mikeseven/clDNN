@@ -1368,7 +1368,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 reorder_prim->id,
                 layout_optimizer::data_type::input,
                 conv_prim,
-                weights_layout).first;
+                weights_layout,
+                conv_node).first;
 
             if (new_input && new_input->output_format != format::winograd_2x3_s1_data && new_input->output_format != format::bf8_xy16) //output format is not optimal
             {
@@ -1408,7 +1409,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 input_node.id(),
                 layout_optimizer::data_type::input,
                 conv_prim,
-                weights_layout).first;
+                weights_layout,
+                conv_node).first;
         }
 
         if (new_input && new_input->output_format == format::winograd_2x3_s1_data)
@@ -1530,7 +1532,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 input.id(),
                 layout_optimizer::data_type::input,
                 detection_output_prim,
-                layout{ data_types::f32, format::bfyx, tensor{} }).first;
+                layout{ data_types::f32, format::bfyx, tensor{} },
+                detection_output_node).first;
 
             if (new_input)
             {
@@ -1563,7 +1566,8 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
             bias.id(),
             bias_type,
             node.get_primitive(),
-            output_layout);
+            output_layout,
+            node);
 
         if (reorder.first)
             this->add_intermediate(reorder.first, node, dep_idx);

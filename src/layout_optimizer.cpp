@@ -26,6 +26,9 @@
 #include <boost/filesystem.hpp>
 #include <sstream>
 
+#include "eltwise_inst.h"
+#include "pooling_inst.h"
+
 using namespace cldnn;
 
 namespace {
@@ -78,7 +81,49 @@ bool layout_optimizer::convolution_bfyx_opt(layout const& output_layout, const l
     return false;
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, layout const& output_or_weights_layout)
+bool layout_optimizer::convolution_byxf_opt(layout const& output_layout, const layout& weights_layout, std::shared_ptr<const convolution> conv)
+{
+    //A set of rules that define when byxf mem format has better performance
+    if (output_layout.data_type == data_types::f16 &&
+        weights_layout.size.spatial[0] == 1 && weights_layout.size.spatial[1] == 1 &&
+        output_layout.size.feature[0] % 64 == 0 && weights_layout.size.batch[0] % 64 == 0 &&
+        conv->stride.spatial[0] == 1 && conv->stride.spatial[1] == 1 &&
+        conv->input_offset.spatial[0] == 0 && conv->input_offset.spatial[1] == 0)
+        return true;
+
+    return false;
+}
+
+bool layout_optimizer::users_for_convolution_byxf_opt(program_node const& node)
+{
+    bool use_byxf = false;
+    for (auto& user : node.get_users())
+    {
+        //primitives that support transitions bfyx->other format
+        if (user->type() == cldnn::eltwise::type_id() || user->type() == cldnn::pooling::type_id())
+            use_byxf = true;
+        //convolution that is capable to use byxf and is performant
+        else if (user->type() == cldnn::convolution::type_id())
+        {
+            auto conv_prim = node.as<convolution>().get_primitive();
+            if (convolution_byxf_opt(user->calc_output_layout(), user->get_dependency(1).get_output_layout(), conv_prim))
+                use_byxf = true;
+            else
+            {
+                use_byxf = false;
+                break;
+            }
+        }
+        else
+        {
+            use_byxf = false;
+            break;
+        }
+    }
+    return use_byxf;
+}
+
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, layout const& output_or_weights_layout, program_node const& node)
 {
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
@@ -102,11 +147,8 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         if (should_use_winograd_2x3_s1(prim, current_layout, output_or_weights_layout, _output_size_handling_enabled))
             return layout(expected_data_type, format::winograd_2x3_s1_data, expected_tensor);
 
-        if (current_layout.data_type == data_types::f16 &&
-            output_or_weights_layout.size.spatial[0] == 1 && output_or_weights_layout.size.spatial[1] == 1 &&
-            current_layout.size.feature[0] % 64 == 0 && output_or_weights_layout.size.batch[0] % 64 == 0 &&
-            prim->stride.spatial[0] == 1 && prim->stride.spatial[1] == 1 &&
-            prim->input_offset.spatial[0] == 0 && prim->input_offset.spatial[1] == 0)
+        if (layout_optimizer::convolution_byxf_opt(current_layout, output_or_weights_layout, prim) &&
+            (node.get_dependency(0).get_output_layout().format == cldnn::format::byxf || users_for_convolution_byxf_opt(node)))
         {
             expected_tensor = current_layout.size;
             expected_format = cldnn::format::byxf;
@@ -149,7 +191,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_format, expected_tensor);
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, layout const& output_or_weights_layout)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, layout const& output_or_weights_layout, program_node const& /*node*/)
 {
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
@@ -174,7 +216,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_format, expected_tensor);
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const deconvolution> prim, layout const& output_or_weights_layout)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const deconvolution> prim, layout const& output_or_weights_layout, program_node const& /*node*/)
 {
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
@@ -199,7 +241,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_format, expected_tensor);
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const detection_output> prim, layout const& /*output_or_weights_layout*/)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const detection_output> prim, layout const& /*output_or_weights_layout*/, program_node const& /*node*/)
 {
     auto expected_tensor = current_layout.size;
     auto expected_data_type = data_types::f32;

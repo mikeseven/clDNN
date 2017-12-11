@@ -104,12 +104,14 @@ private:
     std::map<cache_key, std::shared_ptr<reorder>> _cached_reorders;
     std::map<cache_key, std::shared_ptr<generic_layer>> _cached_generic_layers;
 
-    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, layout const& output_or_weights_layout);
-    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, layout const& output_or_weights_layout);
-    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const deconvolution> prim, layout const& output_or_weights_layout);
-    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const detection_output> prim, layout const& output_or_weights_layout);
+    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, layout const& output_or_weights_layout, program_node const& node);
+    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, layout const& output_or_weights_layout, program_node const& node);
+    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const deconvolution> prim, layout const& output_or_weights_layout, program_node const& node);
+    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const detection_output> prim, layout const& output_or_weights_layout, program_node const& node);
 
     bool convolution_bfyx_opt(const layout& output_layout, const layout& weights_layout, std::shared_ptr<const convolution> conv);
+    bool convolution_byxf_opt(const layout& output_layout, const layout& weights_layout, std::shared_ptr<const convolution> conv);
+    bool users_for_convolution_byxf_opt(program_node const& node);
 
     //pair.first is reorder (may be nullptr if reorder is not needed), pair.second tells if returned reorder was cached (no need to add it to 'ouputs' etc.)
     //for pair.first == nullptr, pair.second == true
@@ -138,13 +140,14 @@ public:
                      primitive_id const& id,
                      data_type type,
                      std::shared_ptr<const T> user,
-                     layout const& user_layout)
+                     layout const& user_layout,
+                     program_node& node)
         -> std::enable_if_t<
             meta::is_any_of_v<T, convolution, fully_connected, deconvolution, detection_output>,
             meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>
         >
     {
-        auto expected_layout = get_expected_layout(data_layout, type, user, user_layout);
+        auto expected_layout = get_expected_layout(data_layout, type, user, user_layout, node);
         return create_reorder_if_needed(data_layout, id, expected_layout);
     }
 
@@ -154,7 +157,8 @@ public:
                      primitive_id const& id,
                      data_type type,
                      std::shared_ptr<const T> user,
-                     layout const& user_layout)
+                     layout const& user_layout,
+                     program_node& node)
         -> std::enable_if_t<
             !meta::is_any_of_v<T, convolution, fully_connected, deconvolution, detection_output>,
             meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>
