@@ -35,7 +35,7 @@ namespace cldnn {
                 auto ry_optional_params = get_default_optional_params<kernel_selector::region_yolo_optional_params>(arg.get_program());
 
                 const auto& primitive = arg.get_primitive();
-
+                ry_params.ryParams.coords = primitive->coords;
                 ry_params.ryParams.classes = primitive->classes;
                 ry_params.ryParams.classes = primitive->num;
 

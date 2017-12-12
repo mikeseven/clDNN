@@ -103,9 +103,17 @@ namespace KernelSelector
                             uint32_t dimX : 1;
                             uint32_t dimY : 1;
                             uint32_t dimFeature : 1;
+                            uint32_t coords : 1;
                             uint32_t classes : 1;
                             uint32_t num : 1;
                         } region_yolo;
+                        struct reorg_yolo_t
+                        {
+                            uint32_t dimX : 1;
+                            uint32_t dimY : 1;
+                            uint32_t dimFeature : 1;
+                            uint32_t stride : 1;
+                        } reorg_yolo;
                         struct concat_t
                         {
                             uint32_t axisX : 1;
@@ -1038,8 +1046,30 @@ namespace KernelSelector
 
         struct DedicatedParams
         {
+            uint32_t coords;
             uint32_t classes;
             uint32_t num;
+        };
+
+        struct DedicatedParams ryParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            auto k = BaseParams::GetParamsKey();
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ReorgYoloParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ReorgYoloParams : public BaseParams
+    {
+        ReorgYoloParams() : BaseParams(KernelType::REORG_YOLO) {}
+
+        struct DedicatedParams
+        {
+            uint32_t stride;
         };
 
         struct DedicatedParams ryParams;
@@ -1415,6 +1445,14 @@ namespace KernelSelector
     struct RegionYoloOptionalParams : OptionalParams
     {
         RegionYoloOptionalParams() : OptionalParams(KernelType::REGION_YOLO) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ReorgYoloOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ReorgYoloOptionalParams : OptionalParams
+    {
+        ReorgYoloOptionalParams() : OptionalParams(KernelType::REORG_YOLO) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

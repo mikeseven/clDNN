@@ -16,7 +16,7 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "../C/region_yolo.h"
+#include "../C/reorg_yolo.h"
 #include "primitive.hpp"
 
 namespace cldnn
@@ -32,50 +32,40 @@ namespace cldnn
     /// @details
     /// @par Algorithm:
     /// @par Where:
-    struct region_yolo : public primitive_base<region_yolo, CLDNN_PRIMITIVE_DESC(region_yolo)>
+    struct reorg_yolo : public primitive_base<reorg_yolo, CLDNN_PRIMITIVE_DESC(reorg_yolo)>
     {
-        CLDNN_DECLATE_PRIMITIVE(region_yolo)
+        CLDNN_DECLATE_PRIMITIVE(reorg_yolo)
 
         /// @brief Constructs region_yolo primitive.
         /// @param id This primitive id.
         /// @param input Input primitive id.
         /// @param dimension Defines a scope of normalization (see #dimension).
-        region_yolo(
+        reorg_yolo(
             const primitive_id& id,
             const primitive_id& input,
-            const uint32_t coords,
-            const uint32_t classes,
-            const uint32_t num,
+            const uint32_t stride,
             const padding& output_padding = padding()
         )
             :primitive_base(id, { input }, output_padding)
-            , coords(coords)
-            , classes(classes)
-            , num(num)
+            , stride(stride)
         {}
 
         /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{region_yolo}
-        region_yolo(const dto* dto)
+        reorg_yolo(const dto* dto)
             :primitive_base(dto)
-            , coords(dto->coords)
-            , classes(dto->classes)
-            , num(dto->num)
+            , stride(dto->stride)
         {}
 
-        /// @brief Defines a scope of a region yolo normalization
+        /// @brief Defines a scope of a reorg yolo normalization
         /// @details
         /// Specific behaviour is determined by these parameters, as follows:
-        uint32_t coords;
-        uint32_t classes;
-        uint32_t num;
+        uint32_t stride;
 
 
     private:
         void update_dto(dto& dto) const override
         {
-            dto.coords = coords;
-            dto.classes = classes;
-            dto.num = num;
+            dto.stride = stride;
         }
     };
     /// @}
