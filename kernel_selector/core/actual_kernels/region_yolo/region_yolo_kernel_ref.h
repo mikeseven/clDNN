@@ -27,14 +27,12 @@ namespace KernelSelector
         RegionYoloKernelRef() : CommonKernelBase("region_yolo_gpu_ref") {}
         virtual ~RegionYoloKernelRef() {}
 
+        using DispatchData = CommonDispatchData;        
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
-        using DispatchData = CommonDispatchData;
 
 
     protected:
-        virtual bool Validate(const Params& p) const;
-        virtual JitConstants GetJitConstants(const RegionYoloParams& params, DispatchData kd) const;
-        virtual DispatchData SetDefault(const RegionYoloParams& params) const;
+        virtual JitConstants GetJitConstants(const RegionYoloParams& params) const;
     };
 }

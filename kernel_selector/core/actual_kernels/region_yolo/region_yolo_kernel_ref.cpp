@@ -19,16 +19,7 @@
  
 namespace KernelSelector 
 {
-    bool RegionYoloKernelRef::Validate(const Params& p) const
-    {
-        if (p.GetType() != KernelType::REGION_YOLO)
-        {
-            return false;
-        }
-
-        return true;
-    }
-
+    
     ParamsKey RegionYoloKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
@@ -44,10 +35,10 @@ namespace KernelSelector
         return k;
     }
 
-    JitConstants RegionYoloKernelRef::GetJitConstants(const RegionYoloParams& params, DispatchData kd) const
+    JitConstants RegionYoloKernelRef::GetJitConstants(const RegionYoloParams& params) const
     {
         const auto& ry = params.ryParams;
-        JitConstants jit = GetJitConstants(params, kd);
+        JitConstants jit = MakeRegionYoloJitConstants(params);
         jit.AddConstants({
             MakeJitConstant("CLASSES",        ry.classes),
             MakeJitConstant("NUM",            ry.num),
@@ -55,43 +46,45 @@ namespace KernelSelector
 
         return jit;
     }
-
-    RegionYoloKernelRef::DispatchData RegionYoloKernelRef::SetDefault(const RegionYoloParams& params) const
+    RegionYoloKernelRef::DispatchData SetDefault(const RegionYoloParams& params)
     {
-        auto runInfo = SetDefault(params);
-        const auto& out = params.output;
-        std::vector<size_t> global = { out.X().v*out.Y().v, out.Feature().v, out.Batch().v };
-        auto local = GetOptimalLocalWorkGroupSizes(global);
+        RegionYoloKernelRef::DispatchData kd;
 
-        runInfo.gws0 = global[0];
-        runInfo.gws1 = global[1];
-        runInfo.gws2 = global[2];
+        kd.fp16UnitUsed = (params.inputs[0].GetDType() == Datatype::F16);
 
-        runInfo.lws0 = local[0];
-        runInfo.lws1 = local[1];
-        runInfo.lws2 = local[2];
+        // Determine global work sizes.
+        kd.gws0 = params.output.LogicalSize();
+        kd.gws1 = 1;
+        kd.gws2 = 1;
 
-        runInfo.effiency = DONT_USE_IF_HAVE_SOMETHING_ELSE;
+        // Find largest positive local work size that is divider for global work size.
+        kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
+        while (kd.gws0 % kd.lws0 != 0)
+        {
+            --kd.lws0;
+        }
+        kd.lws1 = 1;
+        kd.lws2 = 1;
 
-        return runInfo;
+        return kd;
     }
-
     KernelsData RegionYoloKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::REGION_YOLO);
-
         const RegionYoloParams& orgParams = static_cast<const RegionYoloParams&>(params);
 
         DispatchData runInfo = SetDefault(orgParams);
-
         KernelData kd = KernelData::Default<RegionYoloParams>(params);
 
-        auto cldnnJit = GetJitConstants(orgParams, runInfo);
-        auto entryPoint = GetEntryPoint(kernelName, orgParams.layerID, options);
-        auto jit = CreateJit(kernelName, cldnnJit, entryPoint);
+        auto cldnn_jit = GetJitConstants(orgParams);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);
+        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, runInfo, kernelName, jit, entryPoint);
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point);
+        kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 1 });
+
+        kd.estimatedTime = FORCE_PRIORITY_9;
 
         return{ kd };
     }
