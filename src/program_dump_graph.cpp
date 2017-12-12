@@ -96,7 +96,7 @@ namespace
                 #pragma clang diagnostic push
                 #pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
             #endif
-            graph << "    " << get_node_id(node.get()) << "[label=\"" << node->id() << ":\\n" << get_extr_type(typeid(*node).name()) << "\n out format: " + extr_oformat(node.get()) << "\"";
+            graph << "    " << get_node_id(node.get()) << "[label=\"" << node->id() << ":\\n" << get_extr_type(typeid(*node).name()) << "\n out format: " + extr_oformat(node.get()) << (node->can_be_optimized() ? "\\n optimized out" : "") << "\"";
             #ifdef __clang__
                 #pragma clang diagnostic pop
             #endif
