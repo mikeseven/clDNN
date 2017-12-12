@@ -42,7 +42,7 @@ KERNEL (normalize_gpu_within_spatial_bfyx)(const __global UNIT_TYPE* input, __gl
    
     uint output_idx = OUTPUT_OFFSET + b*OUTPUT_BATCH_PITCH + y*OUTPUT_Y_PITCH + x*OUTPUT_X_PITCH;
 
-    if(norm <= 0.0001)
+    if(norm <= THRESHOLD)
     {
         norm = 0;
     }

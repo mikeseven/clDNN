@@ -1,3 +1,19 @@
+/*
+// Copyright (c) 2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+*/
+
 #include <cstdint>
 #include <random>
 #include <stdexcept>
@@ -30,7 +46,7 @@ namespace rnd_generators
         using calc_type = float;
         using rnd_type = std::int32_t;
 
-        static constexpr unsigned significand_bits = 23; // Number of stored bits of significand part of FP.
+        static constexpr unsigned significand_bits = 23; // Number of stored bits of significand part of FP32.
 
         static constexpr calc_type inv_exp2(const unsigned magnitude)
         {
@@ -109,7 +125,6 @@ namespace rnd_generators
 
             constexpr std::uint32_t fp32_exp_bias = (fp32_one << (fp32_exp_bits - 1)) - 1;
 
-
             constexpr std::uint16_t fp16_one = 1;
 
             constexpr std::uint32_t fp16_scd_bits = 10;
@@ -125,8 +140,6 @@ namespace rnd_generators
             constexpr std::uint16_t fp16_sgn_mask = ((fp16_one << fp16_sgn_bits) - 1) << fp16_sgn_off;
 
             constexpr std::uint32_t fp16_exp_bias = (fp16_one << (fp16_exp_bits - 1)) - 1;
-
-
 
             std::uint32_t repr = reinterpret_cast<const std::uint32_t&>(value);
             std::uint16_t significand = static_cast<std::uint16_t>((repr & fp32_scd_mask) >> (fp32_scd_bits - fp16_scd_bits)) & fp16_scd_mask;
@@ -146,7 +159,6 @@ namespace rnd_generators
     };
 
 
-
     template <typename NumberTy, typename RndEngineTy>
     auto gen_number(RndEngineTy& rnd_engine,
         const unsigned significand_rnd_bits = number_caps<NumberTy>::significand_bits,
@@ -160,7 +172,6 @@ namespace rnd_generators
 
         constexpr rnd_type rnd_zero = 0;
         constexpr rnd_type rnd_one = 1;
-
 
         if (significand_rnd_bits > number_caps<NumberTy>::significand_bits)
             throw std::logic_error("Number of random bits is longer than sigificand part stored in the number.");

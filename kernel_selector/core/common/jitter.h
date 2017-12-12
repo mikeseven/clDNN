@@ -567,6 +567,7 @@ inline JitConstants MakeNormalizeJitConstants(const NormalizeParams& params)
         MakeJitConstant("SCALE_TABLE",          np.scaleTable),
         MakeJitConstant("EPSILON",              np.epsilon),
         MakeJitConstant(toString(np.normMode),  ""),
+        MakeJitConstant("THRESHOLD",            0.0001f),
     });
 
     return jit;
