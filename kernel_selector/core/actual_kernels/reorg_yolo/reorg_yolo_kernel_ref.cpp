@@ -14,13 +14,13 @@
 // limitations under the License.
 */
 
-#include "region_yolo_kernel_ref.h"
+#include "reorg_yolo_kernel_ref.h"
 #include "kernel_selector_utils.h" 
  
 namespace KernelSelector 
 {
     
-    ParamsKey RegionYoloKernelRef::GetSupportedKey() const
+    ParamsKey ReorgYoloKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
@@ -35,21 +35,19 @@ namespace KernelSelector
         return k;
     }
 
-    JitConstants RegionYoloKernelRef::GetJitConstants(const RegionYoloParams& params) const
+    JitConstants ReorgYoloKernelRef::GetJitConstants(const ReorgYoloParams& params) const
     {
         const auto& ry = params.ryParams;
-        JitConstants jit = MakeRegionYoloJitConstants(params);
+        JitConstants jit = MakeReorgYoloJitConstants(params);
         jit.AddConstants({
-            MakeJitConstant("COORDS",         ry.coords),
-            MakeJitConstant("CLASSES",        ry.classes),
-            MakeJitConstant("NUM",            ry.num),
+            MakeJitConstant("STRIDE",        ry.stride),
         });
 
         return jit;
     }
-    RegionYoloKernelRef::DispatchData SetDefault(const RegionYoloParams& params)
+    ReorgYoloKernelRef::DispatchData SetDefault(const ReorgYoloParams& params)
     {
-        RegionYoloKernelRef::DispatchData kd;
+        ReorgYoloKernelRef::DispatchData kd;
 
         kd.fp16UnitUsed = (params.inputs[0].GetDType() == Datatype::F16);
 
@@ -69,13 +67,13 @@ namespace KernelSelector
 
         return kd;
     }
-    KernelsData RegionYoloKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ReorgYoloKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        assert(params.GetType() == KernelType::REGION_YOLO);
-        const RegionYoloParams& orgParams = static_cast<const RegionYoloParams&>(params);
+        assert(params.GetType() == KernelType::REORG_YOLO);
+        const ReorgYoloParams& orgParams = static_cast<const ReorgYoloParams&>(params);
 
         DispatchData runInfo = SetDefault(orgParams);
-        KernelData kd = KernelData::Default<RegionYoloParams>(params);
+        KernelData kd = KernelData::Default<ReorgYoloParams>(params);
 
         auto cldnn_jit = GetJitConstants(orgParams);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);

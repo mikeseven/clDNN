@@ -40,7 +40,8 @@ namespace KernelSelector
         REORDER,
         CONCATENATION,
         UPSAMPLING,
-        REGION_YOLO
+        REGION_YOLO,
+        REORG_YOLO
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

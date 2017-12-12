@@ -62,7 +62,7 @@ TEST(region_yolo_gpu_f32, darknet_test)
 
     topology topology(
         input_layout("input", input.get_layout()),
-        region_yolo("region_yolo", "input", 20, 5));
+        region_yolo("region_yolo", "input", 4, 20, 5));
 
     network network(engine, topology);
     network.set_input_data("input", input);

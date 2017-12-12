@@ -15,8 +15,8 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#ifndef REGION_YOLO_H
-#define REGION_YOLO_H
+#ifndef REORG_YOLO_H
+#define REORG_YOLO_H
 
 #include "cldnn.h"
 /// @addtogroup c_api C API
@@ -36,16 +36,13 @@ extern "C" {
     ///   
     /// @par Where:
     ///   
-    CLDNN_BEGIN_PRIMITIVE_DESC(region_yolo)
-    /// @brief paramter coords
-        uint32_t coords;
+    CLDNN_BEGIN_PRIMITIVE_DESC(reorg_yolo)
     /// @brief paramter classes
-        uint32_t classes;
-    /// @brief paramter num
-        uint32_t num;
-    CLDNN_END_PRIMITIVE_DESC(region_yolo)
+        uint32_t stride;
 
-        CLDNN_DECLARE_PRIMITIVE_TYPE_ID(region_yolo);
+    CLDNN_END_PRIMITIVE_DESC(reorg_yolo)
+
+        CLDNN_DECLARE_PRIMITIVE_TYPE_ID(reorg_yolo);
 
 #ifdef __cplusplus
 }
@@ -54,5 +51,5 @@ extern "C" {
 /// @}
 /// @}
 /// @}
-#endif /* REGION_YOLO_H */
+#endif /* REORG_YOLO_H */
 

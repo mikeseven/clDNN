@@ -590,6 +590,7 @@ inline JitConstants MakeRegionYoloJitConstants(const RegionYoloParams& params)
     const auto& ry = params.ryParams;
 
     jit.AddConstants({
+        MakeJitConstant("COORDS_",  ry.coords),
         MakeJitConstant("CLASSES_",  ry.classes),
         MakeJitConstant("NUM_", ry.num)
     });
@@ -597,6 +598,21 @@ inline JitConstants MakeRegionYoloJitConstants(const RegionYoloParams& params)
     return jit;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MakeReorgYoloJitConstants
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+inline JitConstants MakeReorgYoloJitConstants(const ReorgYoloParams& params)
+{
+    JitConstants jit = MakeBaseParamsJitConstants(params);
+
+    const auto& ry = params.ryParams;
+
+    jit.AddConstants({
+        MakeJitConstant("STRIDE",  ry.stride),
+    });
+
+    return jit;
+}
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MakeNormalizeJitConstants
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
