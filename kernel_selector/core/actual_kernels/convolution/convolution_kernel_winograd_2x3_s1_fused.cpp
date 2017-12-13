@@ -29,7 +29,9 @@ namespace KernelSelector {
         k.EnableInputWeightsType(WeightsType::F16);
         k.EnableInputWeightsType(WeightsType::F32);
         k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableInputLayout(DataLayout::byxf);
         k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::byxf);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableBatching();
@@ -56,16 +58,19 @@ namespace KernelSelector {
         auto output_pad_y_after = params.output.GetDims()[1].pad.after;
         auto C4_up16 = ((uint32_t)((idepth + 15) / 16) * 16) / 4;
 
+        const auto inoffset_x = params.convParams.padding.x;
+        const auto inoffset_y = params.convParams.padding.y;
+
         jit.AddConstants({
             MakeJitConstant("H", rows),
             MakeJitConstant("W", cols),
-            MakeJitConstant("P", rows - 3 + 1 + output_pad_y_before + output_pad_y_after),
-            MakeJitConstant("Q", cols - 3 + 1 + output_pad_x_before + output_pad_x_after),
+            MakeJitConstant("P", rows - 3 + 1 + output_pad_y_before + output_pad_y_after + 2 * inoffset_y),
+            MakeJitConstant("Q", cols - 3 + 1 + output_pad_x_before + output_pad_x_after + 2 * inoffset_x),
             MakeJitConstant("R", 3),
             MakeJitConstant("S", 3),
             MakeJitConstant("N", 1),
-            MakeJitConstant("px", 0),
-            MakeJitConstant("py", 0),
+            MakeJitConstant("px", inoffset_x),
+            MakeJitConstant("py", inoffset_y),
             MakeJitConstant("sx", 1),
             MakeJitConstant("sy", 1),
 
@@ -88,9 +93,11 @@ namespace KernelSelector {
         const auto input_pad_x = arg.inputs[0].X().pad.before + arg.inputs[0].X().pad.after;
         const auto rows = arg.inputs[0].Y().v + input_pad_y;
         const auto cols = arg.inputs[0].X().v + input_pad_x;
+        const auto inoffset_x = arg.convParams.padding.x;
+        const auto inoffset_y = arg.convParams.padding.y;
 
-        auto P = rows - 2;
-        auto Q = cols - 2;
+        auto P = rows - 2 + 2 * inoffset_y;
+        auto Q = cols - 2 + 2 * inoffset_x;
         auto K = odepth;
         auto N = 1;
 
