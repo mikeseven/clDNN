@@ -101,7 +101,9 @@ namespace {
                 { std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), concatenation_gpu::create },
                 { std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), concatenation_gpu::create },
                 { std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), concatenation_gpu::create },
-                { std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), concatenation_gpu::create }
+                { std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), concatenation_gpu::create },
+                { std::make_tuple(engine_types::ocl, data_types::f32, format::byxf), concatenation_gpu::create },
+                { std::make_tuple(engine_types::ocl, data_types::f16, format::byxf), concatenation_gpu::create }
             });
         }
         ~attach() {}

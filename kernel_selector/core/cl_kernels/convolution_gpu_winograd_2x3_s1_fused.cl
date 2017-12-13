@@ -185,7 +185,7 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
         __local const UNIT_TYPE_4 *V_read_c8 = V_read;
 
         __attribute__((opencl_unroll_hint(1)))
-        for (int c8 = 0; c8 < 2; ++c8) {
+        for (uint c8 = 0; c8 < 2; ++c8) {
 
             // 2*14 * 3 * 8 = 672 MADs
 
@@ -205,7 +205,7 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
             V_read_c8 += 256;
 			
             __attribute__((opencl_unroll_hint(2)))
-            for (int c4 = 0; c4 < 2; ++c4) {
+            for (uint c4 = 0; c4 < 2; ++c4) {
 
                 // 2*14 * 3 * 4 = 336 MADs
 
@@ -405,7 +405,7 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 		#endif
 
 #if OUTPUT_LAYOUT_BYXF
-		int outindex = gn*PQK + p*Q*FILTER_OFM_NUM + q*FILTER_OFM_NUM + k;
+		uint outindex = gn*PQK + p*Q*FILTER_OFM_NUM + q*FILTER_OFM_NUM + k;
         __global UNIT_TYPE_2 *O_write = (__global UNIT_TYPE_2 *)&O[outindex];
 #else
         __global UNIT_TYPE *O_write_0 = (__global UNIT_TYPE *)(&O[gn*PQK + k*Q*P + (p+0)*Q + q]);
@@ -421,27 +421,38 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 		if (k < FILTER_OFM_NUM) {
             if (p < P - OUTPUT_PAD_AFTER_SIZE_Y) {
                 if (q0_in) {
-#if BIAS_TERM
-                S0.s0 += bias[bias_index0];
-                S0.s4 += bias[bias_index0+1];
-#endif
+
 #if OUTPUT_LAYOUT_BYXF
+#if BIAS_TERM
+                    O_write[0*QK2 + 0*K2] = (UNIT_TYPE_2)(ACTIVATION(S0.s0 + bias[bias_index0], NL_M, NL_N), ACTIVATION(S0.s4 + bias[bias_index1], NL_M, NL_N));
+#else
                     O_write[0*QK2 + 0*K2] = (UNIT_TYPE_2)(ACTIVATION(S0.s0, NL_M, NL_N), ACTIVATION(S0.s4, NL_M, NL_N));
+#endif
+#else
+#if BIAS_TERM
+                    O_write_0[0] = ACTIVATION(S0.s0 + bias[bias_index0], NL_M, NL_N);
+                    O_write_0[0+Q*P] = ACTIVATION(S0.s4 + bias[bias_index1], NL_M, NL_N);
 #else
                     O_write_0[0] = ACTIVATION(S0.s0, NL_M, NL_N);
                     O_write_0[0+Q*P] = ACTIVATION(S0.s4, NL_M, NL_N);
+#endif
 #endif 
                 }
                 if (q1_in) {
-#if BIAS_TERM
-                S0.s1 += bias[bias_index0];
-                S0.s5 += bias[bias_index0+1];
-#endif
 #if OUTPUT_LAYOUT_BYXF
+#if BIAS_TERM
+                    O_write[0*QK2 + 1*K2] = (UNIT_TYPE_2)(ACTIVATION(S0.s1 + bias[bias_index0], NL_M, NL_N), ACTIVATION(S0.s5 + bias[bias_index1], NL_M, NL_N));
+#else
                     O_write[0*QK2 + 1*K2] = (UNIT_TYPE_2)(ACTIVATION(S0.s1, NL_M, NL_N), ACTIVATION(S0.s5, NL_M, NL_N));
+#endif 
+#else
+#if BIAS_TERM
+                    O_write_0[1] = ACTIVATION(S0.s1 + bias[bias_index0], NL_M, NL_N);
+                    O_write_0[1+Q*P] = ACTIVATION(S0.s5 + bias[bias_index1], NL_M, NL_N);
 #else
                     O_write_0[1] = ACTIVATION(S0.s1, NL_M, NL_N);
                     O_write_0[1+Q*P] = ACTIVATION(S0.s5, NL_M, NL_N);
+#endif 
 #endif 
                 }
             }
@@ -449,27 +460,37 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
             // row 1
             if (p + 1 < P - OUTPUT_PAD_AFTER_SIZE_Y) {
                 if (q0_in) {
-#if BIAS_TERM
-                S1.s0 += bias[bias_index0];
-                S1.s4 += bias[bias_index0+1];
-#endif
 #if OUTPUT_LAYOUT_BYXF
+#if BIAS_TERM
+                    O_write[1*QK2 + 0*K2] = (UNIT_TYPE_2)(ACTIVATION(S1.s0 + bias[bias_index0], NL_M, NL_N), ACTIVATION(S1.s4 + bias[bias_index1], NL_M, NL_N));
+#else
                     O_write[1*QK2 + 0*K2] = (UNIT_TYPE_2)(ACTIVATION(S1.s0, NL_M, NL_N), ACTIVATION(S1.s4, NL_M, NL_N));
+#endif 
+#else
+#if BIAS_TERM
+                    O_write_1[0] = ACTIVATION(S1.s0 + bias[bias_index0], NL_M, NL_N);
+                    O_write_1[0+Q*P] = ACTIVATION(S1.s4 + bias[bias_index1], NL_M, NL_N);
 #else
                     O_write_1[0] = ACTIVATION(S1.s0, NL_M, NL_N);
                     O_write_1[0+Q*P] = ACTIVATION(S1.s4, NL_M, NL_N);
 #endif 
+#endif 
                 }
                 if (q1_in) {
-#if BIAS_TERM
-                S1.s1 += bias[bias_index0];
-                S1.s5 += bias[bias_index0+1];
-#endif
 #if OUTPUT_LAYOUT_BYXF
+#if BIAS_TERM
+                    O_write[1*QK2 + 1*K2] = (UNIT_TYPE_2)(ACTIVATION(S1.s1 + bias[bias_index0], NL_M, NL_N), ACTIVATION(S1.s5 + bias[bias_index1], NL_M, NL_N));
+#else
                     O_write[1*QK2 + 1*K2] = (UNIT_TYPE_2)(ACTIVATION(S1.s1, NL_M, NL_N), ACTIVATION(S1.s5, NL_M, NL_N));
+#endif 
+#else
+#if BIAS_TERM
+                    O_write_1[1] = ACTIVATION(S1.s1 + bias[bias_index0], NL_M, NL_N);
+                    O_write_1[1+Q*P] = ACTIVATION(S1.s5 + bias[bias_index1], NL_M, NL_N);
 #else
                     O_write_1[1] = ACTIVATION(S1.s1, NL_M, NL_N);
                     O_write_1[1+Q*P] = ACTIVATION(S1.s5, NL_M, NL_N);
+#endif 
 #endif 
                 }
             }
@@ -477,27 +498,37 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
             // row 2
             if (p + 2 < P - OUTPUT_PAD_AFTER_SIZE_Y) {
                 if (q0_in) {
-#if BIAS_TERM
-                S0.s2 += bias[bias_index0];
-                S0.s6 += bias[bias_index0+1];
-#endif
 #if OUTPUT_LAYOUT_BYXF
+#if BIAS_TERM
+                    O_write[2*QK2 + 0*K2] = (UNIT_TYPE_2)(ACTIVATION(S0.s2 + bias[bias_index0], NL_M, NL_N), ACTIVATION(S0.s6 + bias[bias_index1], NL_M, NL_N));
+#else
                     O_write[2*QK2 + 0*K2] = (UNIT_TYPE_2)(ACTIVATION(S0.s2, NL_M, NL_N), ACTIVATION(S0.s6, NL_M, NL_N));
+#endif 
+#else
+#if BIAS_TERM
+                    O_write_2[0] = ACTIVATION(S0.s2 + bias[bias_index0], NL_M, NL_N);
+                    O_write_2[0+Q*P] = ACTIVATION(S0.s6 + bias[bias_index1], NL_M, NL_N);
 #else
                     O_write_2[0] = ACTIVATION(S0.s2, NL_M, NL_N);
                     O_write_2[0+Q*P] = ACTIVATION(S0.s6, NL_M, NL_N);
 #endif 
+#endif 
                 }
                 if (q1_in) {
-#if BIAS_TERM
-                S0.s3 += bias[bias_index0];
-                S0.s7 += bias[bias_index0+1];
-#endif
 #if OUTPUT_LAYOUT_BYXF
+#if BIAS_TERM
+                    O_write[2*QK2 + 1*K2] = (UNIT_TYPE_2)(ACTIVATION(S0.s3 + bias[bias_index0], NL_M, NL_N), ACTIVATION(S0.s7 + bias[bias_index1], NL_M, NL_N));
+#else
                     O_write[2*QK2 + 1*K2] = (UNIT_TYPE_2)(ACTIVATION(S0.s3, NL_M, NL_N), ACTIVATION(S0.s7, NL_M, NL_N));
+#endif 
+#else
+#if BIAS_TERM
+                    O_write_2[1] = ACTIVATION(S0.s3 + bias[bias_index0], NL_M, NL_N);
+                    O_write_2[1+Q*P] = ACTIVATION(S0.s7 + bias[bias_index1], NL_M, NL_N);
 #else
                     O_write_2[1] = ACTIVATION(S0.s3, NL_M, NL_N);
                     O_write_2[1+Q*P] = ACTIVATION(S0.s7, NL_M, NL_N);
+#endif 
 #endif 
                 }
             }
@@ -505,27 +536,37 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
             // row 3
             if (p + 3 < P - OUTPUT_PAD_AFTER_SIZE_Y) {
                 if (q0_in) {
-#if BIAS_TERM
-                S1.s2 += bias[bias_index0];
-                S1.s6 += bias[bias_index0+1];
-#endif
 #if OUTPUT_LAYOUT_BYXF
+#if BIAS_TERM
+                    O_write[3*QK2 + 0*K2] = (UNIT_TYPE_2)(ACTIVATION(S1.s2 + bias[bias_index0], NL_M, NL_N), ACTIVATION(S1.s6 + bias[bias_index1], NL_M, NL_N));
+#else
                     O_write[3*QK2 + 0*K2] = (UNIT_TYPE_2)(ACTIVATION(S1.s2, NL_M, NL_N), ACTIVATION(S1.s6, NL_M, NL_N));
+#endif 
+#else
+#if BIAS_TERM
+                    O_write_3[0] = ACTIVATION(S1.s2 + bias[bias_index0], NL_M, NL_N);
+                    O_write_3[0+Q*P] = ACTIVATION(S1.s6 + bias[bias_index1], NL_M, NL_N);
 #else
                     O_write_3[0] = ACTIVATION(S1.s2, NL_M, NL_N);
                     O_write_3[0+Q*P] = ACTIVATION(S1.s6, NL_M, NL_N);
+#endif 
 #endif
                 }
                 if (q1_in) {
-#if BIAS_TERM
-                S1.s3 += bias[bias_index0];
-                S1.s7 += bias[bias_index0+1];
-#endif
 #if OUTPUT_LAYOUT_BYXF
+#if BIAS_TERM
+                    O_write[3*QK2 + 1*K2] = (UNIT_TYPE_2)(ACTIVATION(S1.s3 + bias[bias_index0], NL_M, NL_N), ACTIVATION(S1.s7 + bias[bias_index1], NL_M, NL_N));
+#else
                     O_write[3*QK2 + 1*K2] = (UNIT_TYPE_2)(ACTIVATION(S1.s3, NL_M, NL_N), ACTIVATION(S1.s7, NL_M, NL_N));
+#endif 
+#else
+#if BIAS_TERM
+                    O_write_3[1] = ACTIVATION(S1.s3 + bias[bias_index0], NL_M, NL_N);       
+                    O_write_3[1+Q*P] = ACTIVATION(S1.s7 + bias[bias_index1], NL_M, NL_N);
 #else
                     O_write_3[1] = ACTIVATION(S1.s3, NL_M, NL_N);       
-                    O_write_3[1+Q*P] = ACTIVATION(S1.s7, NL_M, NL_N);   
+                    O_write_3[1+Q*P] = ACTIVATION(S1.s7, NL_M, NL_N);
+#endif   
 #endif   
                 }
             }

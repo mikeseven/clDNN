@@ -51,6 +51,7 @@
 #include "program_dump_graph.h"
 #include "upsampling_inst.h"
 #include "eltwise_inst.h"
+#include "fully_connected_inst.h"
 
 #include "network_impl.h"
 #include "kernel_selector_helper.h"
@@ -2110,6 +2111,19 @@ void program_impl::prepare_buffer_fusing()
                 node.can_be_optimized(true);
         });
 
+        do_for_types<fully_connected>(*node, [this](fully_connected_node& node)
+        {
+            auto& input = node.input();
+            auto output_layout = node.get_output_layout();
+
+            if (!input.is_type<pooling>() && !input.is_type<eltwise>() && output_layout.format != format::bfyx && output_layout.format != format::yxfb)
+                return;
+
+            auto input_layout = input.get_output_layout();
+            auto target_layout = layout(input_layout.data_type, output_layout.format, input_layout.size, input_layout.data_padding);
+            input.set_output_layout(target_layout, false);
+        });
+
         do_for_types<reorder>(*node, [this](reorder_node& node)
         {
             auto& input = node.input();
@@ -2137,7 +2151,7 @@ void program_impl::prepare_buffer_fusing()
                 !remove_bf8_xy_opt &&
                 !(input.is_type<convolution>() && input.get_output_layout().format == format::bf8_xy16) &&
                 !(input.is_type<eltwise>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb || output_layout.format == format::byxf) && all_users_same_format) &&
-                !(remove_byxf_opt && node.get_users().front()->is_type<eltwise>()))
+                !(remove_byxf_opt && (node.get_users().front()->is_type<eltwise>() || node.get_users().front()->is_type<pooling>())))
                 return;
 
             if (remove_bf8_xy_opt)
@@ -2161,9 +2175,11 @@ void program_impl::prepare_buffer_fusing()
                     }
                 }
 
-                auto input_layout = input.get_output_layout();
-                if(remove_byxf_opt)
+                if (remove_byxf_opt)
+                {
+                    auto input_layout = input.get_output_layout();
                     user->set_output_layout(input_layout, false);
+                }
             }
             else
                 input.set_output_layout(output_layout, false);
