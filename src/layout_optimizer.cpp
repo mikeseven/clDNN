@@ -42,13 +42,12 @@ namespace {
             || prim->stride != tensor{ 1 }                  //stride has to be 1x1 by definition
             || prim->dilation != tensor{ 1 }                //no support for dilation
             || prim->split() != 1                           //no support for splitted convolutions
-            || (output_size_handling_enabled && prim->with_output_size) //no support for convolutions with user-specified output size
-            || input_layout.data_type == data_types::f16)   //no support for fp16 at this point
+            || (output_size_handling_enabled && prim->with_output_size)) //no support for convolutions with user-specified output size
         {
             return false;
         }
 
-        return false;
+        return true;
     }
 }
 
@@ -84,11 +83,13 @@ bool layout_optimizer::convolution_bfyx_opt(layout const& output_layout, const l
 bool layout_optimizer::convolution_byxf_opt(layout const& output_layout, const layout& weights_layout, std::shared_ptr<const convolution> conv)
 {
     //A set of rules that define when byxf mem format has better performance
-    if (output_layout.data_type == data_types::f16 &&
+    if ((output_layout.data_type == data_types::f16 &&
         weights_layout.size.spatial[0] == 1 && weights_layout.size.spatial[1] == 1 &&
         output_layout.size.feature[0] % 64 == 0 && weights_layout.size.batch[0] % 64 == 0 &&
         conv->stride.spatial[0] == 1 && conv->stride.spatial[1] == 1 &&
-        conv->input_offset.spatial[0] == 0 && conv->input_offset.spatial[1] == 0)
+        conv->input_offset.spatial[0] == 0 && conv->input_offset.spatial[1] == 0) ||
+        //Winograd
+        should_use_winograd_2x3_s1(conv, output_layout, weights_layout, _output_size_handling_enabled))
         return true;
 
     return false;
@@ -105,7 +106,7 @@ bool layout_optimizer::users_for_convolution_byxf_opt(program_node const& node)
         //convolution that is capable to use byxf and is performant
         else if (user->type() == cldnn::convolution::type_id())
         {
-            auto conv_prim = node.as<convolution>().get_primitive();
+            auto conv_prim = user->as<convolution>().get_primitive();
             if (convolution_byxf_opt(user->calc_output_layout(), user->get_dependency(1).get_output_layout(), conv_prim))
                 use_byxf = true;
             else
@@ -142,10 +143,6 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
         break;
 
     case data_type::input: //convolution input
-
-        CLDNN_ERROR_NOT_EQUAL(prim->id, "Convolution input dimension", current_layout.format.dimension(), "expected dimension", static_cast<size_t>(4), "");
-        if (should_use_winograd_2x3_s1(prim, current_layout, output_or_weights_layout, _output_size_handling_enabled))
-            return layout(expected_data_type, format::winograd_2x3_s1_data, expected_tensor);
 
         if (layout_optimizer::convolution_byxf_opt(current_layout, output_or_weights_layout, prim) &&
             (node.get_dependency(0).get_output_layout().format == cldnn::format::byxf || users_for_convolution_byxf_opt(node)) &&

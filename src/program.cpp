@@ -1361,7 +1361,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
         {
             auto reorder_prim = input_node.as<reorder>().typed_desc();
             auto& reorder_input = input_node.get_dependency(0);
-            auto reorder_layout = reorder_input.get_output_layout();
+            auto reorder_layout = input_node.get_output_layout();
             reorder_layout.data_type = reorder_prim->output_data_type;
             new_input = lo.get_reorder(
                 reorder_layout,
@@ -1371,6 +1371,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 weights_layout,
                 conv_node).first;
 
+            auto reorder_removed = false;
             if (new_input && new_input->output_format != format::winograd_2x3_s1_data && new_input->output_format != format::bf8_xy16) //output format is not optimal
             {
                 auto reorder_input_layout = reorder_input.get_output_layout();
@@ -1383,6 +1384,10 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                         !reorder_prim->output_padding) //just plain reorder
                     {
                         conv_node.replace_dependency(0, reorder_input);
+                        if (input_node.get_users().size() == 0 && !input_node.is_output())
+                        {
+                            reorder_removed = extract_and_remove(input_node);
+                        }
                         new_input = nullptr;
                     }
                     else //change reorder's output layout
@@ -1400,7 +1405,10 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 }
             }
 
-            input_node.recalc_output_layout();
+            if(!reorder_removed)
+                input_node.recalc_output_layout();
+            else
+                conv_node.recalc_output_layout();
         }
         else
         {
@@ -2117,7 +2125,7 @@ void program_impl::prepare_buffer_fusing()
             auto all_users_same_format = true;
             for (auto const& user : input.get_users())
             {
-                if (user->get_output_layout().format != input.get_users().front()->get_output_layout().format)
+                if (user->get_output_layout().format != input.get_users().front()->get_output_layout().format && !input.is_type<eltwise>() && !input.is_type<pooling>())
                 {
                     all_users_same_format = false;
                     break;

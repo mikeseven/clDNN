@@ -111,7 +111,7 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
     UNIT_TYPE_4 M6 = (UNIT_TYPE_4)(UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO);
 
 #if INPUT0_LAYOUT_BYXF
-    const __global UNIT_TYPE_4 *I_load = (const __global float4*)&I[gn*HWC + ((uint)y)*WC + ((uint)x)*INPUT0_FEATURE_NUM];
+    const __global UNIT_TYPE_4 *I_load = (const __global UNIT_TYPE_4*)&I[gn*HWC + ((uint)y)*WC + ((uint)x)*INPUT0_FEATURE_NUM];
 #else
 	const __global UNIT_TYPE *I_load = (const __global UNIT_TYPE*)&I[gn*HWC + ((uint)y)*W + ((uint)x)];
 #endif
