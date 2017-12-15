@@ -60,7 +60,7 @@ T* arr_end(T* buf, size_t count) { return buf + count; }
 
 struct gpu_buffer : public memory_impl {
     friend cldnn::memory_pool;
-    friend cldnn::engine_impl; // TODO: remove after debugging
+
     gpu_buffer(const refcounted_obj_ptr<engine_impl>& engine, const layout& new_layout, const cl::Buffer& buffer);
     void* lock() override;
     void unlock() override;
@@ -81,7 +81,6 @@ private:
 
 struct gpu_image2d : public memory_impl {
     friend cldnn::memory_pool;
-    friend cldnn::engine_impl; // TODO: remove after debugging
 
     gpu_image2d(const refcounted_obj_ptr<engine_impl>& engine, const layout& new_layout, const cl::Image2D& buffer);
     void* lock() override;

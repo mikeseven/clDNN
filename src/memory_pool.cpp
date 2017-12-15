@@ -147,7 +147,7 @@ namespace cldnn
         using namespace std;
         ofstream log(path);
 
-        log << "Non-padded pool:" <<endl;
+        log << "\nNon-padded pool:" <<endl;
         log << "Size\tUsers:" << endl;
         for (auto record : _non_padded_pool)
         {
