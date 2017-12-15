@@ -163,6 +163,62 @@ TEST(depth_concatenate_f32_gpu, test02) {
     EXPECT_FLOAT_EQ(-0.2f, output_ptr[15]);
 }
 
+TEST(depth_concatenate_f32_gpu, test03_cascade_concat_opt) {
+    //  Test for cascade concatenation optimization.
+    //  Despite having concatenations one after another and connected to different non padded activation primitives,
+    //  graph should remove all concatenations from execution.
+
+    engine engine;
+    auto input1 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1,2,2,1 } });
+
+    set_values(input1, { 16.0f, 32.0f, 128.0f, 256.0f });
+
+    topology topology;
+    topology.add(input_layout("input1", input1.get_layout()));
+    topology.add(activation("relu1", "input1", activation_relu));
+    topology.add(activation("relu2", "relu1", activation_sqrt));
+    topology.add(concatenation("depth1", { "relu2", "relu1" }, concatenation::along_f));
+    topology.add(activation("relu3", "depth1", activation_sqrt));
+    topology.add(concatenation("depth2", { "relu3", "depth1" }, concatenation::along_f));
+    topology.add(activation("relu4", "depth2", activation_sqrt));
+    topology.add(concatenation("depth3", { "relu4", "depth2" }, concatenation::along_f));
+    topology.add(activation("relu5", "depth3", activation_relu));
+
+    cldnn::build_options options;
+    options.set_option(cldnn::build_option::optimize_data(true));
+    network network(engine, topology, options);
+
+    network.set_input_data("input1", input1);
+
+    auto outputs = network.execute({});
+    auto output_prim = outputs.begin()->second.get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+    auto executed_primitives = network.get_executed_primitives();
+
+    EXPECT_TRUE(executed_primitives.count("depth1") == 0);
+    EXPECT_TRUE(executed_primitives.count("depth2") == 0);
+    EXPECT_TRUE(executed_primitives.count("depth3") == 0);
+
+    EXPECT_FLOAT_EQ(1.4142135f, output_ptr[0]);
+    EXPECT_FLOAT_EQ(1.5422108f, output_ptr[1]);
+    EXPECT_FLOAT_EQ(1.8340081f, output_ptr[2]);
+    EXPECT_FLOAT_EQ(2.0f, output_ptr[3]);
+    EXPECT_FLOAT_EQ(2.0f, output_ptr[4]);
+    EXPECT_FLOAT_EQ(2.3784142f, output_ptr[5]);
+    EXPECT_FLOAT_EQ(3.3635857f, output_ptr[6]);
+    EXPECT_FLOAT_EQ(4.0f, output_ptr[7]);
+    EXPECT_FLOAT_EQ(2.0f, output_ptr[8]);
+    EXPECT_FLOAT_EQ(2.3784142f, output_ptr[9]);
+    EXPECT_FLOAT_EQ(3.3635857f, output_ptr[10]);
+    EXPECT_FLOAT_EQ(4.0f, output_ptr[11]);
+    EXPECT_FLOAT_EQ(4.0f, output_ptr[12]);
+    EXPECT_FLOAT_EQ(5.6568542f, output_ptr[13]);
+    EXPECT_FLOAT_EQ(11.313708f, output_ptr[14]);
+    EXPECT_FLOAT_EQ(16.0f, output_ptr[15]);
+
+}
+
 //////////////////////////////////////////////////////////////////////////////
 //                                                                          //
 //                      Exhaustive Negative Matrix tests                    //
