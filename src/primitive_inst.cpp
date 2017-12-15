@@ -19,6 +19,8 @@
 #include "data_inst.h"
 #include "generic_layer_inst.h"
 #include "input_layout_inst.h"
+#include "pooling_inst.h"
+#include "reorder_inst.h"
 
 #include "network_impl.h"
 #include "engine_impl.h"
@@ -70,7 +72,9 @@ memory_impl::ptr primitive_inst::allocate_output()
     if (_node.is_type<generic_layer>() ||
         _node.is_type<data>() ||
         _node.is_type<input_layout>() ||
-        _node.can_be_optimized())
+        _node.is_type<pooling>() ||
+        _node.can_be_optimized() ||
+        _node.is_output())
     {
         return get_network().get_engine().allocate_memory(layout);
     }

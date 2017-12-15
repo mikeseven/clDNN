@@ -135,6 +135,7 @@ private:
     void prepare_buffer_fusing();
     void prepare_primitive_fusing();
     void prepare_depthwise_sep_opt();
+    void validate_processing_order();
 
     /*
     ** Memory pool functions

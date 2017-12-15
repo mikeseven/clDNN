@@ -28,7 +28,7 @@
 
 namespace cldnn
 {
-    memory_record::memory_record(std::set<primitive_id> users, refcounted_obj_ptr<memory_impl> memory) :
+    memory_record::memory_record(std::set<primitive_id> users, refcounted_obj_ptr<memory_impl>& memory) :
         _users(users),
         _memory(memory)
     {}
@@ -88,15 +88,19 @@ namespace cldnn
             if (!has_conflict(it->second._users, restrictions))
             {
                 it->second._users.insert(id);
-                return _engine->reinterpret_buffer(*it->second._memory, layout);;
+                auto ret_mem = _engine->reinterpret_buffer(*it->second._memory, layout);
+                return ret_mem;
             }
             else
                 it++;
         }
         // didn't find anything for you? create new resource
         auto mem = alloc_memory(layout);
-        
-        _non_padded_pool.insert(std::pair<uint64_t, cldnn::memory_record>(layout.bytes_count(), memory_record({ id }, mem)));
+        {
+            _non_padded_pool.insert(std::pair<uint64_t, cldnn::memory_record>(layout.bytes_count(), memory_record({ id }, mem)));
+            // we don't want to store any resources with no parents so memory pool has to store weak pointer of _engine. 
+            _engine->release();
+        }
         return mem;
     }
 
@@ -117,12 +121,12 @@ namespace cldnn
             else if (!layout.format.is_image()) // padded buffers
             {
                 // not yet
-                return _engine->allocate_memory(layout);
+                return alloc_memory(layout);
             }
             else  // images
             {
                 // not yet
-                return _engine->allocate_memory(layout);
+                return alloc_memory(layout);
             }
         }
 

@@ -154,7 +154,7 @@ public:
     void unmark() { user_mark = 0; }
     auto is_marked() const { return user_mark != 0; }
     auto is_marked(uint8_t val) const { return user_mark == val; }
-    uint8_t ged_user_mark() const { return user_mark; }
+    uint8_t get_user_mark() const { return user_mark; }
 
     void set_fused_activation(cldnn_activation_func activation_func, cldnn_activation_additional_params additional_params)
     {

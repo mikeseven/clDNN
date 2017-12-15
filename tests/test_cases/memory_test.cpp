@@ -97,7 +97,7 @@ TEST(memory_pool, basic_non_padded_relu_pipe) {
     network.set_input_data("input", input);
     auto outputs = network.execute();
 
-    EXPECT_EQ(engine.get_total_device_memory_size(), 48);
+    EXPECT_EQ(engine.get_total_device_memory_size(), (uint64_t) 80);
  }
 
 
@@ -130,7 +130,7 @@ TEST(memory_pool, basic_non_padded_relu_and_pooling_pipe) {
     network.set_input_data("input", input);
     auto outputs = network.execute();
 
-    EXPECT_EQ(engine.get_total_device_memory_size(), 768);
+    EXPECT_EQ(engine.get_total_device_memory_size(), (uint64_t)1152);
 }
 
 
@@ -169,15 +169,15 @@ TEST(memory_pool, multi_outputs_network) {
     network.set_input_data("input", input);
     auto outputs = network.execute();
 
-    EXPECT_EQ(engine.get_total_device_memory_size(), 1024);
+    EXPECT_EQ(engine.get_total_device_memory_size(), (uint64_t)1536);
 }
 
 
 TEST(memory_pool, oooq) {
-    //            /-- relu1 - concat1- relu4 -- \
-    //     input<  -- relu2 /                     concat2 -- relu6
-    //            \-- relu3 --  relu5 --------- /
-    // neither of relu5, relu6 nor relu7 can share resource with relu4. 
+    /*          -- relu1 - concat1- relu4 -- 
+        input<  -- relu2 |                   >-- concat2 -- relu6
+                -- relu3 --  relu5 --------- 
+       neither of relu5, relu6 nor relu7 can share resource with relu4. */
 
     engine_configuration cfg{ false, false, false, std::string(), std::string(), true /*oooq*/, std::string(),std::string(), 0, true /*mem_pool*/ };
     engine engine{ cfg };
@@ -206,5 +206,5 @@ TEST(memory_pool, oooq) {
     network.set_input_data("input", input);
     auto outputs = network.execute();
 
-    EXPECT_EQ(engine.get_total_device_memory_size(), 5376);
+    EXPECT_EQ(engine.get_total_device_memory_size(), (uint64_t) 5376);
 }

@@ -38,10 +38,10 @@ struct memory_record
     std::set<primitive_id> _users; // list of primitives that already use this memory object
     refcounted_obj_ptr<memory_impl> _memory;
 
-    memory_record(std::set<primitive_id> users, refcounted_obj_ptr<memory_impl> memory); 
+    memory_record(std::set<primitive_id> users, refcounted_obj_ptr<memory_impl>& memory); 
 };
     
-    // this class implements memory manager that handles 4 memory pools
+    // memory_pool class implements memory manager that handles 4 memory pools
     // - non padded buffers - 
     //     1 user requests for buffer with no padding. 
     //     2 Check if buffer with requested size exist
@@ -53,9 +53,16 @@ struct memory_record
     // - images 2d arrays - not implemented yet
     // - immutable - if user request for non reusable resource don't use pool, return 
 
+// TODO list:
+// - resolve engine <--> memory_pool circular dependency
+// - add padded buffers pool
+// - add decreasing memory limit in gpu_buffer/image dctor
+// - add support for multi networks reuse
+
 class memory_pool
 {
     memory_pool();
+
     refcounted_obj_ptr<memory_impl> alloc_memory(const layout& layout);
     bool has_conflict(std::set<primitive_id>&, std::set<primitive_id>&);
 
@@ -65,6 +72,7 @@ class memory_pool
 
 public:
     memory_pool(engine_impl& engine);
+
     refcounted_obj_ptr<memory_impl> get_memory(const layout& layout, const primitive_id& id, std::set<primitive_id>& restrictions, bool reusable = true); // get from pool or create memory allocation
     refcounted_obj_ptr<memory_impl> get_memory(const layout& layout);
     refcounted_obj_ptr<memory_impl> get_from_non_padded_pool(const layout& layout, const primitive_id& id, std::set<primitive_id>&);

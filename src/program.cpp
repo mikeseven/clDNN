@@ -259,7 +259,7 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
 
     engine->compile_program(*this);
 
-    this->dump_program("12_finished", true);
+    this->dump_program("13_finished", true);
     cleanup();
 }
 
@@ -455,6 +455,7 @@ void program_impl::post_optimize_graph()
     post_optimize_weights(lo); dump_program("9_reordered_weights", true);
     remove_redundant_reorders(); dump_program("10_removed_redundant_reorders", true); //TODO: do we need it at this place also?
     propagate_constants(); dump_program("11_propagated_constants", true);
+    validate_processing_order(); dump_program("12_validated_processing_order", true);
     prepare_memory_dependencies();
 }
 
@@ -713,6 +714,15 @@ void program_impl::calc_processing_order()
     {
         node->processing_num = ++idx;
         node->unmark();
+    }
+}
+
+void program_impl::validate_processing_order()
+{
+    uint32_t idx = 0;
+    for (auto& node : processing_order)
+    {
+        node->processing_num = ++idx;
     }
 }
 
@@ -1129,47 +1139,44 @@ void program_impl::skipped_branch_memory_dependencies()
 void program_impl::oooq_memory_dependencies()
 {
     auto itr = processing_order.begin();
-    // in oooq execution parallel execution provides risk of conflit.To avoid conflicts we depend on reorder_nodes_for_parallel_execution()
-    // call in graph pre optimization that changes execution order to BFS. This order let us build dependencies based on syncing points. 
+    // This order let us build dependencies based on syncing points. 
     // Set of nodes between two syncing points will be called sync_region.
     // Major rules is: can't share resource with nodes in my sync_region
-    if (get_engine().configuration().enable_parallelisation)
+
+    uint32_t last_barrier = 0;
+    bool needs_barrier = false;
+    std::vector<cldnn::program_node*> sync_region;
+    while (itr != processing_order.end())
     {
-        uint32_t last_barrier = 0;
-        bool needs_barrier = false;
-        std::vector<cldnn::program_node*> sync_region;
-        while (itr != processing_order.end())
+        auto& node = *itr;
+        itr++;
+
+        // if any of dep has proccess num after barrier -> needs barrier
+        for (auto dep : node->get_dependencies())
         {
-            auto& node = *itr;
-            itr++;
-
-            // if any of dep has proccess num after barrier -> needs barrier
-            for (auto dep : node->get_dependencies())
+            if (dep->get_processing_num() >= last_barrier)
             {
-                if (dep->get_processing_num() >= last_barrier)
-                {
-                    needs_barrier = true;
-                    break;
-                }
+                needs_barrier = true;
+                break;
             }
-
-            if (needs_barrier)
-            {
-                last_barrier = node->get_processing_num();
-                needs_barrier = false;
-                // add each pair bi-direction dependency
-                for (auto nd1 = sync_region.begin(); nd1 + 1 != sync_region.end(); nd1++)
-                {
-                    for (auto nd2 = nd1 + 1; nd2 != sync_region.end(); nd2++)
-                    { 
-                        (*nd1)->add_memory_dependency((*nd2)->id());
-                        (*nd2)->add_memory_dependency((*nd1)->id());
-                    }
-                }
-                sync_region.clear();
-            }
-            sync_region.push_back(node);
         }
+
+        if (needs_barrier)
+        {
+            last_barrier = node->get_processing_num();
+            needs_barrier = false;
+            // add each pair bi-direction dependency
+            for (auto nd1 = sync_region.begin(); nd1 + 1 != sync_region.end(); nd1++)
+            {
+                for (auto nd2 = nd1 + 1; nd2 != sync_region.end(); nd2++)
+                {
+                    (*nd1)->add_memory_dependency((*nd2)->id());
+                    (*nd2)->add_memory_dependency((*nd1)->id());
+                }
+            }
+            sync_region.clear();
+        }
+        sync_region.push_back(node);
     }
 }
 
@@ -2517,7 +2524,7 @@ void program_impl::dump_memory_pool() const
     path += "cldnn_memory_pool.log";
     auto dep = get_memory_dependecies_string();
     get_engine().dump_memory_pool(*this, path, dep);
-    dump_program("13_memory_pool", true);
+    dump_program("14_memory_pool", true);
 }
 
 //TODO: break this function into number of smaller ones + add per-primitive fields (possibly use primitive_inst::to_string?)
