@@ -102,7 +102,7 @@ namespace KernelSelector {
         auto N = 1;
 
         uint32_t global_step[3] = { 14, 4, 16 * 8 };
-        uint32_t local_size[3] = { 8, 1, 8 };
+        uint32_t local_size[3] = { 8, 2, 8 };
 
         runInfo.gws0 = ((uint32_t)((Q + global_step[0] - 1)) / global_step[0]) * local_size[0];
         runInfo.gws1 = ((uint32_t)((P + global_step[1] - 1)) / global_step[1]) * local_size[1];
@@ -112,7 +112,7 @@ namespace KernelSelector {
         runInfo.lws1 = local_size[1];
         runInfo.lws2 = local_size[2];
 
-        runInfo.effiency = FORCE_PRIORITY_5;
+        runInfo.effiency = FORCE_PRIORITY_1;
 
         return runInfo;
     }
