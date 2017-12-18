@@ -684,7 +684,7 @@ inline JitConstants MakeReorderJitConstants(const ReorderParams& params)
     bool useUshort = (params.inputs[0].GetDType() == Datatype::F16 && params.output.GetDType() == Datatype::F16 &&
         params.reorderParams.mode == MeanSubtractMode::NONE);
     
-    Datatype calc_type = useUshort ? Datatype::UINT16 : params.output.GetDType();
+    Datatype calc_type = useUshort ? Datatype::UINT16 : params.inputs[0].GetDType();
 
     jit.AddConstants({
         MakeJitConstant("CALC_TYPE",                      toCLType(calc_type)),
