@@ -37,7 +37,7 @@ namespace cldnn {
                 const auto& primitive = arg.get_primitive();
                 ry_params.ryParams.coords = primitive->coords;
                 ry_params.ryParams.classes = primitive->classes;
-                ry_params.ryParams.classes = primitive->num;
+                ry_params.ryParams.num = primitive->num;
 
                 auto& kernel_selector = kernel_selector::region_yolo_kernel_selector::Instance();
                 auto best_kernels = kernel_selector.GetBestKernels(ry_params, ry_optional_params);
