@@ -200,22 +200,22 @@ TEST(depth_concatenate_f32_gpu, test03_cascade_concat_opt) {
     EXPECT_TRUE(executed_primitives.count("depth2") == 0);
     EXPECT_TRUE(executed_primitives.count("depth3") == 0);
 
-    EXPECT_FLOAT_EQ(1.4142135f, output_ptr[0]);
-    EXPECT_FLOAT_EQ(1.5422108f, output_ptr[1]);
-    EXPECT_FLOAT_EQ(1.8340081f, output_ptr[2]);
-    EXPECT_FLOAT_EQ(2.0f, output_ptr[3]);
-    EXPECT_FLOAT_EQ(2.0f, output_ptr[4]);
-    EXPECT_FLOAT_EQ(2.3784142f, output_ptr[5]);
-    EXPECT_FLOAT_EQ(3.3635857f, output_ptr[6]);
-    EXPECT_FLOAT_EQ(4.0f, output_ptr[7]);
-    EXPECT_FLOAT_EQ(2.0f, output_ptr[8]);
-    EXPECT_FLOAT_EQ(2.3784142f, output_ptr[9]);
-    EXPECT_FLOAT_EQ(3.3635857f, output_ptr[10]);
-    EXPECT_FLOAT_EQ(4.0f, output_ptr[11]);
-    EXPECT_FLOAT_EQ(4.0f, output_ptr[12]);
-    EXPECT_FLOAT_EQ(5.6568542f, output_ptr[13]);
-    EXPECT_FLOAT_EQ(11.313708f, output_ptr[14]);
-    EXPECT_FLOAT_EQ(16.0f, output_ptr[15]);
+    EXPECT_NEAR(1.4142f, output_ptr[0], 1e-3);
+    EXPECT_NEAR(1.5422f, output_ptr[1], 1e-3);
+    EXPECT_NEAR(1.8340f, output_ptr[2], 1e-3);
+    EXPECT_NEAR(2.0f, output_ptr[3], 1e-3);
+    EXPECT_NEAR(2.0f, output_ptr[4], 1e-3);
+    EXPECT_NEAR(2.3784f, output_ptr[5], 1e-3);
+    EXPECT_NEAR(3.3635f, output_ptr[6], 1e-3);
+    EXPECT_NEAR(4.0f, output_ptr[7], 1e-3);
+    EXPECT_NEAR(2.0f, output_ptr[8], 1e-3);
+    EXPECT_NEAR(2.3784f, output_ptr[9], 1e-3);
+    EXPECT_NEAR(3.3635f, output_ptr[10], 1e-3);
+    EXPECT_NEAR(4.0f, output_ptr[11], 1e-3);
+    EXPECT_NEAR(4.0f, output_ptr[12], 1e-3);
+    EXPECT_NEAR(5.6568f, output_ptr[13], 1e-3);
+    EXPECT_NEAR(11.3137f, output_ptr[14], 1e-3);
+    EXPECT_NEAR(16.0f, output_ptr[15], 1e-3);
 
 }
 
