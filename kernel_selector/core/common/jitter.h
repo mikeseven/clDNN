@@ -483,18 +483,16 @@ inline JitConstants MakeConvolutionParamsJitConstants(const ConvolutionParams& p
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MakeLoopUnrollParamsJitConstants
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeLoopUnrollParamsJitConstants(const ConvolutionParams& params)
+inline JitConstants MakeLoopUnrollParamsJitConstants(const ConvolutionParams& params, uint32_t loopCount)
 {
     JitConstants jit = MakeConvolutionParamsJitConstants(params);
-
-    auto highest = std::max(params.convParams.filterSize.x, params.convParams.filterSize.y);
 
     jit.AddConstants({
         MakeJitConstant("LOOP0(VAR, STMT)", ""),
         MakeJitConstant("LOOP1(VAR, STMT)", "(STMT); (VAR)++;"),
     });
 
-    for (auto i = 2; i < highest + 16; i++)
+    for (uint32_t i = 2; i <= loopCount + 1; i++)
     {
         jit.AddConstant({
             MakeJitConstant("LOOP" + toCodeString(i) + "(VAR, STMT)", "LOOP" + toCodeString(i - 1) + "(VAR, STMT); (STMT); (VAR)++;"),
