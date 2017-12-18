@@ -14,33 +14,32 @@
 
 #include "include/include_all.cl"
 
+#define IW INPUT0_SIZES[0]
+#define IH INPUT0_SIZES[1]
+#define IC INPUT0_SIZES[2]
+#define B  INPUT0_SIZES[3]
+
+#define ic_off (IC / (STRIDE * STRIDE))
+#define ih_off (IH * STRIDE)
+#define iw_off (IW * STRIDE)
+
 KERNEL (region_yolo_ref)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
-    printf("This is region_yolo kernel!\n");
-    /*
-    const uint d1 = get_global_id(0);
-    const uint d2 = get_global_id(1);
-    const uint d3 = get_global_id(2) % INPUT0_SIZES[2];
-    const uint d4 = get_global_id(2) / INPUT0_SIZES[2];
-
-    uint linear = d1  d2*INPUT0_SIZES[0]  d3*INPUT0_SIZES[0]*INPUT0_SIZES[1] + d4*INPUT0_SIZES[0]*INPUT0_SIZES[1]*INPUT0_SIZES[2];
-
-    const uint od1 = linear % OUTPUT_SIZES[0]; linear /= OUTPUT_SIZES[0];
-    const uint od2 = linear % OUTPUT_SIZES[1]; linear /= OUTPUT_SIZES[1];
-    const uint od3 = linear % OUTPUT_SIZES[2]; linear /= OUTPUT_SIZES[2];
-    const uint od4 = linear;
+    int ic = get_global_id(2);
+    int ih = get_global_id(1);
+    int iw = get_global_id(0);
     
-    uint input_offset =  INPUT0_OFFSET +
-                         d1*INPUT0_PITCHES[0] +
-                         d2*INPUT0_PITCHES[1] +
-                         d3*INPUT0_PITCHES[2] +
-                         d4*INPUT0_PITCHES[3];
-    uint output_offset = OUTPUT_OFFSET +
-                         od1*OUTPUT_PITCHES[0] +
-                         od2*OUTPUT_PITCHES[1] +
-                         od3*OUTPUT_PITCHES[2] +
-                         od4*OUTPUT_PITCHES[3];
-    
-    output[output_offset] = ACTIVATION(input[input_offset], NL_M ,NL_N);
-    */
+    for (int b = 0; b < B; b++) {
+        int dstIndex = b*IC*IH*IW + ic*IH*IW + ih*IW + iw;
+
+        int oc = ic % ic_off;
+        int offset = ic / ic_off;
+
+        int ow = iw * STRIDE + offset % STRIDE;
+        int oh = ih * STRIDE + offset / STRIDE;
+
+        int srcIndex = b*ic_off*ih_off*iw_off + oc*ih_off*iw_off + oh*iw_off + ow;
+
+        output[dstIndex] = input[srcIndex];
+    }
 }
