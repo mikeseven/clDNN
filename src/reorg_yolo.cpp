@@ -29,9 +29,11 @@ namespace cldnn
     layout reorg_yolo_inst::calc_output_layout(reorg_yolo_node const& node)
     {
         auto input_layout = node.input().get_output_layout();
+        auto desc = node.get_primitive();
+        auto stride = desc->stride;
 
         cldnn::layout layoutTemp = input_layout;
-        layoutTemp = cldnn::layout(input_layout.data_type, format::bfyx, tensor(input_layout.size.batch[0], 1, input_layout.size.feature[0], 1));
+        layoutTemp = cldnn::layout(input_layout.data_type, format::bfyx, tensor(input_layout.size.batch[0], input_layout.size.feature[0] * stride * stride, input_layout.size.spatial[0] / stride, input_layout.size.spatial[1] / stride));
         return layoutTemp;
     }
 
