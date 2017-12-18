@@ -1,4 +1,4 @@
-﻿/*
+/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -50,7 +50,7 @@ namespace KernelSelector
 
     JitConstants ConvolutionKernelBase::GetJitConstants(const ConvolutionParams& params, ConvolutionKernelBase::DispatchData kd) const
     {
-        JitConstants mem_consts = MakeConvolutionParamsJitConstants(params);
+        JitConstants mem_consts = MakeLoopUnrollParamsJitConstants(params);
 
         if (params.inputs[0].GetLayout() == DataLayout::yxfb &&
             params.weights.GetLayout() == WeightsLayout::yxio)
