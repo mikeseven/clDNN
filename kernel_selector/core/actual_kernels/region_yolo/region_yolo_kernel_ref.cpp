@@ -53,19 +53,26 @@ namespace KernelSelector
 
         kd.fp16UnitUsed = (params.inputs[0].GetDType() == Datatype::F16);
 
-        // Determine global work sizes.
-        kd.gws0 = params.output.LogicalSize();
-        kd.gws1 = 1;
-        kd.gws2 = 1;
-
-        // Find largest positive local work size that is divider for global work size.
-        kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
-        while (kd.gws0 % kd.lws0 != 0)
+        const auto &input = params.inputs[0];
+        std::vector<size_t> global;
+        if (input.GetLayout() == DataLayout::bfyx)
         {
-            --kd.lws0;
+            global = { input.X().v, input.Y().v, 1 };
         }
-        kd.lws1 = 1;
-        kd.lws2 = 1;
+        else
+        {
+            global = { input.Feature().v*input.Batch().v, input.X().v, input.Y().v };
+        }
+        // Determine global work sizes.
+        kd.gws0 = global[0];
+        kd.gws1 = global[1];
+        kd.gws2 = global[2];
+
+        auto local = GetOptimalLocalWorkGroupSizes(global);
+
+        kd.lws0 = local[0];
+        kd.lws1 = local[1];
+        kd.lws2 = local[2];
 
         return kd;
     }
