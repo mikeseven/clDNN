@@ -97,7 +97,7 @@ TEST(memory_pool, basic_non_padded_relu_pipe) {
     network.set_input_data("input", input);
     auto outputs = network.execute();
 
-    EXPECT_EQ(engine.get_total_device_memory_size(), (uint64_t) 48);
+    EXPECT_EQ(engine.get_total_device_memory_size(), (uint64_t) 64);
  }
 
 
@@ -130,7 +130,7 @@ TEST(memory_pool, basic_non_padded_relu_and_pooling_pipe) {
     network.set_input_data("input", input);
     auto outputs = network.execute();
 
-    EXPECT_EQ(engine.get_total_device_memory_size(), (uint64_t)768);
+    EXPECT_EQ(engine.get_total_device_memory_size(), (uint64_t)1024);
 }
 
 
@@ -169,7 +169,7 @@ TEST(memory_pool, multi_outputs_network) {
     network.set_input_data("input", input);
     auto outputs = network.execute();
 
-    EXPECT_EQ(engine.get_total_device_memory_size(), (uint64_t)1024);
+    EXPECT_EQ(engine.get_total_device_memory_size(), (uint64_t)1280);
 }
 
 
