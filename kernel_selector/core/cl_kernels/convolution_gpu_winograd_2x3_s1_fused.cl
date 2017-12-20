@@ -118,7 +118,8 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
     UNIT_TYPE_4 M6 = (UNIT_TYPE_4)(UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO);
 
 #if INPUT0_LAYOUT_BYXF
-    const __global UNIT_TYPE_4 *I_load = (const __global UNIT_TYPE_4*)&I[gn*HWC + ((uint)y)*WC + ((uint)x)*INPUT0_FEATURE_NUM];
+    uint adr = gn*HWC + ((uint)y)*WC + ((uint)x)*INPUT0_FEATURE_NUM;
+    const __global UNIT_TYPE_4 *I_load = ((const __global UNIT_TYPE_4*)&(I[adr]));
 #else
 	const __global UNIT_TYPE *I_load = (const __global UNIT_TYPE*)&I[gn*HWC + ((uint)y)*W + ((uint)x)];
 #endif
@@ -152,30 +153,39 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 			bool y5_in = 0 <= (y + 5) && (y + 5) < H && x_in;
 
 			#if INPUT0_LAYOUT_BYXF
-    const __global UNIT_TYPE_4 *I_load_0 = &I_load[0*WC4];
-    const __global UNIT_TYPE_4 *I_load_1 = &I_load[1*WC4];
-    const __global UNIT_TYPE_4 *I_load_2 = &I_load[2*WC4];
-    const __global UNIT_TYPE_4 *I_load_3 = &I_load[3*WC4];
-    const __global UNIT_TYPE_4 *I_load_4 = &I_load[4*WC4];
-    const __global UNIT_TYPE_4 *I_load_5 = &I_load[5*WC4];
-#else
-    const __global UNIT_TYPE *I_load_0 = &I_load[0*W]; //y0_in ? &I_load[0*W] : zeros4;
-    const __global UNIT_TYPE *I_load_1 = &I_load[1*W]; //y1_in ? &I_load[1*W] : zeros4;
-    const __global UNIT_TYPE *I_load_2 = &I_load[2*W]; //y2_in ? &I_load[2*W] : zeros4;
-    const __global UNIT_TYPE *I_load_3 = &I_load[3*W]; //y3_in ? &I_load[3*W] : zeros4;
-    const __global UNIT_TYPE *I_load_4 = &I_load[4*W]; //y4_in ? &I_load[4*W] : zeros4;
-    const __global UNIT_TYPE *I_load_5 = &I_load[5*W]; //y5_in ? &I_load[5*W] : zeros4;
-#endif
+			    
+/*				const  UNIT_TYPE_4 I_load_0 = y0_in ? I_load[0*WC4+c] : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				const  UNIT_TYPE_4 I_load_1 = y1_in ? I_load[1*WC4+c] : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				const  UNIT_TYPE_4 I_load_2 = y2_in ? I_load[2*WC4+c] : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				const  UNIT_TYPE_4 I_load_3 = y3_in ? I_load[3*WC4+c] : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				const  UNIT_TYPE_4 I_load_4 = y4_in ? I_load[4*WC4+c] : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				const  UNIT_TYPE_4 I_load_5 = y5_in ? I_load[5*WC4+c] : (UNIT_TYPE_4)(UNIT_VAL_ZERO);*/
+
+				const  UNIT_TYPE_4 I_load_0 = y0_in ? *((const __global UNIT_TYPE_4*)(I+adr+(0*WC4+c)*4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				const  UNIT_TYPE_4 I_load_1 = y1_in ? *((const __global UNIT_TYPE_4*)(I+adr+(1*WC4+c)*4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				const  UNIT_TYPE_4 I_load_2 = y2_in ? *((const __global UNIT_TYPE_4*)(I+adr+(2*WC4+c)*4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				const  UNIT_TYPE_4 I_load_3 = y3_in ? *((const __global UNIT_TYPE_4*)(I+adr+(3*WC4+c)*4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				const  UNIT_TYPE_4 I_load_4 = y4_in ? *((const __global UNIT_TYPE_4*)(I+adr+(4*WC4+c)*4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				const  UNIT_TYPE_4 I_load_5 = y5_in ? *((const __global UNIT_TYPE_4*)(I+adr+(5*WC4+c)*4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
 
 
-            // Workgroup loads 6x16x16 inputs.
+			#else
+				const __global UNIT_TYPE *I_load_0 = &I_load[0*W]; //y0_in ? &I_load[0*W] : zeros4;
+				const __global UNIT_TYPE *I_load_1 = &I_load[1*W]; //y1_in ? &I_load[1*W] : zeros4;
+				const __global UNIT_TYPE *I_load_2 = &I_load[2*W]; //y2_in ? &I_load[2*W] : zeros4;
+				const __global UNIT_TYPE *I_load_3 = &I_load[3*W]; //y3_in ? &I_load[3*W] : zeros4;
+				const __global UNIT_TYPE *I_load_4 = &I_load[4*W]; //y4_in ? &I_load[4*W] : zeros4;
+				const __global UNIT_TYPE *I_load_5 = &I_load[5*W]; //y5_in ? &I_load[5*W] : zeros4;
+			#endif
+
 #if INPUT0_LAYOUT_BYXF
-            UNIT_TYPE_4 I0 =  y0_in ? I_load_0[c]:(UNIT_TYPE_4)(UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO);
-            UNIT_TYPE_4 I1 =  y1_in ? I_load_1[c]:(UNIT_TYPE_4)(UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO);
-            UNIT_TYPE_4 I2 =  y2_in ? I_load_2[c]:(UNIT_TYPE_4)(UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO);
-            UNIT_TYPE_4 I3 =  y3_in ? I_load_3[c]:(UNIT_TYPE_4)(UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO);
-            UNIT_TYPE_4 I4 =  y4_in ? I_load_4[c]:(UNIT_TYPE_4)(UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO);
-            UNIT_TYPE_4 I5 =  y5_in ? I_load_5[c]:(UNIT_TYPE_4)(UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO);
+
+            UNIT_TYPE_4 I0 =  I_load_0;
+            UNIT_TYPE_4 I1 =  I_load_1;
+            UNIT_TYPE_4 I2 =  I_load_2;
+            UNIT_TYPE_4 I3 =  I_load_3;
+            UNIT_TYPE_4 I4 =  I_load_4;
+            UNIT_TYPE_4 I5 =  I_load_5;
 #else
             UNIT_TYPE_4 I0 = y0_in ? (UNIT_TYPE_4)(I_load_0[c*HW*4], I_load_0[c*HW*4+HW], I_load_0[c*HW*4+HW*2], I_load_0[c*HW*4+HW*3]):(UNIT_TYPE_4)(UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO);
             UNIT_TYPE_4 I1 = y1_in ? (UNIT_TYPE_4)(I_load_1[c*HW*4], I_load_1[c*HW*4+HW], I_load_1[c*HW*4+HW*2], I_load_1[c*HW*4+HW*3]):(UNIT_TYPE_4)(UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO,UNIT_VAL_ZERO);
