@@ -259,7 +259,7 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
 
     engine->compile_program(*this);
 
-    this->dump_program("12_finished", true);
+    this->dump_program("13_finished", true);
     cleanup();
 }
 
@@ -455,6 +455,7 @@ void program_impl::post_optimize_graph()
     post_optimize_weights(lo); dump_program("9_reordered_weights", true);
     remove_redundant_reorders(); dump_program("10_removed_redundant_reorders", true); //TODO: do we need it at this place also?
     propagate_constants(); dump_program("11_propagated_constants", true);
+    validate_processing_order(); dump_program("12_validated_processing_order", true);
     prepare_memory_dependencies();
 }
 
@@ -713,6 +714,15 @@ void program_impl::calc_processing_order()
     {
         node->processing_num = ++idx;
         node->unmark();
+    }
+}
+
+void program_impl::validate_processing_order()
+{
+    uint32_t idx = 0;
+    for (auto& node : processing_order)
+    {
+        node->processing_num = ++idx;
     }
 }
 
@@ -2478,7 +2488,7 @@ void program_impl::dump_memory_pool() const
     path += "cldnn_memory_pool.log";
     auto dep = get_memory_dependecies_string();
     get_engine().dump_memory_pool(*this, path, dep);
-    dump_program("13_memory_pool", true);
+    dump_program("14_memory_pool", true);
 }
 
 //TODO: break this function into number of smaller ones + add per-primitive fields (possibly use primitive_inst::to_string?)
