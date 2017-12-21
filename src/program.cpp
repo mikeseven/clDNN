@@ -1139,47 +1139,44 @@ void program_impl::skipped_branch_memory_dependencies()
 void program_impl::oooq_memory_dependencies()
 {
     auto itr = processing_order.begin();
-    // in oooq execution parallel execution provides risk of conflit.To avoid conflicts we depend on reorder_nodes_for_parallel_execution()
-    // call in graph pre optimization that changes execution order to BFS. This order let us build dependencies based on syncing points. 
+    // This order let us build dependencies based on syncing points. 
     // Set of nodes between two syncing points will be called sync_region.
     // Major rules is: can't share resource with nodes in my sync_region
-    if (get_engine().configuration().enable_parallelisation)
+
+    uint32_t last_barrier = 0;
+    bool needs_barrier = false;
+    std::vector<cldnn::program_node*> sync_region;
+    while (itr != processing_order.end())
     {
-        uint32_t last_barrier = 0;
-        bool needs_barrier = false;
-        std::vector<cldnn::program_node*> sync_region;
-        while (itr != processing_order.end())
+        auto& node = *itr;
+        itr++;
+
+        // if any of dep has proccess num after barrier -> needs barrier
+        for (auto dep : node->get_dependencies())
         {
-            auto& node = *itr;
-            itr++;
-
-            // if any of dep has proccess num after barrier -> needs barrier
-            for (auto dep : node->get_dependencies())
+            if (dep->get_processing_num() >= last_barrier)
             {
-                if (dep->get_processing_num() >= last_barrier)
-                {
-                    needs_barrier = true;
-                    break;
-                }
+                needs_barrier = true;
+                break;
             }
-
-            if (needs_barrier)
-            {
-                last_barrier = node->get_processing_num();
-                needs_barrier = false;
-                // add each pair bi-direction dependency
-                for (auto nd1 = sync_region.begin(); nd1 + 1 != sync_region.end(); nd1++)
-                {
-                    for (auto nd2 = nd1 + 1; nd2 != sync_region.end(); nd2++)
-                    { 
-                        (*nd1)->add_memory_dependency((*nd2)->id());
-                        (*nd2)->add_memory_dependency((*nd1)->id());
-                    }
-                }
-                sync_region.clear();
-            }
-            sync_region.push_back(node);
         }
+
+        if (needs_barrier)
+        {
+            last_barrier = node->get_processing_num();
+            needs_barrier = false;
+            // add each pair bi-direction dependency
+            for (auto nd1 = sync_region.begin(); nd1 + 1 != sync_region.end(); nd1++)
+            {
+                for (auto nd2 = nd1 + 1; nd2 != sync_region.end(); nd2++)
+                {
+                    (*nd1)->add_memory_dependency((*nd2)->id());
+                    (*nd2)->add_memory_dependency((*nd1)->id());
+                }
+            }
+            sync_region.clear();
+        }
+        sync_region.push_back(node);
     }
 }
 
