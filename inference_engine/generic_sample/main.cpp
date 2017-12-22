@@ -770,6 +770,9 @@ int main(int argc, char *argv[]) {
                         for (size_t i = 0; i < refValues.size(); i++)
                         {
                             float diff = fabs((pOutputValues[i] * float(FLAGS_scale)) - refValues[i]);
+                            //special case for float nan
+                            if (pOutputValues[i] != pOutputValues[i])
+                                diff = std::numeric_limits<float>::infinity();
                             if (diff > maxDiff) {
                                 maxDiff = diff;
                                 maxDiffOutput = pOutputValues[i] * float(FLAGS_scale);

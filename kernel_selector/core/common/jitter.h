@@ -705,10 +705,12 @@ inline JitConstants MakeReorderJitConstants(const ReorderParams& params)
     if (params.reorderParams.mode == MeanSubtractMode::INSIDE_PARAMS)
     {
         jit.AddConstant(MakeJitConstant("VALUE_TO_SUBTRACT", params.reorderParams.meanValues));
+        jit.AddConstant(MakeJitConstant("TO_MEAN_TYPE", "convert_float"));
     }
     else if (params.reorderParams.mode == MeanSubtractMode::IN_BUFFER)
     {
         jit.AddConstant(MakeJitConstant("MEAN_SUBTRACT", params.reorderParams.mean));
+        jit.AddConstant(MakeJitConstant("TO_MEAN_TYPE", "convert_" + toCLType(params.reorderParams.mean.GetDType())));
     }
 
     //half->half without subtraction (so plain reorder) can be done on shorts without explicit fp16 support

@@ -1788,17 +1788,6 @@ void program_impl::prepare_buffer_fusing()
 
         do_for_types<concatenation>(*node, [this, is_debug](concatenation_node& node)
         {
-            //if any of this node's inputs is used by more than one primitive do not fuse buffers,
-            //also, if an input is marked as network output, prevent optimizations which would affect a form of its output (unless debug flag is set)
-            // todo: in future, if this case is problem, it can be optimized further to enable buffer fusing
-            //       per single input rather than all/none
-            // + restrict input types to pooling, convolution and activation only due to problems with output padding on b and f
-            for (auto const& input : node.get_dependencies())
-                if (input->get_users().size() > 1 ||
-                    (!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>()) ||
-                    (input->is_output() && !is_debug))
-                    return;
-
             // buffer fusing should not be performed if one of inputs produces padded output since
             // it could break desired memory alignment. On the other hand, if this node uses all inputs
             // exclusively (see check above) they should not have output padding set since concatenation
@@ -1810,37 +1799,84 @@ void program_impl::prepare_buffer_fusing()
             auto concat_axis = node.get_primitive()->axis;
             auto padd = node.get_output_layout().data_padding;
 
-            //calculate lower and upper paddding so they sum up to the buffer size
-            // at the beginning lower padd points to the starting position of the output data
-            //
-            //   |--- lower padd ---| ------------------ upper padd -----------------------|
-            //   |-- output padd ---| ----- input1 ------|----- input2 -----|-- out padd --|
             tensor lower_padd = padd.lower_size();
             tensor upper_padd = padd.upper_size();
 
-            upper_padd.raw[concat_axis] = node.get_output_layout().get_buffer_size().raw[concat_axis] - lower_padd.raw[concat_axis];
+            auto upper_padd_val = node.get_output_layout().get_buffer_size().raw[concat_axis] - lower_padd.raw[concat_axis];
+            tensor lower_padd_offset = lower_padd;
 
-            for (auto const& input : node.get_dependencies())
+            std::list<const std::vector<program_node*>*> stack = { &node.get_dependencies() };
+            while (!stack.empty())
             {
-                auto input_lenght = input->get_output_layout().size.raw[concat_axis];
+                auto nodes_list = stack.front();
+                stack.pop_front();
 
-                // shrink upper pad so it points at the end of the input's buffer
-                //
-                //   |--- lower padd ---|                    |---------- upper padd -----------|
-                //   |-- output padd ---| ----- input1 ------|----- input2 -----|-- out padd --|
-                upper_padd.raw[concat_axis] -= input_lenght;
+                upper_padd.raw[concat_axis] = upper_padd_val;
+                lower_padd = lower_padd_offset;
 
-                // set new padding for input
-                input->set_output_padding(padding(lower_padd.sizes(), upper_padd.sizes()));
+                //check if concatenation in place can be applied for inputs set
+                for (auto input : *nodes_list)
+                {
+                    //if any of this node's inputs is used by more than one primitive and is not optimized concatenation then do not fuse buffers,
+                    //also, if an input is marked as network output, prevent optimizations which would affect a form of its output (unless debug flag is set)
+                    // todo: in future, if this case is problem, it can be optimized further to enable buffer fusing
+                    //       per single input rather than all/none
+                    // + restrict input types to pooling, convolution and activation only due to problems with output padding on b and f
+                    if ((!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>() && !input->is_type<concatenation>()) ||
+                        (input->is_output() && !is_debug))
+                        return;
 
-                // move lower padd further
-                //
-                //   |-------------- lower padd -------------|---------- upper padd -----------|
-                //   |-- output padd ---| ----- input1 ------|----- input2 -----|-- out padd --|
+                    if (input->get_users().size() > 1)
+                    {
+                        auto user_count = input->get_users().size();
+                        for (auto& user : input->get_users())
+                            if (user->is_type<concatenation>())
+                                user_count--;
+                        if (user_count > 1)
+                            return;
+                    }
 
-                lower_padd.raw[concat_axis] += input_lenght;
+                    //check only for spatial paddings. Accept feature and batch
+                    if (input->get_output_layout().data_padding.lower_size().spatial[0] != 0 ||
+                        input->get_output_layout().data_padding.upper_size().spatial[0] != 0 ||
+                        input->get_output_layout().data_padding.lower_size().spatial[1] != 0 ||
+                        input->get_output_layout().data_padding.upper_size().spatial[1] != 0)
+                        return;
+                }
+
+                //apply concatenation in place optimization
+                for (auto input : *nodes_list)
+                {
+                    auto input_lenght = input->get_output_layout().size.raw[concat_axis];
+                
+                    // shrink upper pad so it points at the end of the input's buffer
+                    //
+                    //   |--- lower padd ---|                    |---------- upper padd -----------|
+                    //   |-- output padd ---| ----- input1 ------|----- input2 -----|-- out padd --|
+                    upper_padd.raw[concat_axis] -= input_lenght;
+                
+                    // set new padding for input
+                    input->set_output_padding(padding(lower_padd.sizes(), upper_padd.sizes()));
+                
+                    // move lower padd further
+                    //
+                    //   |-------------- lower padd -------------|---------- upper padd -----------|
+                    //   |-- output padd ---| ----- input1 ------|----- input2 -----|-- out padd --|
+                
+                    lower_padd.raw[concat_axis] += input_lenght;
+
+                    if (input->type() == concatenation::type_id() && input->can_be_optimized())
+                    {
+                        if (input->as<concatenation>().get_primitive()->axis != node.get_primitive()->axis)
+                            return;
+
+                        lower_padd_offset = input->get_output_layout().data_padding.lower_size();
+                        if (!input->get_dependencies().empty())
+                            stack.push_back(&input->get_dependencies());
+                    }
+                }
             }
-            
+
             node.can_be_optimized(true);
         });
 
