@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,6 +16,7 @@
 
 #include<vector>
 
+//input data for yolo reorg test
 std::vector<float> yolo_reorg_input = {
     -0.657202f,	-0.0859569f,	-0.0228357f,	-0.0687674f,	-0.0731371f,	-0.0697703f,
     -0.0701425f,	-0.0683975f,	-0.0666341f,	-0.0677017f,	-0.072877f,	-0.0762517f,
@@ -7230,6 +7231,7 @@ std::vector<float> yolo_reorg_input = {
     -0.113236f,	-0.0800425f,	0.010577f,	7.00299f
 };
 
+//reference data for reorg yolo test
 std::vector<float> yolo_reorg_ref = {
     -0.657202f,	-0.0228357f,	-0.0731371f,	-0.0701425f,	-0.0666341f,	-0.072877f,
     -0.0732105f,	-0.0643114f,	-0.0640991f,	-0.0638082f,	-0.0623492f,	-0.0772656f,

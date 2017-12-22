@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,8 +13,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 */
+
 #include<vector>
 
+//input data for yolo region test
 std::vector<float> yolo_region_input = {
     -0.0800558f,	0.45269f,	0.00864292f,	0.0156375f,	-0.0327664f,	-0.0276436f,
     0.0683636f,	0.188619f,	0.243293f,	0.294447f,	0.290883f,	0.13046f,
@@ -3539,6 +3541,7 @@ std::vector<float> yolo_region_input = {
     1.17896f,	1.33623f,	1.29121f,	1.08035f,	1.10158f
 };
 
+//reference data for yolo region test
 std::vector<float> yolo_region_ref = {
     0.479997f,	0.611279f,	0.502161f,	0.503909f,	0.491809f,	0.49309f,
     0.517084f,	0.547016f,	0.560525f,	0.573084f,	0.572212f,	0.532569f,

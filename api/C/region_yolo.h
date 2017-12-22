@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -30,7 +30,7 @@
 extern "C" {
 #endif
     
-    /// @brief Normalizes results so they sum to 1 for values across the groups and nums.
+    /// @brief region softmax specific for yolo2 topology
     /// @details
     /// @par Algorithm:
     ///   

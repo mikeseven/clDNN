@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@
 #include "api/CPP/memory.hpp"
 #include <api/CPP/input_layout.hpp>
 #include "api/CPP/region_yolo.hpp"
-#include "api/CPP/reorder.hpp"
 #include <api/CPP/topology.hpp>
 #include <api/CPP/network.hpp>
 #include <api/CPP/engine.hpp>
@@ -28,14 +27,17 @@
 
 #include <cmath>
 #include <gmock/gmock.h>
-#include <limits>
 
 using namespace cldnn;
 using namespace tests;
 using namespace testing;
 
-TEST(region_yolo_gpu_f32, darknet_test)
+TEST(region_yolo_gpu_f32, region_yolo_test)
 {
+    //  region yolo test
+    //  Input: bfyx:1x125x13x13
+    //  Input: yolo_region_test_data.cpp
+
     extern std::vector<float> yolo_region_input;
     extern std::vector<float> yolo_region_ref;
     engine engine;

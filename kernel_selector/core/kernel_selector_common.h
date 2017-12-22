@@ -326,7 +326,7 @@ namespace KernelSelector {
         case KernelType::ACTIVATION:        return "ACTIVATION";
         case KernelType::SOFT_MAX:          return "SOFT_MAX";
         case KernelType::REGION_YOLO:       return "REGION_YOLO";
-        case KernelType::REORG_YOLO:       return "REORG_YOLO";
+        case KernelType::REORG_YOLO:        return "REORG_YOLO";
         case KernelType::ELTWISE:           return "ELTWISE";
         case KernelType::REORDER:           return "REORDER";
         default:

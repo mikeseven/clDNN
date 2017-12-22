@@ -23,7 +23,7 @@
 #define ih_off (IH * STRIDE)
 #define iw_off (IW * STRIDE)
 
-KERNEL (region_yolo_ref)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
+KERNEL (reorg_yolo_ref)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
     int ic = get_global_id(2);
     int ih = get_global_id(1);

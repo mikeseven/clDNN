@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -19,7 +19,6 @@
 #include "api/CPP/memory.hpp"
 #include <api/CPP/input_layout.hpp>
 #include "api/CPP/reorg_yolo.hpp"
-#include "api/CPP/reorder.hpp"
 #include <api/CPP/topology.hpp>
 #include <api/CPP/network.hpp>
 #include <api/CPP/engine.hpp>
@@ -28,31 +27,17 @@
 
 #include <cmath>
 #include <gmock/gmock.h>
-#include <limits>
 
 using namespace cldnn;
 using namespace tests;
 using namespace testing;
 
-TEST(reorg_yolo_gpu_f32, darknet_test)
+TEST(reorg_yolo_gpu_f32, reorg_yolo_test)
 {
-    //  Input               : bfyx:2x2x3x2
-    //  Permute order       : { 0,1,3,2 }
-    //
-    //  Input:
-    //  f0: b0:  1    2   -15  b1:   0    0     -15
-    //  f0: b0:  3    4   -15  b1:   0.5 -0.5   -15
-    //  f1: b0:  5    6   -15  b1:   1.5  5.2   -15
-    //  f1: b0:  7    8   -15  b1:   12   8     -15
-    //
-    //  Input:
-    //  f0: b0:  1    3  b1:   0    0.5
-    //  f0: b0:  2    4  b1:   0    -0.5
-    //  f0: b0:  -15 -15 b1:   -15  -15
-    //  f1: b0:  5    7  b1:   1.5  12
-    //  f1: b0:  6    8  b1:   5.2   8
-    //  f1: b0:  -15 -15 b1:   -15   -15
-    //
+    //  reorg yolo test
+    //  Input: bfyx:1x64x26x26
+    //  Input: yolo_reorg_test_data.cpp
+
     extern std::vector<float> yolo_reorg_input;
     extern std::vector<float> yolo_reorg_ref;
     engine engine;
