@@ -36,11 +36,23 @@
 	}   \
     }
 
-#define DOT4i( _result, _A, _B, i)					\
+#define DOT4i0( _result, _A, _B, i)					\
     {	\
 	_result = mad(_A.s0, intel_sub_group_shuffle( _B.s0, (i)), _result);	\
+    }
+
+#define DOT4i1( _result, _A, _B, i)					\
+    {	\
 	_result = mad(_A.s1, intel_sub_group_shuffle( _B.s1, (i)), _result);	\
+    }
+
+#define DOT4i2( _result, _A, _B, i)					\
+    {	\
 	_result = mad(_A.s2, intel_sub_group_shuffle( _B.s2, (i)), _result);	\
+    }
+
+#define DOT4i3( _result, _A, _B, i)					\
+    {	\
 	_result = mad(_A.s3, intel_sub_group_shuffle( _B.s3, (i)), _result);	\
     }
 
@@ -233,8 +245,7 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 			UNIT_TYPE_4 V13 = V_read_c8[3 * 8 + 32 * 1 + RndCntr * 256];
 
             __attribute__((opencl_unroll_hint(2)))
-            for (uint c5 = 0; c5 < 2; ++c5) {
-			    const uint c4 = c5; +8*upperHalf;
+            for (uint c4 = 0; c4 < 2; ++c4) {
                 // 2*14 * 3 * 4 = 336 MADs
 
                 // Fetch 4 channels of Winograd filter components.
@@ -264,121 +275,482 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 				// row 0
 
 				// f0 x v[0 .. 14]
-				DOT4i(M0.s0, f0, V00, 0 + c4);
-				DOT4i(M0.s1, f0, V00, 2 + c4);
-				DOT4i(M1.s0, f0, V00, 4 + c4);
-				DOT4i(M1.s1, f0, V00, 6 + c4);
+				DOT4i0(M0.s0, f0, V00, 0 + c4);
+				DOT4i0(M0.s1, f0, V00, 2 + c4);
+				DOT4i0(M1.s0, f0, V00, 4 + c4);
+				DOT4i0(M1.s1, f0, V00, 6 + c4);
 
-				DOT4i(M2.s0, f0, V01, 0 + c4);
-				DOT4i(M2.s1, f0, V01, 2 + c4);
-				DOT4i(M3.s0, f0, V01, 4 + c4);
-				DOT4i(M3.s1, f0, V01, 6 + c4);
+				DOT4i0(M2.s0, f0, V01, 0 + c4);
+				DOT4i0(M2.s1, f0, V01, 2 + c4);
+				DOT4i0(M3.s0, f0, V01, 4 + c4);
+				DOT4i0(M3.s1, f0, V01, 6 + c4);
 
-				DOT4i(M4.s0, f0, V02, 0 + c4);
-				DOT4i(M4.s1, f0, V02, 2 + c4);
-				DOT4i(M5.s0, f0, V02, 4 + c4);
-				DOT4i(M5.s1, f0, V02, 6 + c4);
+				DOT4i0(M4.s0, f0, V02, 0 + c4);
+				DOT4i0(M4.s1, f0, V02, 2 + c4);
+				DOT4i0(M5.s0, f0, V02, 4 + c4);
+				DOT4i0(M5.s1, f0, V02, 6 + c4);
 
-				DOT4i(M6.s0, f0, V03, 0 + c4);
-				DOT4i(M6.s1, f0, V03, 2 + c4);
+				DOT4i0(M6.s0, f0, V03, 0 + c4);
+				DOT4i0(M6.s1, f0, V03, 2 + c4);
 
 				// f1[c4] x v[1 .. 15]
-				DOT4i(M0.s0, f1, V00, 2 + c4);
-				DOT4i(M0.s1, f1, V00, 4 + c4);
-				DOT4i(M1.s0, f1, V00, 6 + c4);
-				DOT4i(M1.s1, f1, V01, 0 + c4);
+				DOT4i0(M0.s0, f1, V00, 2 + c4);
+				DOT4i0(M0.s1, f1, V00, 4 + c4);
+				DOT4i0(M1.s0, f1, V00, 6 + c4);
+				DOT4i0(M1.s1, f1, V01, 0 + c4);
 
-				DOT4i(M2.s0, f1, V01, 2 + c4);
-				DOT4i(M2.s1, f1, V01, 4 + c4);
-				DOT4i(M3.s0, f1, V01, 6 + c4);
-				DOT4i(M3.s1, f1, V02, 0 + c4);
+				DOT4i0(M2.s0, f1, V01, 2 + c4);
+				DOT4i0(M2.s1, f1, V01, 4 + c4);
+				DOT4i0(M3.s0, f1, V01, 6 + c4);
+				DOT4i0(M3.s1, f1, V02, 0 + c4);
 
-				DOT4i(M4.s0, f1, V02, 2 + c4);
-				DOT4i(M4.s1, f1, V02, 4 + c4);
-				DOT4i(M5.s0, f1, V02, 6 + c4);
-				DOT4i(M5.s1, f1, V03, 0 + c4);
+				DOT4i0(M4.s0, f1, V02, 2 + c4);
+				DOT4i0(M4.s1, f1, V02, 4 + c4);
+				DOT4i0(M5.s0, f1, V02, 6 + c4);
+				DOT4i0(M5.s1, f1, V03, 0 + c4);
 
-				DOT4i(M6.s0, f1, V03, 2 + c4);
-				DOT4i(M6.s1, f1, V03, 4 + c4);
+				DOT4i0(M6.s0, f1, V03, 2 + c4);
+				DOT4i0(M6.s1, f1, V03, 4 + c4);
 
 				// f2[c4] x v[2 .. 16]
-				DOT4i(M0.s0, f2, V00, 4 + c4);
-				DOT4i(M0.s1, f2, V00, 6 + c4);
-				DOT4i(M1.s0, f2, V01, 0 + c4);
-				DOT4i(M1.s1, f2, V01, 2 + c4);
+				DOT4i0(M0.s0, f2, V00, 4 + c4);
+				DOT4i0(M0.s1, f2, V00, 6 + c4);
+				DOT4i0(M1.s0, f2, V01, 0 + c4);
+				DOT4i0(M1.s1, f2, V01, 2 + c4);
 
-				DOT4i(M2.s0, f2, V01, 4 + c4);
-				DOT4i(M2.s1, f2, V01, 6 + c4);
-				DOT4i(M3.s0, f2, V02, 0 + c4);
-				DOT4i(M3.s1, f2, V02, 2 + c4);
+				DOT4i0(M2.s0, f2, V01, 4 + c4);
+				DOT4i0(M2.s1, f2, V01, 6 + c4);
+				DOT4i0(M3.s0, f2, V02, 0 + c4);
+				DOT4i0(M3.s1, f2, V02, 2 + c4);
 
-				DOT4i(M4.s0, f2, V02, 4 + c4);
-				DOT4i(M4.s1, f2, V02, 6 + c4);
-				DOT4i(M5.s0, f2, V03, 0 + c4);
-				DOT4i(M5.s1, f2, V03, 2 + c4);
+				DOT4i0(M4.s0, f2, V02, 4 + c4);
+				DOT4i0(M4.s1, f2, V02, 6 + c4);
+				DOT4i0(M5.s0, f2, V03, 0 + c4);
+				DOT4i0(M5.s1, f2, V03, 2 + c4);
 
-				DOT4i(M6.s0, f2, V03, 4 + c4);
-				DOT4i(M6.s1, f2, V03, 6 + c4);
+				DOT4i0(M6.s0, f2, V03, 4 + c4);
+				DOT4i0(M6.s1, f2, V03, 6 + c4);
 
 				// row 1
 
 				// f0 x v[0 .. 14]
-				DOT4i(M0.s2, f0, V10, 0 + c4);
-				DOT4i(M0.s3, f0, V10, 2 + c4);
-				DOT4i(M1.s2, f0, V10, 4 + c4);
-				DOT4i(M1.s3, f0, V10, 6 + c4);
+				DOT4i0(M0.s2, f0, V10, 0 + c4);
+				DOT4i0(M0.s3, f0, V10, 2 + c4);
+				DOT4i0(M1.s2, f0, V10, 4 + c4);
+				DOT4i0(M1.s3, f0, V10, 6 + c4);
 
-				DOT4i(M2.s2, f0, V11, 0 + c4);
-				DOT4i(M2.s3, f0, V11, 2 + c4);
-				DOT4i(M3.s2, f0, V11, 4 + c4);
-				DOT4i(M3.s3, f0, V11, 6 + c4);
+				DOT4i0(M2.s2, f0, V11, 0 + c4);
+				DOT4i0(M2.s3, f0, V11, 2 + c4);
+				DOT4i0(M3.s2, f0, V11, 4 + c4);
+				DOT4i0(M3.s3, f0, V11, 6 + c4);
 
-				DOT4i(M4.s2, f0, V12, 0 + c4);
-				DOT4i(M4.s3, f0, V12, 2 + c4);
-				DOT4i(M5.s2, f0, V12, 4 + c4);
-				DOT4i(M5.s3, f0, V12, 6 + c4);
+				DOT4i0(M4.s2, f0, V12, 0 + c4);
+				DOT4i0(M4.s3, f0, V12, 2 + c4);
+				DOT4i0(M5.s2, f0, V12, 4 + c4);
+				DOT4i0(M5.s3, f0, V12, 6 + c4);
 
-				DOT4i(M6.s2, f0, V13, 0 + c4);
-				DOT4i(M6.s3, f0, V13, 2 + c4);
+				DOT4i0(M6.s2, f0, V13, 0 + c4);
+				DOT4i0(M6.s3, f0, V13, 2 + c4);
 
 				// f1 x v[1 .. 15]
-				DOT4i(M0.s2, f1, V10, 2 + c4);
-				DOT4i(M0.s3, f1, V10, 4 + c4);
-				DOT4i(M1.s2, f1, V10, 6 + c4);
-				DOT4i(M1.s3, f1, V11, 0 + c4);
+				DOT4i0(M0.s2, f1, V10, 2 + c4);
+				DOT4i0(M0.s3, f1, V10, 4 + c4);
+				DOT4i0(M1.s2, f1, V10, 6 + c4);
+				DOT4i0(M1.s3, f1, V11, 0 + c4);
 
-				DOT4i(M2.s2, f1, V11, 2 + c4);
-				DOT4i(M2.s3, f1, V11, 4 + c4);
-				DOT4i(M3.s2, f1, V11, 6 + c4);
-				DOT4i(M3.s3, f1, V12, 0 + c4);
+				DOT4i0(M2.s2, f1, V11, 2 + c4);
+				DOT4i0(M2.s3, f1, V11, 4 + c4);
+				DOT4i0(M3.s2, f1, V11, 6 + c4);
+				DOT4i0(M3.s3, f1, V12, 0 + c4);
 
-				DOT4i(M4.s2, f1, V12, 2 + c4);
-				DOT4i(M4.s3, f1, V12, 4 + c4);
-				DOT4i(M5.s2, f1, V12, 6 + c4);
-				DOT4i(M5.s3, f1, V13, 0 + c4);
+				DOT4i0(M4.s2, f1, V12, 2 + c4);
+				DOT4i0(M4.s3, f1, V12, 4 + c4);
+				DOT4i0(M5.s2, f1, V12, 6 + c4);
+				DOT4i0(M5.s3, f1, V13, 0 + c4);
 
-				DOT4i(M6.s2, f1, V13, 2 + c4);
-				DOT4i(M6.s3, f1, V13, 4 + c4);
+				DOT4i0(M6.s2, f1, V13, 2 + c4);
+				DOT4i0(M6.s3, f1, V13, 4 + c4);
 
 				// f2 x v[2 .. 16]
-				DOT4i(M0.s2, f2, V10, 4 + c4);
-				DOT4i(M0.s3, f2, V10, 6 + c4);
-				DOT4i(M1.s2, f2, V11, 0 + c4);
-				DOT4i(M1.s3, f2, V11, 2 + c4);
+				DOT4i0(M0.s2, f2, V10, 4 + c4);
+				DOT4i0(M0.s3, f2, V10, 6 + c4);
+				DOT4i0(M1.s2, f2, V11, 0 + c4);
+				DOT4i0(M1.s3, f2, V11, 2 + c4);
 
-				DOT4i(M2.s2, f2, V11, 4 + c4);
-				DOT4i(M2.s3, f2, V11, 6 + c4);
-				DOT4i(M3.s2, f2, V12, 0 + c4);
-				DOT4i(M3.s3, f2, V12, 2 + c4);
+				DOT4i0(M2.s2, f2, V11, 4 + c4);
+				DOT4i0(M2.s3, f2, V11, 6 + c4);
+				DOT4i0(M3.s2, f2, V12, 0 + c4);
+				DOT4i0(M3.s3, f2, V12, 2 + c4);
 
-				DOT4i(M4.s2, f2, V12, 4 + c4);
-				DOT4i(M4.s3, f2, V12, 6 + c4);
-				DOT4i(M5.s2, f2, V13, 0 + c4);
-				DOT4i(M5.s3, f2, V13, 2 + c4);
+				DOT4i0(M4.s2, f2, V12, 4 + c4);
+				DOT4i0(M4.s3, f2, V12, 6 + c4);
+				DOT4i0(M5.s2, f2, V13, 0 + c4);
+				DOT4i0(M5.s3, f2, V13, 2 + c4);
 
-				DOT4i(M6.s2, f2, V13, 4 + c4);
-				DOT4i(M6.s3, f2, V13, 6 + c4);
-            }
+				DOT4i0(M6.s2, f2, V13, 4 + c4);
+				DOT4i0(M6.s3, f2, V13, 6 + c4);
+
+				///
+
+
+				// f0 x v[0 .. 14]
+				DOT4i1(M0.s0, f0, V00, 0 + c4);
+				DOT4i1(M0.s1, f0, V00, 2 + c4);
+				DOT4i1(M1.s0, f0, V00, 4 + c4);
+				DOT4i1(M1.s1, f0, V00, 6 + c4);
+
+				DOT4i1(M2.s0, f0, V01, 0 + c4);
+				DOT4i1(M2.s1, f0, V01, 2 + c4);
+				DOT4i1(M3.s0, f0, V01, 4 + c4);
+				DOT4i1(M3.s1, f0, V01, 6 + c4);
+
+				DOT4i1(M4.s0, f0, V02, 0 + c4);
+				DOT4i1(M4.s1, f0, V02, 2 + c4);
+				DOT4i1(M5.s0, f0, V02, 4 + c4);
+				DOT4i1(M5.s1, f0, V02, 6 + c4);
+
+				DOT4i1(M6.s0, f0, V03, 0 + c4);
+				DOT4i1(M6.s1, f0, V03, 2 + c4);
+
+				// f1[c4] x v[1 .. 15]
+				DOT4i1(M0.s0, f1, V00, 2 + c4);
+				DOT4i1(M0.s1, f1, V00, 4 + c4);
+				DOT4i1(M1.s0, f1, V00, 6 + c4);
+				DOT4i1(M1.s1, f1, V01, 0 + c4);
+
+				DOT4i1(M2.s0, f1, V01, 2 + c4);
+				DOT4i1(M2.s1, f1, V01, 4 + c4);
+				DOT4i1(M3.s0, f1, V01, 6 + c4);
+				DOT4i1(M3.s1, f1, V02, 0 + c4);
+
+				DOT4i1(M4.s0, f1, V02, 2 + c4);
+				DOT4i1(M4.s1, f1, V02, 4 + c4);
+				DOT4i1(M5.s0, f1, V02, 6 + c4);
+				DOT4i1(M5.s1, f1, V03, 0 + c4);
+
+				DOT4i1(M6.s0, f1, V03, 2 + c4);
+				DOT4i1(M6.s1, f1, V03, 4 + c4);
+
+				// f2[c4] x v[2 .. 16]
+				DOT4i1(M0.s0, f2, V00, 4 + c4);
+				DOT4i1(M0.s1, f2, V00, 6 + c4);
+				DOT4i1(M1.s0, f2, V01, 0 + c4);
+				DOT4i1(M1.s1, f2, V01, 2 + c4);
+
+				DOT4i1(M2.s0, f2, V01, 4 + c4);
+				DOT4i1(M2.s1, f2, V01, 6 + c4);
+				DOT4i1(M3.s0, f2, V02, 0 + c4);
+				DOT4i1(M3.s1, f2, V02, 2 + c4);
+
+				DOT4i1(M4.s0, f2, V02, 4 + c4);
+				DOT4i1(M4.s1, f2, V02, 6 + c4);
+				DOT4i1(M5.s0, f2, V03, 0 + c4);
+				DOT4i1(M5.s1, f2, V03, 2 + c4);
+
+				DOT4i1(M6.s0, f2, V03, 4 + c4);
+				DOT4i1(M6.s1, f2, V03, 6 + c4);
+
+				// row 1
+
+				// f0 x v[0 .. 14]
+				DOT4i1(M0.s2, f0, V10, 0 + c4);
+				DOT4i1(M0.s3, f0, V10, 2 + c4);
+				DOT4i1(M1.s2, f0, V10, 4 + c4);
+				DOT4i1(M1.s3, f0, V10, 6 + c4);
+
+				DOT4i1(M2.s2, f0, V11, 0 + c4);
+				DOT4i1(M2.s3, f0, V11, 2 + c4);
+				DOT4i1(M3.s2, f0, V11, 4 + c4);
+				DOT4i1(M3.s3, f0, V11, 6 + c4);
+
+				DOT4i1(M4.s2, f0, V12, 0 + c4);
+				DOT4i1(M4.s3, f0, V12, 2 + c4);
+				DOT4i1(M5.s2, f0, V12, 4 + c4);
+				DOT4i1(M5.s3, f0, V12, 6 + c4);
+
+				DOT4i1(M6.s2, f0, V13, 0 + c4);
+				DOT4i1(M6.s3, f0, V13, 2 + c4);
+
+				// f1 x v[1 .. 15]
+				DOT4i1(M0.s2, f1, V10, 2 + c4);
+				DOT4i1(M0.s3, f1, V10, 4 + c4);
+				DOT4i1(M1.s2, f1, V10, 6 + c4);
+				DOT4i1(M1.s3, f1, V11, 0 + c4);
+
+				DOT4i1(M2.s2, f1, V11, 2 + c4);
+				DOT4i1(M2.s3, f1, V11, 4 + c4);
+				DOT4i1(M3.s2, f1, V11, 6 + c4);
+				DOT4i1(M3.s3, f1, V12, 0 + c4);
+
+				DOT4i1(M4.s2, f1, V12, 2 + c4);
+				DOT4i1(M4.s3, f1, V12, 4 + c4);
+				DOT4i1(M5.s2, f1, V12, 6 + c4);
+				DOT4i1(M5.s3, f1, V13, 0 + c4);
+
+				DOT4i1(M6.s2, f1, V13, 2 + c4);
+				DOT4i1(M6.s3, f1, V13, 4 + c4);
+
+				// f2 x v[2 .. 16]
+				DOT4i1(M0.s2, f2, V10, 4 + c4);
+				DOT4i1(M0.s3, f2, V10, 6 + c4);
+				DOT4i1(M1.s2, f2, V11, 0 + c4);
+				DOT4i1(M1.s3, f2, V11, 2 + c4);
+
+				DOT4i1(M2.s2, f2, V11, 4 + c4);
+				DOT4i1(M2.s3, f2, V11, 6 + c4);
+				DOT4i1(M3.s2, f2, V12, 0 + c4);
+				DOT4i1(M3.s3, f2, V12, 2 + c4);
+
+				DOT4i1(M4.s2, f2, V12, 4 + c4);
+				DOT4i1(M4.s3, f2, V12, 6 + c4);
+				DOT4i1(M5.s2, f2, V13, 0 + c4);
+				DOT4i1(M5.s3, f2, V13, 2 + c4);
+
+				DOT4i1(M6.s2, f2, V13, 4 + c4);
+				DOT4i1(M6.s3, f2, V13, 6 + c4);
+
+
+				//
+
+
+				// f0 x v[0 .. 14]
+				DOT4i2(M0.s0, f0, V00, 0 + c4);
+				DOT4i2(M0.s1, f0, V00, 2 + c4);
+				DOT4i2(M1.s0, f0, V00, 4 + c4);
+				DOT4i2(M1.s1, f0, V00, 6 + c4);
+
+				DOT4i2(M2.s0, f0, V01, 0 + c4);
+				DOT4i2(M2.s1, f0, V01, 2 + c4);
+				DOT4i2(M3.s0, f0, V01, 4 + c4);
+				DOT4i2(M3.s1, f0, V01, 6 + c4);
+
+				DOT4i2(M4.s0, f0, V02, 0 + c4);
+				DOT4i2(M4.s1, f0, V02, 2 + c4);
+				DOT4i2(M5.s0, f0, V02, 4 + c4);
+				DOT4i2(M5.s1, f0, V02, 6 + c4);
+
+				DOT4i2(M6.s0, f0, V03, 0 + c4);
+				DOT4i2(M6.s1, f0, V03, 2 + c4);
+
+				// f1[c4] x v[1 .. 15]
+				DOT4i2(M0.s0, f1, V00, 2 + c4);
+				DOT4i2(M0.s1, f1, V00, 4 + c4);
+				DOT4i2(M1.s0, f1, V00, 6 + c4);
+				DOT4i2(M1.s1, f1, V01, 0 + c4);
+
+				DOT4i2(M2.s0, f1, V01, 2 + c4);
+				DOT4i2(M2.s1, f1, V01, 4 + c4);
+				DOT4i2(M3.s0, f1, V01, 6 + c4);
+				DOT4i2(M3.s1, f1, V02, 0 + c4);
+
+				DOT4i2(M4.s0, f1, V02, 2 + c4);
+				DOT4i2(M4.s1, f1, V02, 4 + c4);
+				DOT4i2(M5.s0, f1, V02, 6 + c4);
+				DOT4i2(M5.s1, f1, V03, 0 + c4);
+
+				DOT4i2(M6.s0, f1, V03, 2 + c4);
+				DOT4i2(M6.s1, f1, V03, 4 + c4);
+
+				// f2[c4] x v[2 .. 16]
+				DOT4i2(M0.s0, f2, V00, 4 + c4);
+				DOT4i2(M0.s1, f2, V00, 6 + c4);
+				DOT4i2(M1.s0, f2, V01, 0 + c4);
+				DOT4i2(M1.s1, f2, V01, 2 + c4);
+
+				DOT4i2(M2.s0, f2, V01, 4 + c4);
+				DOT4i2(M2.s1, f2, V01, 6 + c4);
+				DOT4i2(M3.s0, f2, V02, 0 + c4);
+				DOT4i2(M3.s1, f2, V02, 2 + c4);
+
+				DOT4i2(M4.s0, f2, V02, 4 + c4);
+				DOT4i2(M4.s1, f2, V02, 6 + c4);
+				DOT4i2(M5.s0, f2, V03, 0 + c4);
+				DOT4i2(M5.s1, f2, V03, 2 + c4);
+
+				DOT4i2(M6.s0, f2, V03, 4 + c4);
+				DOT4i2(M6.s1, f2, V03, 6 + c4);
+
+				// row 1
+
+				// f0 x v[0 .. 14]
+				DOT4i2(M0.s2, f0, V10, 0 + c4);
+				DOT4i2(M0.s3, f0, V10, 2 + c4);
+				DOT4i2(M1.s2, f0, V10, 4 + c4);
+				DOT4i2(M1.s3, f0, V10, 6 + c4);
+
+				DOT4i2(M2.s2, f0, V11, 0 + c4);
+				DOT4i2(M2.s3, f0, V11, 2 + c4);
+				DOT4i2(M3.s2, f0, V11, 4 + c4);
+				DOT4i2(M3.s3, f0, V11, 6 + c4);
+
+				DOT4i2(M4.s2, f0, V12, 0 + c4);
+				DOT4i2(M4.s3, f0, V12, 2 + c4);
+				DOT4i2(M5.s2, f0, V12, 4 + c4);
+				DOT4i2(M5.s3, f0, V12, 6 + c4);
+
+				DOT4i2(M6.s2, f0, V13, 0 + c4);
+				DOT4i2(M6.s3, f0, V13, 2 + c4);
+
+				// f1 x v[1 .. 15]
+				DOT4i2(M0.s2, f1, V10, 2 + c4);
+				DOT4i2(M0.s3, f1, V10, 4 + c4);
+				DOT4i2(M1.s2, f1, V10, 6 + c4);
+				DOT4i2(M1.s3, f1, V11, 0 + c4);
+
+				DOT4i2(M2.s2, f1, V11, 2 + c4);
+				DOT4i2(M2.s3, f1, V11, 4 + c4);
+				DOT4i2(M3.s2, f1, V11, 6 + c4);
+				DOT4i2(M3.s3, f1, V12, 0 + c4);
+
+				DOT4i2(M4.s2, f1, V12, 2 + c4);
+				DOT4i2(M4.s3, f1, V12, 4 + c4);
+				DOT4i2(M5.s2, f1, V12, 6 + c4);
+				DOT4i2(M5.s3, f1, V13, 0 + c4);
+
+				DOT4i2(M6.s2, f1, V13, 2 + c4);
+				DOT4i2(M6.s3, f1, V13, 4 + c4);
+
+				// f2 x v[2 .. 16]
+				DOT4i2(M0.s2, f2, V10, 4 + c4);
+				DOT4i2(M0.s3, f2, V10, 6 + c4);
+				DOT4i2(M1.s2, f2, V11, 0 + c4);
+				DOT4i2(M1.s3, f2, V11, 2 + c4);
+
+				DOT4i2(M2.s2, f2, V11, 4 + c4);
+				DOT4i2(M2.s3, f2, V11, 6 + c4);
+				DOT4i2(M3.s2, f2, V12, 0 + c4);
+				DOT4i2(M3.s3, f2, V12, 2 + c4);
+
+				DOT4i2(M4.s2, f2, V12, 4 + c4);
+				DOT4i2(M4.s3, f2, V12, 6 + c4);
+				DOT4i2(M5.s2, f2, V13, 0 + c4);
+				DOT4i2(M5.s3, f2, V13, 2 + c4);
+
+				DOT4i2(M6.s2, f2, V13, 4 + c4);
+				DOT4i2(M6.s3, f2, V13, 6 + c4);
+
+
+				//
+
+
+				// f0 x v[0 .. 14]
+				DOT4i3(M0.s0, f0, V00, 0 + c4);
+				DOT4i3(M0.s1, f0, V00, 2 + c4);
+				DOT4i3(M1.s0, f0, V00, 4 + c4);
+				DOT4i3(M1.s1, f0, V00, 6 + c4);
+
+				DOT4i3(M2.s0, f0, V01, 0 + c4);
+				DOT4i3(M2.s1, f0, V01, 2 + c4);
+				DOT4i3(M3.s0, f0, V01, 4 + c4);
+				DOT4i3(M3.s1, f0, V01, 6 + c4);
+
+				DOT4i3(M4.s0, f0, V02, 0 + c4);
+				DOT4i3(M4.s1, f0, V02, 2 + c4);
+				DOT4i3(M5.s0, f0, V02, 4 + c4);
+				DOT4i3(M5.s1, f0, V02, 6 + c4);
+
+				DOT4i3(M6.s0, f0, V03, 0 + c4);
+				DOT4i3(M6.s1, f0, V03, 2 + c4);
+
+				// f1[c4] x v[1 .. 15]
+				DOT4i3(M0.s0, f1, V00, 2 + c4);
+				DOT4i3(M0.s1, f1, V00, 4 + c4);
+				DOT4i3(M1.s0, f1, V00, 6 + c4);
+				DOT4i3(M1.s1, f1, V01, 0 + c4);
+
+				DOT4i3(M2.s0, f1, V01, 2 + c4);
+				DOT4i3(M2.s1, f1, V01, 4 + c4);
+				DOT4i3(M3.s0, f1, V01, 6 + c4);
+				DOT4i3(M3.s1, f1, V02, 0 + c4);
+
+				DOT4i3(M4.s0, f1, V02, 2 + c4);
+				DOT4i3(M4.s1, f1, V02, 4 + c4);
+				DOT4i3(M5.s0, f1, V02, 6 + c4);
+				DOT4i3(M5.s1, f1, V03, 0 + c4);
+
+				DOT4i3(M6.s0, f1, V03, 2 + c4);
+				DOT4i3(M6.s1, f1, V03, 4 + c4);
+
+				// f2[c4] x v[2 .. 16]
+				DOT4i3(M0.s0, f2, V00, 4 + c4);
+				DOT4i3(M0.s1, f2, V00, 6 + c4);
+				DOT4i3(M1.s0, f2, V01, 0 + c4);
+				DOT4i3(M1.s1, f2, V01, 2 + c4);
+
+				DOT4i3(M2.s0, f2, V01, 4 + c4);
+				DOT4i3(M2.s1, f2, V01, 6 + c4);
+				DOT4i3(M3.s0, f2, V02, 0 + c4);
+				DOT4i3(M3.s1, f2, V02, 2 + c4);
+
+				DOT4i3(M4.s0, f2, V02, 4 + c4);
+				DOT4i3(M4.s1, f2, V02, 6 + c4);
+				DOT4i3(M5.s0, f2, V03, 0 + c4);
+				DOT4i3(M5.s1, f2, V03, 2 + c4);
+
+				DOT4i3(M6.s0, f2, V03, 4 + c4);
+				DOT4i3(M6.s1, f2, V03, 6 + c4);
+
+				// row 1
+
+				// f0 x v[0 .. 14]
+				DOT4i3(M0.s2, f0, V10, 0 + c4);
+				DOT4i3(M0.s3, f0, V10, 2 + c4);
+				DOT4i3(M1.s2, f0, V10, 4 + c4);
+				DOT4i3(M1.s3, f0, V10, 6 + c4);
+
+				DOT4i3(M2.s2, f0, V11, 0 + c4);
+				DOT4i3(M2.s3, f0, V11, 2 + c4);
+				DOT4i3(M3.s2, f0, V11, 4 + c4);
+				DOT4i3(M3.s3, f0, V11, 6 + c4);
+
+				DOT4i3(M4.s2, f0, V12, 0 + c4);
+				DOT4i3(M4.s3, f0, V12, 2 + c4);
+				DOT4i3(M5.s2, f0, V12, 4 + c4);
+				DOT4i3(M5.s3, f0, V12, 6 + c4);
+
+				DOT4i3(M6.s2, f0, V13, 0 + c4);
+				DOT4i3(M6.s3, f0, V13, 2 + c4);
+
+				// f1 x v[1 .. 15]
+				DOT4i3(M0.s2, f1, V10, 2 + c4);
+				DOT4i3(M0.s3, f1, V10, 4 + c4);
+				DOT4i3(M1.s2, f1, V10, 6 + c4);
+				DOT4i3(M1.s3, f1, V11, 0 + c4);
+
+				DOT4i3(M2.s2, f1, V11, 2 + c4);
+				DOT4i3(M2.s3, f1, V11, 4 + c4);
+				DOT4i3(M3.s2, f1, V11, 6 + c4);
+				DOT4i3(M3.s3, f1, V12, 0 + c4);
+
+				DOT4i3(M4.s2, f1, V12, 2 + c4);
+				DOT4i3(M4.s3, f1, V12, 4 + c4);
+				DOT4i3(M5.s2, f1, V12, 6 + c4);
+				DOT4i3(M5.s3, f1, V13, 0 + c4);
+
+				DOT4i3(M6.s2, f1, V13, 2 + c4);
+				DOT4i3(M6.s3, f1, V13, 4 + c4);
+
+				// f2 x v[2 .. 16]
+				DOT4i3(M0.s2, f2, V10, 4 + c4);
+				DOT4i3(M0.s3, f2, V10, 6 + c4);
+				DOT4i3(M1.s2, f2, V11, 0 + c4);
+				DOT4i3(M1.s3, f2, V11, 2 + c4);
+
+				DOT4i3(M2.s2, f2, V11, 4 + c4);
+				DOT4i3(M2.s3, f2, V11, 6 + c4);
+				DOT4i3(M3.s2, f2, V12, 0 + c4);
+				DOT4i3(M3.s3, f2, V12, 2 + c4);
+
+				DOT4i3(M4.s2, f2, V12, 4 + c4);
+				DOT4i3(M4.s3, f2, V12, 6 + c4);
+				DOT4i3(M5.s2, f2, V13, 0 + c4);
+				DOT4i3(M5.s3, f2, V13, 2 + c4);
+
+				DOT4i3(M6.s2, f2, V13, 4 + c4);
+				DOT4i3(M6.s3, f2, V13, 6 + c4);
+
+
+			}
 			RndCntr++;
 			//V_read_c8 += 256;
 
