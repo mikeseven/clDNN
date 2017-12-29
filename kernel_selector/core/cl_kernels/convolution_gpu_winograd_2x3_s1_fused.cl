@@ -38,10 +38,10 @@
 
 #define DOT4i( _result, _A, _B, i)					\
     {	\
-	_result = mad(_A.s0, intel_sub_group_shuffle( _B.s0, (upperHalf?i+8:i)), _result);	\
-	_result = mad(_A.s1, intel_sub_group_shuffle( _B.s1, (upperHalf?i+8:i)), _result);	\
-	_result = mad(_A.s2, intel_sub_group_shuffle( _B.s2, (upperHalf?i+8:i)), _result);	\
-	_result = mad(_A.s3, intel_sub_group_shuffle( _B.s3, (upperHalf?i+8:i)), _result);	\
+	_result = mad(_A.s0, intel_sub_group_shuffle( _B.s0, (i)), _result);	\
+	_result = mad(_A.s1, intel_sub_group_shuffle( _B.s1, (i)), _result);	\
+	_result = mad(_A.s2, intel_sub_group_shuffle( _B.s2, (i)), _result);	\
+	_result = mad(_A.s3, intel_sub_group_shuffle( _B.s3, (i)), _result);	\
     }
 
 #define UNIT_TYPE_2 CAT(UNIT_TYPE, 2)
@@ -78,12 +78,11 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
     
 	const uint upperHalf = get_local_id(1);
     uint gx = get_group_id(0);
-    uint gy = get_group_id(1)*2+upperHalf;
-    uint gz = get_group_id(2);
+    uint gy = get_group_id(1)*2+(get_group_id(2)%2);
+    uint gz = (get_group_id(2)/2)*2+ upperHalf;
     uint gk = gz % K16;
     uint gn = gz / K16;
 
-	uint glbx = get_global_id(0);
 	#define lx get_local_id(0)
 	#define lz get_local_id(2)
 
@@ -129,7 +128,7 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
     uint lxb1 = (lx & 2)/2;
                                      
     __local UNIT_TYPE_4 *V_write = &V[lxb1*256 + lz*4 + lxd4*2 + lxm2 + slmSize*upperHalf];
-    __local const UNIT_TYPE_4 *V_read = &V[lzm4*64 + lx + slmSize*upperHalf];
+    __local const UNIT_TYPE_4 *V_read = &V[lzm4*64 + lx ];
 
     uint2 coordU0;
     coordU0.x = (lzm4*24 + k*12);
@@ -143,6 +142,7 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 
         // Transform HxW x C        -> DxUxW x C
         //           6x16x16 inputs -> 4x2x16x16 winograd components.
+		if (!upperHalf)
         {
 			bool x_in =  0 <= x && x < W;
 			bool y0_in = 0 <= (y + 0) && (y + 0) < H && x_in;
@@ -219,6 +219,18 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 
             // Fetch 8 channels of Winograd input components, spread across subgroup.
             // row 0
+			// Fetch 8 channels of Winograd input components, spread across subgroup.
+			// row 0
+			UNIT_TYPE_4 V00 = V_read_c8[0 * 8 + 32 * 0 + RndCntr * 256];
+			UNIT_TYPE_4 V01 = V_read_c8[1 * 8 + 32 * 0 + RndCntr * 256];
+			UNIT_TYPE_4 V02 = V_read_c8[2 * 8 + 32 * 0 + RndCntr * 256];
+			UNIT_TYPE_4 V03 = V_read_c8[3 * 8 + 32 * 0 + RndCntr * 256];
+
+			// row 1
+			UNIT_TYPE_4 V10 = V_read_c8[0 * 8 + 32 * 1 + RndCntr * 256];
+			UNIT_TYPE_4 V11 = V_read_c8[1 * 8 + 32 * 1 + RndCntr * 256];
+			UNIT_TYPE_4 V12 = V_read_c8[2 * 8 + 32 * 1 + RndCntr * 256];
+			UNIT_TYPE_4 V13 = V_read_c8[3 * 8 + 32 * 1 + RndCntr * 256];
 
             __attribute__((opencl_unroll_hint(2)))
             for (uint c5 = 0; c5 < 2; ++c5) {
@@ -249,108 +261,123 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 				*(__global UNIT_TYPE *)(&U[flatA+16+2*FILTER_OFM_NUM*KCOLSW*KROWSW]),
 				*(__global UNIT_TYPE *)(&U[flatA+16+3*FILTER_OFM_NUM*KCOLSW*KROWSW]));
                 coordU0.y += 4;
-
 				// row 0
-				UNIT_TYPE_4 V00 = V_read_c8[0*8 + 32*0 + RndCntr*256];
+
+				// f0 x v[0 .. 14]
 				DOT4i(M0.s0, f0, V00, 0 + c4);
-                DOT4i(M0.s1, f0, V00, 2 + c4);
-				DOT4i(M0.s0, f1, V00, 2 + c4);
-                DOT4i(M1.s0, f0, V00, 4 + c4);
-                DOT4i(M0.s1, f1, V00, 4 + c4);
-				DOT4i(M0.s0, f2, V00, 4 + c4);
-                DOT4i(M1.s1, f0, V00, 6 + c4);
-                DOT4i(M1.s0, f1, V00, 6 + c4);
-                DOT4i(M0.s1, f2, V00, 6 + c4);
+				DOT4i(M0.s1, f0, V00, 2 + c4);
+				DOT4i(M1.s0, f0, V00, 4 + c4);
+				DOT4i(M1.s1, f0, V00, 6 + c4);
 
-                UNIT_TYPE_4 V01 = V_read_c8[1*8 + 32*0 + RndCntr*256];
-			    DOT4i(M2.s0, f0, V01, 0 + c4);
-                DOT4i(M1.s0, f2, V01, 0 + c4);
-				DOT4i(M1.s1, f1, V01, 0 + c4);
-                DOT4i(M2.s0, f1, V01, 2 + c4);
-                DOT4i(M2.s1, f0, V01, 2 + c4);
-                DOT4i(M1.s1, f2, V01, 2 + c4);
-                DOT4i(M2.s0, f2, V01, 4 + c4);
-                DOT4i(M2.s1, f1, V01, 4 + c4);
-                DOT4i(M3.s0, f0, V01, 4 + c4);
-                DOT4i(M2.s1, f2, V01, 6 + c4);
-                DOT4i(M3.s0, f1, V01, 6 + c4);
-                DOT4i(M3.s1, f0, V01, 6 + c4);
+				DOT4i(M2.s0, f0, V01, 0 + c4);
+				DOT4i(M2.s1, f0, V01, 2 + c4);
+				DOT4i(M3.s0, f0, V01, 4 + c4);
+				DOT4i(M3.s1, f0, V01, 6 + c4);
 
-                UNIT_TYPE_4 V02 = V_read_c8[2*8 + 32*0 + RndCntr*256];
-                DOT4i(M4.s0, f0, V02, 0 + c4);
-				DOT4i(M3.s0, f2, V02, 0 + c4);
-				DOT4i(M3.s1, f1, V02, 0 + c4);
-                DOT4i(M4.s0, f1, V02, 2 + c4);
-                DOT4i(M4.s1, f0, V02, 2 + c4);
-                DOT4i(M3.s1, f2, V02, 2 + c4);
-                DOT4i(M4.s0, f2, V02, 4 + c4);
-                DOT4i(M4.s1, f1, V02, 4 + c4);
-                DOT4i(M5.s0, f0, V02, 4 + c4);
-                DOT4i(M4.s1, f2, V02, 6 + c4);
-                DOT4i(M5.s0, f1, V02, 6 + c4);
-                DOT4i(M5.s1, f0, V02, 6 + c4);
+				DOT4i(M4.s0, f0, V02, 0 + c4);
+				DOT4i(M4.s1, f0, V02, 2 + c4);
+				DOT4i(M5.s0, f0, V02, 4 + c4);
+				DOT4i(M5.s1, f0, V02, 6 + c4);
 
-				UNIT_TYPE_4 V03 = V_read_c8[3*8 + 32*0 + RndCntr*256];
 				DOT4i(M6.s0, f0, V03, 0 + c4);
-                DOT4i(M5.s1, f1, V03, 0 + c4);
+				DOT4i(M6.s1, f0, V03, 2 + c4);
+
+				// f1[c4] x v[1 .. 15]
+				DOT4i(M0.s0, f1, V00, 2 + c4);
+				DOT4i(M0.s1, f1, V00, 4 + c4);
+				DOT4i(M1.s0, f1, V00, 6 + c4);
+				DOT4i(M1.s1, f1, V01, 0 + c4);
+
+				DOT4i(M2.s0, f1, V01, 2 + c4);
+				DOT4i(M2.s1, f1, V01, 4 + c4);
+				DOT4i(M3.s0, f1, V01, 6 + c4);
+				DOT4i(M3.s1, f1, V02, 0 + c4);
+
+				DOT4i(M4.s0, f1, V02, 2 + c4);
+				DOT4i(M4.s1, f1, V02, 4 + c4);
+				DOT4i(M5.s0, f1, V02, 6 + c4);
+				DOT4i(M5.s1, f1, V03, 0 + c4);
+
+				DOT4i(M6.s0, f1, V03, 2 + c4);
+				DOT4i(M6.s1, f1, V03, 4 + c4);
+
+				// f2[c4] x v[2 .. 16]
+				DOT4i(M0.s0, f2, V00, 4 + c4);
+				DOT4i(M0.s1, f2, V00, 6 + c4);
+				DOT4i(M1.s0, f2, V01, 0 + c4);
+				DOT4i(M1.s1, f2, V01, 2 + c4);
+
+				DOT4i(M2.s0, f2, V01, 4 + c4);
+				DOT4i(M2.s1, f2, V01, 6 + c4);
+				DOT4i(M3.s0, f2, V02, 0 + c4);
+				DOT4i(M3.s1, f2, V02, 2 + c4);
+
+				DOT4i(M4.s0, f2, V02, 4 + c4);
+				DOT4i(M4.s1, f2, V02, 6 + c4);
 				DOT4i(M5.s0, f2, V03, 0 + c4);
-                DOT4i(M6.s0, f1, V03, 2 + c4);
-                DOT4i(M6.s1, f0, V03, 2 + c4);
-                DOT4i(M5.s1, f2, V03, 2 + c4);
-                DOT4i(M6.s0, f2, V03, 4 + c4);
-                DOT4i(M6.s1, f1, V03, 4 + c4);
-                DOT4i(M6.s1, f2, V03, 6 + c4);
+				DOT4i(M5.s1, f2, V03, 2 + c4);
 
-                // row 1
-				UNIT_TYPE_4 V10 = V_read_c8[0*8 + 32*1 + RndCntr*256];
-                DOT4i(M0.s2, f0, V10, 0 + c4);
-                DOT4i(M0.s3, f0, V10, 2 + c4);
-				DOT4i(M0.s2, f1, V10, 2 + c4);
-                DOT4i(M0.s3, f1, V10, 4 + c4);
-                DOT4i(M1.s2, f0, V10, 4 + c4);
-				DOT4i(M0.s2, f2, V10, 4 + c4);
-                DOT4i(M1.s2, f1, V10, 6 + c4);
-                DOT4i(M1.s3, f0, V10, 6 + c4);
-                DOT4i(M0.s3, f2, V10, 6 + c4);
+				DOT4i(M6.s0, f2, V03, 4 + c4);
+				DOT4i(M6.s1, f2, V03, 6 + c4);
 
-				UNIT_TYPE_4 V11 = V_read_c8[1*8 + 32*1 + RndCntr*256];
+				// row 1
+
+				// f0 x v[0 .. 14]
+				DOT4i(M0.s2, f0, V10, 0 + c4);
+				DOT4i(M0.s3, f0, V10, 2 + c4);
+				DOT4i(M1.s2, f0, V10, 4 + c4);
+				DOT4i(M1.s3, f0, V10, 6 + c4);
+
 				DOT4i(M2.s2, f0, V11, 0 + c4);
+				DOT4i(M2.s3, f0, V11, 2 + c4);
+				DOT4i(M3.s2, f0, V11, 4 + c4);
+				DOT4i(M3.s3, f0, V11, 6 + c4);
+
+				DOT4i(M4.s2, f0, V12, 0 + c4);
+				DOT4i(M4.s3, f0, V12, 2 + c4);
+				DOT4i(M5.s2, f0, V12, 4 + c4);
+				DOT4i(M5.s3, f0, V12, 6 + c4);
+
+				DOT4i(M6.s2, f0, V13, 0 + c4);
+				DOT4i(M6.s3, f0, V13, 2 + c4);
+
+				// f1 x v[1 .. 15]
+				DOT4i(M0.s2, f1, V10, 2 + c4);
+				DOT4i(M0.s3, f1, V10, 4 + c4);
+				DOT4i(M1.s2, f1, V10, 6 + c4);
 				DOT4i(M1.s3, f1, V11, 0 + c4);
-				DOT4i(M1.s2, f2, V11, 0 + c4);
-                DOT4i(M2.s2, f1, V11, 2 + c4);
-                DOT4i(M2.s3, f0, V11, 2 + c4);
-                DOT4i(M1.s3, f2, V11, 2 + c4);
-                DOT4i(M3.s2, f0, V11, 4 + c4);
-                DOT4i(M2.s3, f1, V11, 4 + c4);
-                DOT4i(M2.s2, f2, V11, 4 + c4);
-                DOT4i(M3.s2, f1, V11, 6 + c4);
-                DOT4i(M3.s3, f0, V11, 6 + c4);
-                DOT4i(M2.s3, f2, V11, 6 + c4);
 
-				UNIT_TYPE_4 V12 = V_read_c8[2*8 + 32*1 + RndCntr*256];
-                DOT4i(M4.s2, f0, V12, 0 + c4);
-				DOT4i(M3.s2, f2, V12, 0 + c4);
+				DOT4i(M2.s2, f1, V11, 2 + c4);
+				DOT4i(M2.s3, f1, V11, 4 + c4);
+				DOT4i(M3.s2, f1, V11, 6 + c4);
 				DOT4i(M3.s3, f1, V12, 0 + c4);
-                DOT4i(M4.s3, f0, V12, 2 + c4);
-                DOT4i(M4.s2, f1, V12, 2 + c4);
-                DOT4i(M3.s3, f2, V12, 2 + c4);
-                DOT4i(M5.s2, f0, V12, 4 + c4);
-                DOT4i(M4.s3, f1, V12, 4 + c4);
-                DOT4i(M4.s2, f2, V12, 4 + c4);
-                DOT4i(M5.s3, f0, V12, 6 + c4);
-                DOT4i(M5.s2, f1, V12, 6 + c4);
-                DOT4i(M4.s3, f2, V12, 6 + c4);
 
-				UNIT_TYPE_4 V13 = V_read_c8[3*8 + 32*1 + RndCntr*256];
-                DOT4i(M6.s2, f0, V13, 0 + c4);
-                DOT4i(M5.s2, f2, V13, 0 + c4);
-                DOT4i(M5.s3, f1, V13, 0 + c4);
-                DOT4i(M6.s3, f0, V13, 2 + c4);
-                DOT4i(M6.s2, f1, V13, 2 + c4);
-                DOT4i(M5.s3, f2, V13, 2 + c4);
-                DOT4i(M6.s3, f1, V13, 4 + c4);
-                DOT4i(M6.s2, f2, V13, 4 + c4);
-                DOT4i(M6.s3, f2, V13, 6 + c4);
+				DOT4i(M4.s2, f1, V12, 2 + c4);
+				DOT4i(M4.s3, f1, V12, 4 + c4);
+				DOT4i(M5.s2, f1, V12, 6 + c4);
+				DOT4i(M5.s3, f1, V13, 0 + c4);
+
+				DOT4i(M6.s2, f1, V13, 2 + c4);
+				DOT4i(M6.s3, f1, V13, 4 + c4);
+
+				// f2 x v[2 .. 16]
+				DOT4i(M0.s2, f2, V10, 4 + c4);
+				DOT4i(M0.s3, f2, V10, 6 + c4);
+				DOT4i(M1.s2, f2, V11, 0 + c4);
+				DOT4i(M1.s3, f2, V11, 2 + c4);
+
+				DOT4i(M2.s2, f2, V11, 4 + c4);
+				DOT4i(M2.s3, f2, V11, 6 + c4);
+				DOT4i(M3.s2, f2, V12, 0 + c4);
+				DOT4i(M3.s3, f2, V12, 2 + c4);
+
+				DOT4i(M4.s2, f2, V12, 4 + c4);
+				DOT4i(M4.s3, f2, V12, 6 + c4);
+				DOT4i(M5.s2, f2, V13, 0 + c4);
+				DOT4i(M5.s3, f2, V13, 2 + c4);
+
+				DOT4i(M6.s2, f2, V13, 4 + c4);
+				DOT4i(M6.s3, f2, V13, 6 + c4);
             }
 			RndCntr++;
 			//V_read_c8 += 256;
