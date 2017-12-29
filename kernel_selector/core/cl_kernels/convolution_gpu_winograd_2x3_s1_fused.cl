@@ -21,21 +21,6 @@
 #include "include/data_types.cl"
 #include "include/activation_functions.cl"
 
-#define DOT4i_sep( _result, _A, _B, i)					\
-    {	\
-	if (!upperHalf) {							\
-	_result = mad(_A.s0, intel_sub_group_shuffle( _B.s0, i), _result);	\
-	_result = mad(_A.s1, intel_sub_group_shuffle( _B.s1, i), _result);	\
-	_result = mad(_A.s2, intel_sub_group_shuffle( _B.s2, i), _result);	\
-	_result = mad(_A.s3, intel_sub_group_shuffle( _B.s3, i), _result);	\
-	} else {  \
-	_result = mad(_A.s0, intel_sub_group_shuffle( _B.s0, i+8), _result);	\
-	_result = mad(_A.s1, intel_sub_group_shuffle( _B.s1, i+8), _result);	\
-	_result = mad(_A.s2, intel_sub_group_shuffle( _B.s2, i+8), _result);	\
-	_result = mad(_A.s3, intel_sub_group_shuffle( _B.s3, i+8), _result);	\
-	}   \
-    }
-
 #define DOT4i0( _result, _A, _B, i)					\
     {	\
 	_result = mad(_A.s0, intel_sub_group_shuffle( _B.s0, (i)), _result);	\
@@ -139,16 +124,18 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
     uint lxm2 = lx % 2;
     uint lxb1 = (lx & 2)/2;
                                      
-    __local UNIT_TYPE_4 *V_write = &V[lxb1*256 + lz*4 + lxd4*2 + lxm2 + slmSize*upperHalf];
-    __local const UNIT_TYPE_4 *V_read = &V[lzm4*64 + lx ];
-
     uint2 coordU0;
     coordU0.x = (lzm4*24 + k*12);
     coordU0.y = 0;
 
+	uint slmPipeStage = 0;
 	
     __attribute__((opencl_unroll_hint(1)))
     for (uint c = lxm4; c < C4_up16; c += 4) {
+
+		__local UNIT_TYPE_4 *V_write = &V[lxb1 * 256 + lz * 4 + lxd4 * 2 + lxm2 + slmSize*slmPipeStage];
+		__local const UNIT_TYPE_4 *V_read = &V[lzm4 * 64 + lx + slmSize*slmPipeStage];
+		slmPipeStage = (slmPipeStage+1)%2;
 
         // 2*14 * 3 * 16 = 1344 MADs
 
@@ -222,27 +209,24 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
         barrier(CLK_LOCAL_MEM_FENCE);
 
         __local const UNIT_TYPE_4 *V_read_c8 = V_read;
-		uint RndCntr = 0;
 
         __attribute__((opencl_unroll_hint(1)))
         for (uint c8 = 0; c8 < 2; ++c8) {
 
             // 2*14 * 3 * 8 = 672 MADs
 
-            // Fetch 8 channels of Winograd input components, spread across subgroup.
-            // row 0
 			// Fetch 8 channels of Winograd input components, spread across subgroup.
 			// row 0
-			UNIT_TYPE_4 V00 = V_read_c8[0 * 8 + 32 * 0 + RndCntr * 256];
-			UNIT_TYPE_4 V01 = V_read_c8[1 * 8 + 32 * 0 + RndCntr * 256];
-			UNIT_TYPE_4 V02 = V_read_c8[2 * 8 + 32 * 0 + RndCntr * 256];
-			UNIT_TYPE_4 V03 = V_read_c8[3 * 8 + 32 * 0 + RndCntr * 256];
+			const UNIT_TYPE_4 V00 = V_read_c8[0 * 8 + 32 * 0 + c8 * 256];
+			const UNIT_TYPE_4 V01 = V_read_c8[1 * 8 + 32 * 0 + c8 * 256];
+			const UNIT_TYPE_4 V02 = V_read_c8[2 * 8 + 32 * 0 + c8 * 256];
+			const UNIT_TYPE_4 V03 = V_read_c8[3 * 8 + 32 * 0 + c8 * 256];
 
 			// row 1
-			UNIT_TYPE_4 V10 = V_read_c8[0 * 8 + 32 * 1 + RndCntr * 256];
-			UNIT_TYPE_4 V11 = V_read_c8[1 * 8 + 32 * 1 + RndCntr * 256];
-			UNIT_TYPE_4 V12 = V_read_c8[2 * 8 + 32 * 1 + RndCntr * 256];
-			UNIT_TYPE_4 V13 = V_read_c8[3 * 8 + 32 * 1 + RndCntr * 256];
+			const UNIT_TYPE_4 V10 = V_read_c8[0 * 8 + 32 * 1 + c8 * 256];
+			const UNIT_TYPE_4 V11 = V_read_c8[1 * 8 + 32 * 1 + c8 * 256];
+			const UNIT_TYPE_4 V12 = V_read_c8[2 * 8 + 32 * 1 + c8 * 256];
+			const UNIT_TYPE_4 V13 = V_read_c8[3 * 8 + 32 * 1 + c8 * 256];
 
             __attribute__((opencl_unroll_hint(2)))
             for (uint c4 = 0; c4 < 2; ++c4) {
@@ -252,26 +236,12 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
                 //uint2 coordU = coordU0;
 				//uint coordU_x = coordU0.x + get_sub_group_local_id()%8;
 				const uint flatA = coordU0.y*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU0.x + get_sub_group_local_id()%8;
-                UNIT_TYPE_4 f0 = (UNIT_TYPE_4)(
+                const UNIT_TYPE_4 f0 = (UNIT_TYPE_4)(
 				*(__global UNIT_TYPE *)(&U[flatA+0*FILTER_OFM_NUM*KCOLSW*KROWSW]), // as_UNIT_TYPE_4(intel_sub_group_block_read4(U, coordU));
 				*(__global UNIT_TYPE *)(&U[flatA+1*FILTER_OFM_NUM*KCOLSW*KROWSW]), // as_UNIT_TYPE_4(intel_sub_group_block_read4(U, coordU));
 				*(__global UNIT_TYPE *)(&U[flatA+2*FILTER_OFM_NUM*KCOLSW*KROWSW]), // as_UNIT_TYPE_4(intel_sub_group_block_read4(U, coordU));
 				*(__global UNIT_TYPE *)(&U[flatA+3*FILTER_OFM_NUM*KCOLSW*KROWSW])); // as_UNIT_TYPE_4(intel_sub_group_block_read4(U, coordU));
 
-				//flatA += 8;
-                UNIT_TYPE_4 f1 = (UNIT_TYPE_4)(
-				*(__global UNIT_TYPE *)(&U[flatA+8+0*FILTER_OFM_NUM*KCOLSW*KROWSW]),
-				*(__global UNIT_TYPE *)(&U[flatA+8+1*FILTER_OFM_NUM*KCOLSW*KROWSW]),
-				*(__global UNIT_TYPE *)(&U[flatA+8+2*FILTER_OFM_NUM*KCOLSW*KROWSW]),
-				*(__global UNIT_TYPE *)(&U[flatA+8+3*FILTER_OFM_NUM*KCOLSW*KROWSW]));
-
-				//flatA += 8;
-                UNIT_TYPE_4 f2 = (UNIT_TYPE_4)(
-				*(__global UNIT_TYPE *)(&U[flatA+16+0*FILTER_OFM_NUM*KCOLSW*KROWSW]),
-				*(__global UNIT_TYPE *)(&U[flatA+16+1*FILTER_OFM_NUM*KCOLSW*KROWSW]),
-				*(__global UNIT_TYPE *)(&U[flatA+16+2*FILTER_OFM_NUM*KCOLSW*KROWSW]),
-				*(__global UNIT_TYPE *)(&U[flatA+16+3*FILTER_OFM_NUM*KCOLSW*KROWSW]));
-                coordU0.y += 4;
 				// row 0
 
 				// f0 x v[0 .. 14]
@@ -293,6 +263,151 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 				DOT4i0(M6.s0, f0, V03, 0 + c4);
 				DOT4i0(M6.s1, f0, V03, 2 + c4);
 
+				// f0 x v[0 .. 14]
+				DOT4i0(M0.s2, f0, V10, 0 + c4);
+				DOT4i0(M0.s3, f0, V10, 2 + c4);
+				DOT4i0(M1.s2, f0, V10, 4 + c4);
+				DOT4i0(M1.s3, f0, V10, 6 + c4);
+
+				DOT4i0(M2.s2, f0, V11, 0 + c4);
+				DOT4i0(M2.s3, f0, V11, 2 + c4);
+				DOT4i0(M3.s2, f0, V11, 4 + c4);
+				DOT4i0(M3.s3, f0, V11, 6 + c4);
+
+				DOT4i0(M4.s2, f0, V12, 0 + c4);
+				DOT4i0(M4.s3, f0, V12, 2 + c4);
+				DOT4i0(M5.s2, f0, V12, 4 + c4);
+				DOT4i0(M5.s3, f0, V12, 6 + c4);
+
+				DOT4i0(M6.s2, f0, V13, 0 + c4);
+				DOT4i0(M6.s3, f0, V13, 2 + c4);
+
+
+				// row 1
+				DOT4i1(M0.s0, f0, V00, 0 + c4);
+				DOT4i1(M0.s1, f0, V00, 2 + c4);
+				DOT4i1(M1.s0, f0, V00, 4 + c4);
+				DOT4i1(M1.s1, f0, V00, 6 + c4);
+
+				DOT4i1(M2.s0, f0, V01, 0 + c4);
+				DOT4i1(M2.s1, f0, V01, 2 + c4);
+				DOT4i1(M3.s0, f0, V01, 4 + c4);
+				DOT4i1(M3.s1, f0, V01, 6 + c4);
+
+				DOT4i1(M4.s0, f0, V02, 0 + c4);
+				DOT4i1(M4.s1, f0, V02, 2 + c4);
+				DOT4i1(M5.s0, f0, V02, 4 + c4);
+				DOT4i1(M5.s1, f0, V02, 6 + c4);
+
+				DOT4i1(M6.s0, f0, V03, 0 + c4);
+				DOT4i1(M6.s1, f0, V03, 2 + c4);
+
+				// f0 x v[0 .. 14]
+				DOT4i1(M0.s2, f0, V10, 0 + c4);
+				DOT4i1(M0.s3, f0, V10, 2 + c4);
+				DOT4i1(M1.s2, f0, V10, 4 + c4);
+				DOT4i1(M1.s3, f0, V10, 6 + c4);
+
+				DOT4i1(M2.s2, f0, V11, 0 + c4);
+				DOT4i1(M2.s3, f0, V11, 2 + c4);
+				DOT4i1(M3.s2, f0, V11, 4 + c4);
+				DOT4i1(M3.s3, f0, V11, 6 + c4);
+
+				DOT4i1(M4.s2, f0, V12, 0 + c4);
+				DOT4i1(M4.s3, f0, V12, 2 + c4);
+				DOT4i1(M5.s2, f0, V12, 4 + c4);
+				DOT4i1(M5.s3, f0, V12, 6 + c4);
+
+				DOT4i1(M6.s2, f0, V13, 0 + c4);
+				DOT4i1(M6.s3, f0, V13, 2 + c4);
+
+				// f0 x v[0 .. 14]
+				DOT4i2(M0.s0, f0, V00, 0 + c4);
+				DOT4i2(M0.s1, f0, V00, 2 + c4);
+				DOT4i2(M1.s0, f0, V00, 4 + c4);
+				DOT4i2(M1.s1, f0, V00, 6 + c4);
+
+				DOT4i2(M2.s0, f0, V01, 0 + c4);
+				DOT4i2(M2.s1, f0, V01, 2 + c4);
+				DOT4i2(M3.s0, f0, V01, 4 + c4);
+				DOT4i2(M3.s1, f0, V01, 6 + c4);
+
+				DOT4i2(M4.s0, f0, V02, 0 + c4);
+				DOT4i2(M4.s1, f0, V02, 2 + c4);
+				DOT4i2(M5.s0, f0, V02, 4 + c4);
+				DOT4i2(M5.s1, f0, V02, 6 + c4);
+
+				DOT4i2(M6.s0, f0, V03, 0 + c4);
+				DOT4i2(M6.s1, f0, V03, 2 + c4);
+
+				// f0 x v[0 .. 14]
+				DOT4i2(M0.s2, f0, V10, 0 + c4);
+				DOT4i2(M0.s3, f0, V10, 2 + c4);
+				DOT4i2(M1.s2, f0, V10, 4 + c4);
+				DOT4i2(M1.s3, f0, V10, 6 + c4);
+
+				DOT4i2(M2.s2, f0, V11, 0 + c4);
+				DOT4i2(M2.s3, f0, V11, 2 + c4);
+				DOT4i2(M3.s2, f0, V11, 4 + c4);
+				DOT4i2(M3.s3, f0, V11, 6 + c4);
+
+				DOT4i2(M4.s2, f0, V12, 0 + c4);
+				DOT4i2(M4.s3, f0, V12, 2 + c4);
+				DOT4i2(M5.s2, f0, V12, 4 + c4);
+				DOT4i2(M5.s3, f0, V12, 6 + c4);
+
+				DOT4i2(M6.s2, f0, V13, 0 + c4);
+				DOT4i2(M6.s3, f0, V13, 2 + c4);
+
+
+				// f0 x v[0 .. 14]
+				DOT4i3(M0.s0, f0, V00, 0 + c4);
+				DOT4i3(M0.s1, f0, V00, 2 + c4);
+				DOT4i3(M1.s0, f0, V00, 4 + c4);
+				DOT4i3(M1.s1, f0, V00, 6 + c4);
+
+				DOT4i3(M2.s0, f0, V01, 0 + c4);
+				DOT4i3(M2.s1, f0, V01, 2 + c4);
+				DOT4i3(M3.s0, f0, V01, 4 + c4);
+				DOT4i3(M3.s1, f0, V01, 6 + c4);
+
+				DOT4i3(M4.s0, f0, V02, 0 + c4);
+				DOT4i3(M4.s1, f0, V02, 2 + c4);
+				DOT4i3(M5.s0, f0, V02, 4 + c4);
+				DOT4i3(M5.s1, f0, V02, 6 + c4);
+
+				DOT4i3(M6.s0, f0, V03, 0 + c4);
+				DOT4i3(M6.s1, f0, V03, 2 + c4);
+
+				// f0 x v[0 .. 14]
+				DOT4i3(M0.s2, f0, V10, 0 + c4);
+				DOT4i3(M0.s3, f0, V10, 2 + c4);
+				DOT4i3(M1.s2, f0, V10, 4 + c4);
+				DOT4i3(M1.s3, f0, V10, 6 + c4);
+
+				DOT4i3(M2.s2, f0, V11, 0 + c4);
+				DOT4i3(M2.s3, f0, V11, 2 + c4);
+				DOT4i3(M3.s2, f0, V11, 4 + c4);
+				DOT4i3(M3.s3, f0, V11, 6 + c4);
+
+				DOT4i3(M4.s2, f0, V12, 0 + c4);
+				DOT4i3(M4.s3, f0, V12, 2 + c4);
+				DOT4i3(M5.s2, f0, V12, 4 + c4);
+				DOT4i3(M5.s3, f0, V12, 6 + c4);
+
+				DOT4i3(M6.s2, f0, V13, 0 + c4);
+				DOT4i3(M6.s3, f0, V13, 2 + c4);
+
+
+
+				//flatA += 8;
+				const UNIT_TYPE_4 f1 = (UNIT_TYPE_4)(
+					*(__global UNIT_TYPE *)(&U[flatA + 8 + 0 * FILTER_OFM_NUM*KCOLSW*KROWSW]),
+					*(__global UNIT_TYPE *)(&U[flatA + 8 + 1 * FILTER_OFM_NUM*KCOLSW*KROWSW]),
+					*(__global UNIT_TYPE *)(&U[flatA + 8 + 2 * FILTER_OFM_NUM*KCOLSW*KROWSW]),
+					*(__global UNIT_TYPE *)(&U[flatA + 8 + 3 * FILTER_OFM_NUM*KCOLSW*KROWSW]));
+
+
 				// f1[c4] x v[1 .. 15]
 				DOT4i0(M0.s0, f1, V00, 2 + c4);
 				DOT4i0(M0.s1, f1, V00, 4 + c4);
@@ -312,6 +427,153 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 				DOT4i0(M6.s0, f1, V03, 2 + c4);
 				DOT4i0(M6.s1, f1, V03, 4 + c4);
 
+
+				// f1 x v[1 .. 15]
+				DOT4i0(M0.s2, f1, V10, 2 + c4);
+				DOT4i0(M0.s3, f1, V10, 4 + c4);
+				DOT4i0(M1.s2, f1, V10, 6 + c4);
+				DOT4i0(M1.s3, f1, V11, 0 + c4);
+
+				DOT4i0(M2.s2, f1, V11, 2 + c4);
+				DOT4i0(M2.s3, f1, V11, 4 + c4);
+				DOT4i0(M3.s2, f1, V11, 6 + c4);
+				DOT4i0(M3.s3, f1, V12, 0 + c4);
+
+				DOT4i0(M4.s2, f1, V12, 2 + c4);
+				DOT4i0(M4.s3, f1, V12, 4 + c4);
+				DOT4i0(M5.s2, f1, V12, 6 + c4);
+				DOT4i0(M5.s3, f1, V13, 0 + c4);
+
+				DOT4i0(M6.s2, f1, V13, 2 + c4);
+				DOT4i0(M6.s3, f1, V13, 4 + c4);
+
+
+				// f1[c4] x v[1 .. 15]
+				DOT4i1(M0.s0, f1, V00, 2 + c4);
+				DOT4i1(M0.s1, f1, V00, 4 + c4);
+				DOT4i1(M1.s0, f1, V00, 6 + c4);
+				DOT4i1(M1.s1, f1, V01, 0 + c4);
+
+				DOT4i1(M2.s0, f1, V01, 2 + c4);
+				DOT4i1(M2.s1, f1, V01, 4 + c4);
+				DOT4i1(M3.s0, f1, V01, 6 + c4);
+				DOT4i1(M3.s1, f1, V02, 0 + c4);
+
+				DOT4i1(M4.s0, f1, V02, 2 + c4);
+				DOT4i1(M4.s1, f1, V02, 4 + c4);
+				DOT4i1(M5.s0, f1, V02, 6 + c4);
+				DOT4i1(M5.s1, f1, V03, 0 + c4);
+
+				DOT4i1(M6.s0, f1, V03, 2 + c4);
+				DOT4i1(M6.s1, f1, V03, 4 + c4);
+
+
+				// f1 x v[1 .. 15]
+				DOT4i1(M0.s2, f1, V10, 2 + c4);
+				DOT4i1(M0.s3, f1, V10, 4 + c4);
+				DOT4i1(M1.s2, f1, V10, 6 + c4);
+				DOT4i1(M1.s3, f1, V11, 0 + c4);
+
+				DOT4i1(M2.s2, f1, V11, 2 + c4);
+				DOT4i1(M2.s3, f1, V11, 4 + c4);
+				DOT4i1(M3.s2, f1, V11, 6 + c4);
+				DOT4i1(M3.s3, f1, V12, 0 + c4);
+
+				DOT4i1(M4.s2, f1, V12, 2 + c4);
+				DOT4i1(M4.s3, f1, V12, 4 + c4);
+				DOT4i1(M5.s2, f1, V12, 6 + c4);
+				DOT4i1(M5.s3, f1, V13, 0 + c4);
+
+				DOT4i1(M6.s2, f1, V13, 2 + c4);
+				DOT4i1(M6.s3, f1, V13, 4 + c4);
+
+				// f1[c4] x v[1 .. 15]
+				DOT4i2(M0.s0, f1, V00, 2 + c4);
+				DOT4i2(M0.s1, f1, V00, 4 + c4);
+				DOT4i2(M1.s0, f1, V00, 6 + c4);
+				DOT4i2(M1.s1, f1, V01, 0 + c4);
+
+				DOT4i2(M2.s0, f1, V01, 2 + c4);
+				DOT4i2(M2.s1, f1, V01, 4 + c4);
+				DOT4i2(M3.s0, f1, V01, 6 + c4);
+				DOT4i2(M3.s1, f1, V02, 0 + c4);
+
+				DOT4i2(M4.s0, f1, V02, 2 + c4);
+				DOT4i2(M4.s1, f1, V02, 4 + c4);
+				DOT4i2(M5.s0, f1, V02, 6 + c4);
+				DOT4i2(M5.s1, f1, V03, 0 + c4);
+
+				DOT4i2(M6.s0, f1, V03, 2 + c4);
+				DOT4i2(M6.s1, f1, V03, 4 + c4);
+
+				// f1 x v[1 .. 15]
+				DOT4i2(M0.s2, f1, V10, 2 + c4);
+				DOT4i2(M0.s3, f1, V10, 4 + c4);
+				DOT4i2(M1.s2, f1, V10, 6 + c4);
+				DOT4i2(M1.s3, f1, V11, 0 + c4);
+
+				DOT4i2(M2.s2, f1, V11, 2 + c4);
+				DOT4i2(M2.s3, f1, V11, 4 + c4);
+				DOT4i2(M3.s2, f1, V11, 6 + c4);
+				DOT4i2(M3.s3, f1, V12, 0 + c4);
+
+				DOT4i2(M4.s2, f1, V12, 2 + c4);
+				DOT4i2(M4.s3, f1, V12, 4 + c4);
+				DOT4i2(M5.s2, f1, V12, 6 + c4);
+				DOT4i2(M5.s3, f1, V13, 0 + c4);
+
+				DOT4i2(M6.s2, f1, V13, 2 + c4);
+				DOT4i2(M6.s3, f1, V13, 4 + c4);
+
+				// f1[c4] x v[1 .. 15]
+				DOT4i3(M0.s0, f1, V00, 2 + c4);
+				DOT4i3(M0.s1, f1, V00, 4 + c4);
+				DOT4i3(M1.s0, f1, V00, 6 + c4);
+				DOT4i3(M1.s1, f1, V01, 0 + c4);
+
+				DOT4i3(M2.s0, f1, V01, 2 + c4);
+				DOT4i3(M2.s1, f1, V01, 4 + c4);
+				DOT4i3(M3.s0, f1, V01, 6 + c4);
+				DOT4i3(M3.s1, f1, V02, 0 + c4);
+
+				DOT4i3(M4.s0, f1, V02, 2 + c4);
+				DOT4i3(M4.s1, f1, V02, 4 + c4);
+				DOT4i3(M5.s0, f1, V02, 6 + c4);
+				DOT4i3(M5.s1, f1, V03, 0 + c4);
+
+				DOT4i3(M6.s0, f1, V03, 2 + c4);
+				DOT4i3(M6.s1, f1, V03, 4 + c4);
+
+
+				// f1 x v[1 .. 15]
+				DOT4i3(M0.s2, f1, V10, 2 + c4);
+				DOT4i3(M0.s3, f1, V10, 4 + c4);
+				DOT4i3(M1.s2, f1, V10, 6 + c4);
+				DOT4i3(M1.s3, f1, V11, 0 + c4);
+
+				DOT4i3(M2.s2, f1, V11, 2 + c4);
+				DOT4i3(M2.s3, f1, V11, 4 + c4);
+				DOT4i3(M3.s2, f1, V11, 6 + c4);
+				DOT4i3(M3.s3, f1, V12, 0 + c4);
+
+				DOT4i3(M4.s2, f1, V12, 2 + c4);
+				DOT4i3(M4.s3, f1, V12, 4 + c4);
+				DOT4i3(M5.s2, f1, V12, 6 + c4);
+				DOT4i3(M5.s3, f1, V13, 0 + c4);
+
+				DOT4i3(M6.s2, f1, V13, 2 + c4);
+				DOT4i3(M6.s3, f1, V13, 4 + c4);
+
+				
+				//flatA += 8;
+				const UNIT_TYPE_4 f2 = (UNIT_TYPE_4)(
+					*(__global UNIT_TYPE *)(&U[flatA + 16 + 0 * FILTER_OFM_NUM*KCOLSW*KROWSW]),
+					*(__global UNIT_TYPE *)(&U[flatA + 16 + 1 * FILTER_OFM_NUM*KCOLSW*KROWSW]),
+					*(__global UNIT_TYPE *)(&U[flatA + 16 + 2 * FILTER_OFM_NUM*KCOLSW*KROWSW]),
+					*(__global UNIT_TYPE *)(&U[flatA + 16 + 3 * FILTER_OFM_NUM*KCOLSW*KROWSW]));
+				coordU0.y += 4;
+
+				
 				// f2[c4] x v[2 .. 16]
 				DOT4i0(M0.s0, f2, V00, 4 + c4);
 				DOT4i0(M0.s1, f2, V00, 6 + c4);
@@ -332,44 +594,6 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 				DOT4i0(M6.s1, f2, V03, 6 + c4);
 
 				// row 1
-
-				// f0 x v[0 .. 14]
-				DOT4i0(M0.s2, f0, V10, 0 + c4);
-				DOT4i0(M0.s3, f0, V10, 2 + c4);
-				DOT4i0(M1.s2, f0, V10, 4 + c4);
-				DOT4i0(M1.s3, f0, V10, 6 + c4);
-
-				DOT4i0(M2.s2, f0, V11, 0 + c4);
-				DOT4i0(M2.s3, f0, V11, 2 + c4);
-				DOT4i0(M3.s2, f0, V11, 4 + c4);
-				DOT4i0(M3.s3, f0, V11, 6 + c4);
-
-				DOT4i0(M4.s2, f0, V12, 0 + c4);
-				DOT4i0(M4.s3, f0, V12, 2 + c4);
-				DOT4i0(M5.s2, f0, V12, 4 + c4);
-				DOT4i0(M5.s3, f0, V12, 6 + c4);
-
-				DOT4i0(M6.s2, f0, V13, 0 + c4);
-				DOT4i0(M6.s3, f0, V13, 2 + c4);
-
-				// f1 x v[1 .. 15]
-				DOT4i0(M0.s2, f1, V10, 2 + c4);
-				DOT4i0(M0.s3, f1, V10, 4 + c4);
-				DOT4i0(M1.s2, f1, V10, 6 + c4);
-				DOT4i0(M1.s3, f1, V11, 0 + c4);
-
-				DOT4i0(M2.s2, f1, V11, 2 + c4);
-				DOT4i0(M2.s3, f1, V11, 4 + c4);
-				DOT4i0(M3.s2, f1, V11, 6 + c4);
-				DOT4i0(M3.s3, f1, V12, 0 + c4);
-
-				DOT4i0(M4.s2, f1, V12, 2 + c4);
-				DOT4i0(M4.s3, f1, V12, 4 + c4);
-				DOT4i0(M5.s2, f1, V12, 6 + c4);
-				DOT4i0(M5.s3, f1, V13, 0 + c4);
-
-				DOT4i0(M6.s2, f1, V13, 2 + c4);
-				DOT4i0(M6.s3, f1, V13, 4 + c4);
 
 				// f2 x v[2 .. 16]
 				DOT4i0(M0.s2, f2, V10, 4 + c4);
@@ -393,44 +617,6 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 				///
 
 
-				// f0 x v[0 .. 14]
-				DOT4i1(M0.s0, f0, V00, 0 + c4);
-				DOT4i1(M0.s1, f0, V00, 2 + c4);
-				DOT4i1(M1.s0, f0, V00, 4 + c4);
-				DOT4i1(M1.s1, f0, V00, 6 + c4);
-
-				DOT4i1(M2.s0, f0, V01, 0 + c4);
-				DOT4i1(M2.s1, f0, V01, 2 + c4);
-				DOT4i1(M3.s0, f0, V01, 4 + c4);
-				DOT4i1(M3.s1, f0, V01, 6 + c4);
-
-				DOT4i1(M4.s0, f0, V02, 0 + c4);
-				DOT4i1(M4.s1, f0, V02, 2 + c4);
-				DOT4i1(M5.s0, f0, V02, 4 + c4);
-				DOT4i1(M5.s1, f0, V02, 6 + c4);
-
-				DOT4i1(M6.s0, f0, V03, 0 + c4);
-				DOT4i1(M6.s1, f0, V03, 2 + c4);
-
-				// f1[c4] x v[1 .. 15]
-				DOT4i1(M0.s0, f1, V00, 2 + c4);
-				DOT4i1(M0.s1, f1, V00, 4 + c4);
-				DOT4i1(M1.s0, f1, V00, 6 + c4);
-				DOT4i1(M1.s1, f1, V01, 0 + c4);
-
-				DOT4i1(M2.s0, f1, V01, 2 + c4);
-				DOT4i1(M2.s1, f1, V01, 4 + c4);
-				DOT4i1(M3.s0, f1, V01, 6 + c4);
-				DOT4i1(M3.s1, f1, V02, 0 + c4);
-
-				DOT4i1(M4.s0, f1, V02, 2 + c4);
-				DOT4i1(M4.s1, f1, V02, 4 + c4);
-				DOT4i1(M5.s0, f1, V02, 6 + c4);
-				DOT4i1(M5.s1, f1, V03, 0 + c4);
-
-				DOT4i1(M6.s0, f1, V03, 2 + c4);
-				DOT4i1(M6.s1, f1, V03, 4 + c4);
-
 				// f2[c4] x v[2 .. 16]
 				DOT4i1(M0.s0, f2, V00, 4 + c4);
 				DOT4i1(M0.s1, f2, V00, 6 + c4);
@@ -452,44 +638,7 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 
 				// row 1
 
-				// f0 x v[0 .. 14]
-				DOT4i1(M0.s2, f0, V10, 0 + c4);
-				DOT4i1(M0.s3, f0, V10, 2 + c4);
-				DOT4i1(M1.s2, f0, V10, 4 + c4);
-				DOT4i1(M1.s3, f0, V10, 6 + c4);
-
-				DOT4i1(M2.s2, f0, V11, 0 + c4);
-				DOT4i1(M2.s3, f0, V11, 2 + c4);
-				DOT4i1(M3.s2, f0, V11, 4 + c4);
-				DOT4i1(M3.s3, f0, V11, 6 + c4);
-
-				DOT4i1(M4.s2, f0, V12, 0 + c4);
-				DOT4i1(M4.s3, f0, V12, 2 + c4);
-				DOT4i1(M5.s2, f0, V12, 4 + c4);
-				DOT4i1(M5.s3, f0, V12, 6 + c4);
-
-				DOT4i1(M6.s2, f0, V13, 0 + c4);
-				DOT4i1(M6.s3, f0, V13, 2 + c4);
-
-				// f1 x v[1 .. 15]
-				DOT4i1(M0.s2, f1, V10, 2 + c4);
-				DOT4i1(M0.s3, f1, V10, 4 + c4);
-				DOT4i1(M1.s2, f1, V10, 6 + c4);
-				DOT4i1(M1.s3, f1, V11, 0 + c4);
-
-				DOT4i1(M2.s2, f1, V11, 2 + c4);
-				DOT4i1(M2.s3, f1, V11, 4 + c4);
-				DOT4i1(M3.s2, f1, V11, 6 + c4);
-				DOT4i1(M3.s3, f1, V12, 0 + c4);
-
-				DOT4i1(M4.s2, f1, V12, 2 + c4);
-				DOT4i1(M4.s3, f1, V12, 4 + c4);
-				DOT4i1(M5.s2, f1, V12, 6 + c4);
-				DOT4i1(M5.s3, f1, V13, 0 + c4);
-
-				DOT4i1(M6.s2, f1, V13, 2 + c4);
-				DOT4i1(M6.s3, f1, V13, 4 + c4);
-
+				
 				// f2 x v[2 .. 16]
 				DOT4i1(M0.s2, f2, V10, 4 + c4);
 				DOT4i1(M0.s3, f2, V10, 6 + c4);
@@ -510,47 +659,7 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 				DOT4i1(M6.s3, f2, V13, 6 + c4);
 
 
-				//
-
-
-				// f0 x v[0 .. 14]
-				DOT4i2(M0.s0, f0, V00, 0 + c4);
-				DOT4i2(M0.s1, f0, V00, 2 + c4);
-				DOT4i2(M1.s0, f0, V00, 4 + c4);
-				DOT4i2(M1.s1, f0, V00, 6 + c4);
-
-				DOT4i2(M2.s0, f0, V01, 0 + c4);
-				DOT4i2(M2.s1, f0, V01, 2 + c4);
-				DOT4i2(M3.s0, f0, V01, 4 + c4);
-				DOT4i2(M3.s1, f0, V01, 6 + c4);
-
-				DOT4i2(M4.s0, f0, V02, 0 + c4);
-				DOT4i2(M4.s1, f0, V02, 2 + c4);
-				DOT4i2(M5.s0, f0, V02, 4 + c4);
-				DOT4i2(M5.s1, f0, V02, 6 + c4);
-
-				DOT4i2(M6.s0, f0, V03, 0 + c4);
-				DOT4i2(M6.s1, f0, V03, 2 + c4);
-
-				// f1[c4] x v[1 .. 15]
-				DOT4i2(M0.s0, f1, V00, 2 + c4);
-				DOT4i2(M0.s1, f1, V00, 4 + c4);
-				DOT4i2(M1.s0, f1, V00, 6 + c4);
-				DOT4i2(M1.s1, f1, V01, 0 + c4);
-
-				DOT4i2(M2.s0, f1, V01, 2 + c4);
-				DOT4i2(M2.s1, f1, V01, 4 + c4);
-				DOT4i2(M3.s0, f1, V01, 6 + c4);
-				DOT4i2(M3.s1, f1, V02, 0 + c4);
-
-				DOT4i2(M4.s0, f1, V02, 2 + c4);
-				DOT4i2(M4.s1, f1, V02, 4 + c4);
-				DOT4i2(M5.s0, f1, V02, 6 + c4);
-				DOT4i2(M5.s1, f1, V03, 0 + c4);
-
-				DOT4i2(M6.s0, f1, V03, 2 + c4);
-				DOT4i2(M6.s1, f1, V03, 4 + c4);
-
+				
 				// f2[c4] x v[2 .. 16]
 				DOT4i2(M0.s0, f2, V00, 4 + c4);
 				DOT4i2(M0.s1, f2, V00, 6 + c4);
@@ -570,45 +679,7 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 				DOT4i2(M6.s0, f2, V03, 4 + c4);
 				DOT4i2(M6.s1, f2, V03, 6 + c4);
 
-				// row 1
-
-				// f0 x v[0 .. 14]
-				DOT4i2(M0.s2, f0, V10, 0 + c4);
-				DOT4i2(M0.s3, f0, V10, 2 + c4);
-				DOT4i2(M1.s2, f0, V10, 4 + c4);
-				DOT4i2(M1.s3, f0, V10, 6 + c4);
-
-				DOT4i2(M2.s2, f0, V11, 0 + c4);
-				DOT4i2(M2.s3, f0, V11, 2 + c4);
-				DOT4i2(M3.s2, f0, V11, 4 + c4);
-				DOT4i2(M3.s3, f0, V11, 6 + c4);
-
-				DOT4i2(M4.s2, f0, V12, 0 + c4);
-				DOT4i2(M4.s3, f0, V12, 2 + c4);
-				DOT4i2(M5.s2, f0, V12, 4 + c4);
-				DOT4i2(M5.s3, f0, V12, 6 + c4);
-
-				DOT4i2(M6.s2, f0, V13, 0 + c4);
-				DOT4i2(M6.s3, f0, V13, 2 + c4);
-
-				// f1 x v[1 .. 15]
-				DOT4i2(M0.s2, f1, V10, 2 + c4);
-				DOT4i2(M0.s3, f1, V10, 4 + c4);
-				DOT4i2(M1.s2, f1, V10, 6 + c4);
-				DOT4i2(M1.s3, f1, V11, 0 + c4);
-
-				DOT4i2(M2.s2, f1, V11, 2 + c4);
-				DOT4i2(M2.s3, f1, V11, 4 + c4);
-				DOT4i2(M3.s2, f1, V11, 6 + c4);
-				DOT4i2(M3.s3, f1, V12, 0 + c4);
-
-				DOT4i2(M4.s2, f1, V12, 2 + c4);
-				DOT4i2(M4.s3, f1, V12, 4 + c4);
-				DOT4i2(M5.s2, f1, V12, 6 + c4);
-				DOT4i2(M5.s3, f1, V13, 0 + c4);
-
-				DOT4i2(M6.s2, f1, V13, 2 + c4);
-				DOT4i2(M6.s3, f1, V13, 4 + c4);
+				//
 
 				// f2 x v[2 .. 16]
 				DOT4i2(M0.s2, f2, V10, 4 + c4);
@@ -631,45 +702,8 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 
 
 				//
-
-
+				// row 1
 				// f0 x v[0 .. 14]
-				DOT4i3(M0.s0, f0, V00, 0 + c4);
-				DOT4i3(M0.s1, f0, V00, 2 + c4);
-				DOT4i3(M1.s0, f0, V00, 4 + c4);
-				DOT4i3(M1.s1, f0, V00, 6 + c4);
-
-				DOT4i3(M2.s0, f0, V01, 0 + c4);
-				DOT4i3(M2.s1, f0, V01, 2 + c4);
-				DOT4i3(M3.s0, f0, V01, 4 + c4);
-				DOT4i3(M3.s1, f0, V01, 6 + c4);
-
-				DOT4i3(M4.s0, f0, V02, 0 + c4);
-				DOT4i3(M4.s1, f0, V02, 2 + c4);
-				DOT4i3(M5.s0, f0, V02, 4 + c4);
-				DOT4i3(M5.s1, f0, V02, 6 + c4);
-
-				DOT4i3(M6.s0, f0, V03, 0 + c4);
-				DOT4i3(M6.s1, f0, V03, 2 + c4);
-
-				// f1[c4] x v[1 .. 15]
-				DOT4i3(M0.s0, f1, V00, 2 + c4);
-				DOT4i3(M0.s1, f1, V00, 4 + c4);
-				DOT4i3(M1.s0, f1, V00, 6 + c4);
-				DOT4i3(M1.s1, f1, V01, 0 + c4);
-
-				DOT4i3(M2.s0, f1, V01, 2 + c4);
-				DOT4i3(M2.s1, f1, V01, 4 + c4);
-				DOT4i3(M3.s0, f1, V01, 6 + c4);
-				DOT4i3(M3.s1, f1, V02, 0 + c4);
-
-				DOT4i3(M4.s0, f1, V02, 2 + c4);
-				DOT4i3(M4.s1, f1, V02, 4 + c4);
-				DOT4i3(M5.s0, f1, V02, 6 + c4);
-				DOT4i3(M5.s1, f1, V03, 0 + c4);
-
-				DOT4i3(M6.s0, f1, V03, 2 + c4);
-				DOT4i3(M6.s1, f1, V03, 4 + c4);
 
 				// f2[c4] x v[2 .. 16]
 				DOT4i3(M0.s0, f2, V00, 4 + c4);
@@ -690,45 +724,6 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 				DOT4i3(M6.s0, f2, V03, 4 + c4);
 				DOT4i3(M6.s1, f2, V03, 6 + c4);
 
-				// row 1
-
-				// f0 x v[0 .. 14]
-				DOT4i3(M0.s2, f0, V10, 0 + c4);
-				DOT4i3(M0.s3, f0, V10, 2 + c4);
-				DOT4i3(M1.s2, f0, V10, 4 + c4);
-				DOT4i3(M1.s3, f0, V10, 6 + c4);
-
-				DOT4i3(M2.s2, f0, V11, 0 + c4);
-				DOT4i3(M2.s3, f0, V11, 2 + c4);
-				DOT4i3(M3.s2, f0, V11, 4 + c4);
-				DOT4i3(M3.s3, f0, V11, 6 + c4);
-
-				DOT4i3(M4.s2, f0, V12, 0 + c4);
-				DOT4i3(M4.s3, f0, V12, 2 + c4);
-				DOT4i3(M5.s2, f0, V12, 4 + c4);
-				DOT4i3(M5.s3, f0, V12, 6 + c4);
-
-				DOT4i3(M6.s2, f0, V13, 0 + c4);
-				DOT4i3(M6.s3, f0, V13, 2 + c4);
-
-				// f1 x v[1 .. 15]
-				DOT4i3(M0.s2, f1, V10, 2 + c4);
-				DOT4i3(M0.s3, f1, V10, 4 + c4);
-				DOT4i3(M1.s2, f1, V10, 6 + c4);
-				DOT4i3(M1.s3, f1, V11, 0 + c4);
-
-				DOT4i3(M2.s2, f1, V11, 2 + c4);
-				DOT4i3(M2.s3, f1, V11, 4 + c4);
-				DOT4i3(M3.s2, f1, V11, 6 + c4);
-				DOT4i3(M3.s3, f1, V12, 0 + c4);
-
-				DOT4i3(M4.s2, f1, V12, 2 + c4);
-				DOT4i3(M4.s3, f1, V12, 4 + c4);
-				DOT4i3(M5.s2, f1, V12, 6 + c4);
-				DOT4i3(M5.s3, f1, V13, 0 + c4);
-
-				DOT4i3(M6.s2, f1, V13, 2 + c4);
-				DOT4i3(M6.s3, f1, V13, 4 + c4);
 
 				// f2 x v[2 .. 16]
 				DOT4i3(M0.s2, f2, V10, 4 + c4);
@@ -751,16 +746,16 @@ KERNEL(convolution_gpu_winograd_2x3_s1_fused)
 
 
 			}
-			RndCntr++;
 			//V_read_c8 += 256;
 
         }
 
-        barrier(CLK_LOCAL_MEM_FENCE);
+        //barrier(CLK_LOCAL_MEM_FENCE);
     }
 
     // Store multiplies in SLM.
     {
+		barrier(CLK_LOCAL_MEM_FENCE);
         __local UNIT_TYPE_4 *M_write = &V[lz*7*8 + lx + slmSize*upperHalf];
 
         M_write[0*8] = M0;
