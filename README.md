@@ -36,6 +36,24 @@ Accelerate Deep Learning Inference with Intel® Processor Graphics whitepaper [l
 
 ## Changelog
 
+### Drop 6.0
+	New features:
+	- fused winograd
+	- image support for weights
+	- yolo_region primitive support
+	- yolo_reorg primitive support
+	Bug fixes:
+	- winograd bias fix
+	- mean subtract fix
+	UX:
+	- update boost to 1.64.0
+	- extend graph dumps
+	Performance:
+	- update offline caches for newer drivers
+	- conv1x1 byxf optimization
+	- conv1x1 with images
+	- cascade depth concatenation fuse optimization
+
 ### Drop 5.0
 	New features:
 	- split primitive
