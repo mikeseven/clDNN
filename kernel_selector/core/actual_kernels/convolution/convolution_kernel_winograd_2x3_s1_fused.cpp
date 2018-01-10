@@ -106,7 +106,7 @@ namespace KernelSelector {
 
 		uint32_t zStep = local_size[2];
         runInfo.gws0 = ((uint32_t)((Q + global_step[0] - 1)) / global_step[0]) * local_size[0];
-        runInfo.gws1 = ((uint32_t)((P + global_step[1] - 1)) / global_step[1]);
+        runInfo.gws1 = ((uint32_t)((P + global_step[1] - 1)) / global_step[1]) * local_size[1];
         runInfo.gws2 = ((uint32_t)((N*K * 8 + global_step[2] - 1)) / global_step[2]) * zStep;
 
         runInfo.lws0 = local_size[0];
