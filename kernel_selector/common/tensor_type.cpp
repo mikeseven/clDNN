@@ -252,7 +252,7 @@ namespace KernelSelector
                 vec[Channelndex(l, WeightsChannelName::OFM)] = OFM().v;
 
                 //requirement for winograd 2x3
-                if (l == WeightsLayout::winograd_2x3_s1_weights || l == WeightsLayout::winograd_2x3_s1_fused_weights)
+                if (l == WeightsLayout::winograd_2x3_s1_weights || l == WeightsLayout::winograd_2x3_s1_fused_weights || l == WeightsLayout::image_2d_weights_winograd_2x3_s1)
                 {
                     vec[Channelndex(l, WeightsChannelName::X)] = 4;
                     vec[Channelndex(l, WeightsChannelName::Y)] = 3;

@@ -174,7 +174,8 @@ namespace KernelSelector { namespace
             weightsReorderParams.dtype = dtype;
             weightsReorderParams.destLayout = r_params.reorderParams.output.GetLayout();
             weightsReorderParams.toImageType = r_params.reorderParams.output.GetLayout() == WeightsLayout::image_2d_weights_c4_fyx_b ||
-                r_params.reorderParams.output.GetLayout() == WeightsLayout::image_2d_weights_c1_b_fyx;
+                r_params.reorderParams.output.GetLayout() == WeightsLayout::image_2d_weights_c1_b_fyx ||
+                r_params.reorderParams.output.GetLayout() == WeightsLayout::image_2d_weights_winograd_2x3_s1;
             
             newParams.weights = r_params.reorderParams.output;
         }

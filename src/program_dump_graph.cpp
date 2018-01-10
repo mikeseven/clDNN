@@ -221,6 +221,7 @@ namespace cldnn
             case format::bf8_xy16: out = "bf8_xy16"; break;
             case format::image_2d_weights_c1_b_fyx: out = "image_2d_weights_c1_b_fyx"; break;
             case format::image_2d_weights_c4_fyx_b: out = "image_2d_weights_c4_fyx_b"; break;
+            case format::image_2d_weights_winograd_2x3_s1: out = "image_2d_weights_winograd_2x3_s1"; break;
             case format::any: out = "any"; break;
             default:
                 out = "unk format";
