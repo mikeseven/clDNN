@@ -50,7 +50,7 @@ namespace cldnn
         }
 
         try {
-            if (layout.format.is_image_weights_fyx_b())
+            if (layout.format.is_image_2d())
                 return{ new gpu::gpu_image2d(_engine, layout), false };
             else
                 return{ new gpu::gpu_buffer(_engine, layout), false };
