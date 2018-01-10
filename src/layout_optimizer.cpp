@@ -145,9 +145,11 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     case data_type::input: //convolution input
 
         if (layout_optimizer::convolution_byxf_opt(current_layout, output_or_weights_layout, prim) &&
-            (node.get_dependency(0).get_output_layout().format == cldnn::format::byxf || users_for_convolution_byxf_opt(node)) &&
+            users_for_convolution_byxf_opt(node) &&
             //TODO: remove this condition when yxfb optimizations will be disabled
-            current_layout.format != cldnn::format::yxfb)
+            current_layout.format != cldnn::format::yxfb &&
+            //TODO: add support for batch > 1 in convolution byxf kernels
+            current_layout.size.batch[0] == 1)
         {
             expected_tensor = current_layout.size;
             expected_format = cldnn::format::byxf;
