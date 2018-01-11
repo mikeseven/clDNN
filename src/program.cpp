@@ -2110,20 +2110,6 @@ void program_impl::prepare_buffer_fusing()
             if (node.is_in_place())
                 node.can_be_optimized(true);
         });
-
-        do_for_types<fully_connected>(*node, [this](fully_connected_node& node)
-        {
-            auto& input = node.input();
-            auto output_layout = node.get_output_layout();
-
-            if (!input.is_type<pooling>() && !input.is_type<eltwise>() && output_layout.format != format::bfyx && output_layout.format != format::yxfb)
-                return;
-
-            auto input_layout = input.get_output_layout();
-            auto target_layout = layout(input_layout.data_type, output_layout.format, input_layout.size, input_layout.data_padding);
-            input.set_output_layout(target_layout, false);
-        });
-
         do_for_types<reorder>(*node, [this](reorder_node& node)
         {
             auto& input = node.input();
