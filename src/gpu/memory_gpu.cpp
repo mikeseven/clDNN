@@ -70,7 +70,7 @@ gpu_image2d::gpu_image2d(const refcounted_obj_ptr<engine_impl>& engine, const la
     switch (layout.format)
     {
     case format::image_2d_weights_c1_b_fyx:
-    case format::image_2d_weights_winograd_2x3_s1:
+    case format::image_2d_weights_winograd_6x3_s1:
         _width = layout.size.batch[0];
         _height = layout.size.spatial[0] * layout.size.feature[0] * layout.size.spatial[1];
         order = CL_R;

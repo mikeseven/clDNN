@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "reorder_weights_image_winograd_2x3_kernel.h"
+#include "reorder_weights_image_winograd_6x3_kernel.h"
 #include "kernel_selector_utils.h"
  
 namespace KernelSelector 
 {
-    ParamsKey ReorderWeightsImageWinograd2x3Kernel::GetSupportedKey() const
+    ParamsKey ReorderWeightsImageWinograd6x3Kernel::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputWeightsType(WeightsType::F16);
@@ -27,7 +27,7 @@ namespace KernelSelector
         k.EnableOutputWeightsType(WeightsType::F16);
         k.EnableOutputWeightsType(WeightsType::F32);
         k.EnableAllInputWeightsLayout();
-        k.EnableOutputWeightsLayout(WeightsLayout::image_2d_weights_winograd_2x3_s1);
+        k.EnableOutputWeightsLayout(WeightsLayout::image_2d_weights_winograd_6x3_s1);
         k.EnableWinogradReorder();
         k.EnableDifferentTypes();
         k.EnableTensorOffset();
@@ -35,7 +35,7 @@ namespace KernelSelector
         return k;
     }
 
-    ReorderWeightsImageWinograd2x3Kernel::DispatchData ReorderWeightsImageWinograd2x3Kernel::SetDefault(const ReorderWeightsParams& params) const
+    ReorderWeightsImageWinograd6x3Kernel::DispatchData ReorderWeightsImageWinograd6x3Kernel::SetDefault(const ReorderWeightsParams& params) const
     {
         DispatchData kd;
 
@@ -52,7 +52,7 @@ namespace KernelSelector
         return kd;
     }
 
-    KernelsData ReorderWeightsImageWinograd2x3Kernel::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ReorderWeightsImageWinograd6x3Kernel::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         const ReorderWeightsParams& orgParams = static_cast<const ReorderWeightsParams&>(params);
         return GetCommonKernelsData(orgParams, options, FORCE_PRIORITY_4);

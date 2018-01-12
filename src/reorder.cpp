@@ -83,12 +83,19 @@ layout reorder_inst::calc_output_layout(reorder_node const& node)
     }
     
     //transformation of weights from standard to winograd
-    if (ofmt == format::winograd_2x3_s1_weights || ofmt == format::winograd_2x3_s1_fused_weights || ofmt == format::image_2d_weights_winograd_2x3_s1)
+    if (ofmt == format::winograd_2x3_s1_weights || ofmt == format::winograd_2x3_s1_fused_weights)
     {
         CLDNN_ERROR_NOT_EQUAL(node.id(), "input_layout.size.spatial[0]", input_layout.size.spatial[0], "expected value", 3, "input for conversion to winograd_2x3_s1 weights format should have spatial size 3x3");
         CLDNN_ERROR_NOT_EQUAL(node.id(), "input_layout.size.spatial[1]", input_layout.size.spatial[1], "expected value", 3, "input for conversion to winograd_2x3_s1 weights format should have spatial size 3x3");
 
         return layout(odt, ofmt, tensor{ input_layout.size.batch[0], input_layout.size.feature[0], 4, 3 });
+    }
+    else if(ofmt == format::winograd_6x3_s1_fused_weights || ofmt == format::image_2d_weights_winograd_6x3_s1)
+    {
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "input_layout.size.spatial[0]", input_layout.size.spatial[0], "expected value", 3, "input for conversion to winograd_2x3_s1 weights format should have spatial size 3x3");
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "input_layout.size.spatial[1]", input_layout.size.spatial[1], "expected value", 3, "input for conversion to winograd_2x3_s1 weights format should have spatial size 3x3");
+
+        return layout(odt, ofmt, tensor{ input_layout.size.batch[0], input_layout.size.feature[0], 8, 3 });
     }
 
     //transformation of data from winograd to standard
@@ -108,7 +115,7 @@ layout reorder_inst::calc_output_layout(reorder_node const& node)
     }
 
     //transformation of weights from winograd to standard
-    if (ifmt == format::winograd_2x3_s1_weights || ifmt == format::winograd_2x3_s1_fused_weights)
+    if (ifmt == format::winograd_2x3_s1_weights || ifmt == format::winograd_2x3_s1_fused_weights || ifmt == format::winograd_6x3_s1_fused_weights)
     {
         CLDNN_ERROR_MESSAGE(node.id(), "Conversion of weights from winograd to standard domain is currently unsupported");
     }

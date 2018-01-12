@@ -14,18 +14,16 @@
 // limitations under the License.
 */
 
-#include "convolution_kernel_winograd_2x3_s1_fused.h"
+#include "convolution_kernel_winograd_6x3_s1_fused.h"
 #include "kernel_selector_utils.h"
 
 namespace KernelSelector {
 
-    ParamsKey ConvolutionKernel_Winograd_2x3_s1_fused::GetSupportedKey() const
+    ParamsKey ConvolutionKernel_Winograd_6x3_s1_fused::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
-        k.EnableInputDataType(Datatype::F32);
         k.EnableOutputDataType(Datatype::F16);
-        k.EnableOutputDataType(Datatype::F32);
         k.EnableInputWeightsType(WeightsType::F16);
         k.EnableInputWeightsType(WeightsType::F32);
         k.EnableInputLayout(DataLayout::bfyx);
@@ -42,7 +40,7 @@ namespace KernelSelector {
         return k;
     }
 
-    JitConstants ConvolutionKernel_Winograd_2x3_s1_fused::GetJitConstants(const ConvolutionParams& params, Parent::DispatchData runInfo) const
+    JitConstants ConvolutionKernel_Winograd_6x3_s1_fused::GetJitConstants(const ConvolutionParams& params, Parent::DispatchData runInfo) const
     {
         JitConstants jit = Parent::GetJitConstants(params, runInfo);
 
@@ -73,18 +71,19 @@ namespace KernelSelector {
             MakeJitConstant("py", inoffset_y),
             MakeJitConstant("sx", 1),
             MakeJitConstant("sy", 1),
+            MakeJitConstant("C_", idepth),
 
             MakeJitConstant("C4_up16", C4_up16),
             MakeJitConstant("TROWS", rows),
-            MakeJitConstant("TCOLS", 4),
+            MakeJitConstant("TCOLS", 8),
             MakeJitConstant("KROWSW", 3),
-            MakeJitConstant("KCOLSW", 4),
+            MakeJitConstant("KCOLSW", 8),
         });
 
         return jit;
     }
 
-    ConvolutionKernel_Winograd_2x3_s1_fused::Parent::DispatchData ConvolutionKernel_Winograd_2x3_s1_fused::SetDefault(const ConvolutionParams& arg, int) const
+    ConvolutionKernel_Winograd_6x3_s1_fused::Parent::DispatchData ConvolutionKernel_Winograd_6x3_s1_fused::SetDefault(const ConvolutionParams& arg, int) const
     {
         Parent::DispatchData runInfo = Parent::SetDefault(arg);
 
@@ -101,24 +100,23 @@ namespace KernelSelector {
         auto K = odepth;
         auto N = 1;
 
-        uint32_t global_step[3] = { 14, 4, 16 * 8 };
-        uint32_t local_size[3] = { 8, 2, 8 };
+        uint32_t global_step[3] = { 14, 6 * 2, 16 * 8 };
+        uint32_t local_size[3] = { 16, 1, 8 };
 
-		uint32_t zStep = local_size[2];
         runInfo.gws0 = ((uint32_t)((Q + global_step[0] - 1)) / global_step[0]) * local_size[0];
         runInfo.gws1 = ((uint32_t)((P + global_step[1] - 1)) / global_step[1]) * local_size[1];
-        runInfo.gws2 = ((uint32_t)((N*K * 8 + global_step[2] - 1)) / global_step[2]) * zStep;
+        runInfo.gws2 = ((uint32_t)((N*K * 8 + global_step[2] - 1)) / global_step[2]) * local_size[2];
 
         runInfo.lws0 = local_size[0];
         runInfo.lws1 = local_size[1];
         runInfo.lws2 = local_size[2];
 
-        runInfo.effiency = FORCE_PRIORITY_2;
+        runInfo.effiency = FORCE_PRIORITY_1;
 
         return runInfo;
     }
 
-    bool ConvolutionKernel_Winograd_2x3_s1_fused::Validate(const Params& p, const OptionalParams& o) const
+    bool ConvolutionKernel_Winograd_6x3_s1_fused::Validate(const Params& p, const OptionalParams& o) const
     {
         if (!Parent::Validate(p, o))
         {
@@ -145,8 +143,8 @@ namespace KernelSelector {
         return true;
     }
 
-    KernelsData ConvolutionKernel_Winograd_2x3_s1_fused::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ConvolutionKernel_Winograd_6x3_s1_fused::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        return GetCommonKernelsData(params, options);
+        return GetCommonKernelsData(params, options, AGE_BASED);
     }
 }
