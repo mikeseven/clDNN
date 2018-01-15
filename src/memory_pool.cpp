@@ -116,7 +116,7 @@ namespace cldnn
         {
             if (!layout.format.is_image() && layout.data_padding == padding{ { 0,0,0,0 }, 0 }) // non-padded buffers
             {
-                 return get_from_non_padded_pool(layout, id, restrictions);
+                return get_from_non_padded_pool(layout, id, restrictions);
             }
             else if (!layout.format.is_image()) // padded buffers
             {
@@ -129,7 +129,6 @@ namespace cldnn
                 return alloc_memory(layout);
             }
         }
-
         return alloc_memory(layout);
     }
 
@@ -162,23 +161,17 @@ namespace cldnn
         }
         log << dep;
         log.close();
-
         color_graph(program);
     }
 
     void memory_pool::color_graph(const program_impl& program)
     {
         uint32_t color = 0;
-        auto last_key = _non_padded_pool.begin()->first;
-        for (auto mem : _non_padded_pool)
+        for (auto record : _non_padded_pool)
         {
-            if (last_key != mem.first)
-            {
-                color++;
-                last_key -= mem.first;
-            }
-            for (auto usr : mem.second._users)
+            for (auto usr : record.second._users)
                 program.get_node(usr).set_reused_memory_color(color);
+            color++;
         }
     }
 }

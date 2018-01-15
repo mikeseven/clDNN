@@ -328,7 +328,7 @@ void program_impl::analyze_output_size_handling_need()
                 handling_needed = true;
         }
     }
-
+  
     output_size_handling_enabled = handling_needed;
 }
 
@@ -1122,9 +1122,9 @@ void program_impl::skipped_branch_memory_dependencies()
             {
                 bool has_conflict = false;
                 // if at least one user will be processed after 'node', node2 has to be added to forbiden list
-                for (auto usr = node2->get_dependencies().begin();
-                    usr != node2->get_dependencies().end() && !has_conflict; usr++)
-                {
+                for (auto usr = node2->get_users().begin();
+                    usr != node2->get_users().end() && !has_conflict; usr++)
+                {   
                     if ((*usr)->get_processing_num() > node->get_processing_num())
                     {
                         has_conflict = true;
@@ -1763,7 +1763,7 @@ void program_impl::prepare_padding()
             {
                 auto& prim_node = node->as<convolution>();
                 const auto& prim = prim_node.get_primitive();
-
+                
                 if (!prim->with_output_size)
                     continue;
 
@@ -1772,7 +1772,6 @@ void program_impl::prepare_padding()
                 auto needed_padding = calc_sliding_window_needed_input_padding(
                     prim_node.input().get_output_layout(),
                     prim->output_size, filter_size, prim->input_offset, prim->stride, prim->dilation, false, 1);
-
                 apply_needed_padding(prim_node, prim_node.input(), needed_padding);
             }
             else if (node->is_type<deconvolution>())
@@ -2512,6 +2511,7 @@ void program_impl::dump_memory_pool() const
     if (!get_engine().configuration().enable_memory_pool)
         return;
     auto path = get_dir_path(options);
+
     if (path.empty())
     {
         return;
