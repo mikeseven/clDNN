@@ -2227,7 +2227,7 @@ void program_impl::prepare_primitive_fusing()
 
         do_for_types<activation>(*node, [this, is_debug](activation_node& node)
         {
-            
+
             auto& input = node.input();
 
             //Restrictions:
@@ -2238,18 +2238,18 @@ void program_impl::prepare_primitive_fusing()
             if (node.has_padded_dependency() || (input.is_output() && !is_debug) || node.get_dependencies().size() != 1 ||
                 input.can_be_optimized())
                 return;
-            
+
             // - check if there is no activation fused already
             // - limit to primitives which implementations support activation fusing
             if (input.get_users().size() != 1 || input.get_fused_activation_func() != activation_none ||
                 //TODO: new api needs to be created to read such caps
                 //right now use whitelist so no new primitives will be affected in case of lack of fused activation support
                 (!input.is_type<batch_norm>() && !input.is_type<concatenation>() && !input.is_type<convolution>() &&
-                 !input.is_type<crop>() && !input.is_type<deconvolution>() && !input.is_type<eltwise>() &&
-                 !input.is_type<fully_connected>() && !input.is_type<lrn>() && !input.is_type<normalize>() &&
-                 !input.is_type<permute>() && !input.is_type<pooling>() && !input.is_type<reorder>() &&
-                 !input.is_type<reshape>() && !input.is_type<roi_pooling>() && !input.is_type<scale>() &&
-                 !input.is_type<softmax>() && !input.is_type<upsampling>()))
+                    !input.is_type<crop>() && !input.is_type<deconvolution>() && !input.is_type<eltwise>() &&
+                    !input.is_type<fully_connected>() && !input.is_type<lrn>() && !input.is_type<normalize>() &&
+                    !input.is_type<permute>() && !input.is_type<pooling>() && !input.is_type<reorder>() &&
+                    !input.is_type<reshape>() && !input.is_type<roi_pooling>() && !input.is_type<scale>() &&
+                    !input.is_type<softmax>() && !input.is_type<upsampling>()))
                 return;
 
             input.set_fused_activation(node.get_primitive()->activation_func, node.get_primitive()->additional_params);
@@ -2257,6 +2257,13 @@ void program_impl::prepare_primitive_fusing()
 
             extract_and_remove(node);
         });
+    }
+
+    itr = processing_order.begin(); //note we need to use iterators since currently processed element can be removed
+    while (itr != processing_order.end())
+    {
+        auto node_itr = itr++;
+        auto& node = (*node_itr);
 
         do_for_types<reorder>(*node, [this, is_debug](reorder_node& node)
         {
