@@ -2533,7 +2533,7 @@ void program_impl::dump_memory_pool() const
     if (!get_engine().configuration().enable_memory_pool)
         return;
     auto path = get_dir_path(options);
-    path = "graph";
+
     if (path.empty())
     {
         return;
@@ -2553,7 +2553,6 @@ void program_impl::dump_memory_pool() const
 void program_impl::dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter) const
 {
     auto path = get_dir_path(options);
-    path = "graph";
     if (path.empty())
     {
         return;
