@@ -1,4 +1,4 @@
-﻿/*
+/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -22,6 +22,7 @@
 #include <cassert>
 #include <iomanip>
 #include <ios>
+
 
 namespace {
     std::string ndrange_to_string(cl::NDRange const& range)
@@ -70,7 +71,7 @@ namespace {
                 CL_DEVICE_TYPE_ACCELERATOR };
         return device_types[device_type];
     }
-
+ 
     bool does_device_match_config(cl::Device const& dev, configuration const& config, std::list<std::string>& reasons)
     {
         auto dev_name = dev.getInfo<CL_DEVICE_NAME>();
@@ -89,6 +90,12 @@ namespace {
         {
             reasons.push_back(dev_name + ": invalid vendor type");
             ok = false;
+        }
+
+        auto device_version = dev.getInfo<CL_DEVICE_VERSION>();
+        if (strstr(device_version.c_str(), "NEO"))
+        {
+            oooq_enabled = true;
         }
 
         if (config.host_out_of_order)
@@ -153,7 +160,7 @@ gpu_toolkit::gpu_toolkit(const configuration& config)
                      (config.enable_profiling
                         ? cl::QueueProperties::Profiling
                         : cl::QueueProperties::None) | 
-                     (config.host_out_of_order
+                     (config.host_out_of_order && oooq_enabled
                         ? cl::QueueProperties::OutOfOrder
                         : cl::QueueProperties::None))
     , _engine_info(*this)

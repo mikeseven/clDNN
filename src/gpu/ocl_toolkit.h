@@ -1,4 +1,4 @@
-﻿/*
+/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -41,6 +41,8 @@ class ocl_error : public error
 public:
     ocl_error(cl::Error const& err);
 };
+
+bool oooq_enabled = false; //driver flag for OOOQ
 
 struct configuration
 {
