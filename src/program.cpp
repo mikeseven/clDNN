@@ -1102,8 +1102,8 @@ void program_impl::basic_memory_dependencies()
         {
             for (auto it = node->get_dependencies().begin(); it != node->get_dependencies().end(); it++)
             {
-               // node->add_memory_dependency((*it)->id());
-                add_memory_dependency(node, *it);
+                node->add_memory_dependency((*it)->id());
+                //add_memory_dependency(node, *it);
             }
         }
 
@@ -2127,11 +2127,11 @@ void program_impl::prepare_buffer_fusing()
             extract_and_remove(node); //try to remove redundant reorders
         });
 
-        do_for_types<reshape>(*node, [this](reshape_node& node)
-        {
-            if (node.is_in_place())
-                node.can_be_optimized(true);
-        });
+        //do_for_types<reshape>(*node, [this](reshape_node& node)
+        //{
+        //    if (node.is_in_place())
+        //        node.can_be_optimized(true);
+        //});
     }
 }
 
