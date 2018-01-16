@@ -1102,8 +1102,8 @@ void program_impl::basic_memory_dependencies()
         {
             for (auto it = node->get_dependencies().begin(); it != node->get_dependencies().end(); it++)
             {
-                node->add_memory_dependency((*it)->id());
-                //add_memory_dependency(node, *it);
+                // node->add_memory_dependency((*it)->id());
+                add_memory_dependency(node, *it);
             }
         }
 
@@ -1142,8 +1142,8 @@ void program_impl::skipped_branch_memory_dependencies()
                     if ((*usr)->get_processing_num() > node->get_processing_num())
                     {
                         has_conflict = true;
-                        node->add_memory_dependency(node2->id());
-                       // add_memory_dependency(node, node2);
+                        //node->add_memory_dependency(node2->id());
+                        add_memory_dependency(node, node2);
                     }
                 }
             }
@@ -1185,10 +1185,10 @@ void program_impl::oooq_memory_dependencies()
             {
                 for (auto nd2 = nd1 + 1; nd2 != sync_region.end(); nd2++)
                 {
-                    (*nd1)->add_memory_dependency((*nd2)->id());
-                    (*nd2)->add_memory_dependency((*nd1)->id());
-                  //  add_memory_dependency(*nd1, *nd2);
-                  //  add_memory_dependency(*nd2, *nd1);
+                   // (*nd1)->add_memory_dependency((*nd2)->id());
+                   // (*nd2)->add_memory_dependency((*nd1)->id());
+                    add_memory_dependency(*nd1, *nd2);
+                    add_memory_dependency(*nd2, *nd1);
                 }
             }
             sync_region.clear();
