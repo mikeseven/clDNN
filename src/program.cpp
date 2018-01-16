@@ -1985,7 +1985,8 @@ void program_impl::prepare_buffer_fusing()
                     //       per single input rather than all/none
                     // + restrict input types to pooling, convolution and activation only due to problems with output padding on b and f
                     if ((!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>() && !input->is_type<concatenation>()) ||
-                        (input->is_output() && !is_debug))
+                        (input->is_output() && !is_debug) ||
+                        input->get_users().size() > 2)
                         return;
 
                     if (input->get_users().size() > 1)
