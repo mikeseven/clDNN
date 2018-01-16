@@ -1225,29 +1225,68 @@ void program_impl::remove_redundant_reorders()
         if (!node->is_type<reorder>()) //only care for reorders
             continue;
 
-        auto& r_node = node->as<reorder>();
-        if (r_node.has_mean() || !r_node.get_primitive()->subtract_per_feature.empty()) //do not optimize if mean of subtract are present
+        std::vector<program_node*> nodes = { node };
+        std::vector<program_node*> r_nodes_to_remove;
+        std::list<const std::vector<program_node*>*> stack = { &nodes };
+        auto optimize = true;
+        while (!stack.empty())
+        {
+            auto nodes_list = stack.front();
+            stack.pop_front();
+
+            for (auto reorder_node : *nodes_list)
+            {
+                auto& r_node = reorder_node->as<reorder>();
+
+                if (r_node.has_mean() || !r_node.get_primitive()->subtract_per_feature.empty() ||  //do not optimize if mean of subtract are present
+                    r_node.is_output() && r_node.get_dependency(0).is_output()) //do not optimize when both reorder and layer before are outputs
+                {
+                    optimize = false;
+                    break;
+                }
+
+                r_nodes_to_remove.push_back(reorder_node);
+
+                if (r_node.get_dependency(0).is_type<reorder>() && r_node.get_dependencies().size() == 1 && r_node.get_users().size() == 1)
+                    stack.push_back(&r_node.get_dependencies());
+            }
+        }
+        if (!optimize)
             continue;
 
-        if (r_node.is_output() && r_node.get_dependency(0).is_output()) //do not optimize when both reorder and layer before are outputs
-            continue;
-
-        assert(r_node.dependencies.size() == 1 && "reorder without mean should have exactly one dependecy (input)");
-        auto o_layout = r_node.get_output_layout();
-        auto i_layout = r_node.input().get_output_layout();
+        assert(node->dependencies.size() == 1 && "reorder without mean should have exactly one dependecy (input)");
+        auto& r_output = r_nodes_to_remove.front();
+        auto& r_input = r_nodes_to_remove.back()->get_dependency(0);
+        auto o_layout = r_output->get_output_layout();
+        auto i_layout = r_input.get_output_layout();
 
         auto ident = are_layouts_identical(o_layout, i_layout);
         if (!ident.second)
             continue;
 
-        if (ident.first && ident.second && r_node.is_output() && r_node.get_dependency(0).is_input()) //do not optimize when reorder is output and layer before is input
+        for (auto remove_reorder_node : r_nodes_to_remove)
+        {
+            auto& r_node = remove_reorder_node->as<reorder>();
+
+            if (ident.first && ident.second && r_node.is_output() && r_node.get_dependency(0).is_input()) //do not optimize when reorder is output and layer before is input
+            {
+                optimize = false;
+                break;
+            }
+        }
+        if (!optimize)
             continue;
 
-        //mark as optimized
-        r_node.can_be_optimized(true);
-        r_node.requires_reinterpret(!ident.first);
-        if (ident.first) //no need of reshape
-            extract_and_remove(r_node); //try to remove if possible (with respect to r_node not being marked as output)
+        for (auto remove_reorder_node : r_nodes_to_remove)
+        {
+            auto& r_node = remove_reorder_node->as<reorder>();
+
+            //mark as optimized
+            r_node.can_be_optimized(true);
+            r_node.requires_reinterpret(!ident.first);
+            if (ident.first) //no need of reshape
+                extract_and_remove(r_node); //try to remove if possible (with respect to r_node not being marked as output)
+        }
     }
 }
 
@@ -1373,7 +1412,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 conv_node).first;
 
             auto reorder_removed = false;
-            if (new_input && new_input->output_format != format::winograd_2x3_s1_data && new_input->output_format != format::bf8_xy16) //output format is not optimal
+            if (new_input && new_input->output_format != format::winograd_2x3_s1_data && new_input->output_format != format::bf8_xy16 && new_input->output_format != format::byxf) //output format is not optimal
             {
                 auto reorder_input_layout = reorder_input.get_output_layout();
 
@@ -2216,6 +2255,29 @@ void program_impl::prepare_primitive_fusing()
             input.set_fused_activation(node.get_primitive()->activation_func, node.get_primitive()->additional_params);
             input.set_output_padding(node.get_output_layout().data_padding);
 
+            extract_and_remove(node);
+        });
+
+        do_for_types<reorder>(*node, [this, is_debug](reorder_node& node)
+        {
+            //fuse two reorders when one is after another
+            auto& input = node.input();
+
+            //Restrictions:
+            // - inputs cannot be padded
+            // - primitives input cannot be output
+            // - input was optimized
+            if (node.has_padded_dependency() || (input.is_output() && !is_debug) || node.get_dependencies().size() != 1 ||
+                input.can_be_optimized())
+                return;
+
+            // - check if previous node is reorder with 1 user
+            // - do not fuse if current node has mean subtract
+            if (input.get_users().size() != 1 || !input.is_type<reorder>() ||
+                node.has_mean() || !node.get_primitive()->subtract_per_feature.empty())
+                return;
+
+            input.set_output_layout(node.get_output_layout(), false);
             extract_and_remove(node);
         });
     }

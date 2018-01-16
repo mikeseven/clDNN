@@ -42,7 +42,8 @@ namespace {
             || prim->stride != tensor{ 1 }                  //stride has to be 1x1 by definition
             || prim->dilation != tensor{ 1 }                //no support for dilation
             || prim->split() != 1                           //no support for splitted convolutions
-            || (output_size_handling_enabled && prim->with_output_size)) //no support for convolutions with user-specified output size
+            || (output_size_handling_enabled && prim->with_output_size) //no support for convolutions with user-specified output size
+            || (input_layout.count() > 3000000))
         {
             return false;
         }
