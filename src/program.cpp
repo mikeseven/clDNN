@@ -1239,7 +1239,7 @@ void program_impl::remove_redundant_reorders()
                 auto& r_node = reorder_node->as<reorder>();
 
                 if (r_node.has_mean() || !r_node.get_primitive()->subtract_per_feature.empty() ||  //do not optimize if mean of subtract are present
-                    r_node.is_output() && r_node.get_dependency(0).is_output()) //do not optimize when both reorder and layer before are outputs
+                    (r_node.is_output() && r_node.get_dependency(0).is_output())) //do not optimize when both reorder and layer before are outputs
                 {
                     optimize = false;
                     break;
