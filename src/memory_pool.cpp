@@ -170,7 +170,10 @@ namespace cldnn
         for (auto record : _non_padded_pool)
         {
             for (auto usr : record.second._users)
-                program.get_node(usr).set_reused_memory_color(color);
+            {
+                if (program.has_node(usr))
+                    program.get_node(usr).set_reused_memory_color(color);
+            }
             color++;
         }
     }

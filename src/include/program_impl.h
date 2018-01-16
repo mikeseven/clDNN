@@ -64,6 +64,12 @@ public:
             throw std::runtime_error("Program doesn't contain primtive node: " + id);
         }
     }
+
+    bool has_node(const primitive_id& prim) const
+    {
+        return nodes_map.count(prim) > 0;
+    }
+
     auto const& get_node(primitive_id const& id) const
     {
         try
@@ -144,7 +150,7 @@ private:
     void basic_memory_dependencies();
     void skipped_branch_memory_dependencies();
     void oooq_memory_dependencies();
-    std::string get_memory_dependecies_string() const;
+    std::string get_memory_dependencies_string() const;
 
     /*
     ** Utilities

@@ -41,7 +41,7 @@ void program_node::replace_dependency(size_t idx, program_node& new_dep, bool de
 
     dependencies[idx] = &new_dep;
     if (!is_type<internal_primitive>())
-        desc->dependecies()[idx].get() = new_dep.id();
+        desc->dependencies()[idx].get() = new_dep.id();
     new_dep.users.push_back(this);
 }
 

@@ -358,7 +358,7 @@ void program_impl::init_graph(topology_impl const& topology)
     {
         auto node_itr = itr++;
         auto& node = (*node_itr);
-        auto deps = node->get_primitive()->dependecies();
+        auto deps = node->get_primitive()->dependencies();
         if (deps.empty())
             continue;
 
@@ -1071,6 +1071,19 @@ void program_impl::trim_to_outputs()
     }
 }
 
+void add_memory_dependency(program_node* node, program_node* dep)
+{
+    if (!dep->can_be_optimized())
+    {
+        node->add_memory_dependency(dep->id());
+    }
+    else
+    {
+        for (auto it = dep->get_dependencies().begin(); it != dep->get_dependencies().end(); it++)
+            add_memory_dependency(node, *it);
+    }
+}
+
 void program_impl::basic_memory_dependencies()
 {
     auto itr = processing_order.begin();
@@ -1084,12 +1097,12 @@ void program_impl::basic_memory_dependencies()
         if (node->is_type<data>())
             continue;
 
-        // add my dependencies to restriction list (can share input.output buffers)
+        // add my dependencies to restriction list (can't share input.output buffers)
         if (node->get_dependencies().size())
         {
             for (auto it = node->get_dependencies().begin(); it != node->get_dependencies().end(); it++)
             {
-                node->add_memory_dependency((*it)->id());
+                add_memory_dependency(node, *it);
             }
         }
 
@@ -1128,7 +1141,8 @@ void program_impl::skipped_branch_memory_dependencies()
                     if ((*usr)->get_processing_num() > node->get_processing_num())
                     {
                         has_conflict = true;
-                        node->add_memory_dependency(node2->id());
+                        //node->add_memory_dependency(node2->id());
+                        add_memory_dependency(node, node2);
                     }
                 }
             }
@@ -1170,8 +1184,10 @@ void program_impl::oooq_memory_dependencies()
             {
                 for (auto nd2 = nd1 + 1; nd2 != sync_region.end(); nd2++)
                 {
-                    (*nd1)->add_memory_dependency((*nd2)->id());
-                    (*nd2)->add_memory_dependency((*nd1)->id());
+                    //(*nd1)->add_memory_dependency((*nd2)->id());
+                    //(*nd2)->add_memory_dependency((*nd1)->id());
+                    add_memory_dependency(*nd1, *nd2);
+                    add_memory_dependency(*nd2, *nd1);
                 }
             }
             sync_region.clear();
@@ -1190,7 +1206,7 @@ void program_impl::prepare_memory_dependencies()
     oooq_memory_dependencies();
 }
 
-std::string program_impl::get_memory_dependecies_string() const
+std::string program_impl::get_memory_dependencies_string() const
 {
     std::string mem_dep = "Memory dependencies/restrictions:\n";
     auto itr = processing_order.begin();
@@ -2109,6 +2125,12 @@ void program_impl::prepare_buffer_fusing()
             node.can_be_optimized(true);
             extract_and_remove(node); //try to remove redundant reorders
         });
+
+        do_for_types<reshape>(*node, [this](reshape_node& node)
+        {
+            if (node.is_in_place())
+                node.can_be_optimized(true);
+        });
     }
 }
 
@@ -2511,7 +2533,7 @@ void program_impl::dump_memory_pool() const
     if (!get_engine().configuration().enable_memory_pool)
         return;
     auto path = get_dir_path(options);
-
+    path = "graph";
     if (path.empty())
     {
         return;
@@ -2522,7 +2544,7 @@ void program_impl::dump_memory_pool() const
     }
 
     path += "cldnn_memory_pool.log";
-    auto dep = get_memory_dependecies_string();
+    auto dep = get_memory_dependencies_string();
     get_engine().dump_memory_pool(*this, path, dep);
     dump_program("14_memory_pool", true);
 }
@@ -2531,6 +2553,7 @@ void program_impl::dump_memory_pool() const
 void program_impl::dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter) const
 {
     auto path = get_dir_path(options);
+    path = "graph";
     if (path.empty())
     {
         return;

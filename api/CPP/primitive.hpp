@@ -110,7 +110,7 @@ public:
     virtual const CLDNN_PRIMITIVE_DESC(primitive)* get_dto() const = 0;
 
     /// @brief Returns references to all primitive ids on which this primitive depends - inputs, weights, biases, etc.
-    std::vector<std::reference_wrapper<primitive_id>> dependecies()
+    std::vector<std::reference_wrapper<primitive_id>> dependencies()
     {
         std::vector<std::reference_wrapper<primitive_id>> result;
         auto&& deps = get_dependencies();
@@ -125,7 +125,7 @@ public:
     }
 
     /// @brief Returns copy of all primitive ids on which this primitive depends - inputs, weights, biases, etc.
-    std::vector<primitive_id> dependecies() const
+    std::vector<primitive_id> dependencies() const
     {
         auto result = input.ref();
         auto deps = get_dependencies();

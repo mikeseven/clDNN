@@ -79,7 +79,7 @@ public:
 
     //replaces idx-th dependency of 'this' with 'new_dep', calls program::remove_if_dangling(old_dep, detach_whole_branch)
     void replace_dependency(size_t idx, program_node& new_dep, bool detach_whole_branch = false);
-    //searches for 'old_dep' in dependecies list of 'this' and replaces it with 'new_dep', calls program::remove_if_dangling(old_dep, detach_whole_branch)
+    //searches for 'old_dep' in dependencies list of 'this' and replaces it with 'new_dep', calls program::remove_if_dangling(old_dep, detach_whole_branch)
     void replace_dependency(program_node const& old_dep, program_node& new_dep, bool detach_whole_branch = false);
 
     std::vector<primitive_id> get_dependencies_ids() const;
