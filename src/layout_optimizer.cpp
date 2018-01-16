@@ -145,7 +145,8 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
 
     case data_type::input: //convolution input
 
-        if (layout_optimizer::convolution_byxf_opt(current_layout, output_or_weights_layout, prim) &&
+        if (current_layout.data_type == data_types::f16 &&
+            layout_optimizer::convolution_byxf_opt(current_layout, output_or_weights_layout, prim) &&
             users_for_convolution_byxf_opt(node) &&
             //TODO: remove this condition when yxfb optimizations will be disabled
             current_layout.format != cldnn::format::yxfb &&
