@@ -130,7 +130,7 @@ TEST(memory_pool, basic_non_padded_relu_and_pooling_pipe) {
     network.set_input_data("input", input);
     auto outputs = network.execute();
 
-    EXPECT_EQ(engine.get_total_device_memory_size(), (uint64_t)1152);
+    EXPECT_EQ(engine.get_total_device_memory_size(), (uint64_t)1088);
 }
 
 
