@@ -23,7 +23,6 @@
 #include <iomanip>
 #include <ios>
 
-
 namespace {
     std::string ndrange_to_string(cl::NDRange const& range)
     {
@@ -107,9 +106,8 @@ namespace {
     }
 }
 
-bool enable_oooq(cl::Device const& dev)
+bool driver_supports_oooq(cl::Device const& dev)
 {
-
     auto device_version = dev.getInfo<CL_DEVICE_VERSION>();
     if (strstr(device_version.c_str(), "NEO"))
     {
@@ -165,7 +163,7 @@ gpu_toolkit::gpu_toolkit(const configuration& config)
                      (config.enable_profiling
                         ? cl::QueueProperties::Profiling
                         : cl::QueueProperties::None) | 
-                     (config.host_out_of_order && enable_oooq(_device)
+                     (config.host_out_of_order && driver_supports_oooq(_device)
                         ? cl::QueueProperties::OutOfOrder
                         : cl::QueueProperties::None))
     , _engine_info(*this)

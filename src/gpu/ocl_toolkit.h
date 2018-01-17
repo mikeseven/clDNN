@@ -42,7 +42,6 @@ public:
     ocl_error(cl::Error const& err);
 };
 
-
 struct configuration
 {
     enum device_types { default_device = 0, cpu, gpu, accelerator };
