@@ -92,12 +92,6 @@ namespace {
             ok = false;
         }
 
-        auto device_version = dev.getInfo<CL_DEVICE_VERSION>();
-        if (strstr(device_version.c_str(), "NEO"))
-        {
-            oooq_enabled = true;
-        }
-
         if (config.host_out_of_order)
         {
             auto queue_properties = dev.getInfo<CL_DEVICE_QUEUE_PROPERTIES>();
@@ -111,6 +105,17 @@ namespace {
 
         return ok;
     }
+}
+
+bool enable_oooq(cl::Device const& dev)
+{
+
+    auto device_version = dev.getInfo<CL_DEVICE_VERSION>();
+    if (strstr(device_version.c_str(), "NEO"))
+    {
+        return true;
+    }
+    return false;
 }
 
 cl::Device get_gpu_device(const configuration& config)
@@ -160,7 +165,7 @@ gpu_toolkit::gpu_toolkit(const configuration& config)
                      (config.enable_profiling
                         ? cl::QueueProperties::Profiling
                         : cl::QueueProperties::None) | 
-                     (config.host_out_of_order && oooq_enabled
+                     (config.host_out_of_order && enable_oooq(_device)
                         ? cl::QueueProperties::OutOfOrder
                         : cl::QueueProperties::None))
     , _engine_info(*this)

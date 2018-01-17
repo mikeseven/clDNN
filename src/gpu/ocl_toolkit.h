@@ -42,7 +42,6 @@ public:
     ocl_error(cl::Error const& err);
 };
 
-bool oooq_enabled = false; //driver flag for OOOQ
 
 struct configuration
 {
