@@ -2128,11 +2128,11 @@ void program_impl::prepare_buffer_fusing()
             extract_and_remove(node); //try to remove redundant reorders
         });
 
-        //do_for_types<reshape>(*node, [this](reshape_node& node)
-        //{
-        //    if (node.is_in_place())
-        //        node.can_be_optimized(true);
-        //});
+        do_for_types<reshape>(*node, [this](reshape_node& node)
+        {
+            if (node.is_in_place())
+                node.can_be_optimized(true);
+        });
     }
 }
 

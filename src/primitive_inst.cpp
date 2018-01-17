@@ -74,7 +74,6 @@ memory_impl::ptr primitive_inst::allocate_output()
         _node.is_type<data>() ||
         _node.is_type<input_layout>() ||
         _node.is_type<pooling>() || // TODO: figure out why
-        _node.is_type<reshape>() ||
         _node.can_be_optimized() ||
         _node.is_output())
     {
