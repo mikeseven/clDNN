@@ -2100,6 +2100,13 @@ void program_impl::prepare_buffer_fusing()
             }
         });
 
+        do_for_types<reshape>(*node, [this](reshape_node& node)
+        {
+            if (node.is_in_place())
+                node.can_be_optimized(true);
+            return;
+        });
+
         do_for_types<reorder>(*node, [this](reorder_node& node)
         {
             auto& input = node.input();
@@ -2126,13 +2133,10 @@ void program_impl::prepare_buffer_fusing()
 
             node.can_be_optimized(true);
             extract_and_remove(node); //try to remove redundant reorders
+
+            return;
         });
 
-        do_for_types<reshape>(*node, [this](reshape_node& node)
-        {
-            if (node.is_in_place())
-                node.can_be_optimized(true);
-        });
     }
 }
 
