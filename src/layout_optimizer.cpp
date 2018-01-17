@@ -125,7 +125,7 @@ bool layout_optimizer::users_for_convolution_byxf_opt(program_node const& node)
     return use_byxf;
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, layout const& output_or_weights_layout, program_node const& node)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, layout const& output_or_weights_layout, program_node const&)
 {
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
@@ -145,7 +145,11 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
 
     case data_type::input: //convolution input
 
-        if (current_layout.data_type == data_types::f16 &&
+        CLDNN_ERROR_NOT_EQUAL(prim->id, "Convolution input dimension", current_layout.format.dimension(), "expected dimension", static_cast<size_t>(4), "");
+        if (should_use_winograd_2x3_s1(prim, current_layout, output_or_weights_layout, _output_size_handling_enabled))
+            return layout(expected_data_type, format::bfyx, expected_tensor);
+
+        /*if (current_layout.data_type == data_types::f16 &&
             layout_optimizer::convolution_byxf_opt(current_layout, output_or_weights_layout, prim) &&
             users_for_convolution_byxf_opt(node) &&
             //TODO: remove this condition when yxfb optimizations will be disabled
@@ -156,7 +160,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
             expected_tensor = current_layout.size;
             expected_format = cldnn::format::byxf;
         }
-        else if (layout_optimizer::convolution_bfyx_opt(current_layout, output_or_weights_layout, prim)
+        else */if (layout_optimizer::convolution_bfyx_opt(current_layout, output_or_weights_layout, prim)
             || (_output_size_handling_enabled && prim->with_output_size))
         {
             if (current_layout.data_type == data_types::f32 &&
