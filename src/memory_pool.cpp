@@ -95,7 +95,7 @@ namespace cldnn
         // didn't find anything for you? create new resource
         auto mem = alloc_memory(layout);
         {
-            _non_padded_pool.insert(std::pair<uint64_t, cldnn::memory_record>(layout.bytes_count(), memory_record({ id }, mem)));
+            _non_padded_pool.emplace(layout.bytes_count(), memory_record({ id }, mem));
             // we don't want to store any resources with no parents so memory pool has to store weak pointer of _engine. 
             _engine->release();
         }
@@ -150,10 +150,10 @@ namespace cldnn
 
         log << "\nNon-padded pool:" <<endl;
         log << "Size\tUsers:" << endl;
-        for (auto record : _non_padded_pool)
+        for (const auto& record : _non_padded_pool)
         {
             log << record.first;
-            for (auto usr : record.second._users)
+            for (const auto& usr : record.second._users)
                 log << ", " << usr;
             log << endl;
         }
@@ -165,9 +165,9 @@ namespace cldnn
     void memory_pool::color_graph(const program_impl& program)
     {
         uint32_t color = 0;
-        for (auto record : _non_padded_pool)
+        for (const auto& record : _non_padded_pool)
         {
-            for (auto usr : record.second._users)
+            for (const auto& usr : record.second._users)
             {
                 if (program.has_node(usr))
                     program.get_node(usr).set_reused_memory_color(color);
