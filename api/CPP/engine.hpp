@@ -45,7 +45,7 @@ struct engine_configuration
     const std::string engine_log;           ///< Specifies a file to which engine log should be dumped. Empty by default (means no logging).
     const std::string sources_dumps_dir;    ///< Specifies a directory where sources of cldnn::program objects should be dumped. Empty by default (means no dumping).
     const uint32_t priority_mode;           ///< Placeholder for priority mode (support of priority hints in command queue). Currently ignored.
-    const bool enable_memory_pool;          ///< Enabled memory usage optimization. memory objects will be reused when possible. 
+    const bool enable_memory_pool;          ///< Enables memory usage optimization. memory objects will be reused when possible. 
 
     /// @brief Constructs engine configuration with specified options.
     /// @param profiling Enable per-primitive profiling.
@@ -172,7 +172,7 @@ struct engine
         });
     }
 
-    /// @brief Returns the @ref cldnn_engine_type for the particular engine
+    /// @brief Returns total size of all resources allocated using given engine
     uint64_t get_total_device_memory_size() const
     {
         return check_status<uint64_t>("get total device memory failed", [=](status_t* status)

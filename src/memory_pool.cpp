@@ -120,12 +120,12 @@ namespace cldnn
             }
             else if (!layout.format.is_image()) // padded buffers
             {
-                // not yet
+                // not yet implemented
                 return alloc_memory(layout);
             }
             else  // images
             {
-                // not yet
+                // not yet implemented
                 return alloc_memory(layout);
             }
         }

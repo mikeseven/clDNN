@@ -19,9 +19,6 @@
 #include "data_inst.h"
 #include "generic_layer_inst.h"
 #include "input_layout_inst.h"
-#include "pooling_inst.h"
-#include "reorder_inst.h"
-#include "reshape_inst.h"
 
 #include "network_impl.h"
 #include "engine_impl.h"
