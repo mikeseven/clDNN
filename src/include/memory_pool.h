@@ -73,7 +73,7 @@ class memory_pool
 public:
     memory_pool(engine_impl& engine);
 
-    refcounted_obj_ptr<memory_impl> get_memory(const layout& layout, const primitive_id& id, std::set<primitive_id>& restrictions, bool reusable = true); // get from pool or create memory allocation
+    refcounted_obj_ptr<memory_impl> get_memory(const layout& layout, const primitive_id& id,const std::set<primitive_id>& restrictions, bool reusable = true); // get from pool or create memory allocation
     refcounted_obj_ptr<memory_impl> get_memory(const layout& layout);
     refcounted_obj_ptr<memory_impl> get_from_non_padded_pool(const layout& layout, const primitive_id& id, const std::set<primitive_id>&);
     uint64_t get_total_device_memory_used() const { return _global_memory_used; };

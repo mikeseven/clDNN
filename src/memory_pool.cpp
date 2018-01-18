@@ -107,7 +107,7 @@ namespace cldnn
         return alloc_memory(layout);
     }
 
-    memory_impl::ptr memory_pool::get_memory(const layout& layout, const primitive_id& id, std::set<primitive_id>& restrictions, bool reusable)
+    memory_impl::ptr memory_pool::get_memory(const layout& layout, const primitive_id& id, const std::set<primitive_id>& restrictions, bool reusable)
     {
 
         if (reusable)
