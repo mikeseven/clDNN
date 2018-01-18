@@ -70,19 +70,17 @@ namespace cldnn
         }
     }
 
-    bool memory_pool::has_conflict(std::set<primitive_id>& a, std::set<primitive_id>& b)
+    bool memory_pool::has_conflict(const std::set<primitive_id>& a,const std::set<primitive_id>& b)
     {
         std::vector<primitive_id> intersection;
+        intersection.reserve(std::min(a.size(), b.size()));
         set_intersection(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(intersection));
         return !intersection.empty();
     }
 
-    memory_impl::ptr memory_pool::get_from_non_padded_pool(const layout& layout, const primitive_id& id, std::set<primitive_id>& restrictions)
+    memory_impl::ptr memory_pool::get_from_non_padded_pool(const layout& layout, const primitive_id& id, const std::set<primitive_id>& restrictions)
     {
-        auto it = _non_padded_pool.find(layout.bytes_count());
-        // can't find exact size? try to find bigger one
-        if (it == _non_padded_pool.end())
-            it = _non_padded_pool.upper_bound(layout.bytes_count());
+        auto it = _non_padded_pool.lower_bound(layout.bytes_count());
         while (it != _non_padded_pool.end())
         {
             if (!has_conflict(it->second._users, restrictions))
@@ -92,7 +90,7 @@ namespace cldnn
                 return ret_mem;
             }
             else
-                it++;
+                ++it;
         }
         // didn't find anything for you? create new resource
         auto mem = alloc_memory(layout);

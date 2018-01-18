@@ -64,7 +64,7 @@ class memory_pool
     memory_pool();
 
     refcounted_obj_ptr<memory_impl> alloc_memory(const layout& layout);
-    bool has_conflict(std::set<primitive_id>&, std::set<primitive_id>&);
+    static bool has_conflict(const std::set<primitive_id>&, const std::set<primitive_id>&);
 
     std::multimap<uint64_t, memory_record> _non_padded_pool;
     refcounted_obj_ptr<engine_impl> _engine;
@@ -75,7 +75,7 @@ public:
 
     refcounted_obj_ptr<memory_impl> get_memory(const layout& layout, const primitive_id& id, std::set<primitive_id>& restrictions, bool reusable = true); // get from pool or create memory allocation
     refcounted_obj_ptr<memory_impl> get_memory(const layout& layout);
-    refcounted_obj_ptr<memory_impl> get_from_non_padded_pool(const layout& layout, const primitive_id& id, std::set<primitive_id>&);
+    refcounted_obj_ptr<memory_impl> get_from_non_padded_pool(const layout& layout, const primitive_id& id, const std::set<primitive_id>&);
     uint64_t get_total_device_memory_used() const { return _global_memory_used; };
     void clear_pool();
     void color_graph(const program_impl&);
