@@ -1,4 +1,4 @@
-﻿/*
+/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -70,7 +70,7 @@ namespace {
                 CL_DEVICE_TYPE_ACCELERATOR };
         return device_types[device_type];
     }
-
+ 
     bool does_device_match_config(cl::Device const& dev, configuration const& config, std::list<std::string>& reasons)
     {
         auto dev_name = dev.getInfo<CL_DEVICE_NAME>();
@@ -104,6 +104,16 @@ namespace {
 
         return ok;
     }
+}
+
+bool driver_supports_oooq(cl::Device const& dev)
+{
+    auto device_version = dev.getInfo<CL_DEVICE_VERSION>();
+    if (strstr(device_version.c_str(), "NEO"))
+    {
+        return true;
+    }
+    return false;
 }
 
 cl::Device get_gpu_device(const configuration& config)
@@ -153,7 +163,7 @@ gpu_toolkit::gpu_toolkit(const configuration& config)
                      (config.enable_profiling
                         ? cl::QueueProperties::Profiling
                         : cl::QueueProperties::None) | 
-                     (config.host_out_of_order
+                     (config.host_out_of_order && driver_supports_oooq(_device)
                         ? cl::QueueProperties::OutOfOrder
                         : cl::QueueProperties::None))
     , _engine_info(*this)
