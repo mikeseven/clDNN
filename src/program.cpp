@@ -455,7 +455,7 @@ void program_impl::post_optimize_graph()
     post_optimize_weights(lo); dump_program("9_reordered_weights", true);
     remove_redundant_reorders(); dump_program("10_removed_redundant_reorders", true); //TODO: do we need it at this place also?
     propagate_constants(); dump_program("11_propagated_constants", true);
-    validate_processing_order(); dump_program("12_validated_processing_order", true);
+    update_processing_order(); dump_program("12_validated_processing_order", true);
     prepare_memory_dependencies();
 }
 
@@ -717,7 +717,7 @@ void program_impl::calc_processing_order()
     }
 }
 
-void program_impl::validate_processing_order()
+void program_impl::update_processing_order()
 {
     uint32_t idx = 0;
     for (auto& node : processing_order)
@@ -1079,8 +1079,8 @@ void add_memory_dependency(program_node* node, program_node* dep)
     }
     else
     {
-        for (auto it = dep->get_dependencies().begin(); it != dep->get_dependencies().end(); it++)
-            add_memory_dependency(node, *it);
+        for (auto subdep : dep->get_dependencies())
+            add_memory_dependency(node, subdep);
     }
 }
 
@@ -1098,12 +1098,9 @@ void program_impl::basic_memory_dependencies()
             continue;
 
         // add my dependencies to restriction list (can't share input.output buffers)
-        if (node->get_dependencies().size())
+        for (auto it : node->get_dependencies())
         {
-            for (auto it = node->get_dependencies().begin(); it != node->get_dependencies().end(); it++)
-            {
-                add_memory_dependency(node, *it);
-            }
+            add_memory_dependency(node, it);
         }
 
         // Note we iterate over processing order, it means if primitve has processing num greater than any of outputs, this output
@@ -1119,7 +1116,8 @@ void program_impl::skipped_branch_memory_dependencies()
 {
     auto itr = processing_order.begin();
     // Primitive A can't use primitive B buffer if B->processing_num < A->processing_num and any of B users processing_num > A->processing_num
-    // Otherwise it could override data that has to be used in the future. 
+    // Otherwise it could override data that has to be used in the future.
+    // TODO: improve algorithm to to O(n*log(n))
     while (itr != processing_order.end())
     {
         auto& node = *itr;
@@ -1133,15 +1131,13 @@ void program_impl::skipped_branch_memory_dependencies()
             itr2++;
             if (node2->get_processing_num() < node->get_processing_num())
             {
-                bool has_conflict = false;
                 // if at least one user will be processed after 'node', node2 has to be added to forbiden list
-                for (auto usr = node2->get_users().begin();
-                    usr != node2->get_users().end() && !has_conflict; usr++)
-                {   
-                    if ((*usr)->get_processing_num() > node->get_processing_num())
+                for (auto usr : node2->get_users())
+                {                       
+                    if (usr->get_processing_num() > node->get_processing_num())
                     {
-                        has_conflict = true;
                         add_memory_dependency(node, node2);
+                        break;
                     }
                 }
             }
@@ -2100,7 +2096,6 @@ void program_impl::prepare_buffer_fusing()
         {
             if (node.is_in_place())
                 node.can_be_optimized(true);
-            return;
         });
 
         do_for_types<reorder>(*node, [this](reorder_node& node)
@@ -2129,8 +2124,6 @@ void program_impl::prepare_buffer_fusing()
 
             node.can_be_optimized(true);
             extract_and_remove(node); //try to remove redundant reorders
-
-            return;
         });
 
     }
