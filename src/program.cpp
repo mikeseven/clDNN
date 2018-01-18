@@ -2125,7 +2125,6 @@ void program_impl::prepare_buffer_fusing()
             node.can_be_optimized(true);
             extract_and_remove(node); //try to remove redundant reorders
         });
-
     }
 }
 
