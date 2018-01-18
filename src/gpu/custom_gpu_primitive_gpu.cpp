@@ -51,7 +51,7 @@ struct custom_gpu_primitive_gpu : typed_primitive_impl<custom_gpu_primitive>
             args.inputs.push_back(&(dep->output_memory()));
         }
         args.output = &instance.output_memory();
-        
+        _kernel.set_output_event(instance.node.is_output());
         return _kernel.run(*cl_kernel.get(), events, args);
     }
 };

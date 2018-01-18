@@ -124,6 +124,7 @@ public:
     gpu_toolkit& operator=(gpu_toolkit&& other) = delete;
     std::string single_kernel_name() const { return _configuration.single_kernel_name; }
     bool enabled_single_kernel() const { return single_kernel_name() == "" ? false : true; }
+    void set_output_event(bool out_event) { _output_event = out_event; }
 
     event_impl::ptr enqueue_kernel(cl::Kernel const& kern, cl::NDRange const& global, cl::NDRange const& local, std::vector<event_impl::ptr> const& deps);
     event_impl::ptr enqueue_marker(std::vector<event_impl::ptr> const& deps);
@@ -151,7 +152,7 @@ private:
 
     //returns whether a barrier has been added
     void sync_events(std::vector<event_impl::ptr> const& deps);
-
+    bool _output_event = false;
     std::ofstream& open_log();
 };
 

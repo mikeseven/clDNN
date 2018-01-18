@@ -219,7 +219,14 @@ event_impl::ptr gpu_toolkit::enqueue_kernel(cl::Kernel const& kern, cl::NDRange 
 
     cl::Event ret_ev;
     try {
-        _command_queue.enqueueNDRangeKernel(kern, cl::NullRange, global, local, dep_events_ptr, &ret_ev);
+        if (!_configuration.host_out_of_order || _output_event)
+        {
+            _command_queue.enqueueNDRangeKernel(kern, cl::NullRange, global, local, dep_events_ptr, &ret_ev);
+        }
+        else
+        {
+            _command_queue.enqueueNDRangeKernel(kern, cl::NullRange, global, local, dep_events_ptr, nullptr);
+        }
     }
     catch (cl::Error const& err) {
         throw ocl_error(err);
@@ -279,7 +286,6 @@ event_impl::ptr gpu_toolkit::enqueue_marker(std::vector<event_impl::ptr> const& 
     else
     {
         sync_events(deps);
-        assert(_last_barrier_ev() != nullptr);
         return{ new base_event(shared_from_this(), _last_barrier_ev, _last_barrier), false };
     }
 }
@@ -327,13 +333,23 @@ void gpu_toolkit::sync_events(std::vector<event_impl::ptr> const & deps)
     {
         auto* ocl_ev = dynamic_cast<base_event*>(dep.get());
         if (ocl_ev->get_queue_stamp() > _last_barrier)
+        {
             needs_barrier = true;
+        }
     }
 
     if (needs_barrier)
     {
         try {
-            _command_queue.enqueueBarrierWithWaitList(nullptr, &_last_barrier_ev);
+            if (_output_event)
+            { 
+                _command_queue.enqueueBarrierWithWaitList(nullptr, &_last_barrier_ev);
+            }
+            else
+            {
+                _command_queue.enqueueBarrierWithWaitList(nullptr, nullptr);
+            }
+            
         }
         catch (cl::Error const& err) {
             throw ocl_error(err);

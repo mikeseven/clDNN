@@ -71,6 +71,8 @@ public:
         const kernel_selector::kernel_scalar_arguments* scalars = nullptr;
     };
 
+    void set_output_event(bool is_out_event) { context()->set_output_event(is_out_event); }
+
     event_impl::ptr run(
         const kernel_selector::cl_kernel_data& kernel_data,
         const std::vector<event_impl::ptr>& dependencies,

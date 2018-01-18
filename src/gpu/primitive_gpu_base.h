@@ -22,6 +22,7 @@
 #include "events_waiter.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
+#include "detection_output_inst.h"
 
 namespace cldnn { namespace gpu
 {
@@ -92,8 +93,8 @@ protected:
     }
 
     virtual int32_t get_split() const
-    { 
-        return 1; 
+    {
+        return 1;
     }
 
     event_impl::ptr aggregate_events(const std::vector<event_impl::ptr>& events) const
@@ -134,6 +135,26 @@ protected:
                     args.intermediates.push_back(m);
                 }
 
+                //is any user of the prim's users is an detecion output, set prim as a output event (event won't be nullptr)
+                auto users = instance.node.get_users();
+                bool next_prim_is_detection_output = false;
+                for (const auto& user : users)
+                {
+                    if (user->type() == detection_output::type_id())
+                    {
+                        next_prim_is_detection_output = true;
+                        break;
+                    }
+                }
+                if (next_prim_is_detection_output)
+                {
+                    _kernels[k].set_output_event(true);
+                }
+                else
+                {
+                    _kernels[k].set_output_event(instance.node.is_output());
+                }
+    
                 auto event = _kernels[k].run(_kernel_data.kernels[k], tmp_events, args);
                 new_events.push_back(event);
             }
