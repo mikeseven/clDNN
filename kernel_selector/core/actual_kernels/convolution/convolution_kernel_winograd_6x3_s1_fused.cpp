@@ -98,7 +98,7 @@ namespace KernelSelector {
         auto K = odepth;
         auto N = 1;
 
-        uint32_t global_step[3] = { 14, 6 * 2, 16 * 8 };
+        uint32_t global_step[3] = { 14, 6, 16 * 8 };
         uint32_t local_size[3] = { 16, 1, 8 };
 
         runInfo.gws0 = ((uint32_t)((Q + global_step[0] - 1)) / global_step[0]) * local_size[0];

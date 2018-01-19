@@ -35,15 +35,17 @@ namespace {
     bool should_use_winograd_2x3_s1(std::shared_ptr<const convolution> const& prim, layout const& input_layout, layout const& weights_layout, bool output_size_handling_enabled)
     {
         //cases when NOT to use winograd
-        if (input_layout.size.feature[0] % 32 != 0       //current algorithm requires ifm to be multiply of 32
+        if (input_layout.size.feature[0] % 64 != 0       //current algorithm is effective for ifm to be multiply of 64
             || weights_layout.size.spatial[0] != 3          //weights have to be 3x3 by definiton
             || weights_layout.size.spatial[1] != 3          //weights have to be 3x3 by definition
-            || weights_layout.size.batch[0] % 32 != 0       //current algorithm requires ofm to be multiply of 32
+            || weights_layout.size.batch[0] % 64 != 0       //current algorithm is effective for ofm to be multiply of 64
             || prim->stride != tensor{ 1 }                  //stride has to be 1x1 by definition
             || prim->dilation != tensor{ 1 }                //no support for dilation
             || prim->split() != 1                           //no support for splitted convolutions
             || (output_size_handling_enabled && prim->with_output_size) //no support for convolutions with user-specified output size
-            || (input_layout.count() > 3000000))
+            || (input_layout.count() > 3000000)             //limit max input size as winograd consumes more memory
+            || (input_layout.count() < 50000)               //limit min input size as winograd is not effective for small input
+            || (input_layout.size.spatial[0] < 8 && input_layout.size.spatial[0] < 8)) //disable winograd for small spatials as perf is poor
         {
             return false;
         }
@@ -96,20 +98,23 @@ bool layout_optimizer::convolution_byxf_opt(layout const& output_layout, const l
     return false;
 }
 
-bool layout_optimizer::users_for_convolution_byxf_opt(program_node const& node)
+bool layout_optimizer::users_for_convolution_byxf_opt(program_node const& node, uint32_t depth)
 {
+    if (depth == 0)
+        return true;
+
     bool use_byxf = false;
     for (auto& user : node.get_users())
     {
         //primitives that support transitions bfyx->other format
         if (user->type() == cldnn::eltwise::type_id() || user->type() == cldnn::pooling::type_id())
-            use_byxf = true;
+            use_byxf = users_for_convolution_byxf_opt(*user, depth - 1);
         //convolution that is capable to use byxf and is performant
         else if (user->type() == cldnn::convolution::type_id())
         {
             auto conv_prim = user->as<convolution>().get_primitive();
             if (convolution_byxf_opt(user->calc_output_layout(), user->get_dependency(1).get_output_layout(), conv_prim))
-                use_byxf = true;
+                use_byxf = users_for_convolution_byxf_opt(*user, depth - 1);
             else
             {
                 use_byxf = false;
@@ -123,6 +128,37 @@ bool layout_optimizer::users_for_convolution_byxf_opt(program_node const& node)
         }
     }
     return use_byxf;
+}
+
+bool layout_optimizer::deps_depth_in_same_format(program_node const& node, const cldnn::format format, uint32_t depth)
+{
+    if (depth == 0)
+        return true;
+
+    bool same_format = false;
+    for (auto& dep : node.get_dependencies())
+    {
+        //skip data and generic_layers
+        if (dep->type() == cldnn::data::type_id() || dep->type() == cldnn::generic_layer::type_id())
+            continue;
+
+        if(dep->type() == cldnn::reorder::type_id() && dep->get_dependencies().size() == 1 && dep->get_output_layout().format != format)
+            same_format = deps_depth_in_same_format(dep->get_dependency(0), format, depth);
+        else if (dep->get_output_layout().format == format)
+            //primitives that support transitions bfyx->other format
+            if (dep->type() == cldnn::reorder::type_id() &&
+                (dep->get_dependency(0).type() == cldnn::eltwise::type_id() || dep->get_dependency(0).type() == cldnn::pooling::type_id()) &&
+                dep->get_dependencies().size() == 1)
+                same_format = deps_depth_in_same_format(dep->get_dependency(0), format, depth - 1);
+            else
+                same_format = deps_depth_in_same_format(*dep, format, depth - 1);
+        else
+        {
+            same_format = false;
+            break;
+        }
+    }
+    return same_format;
 }
 
 layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, layout const& output_or_weights_layout, program_node const& node)
@@ -147,7 +183,7 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
 
         if (current_layout.data_type == data_types::f16 &&
             layout_optimizer::convolution_byxf_opt(current_layout, output_or_weights_layout, prim) &&
-            users_for_convolution_byxf_opt(node) &&
+            (users_for_convolution_byxf_opt(node, 2) || deps_depth_in_same_format(node, cldnn::format::byxf, 2)) &&
             //TODO: remove this condition when yxfb optimizations will be disabled
             current_layout.format != cldnn::format::yxfb &&
             //TODO: add support for batch > 1 in convolution byxf kernels

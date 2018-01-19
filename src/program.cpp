@@ -1247,7 +1247,7 @@ void program_impl::remove_redundant_reorders()
 
                 r_nodes_to_remove.push_back(reorder_node);
 
-                if (r_node.get_dependency(0).is_type<reorder>() && r_node.get_dependencies().size() == 1 && r_node.get_users().size() == 1)
+                if (r_node.get_dependency(0).is_type<reorder>() && r_node.get_dependencies().size() == 1 && r_node.get_users().size() == 1 && r_node.get_dependency(0).get_users().size() == 1)
                     stack.push_back(&r_node.get_dependencies());
             }
         }
@@ -2164,7 +2164,7 @@ void program_impl::prepare_buffer_fusing()
             auto all_users_same_format = true;
             for (auto const& user : input.get_users())
             {
-                if (user->get_output_layout().format != input.get_users().front()->get_output_layout().format && !input.is_type<eltwise>() && !input.is_type<pooling>())
+                if (user->get_output_layout().format != input.get_users().front()->get_output_layout().format)
                 {
                     all_users_same_format = false;
                     break;

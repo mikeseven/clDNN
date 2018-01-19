@@ -111,7 +111,8 @@ private:
 
     bool convolution_bfyx_opt(const layout& output_layout, const layout& weights_layout, std::shared_ptr<const convolution> conv);
     bool convolution_byxf_opt(const layout& output_layout, const layout& weights_layout, std::shared_ptr<const convolution> conv);
-    bool users_for_convolution_byxf_opt(program_node const& node);
+    bool users_for_convolution_byxf_opt(program_node const& node, uint32_t depth);
+    bool deps_depth_in_same_format(program_node const& node, const cldnn::format format, uint32_t depth);
 
     //pair.first is reorder (may be nullptr if reorder is not needed), pair.second tells if returned reorder was cached (no need to add it to 'ouputs' etc.)
     //for pair.first == nullptr, pair.second == true
