@@ -100,16 +100,18 @@ bool layout_optimizer::convolution_byxf_opt(layout const& output_layout, const l
 
 bool layout_optimizer::users_for_convolution_byxf_opt(program_node const& node, uint32_t depth)
 {
+    //This function checks if byxf optimization can be applied to the required depth of node's users.
+    //Setting depth to 1 will check only node's users, depth = 2 are user's users etc.
     if (depth == 0)
         return true;
 
     bool use_byxf = false;
     for (auto& user : node.get_users())
     {
-        //primitives that support transitions bfyx->other format
+        //primitives that support transitions byxf->other format and other format->byxf are valid for byxf opt
         if (user->type() == cldnn::eltwise::type_id() || user->type() == cldnn::pooling::type_id())
             use_byxf = users_for_convolution_byxf_opt(*user, depth - 1);
-        //convolution that is capable to use byxf and is performant
+        //convolution that is capable to use byxf and is performant is also valid for byxf opt
         else if (user->type() == cldnn::convolution::type_id())
         {
             auto conv_prim = user->as<convolution>().get_primitive();
@@ -132,6 +134,8 @@ bool layout_optimizer::users_for_convolution_byxf_opt(program_node const& node, 
 
 bool layout_optimizer::deps_depth_in_same_format(program_node const& node, const cldnn::format format, uint32_t depth)
 {
+    //This function checks if requested format is the same for node's users in the required depth.
+    //Setting depth to 1 will check only node's dependencies, depth = 2 are dep's dependencies etc.
     if (depth == 0)
         return true;
 
@@ -142,10 +146,13 @@ bool layout_optimizer::deps_depth_in_same_format(program_node const& node, const
         if (dep->type() == cldnn::data::type_id() || dep->type() == cldnn::generic_layer::type_id())
             continue;
 
+        //if dependency is of type reorder and format is different then skip it and move to its dependency
+        //further in graph such reorders could be optimized out
         if(dep->type() == cldnn::reorder::type_id() && dep->get_dependencies().size() == 1 && dep->get_output_layout().format != format)
             same_format = deps_depth_in_same_format(dep->get_dependency(0), format, depth);
         else if (dep->get_output_layout().format == format)
-            //primitives that support transitions bfyx->other format
+            //if dependency is of type reorder and format is the same, check if its users are primitives with support for different input and output formats
+            //if that is true then graph optimizer will optimize such reorder and layout for its dependency will be changed
             if (dep->type() == cldnn::reorder::type_id() &&
                 (dep->get_dependency(0).type() == cldnn::eltwise::type_id() || dep->get_dependency(0).type() == cldnn::pooling::type_id()) &&
                 dep->get_dependencies().size() == 1)

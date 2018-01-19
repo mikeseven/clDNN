@@ -2259,7 +2259,8 @@ void program_impl::prepare_primitive_fusing()
         });
     }
 
-    itr = processing_order.begin(); //note we need to use iterators since currently processed element can be removed
+    //Second loop tries fusing several reorders one by one (if present) into one reorder
+    itr = processing_order.begin();
     while (itr != processing_order.end())
     {
         auto node_itr = itr++;
@@ -2267,7 +2268,6 @@ void program_impl::prepare_primitive_fusing()
 
         do_for_types<reorder>(*node, [this, is_debug](reorder_node& node)
         {
-            //fuse two reorders when one is after another
             auto& input = node.input();
 
             //Restrictions:
