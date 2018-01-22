@@ -104,30 +104,28 @@ namespace cldnn
 
     memory_impl::ptr memory_pool::get_from_padded_pool(const layout& layout, const primitive_id& id, const std::set<primitive_id>& restrictions)
     {
-        auto it = _padded_pool.find(layout);
+        auto first_level_cache = _padded_pool.find(layout);
 
-        if (it != _padded_pool.end())
+        if (first_level_cache != _padded_pool.end())
         {
-            for (auto& it2 : it->second)
+            for (auto& rec_list : first_level_cache->second)
             {
-                if (layout.size.feature[0] <= it2._memory->get_layout().size.feature[0] &&
-                    layout.size.batch[0] <= it2._memory->get_layout().size.batch[0])
+                if (layout.size.feature[0] <= rec_list._memory->get_layout().size.feature[0] &&
+                    layout.size.batch[0] <= rec_list._memory->get_layout().size.batch[0] &&
+                    !has_conflict(rec_list._users, restrictions))
                 {
-                    if (!has_conflict(it2._users, restrictions))
-                    {
-                        it2._users.insert(id);
-                        auto ret_mem = _engine->reinterpret_buffer(*(it2._memory), layout);
-                        return ret_mem;
-                    }
+                    rec_list._users.insert(id);
+                    auto ret_mem = _engine->reinterpret_buffer(*(rec_list._memory), layout);
+                    return ret_mem;
                 }
             }
             auto mem = alloc_memory(layout);
-            it->second.push_back(memory_record({ id }, mem));
+            first_level_cache->second.emplace_back(memory_record({ id }, mem));
             return mem;            
         }
         auto mem = alloc_memory(layout);
-        std::list<memory_record> list = { memory_record({id},mem) };
-        _padded_pool.emplace(layout, list);
+        std::list<memory_record> list = { memory_record({ id },mem) };
+        _padded_pool.emplace(layout, std::move(list));
         return mem;
     }
 

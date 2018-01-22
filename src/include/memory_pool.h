@@ -53,9 +53,7 @@ struct padded_pool_comparer
             return ll.size.spatial[0] < rl.size.spatial[0];
         if (ll.size.spatial[1] != rl.size.spatial[1])
             return ll.size.spatial[1] < rl.size.spatial[1];
-        if (ll.data_padding != rl.data_padding)
-            return ll.data_padding < rl.data_padding;
-        return false;
+        return ll.data_padding < rl.data_padding;
     }
 };
 
