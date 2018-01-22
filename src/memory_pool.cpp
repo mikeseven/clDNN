@@ -147,7 +147,6 @@ namespace cldnn
             }
             else if (!layout.format.is_image()) // padded buffers
             {
-                // not yet implemented
                 return  get_from_padded_pool(layout, id, restrictions);
             }
             else  // images
@@ -214,7 +213,7 @@ namespace cldnn
                 if (program.has_node(usr))
                     program.get_node(usr).set_reused_memory_color(color);
             }
-            color++;
+            ++color;
         }
 
         for (const auto& list : _padded_pool)
@@ -227,7 +226,7 @@ namespace cldnn
                         if (program.has_node(usr))
                             program.get_node(usr).set_reused_memory_color(color);
                     }
-                color++;
+                ++color;
             }
         }
     }
