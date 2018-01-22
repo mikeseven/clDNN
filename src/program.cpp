@@ -2527,7 +2527,6 @@ void program_impl::dump_memory_pool() const
     if (!get_engine().configuration().enable_memory_pool)
         return;
     auto path = get_dir_path(options);
-
     if (path.empty())
     {
         return;

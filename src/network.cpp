@@ -35,17 +35,11 @@ namespace cldnn
 network_impl::network_impl(const program_impl& program)
     : _program(&program)
 {
+    _program->get_nodes().reverse();
     for (auto const& node : _program->get_nodes())
         allocate_primitive_instance(*node);
-
+    _program->get_nodes().reverse();
     _program->dump_memory_pool();
-    
-    //sanity check
-    //TODO: fix run single layer design (in run single layer multiple networks can be run - i.e. weights optimization, we should have better logic to decide whether to filter or not some networks/nodes)
-    /*if (get_engine()->get_context()->enabled_single_kernel()
-        && (_exec_order.size() != 1 || _exec_order.front()->id() != get_engine()->get_context()->single_kernel_name()))
-        throw std::runtime_error("Network allocation: layer specified to be run with 'single_kernel_name' option could not be found (layer id: '"
-            + get_engine()->get_context()->single_kernel_name() + "').");*/
 }
 
 network_impl::network_impl(engine_impl& engine, const topology_impl& topo, const build_options& options)

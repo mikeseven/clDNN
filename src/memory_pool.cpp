@@ -102,6 +102,33 @@ namespace cldnn
         return mem;
     }
 
+    memory_impl::ptr memory_pool::get_from_padded_pool(const layout& layout, const primitive_id& id, const std::set<primitive_id>& restrictions)
+    {
+        auto first_level_cache = _padded_pool.find(layout);
+
+        if (first_level_cache != _padded_pool.end())
+        {
+            for (auto& rec_list : first_level_cache->second)
+            {
+                if (layout.size.feature[0] <= rec_list._memory->get_layout().size.feature[0] &&
+                    layout.size.batch[0] <= rec_list._memory->get_layout().size.batch[0] &&
+                    !has_conflict(rec_list._users, restrictions))
+                {
+                    rec_list._users.insert(id);
+                    auto ret_mem = _engine->reinterpret_buffer(*(rec_list._memory), layout);
+                    return ret_mem;
+                }
+            }
+            auto mem = alloc_memory(layout);
+            first_level_cache->second.emplace_back(memory_record({ id }, mem));
+            return mem;            
+        }
+        auto mem = alloc_memory(layout);
+        std::list<memory_record> list = { memory_record({ id },mem) };
+        _padded_pool.emplace(layout, std::move(list));
+        return mem;
+    }
+
     memory_impl::ptr memory_pool::get_memory(const layout& layout)
     {
         return alloc_memory(layout);
@@ -118,8 +145,7 @@ namespace cldnn
             }
             else if (!layout.format.is_image()) // padded buffers
             {
-                // not yet implemented
-                return alloc_memory(layout);
+                return  get_from_padded_pool(layout, id, restrictions);
             }
             else  // images
             {
@@ -157,6 +183,19 @@ namespace cldnn
                 log << ", " << usr;
             log << endl;
         }
+
+        log << "\n--- Padded pool: ---" << endl;
+        log << "Size\tUsers:" << endl;
+        for (const auto& record : _padded_pool)
+        {
+            for (const auto& mem : record.second)
+            {
+                log << mem._memory->size();
+                for (const auto& usr : mem._users)
+                    log << ", " << usr;
+                log << endl;
+            }
+        }
         log << dep;
         log.close();
         color_graph(program);
@@ -172,7 +211,21 @@ namespace cldnn
                 if (program.has_node(usr))
                     program.get_node(usr).set_reused_memory_color(color);
             }
-            color++;
+            ++color;
+        }
+
+        for (const auto& list : _padded_pool)
+        {
+            for (const auto& record : list.second)
+            {
+                if(record._users.size() > 1) // one user doesn't mean reusing
+                    for (const auto& usr : record._users)
+                    {
+                        if (program.has_node(usr))
+                            program.get_node(usr).set_reused_memory_color(color);
+                    }
+                ++color;
+            }
         }
     }
 }
