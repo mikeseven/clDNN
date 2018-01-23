@@ -212,6 +212,8 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 #endif
 
 #if INPUT0_LAYOUT_BYXF
+//For winograd 6x3 the WA to scale input needed to be added, as the intermediate computations overflow in some cases
+//Later on the output is adjusted with the same scale factor before adding bias and activation
 				UNIT_TYPE_4 I0 = I_load_0*scl_vec;
 				UNIT_TYPE_4 I1 = I_load_1*scl_vec;
 				UNIT_TYPE_4 I2 = I_load_2*scl_vec;

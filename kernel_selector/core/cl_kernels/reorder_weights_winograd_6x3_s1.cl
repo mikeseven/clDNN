@@ -46,11 +46,6 @@ KERNEL(reorder_weights_winograd_6x3_s1)(const __global INPUT0_TYPE* input, __glo
         batch_idx / 16 * weightsOSplit * OUTPUT_SIZE_X * OUTPUT_SIZE_Y +
         feature_idx * weightsOSplit * OUTPUT_SIZE_X * OUTPUT_SIZE_Y * oDivSplit;
 
-    /*output[out_idx] = TO_OUTPUT_TYPE(tile.x); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
-    output[out_idx] = TO_OUTPUT_TYPE((tile.x + tile.y + tile.z) / 2.0f); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
-    output[out_idx] = TO_OUTPUT_TYPE((tile.x - tile.y + tile.z) / 2.0f); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
-    output[out_idx] = TO_OUTPUT_TYPE(tile.z);*/
-
 	output[out_idx] = TO_OUTPUT_TYPE(+90.0 / 90 * tile.x); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
 	output[out_idx] = TO_OUTPUT_TYPE(-20.0 / 90 * tile.x - 20.0 / 90 * tile.y - 20.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
 	output[out_idx] = TO_OUTPUT_TYPE(-20.0 / 90 * tile.x + 20.0 / 90 * tile.y - 20.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
