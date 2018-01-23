@@ -193,7 +193,6 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
             (users_for_convolution_byxf_opt(node, 2) || deps_depth_in_same_format(node, cldnn::format::byxf, 2)) &&
             //TODO: remove this condition when yxfb optimizations will be disabled
             current_layout.format != cldnn::format::yxfb &&
-            //TODO: add support for batch > 1 in convolution byxf kernels
             current_layout.size.batch[0] == 1)
         {
             expected_tensor = current_layout.size;
