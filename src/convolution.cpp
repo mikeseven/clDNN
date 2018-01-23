@@ -60,7 +60,7 @@ layout convolution_inst::calc_output_layout(convolution_node const& node)
 //     CLDNN_ERROR_GREATER_THAN(node.id(), "Negate input offset spatial Y", -input_offset.spatial[1], "input window size spatial Y", filter_size.spatial[1], "First convolution is outside of image. please reduce input offset Y");
 
     if (input_layout.format == format::winograd_2x3_s1_weights || input_layout.format == format::winograd_2x3_s1_fused_weights ||
-        input_layout.format == format::winograd_6x3_s1_fused_weights || input_layout.format == format::image_2d_weights_winograd_6x3_s1)
+        input_layout.format == format::winograd_6x3_s1_fused_weights)
         CLDNN_ERROR_MESSAGE(node.id(), "Input for convolution should not be in windograd weights format - it is reserved for weights only");
 
     if (input_layout.format == format::winograd_2x3_s1_data)
