@@ -559,6 +559,56 @@ TEST(reorder_gpu, basic_convert_f16_f32_f16) {
     }
 }
 
+
+TEST(reorder_gpu, basic_convert_int8) {
+
+    engine engine;
+    layout in_layout = { type_to_data_type<float>::value,format::byxf,{ 1,1,3,3 } };
+    layout byte_layout = { type_to_data_type<int8_t>::value, format::bfyx,{ 1,1,3,3 } };
+    std::initializer_list<float> input_f = { 1.0f, -2.5f, 3.1f, -4.0f, 5.03f, -6.99f, 7.0f, -8.0f, 9.0f };
+    std::list<float> final_results = { 1.0f, -2.0f, 3.0f, -4.0f, 5.0f, -6.0f, 7.0f, -8.0f, 9.0f };
+
+    // Allocate memory for input image.
+    auto input_memory = memory::allocate(engine, in_layout);
+    set_values(input_memory, input_f);
+
+    // Create input_layout description
+    // "input" - is the primitive id inside topology
+    input_layout input("input", in_layout);
+
+    topology topology(
+        // 1. input layout primitive.
+        input,
+        // 2. reorder primitive with id "reorder_input"
+        reorder("reorder_input",
+            // input primitive for reorder (implicitly converted to primitive_id)
+            input,
+            // output layout for reorder
+            byte_layout),
+        reorder("reorder2", "reorder_input", in_layout)
+    );
+
+    network network(
+        engine,
+        topology,
+        {
+            build_option::outputs({ "reorder2"})
+        });
+
+    network.set_input_data("input", input_memory);
+
+    auto outputs = network.execute();
+
+    auto interm = outputs.at("reorder2").get_memory();
+    auto interm_ptr = interm.pointer<float>();
+    auto output_size = outputs.at("reorder2").get_memory().count();
+    unsigned int cntr = 0;
+    for (const auto& exp : final_results)
+    {
+        EXPECT_EQ(exp, interm_ptr[cntr++]);
+    }
+}
+
 TEST(reorder_gpu, basic_convert_uint8rgbabyxf_to_fp32_bfyx) {
 	//  Converts an ARGB(uint8) image to common clDNN input of bfyx FP32
 	//
@@ -592,11 +642,8 @@ TEST(reorder_gpu, basic_convert_uint8rgbabyxf_to_fp32_bfyx) {
 	// Allocate memory for input image.
 	auto input_memory = memory::allocate(engine, in_layout);
 	set_values(input_memory, input_i8);
-
-
-
-
-	// Create input_layout description
+    
+    // Create input_layout description
 	// "input" - is the primitive id inside topology
 	input_layout input("input", in_layout);
 
@@ -679,9 +726,6 @@ TEST(reorder_gpu, basic_convert_uint8rgbabyxf_to_fp32_bfyx) {
     }
 
 }
-
-
-
 
 TEST(reorder_gpu_f32, basic_yxfb_to_bfyx_input_padding)
 {
