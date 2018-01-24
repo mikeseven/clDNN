@@ -168,8 +168,9 @@ bool layout_optimizer::deps_depth_in_same_format(program_node const& node, const
     return same_format;
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, layout const& output_or_weights_layout, program_node const& node)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, convolution_node const& node, layout const& output_or_weights_layout)
 {
+    auto prim = node.get_primitive();
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
     auto expected_format = current_layout.format;
@@ -236,8 +237,9 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_format, expected_tensor);
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, layout const& output_or_weights_layout, program_node const& /*node*/)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, fully_connected_node const& node, layout const& output_or_weights_layout)
 {
+    auto prim = node.get_primitive();
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
     auto expected_format = current_layout.format;
@@ -261,8 +263,9 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_format, expected_tensor);
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const deconvolution> prim, layout const& output_or_weights_layout, program_node const& /*node*/)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, deconvolution_node const& node, layout const& output_or_weights_layout)
 {
+    auto prim = node.get_primitive();
     auto expected_tensor = current_layout.size;
     auto expected_data_type = current_layout.data_type;
     auto expected_format = current_layout.format;
@@ -286,8 +289,9 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_format, expected_tensor);
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const detection_output> prim, layout const& /*output_or_weights_layout*/, program_node const& /*node*/)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, detection_output_node const& node, layout const& /*output_or_weights_layout*/)
 {
+    auto prim = node.get_primitive();
     auto expected_tensor = current_layout.size;
     auto expected_data_type = data_types::f32;
     auto expected_format = current_layout.format;

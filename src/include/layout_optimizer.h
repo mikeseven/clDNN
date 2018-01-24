@@ -20,12 +20,12 @@
 #include "engine_impl.h"
 #include "meta_utils.h"
 
-#include "api/CPP/data.hpp"
-#include "api/CPP/reorder.hpp"
-#include "api/CPP/convolution.hpp"
-#include "api/CPP/deconvolution.hpp"
-#include "api/CPP/fully_connected.hpp"
-#include "api/CPP/detection_output.hpp"
+#include "data_inst.h"
+#include "reorder_inst.h"
+#include "convolution_inst.h"
+#include "deconvolution_inst.h"
+#include "fully_connected_inst.h"
+#include "detection_output_inst.h"
 
 #include "generic_layer.hpp"
 
@@ -104,10 +104,10 @@ private:
     std::map<cache_key, std::shared_ptr<reorder>> _cached_reorders;
     std::map<cache_key, std::shared_ptr<generic_layer>> _cached_generic_layers;
 
-    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const convolution> prim, layout const& output_or_weights_layout, program_node const& node);
-    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const fully_connected> prim, layout const& output_or_weights_layout, program_node const& node);
-    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const deconvolution> prim, layout const& output_or_weights_layout, program_node const& node);
-    layout get_expected_layout(layout const& current_layout, data_type type, std::shared_ptr<const detection_output> prim, layout const& output_or_weights_layout, program_node const& node);
+    layout get_expected_layout(layout const& current_layout, data_type type, convolution_node const& node, layout const& output_or_weights_layout);
+    layout get_expected_layout(layout const& current_layout, data_type type, deconvolution_node const& node, layout const& output_or_weights_layout);
+    layout get_expected_layout(layout const& current_layout, data_type type, fully_connected_node const& node, layout const& output_or_weights_layout);
+    layout get_expected_layout(layout const& current_layout, data_type type, detection_output_node const& node, layout const& output_or_weights_layout);
 
     bool convolution_bfyx_opt(const layout& output_layout, const layout& weights_layout, std::shared_ptr<const convolution> conv);
     bool convolution_byxf_opt(const layout& output_layout, const layout& weights_layout, std::shared_ptr<const convolution> conv);
@@ -140,15 +140,14 @@ public:
     auto get_reorder(layout const& data_layout,
                      primitive_id const& id,
                      data_type type,
-                     std::shared_ptr<const T> user,
-                     layout const& user_layout,
-                     program_node& node)
+                     T& node,
+                     layout const& user_layout)
         -> std::enable_if_t<
-            meta::is_any_of_v<T, convolution, fully_connected, deconvolution, detection_output>,
+            meta::is_any_of_v<T, convolution_node, fully_connected_node, deconvolution_node, detection_output_node>,
             meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>
         >
     {
-        auto expected_layout = get_expected_layout(data_layout, type, user, user_layout, node);
+        auto expected_layout = get_expected_layout(data_layout, type, node, user_layout);
         return create_reorder_if_needed(data_layout, id, expected_layout);
     }
 
@@ -157,11 +156,10 @@ public:
     auto get_reorder(layout const& data_layout,
                      primitive_id const& id,
                      data_type type,
-                     std::shared_ptr<const T> user,
-                     layout const& user_layout,
-                     program_node& node)
+                     T& node,
+                     layout const& user_layout)
         -> std::enable_if_t<
-            !meta::is_any_of_v<T, convolution, fully_connected, deconvolution, detection_output>,
+            !meta::is_any_of_v<T, convolution_node, fully_connected_node, deconvolution_node, detection_output_node>,
             meta::deduce_ret_type_t<decltype(&layout_optimizer::create_reorder_if_needed)>
         >
     {

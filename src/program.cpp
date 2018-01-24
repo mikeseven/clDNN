@@ -1225,31 +1225,26 @@ void program_impl::remove_redundant_reorders()
         if (!node->is_type<reorder>()) //only care for reorders
             continue;
 
-        std::vector<program_node*> nodes = { node };
+        program_node* current_node = node;
         std::vector<program_node*> r_nodes_to_remove;
-        std::list<const std::vector<program_node*>*> stack = { &nodes };
+
         auto optimize = true;
-        while (!stack.empty())
+        while (current_node)
         {
-            auto nodes_list = stack.front();
-            stack.pop_front();
+            auto& r_node = current_node->as<reorder>();
+            current_node = nullptr;
 
-            for (auto reorder_node : *nodes_list)
+            if (r_node.has_mean() || !r_node.get_primitive()->subtract_per_feature.empty() ||  //do not optimize if mean of subtract are present
+                (r_node.is_output() && r_node.get_dependency(0).is_output())) //do not optimize when both reorder and layer before are outputs
             {
-                auto& r_node = reorder_node->as<reorder>();
-
-                if (r_node.has_mean() || !r_node.get_primitive()->subtract_per_feature.empty() ||  //do not optimize if mean of subtract are present
-                    (r_node.is_output() && r_node.get_dependency(0).is_output())) //do not optimize when both reorder and layer before are outputs
-                {
-                    optimize = false;
-                    break;
-                }
-
-                r_nodes_to_remove.push_back(reorder_node);
-
-                if (r_node.get_dependency(0).is_type<reorder>() && r_node.get_dependencies().size() == 1 && r_node.get_users().size() == 1 && r_node.get_dependency(0).get_users().size() == 1)
-                    stack.push_back(&r_node.get_dependencies());
+                optimize = false;
+                break;
             }
+
+            r_nodes_to_remove.push_back(&r_node);
+
+            if (r_node.get_dependency(0).is_type<reorder>() && r_node.get_dependencies().size() == 1 && r_node.get_users().size() == 1 && r_node.get_dependency(0).get_users().size() == 1)
+                current_node = &r_node.get_dependency(0);
         }
         if (!optimize)
             continue;
@@ -1407,9 +1402,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 reorder_layout,
                 reorder_prim->id,
                 layout_optimizer::data_type::input,
-                conv_prim,
-                weights_layout,
-                conv_node).first;
+                conv_node,
+                weights_layout).first;
 
             auto reorder_removed = false;
             if (new_input && new_input->output_format != format::winograd_2x3_s1_data && new_input->output_format != format::bf8_xy16 && new_input->output_format != format::byxf) //output format is not optimal
@@ -1456,9 +1450,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 input_node.get_output_layout(),
                 input_node.id(),
                 layout_optimizer::data_type::input,
-                conv_prim,
-                weights_layout,
-                conv_node).first;
+                conv_node,
+                weights_layout).first;
         }
 
         if (new_input && new_input->output_format == format::winograd_2x3_s1_data)
@@ -1579,9 +1572,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 input.get_output_layout(),
                 input.id(),
                 layout_optimizer::data_type::input,
-                detection_output_prim,
-                layout{ data_types::f32, format::bfyx, tensor{} },
-                detection_output_node).first;
+                detection_output_node,
+                layout{ data_types::f32, format::bfyx, tensor{} }).first;
 
             if (new_input)
             {
@@ -1613,9 +1605,8 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
             bias.get_output_layout(),
             bias.id(),
             bias_type,
-            node.get_primitive(),
-            output_layout,
-            node);
+            node,
+            output_layout);
 
         if (reorder.first)
             this->add_intermediate(reorder.first, node, dep_idx);
@@ -2162,9 +2153,10 @@ void program_impl::prepare_buffer_fusing()
                 input.get_output_layout().format == format::byxf);
             //check if all inputs user have the same format
             auto all_users_same_format = true;
+            auto input_user_layout_format = input.get_users().front()->get_output_layout().format;
             for (auto const& user : input.get_users())
             {
-                if (user->get_output_layout().format != input.get_users().front()->get_output_layout().format)
+                if (user->get_output_layout().format != input_user_layout_format)
                 {
                     all_users_same_format = false;
                     break;
