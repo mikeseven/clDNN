@@ -28,13 +28,22 @@
     #define UNIT_TYPE half
     #endif
 
-    
-    
     #define UNIT_VAL_MAX HALF_MAX
     #define UNIT_VAL_MIN -UNIT_VAL_MAX
     #define UNIT_VAL_ONE 1.0h
     #define UNIT_VAL_ZERO 0.0h
     #define TO_UNIT_TYPE(v) convert_half(v)
+#elif INT8_UNIT_USED
+    #ifndef UNIT_TYPE
+    #define UNIT_TYPE char
+    #endif
+
+    #define UNIT_VAL_MAX CHAR_MAX
+    #define UNIT_VAL_MIN -UNIT_VAL_MAX
+    #define UNIT_VAL_ONE 1
+    #define UNIT_VAL_ZERO 0
+    #define TO_UNIT_TYPE(v) convert_half(v)
+
 #else
     #ifndef UNIT_TYPE
     #define UNIT_TYPE float

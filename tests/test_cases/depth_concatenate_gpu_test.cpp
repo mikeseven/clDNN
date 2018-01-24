@@ -86,6 +86,63 @@ TEST(depth_concatenate_f32_gpu, test01) {
     EXPECT_FLOAT_EQ(-0.2f, output_ptr[9]);
 }
 
+
+TEST(depth_concatenate_f32_gpu, concat_basic_int8) {
+    //  Input count : 2
+    //  Input1 : 2x 1x1 x 2
+    //  Input2 : 2x 1x1 x 3
+    //
+    //  Input1:
+    //  2.5  3.7  :f0
+    //  0.2  1.4  :f1
+    //
+    //  Input2:
+    //  1    4.1  :f0
+    // -4.3 -7.5  :f1
+    //  0   -0.2  :f2
+    //
+    //  Output:
+    //  2    3  :f0
+    //  0    1  :f1
+    //  1    4  :f2
+    // -4   -7  :f3
+    //  0    0  :f4
+    //
+
+    engine engine;
+    auto input1 = memory::allocate(engine, { data_types::f32, format::yxfb,{ 2,2,1,1 } });
+    auto input2 = memory::allocate(engine, { data_types::f32, format::yxfb,{ 2,3,1,1 } });
+    auto outs = { 2.0f, 3.0f, 0.0f, 1.0f, 1.0f, 4.0f, -4.0f, -7.0f, 0.0f, 0.0f };
+    set_values(input1, { 2.5f, 3.7f, 0.2f, 1.4f });
+    set_values(input2, { 1.0f, 4.1f, -4.3f, -7.5f, 0.0f, -0.2f });
+
+    topology topology;
+    topology.add(input_layout("input1", input1.get_layout()));
+    topology.add(input_layout("input2", input2.get_layout()));
+    topology.add(reorder("to_int1", "input1", { data_types::i8, format::yxfb,{ 2,2,1,1 } }));
+    topology.add(reorder("to_int2", "input2", { data_types::i8, format::yxfb,{ 2,3,1,1 } }));
+    topology.add(concatenation("depth1", { "to_int1", "to_int2" }, concatenation::along_f));
+    topology.add(reorder("to_float", "depth1", { data_types::f32, format::yxfb,{ 2,5,1,1 } }));
+
+    network network(engine, topology);
+
+    network.set_input_data("input1", input1);
+    network.set_input_data("input2", input2);
+
+    auto outputs = network.execute({});
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "to_float");
+
+    auto output = outputs.at("to_float").get_memory();
+
+    auto output_ptr = output.pointer<float>();
+    int ptr_cntr = 0;
+    for (const auto& ref : outs)
+    {
+        EXPECT_FLOAT_EQ(ref, output_ptr[ptr_cntr++]);
+    }
+}
+
 TEST(depth_concatenate_f32_gpu, test02) {
     //  Input count : 3 (yxfb, yxfb, bfyx)
     //  Input1 : 2x 1x1 x 2

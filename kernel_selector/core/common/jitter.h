@@ -408,9 +408,12 @@ public:
 inline JitConstants MakeBaseParamsJitConstants(const BaseParams& params)
 {
     bool bFP16Used = params.output.GetDType() == Datatype::F16;
+    bool int8Used = params.output.GetDType() == Datatype::INT8;
     for (const auto& i : params.inputs)
     {
         bFP16Used |= i.GetDType() == Datatype::F16;
+        int8Used |= i.GetDType() == Datatype::INT8;
+
     }
 
     JitConstants jit{
@@ -418,7 +421,8 @@ inline JitConstants MakeBaseParamsJitConstants(const BaseParams& params)
         MakeJitConstant("FP64_SUPPORTED",       params.engineInfo.bFP64Support),
         MakeJitConstant("FP16_SUPPORTED",       params.engineInfo.bFP16Support),
         MakeJitConstant("FP16_UNIT_USED",       bFP16Used),
-        MakeJitConstant("UNIT_TYPE",            bFP16Used ? "half" : "float"),
+        MakeJitConstant("INT8_UNIT_USED",       int8Used),
+        MakeJitConstant("UNIT_TYPE",            int8Used ? "char" : bFP16Used ? "half" : "float"),
         MakeJitConstant("NL_M",                 params.activationParams.m),
         MakeJitConstant("NL_N",                 params.activationParams.n),
         MakeJitConstant("ACTIVATION_FUNCTION_"  + toString(params.activationFunc), ""),
