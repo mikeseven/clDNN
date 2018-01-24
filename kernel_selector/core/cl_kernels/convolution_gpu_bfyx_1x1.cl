@@ -78,7 +78,7 @@ KERNEL(convolution_bfyx_1x1)(
     const uint b = get_global_id(2);
     const uint group_f = get_group_id(1) * 16;
 
-    MAKE_VECTOR_TYPE(UNIT_TYPE, 16) blockC00;
+    MAKE_VECTOR_TYPE(UNIT_TYPE, 16) blockC00 = UNIT_VAL_ZERO;
 
 #if BIAS_TERM
     #if   BIAS_PER_OUTPUT
