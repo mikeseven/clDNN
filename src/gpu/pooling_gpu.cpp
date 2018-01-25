@@ -148,6 +148,8 @@ namespace {
             implementation_map<pooling>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), pooling_gpu::create);
             implementation_map<pooling>::add(std::make_tuple(engine_types::ocl, data_types::i8, format::bfyx), pooling_gpu::create);
             implementation_map<pooling>::add(std::make_tuple(engine_types::ocl, data_types::i8, format::yxfb), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::byxf), pooling_gpu::create);
+            implementation_map<pooling>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::byxf), pooling_gpu::create);
         }
         ~attach() {}
     };

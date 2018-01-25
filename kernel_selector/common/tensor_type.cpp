@@ -257,6 +257,11 @@ namespace KernelSelector
                     vec[Channelndex(l, WeightsChannelName::X)] = 4;
                     vec[Channelndex(l, WeightsChannelName::Y)] = 3;
                 }
+                else if (l == WeightsLayout::winograd_6x3_s1_fused_weights)
+                {
+                    vec[Channelndex(l, WeightsChannelName::X)] = 8;
+                    vec[Channelndex(l, WeightsChannelName::Y)] = 3;
+                }
             }
             else if (src_channels == 2 && dst_channels == 4)
             {

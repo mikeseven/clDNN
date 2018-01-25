@@ -20,10 +20,10 @@
  
 namespace KernelSelector 
 {    
-    class ReorderWeightsWinograd2x3Kernel : public ReorderKernelBase
+    class ReorderWeightsWinograd6x3Kernel : public ReorderKernelBase
     {
     public:
-        ReorderWeightsWinograd2x3Kernel() : ReorderKernelBase("reorder_weights_winograd_2x3_s1") {}
+        ReorderWeightsWinograd6x3Kernel() : ReorderKernelBase("reorder_weights_winograd_6x3_s1") {}
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;

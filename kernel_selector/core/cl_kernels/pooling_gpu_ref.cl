@@ -35,7 +35,7 @@ inline UNIT_TYPE FUNC(apply_pooling)(UNIT_TYPE tmp, UNIT_TYPE in)
 
 KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
 {
-#if   defined OUTPUT_LAYOUT_BFYX
+#if OUTPUT_LAYOUT_BFYX  || OUTPUT_LAYOUT_BYXF
     const uint x    = (uint)get_global_id(0);
     const uint y    = (uint)get_global_id(1);
     const uint bf   = (uint)get_global_id(2);
@@ -46,7 +46,7 @@ KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
     {
         return;
     }
-#elif defined OUTPUT_LAYOUT_YXFB
+#elif OUTPUT_LAYOUT_YXFB
     const uint x    = (uint)get_global_id(1);
     const uint y    = (uint)get_global_id(2);
     const uint bf   = (uint)get_global_id(0);

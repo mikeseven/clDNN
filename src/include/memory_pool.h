@@ -40,7 +40,23 @@ struct memory_record
 
     memory_record(std::set<primitive_id> users, refcounted_obj_ptr<memory_impl>& memory); 
 };
-    
+
+struct padded_pool_comparer
+{
+    bool operator()(const layout& ll, const layout& rl) const
+    {
+        if (ll.format != rl.format)
+            return ll.format < rl.format;
+        if (ll.data_type != rl.data_type)
+            return ll.data_type < rl.data_type;
+        if (ll.size.spatial[0] != rl.size.spatial[0])
+            return ll.size.spatial[0] < rl.size.spatial[0];
+        if (ll.size.spatial[1] != rl.size.spatial[1])
+            return ll.size.spatial[1] < rl.size.spatial[1];
+        return ll.data_padding < rl.data_padding;
+    }
+};
+
     // memory_pool class implements memory manager that handles 4 memory pools
     // - non padded buffers - 
     //     1 user requests for buffer with no padding. 
@@ -67,6 +83,7 @@ class memory_pool
     static bool has_conflict(const std::set<primitive_id>&, const std::set<primitive_id>&);
 
     std::multimap<uint64_t, memory_record> _non_padded_pool;
+    std::map<layout,std::list<memory_record>, padded_pool_comparer> _padded_pool;
     refcounted_obj_ptr<engine_impl> _engine;
     uint64_t _global_memory_used;
 
@@ -76,6 +93,7 @@ public:
     refcounted_obj_ptr<memory_impl> get_memory(const layout& layout, const primitive_id& id,const std::set<primitive_id>& restrictions, bool reusable = true); // get from pool or create memory allocation
     refcounted_obj_ptr<memory_impl> get_memory(const layout& layout);
     refcounted_obj_ptr<memory_impl> get_from_non_padded_pool(const layout& layout, const primitive_id& id, const std::set<primitive_id>&);
+    refcounted_obj_ptr<memory_impl> get_from_padded_pool(const layout& layout, const primitive_id& id, const std::set<primitive_id>& restrictions);
     uint64_t get_total_device_memory_used() const { return _global_memory_used; };
     void clear_pool();
     void color_graph(const program_impl&);

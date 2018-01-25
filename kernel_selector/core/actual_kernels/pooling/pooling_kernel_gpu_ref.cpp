@@ -29,8 +29,10 @@ namespace KernelSelector
         k.EnableOutputDataType(Datatype::INT8);
         k.EnableInputLayout(DataLayout::bfyx);
         k.EnableInputLayout(DataLayout::yxfb);
+        k.EnableInputLayout(DataLayout::byxf);
         k.EnableOutputLayout(DataLayout::bfyx);
         k.EnableOutputLayout(DataLayout::yxfb);
+        k.EnableOutputLayout(DataLayout::byxf);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableBatching();

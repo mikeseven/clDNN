@@ -82,7 +82,9 @@ namespace {
                 { std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), eltwise_gpu::create },
                 { std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), eltwise_gpu::create },
                 { std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), eltwise_gpu::create },
-                { std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), eltwise_gpu::create }
+                { std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), eltwise_gpu::create },
+                { std::make_tuple(engine_types::ocl, data_types::f32, format::byxf), eltwise_gpu::create },
+                { std::make_tuple(engine_types::ocl, data_types::f16, format::byxf), eltwise_gpu::create }
             });
         }
         ~attach() {}

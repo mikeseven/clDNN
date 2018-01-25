@@ -51,6 +51,7 @@
 #include "program_dump_graph.h"
 #include "upsampling_inst.h"
 #include "eltwise_inst.h"
+#include "fully_connected_inst.h"
 
 #include "network_impl.h"
 #include "kernel_selector_helper.h"
@@ -1224,29 +1225,63 @@ void program_impl::remove_redundant_reorders()
         if (!node->is_type<reorder>()) //only care for reorders
             continue;
 
-        auto& r_node = node->as<reorder>();
-        if (r_node.has_mean() || !r_node.get_primitive()->subtract_per_feature.empty()) //do not optimize if mean of subtract are present
+        program_node* current_node = node;
+        std::vector<program_node*> r_nodes_to_remove;
+
+        auto optimize = true;
+        while (current_node)
+        {
+            auto& r_node = current_node->as<reorder>();
+            current_node = nullptr;
+
+            if (r_node.has_mean() || !r_node.get_primitive()->subtract_per_feature.empty() ||  //do not optimize if mean of subtract are present
+                (r_node.is_output() && r_node.get_dependency(0).is_output())) //do not optimize when both reorder and layer before are outputs
+            {
+                optimize = false;
+                break;
+            }
+
+            r_nodes_to_remove.push_back(&r_node);
+
+            if (r_node.get_dependency(0).is_type<reorder>() && r_node.get_dependencies().size() == 1 && r_node.get_users().size() == 1 && r_node.get_dependency(0).get_users().size() == 1)
+                current_node = &r_node.get_dependency(0);
+        }
+        if (!optimize)
             continue;
 
-        if (r_node.is_output() && r_node.get_dependency(0).is_output()) //do not optimize when both reorder and layer before are outputs
-            continue;
-
-        assert(r_node.dependencies.size() == 1 && "reorder without mean should have exactly one dependecy (input)");
-        auto o_layout = r_node.get_output_layout();
-        auto i_layout = r_node.input().get_output_layout();
+        assert(node->dependencies.size() == 1 && "reorder without mean should have exactly one dependecy (input)");
+        auto& r_output = r_nodes_to_remove.front();
+        auto& r_input = r_nodes_to_remove.back()->get_dependency(0);
+        auto o_layout = r_output->get_output_layout();
+        auto i_layout = r_input.get_output_layout();
 
         auto ident = are_layouts_identical(o_layout, i_layout);
         if (!ident.second)
             continue;
 
-        if (ident.first && ident.second && r_node.is_output() && r_node.get_dependency(0).is_input()) //do not optimize when reorder is output and layer before is input
+        for (auto remove_reorder_node : r_nodes_to_remove)
+        {
+            auto& r_node = remove_reorder_node->as<reorder>();
+
+            if (ident.first && ident.second && r_node.is_output() && r_node.get_dependency(0).is_input()) //do not optimize when reorder is output and layer before is input
+            {
+                optimize = false;
+                break;
+            }
+        }
+        if (!optimize)
             continue;
 
-        //mark as optimized
-        r_node.can_be_optimized(true);
-        r_node.requires_reinterpret(!ident.first);
-        if (ident.first) //no need of reshape
-            extract_and_remove(r_node); //try to remove if possible (with respect to r_node not being marked as output)
+        for (auto remove_reorder_node : r_nodes_to_remove)
+        {
+            auto& r_node = remove_reorder_node->as<reorder>();
+
+            //mark as optimized
+            r_node.can_be_optimized(true);
+            r_node.requires_reinterpret(!ident.first);
+            if (ident.first) //no need of reshape
+                extract_and_remove(r_node); //try to remove if possible (with respect to r_node not being marked as output)
+        }
     }
 }
 
@@ -1361,16 +1396,17 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
         {
             auto reorder_prim = input_node.as<reorder>().typed_desc();
             auto& reorder_input = input_node.get_dependency(0);
-            auto reorder_layout = reorder_input.get_output_layout();
+            auto reorder_layout = input_node.get_output_layout();
             reorder_layout.data_type = reorder_prim->output_data_type;
             new_input = lo.get_reorder(
                 reorder_layout,
                 reorder_prim->id,
                 layout_optimizer::data_type::input,
-                conv_prim,
+                conv_node,
                 weights_layout).first;
 
-            if (new_input && new_input->output_format != format::winograd_2x3_s1_data && new_input->output_format != format::bf8_xy16) //output format is not optimal
+            auto reorder_removed = false;
+            if (new_input && new_input->output_format != format::winograd_2x3_s1_data && new_input->output_format != format::bf8_xy16 && new_input->output_format != format::byxf) //output format is not optimal
             {
                 auto reorder_input_layout = reorder_input.get_output_layout();
 
@@ -1382,6 +1418,10 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                         !reorder_prim->output_padding) //just plain reorder
                     {
                         conv_node.replace_dependency(0, reorder_input);
+                        if (input_node.get_users().size() == 0 && !input_node.is_output())
+                        {
+                            reorder_removed = extract_and_remove(input_node);
+                        }
                         new_input = nullptr;
                     }
                     else //change reorder's output layout
@@ -1399,7 +1439,10 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 }
             }
 
-            input_node.recalc_output_layout();
+            if(!reorder_removed)
+                input_node.recalc_output_layout();
+            else
+                conv_node.recalc_output_layout();
         }
         else
         {
@@ -1407,7 +1450,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 input_node.get_output_layout(),
                 input_node.id(),
                 layout_optimizer::data_type::input,
-                conv_prim,
+                conv_node,
                 weights_layout).first;
         }
 
@@ -1529,7 +1572,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 input.get_output_layout(),
                 input.id(),
                 layout_optimizer::data_type::input,
-                detection_output_prim,
+                detection_output_node,
                 layout{ data_types::f32, format::bfyx, tensor{} }).first;
 
             if (new_input)
@@ -1562,7 +1605,7 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
             bias.get_output_layout(),
             bias.id(),
             bias_type,
-            node.get_primitive(),
+            node,
             output_layout);
 
         if (reorder.first)
@@ -2097,7 +2140,6 @@ void program_impl::prepare_buffer_fusing()
             if (node.is_in_place())
                 node.can_be_optimized(true);
         });
-
         do_for_types<reorder>(*node, [this](reorder_node& node)
         {
             auto& input = node.input();
@@ -2105,11 +2147,29 @@ void program_impl::prepare_buffer_fusing()
             //This is WA for topologies that due to additional reorders added perform worse with conv1x1 optimization
             auto remove_bf8_xy_opt = ((input.is_type<pooling>() || input.is_type<concatenation>()) &&
                 output_layout.format == format::bf8_xy16 && input.get_users().size() == 1);
+            //Remove reorder from convolution 1x1 to bfyx in some conditions
+            auto remove_byxf_opt = (input.is_type<convolution>() &&
+                input.get_users().size() == 1 &&
+                input.get_output_layout().format == format::byxf);
+            //check if all inputs user have the same format
+            auto all_users_same_format = true;
+            auto input_user_layout_format = input.get_users().front()->get_output_layout().format;
+            for (auto const& user : input.get_users())
+            {
+                if (user->get_output_layout().format != input_user_layout_format)
+                {
+                    all_users_same_format = false;
+                    break;
+                }
+            }
+            auto same_data_type = input.get_output_layout().data_type == output_layout.data_type;
             //Optimization only available in case of layers that support different input and output formats.
             //todo: new api needs to be created to read such caps
-            if (!(input.is_type<pooling>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb)) &&
+            if (!(input.is_type<pooling>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb || output_layout.format == format::byxf) && all_users_same_format && same_data_type) &&
                 !remove_bf8_xy_opt &&
-                !(input.is_type<convolution>() && input.get_output_layout().format == format::bf8_xy16))
+                !(input.is_type<convolution>() && input.get_output_layout().format == format::bf8_xy16) &&
+                !(input.is_type<eltwise>() && (output_layout.format == format::bfyx || output_layout.format == format::yxfb || output_layout.format == format::byxf) && all_users_same_format && same_data_type) &&
+                !(remove_byxf_opt && (node.get_users().front()->is_type<eltwise>() || node.get_users().front()->is_type<pooling>())))
                 return;
 
             if (remove_bf8_xy_opt)
@@ -2118,6 +2178,26 @@ void program_impl::prepare_buffer_fusing()
                 auto input_layout = input.get_output_layout();
                 auto target_layout = layout(input_layout.data_type, users_user_layout.format, input_layout.size, input_layout.data_padding);
                 input.set_output_layout(target_layout, false);
+            }
+            else if (remove_byxf_opt)
+            {
+                auto user = node.get_users().front();
+                auto users_users = node.get_users().front()->get_users();
+                
+                for (auto const& users_user : users_users)
+                {
+                    if (users_user->get_output_layout().format != format::byxf && !users_user->is_type<eltwise>())
+                    {
+                        remove_byxf_opt = false;
+                        break;
+                    }
+                }
+
+                if (remove_byxf_opt)
+                {
+                    auto input_layout = input.get_output_layout();
+                    user->set_output_layout(input_layout, false);
+                }
             }
             else
                 input.set_output_layout(output_layout, false);
@@ -2140,7 +2220,7 @@ void program_impl::prepare_primitive_fusing()
 
         do_for_types<activation>(*node, [this, is_debug](activation_node& node)
         {
-            
+
             auto& input = node.input();
 
             //Restrictions:
@@ -2151,23 +2231,53 @@ void program_impl::prepare_primitive_fusing()
             if (node.has_padded_dependency() || (input.is_output() && !is_debug) || node.get_dependencies().size() != 1 ||
                 input.can_be_optimized())
                 return;
-            
+
             // - check if there is no activation fused already
             // - limit to primitives which implementations support activation fusing
             if (input.get_users().size() != 1 || input.get_fused_activation_func() != activation_none ||
                 //TODO: new api needs to be created to read such caps
                 //right now use whitelist so no new primitives will be affected in case of lack of fused activation support
                 (!input.is_type<batch_norm>() && !input.is_type<concatenation>() && !input.is_type<convolution>() &&
-                 !input.is_type<crop>() && !input.is_type<deconvolution>() && !input.is_type<eltwise>() &&
-                 !input.is_type<fully_connected>() && !input.is_type<lrn>() && !input.is_type<normalize>() &&
-                 !input.is_type<permute>() && !input.is_type<pooling>() && !input.is_type<reorder>() &&
-                 !input.is_type<reshape>() && !input.is_type<roi_pooling>() && !input.is_type<scale>() &&
-                 !input.is_type<softmax>() && !input.is_type<upsampling>()))
+                    !input.is_type<crop>() && !input.is_type<deconvolution>() && !input.is_type<eltwise>() &&
+                    !input.is_type<fully_connected>() && !input.is_type<lrn>() && !input.is_type<normalize>() &&
+                    !input.is_type<permute>() && !input.is_type<pooling>() && !input.is_type<reorder>() &&
+                    !input.is_type<reshape>() && !input.is_type<roi_pooling>() && !input.is_type<scale>() &&
+                    !input.is_type<softmax>() && !input.is_type<upsampling>()))
                 return;
 
             input.set_fused_activation(node.get_primitive()->activation_func, node.get_primitive()->additional_params);
             input.set_output_padding(node.get_output_layout().data_padding);
 
+            extract_and_remove(node);
+        });
+    }
+
+    //Second loop tries fusing several reorders one by one (if present) into one reorder
+    itr = processing_order.begin();
+    while (itr != processing_order.end())
+    {
+        auto node_itr = itr++;
+        auto& node = (*node_itr);
+
+        do_for_types<reorder>(*node, [this, is_debug](reorder_node& node)
+        {
+            auto& input = node.input();
+
+            //Restrictions:
+            // - inputs cannot be padded
+            // - primitives input cannot be output
+            // - input was optimized
+            if (node.has_padded_dependency() || (input.is_output() && !is_debug) || node.get_dependencies().size() != 1 ||
+                input.can_be_optimized())
+                return;
+
+            // - check if previous node is reorder with 1 user
+            // - do not fuse if current node has mean subtract
+            if (input.get_users().size() != 1 || !input.is_type<reorder>() ||
+                node.has_mean() || !node.get_primitive()->subtract_per_feature.empty())
+                return;
+
+            input.set_output_layout(node.get_output_layout(), false);
             extract_and_remove(node);
         });
     }
@@ -2527,7 +2637,6 @@ void program_impl::dump_memory_pool() const
     if (!get_engine().configuration().enable_memory_pool)
         return;
     auto path = get_dir_path(options);
-
     if (path.empty())
     {
         return;

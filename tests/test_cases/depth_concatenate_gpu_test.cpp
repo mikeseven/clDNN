@@ -28,6 +28,19 @@
 using namespace cldnn;
 using namespace tests;
 
+template<typename T>
+std::vector<T> generate_random_input(size_t b, size_t f, size_t y, size_t x, int min, int max) {
+    static std::default_random_engine generator(random_seed);
+    int k = 8; // 1/k is the resolution of the floating point numbers
+    std::uniform_int_distribution<int> distribution(k * min, k * max);
+    std::vector<T> v(b*f*x*y);
+    for (size_t i = 0; i < b*f*x*y; ++i) {
+        v[i] = (T)distribution(generator);
+        v[i] /= k;
+    }
+    return v;
+}
+
 TEST(depth_concatenate_f32_gpu, test01) {
     //  Input count : 2
     //  Input1 : 2x 1x1 x 2
@@ -274,6 +287,49 @@ TEST(depth_concatenate_f32_gpu, test03_cascade_concat_opt) {
     EXPECT_NEAR(11.3137f, output_ptr[14], 1e-3);
     EXPECT_NEAR(16.0f, output_ptr[15], 1e-3);
 
+}
+
+TEST(depth_concatenate_f32_gpu, test04_fused_relu) {
+    // 2 inputs of size 3x10x10 concatenated on f axis with fused relu
+
+    engine engine;
+    auto input1 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1,3,10,10 } });
+    auto input2 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1,3,10,10 } });
+
+    std::vector<float> input1_vec = generate_random_input<float>(1, 3, 10, 10, -10, 10);
+    set_values(input1, input1_vec);
+    std::vector<float> input2_vec = generate_random_input<float>(1, 3, 10, 10, -10, 10);
+    set_values(input2, input2_vec);
+
+    topology topology;
+    topology.add(input_layout("input1", input1.get_layout()));
+    topology.add(input_layout("input2", input2.get_layout()));
+    topology.add(concatenation("depth1", { "input1", "input2" }, concatenation::along_f));
+    topology.add(activation("relu1", "depth1", activation_relu));
+
+    cldnn::build_options options;
+    options.set_option(cldnn::build_option::optimize_data(true));
+    network network(engine, topology, options);
+
+    network.set_input_data("input1", input1);
+    network.set_input_data("input2", input2);
+
+    auto outputs = network.execute({});
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "relu1");
+
+    auto output = outputs.at("relu1").get_memory();
+
+    auto output_ptr = output.pointer<float>();
+    unsigned int elements_count = 600;
+    unsigned int input_element_count = 300;
+    for (unsigned int i = 0; i < 600; i++)
+    {
+        if(i < input_element_count)
+            EXPECT_FLOAT_EQ(input1_vec[i] < 0.0f ? 0.0f : input1_vec[i], output_ptr[i]);
+        else
+            EXPECT_FLOAT_EQ(input2_vec[i - input_element_count] < 0.0f ? 0.0f : input2_vec[i - input_element_count], output_ptr[i]);
+    }
 }
 
 //////////////////////////////////////////////////////////////////////////////
