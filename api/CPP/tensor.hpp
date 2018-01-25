@@ -427,8 +427,12 @@ public:
         if (lhs.raw.size() != rhs.raw.size())
             return lhs.raw.size() < rhs.raw.size();
         for (size_t i = 0; i < lhs.raw.size(); ++i)
+        {
             if (lhs.raw[i] < rhs.raw[i])
                 return true;
+            if (rhs.raw[i] < lhs.raw[i])
+                return false;
+        }
 
         return false;
     }
