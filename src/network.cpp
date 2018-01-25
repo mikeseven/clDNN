@@ -35,10 +35,10 @@ namespace cldnn
 network_impl::network_impl(const program_impl& program)
     : _program(&program)
 {
-    _program->get_nodes().reverse();
+   // _program->get_nodes().reverse();
     for (auto const& node : _program->get_nodes())
         allocate_primitive_instance(*node);
-    _program->get_nodes().reverse();
+  //  _program->get_nodes().reverse();
     _program->dump_memory_pool();
 }
 
