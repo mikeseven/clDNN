@@ -69,8 +69,32 @@ namespace KernelSelector
         return kd;
     }
 
+    bool KernelSelector::SoftmaxKernel_fb::Validate(const Params& params, const OptionalParams& o) const
+    {
+        if (!SoftmaxKernelBase::Validate(params, o))
+        {
+            return false;
+        }
+
+        const auto& softmax_params = static_cast<const SoftmaxParams&>(params);
+        auto kd = Parent::SetDefault(softmax_params, o);
+        auto local_mem_per_wi = 2 * (kd.fp16UnitUsed ? sizeof(short) : sizeof(float));
+        auto max_lws = static_cast<std::size_t>(std::min(params.engineInfo.maxWorkGroupSize, params.engineInfo.maxLocalMemSize / local_mem_per_wi));
+
+        if (softmax_params.inputs[0].Batch().v > max_lws)
+        {
+            return false;
+        }
+        return true;
+    }
+
+
     KernelsData SoftmaxKernel_fb::GetKernelsData(const Params& params, const OptionalParams& optParams) const
     {
+        if (!Validate(params, optParams))
+        {
+            return{};
+        }
         return GetCommonKernelsData(params, optParams);
     }
 }
