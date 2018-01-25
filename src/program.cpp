@@ -1102,6 +1102,7 @@ void program_impl::basic_memory_dependencies()
         for (auto it : node->get_dependencies())
         {
             add_memory_dependency(node, it);
+            add_memory_dependency(it, node);
         }
 
         // Note we iterate over processing order, it means if primitve has processing num greater than any of outputs, this output
@@ -1138,6 +1139,7 @@ void program_impl::skipped_branch_memory_dependencies()
                     if (usr->get_processing_num() > node->get_processing_num())
                     {
                         add_memory_dependency(node, node2);
+                        add_memory_dependency(node2, node);
                         break;
                     }
                 }

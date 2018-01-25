@@ -105,7 +105,7 @@ namespace cldnn
     memory_impl::ptr memory_pool::get_from_padded_pool(const layout& layout, const primitive_id& id, const std::set<primitive_id>& restrictions)
     {
         auto first_level_cache = _padded_pool.find(layout);
-
+        
         if (first_level_cache != _padded_pool.end())
         {
             for (auto& rec_list : first_level_cache->second)
@@ -145,7 +145,7 @@ namespace cldnn
             }
             else if (!layout.format.is_image()) // padded buffers
             {
-                return  alloc_memory(layout); //get_from_padded_pool(layout, id, restrictions);
+                return  get_from_padded_pool(layout, id, restrictions);
             }
             else  // images
             {
