@@ -37,7 +37,7 @@ gpu_toolkit_config convert_configuration(const engine_configuration conf)
     result.single_kernel_name = conf.single_kernel_name;
     result.host_out_of_order = true; //TODO: enable when barriers in driver will be fixed
     result.log = conf.engine_log;
-    result.ocl_sources_dumps_dir = "cl_code";// conf.sources_dumps_dir;
+    result.ocl_sources_dumps_dir = conf.sources_dumps_dir;
     return result;
 }
 
