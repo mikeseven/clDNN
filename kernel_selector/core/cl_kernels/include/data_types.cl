@@ -42,7 +42,7 @@
     #define UNIT_VAL_MIN -UNIT_VAL_MAX
     #define UNIT_VAL_ONE 1
     #define UNIT_VAL_ZERO 0
-    #define TO_UNIT_TYPE(v) convert_half(v)
+    #define TO_UNIT_TYPE(v) convert_char(v)
 
 #else
     #ifndef UNIT_TYPE
