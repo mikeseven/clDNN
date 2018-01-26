@@ -83,7 +83,7 @@ class memory_pool
     static bool has_conflict(const std::set<primitive_id>&, const std::set<primitive_id>&);
 
     std::multimap<uint64_t, memory_record> _non_padded_pool;
-    std::map<layout,std::list<memory_record>, padded_pool_comparer> _padded_pool;
+    std::map<layout,std::list<memory_record>> _padded_pool;
     refcounted_obj_ptr<engine_impl> _engine;
     uint64_t _global_memory_used;
 
