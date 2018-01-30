@@ -27,7 +27,7 @@
 #include <chrono>
 #include <ie_plugin_ptr.hpp>
 #include <ie_plugin_config.hpp>
-#include <"../dpd_vcp_dl-scoring_engine/include/cpp/ie_cnn_net_reader.h" >
+#include "../dpd_vcp_dl-scoring_engine/include/cpp/ie_cnn_net_reader.h"
 #include "../dpd_vcp_dl-scoring_engine/samples/format_reader/format_reader_ptr.h"
 #include "../dpd_vcp_dl-scoring_engine/samples/common/samples/common.hpp"
 #include <inference_engine.hpp>
