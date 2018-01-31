@@ -399,7 +399,7 @@ void program_impl::pre_optimize_graph()
 {
     trim_to_outputs(); dump_program("3_trimmed", true);
 
-    if (get_engine().configuration().enable_parallelisation)
+    //if (get_engine().configuration().enable_parallelisation)
         reorder_nodes_for_parallel_execution();
 
     analyze_output_size_handling_need();
@@ -1186,6 +1186,21 @@ void program_impl::oooq_memory_dependencies()
                     add_memory_dependency(*nd2, *nd1);
                 }
             }
+            
+            // collect dependencies of every node in sync region
+            std::vector<cldnn::program_node*> deps;
+            for (auto& nd_in_region : sync_region)
+                for (auto& dep : nd_in_region->get_dependencies())
+                    deps.emplace_back(dep);
+            
+
+            for (auto& nd_in_region : sync_region)
+                for (auto& dep : deps)
+                {
+                    add_memory_dependency(nd_in_region, dep);
+                    add_memory_dependency(dep, nd_in_region);
+                }
+
             sync_region.clear();
         }
         sync_region.push_back(node);

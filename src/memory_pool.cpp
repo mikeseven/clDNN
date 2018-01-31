@@ -145,7 +145,7 @@ namespace cldnn
             }
             else if (!layout.format.is_image()) // padded buffers
             {
-                return  get_from_padded_pool(layout, id, restrictions);
+                return get_from_padded_pool(layout, id, restrictions);
             }
             else  // images
             {
