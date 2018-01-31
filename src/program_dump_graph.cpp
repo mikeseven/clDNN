@@ -164,8 +164,6 @@ namespace cldnn
 
     std::string get_dir_path(build_options opts)
     {
-        if (true)
-            return "graph";
         auto path = opts.get<build_option_type::graph_dumps_dir>()->directory_path;
         if (path.empty())
         {
