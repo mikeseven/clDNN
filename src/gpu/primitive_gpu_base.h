@@ -23,6 +23,8 @@
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
 #include "detection_output_inst.h"
+#include "proposal_inst.h"
+#include "prior_box_inst.h"
 
 namespace cldnn { namespace gpu
 {
@@ -137,16 +139,18 @@ protected:
 
                 //is any user of the prim's users is an detecion output, set prim as a output event (event won't be nullptr)
                 auto users = instance.node.get_users();
-                bool next_prim_is_detection_output = false;
+                bool next_prim_is_cpu = false;
                 for (const auto& user : users)
                 {
-                    if (user->type() == detection_output::type_id())
+                    if (user->is_type<detection_output>() ||
+                        user->is_type<prior_box>() ||
+                        user->is_type<proposal>())
                     {
-                        next_prim_is_detection_output = true;
+                        next_prim_is_cpu = true;
                         break;
                     }
                 }
-                if (next_prim_is_detection_output)
+                if (next_prim_is_cpu)
                 {
                     _kernels[k].set_output_event(true);
                 }
