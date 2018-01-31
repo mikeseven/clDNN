@@ -142,9 +142,9 @@ protected:
                 bool next_prim_is_cpu = false;
                 for (const auto& user : users)
                 {
-                    if (user->is_type<detection_output>() ||
-                        user->is_type<prior_box>() ||
-                        user->is_type<proposal>())
+                    if (user->type() == detection_output::type_id() ||
+                        user->type() == prior_box::type_id() ||
+                        user->type() == proposal::type_id())
                     {
                         next_prim_is_cpu = true;
                         break;
