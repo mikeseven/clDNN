@@ -169,7 +169,7 @@ TEST(memory_pool, multi_outputs_network) {
     network.set_input_data("input", input);
     auto outputs = network.execute();
 
-    EXPECT_EQ(engine.get_total_device_memory_size(), (uint64_t)1536);
+    EXPECT_EQ(engine.get_total_device_memory_size(), (uint64_t)2048);
 }
 
 
