@@ -399,6 +399,7 @@ void program_impl::pre_optimize_graph()
 {
     trim_to_outputs(); dump_program("3_trimmed", true);
 
+    // TODO: uncomment as soon as IE will enable OOOQ by default
     //if (get_engine().configuration().enable_parallelisation)
         reorder_nodes_for_parallel_execution();
 
