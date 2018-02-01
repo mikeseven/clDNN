@@ -27,7 +27,7 @@
 #include <chrono>
 #include <ie_plugin_ptr.hpp>
 #include <ie_plugin_config.hpp>
-#include <ie_cnn_net_reader.h>
+#include "../dpd_vcp_dl-scoring_engine/include/cpp/ie_cnn_net_reader.h"
 #include "../dpd_vcp_dl-scoring_engine/samples/format_reader/format_reader_ptr.h"
 #include "../dpd_vcp_dl-scoring_engine/samples/common/samples/common.hpp"
 #include <inference_engine.hpp>
@@ -440,6 +440,31 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        InferenceEngine::BlobMap outputBlobs;
+        if (FLAGS_newapi) {
+            THROW_IE_EXCEPTION << "NewAPI option is currently broken!";
+            //sts = req->SetInput(inputBlobs, &dsc);
+            //if (sts != InferenceEngine::OK) {
+            //    THROW_IE_EXCEPTION << "Error setting inputs." << dsc.msg;
+            //}
+            //sts = req->GetOutput(outputBlobs, &dsc);
+            //if (sts != InferenceEngine::OK) {
+            //    THROW_IE_EXCEPTION << "Error getting outputs." << dsc.msg;
+            //}
+        }
+        else {
+            InferenceEngine::OutputsDataMap out;
+            out = network.getNetwork().getOutputsInfo();
+            for (auto &&item : out) {
+                InferenceEngine::SizeVector outputDims = item.second->dims;
+                InferenceEngine::TBlob<float>::Ptr output;
+                item.second->precision = InferenceEngine::Precision::FP32;
+                output = InferenceEngine::make_shared_blob<float, const InferenceEngine::SizeVector>(InferenceEngine::Precision::FP32, outputDims);
+                output->allocate();
+                outputBlobs[item.first] = output;
+            }
+        }
+        
         InferenceEngine::ResponseDesc dsc;
         InferenceEngine::StatusCode sts;
         // Load custom kernel configuration files
@@ -485,31 +510,6 @@ int main(int argc, char *argv[]) {
         }
         else if (sts == InferenceEngine::NOT_IMPLEMENTED) {
             THROW_IE_EXCEPTION << "Model cannot be loaded! Plugin doesn't support this model!";
-        }
-
-        InferenceEngine::BlobMap outputBlobs;
-        if (FLAGS_newapi) {
-            THROW_IE_EXCEPTION << "NewAPI option is currently broken!";
-            //sts = req->SetInput(inputBlobs, &dsc);
-            //if (sts != InferenceEngine::OK) {
-            //    THROW_IE_EXCEPTION << "Error setting inputs." << dsc.msg;
-            //}
-            //sts = req->GetOutput(outputBlobs, &dsc);
-            //if (sts != InferenceEngine::OK) {
-            //    THROW_IE_EXCEPTION << "Error getting outputs." << dsc.msg;
-            //}
-        }
-        else {
-            InferenceEngine::OutputsDataMap out;
-            out = network.getNetwork().getOutputsInfo();
-            for (auto &&item : out) {
-                InferenceEngine::SizeVector outputDims = item.second->dims;
-                InferenceEngine::TBlob<float>::Ptr output;
-                item.second->precision = InferenceEngine::Precision::FP32;
-                output = InferenceEngine::make_shared_blob<float, const InferenceEngine::SizeVector>(InferenceEngine::Precision::FP32, outputDims);
-                output->allocate();
-                outputBlobs[item.first] = output;
-            }
         }
 
         // Start measuring power Windows
