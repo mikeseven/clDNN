@@ -219,7 +219,8 @@ namespace cldnn
                 #pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
             #endif
             graph << "    " << get_node_id(node.get()) << "[label=\"" << node->id() << ":\n" << get_extr_type(typeid(*node).name()) << "\n out format: " + extr_oformat(node.get())
-                << "\\nprocessing number: "<< node->get_processing_num() << (node->can_be_optimized() ? "\\n optimized out" : "") << "\"";
+                << "\\nprocessing number: " << node->get_processing_num() << "\\n color:" << (node->is_reusing_memory() ? std::to_string(node->get_reused_memory_color()) : "none")
+                << (node->can_be_optimized() ? "\\n optimized out" : "") << "\"";
             #ifdef __clang__
                 #pragma clang diagnostic pop
             #endif

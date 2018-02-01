@@ -59,7 +59,7 @@ struct engine_configuration
             bool dump_custom_program = false,
             const std::string& options = std::string(),
             const std::string& single_kernel = std::string(),
-            bool primitives_parallelisation = false,
+            bool primitives_parallelisation = true,
             const std::string& engine_log = std::string(),
             const std::string& sources_dumps_dir = std::string(),
             uint32_t priority_mode = 0,
