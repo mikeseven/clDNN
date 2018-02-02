@@ -172,6 +172,7 @@ namespace KernelSelector
             switch (l)
             {
             case os_iyx_osv16:
+            case os_iyx_osv16_transposed:
                 assert(newDims.size() == 4);
                 newDims[3] = RoundUp(newDims[3], 16);
                 break;

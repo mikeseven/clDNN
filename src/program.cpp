@@ -630,7 +630,8 @@ void program_impl::replace_nodes_post()
             auto weights_node_ptr = nodes_map.find(weights_id)->second;
             auto deconv_node_ptr = nodes_map.find(upsampling_id)->second;
 
-            replace_all_usages(*node, *deconv_node_ptr);
+            auto upsampling_node_ptr = nodes_map.find(rename_id)->second;
+            replace_all_usages(*upsampling_node_ptr, *deconv_node_ptr);
             optimized_out.push_back(rename_id);
             nodes_map.erase(rename_id);
 
@@ -641,6 +642,105 @@ void program_impl::replace_nodes_post()
             //add connections input->deconvolution and weights->deconvolution
             add_connection(input_node, *deconv_node_ptr);
             add_connection(*weights_node_ptr, *deconv_node_ptr);
+            continue;
+        }
+
+        //find deconvolution primitives with stride 1 and change them to convolution with trasposed weights
+        if (node->is_type<deconvolution>())
+        {
+            auto deconv_prim = node->as<deconvolution>().typed_desc();
+
+            //limit optimization to stride = 1
+            if (deconv_prim->stride.spatial[0] != 1 || deconv_prim->stride.spatial[1] != 1)
+                continue;
+
+            primitive_id deconv_id = node->id();
+            auto& input_node = node->get_dependency(0);
+
+            primitive_id input_id = deconv_prim->input[0];
+
+            //setting convolution parameters based on deconvolution params
+            auto stride = deconv_prim->stride;
+            auto weights = deconv_prim->weights;
+            std::vector<primitive_id> weights_vec;
+            for (auto& weights_id : weights)
+                weights_vec.push_back(weights_id);
+            auto biases = deconv_prim->bias;
+            std::vector<primitive_id> bias_vec;
+            for (auto& bias_id : biases)
+                bias_vec.push_back(bias_id);
+            auto input_offset = deconv_prim->input_offset;
+            auto with_activation = deconv_prim->with_activation;
+            auto activation_negative_slope = deconv_prim->activation_negative_slope;
+            auto output_padding = deconv_prim->output_padding;
+
+            //remove deconvolution node and its connections to weights and biases, rename it and move to the optimized list
+            tensor filter_size = { 1, 1, 1, 1 };
+            remove_connection(node->get_dependency(0), *node);
+            for (auto& weights_id : weights_vec)
+            {
+                auto weights_node_ptr = nodes_map.find(weights_id)->second;
+                remove_connection(*weights_node_ptr, *node);
+                //get filter spatial sizes for input offset adjustment, perform this only once as all filters shouls have same size
+                if(weights_id == weights_vec[0])
+                    filter_size = weights_node_ptr->get_output_layout().size;
+            }
+
+            input_offset.spatial[0] = std::abs(input_offset.spatial[0]) - (filter_size.spatial[0] - 1);
+            input_offset.spatial[1] = std::abs(input_offset.spatial[1]) - (filter_size.spatial[1] - 1);
+
+            if (!bias_vec.empty())
+            {
+                for (auto& bias_id : bias_vec)
+                {
+                    auto bias_id_node_ptr = nodes_map.find(bias_id)->second;
+                    remove_connection(*bias_id_node_ptr, *node);
+                }
+            }
+            auto rename_id = deconv_id + "_tmp";
+            rename(*node, rename_id);
+
+            //create convolution primitive
+            if (biases.size() != 0)
+            {
+                auto conv_prim = std::make_shared<convolution>(deconv_id, input_id, weights_vec, bias_vec,
+                    stride, input_offset, tensor{ 1, 1, 1, 1 }, with_activation, activation_negative_slope, output_padding);
+                get_or_create(conv_prim);
+            }
+            else
+            {
+                auto conv_prim = std::make_shared<convolution>(deconv_id, input_id, weights_vec,
+                    stride, input_offset, tensor{ 1, 1, 1, 1 }, with_activation, activation_negative_slope, output_padding);
+                get_or_create(conv_prim);
+            }
+
+            auto conv_node_ptr = nodes_map.find(deconv_id)->second;
+            auto conv_node = &conv_node_ptr->as<convolution>();
+            conv_node->set_transposed(true);
+
+            //add connections input->convolution, weights->convolution and bias->convolution
+            add_connection(input_node, *conv_node_ptr);
+
+            for (auto& weights_id : weights_vec)
+            {
+                auto weights_node_ptr = nodes_map.find(weights_id)->second;
+                add_connection(*weights_node_ptr, *conv_node_ptr);
+            }
+
+            if (!bias_vec.empty())
+            {
+                for (auto& bias_id : bias_vec)
+                {
+                    auto bias_id_node_ptr = nodes_map.find(bias_id)->second;
+                    add_connection(*bias_id_node_ptr, *conv_node_ptr);
+                }
+            }
+
+            auto deconv_node_ptr = nodes_map.find(rename_id)->second;
+            replace_all_usages(*deconv_node_ptr, *conv_node_ptr);
+            optimized_out.push_back(rename_id);
+            nodes_map.erase(rename_id);
+
             continue;
         }
     }

@@ -487,14 +487,12 @@ inline JitConstants MakeConvolutionParamsJitConstants(const ConvolutionParams& p
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MakeLoopUnrollParamsJitConstants
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeLoopUnrollParamsJitConstants(const ConvolutionParams& params, uint32_t loopCount)
+inline JitConstants MakeLoopUnrollParamsJitConstants(uint32_t loopCount)
 {
-    JitConstants jit = MakeConvolutionParamsJitConstants(params);
-
-    jit.AddConstants({
+    JitConstants jit{
         MakeJitConstant("LOOP0(VAR, STMT)", ""),
         MakeJitConstant("LOOP1(VAR, STMT)", "(STMT); (VAR)++;"),
-    });
+    };
 
     for (uint32_t i = 2; i <= loopCount + 1; i++)
     {
@@ -660,7 +658,7 @@ inline JitConstants MakeDeconvolutionJitConstants(const DeconvolutionParams& par
     const auto& padding = dp.padding;
     const auto& input = params.inputs[0];
 
-    int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - padding.x*input.X().pitch - input.Y().pitch*padding.y;
+    int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - (dp.filterSize.x - 1 + padding.x)*input.X().pitch - (dp.filterSize.y - 1 + padding.y)*input.Y().pitch;
     input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);
 
     jit.AddConstants({

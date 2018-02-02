@@ -61,6 +61,7 @@ namespace KernelSelector
             iyxo,
             yxio,
             os_iyx_osv16,
+            os_iyx_osv16_transposed,
             os_i_osv16,
             os_i_osv8__ai8,         // TODO can we drop the alignment form layout name?
             os_i_osv16__ai8,
@@ -147,6 +148,7 @@ namespace KernelSelector
                 { WeightsLayout::iyxo,                          {  1, 2, 3, 0 } },
                 { WeightsLayout::yxio,                          {  2, 3, 1, 0 } },
                 { WeightsLayout::os_iyx_osv16,                  {  0, 1, 2, 3 } },
+                { WeightsLayout::os_iyx_osv16_transposed,       {  0, 1, 2, 3 } },
                 { WeightsLayout::os_i_osv8__ai8,                { -1,-1, 0, 1 } },
                 { WeightsLayout::os_i_osv16__ai8,               { -1,-1, 0, 1 } },
                 { WeightsLayout::os_i_osv16,                    { -1,-1, 0, 1 } },

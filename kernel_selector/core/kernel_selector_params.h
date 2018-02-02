@@ -90,6 +90,7 @@ namespace KernelSelector
                             uint32_t split : 1;
                             uint32_t dilation : 1;
                             uint32_t depthwiseSeparableOpt : 1;
+                            uint32_t transposed : 1;
                         } conv;
                         struct fc_t {} fc;
                         struct softmax_t 
@@ -501,6 +502,11 @@ namespace KernelSelector
             key.restrict.val.dedicated.conv.depthwiseSeparableOpt = 1;
         }
 
+        void EnableTranspose()
+        {
+            key.restrict.val.dedicated.conv.transposed = 1;
+        }
+
         void EnableWinogradReorder()
         {
             key.restrict.val.dedicated.reorder.winograd = 1;
@@ -791,6 +797,7 @@ namespace KernelSelector
             uint32_t winograd_input_tile_height;
             uint32_t split = 1;
             bool     depthwiseSeparableOpt = false;
+            bool     transposed = false;
         };
 
         DedicatedParams convParams;
@@ -815,6 +822,11 @@ namespace KernelSelector
             if (convParams.depthwiseSeparableOpt)
             {
                 k.EnableDepthwiseSeparableOpt();
+            }
+
+            if (convParams.transposed)
+            {
+                k.EnableTranspose();
             }
 
             return k;

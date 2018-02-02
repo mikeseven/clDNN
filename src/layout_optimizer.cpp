@@ -194,20 +194,23 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
             (users_for_convolution_byxf_opt(node, 2) || deps_depth_in_same_format(node, cldnn::format::byxf, 2)) &&
             //TODO: remove this condition when yxfb optimizations will be disabled
             current_layout.format != cldnn::format::yxfb &&
-            current_layout.size.batch[0] == 1)
+            current_layout.size.batch[0] == 1 &&
+            !node.get_transposed())
         {
             expected_tensor = current_layout.size;
             expected_format = cldnn::format::byxf;
         }
         else if (layout_optimizer::convolution_bfyx_opt(current_layout, output_or_weights_layout, prim)
-            || (_output_size_handling_enabled && prim->with_output_size))
+            || (_output_size_handling_enabled && prim->with_output_size) ||
+            node.get_transposed())
         {
             if (current_layout.data_type == data_types::f32 &&
                 current_layout.size.batch[0] % 16 == 0 &&
                 current_layout.format == format::bfyx &&
                 output_or_weights_layout.size.spatial[0] == 1 && output_or_weights_layout.size.spatial[1] == 1 &&
                 prim->stride.spatial[0] == 1 && prim->stride.spatial[1] == 1 &&
-                prim->input_offset.spatial[0] == 0 && prim->input_offset.spatial[1] == 0)
+                prim->input_offset.spatial[0] == 0 && prim->input_offset.spatial[1] == 0 &&
+                !node.get_transposed())
             {
                 if (!((current_layout.size.feature[0] % 8) == 0 && (current_layout.size.spatial[0] * current_layout.size.spatial[1]) == 16 &&
                     current_layout.data_padding == padding{ { 0,0,0,0 }, 0 }))

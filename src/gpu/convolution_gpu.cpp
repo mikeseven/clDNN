@@ -75,6 +75,8 @@ public:
         const auto depthwise_separable_opt = arg.get_depthwise_sep_opt();
         const auto actual_split = depthwise_separable_opt ? (decltype(split))1 : split;
 
+        const auto transposed = arg.get_transposed();
+
         assert(arg.get_output_layout().size.feature[0] / primitive->split() == weights_layout.size.batch[0]);
 
         auto conv_params = get_weights_bias_default_params<kernel_selector::convolution_params>(arg, actual_split);
@@ -98,6 +100,7 @@ public:
         }
 
         conv_params.convParams.depthwiseSeparableOpt = depthwise_separable_opt;
+        conv_params.convParams.transposed = transposed;
 
         conv_params.convParams.split = split;
         conv_params.convParams.filterSize = {

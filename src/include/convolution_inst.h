@@ -34,6 +34,7 @@ public:
         : parent(prim, prog)
         , split(this->get_primitive()->split())
         , depthwise_sep_opt(false)
+        , transposed(false)
     {
     }
 
@@ -42,6 +43,9 @@ public:
 
     void set_depthwise_sep_opt(bool node_depthwise_sep_opt) { depthwise_sep_opt = node_depthwise_sep_opt; }
     bool get_depthwise_sep_opt() const { return depthwise_sep_opt; }
+
+    void set_transposed(bool node_transposed) { transposed = node_transposed; }
+    bool get_transposed() const { return transposed; }
 
     decltype(auto) input() const { return get_dependency(0); }
 
@@ -72,6 +76,7 @@ public:
 private:
     int32_t split;
     bool depthwise_sep_opt;
+    bool transposed;
 };
 
 using convolution_node = typed_program_node<convolution>;

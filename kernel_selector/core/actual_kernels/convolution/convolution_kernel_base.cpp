@@ -63,7 +63,9 @@ namespace KernelSelector
 
         auto loopCount = *std::max_element(unrollLoopParams.begin(), unrollLoopParams.end());
 
-        JitConstants mem_consts = MakeLoopUnrollParamsJitConstants(params, loopCount);
+        JitConstants mem_consts = MakeConvolutionParamsJitConstants(params);
+        JitConstants mem_consts_loop = MakeLoopUnrollParamsJitConstants(loopCount);
+        mem_consts.Merge(mem_consts_loop);
 
         if (params.inputs[0].GetLayout() == DataLayout::yxfb &&
             params.weights.GetLayout() == WeightsLayout::yxio)
