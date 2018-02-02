@@ -18,10 +18,12 @@
 #include <limits>
 #include <string>
 #include <memory>
+#include <list>
 #include "primitive_db.h"
 #include "kernel_selector_params.h"
 #include <float.h>
 #include <sstream>
+#include <boost\functional\hash\hash.hpp>
 
 #define AGE_BASED "-cl-no-subgroup-ifp"
 #define ROUND_ROBIN ""
@@ -70,6 +72,12 @@ namespace KernelSelector {
             options(""), entry_point(""),
             batch_compilation(false)
         {};
+
+        uint64_t get_hash()
+        {
+            std::list<std::string> to_hash({ str,jit,options,entry_point });
+            return boost::hash_range(to_hash.begin(), to_hash.end());
+        }
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
