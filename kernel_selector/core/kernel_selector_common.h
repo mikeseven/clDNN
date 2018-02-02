@@ -23,7 +23,8 @@
 #include "kernel_selector_params.h"
 #include <float.h>
 #include <sstream>
-#include <boost\functional\hash\hash.hpp>
+#include <boost\functional\hash.hpp>
+
 
 #define AGE_BASED "-cl-no-subgroup-ifp"
 #define ROUND_ROBIN ""
