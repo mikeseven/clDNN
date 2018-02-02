@@ -2020,17 +2020,18 @@ void program_impl::prepare_buffer_fusing()
             auto upper_padd_val = node.get_output_layout().get_buffer_size().raw[concat_axis] - lower_padd.raw[concat_axis];
             tensor lower_padd_offset = lower_padd;
 
-            std::list<const std::vector<program_node*>*> stack = { &node.get_dependencies() };
+            std::list<std::pair<const std::vector<program_node*>, tensor>> stack = { std::make_pair(node.get_dependencies(), tensor{ 0, 0, 0, 0 }) };
             while (!stack.empty())
             {
                 auto nodes_list = stack.front();
                 stack.pop_front();
 
+                auto cascade_adjustment = nodes_list.second;
                 upper_padd.raw[concat_axis] = upper_padd_val;
                 lower_padd = lower_padd_offset;
 
                 //check if concatenation in place can be applied for inputs set
-                for (auto input : *nodes_list)
+                for (auto input : nodes_list.first)
                 {
                     //if any of this node's inputs is used by more than one primitive and is not optimized concatenation then do not fuse buffers,
                     //also, if an input is marked as network output, prevent optimizations which would affect a form of its output (unless debug flag is set)
@@ -2061,24 +2062,30 @@ void program_impl::prepare_buffer_fusing()
                 }
 
                 //apply concatenation in place optimization
-                for (auto input : *nodes_list)
+                for (auto input : nodes_list.first)
                 {
                     auto input_lenght = input->get_output_layout().size.raw[concat_axis];
-                
+
                     // shrink upper pad so it points at the end of the input's buffer
                     //
                     //   |--- lower padd ---|                    |---------- upper padd -----------|
                     //   |-- output padd ---| ----- input1 ------|----- input2 -----|-- out padd --|
                     upper_padd.raw[concat_axis] -= input_lenght;
-                
+
+                    //adjust padding sizes for cascade concatenations
+                    auto lower_padd_tmp = lower_padd;
+                    lower_padd_tmp.raw[concat_axis] += cascade_adjustment.raw[concat_axis];
+                    auto upper_padd_tmp = upper_padd;
+                    upper_padd_tmp.raw[concat_axis] -= cascade_adjustment.raw[concat_axis];
+
                     // set new padding for input
-                    input->set_output_padding(padding(lower_padd.sizes(), upper_padd.sizes()));
-                
+                    input->set_output_padding(padding(lower_padd_tmp.sizes(), upper_padd_tmp.sizes()));
+
                     // move lower padd further
                     //
                     //   |-------------- lower padd -------------|---------- upper padd -----------|
                     //   |-- output padd ---| ----- input1 ------|----- input2 -----|-- out padd --|
-                
+
                     lower_padd.raw[concat_axis] += input_lenght;
 
                     if (input->type() == concatenation::type_id() && input->can_be_optimized())
@@ -2086,9 +2093,8 @@ void program_impl::prepare_buffer_fusing()
                         if (input->as<concatenation>().get_primitive()->axis != node.get_primitive()->axis)
                             return;
 
-                        lower_padd_offset = input->get_output_layout().data_padding.lower_size();
                         if (!input->get_dependencies().empty())
-                            stack.push_back(&input->get_dependencies());
+                            stack.push_back(std::make_pair(input->get_dependencies(), input->get_output_layout().data_padding.lower_size()));
                     }
                 }
             }
