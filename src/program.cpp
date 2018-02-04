@@ -648,6 +648,9 @@ void program_impl::replace_nodes_post()
         //find deconvolution primitives with stride 1 and change them to convolution with trasposed weights
         if (node->is_type<deconvolution>())
         {
+            if (!options.get<build_option_type::optimize_data>()->enabled())
+                continue;
+
             auto deconv_prim = node->as<deconvolution>().typed_desc();
 
             //limit optimization to stride = 1
