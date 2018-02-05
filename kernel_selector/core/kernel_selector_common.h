@@ -444,7 +444,7 @@ namespace KernelSelector {
         case WeightsLayout::iyxo:                       return "IYXO";
         case WeightsLayout::yxio:                       return "YXIO";
         case WeightsLayout::os_iyx_osv16:               return "OS_IYX_OSV16";
-        case WeightsLayout::os_iyx_osv16_transposed:    return "OS_IYX_OSV16_TRANSPOSED";
+        case WeightsLayout::os_iyx_osv16_rotate_180:    return "OS_IYX_OSV16_ROTATE_180";
         case WeightsLayout::os_i_osv16:                 return "OS_I_OSV16";
         case WeightsLayout::os_i_osv8__ai8:             return "OS_I_OSV8__AI8";
         case WeightsLayout::os_i_osv16__ai8:            return "OS_I_OSV16__AI8";

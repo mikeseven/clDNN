@@ -86,7 +86,7 @@ inline uint FUNC(get_bf8_xy16_index)(uint b, uint f, uint y, uint x, uint x_size
         ((o) / (sub_group_size))*CAT(prefix, _OFM_PITCH)                    \
     )
 
-#define GET_FILTER_OS_IYX_OSV8_TRANSPOSED_INDEX(prefix, o, i, y, x, sub_group_size)    \
+#define GET_FILTER_OS_IYX_OSV8_ROTATE_180_INDEX(prefix, o, i, y, x, sub_group_size)    \
     CAT(prefix, _OFFSET) +                                                  \
     ((o) % (sub_group_size)) +                                              \
     (sub_group_size)*(                                                      \

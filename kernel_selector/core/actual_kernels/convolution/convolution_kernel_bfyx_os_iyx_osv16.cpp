@@ -269,7 +269,7 @@ namespace KernelSelector
         }
         else
         {
-            return{ WeightsLayout::os_iyx_osv16_transposed };
+            return{ WeightsLayout::os_iyx_osv16_rotate_180 };
         }
     }
 
