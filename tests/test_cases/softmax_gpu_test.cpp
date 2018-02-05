@@ -506,17 +506,14 @@ TEST(softmax_gpu_yxfb_f32, normalize_f) {
                 for (uint32_t y = 0; y < y_size; y++)
                 {
                     int index = b + y * batch_num + f * feature_num + x * x_size;
-                    std::cout << index << std::endl;
                     if (out_buffer[index] >= temp_max)
                     {
                         temp_max = out_buffer[index];
                     }
-
                     sum += out_buffer[index];
                 }
-                EXPECT_EQ(true, are_equal(temp_max, expected_max_values[b * f * x]));
+                EXPECT_EQ(true, are_equal(temp_max, expected_max_values[b * feature_num * x_size + f * x_size + x]));
                 temp_max = 0;
-
                 EXPECT_EQ(true, are_equal(sum, expected_sum));
                 sum = 0.0f;
             }
