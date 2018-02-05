@@ -460,7 +460,7 @@ TEST(softmax_gpu_yxfb_f32, normalize_f) {
         /*y1x0*/ 0.2f, 0.2f, -10.f, 5.2f, 0.01f, 0.015f, 0.29f,  0.05f, 0.41f, -0.31f, 0.29f, 1.35f
     });
 
-    float expected_max_values[12] = {
+    float expected_max_values[batch_num * feature_num * x_size] = {
         0.524979174f,
         0.574442506f,
         0.999981523f,
@@ -495,7 +495,6 @@ TEST(softmax_gpu_yxfb_f32, normalize_f) {
     float expected_sum = 1.0f;
 
     float temp_max = 0;
-    int max_value_buffer_index = 0;
 
     for (uint32_t b = 0; b < batch_num; b++)
     {
@@ -515,9 +514,8 @@ TEST(softmax_gpu_yxfb_f32, normalize_f) {
 
                     sum += out_buffer[index];
                 }
-                EXPECT_EQ(true, are_equal(temp_max, expected_max_values[max_value_buffer_index]));
+                EXPECT_EQ(true, are_equal(temp_max, expected_max_values[b * f * x]));
                 temp_max = 0;
-                max_value_buffer_index++;
 
                 EXPECT_EQ(true, are_equal(sum, expected_sum));
                 sum = 0.0f;
