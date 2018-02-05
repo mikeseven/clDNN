@@ -191,7 +191,7 @@ kernels_cache::kernel_id kernels_cache::set_kernel_source(const std::shared_ptr<
     kernels_cache::kernel_id id;
     
     // same kernel_string == same kernel
-    const auto key = kernel_string.get();
+    const auto key = kernel_string.get()->get_hash();
 
     std::lock_guard<std::mutex> lock(_mutex);
 

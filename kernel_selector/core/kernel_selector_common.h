@@ -70,6 +70,11 @@ namespace KernelSelector {
             options(""), entry_point(""),
             batch_compilation(false)
         {};
+
+        std::string get_hash()
+        {
+            return str + jit + options + entry_point;
+        }
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
