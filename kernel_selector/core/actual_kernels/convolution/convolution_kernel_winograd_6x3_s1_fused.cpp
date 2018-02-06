@@ -26,8 +26,8 @@ namespace KernelSelector {
         k.EnableOutputDataType(Datatype::F16);
         k.EnableInputWeightsType(WeightsType::F16);
         k.EnableInputWeightsType(WeightsType::F32);
-        k.EnableInputLayout(DataLayout::byxf);
-        k.EnableOutputLayout(DataLayout::byxf);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::bfyx);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableBatching();
@@ -91,6 +91,7 @@ namespace KernelSelector {
         const auto input_pad_x = arg.inputs[0].X().pad.before + arg.inputs[0].X().pad.after;
         const auto rows = arg.inputs[0].Y().v + input_pad_y;
         const auto cols = arg.inputs[0].X().v + input_pad_x;
+
 		//if there's input padding then input offset should be ignored
 		const auto inoffset_x = (input_pad_x) ? 0 : arg.convParams.padding.x;
 		const auto inoffset_y = (input_pad_y) ? 0 : arg.convParams.padding.y;
