@@ -50,13 +50,16 @@ namespace KernelSelector
         //kernel uses intel_sub_group_block_read that has 4-byte alignment requirement
         if (params.output.GetDType() == Datatype::F16)
         {
+            size_t output_offset = 0;
+
             for (size_t i = 0; i < params.inputs.size(); i++)
             {
                 for (size_t b = 0; b < params.output.Batch().v; b++)
                 {
-                    if ((b*params.inputs[i].Batch().pitch) % 2 != 0)
+                    if ((output_offset + b*params.inputs[i].Batch().pitch) % 2 != 0)
                         return false;
                 }
+                output_offset += params.inputs[i].Batch().pitch;
             }
         }
 
