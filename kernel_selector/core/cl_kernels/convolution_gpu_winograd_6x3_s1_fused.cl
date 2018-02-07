@@ -150,7 +150,8 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 	uint adr = gn*HWC + ((uint)y)*WC + ((uint)x)*INPUT0_FEATURE_NUM + c0;
 	const __global UNIT_TYPE_4 *I_load = ((const __global UNIT_TYPE_4*)&(I[adr]));
 #else
-	const __global UNIT_TYPE *I_load = (const __global UNIT_TYPE*)&I[gn*HWC + c0*HW + ((uint)y)*W + ((uint)x)];
+	uint adr = gn*HWC + c0*HW + ((uint)y)*W + ((uint)x);
+	const __global UNIT_TYPE *I_load = (const __global UNIT_TYPE*)&I[adr];
 #endif
 
 	// c, Kdsk
@@ -183,47 +184,25 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 
 #if INPUT0_LAYOUT_BYXF
 
-				/*				const  UNIT_TYPE_4 I_load_0 = y0_in ? I_load[0*WC4+c] : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
-								const  UNIT_TYPE_4 I_load_1 = y1_in ? I_load[1*WC4+c] : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
-								const  UNIT_TYPE_4 I_load_2 = y2_in ? I_load[2*WC4+c] : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
-								const  UNIT_TYPE_4 I_load_3 = y3_in ? I_load[3*WC4+c] : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
-								const  UNIT_TYPE_4 I_load_4 = y4_in ? I_load[4*WC4+c] : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
-								const  UNIT_TYPE_4 I_load_5 = y5_in ? I_load[5*WC4+c] : (UNIT_TYPE_4)(UNIT_VAL_ZERO);*/
-
-				const  UNIT_TYPE_4 I_load_0 = y0_in ? *((const __global UNIT_TYPE_4*)(I + adr + (0 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
-				const  UNIT_TYPE_4 I_load_1 = y1_in ? *((const __global UNIT_TYPE_4*)(I + adr + (1 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
-				const  UNIT_TYPE_4 I_load_2 = y2_in ? *((const __global UNIT_TYPE_4*)(I + adr + (2 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
-				const  UNIT_TYPE_4 I_load_3 = y3_in ? *((const __global UNIT_TYPE_4*)(I + adr + (3 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
-				const  UNIT_TYPE_4 I_load_4 = y4_in ? *((const __global UNIT_TYPE_4*)(I + adr + (4 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
-				const  UNIT_TYPE_4 I_load_5 = y5_in ? *((const __global UNIT_TYPE_4*)(I + adr + (5 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
-				const  UNIT_TYPE_4 I_load_6 = y6_in ? *((const __global UNIT_TYPE_4*)(I + adr + (6 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
-				const  UNIT_TYPE_4 I_load_7 = y7_in ? *((const __global UNIT_TYPE_4*)(I + adr + (7 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
-
+				UNIT_TYPE_4 I0 = y0_in ? *((const __global UNIT_TYPE_4*)(I + adr + (0 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				UNIT_TYPE_4 I1 = y1_in ? *((const __global UNIT_TYPE_4*)(I + adr + (1 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				UNIT_TYPE_4 I2 = y2_in ? *((const __global UNIT_TYPE_4*)(I + adr + (2 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				UNIT_TYPE_4 I3 = y3_in ? *((const __global UNIT_TYPE_4*)(I + adr + (3 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				UNIT_TYPE_4 I4 = y4_in ? *((const __global UNIT_TYPE_4*)(I + adr + (4 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				UNIT_TYPE_4 I5 = y5_in ? *((const __global UNIT_TYPE_4*)(I + adr + (5 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				UNIT_TYPE_4 I6 = y6_in ? *((const __global UNIT_TYPE_4*)(I + adr + (6 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
+				UNIT_TYPE_4 I7 = y7_in ? *((const __global UNIT_TYPE_4*)(I + adr + (7 * WC4 + c) * 4)) : (UNIT_TYPE_4)(UNIT_VAL_ZERO);
 
 #else
-				const __global UNIT_TYPE *I_load_0 = &I_load[0 * W]; //y0_in ? &I_load[0*W] : zeros4;
-				const __global UNIT_TYPE *I_load_1 = &I_load[1 * W]; //y1_in ? &I_load[1*W] : zeros4;
-				const __global UNIT_TYPE *I_load_2 = &I_load[2 * W]; //y2_in ? &I_load[2*W] : zeros4;
-				const __global UNIT_TYPE *I_load_3 = &I_load[3 * W]; //y3_in ? &I_load[3*W] : zeros4;
-				const __global UNIT_TYPE *I_load_4 = &I_load[4 * W]; //y4_in ? &I_load[4*W] : zeros4;
-				const __global UNIT_TYPE *I_load_5 = &I_load[5 * W]; //y5_in ? &I_load[5*W] : zeros4;
-				const __global UNIT_TYPE *I_load_6 = &I_load[6 * W]; //y5_in ? &I_load[5*W] : zeros4;
-				const __global UNIT_TYPE *I_load_7 = &I_load[7 * W]; //y5_in ? &I_load[5*W] : zeros4;
-#endif
+				const __global UNIT_TYPE *I_load_0 = &I_load[0 * W];
+				const __global UNIT_TYPE *I_load_1 = &I_load[1 * W];
+				const __global UNIT_TYPE *I_load_2 = &I_load[2 * W];
+				const __global UNIT_TYPE *I_load_3 = &I_load[3 * W];
+				const __global UNIT_TYPE *I_load_4 = &I_load[4 * W];
+				const __global UNIT_TYPE *I_load_5 = &I_load[5 * W];
+				const __global UNIT_TYPE *I_load_6 = &I_load[6 * W];
+				const __global UNIT_TYPE *I_load_7 = &I_load[7 * W];
 
-#if INPUT0_LAYOUT_BYXF
-//For winograd 6x3 the WA to scale input needed to be added, as the intermediate computations overflow in some cases
-//Later on the output is adjusted with the same scale factor before adding bias and activation
-				UNIT_TYPE_4 I0 = I_load_0*scl_vec;
-				UNIT_TYPE_4 I1 = I_load_1*scl_vec;
-				UNIT_TYPE_4 I2 = I_load_2*scl_vec;
-				UNIT_TYPE_4 I3 = I_load_3*scl_vec;
-				UNIT_TYPE_4 I4 = I_load_4*scl_vec;
-				UNIT_TYPE_4 I5 = I_load_5*scl_vec;
-				UNIT_TYPE_4 I6 = I_load_6*scl_vec;
-				UNIT_TYPE_4 I7 = I_load_7*scl_vec;
-
-#else
 				UNIT_TYPE_4 I0 = y0_in ? (UNIT_TYPE_4)(I_load_0[c*HW * 4], I_load_0[c*HW * 4 + HW], I_load_0[c*HW * 4 + HW * 2], I_load_0[c*HW * 4 + HW * 3]) : (UNIT_TYPE_4)(UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO);
 				UNIT_TYPE_4 I1 = y1_in ? (UNIT_TYPE_4)(I_load_1[c*HW * 4], I_load_1[c*HW * 4 + HW], I_load_1[c*HW * 4 + HW * 2], I_load_1[c*HW * 4 + HW * 3]) : (UNIT_TYPE_4)(UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO);
 				UNIT_TYPE_4 I2 = y2_in ? (UNIT_TYPE_4)(I_load_2[c*HW * 4], I_load_2[c*HW * 4 + HW], I_load_2[c*HW * 4 + HW * 2], I_load_2[c*HW * 4 + HW * 3]) : (UNIT_TYPE_4)(UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO);
@@ -233,7 +212,18 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 				UNIT_TYPE_4 I6 = y6_in ? (UNIT_TYPE_4)(I_load_6[c*HW * 4], I_load_6[c*HW * 4 + HW], I_load_6[c*HW * 4 + HW * 2], I_load_6[c*HW * 4 + HW * 3]) : (UNIT_TYPE_4)(UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO);
 				UNIT_TYPE_4 I7 = y7_in ? (UNIT_TYPE_4)(I_load_7[c*HW * 4], I_load_7[c*HW * 4 + HW], I_load_7[c*HW * 4 + HW * 2], I_load_7[c*HW * 4 + HW * 3]) : (UNIT_TYPE_4)(UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO);
 #endif
-				//I_load += 8;
+
+				//For winograd 6x3 the WA to scale input needed to be added, as the intermediate computations overflow in some cases
+				//Later on the output is adjusted with the same scale factor before adding bias and ACTIVATION
+				I0 = I0*scl_vec;
+				I1 = I1*scl_vec;
+				I2 = I2*scl_vec;
+				I3 = I3*scl_vec;
+				I4 = I4*scl_vec;
+				I5 = I5*scl_vec;
+				I6 = I6*scl_vec;
+				I7 = I7*scl_vec;
+
 
 				// Compute Winograd f6x3 data transform and store components in SLM.
 				V_write[0 * 64] = I0 - 5.25h*I2 + 5.25h*I4 - I6;

@@ -56,8 +56,9 @@ namespace KernelSelector {
         auto output_pad_y_after = params.output.GetDims()[1].pad.after;
         auto C4_up16 = ((uint32_t)((idepth + 15) / 16) * 16) / 4;
 
-        const auto inoffset_x = params.convParams.padding.x;
-        const auto inoffset_y = params.convParams.padding.y;
+		//if there's input padding then input offset should be ignored
+		const auto inoffset_x = (input_pad_x) ? 0 : params.convParams.padding.x;
+		const auto inoffset_y = (input_pad_y) ? 0 : params.convParams.padding.y;
 
         jit.AddConstants({
             MakeJitConstant("H", rows),
@@ -91,8 +92,10 @@ namespace KernelSelector {
         const auto input_pad_x = arg.inputs[0].X().pad.before + arg.inputs[0].X().pad.after;
         const auto rows = arg.inputs[0].Y().v + input_pad_y;
         const auto cols = arg.inputs[0].X().v + input_pad_x;
-        const auto inoffset_x = arg.convParams.padding.x;
-        const auto inoffset_y = arg.convParams.padding.y;
+
+		//if there's input padding then input offset should be ignored
+		const auto inoffset_x = (input_pad_x) ? 0 : arg.convParams.padding.x;
+		const auto inoffset_y = (input_pad_y) ? 0 : arg.convParams.padding.y;
 
         auto P = rows - 2 + 2 * inoffset_y;
         auto Q = cols - 2 + 2 * inoffset_x;
