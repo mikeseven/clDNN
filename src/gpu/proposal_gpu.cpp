@@ -216,22 +216,39 @@ struct proposal_gpu : typed_primitive_impl<proposal>
         mem_lock<dtype> image_info_ptr{ image_info };
         const dtype* image_info_mem = image_info_ptr.data();
 
-        int img_w = (int)(float_read_helper(image_info_mem + proposal_inst::image_info_width_index) + EPSILON);
-        int img_h = (int)(float_read_helper(image_info_mem + proposal_inst::image_info_height_index) + EPSILON);
-        int img_z = (int)(float_read_helper(image_info_mem + proposal_inst::image_info_depth_index) + EPSILON);
+        int img_w = 1;
+        int img_h = 1;
+        int img_z = 1;
+        int min_bbox_x = 1;
+        int min_bbox_y = 1;
+        int scaled_min_bbox_size = instance.argument.min_bbox_size;
 
-        int scaled_min_bbox_size = instance.argument.min_bbox_size * img_z;
-
-        int min_bbox_x = scaled_min_bbox_size;
-        if (image_info.get_layout().count() > proposal_inst::image_info_scale_min_bbox_x)
+        if (image_info.get_layout().count() == 4)
         {
-            min_bbox_x = static_cast<int>(min_bbox_x * float_read_helper(image_info_mem + proposal_inst::image_info_scale_min_bbox_x));
+            img_w = static_cast<int>(float_read_helper(image_info_mem + proposal_inst::image_info_width_index) + EPSILON);
+            img_h = static_cast<int>(float_read_helper(image_info_mem + proposal_inst::image_info_height_index) + EPSILON);
+            min_bbox_x = static_cast<int>(scaled_min_bbox_size * float_read_helper(image_info_mem + 3));
+            min_bbox_y = static_cast<int>(scaled_min_bbox_size * float_read_helper(image_info_mem + 2));
         }
-
-        int min_bbox_y = scaled_min_bbox_size;
-        if (image_info.get_layout().count() > proposal_inst::image_info_scale_min_bbox_y)
+        else
         {
-            min_bbox_y = static_cast<int>(min_bbox_y * float_read_helper(image_info_mem + proposal_inst::image_info_scale_min_bbox_y));
+            img_w = static_cast<int>(float_read_helper(image_info_mem + proposal_inst::image_info_width_index) + EPSILON);
+            img_h = static_cast<int>(float_read_helper(image_info_mem + proposal_inst::image_info_height_index) + EPSILON);
+            img_z = static_cast<int>(float_read_helper(image_info_mem + proposal_inst::image_info_depth_index) + EPSILON);
+
+            scaled_min_bbox_size *= img_z;
+
+            min_bbox_x = scaled_min_bbox_size;
+            if (image_info.get_layout().count() > proposal_inst::image_info_scale_min_bbox_x)
+            {
+                min_bbox_x = static_cast<int>(min_bbox_x * float_read_helper(image_info_mem + proposal_inst::image_info_scale_min_bbox_x));
+            }
+
+            min_bbox_y = scaled_min_bbox_size;
+            if (image_info.get_layout().count() > proposal_inst::image_info_scale_min_bbox_y)
+            {
+                min_bbox_y = static_cast<int>(min_bbox_y * float_read_helper(image_info_mem + proposal_inst::image_info_scale_min_bbox_y));
+            }
         }
 
         mem_lock<dtype> cls_scores_ptr{ cls_scores };
@@ -323,8 +340,8 @@ struct proposal_gpu : typed_primitive_impl<proposal>
         const layout & l = arg.image_info().get_output_layout();
         const size_t count = l.size.count();
 
-        if ((size_t)l.size.spatial[0] != count || (count != 3 && count != 6)) {
-            CLDNN_ERROR_MESSAGE(arg.id(), "image_info must have either 3 or 6 items");
+        if ((size_t)l.size.spatial[0] != count || (count != 3 && count != 4 && count != 6)) {
+            CLDNN_ERROR_MESSAGE(arg.id(), "image_info must have either 3, 4 or 6 items");
         }
         CLDNN_ERROR_BOOL(arg.id(), "Batching", !hasSingleBatchOutput(arg.bbox_pred()), "Proposal doesn't support batching.");
         CLDNN_ERROR_BOOL(arg.id(), "Batching", !hasSingleBatchOutput(arg.cls_score()), "Proposal doesn't support batching.");
