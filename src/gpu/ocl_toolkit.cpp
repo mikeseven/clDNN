@@ -219,7 +219,7 @@ event_impl::ptr gpu_toolkit::enqueue_kernel(cl::Kernel const& kern, cl::NDRange 
 
     cl::Event ret_ev;
     try {
-        if (!_configuration.host_out_of_order || _output_event)
+        if (!_configuration.host_out_of_order || _output_event || _configuration.enable_profiling)
         {
             _command_queue.enqueueNDRangeKernel(kern, cl::NullRange, global, local, dep_events_ptr, &ret_ev);
         }
