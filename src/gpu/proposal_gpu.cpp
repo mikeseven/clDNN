@@ -341,9 +341,9 @@ struct proposal_gpu : typed_primitive_impl<proposal>
         const size_t count = l.size.count();
 
         //Supported image_info sizes and components meaning:
-        // - size[2] = { img_height, img_width, img_depth }
-        // - size[3] = { img_height, img_width, scale_min_bbox_y, scale_min_bbox_x }
-        // - size[5] = { img_height, img_width, img_depth, scale_min_bbox_y, scale_min_bbox_x, scale_depth_index }
+        // - image_info[2] = { img_height, img_width, img_depth }
+        // - image_info[3] = { img_height, img_width, scale_min_bbox_y, scale_min_bbox_x }
+        // - image_info[5] = { img_height, img_width, img_depth, scale_min_bbox_y, scale_min_bbox_x, scale_depth_index }
         if ((size_t)l.size.spatial[0] != count || (count != 3 && count != 4 && count != 6)) {
             CLDNN_ERROR_MESSAGE(arg.id(), "image_info must have either 3, 4 or 6 items");
         }
