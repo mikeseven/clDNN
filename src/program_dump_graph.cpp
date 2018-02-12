@@ -223,7 +223,7 @@ namespace cldnn
 				<< "\\nprocessing number: " << node->get_processing_num() << "\\n color:" << (node->is_reusing_memory() ? std::to_string(node->get_reused_memory_color()) : "none")
 				<< (node->can_be_optimized() ? "\\n optimized out" : "");
 			if (node_type != "struct cldnn::data" && node_type != "struct cldnn::input_layout" && !node->can_be_optimized())
-				graph << "\\n Selected kernel: " << (node->get_selected_impl() == nullptr ? "none" : node->get_selected_impl().get()->kernel_name);
+				graph << "\\n Selected kernel: " << (node->get_selected_impl() == nullptr ? "none" : node->get_selected_impl().get()->get_kernel_name());
 			graph << "\"";
             #ifdef __clang__
                 #pragma clang diagnostic pop
