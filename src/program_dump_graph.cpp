@@ -218,9 +218,13 @@ namespace cldnn
                 #pragma clang diagnostic push
                 #pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
             #endif
-            graph << "    " << get_node_id(node.get()) << "[label=\"" << node->id() << ":\n" << get_extr_type(typeid(*node).name()) << "\n out format: " + extr_oformat(node.get())
-                << "\\nprocessing number: " << node->get_processing_num() << "\\n color:" << (node->is_reusing_memory() ? std::to_string(node->get_reused_memory_color()) : "none")
-                << (node->can_be_optimized() ? "\\n optimized out" : "") << "\"";
+			std::string node_type = get_extr_type(typeid(*node).name());
+			graph << "    " << get_node_id(node.get()) << "[label=\"" << node->id() << ":\n" << node_type << "\n out format: " + extr_oformat(node.get())
+				<< "\\nprocessing number: " << node->get_processing_num() << "\\n color:" << (node->is_reusing_memory() ? std::to_string(node->get_reused_memory_color()) : "none")
+				<< (node->can_be_optimized() ? "\\n optimized out" : "");
+			if (node_type != "struct cldnn::data" && node_type != "struct cldnn::input_layout" && !node->can_be_optimized())
+				graph << "\\n Selected kernel: " << (node->get_selected_impl() == nullptr ? "none" : node->get_selected_impl().get()->kernel_name);
+			graph << "\"";
             #ifdef __clang__
                 #pragma clang diagnostic pop
             #endif
