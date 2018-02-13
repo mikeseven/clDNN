@@ -43,7 +43,7 @@ struct typed_primitive_gpu_impl : public typed_primitive_impl<PType>
     std::vector<memory_impl::ptr> _intermediates_memory;
 
     typed_primitive_gpu_impl(const typed_program_node<PType>& arg, const kernel_selector::kernel_data& kd)
-        : typed_primitive_impl<PType>(kd.weightsReorderParams)
+        : typed_primitive_impl<PType>(kd.weightsReorderParams, kd.kernelName)
         , _outer(arg)
         , _engine_info(arg.get_program().get_engine().get_context()->get_engine_info())
         , _kernel_data(kd)
