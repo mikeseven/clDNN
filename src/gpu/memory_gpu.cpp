@@ -91,11 +91,11 @@ gpu_image2d::gpu_image2d(const refcounted_obj_ptr<engine_impl>& engine, const la
     cl_channel_type type = layout.data_type == data_types::f16 ? CL_HALF_FLOAT : CL_FLOAT;
     cl::ImageFormat imageFormat(order, type);
     _buffer = cl::Image2D(_context->context(), CL_MEM_READ_WRITE, imageFormat, _width, _height, 0);
-	//What is this for? Doesn't make sense.
-    /*void* ptr = gpu_image2d::lock();
-    for(uint64_t y = 0; y < static_cast<uint64_t>(_width); y++)
+
+    void* ptr = gpu_image2d::lock();
+    for(uint64_t y = 0; y < static_cast<uint64_t>(_height); y++)
         memset(ptr, 0, static_cast<size_t>(y*_row_pitch));
-    gpu_image2d::unlock();*/
+    gpu_image2d::unlock();
 }
 
 gpu_image2d::gpu_image2d(const refcounted_obj_ptr<engine_impl>& engine, const layout& new_layout, const cl::Image2D& buffer)
