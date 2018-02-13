@@ -227,6 +227,8 @@ def getRegressions(sessionIds):
                 elif 'result' in regression:
                     if tcu.cvtUni(regression['result']).lower().startswith('pass'):
                         isRegression = False
+                    if regression['result'].lower().startswith('fail') and regression['prev_result'].lower().startswith('pass'):
+                        isRegression = True
 
                     testMessage = 'Test:        {0}\nTest status: {1}\n\nTest change: {2} -> {1}' \
                         .format(regression['cmd_line'], regression['result'], regression['prev_result'])
