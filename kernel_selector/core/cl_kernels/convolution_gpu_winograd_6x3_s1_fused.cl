@@ -70,13 +70,19 @@
 #define UNIT_TYPE_4 CAT(UNIT_TYPE, 4)
 #define UNIT_TYPE_8 CAT(UNIT_TYPE, 8)
 
+#define WEIGHTS_IN_IMAGE
+
 __attribute__((reqd_work_group_size(16, 1, 8)))
 __attribute__((intel_reqd_sub_group_size(16)))
 KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 (
 	__global INPUT0_TYPE* I,
 	__global OUTPUT_TYPE* O,
+#ifdef WEIGHTS_IN_IMAGE
+    __read_only image2d_t  U,
+#else
 	__global FILTER_TYPE* U,
+#endif
 #if BIAS_TERM
 	const __global UNIT_TYPE * bias,
 #endif 
@@ -158,7 +164,11 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 	uint2 coordU0;
 	//coordU0.x = (k * 3);
 	//coordU0.y = lz*C_;
+#ifdef WEIGHTS_IN_IMAGE
+	coordU0.x = (lz * 48 + k * 24)*sizeof(UNIT_TYPE);
+#else
 	coordU0.x = (lz * 48 + k * 24);
+#endif
 	coordU0.y = 0;
 
 	__attribute__((opencl_unroll_hint(1)))
@@ -211,7 +221,10 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 				UNIT_TYPE_4 I5 = y5_in ? (UNIT_TYPE_4)(I_load_5[c*HW * 4], I_load_5[c*HW * 4 + HW], I_load_5[c*HW * 4 + HW * 2], I_load_5[c*HW * 4 + HW * 3]) : (UNIT_TYPE_4)(UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO);
 				UNIT_TYPE_4 I6 = y6_in ? (UNIT_TYPE_4)(I_load_6[c*HW * 4], I_load_6[c*HW * 4 + HW], I_load_6[c*HW * 4 + HW * 2], I_load_6[c*HW * 4 + HW * 3]) : (UNIT_TYPE_4)(UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO);
 				UNIT_TYPE_4 I7 = y7_in ? (UNIT_TYPE_4)(I_load_7[c*HW * 4], I_load_7[c*HW * 4 + HW], I_load_7[c*HW * 4 + HW * 2], I_load_7[c*HW * 4 + HW * 3]) : (UNIT_TYPE_4)(UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO, UNIT_VAL_ZERO);
+
 #endif
+
+
 
 				//For winograd 6x3 the WA to scale input needed to be added, as the intermediate computations overflow in some cases
 				//Later on the output is adjusted with the same scale factor before adding bias and ACTIVATION
@@ -258,7 +271,7 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 			__local const UNIT_TYPE_8 *V_read_c16 = V_read;
 
 			__attribute__((opencl_unroll_hint(1)))
-				for (uint c16 = 0; c16 < 2 ; ++c16) {
+            for (uint c16 = 0; c16 < 2 ; ++c16) {
 
 					// 2*14 * 3 * 8 = 672 MADs
 
@@ -267,18 +280,20 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 					UNIT_TYPE_8 V8 = V_read_c16[1 * 16 + c16 * 256];
 
 					__attribute__((opencl_unroll_hint(2)))
-						for (int c8 = 0; c8 < 2; ++c8) {
+                    for (int c8 = 0; c8 < 2; ++c8) {
 
 
 							// filter 0
 
 							// 2*14 * 3 * 4 = 336 MADs
-
-							const uint2 coordU = coordU0;
+                            const uint2 coordU = coordU0;
 
 							const uint flatA = coordU0.y*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU0.x;
 
 							// Fetch 8 channels of Winograd components from f(k,s)
+#ifdef WEIGHTS_IN_IMAGE
+							const UNIT_TYPE_8 f00 = as_half8(intel_sub_group_block_read_us8(U, (int2)(coordU0.x, coordU0.y)));
+#else
 							const UNIT_TYPE_8 f00 = (UNIT_TYPE_8)(
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 0 * FILTER_OFM_NUM*KCOLSW*KROWSW])),
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 1 * FILTER_OFM_NUM*KCOLSW*KROWSW])),
@@ -288,6 +303,7 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 5 * FILTER_OFM_NUM*KCOLSW*KROWSW])),
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 6 * FILTER_OFM_NUM*KCOLSW*KROWSW])),
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 7 * FILTER_OFM_NUM*KCOLSW*KROWSW])));
+#endif
 
 
 							// f0 x v[0 .. 14]
@@ -445,6 +461,9 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 							DOT8i_7(M6.s0, f00, V8, 8 + c8);
 							DOT8i_7(M6.s1, f00, V8, 10 + c8);
 
+#ifdef WEIGHTS_IN_IMAGE
+							const UNIT_TYPE_8 f01 = as_half8(intel_sub_group_block_read_us8(U, (int2)(coordU0.x + 16 * sizeof(UNIT_TYPE), coordU0.y)));
+#else
 							const UNIT_TYPE_8 f01 = (UNIT_TYPE_8)(
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 16 + 0 * FILTER_OFM_NUM*KCOLSW*KROWSW])),
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 16 + 1 * FILTER_OFM_NUM*KCOLSW*KROWSW])),
@@ -454,7 +473,7 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 16 + 5 * FILTER_OFM_NUM*KCOLSW*KROWSW])),
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 16 + 6 * FILTER_OFM_NUM*KCOLSW*KROWSW])),
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 16 + 7 * FILTER_OFM_NUM*KCOLSW*KROWSW])));
-
+#endif
 
 							// f1[c8] x v[1 .. 15]
 							DOT8i_0(M0.s0, f01, V0, 2 + c8);
@@ -612,6 +631,9 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 							DOT8i_7(M6.s0, f01, V8, 10 + c8);
 							DOT8i_7(M6.s1, f01, V8, 12 + c8);
 
+#ifdef WEIGHTS_IN_IMAGE
+							const UNIT_TYPE_8 f02 = as_half8(intel_sub_group_block_read_us8(U, (int2)(coordU0.x + 32 * sizeof(UNIT_TYPE), coordU0.y)));
+#else
 							const UNIT_TYPE_8 f02 = (UNIT_TYPE_8)(
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 32 + 0 * FILTER_OFM_NUM*KCOLSW*KROWSW])),
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 32 + 1 * FILTER_OFM_NUM*KCOLSW*KROWSW])),
@@ -621,8 +643,8 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 32 + 5 * FILTER_OFM_NUM*KCOLSW*KROWSW])),
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 32 + 6 * FILTER_OFM_NUM*KCOLSW*KROWSW])),
 								as_half(intel_sub_group_block_read_us((__global unsigned short *)&U[flatA + 32 + 7 * FILTER_OFM_NUM*KCOLSW*KROWSW])));
+#endif
 							coordU0.y += 8;
-
 
 
 							// f2[c8] x v[2 .. 16]
@@ -782,7 +804,6 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 
 							DOT8i_7(M6.s0, f02, V8, 12 + c8);
 							DOT8i_7(M6.s1, f02, V8, 14 + c8);
-
 
 						}
 				}
