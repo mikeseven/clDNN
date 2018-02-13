@@ -70,7 +70,6 @@
 #define UNIT_TYPE_4 CAT(UNIT_TYPE, 4)
 #define UNIT_TYPE_8 CAT(UNIT_TYPE, 8)
 
-#define WEIGHTS_IN_IMAGE
 
 __attribute__((reqd_work_group_size(16, 1, 8)))
 __attribute__((intel_reqd_sub_group_size(16)))
@@ -78,7 +77,7 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 (
 	__global INPUT0_TYPE* I,
 	__global OUTPUT_TYPE* O,
-#ifdef WEIGHTS_IN_IMAGE
+#ifdef FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1
     __read_only image2d_t  U,
 #else
 	__global FILTER_TYPE* U,
@@ -164,7 +163,7 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 	uint2 coordU0;
 	//coordU0.x = (k * 3);
 	//coordU0.y = lz*C_;
-#ifdef WEIGHTS_IN_IMAGE
+#ifdef FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1
 	coordU0.x = (lz * 48 + k * 24)*sizeof(UNIT_TYPE);
 #else
 	coordU0.x = (lz * 48 + k * 24);
@@ -291,7 +290,7 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 							const uint flatA = coordU0.y*FILTER_OFM_NUM*KCOLSW*KROWSW + coordU0.x;
 
 							// Fetch 8 channels of Winograd components from f(k,s)
-#ifdef WEIGHTS_IN_IMAGE
+#ifdef FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1
 							const UNIT_TYPE_8 f00 = as_half8(intel_sub_group_block_read_us8(U, (int2)(coordU0.x, coordU0.y)));
 #else
 							const UNIT_TYPE_8 f00 = (UNIT_TYPE_8)(
@@ -461,7 +460,7 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 							DOT8i_7(M6.s0, f00, V8, 8 + c8);
 							DOT8i_7(M6.s1, f00, V8, 10 + c8);
 
-#ifdef WEIGHTS_IN_IMAGE
+#ifdef FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1
 							const UNIT_TYPE_8 f01 = as_half8(intel_sub_group_block_read_us8(U, (int2)(coordU0.x + 16 * sizeof(UNIT_TYPE), coordU0.y)));
 #else
 							const UNIT_TYPE_8 f01 = (UNIT_TYPE_8)(
@@ -631,7 +630,7 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 							DOT8i_7(M6.s0, f01, V8, 10 + c8);
 							DOT8i_7(M6.s1, f01, V8, 12 + c8);
 
-#ifdef WEIGHTS_IN_IMAGE
+#ifdef FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1
 							const UNIT_TYPE_8 f02 = as_half8(intel_sub_group_block_read_us8(U, (int2)(coordU0.x + 32 * sizeof(UNIT_TYPE), coordU0.y)));
 #else
 							const UNIT_TYPE_8 f02 = (UNIT_TYPE_8)(
