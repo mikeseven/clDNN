@@ -50,13 +50,13 @@ KERNEL(reorder_weights_image_winograd_6x3_s1)(const __global INPUT0_TYPE* input,
 	uint idx_x = idx%ySize;
 	uint idx_y = idx/ySize;
 
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+90.0 / 90 * tile.x)); idx_x += weightsOSplit * OUTPUT_SIZE_Y; //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(-20.0 / 90 * tile.x - 20.0 / 90 * tile.y - 20.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(-20.0 / 90 * tile.x + 20.0 / 90 * tile.y - 20.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+1.0 / 90 * tile.x + 2.0 / 90 * tile.y + 4.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+1.0 / 90 * tile.x - 2.0 / 90 * tile.y + 4.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+64.0 / 90 * tile.x + 32.0 / 90 * tile.y + 16.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+64.0 / 90 * tile.x - 32.0 / 90 * tile.y + 16.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+90.0 / 90 * tile.x)); idx_x += weightsOSplit * OUTPUT_SIZE_Y; if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(-20.0 / 90 * tile.x - 20.0 / 90 * tile.y - 20.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(-20.0 / 90 * tile.x + 20.0 / 90 * tile.y - 20.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+1.0 / 90 * tile.x + 2.0 / 90 * tile.y + 4.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+1.0 / 90 * tile.x - 2.0 / 90 * tile.y + 4.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+64.0 / 90 * tile.x + 32.0 / 90 * tile.y + 16.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+64.0 / 90 * tile.x - 32.0 / 90 * tile.y + 16.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
 	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+90.0 / 90 * tile.z)); 
 	
 	/*output[out_idx] = TO_OUTPUT_TYPE(+90.0 / 90 * tile.x); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
