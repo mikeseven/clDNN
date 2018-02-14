@@ -69,7 +69,7 @@ KERNEL(convolution_f32)(
     // Src1 (filter) is directly used as btile.
     // It starts at the top of src1 and walks down.
     // btile is K rows x N columns.
-    const __global float *src1_read = src1 + ( global_x * TILE_N * 2);
+    uint src1_read_offset = ( global_x * TILE_N * 2);
 
 #define DOT_PRODUCT_8( _result, _rowA, colB )    \
     {   \
@@ -105,9 +105,6 @@ KERNEL(convolution_f32)(
             // ...
             const bool kernel_width_is_odd = FILTER_SIZE_X % 2 == 1;
 
-            const __global float *src0_read0 = src0 + src0_read_offset0;
-            const __global float *src0_read1 = src0 + src0_read_offset1;
-            
             float blockA00[FILTER_SIZE_X];
             float blockA01[FILTER_SIZE_X];
             
@@ -116,8 +113,8 @@ KERNEL(convolution_f32)(
                 unsigned i = 0;
                 LOOP(FILTER_SIZE_X, i, 
                 {
-                    blockA00[i] = src0_read0[i];
-                    blockA01[i] = src0_read1[i];
+                    blockA00[i] = src0[src0_read_offset0 + i];
+                    blockA01[i] = src0[src0_read_offset1 + i];
                 } )
             }
 
@@ -136,13 +133,13 @@ KERNEL(convolution_f32)(
             interleaved_y = 0;
             LOOP(FILTER_SIZE_X_DIV2, interleaved_y,
             {
-                p8BlockB00[interleaved_y] = as_float8( intel_sub_group_block_read8( (const __global uint*)src1_read ) );
-                src1_read += ALIGNED_OFM * 2;
+                p8BlockB00[interleaved_y] = as_float8( intel_sub_group_block_read8( (const __global uint*)src1 + src1_read_offset ) );
+                src1_read_offset += ALIGNED_OFM * 2;
             } )
             if ( kernel_width_is_odd )
             {
-                p4BlockB00[FILTER_SIZE_X - 1] = as_float4( intel_sub_group_block_read4( (const __global uint*)src1_read ) );
-                src1_read += ALIGNED_OFM * 2;
+                p4BlockB00[FILTER_SIZE_X - 1] = as_float4( intel_sub_group_block_read4( (const __global uint*)src1 + src1_read_offset ) );
+                src1_read_offset += ALIGNED_OFM * 2;
             }
 
             // Perform MADs
