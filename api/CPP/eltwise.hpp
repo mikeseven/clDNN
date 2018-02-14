@@ -59,14 +59,13 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
     /// @param activation_slp Relu activation slope.
     eltwise(
         const primitive_id& id,
-        const primitive_id& input,
-        const primitive_id& input2,
+        const std::vector<primitive_id>& inputs,
         eltwise_mode mode,
         bool with_activation = false,
         float activation_slp = 0.0f,
         const padding& output_padding = padding()
     )
-        :primitive_base(id, { input, input2 }, output_padding)
+        :primitive_base(id, inputs, output_padding)
         , mode(mode)
         , with_activation(with_activation)
         , activation_negative_slope(activation_slp)
@@ -80,8 +79,8 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
         , with_activation(dto->with_activation != 0)
         , activation_negative_slope(dto->activation_negative_slope)
     {
-        if (dto->input.size != 2)
-            throw std::invalid_argument("eltiwise dto should containt exactly two inputs");
+        if (dto->input.size < 2)
+            throw std::invalid_argument("eltiwise dto should containt at least two inputs");
     }
 
     /// @param mode Eltwise mode.

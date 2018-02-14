@@ -32,7 +32,8 @@ public:
     using parent::parent;
 
     decltype(auto) input() const { return get_dependency(0); }
-    decltype(auto) input2() const { return get_dependency(1); }
+    decltype(auto) input_n(int n) const { return get_dependency(n); }
+    size_t inputs_count() const { return get_dependencies().size(); }
 };
 
 using eltwise_node = typed_program_node<eltwise>;

@@ -1595,7 +1595,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
             if (bias_term)
             {
                 auto& bias_node = conv_node.get_dependency(2);
-                auto winograd_output_biases = std::make_shared<eltwise>(back_node.id() + "_bias", back_node.id(), bias_node.id(),
+                std::vector<primitive_id> inputs = { back_node.id(), bias_node.id() };
+                auto winograd_output_biases = std::make_shared<eltwise>(back_node.id() + "_bias", inputs,
                     cldnn::eltwise_mode::sum, conv_prim->with_activation, conv_prim->activation_negative_slope, 
                     back_node.output_layout.data_padding);
                 back_node.output_layout.data_padding = padding{};
