@@ -42,29 +42,49 @@ KERNEL(reorder_weights_image_winograd_6x3_s1)(const __global INPUT0_TYPE* input,
 	const uint weightsOSplit = 16;
 	const uint oDivSplit = OUTPUT_OFM_NUM / 16;
 
+//#define WEIGHTS_FBXYb
+#ifdef WEIGHTS_FBXYb
 	const uint ySize = OUTPUT_OFM_NUM * OUTPUT_SIZE_X * OUTPUT_SIZE_Y;
-	uint idx = batch_idx % 16 + tile_y_idx * output_tile_height * weightsOSplit +
+	uint idx = batch_idx % 16 + 
+		tile_y_idx * output_tile_height * weightsOSplit +
 		tile_x_idx * output_tile_width * weightsOSplit * OUTPUT_SIZE_Y +
 		batch_idx / 16 * weightsOSplit * OUTPUT_SIZE_X * OUTPUT_SIZE_Y +
 	    feature_idx * ySize;
 	uint idx_x = idx%ySize;
 	uint idx_y = idx/ySize;
+	const uint Stride = weightsOSplit * OUTPUT_SIZE_Y;
 
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+90.0 / 90 * tile.x)); idx_x += weightsOSplit * OUTPUT_SIZE_Y; if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(-20.0 / 90 * tile.x - 20.0 / 90 * tile.y - 20.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(-20.0 / 90 * tile.x + 20.0 / 90 * tile.y - 20.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+1.0 / 90 * tile.x + 2.0 / 90 * tile.y + 4.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+1.0 / 90 * tile.x - 2.0 / 90 * tile.y + 4.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+64.0 / 90 * tile.x + 32.0 / 90 * tile.y + 16.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+64.0 / 90 * tile.x - 32.0 / 90 * tile.y + 16.0 / 90 * tile.z)); idx_x += weightsOSplit * OUTPUT_SIZE_Y;  if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
-	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+90.0 / 90 * tile.z)); 
-	
-	/*output[out_idx] = TO_OUTPUT_TYPE(+90.0 / 90 * tile.x); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
-	output[out_idx] = TO_OUTPUT_TYPE(-20.0 / 90 * tile.x - 20.0 / 90 * tile.y - 20.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
-	output[out_idx] = TO_OUTPUT_TYPE(-20.0 / 90 * tile.x + 20.0 / 90 * tile.y - 20.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
-	output[out_idx] = TO_OUTPUT_TYPE(+1.0 / 90 * tile.x + 2.0 / 90 * tile.y + 4.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
-	output[out_idx] = TO_OUTPUT_TYPE(+1.0 / 90 * tile.x - 2.0 / 90 * tile.y + 4.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
-	output[out_idx] = TO_OUTPUT_TYPE(+64.0 / 90 * tile.x + 32.0 / 90 * tile.y + 16.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
-	output[out_idx] = TO_OUTPUT_TYPE(+64.0 / 90 * tile.x - 32.0 / 90 * tile.y + 16.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
-	output[out_idx] = TO_OUTPUT_TYPE(+90.0 / 90 * tile.z);*/
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+90.0 / 90 * tile.x)); idx_x += Stride; //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(-20.0 / 90 * tile.x - 20.0 / 90 * tile.y - 20.0 / 90 * tile.z)); idx_x += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(-20.0 / 90 * tile.x + 20.0 / 90 * tile.y - 20.0 / 90 * tile.z)); idx_x += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+1.0 / 90 * tile.x + 2.0 / 90 * tile.y + 4.0 / 90 * tile.z)); idx_x += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+1.0 / 90 * tile.x - 2.0 / 90 * tile.y + 4.0 / 90 * tile.z)); idx_x += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+64.0 / 90 * tile.x + 32.0 / 90 * tile.y + 16.0 / 90 * tile.z)); idx_x += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+64.0 / 90 * tile.x - 32.0 / 90 * tile.y + 16.0 / 90 * tile.z)); idx_x += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+90.0 / 90 * tile.z));
+
+
+#else // WEIGHTS_XFBYb
+	const uint ySize = OUTPUT_OFM_NUM * OUTPUT_SIZE_Y;
+	uint idx = batch_idx % 16 +
+		tile_y_idx * output_tile_height * weightsOSplit +
+		batch_idx / 16 * weightsOSplit * OUTPUT_SIZE_Y +
+		feature_idx * weightsOSplit * OUTPUT_SIZE_Y * oDivSplit +
+		tile_x_idx * output_tile_width * weightsOSplit * OUTPUT_SIZE_Y * oDivSplit * INPUT0_IFM_NUM;
+	uint idx_x = idx%ySize;
+	uint idx_y = idx/ySize;
+	const uint Stride = INPUT0_IFM_NUM;
+
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+90.0 / 90 * tile.x)); idx_y += Stride; //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(-20.0 / 90 * tile.x - 20.0 / 90 * tile.y - 20.0 / 90 * tile.z)); idx_y += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(-20.0 / 90 * tile.x + 20.0 / 90 * tile.y - 20.0 / 90 * tile.z)); idx_y += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+1.0 / 90 * tile.x + 2.0 / 90 * tile.y + 4.0 / 90 * tile.z)); idx_y += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+1.0 / 90 * tile.x - 2.0 / 90 * tile.y + 4.0 / 90 * tile.z)); idx_y += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+64.0 / 90 * tile.x + 32.0 / 90 * tile.y + 16.0 / 90 * tile.z)); idx_y += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+64.0 / 90 * tile.x - 32.0 / 90 * tile.y + 16.0 / 90 * tile.z)); idx_y += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+90.0 / 90 * tile.z));
+
+#endif
+
+
 }
