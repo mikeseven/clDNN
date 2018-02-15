@@ -54,7 +54,7 @@ KERNEL(convolution_gpu_bfyx_3x3_dw_opt)(
     // 0 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15
     // In the diagram above X represents the current work item.
 
-    int input_offset = INPUT0_OFFSET + offset + (start_y * INPUT0_Y_PITCH + start_x) - 1;
+    const int input_offset_const = INPUT0_OFFSET + offset + (start_y * INPUT0_Y_PITCH + start_x) - 1;
 
     const uint base_addr_offset = INPUT0_Y_PITCH;
 
@@ -63,13 +63,13 @@ KERNEL(convolution_gpu_bfyx_3x3_dw_opt)(
 
 #if FP16_UNIT_USED
     const uint lid = get_sub_group_local_id();
-    if(input_offset - base_addr_offset >= 0)
-        input_buffer[0] = input[input_offset - base_addr_offset + lid];
-    if(input_offset >= 0)
-        input_buffer[1] = input[input_offset + lid];
+    if(input_offset_const - base_addr_offset >= 0)
+        input_buffer[0] = input[input_offset_const - base_addr_offset + lid];
+    if(input_offset_const >= 0)
+        input_buffer[1] = input[input_offset_const + lid];
 #else
-    input_buffer[0] = ALIGNED_BLOCK_READ(input, input_offset - base_addr_offset);
-    input_buffer[1] = ALIGNED_BLOCK_READ(input, input_offset);
+    input_buffer[0] = ALIGNED_BLOCK_READ(input, input_offset_const - base_addr_offset);
+    input_buffer[1] = ALIGNED_BLOCK_READ(input, input_offset_const);
 #endif
 
     UNIT_TYPE w = weights[weight_offset];
@@ -77,6 +77,7 @@ KERNEL(convolution_gpu_bfyx_3x3_dw_opt)(
     int first = 0;
     int second = 1;
     int third = 2;
+    int input_offset = input_offset_const;
 
     for (int y = start_y; y <= end_y; y++)
     {
