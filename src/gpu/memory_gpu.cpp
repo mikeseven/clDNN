@@ -70,10 +70,20 @@ gpu_image2d::gpu_image2d(const refcounted_obj_ptr<engine_impl>& engine, const la
     switch (layout.format)
     {
     case format::image_2d_weights_c1_b_fyx:
+		_width = layout.size.batch[0];
+		_height = layout.size.spatial[0] * layout.size.feature[0] * layout.size.spatial[1];
+		order = CL_R;
+		break;
     case format::image_2d_weights_winograd_6x3_s1:
-        _width = layout.size.batch[0];
-        _height = layout.size.spatial[0] * layout.size.feature[0] * layout.size.spatial[1];
-        order = CL_R;
+//#define WEIGHTS_FBXYb
+#ifdef WEIGHTS_FBXYb
+		_height =  layout.size.feature[0];
+		_width = layout.size.spatial[0] * layout.size.batch[0] * layout.size.spatial[1] * 8 / 3;
+#else
+		_height = layout.size.feature[0] * layout.size.spatial[0] * 8 / 3;
+		_width =  layout.size.batch[0] * layout.size.spatial[1] ;
+#endif
+		order = CL_R;
         break;
     case format::image_2d_weights_c4_fyx_b:
         _width = layout.size.batch[0];
@@ -87,8 +97,9 @@ gpu_image2d::gpu_image2d(const refcounted_obj_ptr<engine_impl>& engine, const la
     cl_channel_type type = layout.data_type == data_types::f16 ? CL_HALF_FLOAT : CL_FLOAT;
     cl::ImageFormat imageFormat(order, type);
     _buffer = cl::Image2D(_context->context(), CL_MEM_READ_WRITE, imageFormat, _width, _height, 0);
+
     void* ptr = gpu_image2d::lock();
-    for(uint64_t y = 0; y < static_cast<uint64_t>(layout.size.spatial[0] * layout.size.feature[0] * layout.size.spatial[1]); y++)
+    for(uint64_t y = 0; y < static_cast<uint64_t>(_height); y++)
         memset(ptr, 0, static_cast<size_t>(y*_row_pitch));
     gpu_image2d::unlock();
 }

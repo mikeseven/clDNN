@@ -16,38 +16,75 @@
 
 KERNEL(reorder_weights_image_winograd_6x3_s1)(const __global INPUT0_TYPE* input, write_only image2d_t output)
 {
-    const uint input_tile_width = 1;
-    const uint input_tile_height = 3;
-    const uint in_tile_x_idx = get_global_id(1);
-    const uint in_tile_y_idx = get_global_id(0);
+	const uint input_tile_width = 1;
+	const uint input_tile_height = 3;
+	const uint in_tile_x_idx = get_global_id(1);
+	const uint in_tile_y_idx = get_global_id(0);
 
-    const uint output_tile_width = 4;
-    const uint output_tile_height = 1;
-    
-    const uint tile_x_idx = get_global_id(0);
-    const uint tile_y_idx = get_global_id(1);
-    const uint feature_idx = get_global_id(2) % INPUT0_IFM_NUM;
-    const uint batch_idx = get_global_id(2) / INPUT0_IFM_NUM;
-    
-    uint in_idx = batch_idx * INPUT0_OFM_PITCH
-                 + feature_idx * INPUT0_IFM_PITCH
-                 + in_tile_y_idx * input_tile_height * INPUT0_Y_PITCH
-                 + in_tile_x_idx * input_tile_width * INPUT0_X_PITCH;
+	const uint output_tile_width = 8;
+	const uint output_tile_height = 1;
 
-    MAKE_VECTOR_TYPE(INPUT0_TYPE, 4) tile;
-    tile.x = input[in_idx]; in_idx += INPUT0_Y_PITCH;
-    tile.y = input[in_idx]; in_idx += INPUT0_Y_PITCH;
-    tile.z = input[in_idx];
+	const uint tile_x_idx = get_global_id(0);
+	const uint tile_y_idx = get_global_id(1);
+	const uint feature_idx = get_global_id(2) % INPUT0_IFM_NUM;
+	const uint batch_idx = get_global_id(2) / INPUT0_IFM_NUM;
 
-    const uint weightsOSplit = 8;
-    const uint oDivSplit = OUTPUT_OFM_NUM / 8;
-    uint out_idx = batch_idx % 8 + tile_y_idx * output_tile_height * weightsOSplit +
-        tile_x_idx * output_tile_width * weightsOSplit * OUTPUT_SIZE_Y +
-        batch_idx / 8 * weightsOSplit * OUTPUT_SIZE_X * OUTPUT_SIZE_Y +
-        feature_idx * weightsOSplit * OUTPUT_SIZE_X * OUTPUT_SIZE_Y * oDivSplit;
+	uint in_idx = batch_idx * INPUT0_OFM_PITCH
+		+ feature_idx * INPUT0_IFM_PITCH
+		+ in_tile_y_idx * input_tile_height * INPUT0_Y_PITCH
+		+ in_tile_x_idx * input_tile_width * INPUT0_X_PITCH;
 
-    output[out_idx] = TO_OUTPUT_TYPE(tile.x); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
-    output[out_idx] = TO_OUTPUT_TYPE((tile.x + tile.y + tile.z) / 2.0f); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
-    output[out_idx] = TO_OUTPUT_TYPE((tile.x - tile.y + tile.z) / 2.0f); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
-    output[out_idx] = TO_OUTPUT_TYPE(tile.z);
+	MAKE_VECTOR_TYPE(INPUT0_TYPE, 4) tile;
+	tile.x = input[in_idx]; in_idx += INPUT0_Y_PITCH;
+	tile.y = input[in_idx]; in_idx += INPUT0_Y_PITCH;
+	tile.z = input[in_idx];
+
+	const uint weightsOSplit = 16;
+	const uint oDivSplit = OUTPUT_OFM_NUM / 16;
+
+//#define WEIGHTS_FBXYb
+#ifdef WEIGHTS_FBXYb
+	const uint ySize = OUTPUT_OFM_NUM * OUTPUT_SIZE_X * OUTPUT_SIZE_Y;
+	uint idx = batch_idx % 16 + 
+		tile_y_idx * output_tile_height * weightsOSplit +
+		tile_x_idx * output_tile_width * weightsOSplit * OUTPUT_SIZE_Y +
+		batch_idx / 16 * weightsOSplit * OUTPUT_SIZE_X * OUTPUT_SIZE_Y +
+	    feature_idx * ySize;
+	uint idx_x = idx%ySize;
+	uint idx_y = idx/ySize;
+	const uint Stride = weightsOSplit * OUTPUT_SIZE_Y;
+
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+90.0 / 90 * tile.x)); idx_x += Stride; //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(-20.0 / 90 * tile.x - 20.0 / 90 * tile.y - 20.0 / 90 * tile.z)); idx_x += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(-20.0 / 90 * tile.x + 20.0 / 90 * tile.y - 20.0 / 90 * tile.z)); idx_x += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+1.0 / 90 * tile.x + 2.0 / 90 * tile.y + 4.0 / 90 * tile.z)); idx_x += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+1.0 / 90 * tile.x - 2.0 / 90 * tile.y + 4.0 / 90 * tile.z)); idx_x += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+64.0 / 90 * tile.x + 32.0 / 90 * tile.y + 16.0 / 90 * tile.z)); idx_x += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+64.0 / 90 * tile.x - 32.0 / 90 * tile.y + 16.0 / 90 * tile.z)); idx_x += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+90.0 / 90 * tile.z));
+
+
+#else // WEIGHTS_XFBYb
+	const uint ySize = OUTPUT_OFM_NUM * OUTPUT_SIZE_Y;
+	uint idx = batch_idx % 16 +
+		tile_y_idx * output_tile_height * weightsOSplit +
+		batch_idx / 16 * weightsOSplit * OUTPUT_SIZE_Y +
+		feature_idx * weightsOSplit * OUTPUT_SIZE_Y * oDivSplit +
+		tile_x_idx * output_tile_width * weightsOSplit * OUTPUT_SIZE_Y * oDivSplit * INPUT0_IFM_NUM;
+	uint idx_x = idx%ySize;
+	uint idx_y = idx/ySize;
+	const uint Stride = INPUT0_IFM_NUM;
+
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+90.0 / 90 * tile.x)); idx_y += Stride; //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(-20.0 / 90 * tile.x - 20.0 / 90 * tile.y - 20.0 / 90 * tile.z)); idx_y += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(-20.0 / 90 * tile.x + 20.0 / 90 * tile.y - 20.0 / 90 * tile.z)); idx_y += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+1.0 / 90 * tile.x + 2.0 / 90 * tile.y + 4.0 / 90 * tile.z)); idx_y += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+1.0 / 90 * tile.x - 2.0 / 90 * tile.y + 4.0 / 90 * tile.z)); idx_y += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+64.0 / 90 * tile.x + 32.0 / 90 * tile.y + 16.0 / 90 * tile.z)); idx_y += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+64.0 / 90 * tile.x - 32.0 / 90 * tile.y + 16.0 / 90 * tile.z)); idx_y += Stride;  //if (idx_x >= ySize) { idx_x = idx_x % ySize; idx_y++; }
+	write_imagef(output, (int2)(idx_x, idx_y), TO_OUTPUT_TYPE(+90.0 / 90 * tile.z));
+
+#endif
+
+
 }
