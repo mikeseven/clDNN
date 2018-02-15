@@ -28,6 +28,7 @@
 #include "api/CPP/pooling.hpp"
 #include "api/CPP/proposal.hpp"
 #include "api/CPP/roi_pooling.hpp"
+#include "api/CPP/reorg_yolo.hpp"
 
 #include "activation_inst.h"
 #include "batch_norm_inst.h"
@@ -44,6 +45,8 @@
 #include "permute_inst.h"
 #include "prior_box_inst.h"
 #include "reorder_inst.h"
+#include "reorg_yolo_inst.h"
+#include "region_yolo_inst.h"
 #include "reshape_inst.h"
 #include "scale_inst.h"
 #include "softmax_inst.h"
@@ -1500,7 +1503,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
         //list of layers that do not support yxfb or perform worse than bfyx
         if (prim.type() == cldnn::detection_output::type_id() || prim.type() == cldnn::proposal::type_id() ||
             prim.type() == cldnn::roi_pooling::type_id() || prim.type() == cldnn::deconvolution::type_id() ||
-            prim.type() == cldnn::upsampling::type_id())
+            prim.type() == cldnn::upsampling::type_id() || prim.type() == cldnn::reorg_yolo::type_id())
             lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::bfyx_only_layer, 1);
     }
 
