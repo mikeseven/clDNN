@@ -52,13 +52,17 @@ struct primitive_impl
     //   A special member function is user-provided if it is user-declared and not explicitly defaulted or deleted
     //   on its first declaration.
     primitive_impl() : _weights_reorder_params() {}
-    primitive_impl(const kernel_selector::weights_reorder_params& params) : _weights_reorder_params(params) {}
+    primitive_impl(const kernel_selector::weights_reorder_params& params, std::string kernel_name = "") : _weights_reorder_params(params), kernel_name(kernel_name) {}
     virtual ~primitive_impl() = default;
 
     virtual event_impl::ptr execute(const std::vector<event_impl::ptr>& events, primitive_inst& instance) = 0;
 
+	std::string get_kernel_name() { return kernel_name; };
+
     // TODO: added a derived class for weights reordering (maybe for all static data reordering)
     const kernel_selector::weights_reorder_params _weights_reorder_params;
+private:
+	std::string kernel_name;
 };
 
 /*

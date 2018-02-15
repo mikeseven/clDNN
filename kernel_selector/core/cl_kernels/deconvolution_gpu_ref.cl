@@ -58,7 +58,7 @@ KERNEL(deconvolution_gpu_yxfb_ref)(
                     uint fixed_input_offset_y = (uint)input_offset_y / STRIDE_SIZE_Y;
                     uint input_idx = input_offset + (uint)fixed_input_offset_x*INPUT0_X_PITCH + (uint)fixed_input_offset_y*INPUT0_Y_PITCH;
 
-                    uint filter_idx = ofm_offset*FILTER_OFM_PITCH + (FILTER_SIZE_Y - i)*FILTER_Y_PITCH - (j + 1)*FILTER_X_PITCH;
+                    uint filter_idx = ofm_offset*FILTER_OFM_PITCH + (FILTER_SIZE_Y - i - 1)*FILTER_Y_PITCH + (FILTER_SIZE_X - j - 1)*FILTER_X_PITCH;
 
                     for (uint h = 0; h < FILTER_IFM_NUM; h++)
                     {
