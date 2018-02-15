@@ -43,6 +43,35 @@ namespace KernelSelector
         return k;
     }
 
+    CommonDispatchData DeconvolutionKernelRef::SetDefault(const DeconvolutionParams& params) const
+    {
+        CommonDispatchData runInfo = DeconvolutionKernelBase::SetDefault(params);
+
+        if (params.output.Feature().v == 1)
+        {
+            const auto& out = params.output;
+            runInfo.gws0 = Align(out.X().v, 32);
+            runInfo.gws1 = out.Y().v;
+            runInfo.gws2 = out.Feature().v * out.Batch().v;
+
+            runInfo.lws0 = 32;
+            runInfo.lws1 = 1;
+            runInfo.lws2 = 1;
+        }
+
+        return runInfo;
+    }
+
+    JitConstants DeconvolutionKernelRef::GetJitConstants(const DeconvolutionParams& params) const
+    {
+        auto jit = DeconvolutionKernelBase::GetJitConstants(params);
+
+        if (params.output.Feature().v == 1)
+            jit.AddConstant(MakeJitConstant("DIM_ORDER_XYBF", 1));
+
+        return jit;
+    }
+
     KernelsData DeconvolutionKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::DECONVOLUTION);

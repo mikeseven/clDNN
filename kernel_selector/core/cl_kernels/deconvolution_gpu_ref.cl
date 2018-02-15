@@ -25,10 +25,22 @@ KERNEL(deconvolution_gpu_yxfb_ref)(
 {
     UNIT_TYPE result = UNIT_VAL_ZERO;
 
-    const uint batch_offset = (uint)get_global_id(0) % INPUT0_BATCH_NUM;
-    const uint ofm_offset   = (uint)get_global_id(0) / INPUT0_BATCH_NUM;
-    const uint out_x        = (uint)get_global_id(1);
-    const uint out_y        = (uint)get_global_id(2);
+#if DIM_ORDER_XYBF == 1
+    const uint out_x        = get_global_id(0);    
+    const uint out_y        = get_global_id(1);
+    const uint b_f          = get_global_id(2);
+    const uint batch_offset = b_f / INPUT0_FEATURE_NUM;
+    const uint ofm_offset   = b_f % INPUT0_FEATURE_NUM;
+    
+    if (out_x >= OUTPUT_SIZE_X)
+        return;
+#else
+    const uint b_f           = get_global_id(0);
+    const uint out_x         = (uint)get_global_id(1);
+    const uint out_y         = (uint)get_global_id(2);
+    const uint ofm_offset    = b_f / INPUT0_BATCH_NUM;
+    const uint batch_offset  = b_f % INPUT0_BATCH_NUM;
+#endif 
 
     const int x = (int)out_x + PADDING_SIZE_X - (FILTER_SIZE_X - 1);
     const int y = (int)out_y + PADDING_SIZE_Y - (FILTER_SIZE_Y - 1);
