@@ -64,7 +64,7 @@ std::string eltwise_inst::to_string(eltwise_node const& node)
     json_composite eltwise_info;
     for (size_t i = 0; i < node.inputs_count(); i++)
     {
-        eltwise_info.add("input_"+std::to_string(i), node.input_n(i).id());
+        eltwise_info.add("input_"+std::to_string(i), node.input(i).id());
     }
     eltwise_info.add("mode", str_mode);
     if (desc->with_activation)

@@ -50,7 +50,7 @@ struct eltwise_gpu : typed_primitive_gpu_impl<eltwise>
 
         for (size_t i = 1; i < arg.inputs_count(); i++)
         {
-            ew_params.inputs.push_back(convert_data_tensor(arg.input_n(i).get_output_layout()));
+            ew_params.inputs.push_back(convert_data_tensor(arg.input(i).get_output_layout()));
         }
 
         const auto& primitive = arg.get_primitive();
@@ -61,7 +61,7 @@ struct eltwise_gpu : typed_primitive_gpu_impl<eltwise>
             { kernel_selector::eltwise_params::InputType::Buffer(0), kernel_selector::eltwise_params::InputType::Buffer(1) },
             convect_to_eltwise_mode(primitive->mode) });
 
-        for (size_t i = 2; i < arg.inputs_count(); i++)
+        for (uint32_t i = 2; i < static_cast<uint32_t>(arg.inputs_count()); i++)
         {
             ew_params.eltwiseParams.operations.push_back({{ kernel_selector::eltwise_params::InputType::Intermediate(i-2),
                                                             kernel_selector::eltwise_params::InputType::Buffer(i) },
