@@ -41,7 +41,11 @@ KERNEL(reorder_weights_winograd_6x3_s1)(const __global INPUT0_TYPE* input, __glo
 
     const uint weightsOSplit = 16;
     const uint oDivSplit = OUTPUT_OFM_NUM / 16;
-    uint out_idx = batch_idx % 16 + tile_y_idx * output_tile_height * weightsOSplit +
+
+//#define WEIGHTS_FBXYb
+#ifdef WEIGHTS_FBXYb
+    uint out_idx = batch_idx % 16 + 
+		tile_y_idx * output_tile_height * weightsOSplit +
         tile_x_idx * output_tile_width * weightsOSplit * OUTPUT_SIZE_Y +
         batch_idx / 16 * weightsOSplit * OUTPUT_SIZE_X * OUTPUT_SIZE_Y +
         feature_idx * weightsOSplit * OUTPUT_SIZE_X * OUTPUT_SIZE_Y * oDivSplit;
@@ -53,5 +57,24 @@ KERNEL(reorder_weights_winograd_6x3_s1)(const __global INPUT0_TYPE* input, __glo
 	output[out_idx] = TO_OUTPUT_TYPE(+1.0 / 90 * tile.x - 2.0 / 90 * tile.y + 4.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
 	output[out_idx] = TO_OUTPUT_TYPE(+64.0 / 90 * tile.x + 32.0 / 90 * tile.y + 16.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
 	output[out_idx] = TO_OUTPUT_TYPE(+64.0 / 90 * tile.x - 32.0 / 90 * tile.y + 16.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y;
+	output[out_idx] = TO_OUTPUT_TYPE(+90.0 / 90 * tile.z);
+
+#else // WEIGHTS_XFBYb
+
+	uint out_idx = batch_idx % 16 +
+		tile_y_idx * output_tile_height * weightsOSplit +
+		batch_idx / 16 * weightsOSplit * OUTPUT_SIZE_Y +
+		feature_idx * weightsOSplit * OUTPUT_SIZE_Y * oDivSplit +
+		tile_x_idx * output_tile_width * weightsOSplit * OUTPUT_SIZE_Y * oDivSplit * INPUT0_IFM_NUM;
+
+	output[out_idx] = TO_OUTPUT_TYPE(+90.0 / 90 * tile.x); out_idx += weightsOSplit * OUTPUT_SIZE_Y * oDivSplit * INPUT0_IFM_NUM;
+	output[out_idx] = TO_OUTPUT_TYPE(-20.0 / 90 * tile.x - 20.0 / 90 * tile.y - 20.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y * oDivSplit * INPUT0_IFM_NUM;
+	output[out_idx] = TO_OUTPUT_TYPE(-20.0 / 90 * tile.x + 20.0 / 90 * tile.y - 20.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y * oDivSplit * INPUT0_IFM_NUM;
+	output[out_idx] = TO_OUTPUT_TYPE(+1.0 / 90 * tile.x + 2.0 / 90 * tile.y + 4.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y * oDivSplit * INPUT0_IFM_NUM;
+	output[out_idx] = TO_OUTPUT_TYPE(+1.0 / 90 * tile.x - 2.0 / 90 * tile.y + 4.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y * oDivSplit * INPUT0_IFM_NUM;
+	output[out_idx] = TO_OUTPUT_TYPE(+64.0 / 90 * tile.x + 32.0 / 90 * tile.y + 16.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y * oDivSplit * INPUT0_IFM_NUM;
+	output[out_idx] = TO_OUTPUT_TYPE(+64.0 / 90 * tile.x - 32.0 / 90 * tile.y + 16.0 / 90 * tile.z); out_idx += weightsOSplit * OUTPUT_SIZE_Y * oDivSplit * INPUT0_IFM_NUM;
 	output[out_idx] = TO_OUTPUT_TYPE(+90.0 / 90 * tile.z); 
+
+#endif
 }

@@ -98,8 +98,9 @@ struct format
         winograd_2x3_s1_weights,    ///< format used for weights for winograd non-fused convolution, F(2,3) -- filter 3x3 with stride 1
         winograd_2x3_s1_fused_weights,    ///< format used for weights for winograd fused convolution, F(2,3) -- filter 3x3 with stride 1
         winograd_6x3_s1_fused_weights,    ///< format used for weights for winograd fused convolution, F(6,3) -- filter 3x3 with stride 1
+        image_2d_weights_winograd_6x3_s1,      ///< image format used for weights for winograd fused convolution, F(6,3) -- filter 3x3 with stride 1
         format_num = cldnn_format_format_num, ///< number of format types
-        any = cldnn_format_any,
+        any = cldnn_format_any
     };
 
     /// @brief Get format traits for particular @p format::type
@@ -121,7 +122,8 @@ struct format
             { winograd_2x3_s1_data, { 1, 1, 2, "bxyf", "bfxy" } },
             { winograd_2x3_s1_weights, { 1, 1, 2, "bfyx", "bfxy" } },
             { winograd_2x3_s1_fused_weights, { 1, 1, 2, "xyfb", "bfxy" } },
-            { winograd_6x3_s1_fused_weights,{ 1, 1, 2, "xyfb", "bfxy" } } };
+            { winograd_6x3_s1_fused_weights,{ 1, 1, 2, "xyfb", "bfxy" } },
+            { image_2d_weights_winograd_6x3_s1,{ 1, 1, 2, "xyfb", "bfxy" } } };
         return traits.at(fmt);
     }
 
@@ -138,9 +140,9 @@ struct format
     /// @brief Returns number of dimensions contained within a @p format
     static size_t dimension(type fmt) { return order(fmt).size(); }
     /// @brief Checks if @p format is a winograd format
-    static bool is_winograd(type fmt) { return (fmt == winograd_2x3_s1_data || fmt == winograd_2x3_s1_weights || fmt == winograd_2x3_s1_fused_weights || fmt == winograd_6x3_s1_fused_weights); }
+    static bool is_winograd(type fmt) { return (fmt == winograd_2x3_s1_data || fmt == winograd_2x3_s1_weights || fmt == winograd_2x3_s1_fused_weights || fmt == winograd_6x3_s1_fused_weights || fmt == image_2d_weights_winograd_6x3_s1); }
     /// @brief Checks if @p format is of image2d type
-    static bool is_image_2d(type fmt) { return (fmt == image_2d_weights_c4_fyx_b || fmt == image_2d_weights_c1_b_fyx); }
+    static bool is_image_2d(type fmt) { return (fmt == image_2d_weights_c4_fyx_b || fmt == image_2d_weights_c1_b_fyx || fmt == image_2d_weights_winograd_6x3_s1); }
     /// @brief Checks if @p format is of image type
     static bool is_image(type fmt) { return (is_image_2d(fmt)); }
 
