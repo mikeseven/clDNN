@@ -59,6 +59,28 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
     /// @param activation_slp Relu activation slope.
     eltwise(
         const primitive_id& id,
+        const primitive_id& input,
+        const primitive_id& input2,
+        eltwise_mode mode,
+        bool with_activation = false,
+        float activation_slp = 0.0f,
+        const padding& output_padding = padding()
+    )
+        :primitive_base(id, { input, input2 }, output_padding)
+        , mode(mode)
+        , with_activation(with_activation)
+        , activation_negative_slope(activation_slp)
+    {
+    }
+
+    /// @brief Constructs eltwise primitive.
+    /// @param id This primitive id.
+    /// @param inputs Input primitives ids.
+    /// @param mode Eltwise mode.
+    /// @param with_activation Enables Relu activation.
+    /// @param activation_slp Relu activation slope.
+    eltwise(
+        const primitive_id& id,
         const std::vector<primitive_id>& inputs,
         eltwise_mode mode,
         bool with_activation = false,
