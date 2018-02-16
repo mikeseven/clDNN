@@ -249,6 +249,19 @@ namespace KernelSelector
                     return false;
                 }
             }
+
+            inline bool IsImageType(WeightsLayout l)
+            {
+                switch (l)
+                {
+                case WeightsLayout::image_2d_weights_c4_fyx_b:
+                case WeightsLayout::image_2d_weights_c1_b_fyx:
+                case WeightsLayout::image_2d_weights_winograd_6x3_s1:
+                    return true;
+                default:
+                    return false;
+                }
+            }
         }
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

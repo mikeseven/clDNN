@@ -153,10 +153,14 @@ typedef struct
     uint64_t max_global_mem_size;      ///< Maximum size of global device memory in bytes.
     uint64_t max_alloc_mem_size;       ///< Maximum size of memory object allocation in bytes.
 
+    uint64_t max_image2d_width;        ///< Maximum image 2d width supported by the device.
+    uint64_t max_image2d_height;       ///< Maximum image 2d height supported by the device.
+
     // Flags (for layout compatibility fixed size types are used).
     uint8_t supports_fp16;             ///< Does engine support FP16.
     uint8_t supports_fp16_denorms;     ///< Does engine support denormalized FP16.
     uint8_t supports_subgroups_short;  ///< Does engine support cl_intel_subgroups_short.
+    uint8_t supports_image;           ///< Does engine support images (CL_DEVICE_IMAGE_SUPPORT cap).
 }  cldnn_engine_info;
 /// @}
 

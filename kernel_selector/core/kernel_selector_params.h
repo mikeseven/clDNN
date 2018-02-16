@@ -620,8 +620,11 @@ namespace KernelSelector
         bool bSubGroupShortSupport = false;
         bool bFP16Support = false;
         bool bFP64Support = false;
+        bool bImageSupport = false;
         uint64_t maxWorkGroupSize = 0;
         uint64_t maxLocalMemSize = 0;
+        uint64_t maxImage2dWidth = 0;
+        uint64_t maxImage2dHeight = 0;
         std::string deviceId = "";
         std::string driverVersion = "";
         std::string hostVersion = "";
