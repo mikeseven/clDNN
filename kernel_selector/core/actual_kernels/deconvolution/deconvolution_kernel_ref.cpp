@@ -47,7 +47,7 @@ namespace KernelSelector
     {
         CommonDispatchData runInfo = DeconvolutionKernelBase::SetDefault(params);
 
-        if (params.output.Feature().v == 1)
+        if (params.output.Feature().v * params.output.Batch().v <= 16)
         {
             const auto& out = params.output;
             runInfo.gws0 = Align(out.X().v, 32);
@@ -66,7 +66,7 @@ namespace KernelSelector
     {
         auto jit = DeconvolutionKernelBase::GetJitConstants(params);
 
-        if (params.output.Feature().v == 1)
+        if (params.output.Feature().v * params.output.Batch().v <= 16)
             jit.AddConstant(MakeJitConstant("DIM_ORDER_XYBF", 1));
 
         return jit;

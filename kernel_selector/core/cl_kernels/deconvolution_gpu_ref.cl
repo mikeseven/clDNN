@@ -29,8 +29,8 @@ KERNEL(deconvolution_gpu_yxfb_ref)(
     const uint out_x        = get_global_id(0);    
     const uint out_y        = get_global_id(1);
     const uint b_f          = get_global_id(2);
-    const uint batch_offset = b_f / INPUT0_FEATURE_NUM;
-    const uint ofm_offset   = b_f % INPUT0_FEATURE_NUM;
+    const uint batch_offset = b_f / OUTPUT_FEATURE_NUM;
+    const uint ofm_offset   = b_f % OUTPUT_FEATURE_NUM;
     
     if (out_x >= OUTPUT_SIZE_X)
         return;
