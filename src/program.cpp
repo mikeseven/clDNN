@@ -45,8 +45,6 @@
 #include "permute_inst.h"
 #include "prior_box_inst.h"
 #include "reorder_inst.h"
-#include "reorg_yolo_inst.h"
-#include "region_yolo_inst.h"
 #include "reshape_inst.h"
 #include "scale_inst.h"
 #include "softmax_inst.h"
