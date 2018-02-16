@@ -403,6 +403,8 @@ inline kernel_selector::activation_function get_kernel_selector_activation_param
         return kernel_selector::activation_function::SQUARE;
     case activation_sqrt:
         return kernel_selector::activation_function::SQRT;
+    case activation_elu:
+        return kernel_selector::activation_function::ELU;
     default:
         throw std::runtime_error("Unknown activation function");
         break;

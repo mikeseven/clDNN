@@ -229,6 +229,7 @@ TEST(activation_f32_fw_gpu, basic_yxfb_all_functions)
         activation_linear,
         activation_square,
         activation_sqrt,
+        activation_elu,
     };
 
     cldnn_activation_additional_params params = { 0.5f, 2.5f };
@@ -307,6 +308,10 @@ TEST(activation_f32_fw_gpu, basic_yxfb_all_functions)
                     {
                         EXPECT_FLOAT_EQ(std::sqrt((float)input_ptr[i]), output_ptr[i]);
                     }
+                    break;
+                case activation_elu:
+                    EXPECT_FLOAT_EQ(std::fmax((float)input_ptr[i], 0.0f) +
+                                    params.a*(std::exp(std::fmin((float)input_ptr[i], 0.0f)) - 1), output_ptr[i]);
                     break;
                 default:
                     break;
