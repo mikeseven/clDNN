@@ -384,6 +384,7 @@ typedef enum cldnn_activation_func_t
     activation_linear,                  // a*val + b                        (a,b are additional params) 
     activation_square,                  // val*val
     activation_sqrt,                    // sqrt(val)
+    activation_elu,                     // max(0, val) + a * (exp(min(0, val) - 1) (a is additional param)
 } cldnn_activation_func;
 
 /// @brief activation additional params
