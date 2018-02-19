@@ -68,6 +68,15 @@ namespace KernelSelector
 
                     union dedicated_t
                     {
+						struct argm_t
+						{
+							uint32_t axisX : 1;
+							uint32_t axisY : 1;
+							uint32_t axisFeature : 1;
+							uint32_t axisBatch : 1;
+							uint32_t axisNone : 1;
+							uint32_t outputVal : 1;
+						} argm;
                         struct norm_t
                         {
                             uint32_t across : 1;
@@ -576,6 +585,33 @@ namespace KernelSelector
             key.restrict.val.dedicated.concat.oneKernel = 1;
         }
 
+		void EnableArgMaxOutVal() {
+			key.restrict.val.dedicated.argm.outputVal = 1;
+		}
+
+		void EnableArgMaxAxis(ArgMaxAxis a) {
+			switch (a)
+			{
+			case ArgMaxAxis::X:
+				key.restrict.val.dedicated.argm.axisX = 1;
+				break;
+			case ArgMaxAxis::Y:
+				key.restrict.val.dedicated.argm.axisY = 1;
+				break;
+			case ArgMaxAxis::FEATURE:
+				key.restrict.val.dedicated.argm.axisFeature = 1;
+				break;
+			case ArgMaxAxis::BATCH:
+				key.restrict.val.dedicated.argm.axisBatch = 1;
+				break;
+			case ArgMaxAxis::NONE:
+				key.restrict.val.dedicated.argm.axisNone = 1;
+				break;
+			default:
+				break;
+			}
+		}
+
         bool Support(const ParamsKey& k) const
         {
             return
@@ -933,6 +969,34 @@ namespace KernelSelector
             return k;
         }
     };
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// ArgMaxParams
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+	struct ArgMaxParams : public BaseParams
+	{
+		ArgMaxParams() : BaseParams(KernelType::ARGMAX), argMaxParams() {}
+
+		struct DedicatedParams
+		{
+			ArgMaxAxis	argMaxAxis	= ArgMaxAxis::NONE;
+			ArgMaxOut	argMaxOut	= ArgMaxOut::INDEX;
+			uint32_t	topK		= 1;
+		};
+
+		DedicatedParams argMaxParams;
+
+		virtual ParamsKey GetParamsKey() const
+		{
+			ParamsKey k = BaseParams::GetParamsKey();
+			if (argMaxParams.argMaxOut != ArgMaxOut::INDEX)
+				k.EnableArgMaxOutVal();
+			k.EnableArgMaxAxis(argMaxParams.argMaxAxis);
+
+			return k;
+		}
+	};
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // PoolingParams
@@ -1410,6 +1474,14 @@ namespace KernelSelector
     {
         NormalizeOptionalParams() : OptionalParams(KernelType::NORMALIZE) {}
     };
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// ArgMaxOptionalParams
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	struct ArgMaxOptionalParams : OptionalParams
+	{
+		ArgMaxOptionalParams() : OptionalParams(KernelType::ARGMAX) {}
+	};
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // PoolingOptionalParams
