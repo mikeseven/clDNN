@@ -145,12 +145,14 @@ KERNEL(convolution_f16)(
                 unsigned i = 0;
                 LOOP(FILTER_SIZE_X, i, 
                 {
+#if LEFTOVERS == 1
                     if(src0_read_offset_const + (FILTER_SIZE_Y - 1) * INPUT0_Y_PITCH + (INPUT0_FEATURE_NUM - 1) * (INPUT0_FEATURE_PITCH - ( FILTER_SIZE_Y * INPUT0_Y_PITCH )) >= INPUT0_BATCH_NUM * INPUT0_BATCH_PITCH)
                     {
                         if(src0_read_offset + i < INPUT0_BATCH_NUM * INPUT0_BATCH_PITCH)
                             blockA00[i] = src0[src0_read_offset + i];
                     }
                     else
+#endif
                         blockA00[i] = src0[src0_read_offset + i];
                 } )
             }
