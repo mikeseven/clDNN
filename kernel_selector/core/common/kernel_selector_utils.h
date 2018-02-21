@@ -151,8 +151,10 @@ namespace KernelSelector { namespace
         case WeightsLayout::image_2d_weights_c1_b_fyx:
         case WeightsLayout::image_2d_weights_c4_fyx_b:
             return { ofm, ifm * x * y };
-        case WeightsLayout::image_2d_weights_winograd_6x3_s1:
-            return{ ifm * x * 8 / 3, ofm * y };
+        case WeightsLayout::image_2d_weights_winograd_6x3_s1_fbxyb:
+            return { ofm * x * y * 8 / 3, ifm };
+        case WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb:
+            return { ofm * y, ifm * x * 8 / 3 };
         default:
             return { 0, 0 };
         }

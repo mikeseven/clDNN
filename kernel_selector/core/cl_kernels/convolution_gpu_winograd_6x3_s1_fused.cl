@@ -77,7 +77,7 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 (
 	__global INPUT0_TYPE* I,
 	__global OUTPUT_TYPE* O,
-#ifdef FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1
+#if FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_FBXYB || FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_XFBYB
     __read_only image2d_t  U,
 #else
 	__global FILTER_TYPE* U,
@@ -162,17 +162,16 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 	// c, Kdsk
 	uint2 coordU0;
 
-//#define WEIGHTS_FBXYb
-#ifdef WEIGHTS_FBXYb
+#if FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_FBXYB
 	coordU0.x = (lz * 48 + k * 24);
 	coordU0.y = 0;
-#else // WEIGHTS_XFBYb
+#else // FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_XFBYB
 	coordU0.x = (k * 3);
 	coordU0.y = lz*C_;
 	int last_coord_y = lz*C_ + C_;
 #endif
 
-#ifdef FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1
+#if FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_FBXYB || FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_XFBYB
 	coordU0.x *= sizeof(UNIT_TYPE);
 #endif
 
@@ -277,7 +276,7 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 
 			__attribute__((opencl_unroll_hint(1)))
             for (uint c16 = 0; c16 < 2 
-#ifndef WEIGHTS_FBXYb
+#ifndef FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_FBXYB
 				&& coordU0.y < last_coord_y
 #endif
 				; ++c16) {
@@ -297,7 +296,7 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 							// 2*14 * 3 * 4 = 336 MADs
                             const uint2 coordU = coordU0;
 
-#ifdef WEIGHTS_FBXYb
+#if FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_FBXYB
 							const uint WEIGHTWIDTH = FILTER_OFM_NUM*KCOLSW*KROWSW;
 #else
 							const uint WEIGHTWIDTH = FILTER_OFM_NUM*KROWSW;
@@ -306,7 +305,7 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 							const uint flatA = coordU0.y*WEIGHTWIDTH + coordU0.x;
 
 							// Fetch 8 channels of Winograd components from f(k,s)
-#ifdef FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1
+#if FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_FBXYB || FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_XFBYB
 							const UNIT_TYPE_8 f00 = as_half8(intel_sub_group_block_read_us8(U, (int2)(coordU0.x, coordU0.y)));
 #else
 							const UNIT_TYPE_8 f00 = (UNIT_TYPE_8)(
@@ -476,7 +475,7 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 							DOT8i_7(M6.s0, f00, V8, 8 + c8);
 							DOT8i_7(M6.s1, f00, V8, 10 + c8);
 
-#ifdef FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1
+#if FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_FBXYB || FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_XFBYB
 							const UNIT_TYPE_8 f01 = as_half8(intel_sub_group_block_read_us8(U, (int2)(coordU0.x + 16 * sizeof(UNIT_TYPE), coordU0.y)));
 #else
 							const UNIT_TYPE_8 f01 = (UNIT_TYPE_8)(
@@ -646,7 +645,7 @@ KERNEL(convolution_gpu_winograd_6x3_s1_fused)
 							DOT8i_7(M6.s0, f01, V8, 10 + c8);
 							DOT8i_7(M6.s1, f01, V8, 12 + c8);
 
-#ifdef FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1
+#if FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_FBXYB || FILTER_LAYOUT_IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_XFBYB
 							const UNIT_TYPE_8 f02 = as_half8(intel_sub_group_block_read_us8(U, (int2)(coordU0.x + 32 * sizeof(UNIT_TYPE), coordU0.y)));
 #else
 							const UNIT_TYPE_8 f02 = (UNIT_TYPE_8)(

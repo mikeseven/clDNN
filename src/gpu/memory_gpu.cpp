@@ -70,20 +70,19 @@ gpu_image2d::gpu_image2d(const refcounted_obj_ptr<engine_impl>& engine, const la
     switch (layout.format)
     {
     case format::image_2d_weights_c1_b_fyx:
-		_width = layout.size.batch[0];
-		_height = layout.size.spatial[0] * layout.size.feature[0] * layout.size.spatial[1];
-		order = CL_R;
-		break;
-    case format::image_2d_weights_winograd_6x3_s1:
-//#define WEIGHTS_FBXYb
-#ifdef WEIGHTS_FBXYb
-		_height =  layout.size.feature[0];
-		_width = layout.size.spatial[0] * layout.size.batch[0] * layout.size.spatial[1] * 8 / 3;
-#else
-		_height = layout.size.feature[0] * layout.size.spatial[0] * 8 / 3;
-		_width =  layout.size.batch[0] * layout.size.spatial[1] ;
-#endif
-		order = CL_R;
+        _width = layout.size.batch[0];
+        _height = layout.size.spatial[0] * layout.size.feature[0] * layout.size.spatial[1];
+        order = CL_R;
+        break;
+    case format::image_2d_weights_winograd_6x3_s1_fbxyb:
+        _height =  layout.size.feature[0];
+        _width = layout.size.spatial[0] * layout.size.batch[0] * layout.size.spatial[1] * 8 / 3;
+        order = CL_R;
+        break;
+    case format::image_2d_weights_winograd_6x3_s1_xfbyb:
+        _height = layout.size.feature[0] * layout.size.spatial[0] * 8 / 3;
+        _width =  layout.size.batch[0] * layout.size.spatial[1] ;
+        order = CL_R;
         break;
     case format::image_2d_weights_c4_fyx_b:
         _width = layout.size.batch[0];

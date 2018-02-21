@@ -90,7 +90,7 @@ layout reorder_inst::calc_output_layout(reorder_node const& node)
 
         return layout(odt, ofmt, tensor{ input_layout.size.batch[0], input_layout.size.feature[0], 4, 3 });
     }
-    else if(ofmt == format::winograd_6x3_s1_fused_weights || ofmt == format::image_2d_weights_winograd_6x3_s1)
+    else if(ofmt == format::winograd_6x3_s1_fused_weights || ofmt == format::image_2d_weights_winograd_6x3_s1_fbxyb || ofmt == format::image_2d_weights_winograd_6x3_s1_xfbyb)
     {
         CLDNN_ERROR_NOT_EQUAL(node.id(), "input_layout.size.spatial[0]", input_layout.size.spatial[0], "expected value", 3, "input for conversion to winograd_2x3_s1 weights format should have spatial size 3x3");
         CLDNN_ERROR_NOT_EQUAL(node.id(), "input_layout.size.spatial[1]", input_layout.size.spatial[1], "expected value", 3, "input for conversion to winograd_2x3_s1 weights format should have spatial size 3x3");

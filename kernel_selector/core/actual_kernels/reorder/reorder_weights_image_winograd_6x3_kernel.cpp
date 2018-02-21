@@ -27,7 +27,8 @@ namespace KernelSelector
         k.EnableOutputWeightsType(WeightsType::F16);
         k.EnableOutputWeightsType(WeightsType::F32);
         k.EnableAllInputWeightsLayout();
-        k.EnableOutputWeightsLayout(WeightsLayout::image_2d_weights_winograd_6x3_s1);
+        k.EnableOutputWeightsLayout(WeightsLayout::image_2d_weights_winograd_6x3_s1_fbxyb);
+        k.EnableOutputWeightsLayout(WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb);
         k.EnableWinogradReorder();
         k.EnableDifferentTypes();
         k.EnableTensorOffset();
