@@ -57,11 +57,11 @@ KERNEL(convolution_f32)(
     // Src0 (patch input) is directly used as atile.
     // Each work item points to the start of a different patch.
     // atile is M rows x K columns.
-    int src0_read_offset0 = INPUT0_OFFSET_WITH_PADDING + in_split_offset
+    const uint src0_read_offset0_const = INPUT0_OFFSET_WITH_PADDING + in_split_offset
      + INPUT0_BATCH_PITCH * global_z                                                         // batch offset
      + ( ( ( global_y * TILE_M + 0 ) / OUTPUT_SIZE_X ) * STRIDE_SIZE_Y * INPUT0_Y_PITCH )    // y offset
      + ( ( ( global_y * TILE_M + 0 ) % OUTPUT_SIZE_X ) * STRIDE_SIZE_X );                    // x offset
-    int src0_read_offset1 = INPUT0_OFFSET_WITH_PADDING + in_split_offset
+    const uint src0_read_offset1_const = INPUT0_OFFSET_WITH_PADDING + in_split_offset
      + INPUT0_BATCH_PITCH * global_z                                                 // batch offset
      + ( ( ( global_y * TILE_M + 1 ) / OUTPUT_SIZE_X ) * STRIDE_SIZE_Y * INPUT0_Y_PITCH )    // y offset
      + ( ( ( global_y * TILE_M + 1 ) % OUTPUT_SIZE_X ) * STRIDE_SIZE_X );                    // x offset
@@ -69,6 +69,8 @@ KERNEL(convolution_f32)(
     // Src1 (filter) is directly used as btile.
     // It starts at the top of src1 and walks down.
     // btile is K rows x N columns.
+    uint src0_read_offset0 = src0_read_offset0_const;
+    uint src0_read_offset1 = src0_read_offset1_const;
     uint src1_read_offset = ( global_x * TILE_N * 2);
 
 #define DOT_PRODUCT_8( _result, _rowA, colB )    \
@@ -113,8 +115,21 @@ KERNEL(convolution_f32)(
                 unsigned i = 0;
                 LOOP(FILTER_SIZE_X, i, 
                 {
-                    blockA00[i] = src0[src0_read_offset0 + i];
-                    blockA01[i] = src0[src0_read_offset1 + i];
+                    if(src0_read_offset0_const + (FILTER_SIZE_Y - 1) * INPUT0_Y_PITCH + (INPUT0_FEATURE_NUM - 1) * (INPUT0_FEATURE_PITCH - ( FILTER_SIZE_Y * INPUT0_Y_PITCH )) >= INPUT0_BATCH_NUM * INPUT0_BATCH_PITCH)
+                    {
+                        if(src0_read_offset0 + i < INPUT0_BATCH_NUM * INPUT0_BATCH_PITCH)
+                            blockA00[i] = src0[src0_read_offset0 + i];
+                    }
+                    else
+                        blockA00[i] = src0[src0_read_offset0 + i];
+
+                    if(src0_read_offset1_const + (FILTER_SIZE_Y - 1) * INPUT0_Y_PITCH + (INPUT0_FEATURE_NUM - 1) * (INPUT0_FEATURE_PITCH - ( FILTER_SIZE_Y * INPUT0_Y_PITCH )) >= INPUT0_BATCH_NUM * INPUT0_BATCH_PITCH)
+                    {
+                        if(src0_read_offset1 + i < INPUT0_BATCH_NUM * INPUT0_BATCH_PITCH)
+                            blockA01[i] = src0[src0_read_offset1 + i];
+                    }
+                    else
+                        blockA01[i] = src0[src0_read_offset1 + i];
                 } )
             }
 
