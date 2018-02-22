@@ -139,7 +139,7 @@ namespace KernelSelector { namespace
         return bProperWeightsLayout;
     }
 
-    inline std::vector<size_t> GetImageSizes(KernelSelector::WeightsTensor& dimensions, WeightsLayout layout)
+    inline std::vector<size_t> GetImageSizes(const KernelSelector::WeightsTensor& dimensions, WeightsLayout layout)
     {
         auto ofm = dimensions.OFM().v;
         auto ifm = dimensions.IFM().v;
@@ -160,6 +160,21 @@ namespace KernelSelector { namespace
         }
     }
 
+    inline bool CheckImageSize(const WeightBiasParams& newParams, WeightsLayout layout)
+    {
+        if (!newParams.engineInfo.bImageSupport)
+            return false;
+
+        auto image_sizes = GetImageSizes(newParams.weights, layout);
+        if (image_sizes[0] == 0 ||
+            image_sizes[1] == 0 ||
+            image_sizes[0] > newParams.engineInfo.maxImage2dWidth ||
+            image_sizes[1] > newParams.engineInfo.maxImage2dHeight)
+            return false;
+
+        return true;
+    }
+
     inline bool UpdateWeightsParams(WeightBiasParams& newParams, const OptionalParams& options, std::vector<WeightsLayout> layouts, WeightsReorderParams& weightsReorderParams)
     {
         //validate if weights type is image and if device supports requested sizes
@@ -167,14 +182,7 @@ namespace KernelSelector { namespace
         {
             if (Tensor::IsImageType(requested_layout))
             {
-                if (!newParams.engineInfo.bImageSupport)
-                    return false;
-
-                auto image_sizes = GetImageSizes(newParams.weights, requested_layout);
-                if (image_sizes[0] == 0 ||
-                    image_sizes[1] == 0 ||
-                    image_sizes[0] > newParams.engineInfo.maxImage2dWidth ||
-                    image_sizes[1] > newParams.engineInfo.maxImage2dHeight)
+                if (!CheckImageSize(newParams, requested_layout))
                     return false;
             }
         }
