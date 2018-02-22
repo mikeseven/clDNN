@@ -139,7 +139,7 @@ namespace KernelSelector { namespace
         return bProperWeightsLayout;
     }
 
-    inline std::vector<size_t> GetImageSizes(const KernelSelector::WeightsTensor& dimensions, WeightsLayout layout)
+    inline std::vector<size_t> GetImageSizes(const KernelSelector::WeightsTensor& dimensions, const WeightsLayout layout)
     {
         auto ofm = dimensions.OFM().v;
         auto ifm = dimensions.IFM().v;
@@ -160,7 +160,7 @@ namespace KernelSelector { namespace
         }
     }
 
-    inline bool CheckImageSize(const WeightBiasParams& newParams, WeightsLayout layout)
+    inline bool CheckImageSize(const WeightBiasParams& newParams, const WeightsLayout layout)
     {
         if (!newParams.engineInfo.bImageSupport)
             return false;
