@@ -386,7 +386,7 @@
             }, 
             "64":  {
                 "fc3_a": "0x90B97CE0FB8B1E2D34DE2C8043C47603",
-                "prob": "0x28B3D4FC207F8587D75DA5E9E6008C02",
+                "prob": "0x28B3D4FC207F8587D75DA5E9E6008C02"
             },
             "128": {
                 "fc3_a": "0xD45E30389A090A6437E6FBECE04DA630", 
