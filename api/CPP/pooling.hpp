@@ -51,6 +51,7 @@ struct pooling : public primitive_base<pooling, CLDNN_PRIMITIVE_DESC(pooling)>
     /// @param mode Pooling mode.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param size Pooling kernel size.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the pooling window should start calculations.
     pooling(
         const primitive_id& id,
         const primitive_id& input,
@@ -74,6 +75,7 @@ struct pooling : public primitive_base<pooling, CLDNN_PRIMITIVE_DESC(pooling)>
     /// @param mode Pooling mode.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param size Pooling kernel size.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the pooling window should start calculations.
     /// @param output_size User-defined output data size of the primitive (w/o padding).
     pooling(
         const primitive_id& id,
@@ -112,6 +114,7 @@ struct pooling : public primitive_base<pooling, CLDNN_PRIMITIVE_DESC(pooling)>
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param size Pooling kernel size.
     /// @param output_size User-defined output data size of the primitive (w/o padding).
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the pooling window should start calculations.
     /// @return Pooling primitive with specified settings.
     static pooling create_with_output_size(
         const primitive_id& id,
