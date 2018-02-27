@@ -40,6 +40,8 @@ namespace KernelSelector
     private:
         static std::shared_ptr<auto_tuner_offline> instance;
         auto_tuner_offline() = delete;
+        // this is singleton implementation, if called twice with different parameter, 
+        // second call param will be ignored
         auto_tuner_offline(const std::string& hw_id);
         tuning_data t_data;
 

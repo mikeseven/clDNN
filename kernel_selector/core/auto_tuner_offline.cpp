@@ -783,7 +783,9 @@ namespace KernelSelector
         { "15256375572125522238", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 241) },
         { "5083173538217738703", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 175) },
         { "17269467004855120308", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 175) },
-        { "2901056469731554922", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 175) },
+        { "2901056469731554922", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 175) }, });
+          
+        td.td.insert({
         { "9747637051217505111", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 246) },
         { "7175860674618956918", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 242) },
         { "9530922411870814200", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 181) },
@@ -1139,7 +1141,9 @@ namespace KernelSelector
         { "1915712383376159541", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 334) },
         { "6176816506826300479", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 260) },
         { "15331830720555178784", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
-        { "17558578036713688769", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 294) },
+        { "17558578036713688769", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 294) }, });
+
+        td.td.insert({
         { "2388815483287403961", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
         { "15948716167523201661", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
         { "6787190800192250525", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
@@ -1560,7 +1564,9 @@ namespace KernelSelector
         { "2024487327183855979", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
         { "12171311926461204420", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
         { "14382314098576545407", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
-        { "16490862041096178981", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
+        { "16490862041096178981", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) }, });
+
+        td.td.insert({
         { "1858761743444445839", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
         { "10763042538682495470", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
         { "14088471528265329680", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
@@ -1910,7 +1916,8 @@ namespace KernelSelector
         { "1854612313463195535", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
         { "13051406650237455505", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
         { "15438530452161762045", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
-        { "7446661399223808792", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
+        { "7446661399223808792", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) }, });
+        td.td.insert({
         { "17861183465344343443", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
         { "2026622899016787854", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
         { "16127482065413259805", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
@@ -2477,7 +2484,8 @@ namespace KernelSelector
             { "13867172651521406104", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "16744813357455687598", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "17271409929705935575", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
-            { "17215047912921813592", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
+            { "17215047912921813592", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) }, });
+            td.td.insert({
             { "4093195092417588676", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "17895953872149392740", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 198) },
             { "5918874715861160937", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
@@ -2801,7 +2809,8 @@ namespace KernelSelector
             { "3273748387141431306", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 86) },
             { "14472322679644532468", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "8378137527264154204", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
-            { "10180255575636684134", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
+            { "10180255575636684134", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) }, });
+            td.td.insert({
             { "18242121098885244699", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "6178572652675599622", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "6558074021146321216", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 332) },
@@ -3078,7 +3087,8 @@ namespace KernelSelector
             { "8833751655076849826", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 326) },
             { "16256124470203598218", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "2706523860113152678", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
-            { "14946999257618007034", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
+            { "14946999257618007034", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) }, });
+            td.td.insert({
             { "13699343107940933196", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "2887515984302814699", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 333) },
             { "4906737644615337997", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
@@ -3372,7 +3382,8 @@ namespace KernelSelector
             { "14782181149367028912", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 262) },
             { "1448238652280623323", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 261) },
             { "2076478920663115306", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 259) },
-            { "7369834759425644726", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 111) },
+            { "7369834759425644726", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 111) }, });
+            td.td.insert({
             { "11702633755046828968", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 262) },
             { "2944972038827287015", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 95) },
             { "8261441437673092886", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 215) },
@@ -4010,7 +4021,8 @@ namespace KernelSelector
             { "5673972310424776040", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 326) },
             { "8797843396807284399", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 271) },
             { "1698321314111848001", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 342) },
-            { "5762290464889692462", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", -1) },
+            { "5762290464889692462", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", -1) }, });
+            td.td.insert({
             { "3218248162832023196", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", -1) },
             { "12988961529988078346", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", -1) },
             { "11717348577195224554", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
@@ -4609,7 +4621,8 @@ namespace KernelSelector
             { "7643107990895082908", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
             { "16193269051050851278", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
             { "12320768574272618696", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
-            { "16436839019994480209", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
+            { "16436839019994480209", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) }, });
+            td.td.insert({
             { "5093086346122901737", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
             { "8009629486267787445", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
             { "3774753320955785270", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
@@ -5539,7 +5552,8 @@ namespace KernelSelector
             { "54975980454651672", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 338) },
             { "11529876081402974396", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 322) },
             { "3644282167178264526", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
-            { "360872770877634346", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
+            { "360872770877634346", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) }, });
+            td.td.insert({
             { "16720108310653948550", std::make_tuple("convolution_gpu_winograd_6x3_s1_fused", -1) },
             { "14353390922580547467", std::make_tuple("convolution_gpu_bfyx_1x1_hgemm_buf_16x1", -1) },
             { "9868561386826862471", std::make_tuple("convolution_gpu_winograd_6x3_s1_fused", -1) },
@@ -6158,7 +6172,8 @@ namespace KernelSelector
             { "11177710514557128293", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", -1) },
             { "17515272254985846970", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 335) },
             { "312130674630486188", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", -1) },
-            { "18247095696433793115", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 367) },
+            { "18247095696433793115", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 367) }, });
+            td.td.insert({
             { "6341728273786101457", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 320) },
             { "10401462893795799864", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 337) },
             { "3032101782888447048", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
@@ -6749,7 +6764,8 @@ namespace KernelSelector
             { "10978693262040522687", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 156) },
             { "10037086825900566930", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 143) },
             { "17216583849049249733", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 273) },
-            { "341552075482632478", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 158) },
+            { "341552075482632478", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 158) }, });
+            td.td.insert({
             { "738850098651678143", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 127) },
             { "7139714914586273766", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 158) },
             { "18209157436315328292", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 102) },
@@ -7475,7 +7491,8 @@ namespace KernelSelector
             { "14912119584313592912", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 331) },
             { "7639015398436550592", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "14587150810299279663", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
-            { "13867172651521406104", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
+            { "13867172651521406104", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) }, });
+            td.td.insert({
             { "16744813357455687598", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "17271409929705935575", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "17215047912921813592", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 361) },
@@ -7947,7 +7964,8 @@ namespace KernelSelector
             { "6198830126915940359", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 212) },
             { "12125006289181390694", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 223) },
             { "14152716242882609401", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
-            { "16732621354152092286", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
+            { "16732621354152092286", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) }, });
+            td.td.insert({
             { "17921489101554455214", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "7384108582424003436", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "13139625572508441980", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 332) },
@@ -8397,7 +8415,8 @@ namespace KernelSelector
             { "12268432630136256720", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 362) },
             { "2373658589834410892", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 362) },
             { "4974435385259831818", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
-            { "4455497237293642238", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
+            { "4455497237293642238", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) }, });
+            td.td.insert({
             { "682912708716537431", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "2585176064846114298", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "16033144151193421543", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 330) },
