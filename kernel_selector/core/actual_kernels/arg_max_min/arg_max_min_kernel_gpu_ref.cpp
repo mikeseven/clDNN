@@ -14,35 +14,33 @@
 // limitations under the License.
 */
 
-#include "arg_max_kernel_gpu_ref.h"
+#include "arg_max_min_kernel_gpu_ref.h"
 
 namespace KernelSelector
 {
-	ParamsKey ArgMaxKernelGPURef::GetSupportedKey() const
+	ParamsKey ArgMaxMinKernelGPURef::GetSupportedKey() const
 	{
 		ParamsKey k;
 		k.EnableInputDataType(Datatype::F16);
 		k.EnableInputDataType(Datatype::F32);
 		k.EnableInputDataType(Datatype::INT8);
-		k.EnableOutputDataType(Datatype::F16);
 		k.EnableOutputDataType(Datatype::F32);
-		k.EnableOutputDataType(Datatype::INT8);
 		k.EnableInputLayout(DataLayout::bfyx);
 		k.EnableInputLayout(DataLayout::yxfb);
 		k.EnableInputLayout(DataLayout::byxf);
 		k.EnableOutputLayout(DataLayout::bfyx);
-		k.EnableOutputLayout(DataLayout::yxfb);
-		k.EnableOutputLayout(DataLayout::byxf);
-		k.EnableArgMaxAxis(ArgMaxAxis::BATCH);
-		k.EnableArgMaxAxis(ArgMaxAxis::NONE);
-		k.EnableArgMaxAxis(ArgMaxAxis::X);
-		k.EnableArgMaxAxis(ArgMaxAxis::Y);
-		k.EnableArgMaxAxis(ArgMaxAxis::FEATURE);
-		k.EnableArgMaxOutVal();
+		k.EnableArgMaxMinAxis(ArgMaxMinAxis::BATCH);
+		k.EnableArgMaxMinAxis(ArgMaxMinAxis::NONE);
+		k.EnableArgMaxMinAxis(ArgMaxMinAxis::X);
+		k.EnableArgMaxMinAxis(ArgMaxMinAxis::Y);
+		k.EnableArgMaxMinAxis(ArgMaxMinAxis::FEATURE);
+		k.EnableArgMaxMinOutVal(ArgMaxMinOut::MAX);
+		k.EnableArgMaxMinOutVal(ArgMaxMinOut::MIN);
+		k.EnableBatching();
 		return k;
 	}
 
-	KernelsData ArgMaxKernelGPURef::GetKernelsData(const Params& params, const OptionalParams& options) const
+	KernelsData ArgMaxMinKernelGPURef::GetKernelsData(const Params& params, const OptionalParams& options) const
 	{
 		return GetCommonKernelsData(params, options, FORCE_PRIORITY_9);
 	}

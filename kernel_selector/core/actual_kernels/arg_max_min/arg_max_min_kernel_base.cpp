@@ -14,14 +14,14 @@
 // limitations under the License.
 */
 
-#include "arg_max_kernel_base.h"
+#include "arg_max_min_kernel_base.h"
 
 namespace KernelSelector
 {
-	bool ArgMaxKernelBase::Validate(const Params& p, const OptionalParams& o) const
+	bool ArgMaxMinKernelBase::Validate(const Params& p, const OptionalParams& o) const
 	{
-		if (p.GetType() != KernelType::ARGMAX ||
-			o.GetType() != KernelType::ARGMAX)
+		if (p.GetType() != KernelType::ARG_MAX_MIN ||
+			o.GetType() != KernelType::ARG_MAX_MIN)
 		{
 			return false;
 		}
@@ -29,14 +29,14 @@ namespace KernelSelector
 		return true;
 	}
 
-	JitConstants ArgMaxKernelBase::GetJitConstants(const ArgMaxParams& params) const
+	JitConstants ArgMaxMinKernelBase::GetJitConstants(const ArgMaxMinParams& params) const
 	{
-		JitConstants mem_consts = MakeBaseParamsJitConstants(params);
+		JitConstants mem_consts = MakeArgMaxJitConstants(params);
 
 		return mem_consts;
 	}
 
-	ArgMaxKernelBase::DispatchData ArgMaxKernelBase::SetDefault(const ArgMaxParams& params) const
+	ArgMaxMinKernelBase::DispatchData ArgMaxMinKernelBase::SetDefault(const ArgMaxMinParams& params) const
 	{
 		const auto& output = params.output;
 
@@ -47,13 +47,13 @@ namespace KernelSelector
 		if (output.GetLayout() == DataLayout::bfyx || output.GetLayout() == DataLayout::byxf)
 		{
 			// Determine global work sizes.
+			kd.gws0 = Align(output.X().v, 16);     // X
+			kd.gws1 = params.inputs[0].Batch().v;                   // Y
 			kd.gws2 = output.Batch().v * output.Feature().v;    // B, F
-			kd.gws0 = Align(output.X().v, 32);        // X
-			kd.gws1 = output.Y().v;                             // Y
 
 																// Find largest positive local work size that is divider for global work size.
-			kd.lws0 = 32;
-			kd.lws1 = 1;
+			kd.lws0 = 16;
+			kd.lws1 = params.inputs[0].Batch().v;
 			kd.lws2 = 1;
 		}
 		else
@@ -75,18 +75,18 @@ namespace KernelSelector
 		return kd;
 	}
 
-	KernelsData ArgMaxKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, float estimatedTime) const
+	KernelsData ArgMaxMinKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, float estimatedTime) const
 	{
 		if (!Validate(params, options))
 		{
 			return{};
 		}
 
-		const ArgMaxParams& orgParams = static_cast<const ArgMaxParams&>(params);
+		const ArgMaxMinParams& orgParams = static_cast<const ArgMaxMinParams&>(params);
 
 		DispatchData runInfo = SetDefault(orgParams);
 
-		KernelData kd = KernelData::Default<ArgMaxParams>(params);
+		KernelData kd = KernelData::Default<ArgMaxMinParams>(params);
 
 		auto cldnn_jit = GetJitConstants(orgParams);
 		auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);

@@ -75,7 +75,8 @@ namespace KernelSelector
 							uint32_t axisFeature : 1;
 							uint32_t axisBatch : 1;
 							uint32_t axisNone : 1;
-							uint32_t outputVal : 1;
+							uint32_t outputMax : 1;
+							uint32_t outputMin : 1;
 						} argm;
                         struct norm_t
                         {
@@ -585,26 +586,37 @@ namespace KernelSelector
             key.restrict.val.dedicated.concat.oneKernel = 1;
         }
 
-		void EnableArgMaxOutVal() {
-			key.restrict.val.dedicated.argm.outputVal = 1;
-		}
-
-		void EnableArgMaxAxis(ArgMaxAxis a) {
+		void EnableArgMaxMinOutVal(ArgMaxMinOut a) {
 			switch (a)
 			{
-			case ArgMaxAxis::X:
+			case ArgMaxMinOut::MAX:
+				key.restrict.val.dedicated.argm.outputMax = 1;
+				break;
+			case ArgMaxMinOut::MIN:
+				key.restrict.val.dedicated.argm.outputMin = 1;
+				break;
+			default:
+				break;
+			}
+			
+		}
+
+		void EnableArgMaxMinAxis(ArgMaxMinAxis a) {
+			switch (a)
+			{
+			case ArgMaxMinAxis::X:
 				key.restrict.val.dedicated.argm.axisX = 1;
 				break;
-			case ArgMaxAxis::Y:
+			case ArgMaxMinAxis::Y:
 				key.restrict.val.dedicated.argm.axisY = 1;
 				break;
-			case ArgMaxAxis::FEATURE:
+			case ArgMaxMinAxis::FEATURE:
 				key.restrict.val.dedicated.argm.axisFeature = 1;
 				break;
-			case ArgMaxAxis::BATCH:
+			case ArgMaxMinAxis::BATCH:
 				key.restrict.val.dedicated.argm.axisBatch = 1;
 				break;
-			case ArgMaxAxis::NONE:
+			case ArgMaxMinAxis::NONE:
 				key.restrict.val.dedicated.argm.axisNone = 1;
 				break;
 			default:
@@ -974,15 +986,15 @@ namespace KernelSelector
 	// ArgMaxParams
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-	struct ArgMaxParams : public BaseParams
+	struct ArgMaxMinParams : public BaseParams
 	{
-		ArgMaxParams() : BaseParams(KernelType::ARGMAX), argMaxParams() {}
+		ArgMaxMinParams() : BaseParams(KernelType::ARG_MAX_MIN), argMaxParams() {}
 
 		struct DedicatedParams
 		{
-			ArgMaxAxis	argMaxAxis	= ArgMaxAxis::NONE;
-			ArgMaxOut	argMaxOut	= ArgMaxOut::INDEX;
-			uint32_t	topK		= 1;
+			ArgMaxMinAxis	argMaxMinAxis	= ArgMaxMinAxis::NONE;
+			ArgMaxMinOut	argMaxMinOut	= ArgMaxMinOut::MAX;
+			uint32_t		topK			= 1;
 		};
 
 		DedicatedParams argMaxParams;
@@ -990,9 +1002,8 @@ namespace KernelSelector
 		virtual ParamsKey GetParamsKey() const
 		{
 			ParamsKey k = BaseParams::GetParamsKey();
-			if (argMaxParams.argMaxOut != ArgMaxOut::INDEX)
-				k.EnableArgMaxOutVal();
-			k.EnableArgMaxAxis(argMaxParams.argMaxAxis);
+			k.EnableArgMaxMinOutVal(argMaxParams.argMaxMinOut);
+			k.EnableArgMaxMinAxis(argMaxParams.argMaxMinAxis);
 
 			return k;
 		}
@@ -1476,11 +1487,11 @@ namespace KernelSelector
     };
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// ArgMaxOptionalParams
+	// ArgMaxMinOptionalParams
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	struct ArgMaxOptionalParams : OptionalParams
+	struct ArgMaxMinOptionalParams : OptionalParams
 	{
-		ArgMaxOptionalParams() : OptionalParams(KernelType::ARGMAX) {}
+		ArgMaxMinOptionalParams() : OptionalParams(KernelType::ARG_MAX_MIN) {}
 	};
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -14,19 +14,18 @@
 // limitations under the License.
 */
 
-#pragma once
+#include "arg_max_min_kernel_selector.h"
+#include "arg_max_min_kernel_gpu_ref.h"
 
-#include "arg_max_kernel_base.h"
+namespace KernelSelector {
 
-namespace KernelSelector
-{
-	class ArgMaxKernelGPURef : public ArgMaxKernelBase
+	ArgMaxMinKernelSelctor::ArgMaxMinKernelSelctor()
 	{
-	public:
-		ArgMaxKernelGPURef() : ArgMaxKernelBase("arg_max_gpu_ref") {}
-		virtual ~ArgMaxKernelGPURef() {}
+		Attach<ArgMaxMinKernelGPURef>();
+	}
 
-		virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
-		virtual ParamsKey GetSupportedKey() const override;
-	};
+	KernelsData ArgMaxMinKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+	{
+		return GetNaiveBestKernel(params, options, KernelType::ARG_MAX_MIN);
+	}
 }

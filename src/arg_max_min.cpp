@@ -15,7 +15,7 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#include "arg_max_inst.h"
+#include "arg_max_min_inst.h"
 #include "primitive_type_base.h"
 #include "sliding_window_utils.h"
 #include "error_handler.h"
@@ -23,31 +23,28 @@
 
 namespace cldnn
 {
-	primitive_type_id arg_max_type_id()
+	primitive_type_id arg_max_min_type_id()
 	{
-		static primitive_type_base<arg_max> instance;
+		static primitive_type_base<arg_max_min> instance;
 		return &instance;
 	}
 
-	layout arg_max_inst::calc_output_layout(arg_max_node const& node)
+	layout arg_max_min_inst::calc_output_layout(arg_max_min_node const& node)
 	{
 		auto desc = node.get_primitive();
 
 		auto input_layout = node.input().get_output_layout();
 
-		if (desc->output_max_value)
-			return layout{ input_layout.data_type, input_layout.format, tensor{input_layout.size.batch[0], 1, (int32_t)(2 * desc->top_k), 0} };
-		else
-			return layout{ input_layout.data_type, input_layout.format, tensor{ input_layout.size.batch[0], 1, (int32_t)desc->top_k, 0 } };
+		return layout{ data_types::f32, format::bfyx, tensor{ input_layout.size.batch[0], 1, (int32_t)desc->top_k, 1 } };
 	}
 
-	std::string arg_max_inst::to_string(arg_max_node const& node)
+	std::string arg_max_min_inst::to_string(arg_max_min_node const& node)
 	{
 		auto desc = node.get_primitive();
 		auto node_info = node.desc_to_json();
 		auto activation = desc->with_activation ? "true" : "false";
 		auto axis = desc->with_axis ? "true" : "false";
-		auto max_val = desc->output_max_value ? "true" : "false";
+		auto out_type = desc->output_type ? "max" : "min";
 
 		std::stringstream primitive_description;
 
@@ -56,16 +53,16 @@ namespace cldnn
 		conv_info.add("with axis", axis);
 		if (desc->with_axis)
 			conv_info.add("axis", desc->axis);
-		conv_info.add("output max value", max_val);
+		conv_info.add("output type", out_type);
 		conv_info.add("with activation", activation);
 		conv_info.add("slope", desc->activation_negative_slope);
-		node_info.add("arg_max info", conv_info);
+		node_info.add("arg_max_min info", conv_info);
 		node_info.dump(primitive_description);
 
 		return primitive_description.str();
 	}
 
-	arg_max_inst::typed_primitive_inst(network_impl& network, arg_max_node const& node)
+	arg_max_min_inst::typed_primitive_inst(network_impl& network, arg_max_min_node const& node)
 		: parent(network, node)
 	{
 		auto output_size = output_memory().get_layout().size;

@@ -15,8 +15,8 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#ifndef ARG_MAX_H
-#define ARG_MAX_H
+#ifndef ARG_MAX_MIN_H
+#define ARG_MAX_MIN_H
 
 #include "cldnn.h"
 /// @addtogroup c_api C API
@@ -30,24 +30,32 @@
 extern "C" {
 #endif
 
-/// @brief Finds the index of the k max values of input.
+/// @brief Enum type to specify output type - index of max or min values
+typedef enum
+{
+	cldnn_arg_max,
+	cldnn_arg_min,
+} cldnn_arg_max_min_out;
+
+
+/// @brief Finds the index of the k max/min values of input.
 /// Also supports built-in Relu @CLDNN_PRIMITIVE_DESC{activation} available by setting it in arguments.
-CLDNN_BEGIN_PRIMITIVE_DESC(arg_max)
+CLDNN_BEGIN_PRIMITIVE_DESC(arg_max_min)
 /// @brief Enable Relu activation.
 uint32_t with_activation;
 /// @brief Relu activation slope.
 float activation_negative_slope;
 /// @brief Number of maximal indexes to output.
 uint32_t top_k;
-/// @brief Enables outputing vector of pairs (maximum index, maximum value).
-uint32_t output_max_value;
-/// @brief Indicates that the primitive has user defined axis to maximize along;
+/// @brief Type of output - max or mix.
+cldnn_arg_max_min_out output_type;
+/// @brief Indicates that the primitive has user defined axis to maximize along.
 uint32_t with_axis;
 /// @brief Axis to maximize along. If not set, maximize the flattened trailing dimensions for each index of the first dimension.
 uint32_t axis;
-CLDNN_END_PRIMITIVE_DESC(arg_max)
+CLDNN_END_PRIMITIVE_DESC(arg_max_min)
 
-CLDNN_DECLARE_PRIMITIVE_TYPE_ID(arg_max);
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(arg_max_min);
 
 #ifdef __cplusplus
 }

@@ -385,6 +385,19 @@ namespace KernelSelector {
         }
     }
 
+	inline std::string toString(ArgMaxMinAxis mode) 
+	{
+		switch (mode)
+		{
+		case ArgMaxMinAxis::BATCH: return "BATCH";
+		case ArgMaxMinAxis::FEATURE: return "FEATURE";
+		case ArgMaxMinAxis::X: return "X";
+		case ArgMaxMinAxis::Y: return "Y";
+		case ArgMaxMinAxis::NONE: return "NONE";
+		default: return "";
+		}
+	}
+
     inline std::string toString(PoolType mode)
     {
         switch (mode)

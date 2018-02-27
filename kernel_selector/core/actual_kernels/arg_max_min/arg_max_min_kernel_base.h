@@ -16,22 +16,25 @@
 
 #pragma once
 
-#include "kernel_selector.h"
+#include "common_kernel_base.h"
+#include "kernel_selector_params.h"
 
 namespace KernelSelector
 {
-	class ArgMaxKernelSelctor : public KernelSelctorBase
+	class ArgMaxMinKernelBase : public CommonKernelBase
 	{
 	public:
-		static ArgMaxKernelSelctor &Instance() {
-			static ArgMaxKernelSelctor instance_;
-			return instance_;
-		}
+		using CommonKernelBase::CommonKernelBase;
+		virtual ~ArgMaxMinKernelBase() {}
 
-		ArgMaxKernelSelctor();
+		struct DispatchData : public CommonDispatchData
+		{
+		};
 
-		virtual ~ArgMaxKernelSelctor() {}
-
-		virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
+	protected:
+		virtual bool Validate(const Params&, const OptionalParams&) const override;
+		virtual JitConstants GetJitConstants(const ArgMaxMinParams& params) const;
+		virtual DispatchData SetDefault(const ArgMaxMinParams& params) const;
+		KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimatedTime) const;
 	};
 }

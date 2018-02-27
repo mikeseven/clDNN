@@ -26,7 +26,7 @@
 #include "lrn/lrn_kernel_selector.h"
 #include "normalize/normalize_kernel_selector.h"
 #include "pooling/pooling_kernel_selector.h"
-#include "arg_max/arg_max_kernel_selector.h"
+#include "arg_max_min/arg_max_min_kernel_selector.h"
 #include "roi_pooling/roi_pooling_kernel_selector.h"
 #include "fully_connected/fully_connected_kernel_selector.h"
 #include "activation/activation_kernel_selector.h"
@@ -62,8 +62,8 @@ namespace kernel_selector
     using activation_function               = KernelSelector::ActivationFunction;
     using pool_type                         = KernelSelector::PoolType;
     using pool_remainder                    = KernelSelector::PoolRemainder;
-	using argm_axis							= KernelSelector::ArgMaxAxis;
-	using argm_output						= KernelSelector::ArgMaxOut;
+	using argm_axis							= KernelSelector::ArgMaxMinAxis;
+	using argm_output						= KernelSelector::ArgMaxMinOut;
     using lrn_mode                          = KernelSelector::LRNMode;
     using normalize_mode                    = KernelSelector::NormalizeMode;
     using kernel_divider_mode               = KernelSelector::KernelDividerMode;
@@ -84,7 +84,7 @@ namespace kernel_selector
     using params                            = KernelSelector::Params;
     using base_params                       = KernelSelector::BaseParams;
     using weight_bias_params                = KernelSelector::WeightBiasParams;
-	using arg_max_params					= KernelSelector::ArgMaxParams;
+	using arg_max_min_params				= KernelSelector::ArgMaxMinParams;
     using convolution_params                = KernelSelector::ConvolutionParams;
     using deconvolution_params              = KernelSelector::DeconvolutionParams;
     using lrn_params                        = KernelSelector::LRNParams;
@@ -108,7 +108,7 @@ namespace kernel_selector
 
     using optional_params                   = KernelSelector::OptionalParams;
     using weights_bias_optional_params      = KernelSelector::WeightsBiasOptionalParams;
-	using arg_max_optional_params			= KernelSelector::ArgMaxOptionalParams;
+	using arg_max_min_optional_params		= KernelSelector::ArgMaxMinOptionalParams;
     using convolution_optional_params       = KernelSelector::ConvolutionOptionalParams;
     using deconvolution_optional_params     = KernelSelector::DeconvolutionOptionalParams;
     using lrn_optional_params               = KernelSelector::LRNOptionalParams;
@@ -125,7 +125,7 @@ namespace kernel_selector
     using concatenation_optional_params     = KernelSelector::ConcatenationOptionalParams;
     using upsampling_optional_params        = KernelSelector::UpSamplingOptionalParams;
 
-	using arg_max_kernel_selector			= KernelSelector::ArgMaxKernelSelctor;
+	using arg_max_min_kernel_selector		= KernelSelector::ArgMaxMinKernelSelctor;
     using convolution_kernel_selector       = KernelSelector::ConvolutionKernelSelctor;
     using deconvolution_kernel_selector     = KernelSelector::DeconvolutionKernelSelctor;
     using lrn_kernel_selector               = KernelSelector::LRNKernelSelctor;
