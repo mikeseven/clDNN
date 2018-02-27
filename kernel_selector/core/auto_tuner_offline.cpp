@@ -23,6 +23,8 @@ namespace KernelSelector
     auto_tuner_offline::auto_tuner_offline(const std::string hw_id)
     {
         std::string temp_hw_id = hw_id;
+        // TODO: this is temporary solution of cases where user has non-tuned configuration. needs to implement better logic
+        // i.e. create table with number of eu's configuration that will point to common cache.
         if (sku_cache_fillers.count(hw_id) == 0)
             temp_hw_id = "0x1912";
         sku_cache_fillers.at(temp_hw_id)(t_data);
