@@ -38,9 +38,9 @@ namespace KernelSelector
     class auto_tuner_offline
     {
     private:
-        static auto_tuner_offline* instance;
+        static std::shared_ptr<auto_tuner_offline> instance;
         auto_tuner_offline() = delete;
-        auto_tuner_offline(const std::string hw_id);
+        auto_tuner_offline(const std::string& hw_id);
         tuning_data t_data;
 
         const std::map<std::string, void(*)(tuning_data&)> sku_cache_fillers
@@ -54,7 +54,7 @@ namespace KernelSelector
         };
 
     public:
-        static auto_tuner_offline* get_instance(const std::string hw_id);
+        static std::shared_ptr<auto_tuner_offline> get_instance(const std::string& hw_id);
         tuning_data get_tuning_data() const { return t_data; }
    };
 }

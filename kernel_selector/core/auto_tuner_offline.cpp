@@ -18,9 +18,9 @@
 #include "auto_tuner_offline.h"
 namespace KernelSelector 
 {
-    auto_tuner_offline* auto_tuner_offline::instance = 0;
+    std::shared_ptr<auto_tuner_offline> auto_tuner_offline::instance = 0;
 
-    auto_tuner_offline::auto_tuner_offline(const std::string hw_id)
+    auto_tuner_offline::auto_tuner_offline(const std::string& hw_id)
     {
         std::string temp_hw_id = hw_id;
         // TODO: this is temporary solution of cases where user has non-tuned configuration. needs to implement better logic
@@ -30,11 +30,11 @@ namespace KernelSelector
         sku_cache_fillers.at(temp_hw_id)(t_data);
     }
 
-    auto_tuner_offline* auto_tuner_offline::get_instance(const std::string hw_id)
+    std::shared_ptr<auto_tuner_offline> auto_tuner_offline::get_instance(const std::string& hw_id)
     {
-        if (instance == 0)
+        if (instance == nullptr)
         {
-            instance = new auto_tuner_offline(hw_id);
+            instance = std::make_shared<auto_tuner_offline>(auto_tuner_offline(hw_id));
         }
         return instance;
     }
