@@ -17,6 +17,7 @@
 #pragma once
 
 #include <string>
+#include <mutex>
 #include "auto_tuner.h"
 #include "kernel_selector_common.h"
 
@@ -39,6 +40,7 @@ namespace KernelSelector
     {
     private:
         static std::shared_ptr<auto_tuner_offline> instance;
+        static std::mutex mutex;
         auto_tuner_offline() = delete;
         // this is singleton implementation, if called twice with different parameter, 
         // second call param will be ignored

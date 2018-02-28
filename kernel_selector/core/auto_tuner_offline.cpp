@@ -19,6 +19,7 @@
 namespace KernelSelector 
 {
     std::shared_ptr<auto_tuner_offline> auto_tuner_offline::instance = 0;
+    std::mutex auto_tuner_offline::mutex;
 
     auto_tuner_offline::auto_tuner_offline(const std::string& hw_id)
     {
@@ -32,6 +33,7 @@ namespace KernelSelector
 
     std::shared_ptr<auto_tuner_offline> auto_tuner_offline::get_instance(const std::string& hw_id)
     {
+        std::lock_guard<std::mutex> lock(mutex);
         if (instance == nullptr)
         {
             instance = std::make_shared<auto_tuner_offline>(auto_tuner_offline(hw_id));
