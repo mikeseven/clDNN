@@ -2635,7 +2635,8 @@ bool program_impl::remove_if_dangling(program_node& node, bool detach_whole_bran
             if (rem->is_input())
                 inputs.remove(rem);
 
-            processing_order.erase(rem->processing_itr);
+            if(std::find(processing_order.begin(), processing_order.end(), rem) != processing_order.end())
+                processing_order.erase(rem->processing_itr);
             optimized_out.push_back(rem->id());
             nodes_map.erase(rem->id());
         }
