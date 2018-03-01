@@ -48,7 +48,7 @@ namespace KernelSelector
         kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
         auto wg_size = kd.fp16UnitUsed ? 16 : 8;
 
-        kd.gws0 = Align(params.output.X().v, wg_size);
+        kd.gws0 = Align(params.output.X().v, wg_size * params.deconvParams.stride.x);
         kd.gws1 = params.output.Y().v;
         kd.gws2 = params.output.Batch().v * params.output.Feature().v;
         kd.lws0 = wg_size;
