@@ -14,20 +14,22 @@
 // limitations under the License.
 */
 
-#include "deconvolution_kernel_selector.h"
-#include "deconvolution_kernel_ref.h"
-#include "deconvolution_kernel_bfyx_opt.h"
- 
-namespace KernelSelector 
-{
-    DeconvolutionKernelSelctor::DeconvolutionKernelSelctor()
-    {
-        Attach<DeconvolutionKernelRef>();
-        Attach<DeconvolutionKernel_bfyx_opt>();
-    }
+#pragma once
 
-    KernelsData DeconvolutionKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+#include "deconvolution_kernel_base.h"
+
+namespace KernelSelector {
+
+    class DeconvolutionKernel_bfyx_opt : public DeconvolutionKernelBase
     {
-        return GetNaiveBestKernel(params, options, KernelType::DECONVOLUTION);
-    }
+    public:
+        DeconvolutionKernel_bfyx_opt() : DeconvolutionKernelBase("deconvolution_gpu_bfyx_opt") {}
+        virtual ~DeconvolutionKernel_bfyx_opt() {}
+
+        virtual ParamsKey GetSupportedKey() const override;
+
+    protected:
+        CommonDispatchData SetDefault(const DeconvolutionParams& params) const override;
+        JitConstants GetJitConstants(const DeconvolutionParams& params) const override;
+    };
 }

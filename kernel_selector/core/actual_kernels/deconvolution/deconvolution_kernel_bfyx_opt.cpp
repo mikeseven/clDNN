@@ -14,12 +14,13 @@
 // limitations under the License.
 */
 
-#include "deconvolution_kernel_ref.h"
+#include "deconvolution_kernel_bfyx_opt.h"
+#include "kernel_selector_utils.h"
 
 namespace KernelSelector 
 {
 
-    ParamsKey DeconvolutionKernelRef::GetSupportedKey() const
+    ParamsKey DeconvolutionKernel_bfyx_opt::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
@@ -28,12 +29,8 @@ namespace KernelSelector
         k.EnableInputWeightsType(WeightsType::F32);
         k.EnableOutputDataType(Datatype::F16);
         k.EnableOutputDataType(Datatype::F32);
-        k.EnableInputLayout(DataLayout::yxfb);
         k.EnableInputLayout(DataLayout::bfyx);
-        k.EnableInputLayout(DataLayout::byxf);
-        k.EnableOutputLayout(DataLayout::yxfb);
         k.EnableOutputLayout(DataLayout::bfyx);
-        k.EnableOutputLayout(DataLayout::byxf);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableBiasPerFeature();
@@ -44,31 +41,28 @@ namespace KernelSelector
         return k;
     }
 
-    CommonDispatchData DeconvolutionKernelRef::SetDefault(const DeconvolutionParams& params) const
+    CommonDispatchData DeconvolutionKernel_bfyx_opt::SetDefault(const DeconvolutionParams& params) const
     {
-        CommonDispatchData runInfo = DeconvolutionKernelBase::SetDefault(params);
+        DispatchData kd;
 
-        if (params.output.Feature().v * params.output.Batch().v <= 16)
-        {
-            const auto& out = params.output;
-            runInfo.gws0 = Align(out.X().v, 32);
-            runInfo.gws1 = out.Y().v;
-            runInfo.gws2 = out.Feature().v * out.Batch().v;
+        kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
+        auto wg_size = kd.fp16UnitUsed ? 16 : 8;
 
-            runInfo.lws0 = 32;
-            runInfo.lws1 = 1;
-            runInfo.lws2 = 1;
-        }
-
-        return runInfo;
+        kd.gws0 = Align(params.output.X().v, wg_size);
+        kd.gws1 = params.output.Y().v;
+        kd.gws2 = params.output.Batch().v * params.output.Feature().v;
+        kd.lws0 = wg_size;
+        kd.lws1 = 1;
+        kd.lws2 = 1;
+        kd.effiency = FORCE_PRIORITY_6;
+        return kd;
     }
 
-    JitConstants DeconvolutionKernelRef::GetJitConstants(const DeconvolutionParams& params) const
+    JitConstants DeconvolutionKernel_bfyx_opt::GetJitConstants(const DeconvolutionParams& params) const
     {
         auto jit = DeconvolutionKernelBase::GetJitConstants(params);
 
-        if (params.output.Feature().v * params.output.Batch().v <= 16)
-            jit.AddConstant(MakeJitConstant("DIM_ORDER_XYBF", 1));
+        jit.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", params.inputs[0].GetDType() == Datatype::F16 ? 16 : 8));
 
         return jit;
     }
