@@ -179,7 +179,7 @@ TEST(memory_pool, oooq) {
                 -- relu3 --  relu5 --------- 
        neither of relu5, relu6 nor relu7 can share resource with relu4. */
 
-    engine_configuration cfg{ false, false, false, std::string(), std::string(), true /*oooq*/, std::string(),std::string(), 0, true /*mem_pool*/ };
+    engine_configuration cfg{ false, false, false, std::string(), std::string(), true /*oooq*/, std::string(),std::string(), priority_mode_types::disabled, throttle_mode_types::disabled, true /*mem_pool*/ };
     engine engine{ cfg };
     auto batch_num = 1;
     auto feature_num = 4;

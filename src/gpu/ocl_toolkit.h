@@ -36,6 +36,12 @@
 
 namespace cldnn { namespace gpu {
 
+typedef  CL_API_ENTRY cl_command_queue(CL_API_CALL *pfn_clCreateCommandQueueWithPropertiesINTEL)(
+    cl_context context,
+    cl_device_id device,
+    const cl_queue_properties *properties,
+    cl_int *errcodeRet);
+
 class ocl_error : public error
 {
 public:
@@ -58,6 +64,8 @@ struct configuration
     bool host_out_of_order;
     std::string log;
     std::string ocl_sources_dumps_dir;
+    cldnn_priority_mode_type priority_mode;
+    cldnn_throttle_mode_type throttle_mode;
 };
 
 class gpu_toolkit;
@@ -139,6 +147,7 @@ private:
     cl::Device _device;
     cl::Context _context;
     cl::CommandQueue _command_queue;
+    cl_platform_id _platform_id;
     engine_info_internal _engine_info;
     kernels_cache _kernels_cache;
 

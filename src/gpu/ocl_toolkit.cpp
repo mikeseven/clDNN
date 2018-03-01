@@ -116,20 +116,36 @@ bool driver_supports_oooq(cl::Device const& dev)
     return false;
 }
 
-cl::Device get_gpu_device(const configuration& config)
+cl::Device get_gpu_device(const configuration& config, cl_platform_id& platform_id)
 {
-    std::vector<cl::Platform> platforms;
-    cl::Platform::get(&platforms);
     std::list<std::string> reasons;
+    cl_uint n = 0;
 
-    for (auto& p : platforms)
+    // Get number of platforms availible
+    cl_int err = clGetPlatformIDs(0, NULL, &n);
+    if (err != CL_SUCCESS) {
+        throw std::runtime_error("clGetPlatformIDs error " + std::to_string(err));
+    }
+
+    // Get platform list
+    std::vector<cl_platform_id> platform_ids(n);
+    err = clGetPlatformIDs(n, platform_ids.data(), NULL);
+    if (err != CL_SUCCESS) {
+        throw std::runtime_error("clGetPlatformIDs error " + std::to_string(err));
+    }
+
+    for (auto& id : platform_ids)
     {
+        cl::Platform platform = cl::Platform(id);
         std::vector<cl::Device> devices;
-        p.getDevices(CL_DEVICE_TYPE_ALL, &devices);
+        platform.getDevices(CL_DEVICE_TYPE_ALL, &devices);
         for (auto& d : devices)
         {
             if (does_device_match_config(d, config, reasons))
+            {
+                platform_id = id;
                 return d;
+            }
         }
     }
 
@@ -156,7 +172,7 @@ std::shared_ptr<gpu_toolkit> gpu_toolkit::create(const configuration & cfg)
 
 gpu_toolkit::gpu_toolkit(const configuration& config) 
     : _configuration(config)
-    , _device(get_gpu_device(config))
+    , _device(get_gpu_device(config, _platform_id))
     , _context(_device)
     , _command_queue(_context,
                      _device,
@@ -170,6 +186,91 @@ gpu_toolkit::gpu_toolkit(const configuration& config)
     , _kernels_cache(*this)
 {
     _device.getInfo(CL_DEVICE_EXTENSIONS, &_extensions);
+
+    cl_command_queue_properties queue_properties =
+        ((config.enable_profiling) ?
+            CL_QUEUE_PROFILING_ENABLE :
+            0) |
+            ((config.host_out_of_order &&
+                driver_supports_oooq(_device)) ?
+                CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE :
+                0);
+
+    if (_configuration.priority_mode != cldnn_priority_disabled)
+    {
+        if (extension_supported("cl_khr_priority_hints") &&
+            extension_supported("cl_intelx_create_command_queue"))
+            // TODO add check when caps will be availible (instead of cl_intelx_create_command_queue)
+            //&& extension_supported("cl_khr_create_command_queue"))
+        {
+            // TODO: When cl_khr_create_command_queue will be availible the
+            // function name will change to clCreateCommandQueueWithPropertiesKHR
+            // in place of clCreateCommandQueueWithPropertiesINTEL.
+            pfn_clCreateCommandQueueWithPropertiesINTEL clCreateCommandQueueWithPropertiesINTEL =
+                (pfn_clCreateCommandQueueWithPropertiesINTEL)clGetExtensionFunctionAddressForPlatform(
+                    _platform_id,
+                    "clCreateCommandQueueWithPropertiesINTEL");
+
+            unsigned cl_queue_priority_value = CL_QUEUE_PRIORITY_MED_KHR;
+
+            switch (_configuration.priority_mode)
+            {
+            case cldnn_priority_high:
+                cl_queue_priority_value = CL_QUEUE_PRIORITY_HIGH_KHR;
+                break;
+            case cldnn_priority_low:
+                cl_queue_priority_value = CL_QUEUE_PRIORITY_LOW_KHR;
+                break;
+            default:
+                break;
+            }
+
+            cl_int error_code = CL_SUCCESS;
+            cl_queue_properties properties_low[] = {
+                CL_QUEUE_PRIORITY_KHR, cl_queue_priority_value,
+                CL_QUEUE_PROPERTIES, queue_properties,
+                0 };
+
+            _command_queue = clCreateCommandQueueWithPropertiesINTEL(
+                _context.get(),
+                _device.get(),
+                properties_low,
+                &error_code);
+
+            if (error_code != CL_SUCCESS) {
+                throw std::runtime_error("clCreateCommandQueueWithPropertiesINTEL error " + std::to_string(error_code));
+            }
+        }
+        else
+        {
+            throw std::invalid_argument(
+                "The param priority_mode is set in engine_configuration,\
+                 but cl_khr_priority_hints or cl_khr_create_command_queue\
+                 is not supported by current OpenCL implementation.");
+        }
+    }
+    else
+    {
+        _command_queue = cl::CommandQueue(_context, _device, queue_properties);
+    }
+
+    if (_configuration.throttle_mode != cldnn_throttle_disabled)
+    {
+        if (extension_supported("cl_khr_throttle_hints"))
+        {
+            throw std::invalid_argument(
+                "The param throttle_mode is set in engine_configuration,\
+                 but it is placeholder for future use. It has no effect for now\
+                 and should be set to cldnn_throttle_disabled");
+        }
+        else
+        {
+            throw std::invalid_argument(
+                "The param throttle_mode is set in engine_configuration,\
+                 but cl_khr_throttle_hints is not supported by current OpenCL implementation.");
+        }
+    }
+
     if (logging_enabled())
     {
         open_log()
