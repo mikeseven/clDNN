@@ -30,6 +30,5 @@ namespace KernelSelector {
 
     protected:
         CommonDispatchData SetDefault(const DeconvolutionParams& params) const override;
-        JitConstants GetJitConstants(const DeconvolutionParams& params) const override;
     };
 }

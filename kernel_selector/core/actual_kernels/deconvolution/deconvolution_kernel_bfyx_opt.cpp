@@ -57,13 +57,4 @@ namespace KernelSelector
         kd.effiency = FORCE_PRIORITY_6;
         return kd;
     }
-
-    JitConstants DeconvolutionKernel_bfyx_opt::GetJitConstants(const DeconvolutionParams& params) const
-    {
-        auto jit = DeconvolutionKernelBase::GetJitConstants(params);
-
-        jit.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", 16));
-
-        return jit;
-    }
 }
