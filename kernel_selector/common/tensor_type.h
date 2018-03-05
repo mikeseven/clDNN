@@ -73,7 +73,8 @@ namespace KernelSelector
             winograd_2x3_s1_weights, //winograd convolution weights, F(2, 3) --filter 3x3 with stride 1
             winograd_2x3_s1_fused_weights, //winograd convolution weights for fused kernel, F(2, 3) --filter 3x3 with stride 1
             winograd_6x3_s1_fused_weights, //winograd convolution weights for fused kernel, F(6, 3) --filter 3x3 with stride 1
-            image_2d_weights_winograd_6x3_s1 // image 2d winograd convolution weights for fused kernel, F(2, 3) --filter 3x3 with stride 1
+            image_2d_weights_winograd_6x3_s1_fbxyb, // image 2d winograd convolution weights for fused kernel, F(2, 3) --filter 3x3 with stride 1
+            image_2d_weights_winograd_6x3_s1_xfbyb // image 2d winograd convolution weights for fused kernel, F(2, 3) --filter 3x3 with stride 1
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -161,7 +162,8 @@ namespace KernelSelector
                 { WeightsLayout::winograd_2x3_s1_weights,       {  3, 2, 1, 0 } },
                 { WeightsLayout::winograd_2x3_s1_fused_weights, {  0, 1, 2, 3 } },
                 { WeightsLayout::winograd_6x3_s1_fused_weights, {  0, 1, 2, 3 } },
-                { WeightsLayout::image_2d_weights_winograd_6x3_s1, { 0, 1, 2, 3 } }
+                { WeightsLayout::image_2d_weights_winograd_6x3_s1_fbxyb, { 0, 1, 2, 3 } },
+                { WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb, { 0, 1, 2, 3 } }
             };
 
             template <typename MapT, typename Layout, typename ChannelName>
@@ -244,6 +246,20 @@ namespace KernelSelector
                 case DataLayout::yxfb:
                 case DataLayout::byxf:
                 case DataLayout::fyxb:
+                    return true;
+                default:
+                    return false;
+                }
+            }
+
+            inline bool IsImageType(WeightsLayout l)
+            {
+                switch (l)
+                {
+                case WeightsLayout::image_2d_weights_c4_fyx_b:
+                case WeightsLayout::image_2d_weights_c1_b_fyx:
+                case WeightsLayout::image_2d_weights_winograd_6x3_s1_fbxyb:
+                case WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb:
                     return true;
                 default:
                     return false;

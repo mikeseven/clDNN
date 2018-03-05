@@ -44,7 +44,7 @@ struct detection_output : public primitive_base<detection_output, CLDNN_PRIMITIV
 {
     CLDNN_DECLATE_PRIMITIVE(detection_output)
 
-    /// @brief Constructs pooling primitive.
+    /// @brief Constructs detection output primitive.
     /// @param id This primitive id.
     /// @param input_location Input location primitive id.
     /// @param input_confidence Input confidence primitive id.

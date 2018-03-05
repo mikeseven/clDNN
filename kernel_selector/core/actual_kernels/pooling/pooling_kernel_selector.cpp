@@ -24,7 +24,7 @@ namespace KernelSelector {
     PoolingKernelSelctor::PoolingKernelSelctor()
     {
         Attach<PoolingKernelGPURef>();
-        Attach<PoolingKernelGPUAverageOpt>();
+        //Attach<PoolingKernelGPUAverageOpt>(); TODO: fix the kernel as it reads out of bounds now
         Attach<PoolingKernelGPUBfyxBlockOpt>();
     }
 

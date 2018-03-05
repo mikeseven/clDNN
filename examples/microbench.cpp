@@ -16,40 +16,22 @@
 
 #include "common/common_tools.h"
 #include "file.h"
-
 #include <cmath>
 #include <string>
 #include <api/CPP/input_layout.hpp>
 #include <api/CPP/convolution.hpp>
 #include <api/CPP/data.hpp>
+#include <api/CPP/input_layout.hpp>
 
 using namespace cldnn;
 
 
-typedef enum
-{
-    zero = 0,
-    one,
-    zero_to_nine, 
-} filler_type;
 
-template<typename T>
-void fill_memory(const memory& memory, filler_type fill)
-{
-
-    auto mem_ptr = memory.pointer<T>();
-    float val = (fill == filler_type::zero) ? 0.0f : 1.0f;
-    for (auto& it : mem_ptr)
-    {
-        if (fill == zero_to_nine)
-            val += fmod(val + 1.0f, 10.0f);
-        it = T(val);
-    }
-}
 
 void test_conv(
     const engine& engine,
     topology& topology,
+    std::map<primitive_id, layout>& inputs,
     const primitive_id& id,
     int32_t batch_size,
     int32_t in_w,
@@ -68,47 +50,43 @@ void test_conv(
     auto weight_size = tensor(out_feature, in_feature, kernel_w, kernel_h);
     auto bias_size = tensor(1, 1, out_feature, 1);
 
-    auto input = memory::allocate(engine, { data_type, format::bfyx, input_size });
-    auto weights = memory::allocate(engine, { data_type, format::yxfb, weight_size });
-    auto bias = memory::allocate(engine, { data_type, format::bfyx, bias_size });
+    primitive_id input_id = id + "_input";
+    layout input_lay{ data_type, format::bfyx, input_size };
 
-    // to get different type of weights, biases and input values changed here. Feel free to add new type of fillers
-    auto fill_with = filler_type::zero;
-    if (!use_half)
-    {
-        fill_memory<float>(input, fill_with);
-        fill_memory<float>(weights, fill_with);
-        fill_memory<float>(bias, fill_with);
-    }
-    else
-    {
-        fill_memory<half_t>(input, fill_with);
-        fill_memory<half_t>(weights, fill_with);
-        fill_memory<half_t>(bias, fill_with);
-    }
+    primitive_id weights_id = id + "_weights";
+    layout weights_lay{ data_type, format::yxfb, weight_size };
+
+    primitive_id bias_id = id + "_bias";
+    layout bias_lay{ data_type, format::bfyx, bias_size };
+
+    inputs.insert({ input_id, input_lay });
+    inputs.insert({ weights_id, weights_lay });
+    inputs.insert({ bias_id, bias_lay });
+
     auto conv = convolution(
         id,
-        id + "_input",
-        { id + "_weights" },
-        { id + "_bias" },
+        input_id,
+        { weights_id},
+        { bias_id },
         stride,
         offset,
         { 1,1,1,1 },
         true);
 
-    topology.add(data(id + "_input", input), data(id + "_weights", weights), data(id + "_bias", bias), conv);
+    topology.add(input_layout(input_id, input_lay), input_layout(weights_id, weights_lay), input_layout(bias_id, bias_lay), conv);
 }
-cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)
+cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine, std::map<primitive_id, cldnn::layout>& inputs, int32_t batch_size)
 {
     topology topology;
-    bool use_half = input_layout.data_type == data_types::f16 ? true : false;
-  
+    bool use_half = inputs.at("input_layout").data_type == data_types::f16 ? true : false;
+
     //not used but needs to be initialized
-    input_layout.size = { 1, 1, 1, 1 };
+    inputs.at("input_layout").size = { 1, 1, 1, 1 };
 
     test_conv(
         engine,
         topology,
+        inputs,
         "conv1_7x7_s2",
         batch_size,
         224, 224, 3, // input: x,y,f
@@ -122,6 +100,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     test_conv(
         engine,
         topology,
+        inputs,
         "conv2_3x3_reduce",
         batch_size,
         56, 56, 64, // input: x,y,f
@@ -135,6 +114,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     test_conv(
         engine,
         topology,
+        inputs,
         "conv2_3x3",
         batch_size,
         56, 56, 384, // input: x,y,f
@@ -148,6 +128,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     test_conv(
         engine,
         topology,
+        inputs,
         "inception_3a_1x1",
         batch_size,
         28, 28, 192, // input: x,y,f
@@ -161,6 +142,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     test_conv(
         engine,
         topology,
+        inputs,
         "inception_3a_3x3_reduce",
         batch_size,
         28, 28, 64, // input: x,y,f
@@ -174,6 +156,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     test_conv(
         engine,
         topology,
+        inputs,
         "inception_3a_3x3",
         batch_size,
         28, 28, 192, // input: x,y,f
@@ -187,6 +170,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     test_conv(
         engine,
         topology,
+        inputs,
         "inception_3a_double3x3_reduce",
         batch_size,
         28, 28, 192, // input: x,y,f
@@ -200,6 +184,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     test_conv(
         engine,
         topology,
+        inputs,
         "inception_3a_double3x3a",
         batch_size,
         28, 28, 64, // input: x,y,f
@@ -213,6 +198,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     test_conv(
         engine,
         topology,
+        inputs,
         "inception_3a_double3x3b",
         batch_size,
         28, 28, 96, // input: x,y,f
@@ -226,6 +212,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     test_conv(
         engine,
         topology,
+        inputs,
         "inception_3b_1x1",
         batch_size,
         28, 28, 256, // input: x,y,f
@@ -239,6 +226,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     test_conv(
         engine,
         topology,
+        inputs,
         "inception_3b_3x3_reduce",
         batch_size,
         28, 28, 64, // input: x,y,f
@@ -252,6 +240,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     test_conv(
         engine,
         topology,
+        inputs,
         "inception_3b_3x3",
         batch_size,
         28, 28, 192, // input: x,y,f
@@ -266,6 +255,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     test_conv(
         engine,
         topology,
+        inputs,
         "inception_3b_double3x3_reduce",
         batch_size,
         28, 28, 192, // input: x,y,f
@@ -279,6 +269,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     test_conv(
         engine,
         topology,
+        inputs,
         "inception_3b_double3x3a",
         batch_size,
         28, 28, 64, // input: x,y,f
@@ -292,6 +283,7 @@ cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine
     test_conv(
         engine,
         topology,
+        inputs,
         "inception_3b_double3x3b",
         batch_size,
         28, 28, 96, // input: x,y,f

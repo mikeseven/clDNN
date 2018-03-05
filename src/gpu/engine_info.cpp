@@ -167,6 +167,10 @@ engine_info_internal::engine_info_internal(const gpu_toolkit& context)
     max_global_mem_size = static_cast<uint64_t>(context.device().getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>());
     max_alloc_mem_size = static_cast<uint64_t>(context.device().getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>());
 
+    supports_image = static_cast<uint8_t>(context.device().getInfo<CL_DEVICE_IMAGE_SUPPORT>());
+    max_image2d_width = static_cast<uint64_t>(context.device().getInfo<CL_DEVICE_IMAGE2D_MAX_WIDTH>());
+    max_image2d_height = static_cast<uint64_t>(context.device().getInfo<CL_DEVICE_IMAGE2D_MAX_HEIGHT>());
+
     // Check for supported features.
     auto extensions = context.device().getInfo<CL_DEVICE_EXTENSIONS>();
     extensions.push_back(' '); // Add trailing space to ease searching (search with keyword with trailing space).

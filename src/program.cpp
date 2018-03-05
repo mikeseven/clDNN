@@ -28,6 +28,7 @@
 #include "api/CPP/pooling.hpp"
 #include "api/CPP/proposal.hpp"
 #include "api/CPP/roi_pooling.hpp"
+#include "api/CPP/reorg_yolo.hpp"
 
 #include "activation_inst.h"
 #include "batch_norm_inst.h"
@@ -1500,7 +1501,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
         //list of layers that do not support yxfb or perform worse than bfyx
         if (prim.type() == cldnn::detection_output::type_id() || prim.type() == cldnn::proposal::type_id() ||
             prim.type() == cldnn::roi_pooling::type_id() || prim.type() == cldnn::deconvolution::type_id() ||
-            prim.type() == cldnn::upsampling::type_id())
+            prim.type() == cldnn::upsampling::type_id() || prim.type() == cldnn::reorg_yolo::type_id())
             lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::bfyx_only_layer, 1);
     }
 
@@ -1595,7 +1596,8 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
             if (bias_term)
             {
                 auto& bias_node = conv_node.get_dependency(2);
-                auto winograd_output_biases = std::make_shared<eltwise>(back_node.id() + "_bias", back_node.id(), bias_node.id(),
+                std::vector<primitive_id> inputs = { back_node.id(), bias_node.id() };
+                auto winograd_output_biases = std::make_shared<eltwise>(back_node.id() + "_bias", inputs,
                     cldnn::eltwise_mode::sum, conv_prim->with_activation, conv_prim->activation_negative_slope, 
                     back_node.output_layout.data_padding);
                 back_node.output_layout.data_padding = padding{};
@@ -2633,7 +2635,8 @@ bool program_impl::remove_if_dangling(program_node& node, bool detach_whole_bran
             if (rem->is_input())
                 inputs.remove(rem);
 
-            processing_order.erase(rem->processing_itr);
+            if(std::find(processing_order.begin(), processing_order.end(), rem) != processing_order.end())
+                processing_order.erase(rem->processing_itr);
             optimized_out.push_back(rem->id());
             nodes_map.erase(rem->id());
         }

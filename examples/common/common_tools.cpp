@@ -629,7 +629,7 @@ void run_topology(const execution_params &ep)
             }
         }
 
-        return cldnn::engine_configuration(ep.profiling, ep.meaningful_kernels_names, false, "", ep.run_single_kernel_name, use_ooq, engine_log, sources_dir, 0, !ep.disable_mem_pool);
+        return cldnn::engine_configuration(ep.profiling, ep.meaningful_kernels_names, false, "", ep.run_single_kernel_name, use_ooq, engine_log, sources_dir, cldnn::priority_mode_types::disabled, cldnn::throttle_mode_types::disabled, !ep.disable_mem_pool);
     };
 
     if (ep.use_oooq)
@@ -672,6 +672,8 @@ void run_topology(const execution_params &ep)
     }
     cldnn::instrumentation::timer<> timer_build;
     cldnn::layout input_layout = { ep.use_half ? cldnn::data_types::f16 : cldnn::data_types::f32, cldnn::format::byxf, {} };
+    std::map<cldnn::primitive_id, cldnn::layout> microbench_inputs;
+    microbench_inputs.insert({ "input_layout", input_layout }); //add dummy input so we pass data format to mcirobench topology
     if (ep.topology_name == "alexnet")
         primitives = build_alexnet(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "vgg16" || ep.topology_name == "vgg16_face")
@@ -681,11 +683,12 @@ void run_topology(const execution_params &ep)
     else if (ep.topology_name == "gender")
         primitives = build_gender(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "microbench")
-        primitives = build_microbench(ep.weights_dir, engine, input_layout, gpu_batch_size);
+        primitives = build_microbench(ep.weights_dir, engine, microbench_inputs, gpu_batch_size);
     else if(ep.topology_name == "squeezenet")
         primitives = build_squeezenet(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
+    microbench_inputs.erase("input_layout");
 
     auto build_time = timer_build.uptime();
 
@@ -702,7 +705,6 @@ void run_topology(const execution_params &ep)
         }
     }
     auto network = build_network(engine, primitives, ep);
-    auto input = cldnn::memory::allocate(engine, input_layout);
     //TODO check if we can define the 'empty' memory
     float zero = 0;
     cldnn::layout zero_layout( cldnn::data_types::f32, cldnn::format::bfyx, {1,1,1,1} );
@@ -710,6 +712,7 @@ void run_topology(const execution_params &ep)
 
     if (ep.topology_name != "microbench")
     {
+        auto input = cldnn::memory::allocate(engine, input_layout);
         auto neurons_list_filename = "names.txt";
         if (ep.topology_name == "vgg16_face")
             neurons_list_filename = "vgg16_face.txt";
@@ -776,6 +779,22 @@ void run_topology(const execution_params &ep)
         }
     }
     else {
+        auto fill_with = memory_filler::filler_type::zero;
+        for (const auto& inp_data : microbench_inputs)
+        {
+            auto mem = cldnn::memory::allocate(engine, inp_data.second);
+            if (!ep.use_half)
+            {
+                memory_filler::fill_memory<float>(mem, fill_with);
+            }
+            else
+            {
+                memory_filler::fill_memory<half_t>(mem, fill_with);
+            }
+            
+            network.set_input_data(inp_data.first, mem);
+        }
+
         auto time = execute_topology(network, ep, energyLib, output);
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
         if (time_in_sec != 0.0)

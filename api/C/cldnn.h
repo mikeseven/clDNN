@@ -127,19 +127,38 @@ typedef enum /*:int32_t*/
     cldnn_engine_ocl ///< OpenCL engine
 } cldnn_engine_type;
 
+/// @brief Priority modes.
+typedef enum /*:int16_t*/
+{
+    cldnn_priority_disabled,
+    cldnn_priority_low,
+    cldnn_priority_med,
+    cldnn_priority_high
+} cldnn_priority_mode_type;
+
+/// @brief Throttle modes.
+typedef enum /*:int16_t*/
+{
+    cldnn_throttle_disabled,
+    cldnn_throttle_low,
+    cldnn_throttle_med,
+    cldnn_throttle_high
+} cldnn_throttle_mode_type;
+
 /// @brief Configuration parameters for created engine.
 typedef struct
 {
-    uint32_t enable_profiling;         ///< Enable per-primitive profiling.
-    uint32_t meaningful_kernels_names; ///< Generate meaniful names fo OpenCL kernels.
-    uint32_t dump_custom_program;      ///< dump the custom generated program to files 
-    const char* compiler_options;      ///< OpenCL compiler options string.
-    const char* single_kernel_name;    ///< If provided, runs specific layer.
-    uint32_t enable_parallelisation;   ///< Enables parallel execution of primitives which don't depend on each other. Disabled by default.
-    const char* engine_log;            ///< Specifies a file to which engine log should be dumped. Null/empty values means no logging.
-    const char* sources_dumps_dir;     ///< Specifies a directory where sources of cldnn::program objects should be dumped. Null/empty values means no loggins.
-    uint32_t priority_mode;            ///< Placeholder for priority mode (support of priority hints in command queue). Currently ignored.
-    uint32_t enable_memory_pool;       ///< Enables memory usage optimization. memory objects will be reused when possible. 
+    uint32_t enable_profiling;                          ///< Enable per-primitive profiling.
+    uint32_t meaningful_kernels_names;                  ///< Generate meaniful names fo OpenCL kernels.
+    uint32_t dump_custom_program;                       ///< dump the custom generated program to files 
+    const char* compiler_options;                       ///< OpenCL compiler options string.
+    const char* single_kernel_name;                     ///< If provided, runs specific layer.
+    uint32_t enable_parallelisation;                    ///< Enables parallel execution of primitives which don't depend on each other. Disabled by default.
+    const char* engine_log;                             ///< Specifies a file to which engine log should be dumped. Null/empty values means no logging.
+    const char* sources_dumps_dir;                      ///< Specifies a directory where sources of cldnn::program objects should be dumped. Null/empty values means no loggins.
+    /*cldnn_priority_mode_type*/ int16_t priority_mode; ///< Priority mode (support of OpenCL priority hints in command queue).
+    /*cldnn_throttle_mode_type*/ int16_t throttle_mode; ///< Placeholder for throttle mode (support of throttle hints in command queue). It has no effect for now and should be set to cldnn_throttle_disabled.
+    uint32_t enable_memory_pool;                        ///< Enables memory usage optimization. memory objects will be reused when possible. 
 }  cldnn_engine_configuration;
 
 /// @brief Information about the engine returned by cldnn_get_engine_info().
@@ -153,10 +172,14 @@ typedef struct
     uint64_t max_global_mem_size;      ///< Maximum size of global device memory in bytes.
     uint64_t max_alloc_mem_size;       ///< Maximum size of memory object allocation in bytes.
 
+    uint64_t max_image2d_width;        ///< Maximum image 2d width supported by the device.
+    uint64_t max_image2d_height;       ///< Maximum image 2d height supported by the device.
+
     // Flags (for layout compatibility fixed size types are used).
     uint8_t supports_fp16;             ///< Does engine support FP16.
     uint8_t supports_fp16_denorms;     ///< Does engine support denormalized FP16.
     uint8_t supports_subgroups_short;  ///< Does engine support cl_intel_subgroups_short.
+    uint8_t supports_image;           ///< Does engine support images (CL_DEVICE_IMAGE_SUPPORT cap).
 }  cldnn_engine_info;
 /// @}
 
@@ -384,6 +407,7 @@ typedef enum cldnn_activation_func_t
     activation_linear,                  // a*val + b                        (a,b are additional params) 
     activation_square,                  // val*val
     activation_sqrt,                    // sqrt(val)
+    activation_elu,                     // max(0, val) + a * (exp(min(0, val) - 1) (a is additional param)
 } cldnn_activation_func;
 
 /// @brief activation additional params

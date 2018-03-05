@@ -14,32 +14,47 @@
 // limitations under the License.
 */
 
-#include "normalize_kernel_within_spatial_ref.h"
- 
+#include "deconvolution_kernel_bfyx_opt.h"
+#include "kernel_selector_utils.h"
+
 namespace KernelSelector 
 {
-    ParamsKey NormalizeKernelWithinSpatialRef::GetSupportedKey() const
+
+    ParamsKey DeconvolutionKernel_bfyx_opt::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
         k.EnableInputDataType(Datatype::F32);
+        k.EnableInputWeightsType(WeightsType::F16);
+        k.EnableInputWeightsType(WeightsType::F32);
         k.EnableOutputDataType(Datatype::F16);
         k.EnableOutputDataType(Datatype::F32);
         k.EnableInputLayout(DataLayout::bfyx);
-        k.EnableInputLayout(DataLayout::yxfb);
-        k.EnableInputLayout(DataLayout::byxf);
         k.EnableOutputLayout(DataLayout::bfyx);
-        k.EnableOutputLayout(DataLayout::yxfb);
-        k.EnableOutputLayout(DataLayout::byxf);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
+        k.EnableBiasPerFeature();
+        k.EnableNonBiasTerm();
         k.EnableBatching();
-        k.EnableNormalizeMode(NormalizeMode::WITHIN_SPATIAL);
+        k.EnableSplitSupport();
+        k.EnableDepthwiseSeparableOpt();
         return k;
     }
 
-    KernelsData NormalizeKernelWithinSpatialRef::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    CommonDispatchData DeconvolutionKernel_bfyx_opt::SetDefault(const DeconvolutionParams& params) const
     {
-        return GetCommonKernelsData(params, optParams, FORCE_PRIORITY_9);
+        DispatchData kd;
+
+        kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
+        auto wg_size = 16;
+
+        kd.gws0 = Align(params.output.X().v, wg_size * params.deconvParams.stride.x);
+        kd.gws1 = params.output.Y().v;
+        kd.gws2 = params.output.Batch().v * params.output.Feature().v;
+        kd.lws0 = wg_size;
+        kd.lws1 = 1;
+        kd.lws2 = 1;
+        kd.effiency = FORCE_PRIORITY_6;
+        return kd;
     }
 }
