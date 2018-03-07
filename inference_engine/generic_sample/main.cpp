@@ -528,6 +528,7 @@ int main(int argc, char *argv[]) {
         typedef std::chrono::high_resolution_clock Time;
         typedef std::chrono::duration<double, std::ratio<1, 1000>> ms;
         typedef std::chrono::duration<float> fsec;
+        std::vector<double> times_vector;
         double total = 0.0;
         double framesPerSecond = 0.0;
         uint32_t niter = FLAGS_ni;
@@ -548,6 +549,7 @@ int main(int argc, char *argv[]) {
             fsec fs = t1 - t0;
             ms d = std::chrono::duration_cast<ms>(fs);
             total += static_cast<double>(d.count());
+            times_vector.push_back(static_cast<double>(d.count()));
             if (!FLAGS_pi.empty()) {
 #ifdef _WIN32
                 if (i < (niter - 1)) {
@@ -564,7 +566,11 @@ int main(int argc, char *argv[]) {
         std::cout << "Average running time of one iteration: " << total / static_cast<double>(niter) << " ms" << std::endl;
         framesPerSecond = (static_cast<double>(batchSize) * 1000.0) / (total / static_cast<double>(niter));
         std::cout << "FPS: " << framesPerSecond << std::endl;
-
+        std::sort(times_vector.begin(), times_vector.end());
+        int median_index = niter / 2;
+        if (niter % 2 == 1)
+            median_index++;
+        std::cout << "Median FPS: " << times_vector.at(median_index) << std::endl;
 #ifndef _WIN32
         packageEnergySum = get_rapl_energy_info(0, 0) - packageEnergySum;
         gpuEnergySum = get_rapl_energy_info(2, 0) - gpuEnergySum;
