@@ -218,7 +218,7 @@ namespace {
             return{ false, false };
         if (l1.get_linear_size() != l2.get_linear_size())
             return{ false, false };
-        if ((l1.format == format::bf8_xy16 && l2.format != format::bf8_xy16) || 
+        if ((l1.format == format::bf8_xy16 && l2.format != format::bf8_xy16) ||
             (l2.format == format::bf8_xy16 && l1.format != format::bf8_xy16))
             return{ false, false };
 
@@ -262,7 +262,7 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
 
     engine->compile_program(*this);
 
-    this->dump_program("13_finished", true);
+     this->dump_program("13_finished", true);
     cleanup();
 }
 
@@ -331,7 +331,7 @@ void program_impl::analyze_output_size_handling_need()
                 handling_needed = true;
         }
     }
-  
+
     output_size_handling_enabled = handling_needed;
 }
 
@@ -1173,7 +1173,7 @@ void program_impl::trim_to_outputs()
         for (auto user : node->users)
             if (user->is_marked())
                 user->dependencies.erase(std::remove(user->dependencies.begin(), user->dependencies.end(), node), user->dependencies.end());
-        
+
         optimized_out.push_back(node->id());
         nodes_map.erase(node->id());
     }
@@ -1242,7 +1242,7 @@ void program_impl::skipped_branch_memory_dependencies()
             {
                 // if at least one user will be processed after 'node', node2 has to be added to forbiden list
                 for (auto usr : node2->get_users())
-                {                       
+                {
                     if (usr->get_processing_num() > node->get_processing_num())
                     {
                         add_memory_dependency(node, node2);
@@ -1258,7 +1258,7 @@ void program_impl::skipped_branch_memory_dependencies()
 void program_impl::oooq_memory_dependencies()
 {
     auto itr = processing_order.begin();
-    // This order let us build dependencies based on syncing points. 
+    // This order let us build dependencies based on syncing points.
     // Set of nodes between two syncing points will be called sync_region.
     // Major rules is: can't share resource with nodes in my sync_region
 
@@ -1293,13 +1293,13 @@ void program_impl::oooq_memory_dependencies()
                     add_memory_dependency(*nd2, *nd1);
                 }
             }
-            
+
             // collect dependencies of every node in sync region
             std::vector<cldnn::program_node*> deps;
             for (auto& nd_in_region : sync_region)
                 for (auto& dep : nd_in_region->get_dependencies())
                     deps.emplace_back(dep);
-            
+
 
             for (auto& nd_in_region : sync_region)
                 for (auto& dep : deps)
@@ -1318,7 +1318,7 @@ void program_impl::prepare_memory_dependencies()
 {
     if (!get_engine().configuration().enable_memory_pool)
         return;
-    
+
     basic_memory_dependencies();
     skipped_branch_memory_dependencies();
     oooq_memory_dependencies();
@@ -1592,7 +1592,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
             conv_node.output_layout.data_padding = padding{};
             auto& back_node = get_or_create(winograd_output);
             back_node.processing_itr = processing_order.insert(std::next(conv_node.processing_itr), &back_node);
-            
+
             auto bias_term = conv_node.bias_term();
             //create additional eltwise node after reorder to compute bias
             if (bias_term)
@@ -1600,7 +1600,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 auto& bias_node = conv_node.get_dependency(2);
                 std::vector<primitive_id> inputs = { back_node.id(), bias_node.id() };
                 auto winograd_output_biases = std::make_shared<eltwise>(back_node.id() + "_bias", inputs,
-                    cldnn::eltwise_mode::sum, conv_prim->with_activation, conv_prim->activation_negative_slope, 
+                    cldnn::eltwise_mode::sum, conv_prim->with_activation, conv_prim->activation_negative_slope,
                     back_node.output_layout.data_padding);
                 back_node.output_layout.data_padding = padding{};
                 auto& back_bias_node = get_or_create(winograd_output_biases);
@@ -1689,7 +1689,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
     const auto reorder_input_detection_output = [this, &lo](typed_program_node<detection_output>& detection_output_node)
     {
         auto detection_output_prim = detection_output_node.get_primitive();
-         
+
         for (size_t i = 0; i < detection_output_node.get_dependencies().size(); i++)
         {
             auto& input = detection_output_node.get_dependency(i);
@@ -1782,7 +1782,7 @@ void program_impl::prepare_depthwise_sep_opt()
             !(node.get_primitive()->split() >= 16))
             return;
 
-        //make sure the weights and biases are data type and 
+        //make sure the weights and biases are data type and
         //are not reused in other primitives as they will be overriden with concatenated ones
         for (size_t i = 1; i < node.get_dependencies().size(); i++)
         {
@@ -2020,7 +2020,7 @@ void program_impl::prepare_padding()
             {
                 auto& prim_node = node->as<convolution>();
                 const auto& prim = prim_node.get_primitive();
-                
+
                 if (!prim->with_output_size)
                     continue;
 
@@ -2092,7 +2092,7 @@ void program_impl::prepare_padding()
         auto filter_prim = filter_node.get_primitive();
 
         layout filter_layout = filter_node.get_output_layout();
-        
+
         // convolution have only one input primitive
         auto prev_prim_output_layout = conv_input_node.get_output_layout();
 
@@ -2130,7 +2130,7 @@ void program_impl::propagate_constants()
         prop.visit_node(*node);
 
     auto&& to_replace = prop.calculate();
-    
+
     //remove all nodes which are no longer relevant, i.e. nodes which:
     // 1. are constants, and
     // 2. do not have non-const user (so their data are not used during inference), and
@@ -2177,6 +2177,7 @@ void program_impl::propagate_constants()
             curr_node.users.end()
         );
         replace(curr_node, new_node, false, false);
+
     }
 }
 
@@ -2288,7 +2289,7 @@ void program_impl::prepare_buffer_fusing()
             node.can_be_optimized(true);
         });
 
-        // zero copy 
+        // zero copy
         do_for_types<crop>(*node, [this, is_debug](crop_node& node)
         {
             //if the node is marked as network output, prevent optimizations which would affect a form of its output, unless debug flag is set
@@ -2307,7 +2308,7 @@ void program_impl::prepare_buffer_fusing()
                 node.get_users().size() > 0)
             {
                 // optimization is avaiable for croping across depth(features) only
-                // if output padding has defined padding accross featuers already it wouldn't 
+                // if output padding has defined padding accross featuers already it wouldn't
                 // work because it expect to have zeros in the padded area.
                 auto format = node.get_output_layout().format;
                 auto crop_prim = node.get_primitive();
@@ -2322,14 +2323,14 @@ void program_impl::prepare_buffer_fusing()
                     out_padd.lower_size().batch[0] == 0 &&
                     out_padd.upper_size().batch[0] == 0 &&
                     out_padd.lower_size().spatial[0] == 0 &&
-                    out_padd.lower_size().spatial[1] == 0 && 
-                    out_padd.upper_size().spatial[0] == 0 && 
+                    out_padd.lower_size().spatial[1] == 0 &&
+                    out_padd.upper_size().spatial[0] == 0 &&
                     out_padd.upper_size().spatial[1] == 0)
                 {
                     //  Regular crop
                     //  crop input buffer
                     //  |___________data____________|
-                    //  
+                    //
                     //  crop output buffer
                     //  |-------->| offsets[f]  |<--|
                     //            |_____data____|
@@ -2397,7 +2398,7 @@ void program_impl::prepare_buffer_fusing()
             {
                 auto user = node.get_users().front();
                 auto users_users = node.get_users().front()->get_users();
-                
+
                 for (auto const& users_user : users_users)
                 {
                     if (users_user->get_output_layout().format != format::byxf && !users_user->is_type<eltwise>())

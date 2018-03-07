@@ -32,10 +32,18 @@
 
 namespace cldnn
 {
-
-network_impl::network_impl(const program_impl& program)
+/*
+Network_impl will always have net_id = 0 when it will be cldnn internal micronetwork (created i.e by const. propagator).
+*/
+network_impl::network_impl(const program_impl& program, bool is_internal)
     : _program(&program)
+    , _internal(is_internal)
 {
+    static std::atomic<uint32_t> id_gen{ 0 };
+    if (!_internal)
+    {
+        net_id = ++id_gen;
+    }
     _program->get_nodes().reverse();
     for (auto const& node : _program->get_nodes())
         allocate_primitive_instance(*node);
@@ -43,8 +51,8 @@ network_impl::network_impl(const program_impl& program)
     _program->dump_memory_pool();
 }
 
-network_impl::network_impl(engine_impl& engine, const topology_impl& topo, const build_options& options)
-    : network_impl(*engine.build_program(topo, options))
+network_impl::network_impl(engine_impl& engine, const topology_impl& topo, const build_options& options, bool is_internal)
+    : network_impl(*engine.build_program(topo, options), is_internal)
 {
 }
 

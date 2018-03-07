@@ -25,12 +25,12 @@
 #include "program_impl.h"
 
 #include "gpu/memory_gpu.h"
-
 namespace cldnn
 {
-    memory_record::memory_record(std::set<primitive_id> users, refcounted_obj_ptr<memory_impl>& memory) :
-        _users(users),
-        _memory(memory)
+    memory_record::memory_record(memory_set users, refcounted_obj_ptr<memory_impl>& memory, uint32_t net_id) :
+        _users(users)
+        , _memory(memory)
+        , _network_id(net_id)
     {}
 
     memory_impl::ptr memory_pool::alloc_memory(const layout& layout)
@@ -42,9 +42,9 @@ namespace cldnn
             throw error("exceeded max size of memory object allocation", CLDNN_ALLOC_SIZE_EXCEEDED);
         }
 
-        _global_memory_used += layout.bytes_count();
-        
-        if (_global_memory_used > context->get_engine_info().max_global_mem_size)
+        add_memory_used(layout.bytes_count());
+
+        if (_max_peak_memory_used > context->get_engine_info().max_global_mem_size)
         {
             throw error("exceeded global device memory", CLDNN_GLOBAL_SIZE_EXCEEDED);
         }
@@ -70,22 +70,30 @@ namespace cldnn
         }
     }
 
-    bool memory_pool::has_conflict(const std::set<primitive_id>& a,const std::set<primitive_id>& b)
-    {
+    bool memory_pool::has_conflict(const memory_set& a, const std::set<primitive_id>& b, uint32_t b_network_id)
+    {   
+        std::set<primitive_id> a_same_network;
+        for (auto const& mem_usr : a)
+        {
+            if (mem_usr._network_id == b_network_id)
+            {
+                a_same_network.insert(mem_usr._id);
+            }
+        }
         std::vector<primitive_id> intersection;
-        intersection.reserve(std::min(a.size(), b.size()));
-        set_intersection(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(intersection));
+        intersection.reserve(std::min(a_same_network.size(), b.size()));
+        set_intersection(a_same_network.begin(), a_same_network.end(), b.begin(), b.end(), std::back_inserter(intersection));
         return !intersection.empty();
     }
 
-    memory_impl::ptr memory_pool::get_from_non_padded_pool(const layout& layout, const primitive_id& id, const std::set<primitive_id>& restrictions)
+    memory_impl::ptr memory_pool::get_from_non_padded_pool(const layout& layout, const primitive_id& id, uint32_t network_id, const std::set<primitive_id>& restrictions)
     {
         auto it = _non_padded_pool.lower_bound(layout.bytes_count());
         while (it != _non_padded_pool.end())
         {
-            if (!has_conflict(it->second._users, restrictions))
+            if (!has_conflict(it->second._users, restrictions, network_id))
             {
-                it->second._users.insert(id);
+                it->second._users.insert(memory_user( id, network_id ));
                 auto ret_mem = _engine->reinterpret_buffer(*it->second._memory, layout);
                 return ret_mem;
             }
@@ -95,14 +103,14 @@ namespace cldnn
         // didn't find anything for you? create new resource
         auto mem = alloc_memory(layout);
         {
-            _non_padded_pool.emplace(layout.bytes_count(), memory_record({ id }, mem));
+            _non_padded_pool.emplace(layout.bytes_count(), memory_record({ {id, network_id } }, mem, network_id));
             // we don't want to store any resources with no parents so memory pool has to store weak pointer of _engine. 
             _engine->release();
         }
         return mem;
     }
 
-    memory_impl::ptr memory_pool::get_from_padded_pool(const layout& layout, const primitive_id& id, const std::set<primitive_id>& restrictions)
+    memory_impl::ptr memory_pool::get_from_padded_pool(const layout& layout, const primitive_id& id, uint32_t network_id, const std::set<primitive_id>& restrictions)
     {
         auto first_level_cache = _padded_pool.find(layout);
         
@@ -112,21 +120,53 @@ namespace cldnn
             {
                 if (layout.size.feature[0] <= rec_list._memory->get_layout().size.feature[0] &&
                     layout.size.batch[0] <= rec_list._memory->get_layout().size.batch[0] &&
-                    !has_conflict(rec_list._users, restrictions))
+                    !has_conflict(rec_list._users, restrictions, network_id))
                 {
-                    rec_list._users.insert(id);
+                    rec_list._users.insert({ id, network_id });
                     auto ret_mem = _engine->reinterpret_buffer(*(rec_list._memory), layout);
                     return ret_mem;
                 }
             }
             auto mem = alloc_memory(layout);
-            first_level_cache->second.emplace_back(memory_record({ id }, mem));
+            first_level_cache->second.emplace_back(memory_record({ { id, network_id } }, mem, network_id));
             return mem;            
         }
         auto mem = alloc_memory(layout);
-        std::list<memory_record> list = { memory_record({ id },mem) };
+        std::list<memory_record> list = { memory_record({ { id, network_id } },mem, network_id) };
         _padded_pool.emplace(layout, std::move(list));
         return mem;
+    }
+
+    /*
+        no_reusable_pool is not reusable within one network or its internal miconetworks. But we can use this memory records between networks.
+    */
+    memory_impl::ptr memory_pool::get_from_no_reusable_pool(const layout& layout, const primitive_id& id, uint32_t network_id)
+    {
+        auto it = _no_reusable_pool.lower_bound(layout.bytes_count());
+
+        if (it->second._network_id != network_id) // dont use non reusable resources within the same network
+        {
+            while (it != _no_reusable_pool.end())
+            {
+                if (!has_conflict(it->second._users, {}, network_id))
+                {
+                    it->second._users.insert(memory_user(id, network_id));
+                    auto ret_mem = _engine->reinterpret_buffer(*it->second._memory, layout);
+                    return ret_mem;
+                }
+                else
+                {
+                    ++it;
+                }
+            }
+        }
+        auto mem = alloc_memory(layout);
+        {
+            _no_reusable_pool.emplace(layout.bytes_count(), memory_record({ { id, network_id } }, mem, network_id));
+            // we don't want to store any resources with no parents so memory pool has to store weak pointer of _engine. 
+            _engine->release();
+        }
+        return mem; 
     }
 
     memory_impl::ptr memory_pool::get_memory(const layout& layout)
@@ -134,18 +174,17 @@ namespace cldnn
         return alloc_memory(layout);
     }
 
-    memory_impl::ptr memory_pool::get_memory(const layout& layout, const primitive_id& id, const std::set<primitive_id>& restrictions, bool reusable)
+    memory_impl::ptr memory_pool::get_memory(const layout& layout, const primitive_id& id, uint32_t network_id, const std::set<primitive_id>& restrictions, bool reusable)
     {
-
-        if (reusable)
+        if (reusable) //reusable within the same network
         {
             if (!layout.format.is_image() && layout.data_padding == padding{ { 0,0,0,0 }, 0 }) // non-padded buffers
             {
-                return get_from_non_padded_pool(layout, id, restrictions);
+                return get_from_non_padded_pool(layout, id, network_id, restrictions);
             }
             else if (!layout.format.is_image()) // padded buffers
             {
-                return get_from_padded_pool(layout, id, restrictions);
+                return get_from_padded_pool(layout, id, network_id, restrictions);
             }
             else  // images
             {
@@ -153,7 +192,10 @@ namespace cldnn
                 return alloc_memory(layout);
             }
         }
-        return alloc_memory(layout);
+        else
+        {
+            return get_from_no_reusable_pool(layout, id, network_id);
+        }
     }
 
     void memory_pool::clear_pool()
@@ -162,8 +204,9 @@ namespace cldnn
     }
 
     memory_pool::memory_pool(engine_impl& engine)
-        : _engine(&engine),
-        _global_memory_used(0)
+        : _engine(&engine)
+        , _temp_memory_used(0)
+        , _max_peak_memory_used(0)
     {
         _engine->release(); // since engine is refcount object and there is circular dependency until context will be moved to memory pool we need 
                             // to detach engine while destroying memory pool
@@ -208,8 +251,8 @@ namespace cldnn
         {
             for (const auto& usr : record.second._users)
             {
-                if (program.has_node(usr))
-                    program.get_node(usr).set_reused_memory_color(color);
+                if (program.has_node(usr._id))
+                    program.get_node(usr._id).set_reused_memory_color(color);
             }
             ++color;
         }
@@ -221,12 +264,27 @@ namespace cldnn
                 if(record._users.size() > 1) // one user doesn't mean reusing
                     for (const auto& usr : record._users)
                     {
-                        if (program.has_node(usr))
-                            program.get_node(usr).set_reused_memory_color(color);
+                        if (program.has_node(usr._id))
+                            program.get_node(usr._id).set_reused_memory_color(color);
                     }
                 ++color;
             }
         }
     }
+
+    void memory_pool::add_memory_used(size_t value)
+    {
+        _temp_memory_used += value;
+        if (_temp_memory_used > _max_peak_memory_used)
+        {
+            _max_peak_memory_used = _temp_memory_used;
+        }
+    }
+
+    void memory_pool::subtract_memory_used(size_t value)
+    {
+        _temp_memory_used -= value;
+    }
+
 }
 

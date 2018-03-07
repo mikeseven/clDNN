@@ -105,7 +105,7 @@ public:
             topology_impl tpl;
             tpl.add(std::make_shared<cldnn::input_layout>("input", input_layout));
             tpl.add(std::make_shared<cldnn::reorder>("reorder", "input", from_data_layout(new_fc_params.inputs[0].GetLayout()), input_layout.data_type));
-            reorders.push_back(arg.get_program().get_engine().build_network(tpl, cldnn::build_options()));
+            reorders.push_back(arg.get_program().get_engine().build_network(tpl, cldnn::build_options(), true));
         }
 
         auto fc = new fully_connected_gpu(arg, best_kernels[0], reorders);

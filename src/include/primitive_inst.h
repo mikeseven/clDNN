@@ -114,6 +114,7 @@ protected:
 
     network_impl& _network;
     program_node const& _node;
+    uint32_t _my_network_id;
 
     std::shared_ptr<primitive_impl> _impl;
 

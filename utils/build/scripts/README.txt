@@ -9,6 +9,7 @@
 				   3. topology have to be placed in \\samba-users.igk.intel.com\samba\Users\leszczyn\clDNN_Validation\workloads
 				   4. images have to be placed in   \\samba-users.igk.intel.com\samba\Users\leszczyn\clDNN_Validation\workloads\images
 	example command line: dump_hash_to_conform_json.py --topology CommunityGoogleNetV2 ResNet-18_fp16 NewTopology_TincaTinca-fp128
+			     dump_hash_to_conform_json.py --all
 
 
 3. modify_csv.py -> add or remove topologies from csv's.

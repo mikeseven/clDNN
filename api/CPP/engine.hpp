@@ -196,11 +196,20 @@ struct engine
     }
 
     /// @brief Returns total size of all resources allocated using given engine
-    uint64_t get_total_device_memory_size() const
+    uint64_t get_max_used_device_memory_size() const
     {
         return check_status<uint64_t>("get total device memory failed", [=](status_t* status)
         {
-            return cldnn_get_total_device_memory_size(_impl, status);
+            return cldnn_get_max_used_device_memory_size(_impl, status);
+        });
+    }
+
+    /// @brief Returns total size of currently resources allocated using given engine
+    uint64_t get_temp_used_device_memory_size() const
+    {
+        return check_status<uint64_t>("get device memory failed", [=](status_t* status)
+        {
+            return cldnn_get_temp_used_device_memory_size(_impl, status);
         });
     }
 

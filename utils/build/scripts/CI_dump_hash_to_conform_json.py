@@ -1,7 +1,5 @@
-#!/usr/bin/env python2
-
 # INTEL CONFIDENTIAL
-# Copyright 2018 Intel Corporation
+# Copyright 2016 Intel Corporation
 #
 # The source code contained or described herein and all documents related to the source code ("Material") are owned by
 # Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its
@@ -15,7 +13,8 @@
 # estoppel or otherwise. Any license under such intellectual property rights must be express and approved by Intel
 # in writing.
 
- __future__ import print_function
+
+from __future__ import print_function
 import json
 import os
 import subprocess
@@ -23,15 +22,16 @@ import argparse
 from collections import OrderedDict
 from xml.etree.ElementTree import ElementTree
 
-
-
 class consts:
     confom_json_file_name = "conform.json"
     error_msg = "ERROR:"
     output_msg = "Output:"
     batches = [1, 2, 4, 8, 10, 16, 32, 64, 128]
-    workloads_folder = "\\\samba-users.igk.intel.com\\samba\\Users\\leszczyn\\clDNN_Validation\\workloads\\"
-    images_folder = "\\\samba-users.igk.intel.com\\samba\\Users\\leszczyn\\clDNN_Validation\\workloads\\images\\"
+    batches_dump = {1: "001", 2: "002", 4: "004", 8: "008", 10: "010", 16: "016", 32: "032", 64: "064", 128: "128"}
+    #workloads_folder = "\\\samba-users.igk.intel.com\\samba\\Users\\leszczyn\\clDNN_Validation\\workloads\\"
+    workloads_folder = "C:\\Tests\\IE\\bin\\models\\"
+    #images_folder = "\\\samba-users.igk.intel.com\\samba\\Users\\leszczyn\\clDNN_Validation\\workloads\\images\\"
+    images_folder = "C:\\Tests\\IE\\bin\\images\\"
     break_line = "-------------------"
 
     
@@ -49,6 +49,11 @@ class conform_obj:
         self.proposal = OrderedDict({
                     "bbox_pred_reshape": "",
                     "cls_prob_reshape": "",
+                    "proposal": ""
+                    })
+        self.proposal_fasterRCNN = OrderedDict({
+                    "bbox_pred": "",
+                    "loss_cls": "",
                     "proposal": ""
                     })
         self.two_dim_output = OrderedDict({
@@ -144,7 +149,10 @@ def update_json_file(conform_file, topo):
     elif topo.count_output == 2:
         conform_file['IE'][topo.name] = topo.hashes.two_dim_output
     elif topo.count_output == 3:
-        conform_file['IE'][topo.name] = topo.hashes.proposal
+        if "fasterRCNN" in topo.name:
+            conform_file['IE'][topo.name] = topo.hashes.proposal_fasterRCNN
+        else:
+            conform_file['IE'][topo.name] = topo.hashes.proposal
     conform_file['IE']['blank'] = blank
     save_conform_json_file(conform_file)
     pass
@@ -193,11 +201,18 @@ def parse_conform_file(conform_file, topology_name, count_output):
                         "128": ""
                     })
         else:
-            conform_file['IE'][topology_name] = OrderedDict({
-                    "bbox_pred_reshape": "",
-                    "cls_prob_reshape": "",
+            if "fasterRCNN" in topology_name:
+                conform_file['IE'][topology_name] = OrderedDict({
+                    "bbox_pred": "",
+                    "loss_cls": "",
                     "proposal": ""
-                    })
+                })
+            else:
+                conform_file['IE'][topology_name] = OrderedDict({
+                        "bbox_pred_reshape": "",
+                        "cls_prob_reshape": "",
+                        "proposal": ""
+                        })
         conform_file['IE']['blank'] = blank
         save_conform_json_file(conform_file)
     return conform_object, new_topology
@@ -209,8 +224,12 @@ def parse_topology_proposal(topology):
     cmd_line_generic = "generic_sample.exe -p clDNNPlugin "
     cmd_line_model = "-m " + consts.workloads_folder + topology.name + ".xml "
     cmd_line_proposal = "-im_info -layer proposal "
+    cmd_line_dump = " -dump C:\\Tests\\" + topology.name + ".txt"
     conform_hashes = conform_obj()
-    image_folder = consts.images_folder + topology.get_images_dir_name()
+    image_folder = ""
+    if "fasterRCNN" not in topology.name:
+        image_folder = consts.images_folder + topology.get_images_dir_name()
+
     images = []
     for dirpath, dirnames, files in os.walk(os.path.abspath(image_folder)):
         for file in files:
@@ -222,10 +241,14 @@ def parse_topology_proposal(topology):
     if len(images) > 1:
         raise Exception("ERROR. TOO MUCH IMAGES. FOR PROPOSAL TOPOLOGIES WE DO CONFORM CHECK FOR BATCH 1")
 
-    cmd_line_images = "-i " + consts.images_folder + topology.get_images_dir_name() + "\\1\\" + images[0]
+    cmd_line_images = ""
+    if "fasterRCNN" in topology.name:
+        cmd_line_images = "-i C:\\Tests\\IE\\bin\\images\\rcnn\\zf_scaled.bmp"
+    else:
+        cmd_line_images = "-i " + consts.images_folder + topology.get_images_dir_name() + "\\1\\" + images[0]
 
     try:
-        cmd_line_output = subprocess.check_output(cmd_line_generic + cmd_line_proposal + cmd_line_model + cmd_line_images, shell=True).decode("utf-8", "ignore").splitlines()
+        cmd_line_output = subprocess.check_output(cmd_line_generic + cmd_line_proposal + cmd_line_model + cmd_line_images + cmd_line_dump, shell=True).decode("utf-8", "ignore").splitlines()
     except:
         print("EXECUTION ERROR")
         cmd_line_output = [""]
@@ -243,9 +266,14 @@ def parse_topology_proposal(topology):
     if len(error) == 0 and len(output) == 3:
         for out in output:
             print(out)
-        conform_hashes.proposal[output[0].name] = output[0].hash
-        conform_hashes.proposal[output[1].name] = output[1].hash
-        conform_hashes.proposal[output[2].name] = output[2].hash
+            if "fasterRCNN" in topology.name:
+                conform_hashes.proposal_fasterRCNN[output[0].name] = output[0].hash
+                conform_hashes.proposal_fasterRCNN[output[1].name] = output[1].hash
+                conform_hashes.proposal_fasterRCNN[output[2].name] = output[2].hash
+            else:
+                conform_hashes.proposal[output[0].name] = output[0].hash
+                conform_hashes.proposal[output[1].name] = output[1].hash
+                conform_hashes.proposal[output[2].name] = output[2].hash
     if len(error) != 0:
         for err in error:
             print(err)
@@ -256,19 +284,34 @@ def parse_topology_proposal(topology):
         for key,value in conform_hashes.proposal.items():
             conform_hashes.proposal[key] = 'x'
 
-    if topology.count_output == 3:
-        if topology.new is False:
-            for key, value in topology.hashes.proposal.items():
-                if value == conform_hashes.proposal[key]:
-                    print(key + " hash has not changed.")
-                    continue
-                if value != conform_hashes.proposal[key]:
+    if "fasterRCNN" in topology.name:
+        if topology.count_output == 3:
+            if topology.new is False:
+                for key, value in topology.hashes.proposal_fasterRCNN.items():
+                    if value == conform_hashes.proposal_fasterRCNN[key]:
+                        print(key + " hash has not changed.")
+                        continue
+                    if value != conform_hashes.proposal_fasterRCNN[key]:
+                        topology.hashes.proposal_fasterRCNN[key] = conform_hashes.proposal_fasterRCNN[key]
+                        print(key + " hash updated.")
+            else:
+                for key, value in topology.hashes.proposal_fasterRCNN.items():
+                    topology.hashes.proposal_fasterRCNN[key] = conform_hashes.proposal_fasterRCNN[key]
+                    print(key + " hash has been created.")
+    else:
+        if topology.count_output == 3:
+            if topology.new is False:
+                for key, value in topology.hashes.proposal.items():
+                    if value == conform_hashes.proposal[key]:
+                        print(key + " hash has not changed.")
+                        continue
+                    if value != conform_hashes.proposal[key]:
+                        topology.hashes.proposal[key] = conform_hashes.proposal[key]
+                        print(key + " hash updated.")
+            else:
+                for key, value in topology.hashes.proposal.items():
                     topology.hashes.proposal[key] = conform_hashes.proposal[key]
-                    print(key + " hash updated.")
-        else:
-            for key, value in topology.hashes.proposal.items():
-                topology.hashes.proposal[key] = conform_hashes.proposal[key]
-                print(key + " hash has been created.")
+                    print(key + " hash has been created.")
     return topology
 
 
@@ -281,12 +324,22 @@ def parse_topology(topology):
 
     for batch in consts.batches:
         batch_str = str(batch)
-        cmd_line_images = "-i " + consts.images_folder + topology.get_images_dir_name() + "\\"
-        cmd_line_images += batch_str
+        cmd_line_images = ""
+        if "pvanet_reid" in topology.name.lower():
+            cmd_line_images = "-i " + '"' + consts.images_folder + topology.get_images_dir_name() + "\\"
+            data_left = cmd_line_images + "data_left.bmp" + '" '
+            data_right = cmd_line_images + "data_right.bmp" + '" '
+            cmd_line_images = ""
+            for b in range(batch):
+                cmd_line_images = cmd_line_images + data_left + data_right
+        else:
+            cmd_line_images = "-i " + consts.images_folder + topology.get_images_dir_name() + "\\"
+            cmd_line_images += batch_str
+        cmd_line_dump = " -dump C:\\Tests\\" + topology.name + "_b" + consts.batches_dump[batch] + ".txt"
         print("BATCH: " + batch_str)
-        
+
         try:
-            cmd_line_output = subprocess.check_output(cmd_line_generic + cmd_line_model + cmd_line_images, shell=True).decode("utf-8", "ignore").splitlines()
+            cmd_line_output = subprocess.check_output(cmd_line_generic + cmd_line_model + cmd_line_images + cmd_line_dump, shell=True).decode("utf-8", "ignore").splitlines()
         except:
             print("EXECUTION ERROR")
             cmd_line_output = [""]
@@ -348,6 +401,14 @@ def parse_topology(topology):
                 print("Batch: " + key + " hash has been created.")
     return topology
 
+def get_all_topology_names():
+    dir = consts.workloads_folder
+    fis = []
+    for file_name in os.listdir(dir):
+        if file_name.endswith(".xml"):
+            file_name = file_name[:-4]
+            fis.append(file_name)
+    return fis
 
 def main(): # conform json and generic_sample with all dependecies need to be in the same folder as this script. Topology .xml file and images need to be in the cldnnValidation workload folder.
     parser = argparse.ArgumentParser(description='Dump output hashes to conform.json')
@@ -355,22 +416,27 @@ def main(): # conform json and generic_sample with all dependecies need to be in
                         help="info about the script", action="store_true")
     parser.add_argument('-t', "--topology", type=str, nargs='+',
                         help='names of topologies')
+    parser.add_argument('-a', "--all",
+                        help='names of topologies', action="store_true")
     args = parser.parse_args()
 
     if args.info:
         print("conform json and generic_sample with all dependecies need to be in the same folder as this script. Topology .xml file and images need to be in the cldnnValidation workload folder.")
         print("example command line: dump_hash_to_conform_json.py --topology CommunityGoogleNetV2 ResNet-18_fp16 NewTopology_TincaTinca-fp128")
         exit(0)
-
-
+    topologies = []
+    if args.all:
+        topologies = get_all_topology_names()
+    if args.topology:
+        topologies = args.topology
     print("WORKLOAD FOLDER: " + consts.workloads_folder)
     print("IMAGES FOLDER: " + consts.images_folder)
     print("CONFORM FILE NAME: " + consts.confom_json_file_name)
     conform_file = open_json_file(consts.confom_json_file_name)
 
     array_of_topologies = []
-
-    for arg in args.topology:
+    not_conformed_topologies = []
+    for arg in topologies:
         if ".xml" not in arg:
             full_name = arg + ".xml"
         xml_root = ElementTree()
@@ -380,6 +446,8 @@ def main(): # conform json and generic_sample with all dependecies need to be in
         input_arr = []
         if "age_gender" in arg:
             count_output = 2
+        if "PNet_fp16" in arg:
+            count_output = 2
         dim_objs = None
         if input is not None:
             dim_objs = input.findall("dim")
@@ -388,7 +456,8 @@ def main(): # conform json and generic_sample with all dependecies need to be in
             for layer in layers:
                 if layer.attrib['type'] == 'Input' or layer.attrib['type'] == 'input':
                     input_arr.append(layer)
-                if layer.attrib['type'] == 'Proposal' or layer.attrib['type'] == 'proposal':
+                if layer.attrib['type'] == 'Proposal' or layer.attrib['type'] == 'proposal' or \
+                    layer.attrib['name'] == 'Proposal' or layer.attrib['name'] == 'proposal':
                     proposal = layer
                     count_output = 3
 
@@ -398,6 +467,10 @@ def main(): # conform json and generic_sample with all dependecies need to be in
             for inp in input_arr:
                 if inp.attrib['name'] != 'im_info':
                     input = inp
+                if "fasterRCNN" in arg:
+                    if inp.attrib['name'] == 'imageData':
+                        input = inp
+                        break
 
 
         if dim_objs is None:
@@ -407,12 +480,16 @@ def main(): # conform json and generic_sample with all dependecies need to be in
             if d.text != '1' and d.text != '3':
                 dim.append(int(d.text))
         if len(dim) != 2:
-            raise Exception("Is the input of the topology " + arg + " has the correct sizes?")
+            print("Is the input of the topology " + arg + " has the correct sizes?")
+            not_conformed_topologies.append(arg)
+            continue
 
-        print(count_output)
-        hashes, is_new_topology = parse_conform_file(conform_file, arg, count_output)
-        array_of_topologies.append(topology(arg, dim[0], dim[1], hashes, is_new_topology, count_output))
-        print("LOADED TOPOLOGY CORRECTLY: " + arg)
+        try:
+            hashes, is_new_topology = parse_conform_file(conform_file, arg, count_output)
+            array_of_topologies.append(topology(arg, dim[0], dim[1], hashes, is_new_topology, count_output))
+            print("LOADED TOPOLOGY CORRECTLY: " + arg)
+        except:
+            not_conformed_topologies.append(arg)
 
     for topo in array_of_topologies:
         if topo.count_output != 3:
@@ -425,6 +502,12 @@ def main(): # conform json and generic_sample with all dependecies need to be in
     ret = open_json_file(consts.confom_json_file_name) #for ordering purpose.
     save_conform_json_file(ret)
     print(consts.break_line)
+
+    if len(not_conformed_topologies) != 0:
+        print("Topologies not conformed:")
+        for arg in not_conformed_topologies:
+            print(arg)
+
     print("FINISHED CORRECTLY.")
     pass
 
