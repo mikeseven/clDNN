@@ -571,9 +571,12 @@ int main(int argc, char *argv[]) {
         int median_index = niter / 2;
         if (niter % 2 == 1)
             median_index++;
-        auto medianFramesPerSecond = (static_cast<double>(batchSize) * 1000.0) / times_vector.at(median_index - 1);
-        std::cout << "Median running time of one iteration: " << times_vector.at(median_index - 1) << " ms" << std::endl;
-        std::cout << "Median FPS: " << medianFramesPerSecond << std::endl;
+        if (median_index > 0)
+        {
+            auto medianFramesPerSecond = (static_cast<double>(batchSize) * 1000.0) / times_vector.at(median_index - 1);
+            std::cout << "Median running time of one iteration: " << times_vector.at(median_index - 1) << " ms" << std::endl;
+            std::cout << "Median FPS: " << medianFramesPerSecond << std::endl;
+        }
         
 #ifndef _WIN32
         packageEnergySum = get_rapl_energy_info(0, 0) - packageEnergySum;
