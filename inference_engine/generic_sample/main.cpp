@@ -464,7 +464,7 @@ int main(int argc, char *argv[]) {
                 outputBlobs[item.first] = output;
             }
         }
-        
+
         InferenceEngine::ResponseDesc dsc;
         InferenceEngine::StatusCode sts;
         // Load custom kernel configuration files
@@ -565,12 +565,16 @@ int main(int argc, char *argv[]) {
 
         std::cout << "Average running time of one iteration: " << total / static_cast<double>(niter) << " ms" << std::endl;
         framesPerSecond = (static_cast<double>(batchSize) * 1000.0) / (total / static_cast<double>(niter));
-        std::cout << "FPS: " << framesPerSecond << std::endl;
+        std::cout << "Average FPS: " << framesPerSecond << std::endl;
         std::sort(times_vector.begin(), times_vector.end());
+       
         int median_index = niter / 2;
         if (niter % 2 == 1)
             median_index++;
-        std::cout << "Median FPS: " << times_vector.at(median_index) << std::endl;
+        auto medianFramesPerSecond = (static_cast<double>(batchSize) * 1000.0) / times_vector.at(median_index - 1);
+        std::cout << "Median running time of one iteration: " << times_vector.at(median_index - 1) << " ms" << std::endl;
+        std::cout << "Median FPS: " << medianFramesPerSecond << std::endl;
+        
 #ifndef _WIN32
         packageEnergySum = get_rapl_energy_info(0, 0) - packageEnergySum;
         gpuEnergySum = get_rapl_energy_info(2, 0) - gpuEnergySum;
