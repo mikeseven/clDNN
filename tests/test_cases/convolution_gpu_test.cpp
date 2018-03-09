@@ -2246,6 +2246,90 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxfb_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)
 #undef USE_OLD_WEIGHTS_FORMAT
 }
 
+TEST(convolution_f32_fw_gpu, quantized_convolution) {
+    //  Filter : 2x3
+    //  Stride : 2x1
+    //  Input  : 4x5
+    //  Output : 2x3
+    //
+    //  Input:
+    //  1  2  3  4  5
+    //  2  2  3  4  6
+    //  3  3  3  5  1
+    //  1  1  1  1  1
+    //
+    //  Filter:
+    //  1  2  1
+    //  2  1  2
+    //
+    //  19 17 -1
+    // -10 32 23
+    //
+    //  Output:
+    // 21  28  39
+    // 18  20  20
+    //
+    //  Bias:
+    //  1 -8
+    engine_configuration eng_conf(false,false,false,"","",true,"","kernels");
+    engine engine{ eng_conf };
+
+    auto input = memory::allocate(engine, { data_types::i8, format::bfyx,{ 1, 1, 5, 4 } });
+    auto weights = memory::allocate(engine, { data_types::i8, format::bfyx,{ 2, 1, 3, 2 } });
+    auto biases = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 1 } });
+    auto weigths_qfs = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 1 } });
+    float i_qf = 1.0f;
+    float o_qf = 1.0f;
+
+    set_values<char>(input, { 1, 2, 3, 4, 5, 2, 2, 3, 4, 6, 3, 3, 3, 5, 1, 1, 1, 1, 1, 1 });
+    set_values<char>(weights, { 1, 2, 1, 2, 1, 2, 19, 17, -1, -10, 32, 23});
+    set_values(weigths_qfs, { 1.0f,1.0f });
+    set_values(biases, { 1.0f, -8.0f });
+    VVVF<float> output_vec = {
+        {{ 21.0f, 28.0f, 39.0f },
+        { 18.0f, 20.0f, 20.0f }},
+        {{ -101.0f, -11.0f, 92.0f },
+        { -114.0f, -116.0f, -78.0f }} };
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        data("w_qfs",weigths_qfs),
+        convolution("conv", "input", { "weights" }, { "biases" }, { "w_qfs" },i_qf, o_qf, { 0, 0, 1, 2 }));
+
+    build_options opts;
+    opts.set_option(build_option::optimize_data(true));
+    opts.set_option(build_option::graph_dumps_dir("graph"));
+    network network(engine, topology, opts);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    // TODO: uncomment when w_qfs will be input to conv
+    //EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "conv");
+
+    auto output_memory = outputs.at("conv").get_memory();
+    auto output_layout = output_memory.get_layout();
+    auto output_ptr = output_memory.pointer<char>();
+
+    int y_size = output_layout.size.spatial[1];
+    int x_size = output_layout.size.spatial[0];
+    int f_size = output_layout.size.feature[0];
+    int b_size = output_layout.size.batch[0];
+    EXPECT_EQ(output_layout.format, format::bfyx);
+    EXPECT_EQ(y_size, 2);
+    EXPECT_EQ(x_size, 3);
+    EXPECT_EQ(f_size, 2);
+    EXPECT_EQ(b_size, 1);
+    for (int f = 0; f < f_size; f++)
+        for (int y = 0; y < y_size; ++y) {
+            for (int x = 0; x < x_size; ++x) {
+                EXPECT_EQ(output_vec[f][y][x], (float)output_ptr[f*y_size*x_size + y * x_size + x]);
+            }
+        }
+}
+
 TEST(convolution_gpu, basic_yxfb_4_4_yxfb_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)
 {
 #define USE_OLD_WEIGHTS_FORMAT 0

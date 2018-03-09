@@ -21,6 +21,9 @@ KERNEL(convolution)(
 #if BIAS_TERM
     __global BIAS_TYPE* biases,
 #endif
+#if QUANTIZATION_TERM
+    __global float* quantizations,
+#endif
     uint split_idx)
 {
     const uint x = get_global_id(0);
@@ -34,14 +37,6 @@ KERNEL(convolution)(
 #endif
 
     UNIT_TYPE dotProd = UNIT_VAL_ZERO;
-#if BIAS_TERM
-    #if   BIAS_PER_OUTPUT
-        const uint bias_index = GET_DATA_INDEX(BIAS, b, f, y, x);
-    #elif BIAS_PER_OFM
-        const uint bias_index = f;
-    #endif
-    dotProd = biases[bias_index];
-#endif
 
     const int input_x = x * STRIDE_SIZE_X - PADDING_SIZE_X;
     const int input_y = y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
@@ -78,7 +73,22 @@ KERNEL(convolution)(
             }
         }
     }
-    
+
+#if BIAS_TERM
+#if   BIAS_PER_OUTPUT
+    const uint bias_index = GET_DATA_INDEX(BIAS, b, f, y, x);
+#elif BIAS_PER_OFM
+    const uint bias_index = f;
+#endif
+#if QUANTIZATION_TERM
+    dotProd = (UNIT_TYPE)((float)dotProd * quantizations[f] + biases[bias_index]);
+#else
+    dotProd += (UNIT_TYPE)biases[bias_index];
+#endif
+#endif
+
+
+
     const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * OUTPUT_FEATURE_NUM;
     const uint dst_index = GET_DATA_INDEX(OUTPUT, b, f, y, x) + out_split_offset;
     output[dst_index] = ACTIVATION(dotProd, NL_M, NL_N);

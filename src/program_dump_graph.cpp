@@ -209,6 +209,22 @@ namespace cldnn
             return out;
         };
 
+        const auto extr_data_type = [](program_node* ptr)
+        {
+            std::string out = "";
+            switch (ptr->get_output_layout().data_type)
+            {
+            case data_types::i8: out = "i8"; break;
+            case data_types::u8: out = "u8"; break;
+            case data_types::f16: out = "f16"; break;
+            case data_types::f32: out = "f32"; break;
+            default:
+                out = "unknown data_type";
+                break;
+            }
+            return out;
+        };
+
         graph << "digraph cldnn_program {\n";
         for (auto& node : program.get_nodes())
         {
@@ -222,6 +238,7 @@ namespace cldnn
             #endif
 			std::string node_type = get_extr_type(typeid(*node).name());
 			graph << "    " << get_node_id(node.get()) << "[label=\"" << node->id() << ":\n" << node_type << "\n out format: " + extr_oformat(node.get())
+                << "\n out data_type: " + extr_data_type(node.get())
 				<< "\\nprocessing number: " << node->get_processing_num() << "\\n color:" << (node->is_reusing_memory() ? std::to_string(node->get_reused_memory_color()) : "none")
 				<< (node->can_be_optimized() ? "\\n optimized out" : "");
 			if (node_type != "struct cldnn::data" && node_type != "struct cldnn::input_layout" && !node->can_be_optimized())

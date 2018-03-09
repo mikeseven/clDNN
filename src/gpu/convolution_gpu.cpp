@@ -45,8 +45,9 @@ protected:
     {
         kernel::kernel_arguments_data args = parent::get_arguments(instance, split);
 
-        args.weights    = &instance.weights_memory(split);
-        args.bias       = instance.bias_term() ? &instance.bias_memory(split) : nullptr;
+        args.weights              = &instance.weights_memory(split);
+        args.bias                 = instance.bias_term() ? &instance.bias_memory(split) : nullptr;
+        args.quantization_factors = instance.quantization_factors_term() ? &instance.quantization_factors_memory(split) : nullptr;
 
         return args;
     }
@@ -121,6 +122,13 @@ public:
             (uint32_t)std::min(dilation.spatial[0], input_size.spatial[0]),
             (uint32_t)std::min(dilation.spatial[1], input_size.spatial[1])
         };
+        
+        bool int8_quantization = primitive->weights_quantization_factors.size() != 0;
+        conv_params.convParams.int8_quantization = int8_quantization;
+        if (int8_quantization)
+        {
+            conv_params.quantization_factors.push_back(convert_data_tensor(arg.quantization_factors().get_output_layout()).FlattenFeatureAndSpatials());
+        }
 
         auto& kernel_selector = kernel_selector::convolution_kernel_selector::Instance();
 

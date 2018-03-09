@@ -56,6 +56,14 @@ cldnn_tensor output_size;
 cldnn_primitive_id_arr weights;
 /// @brief Array of primitive ids containing bias data. Size of array should be equivalent to @p split.
 cldnn_primitive_id_arr bias;
+
+/// @brief List of primitive ids containing quanitization factors per output feature map.
+cldnn_primitive_id_arr weights_quantization_factors;
+/// @brief Input quantization factor
+float input_quantization_factor;
+/// @brief Output quantization factor
+float output_quantization_factor;
+
 CLDNN_END_PRIMITIVE_DESC(convolution)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(convolution);
