@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,7 +23,7 @@ namespace KernelSelector
 	class ArgMaxMinKernelGPURef : public ArgMaxMinKernelBase
 	{
 	public:
-		ArgMaxMinKernelGPURef() : ArgMaxMinKernelBase("arg_max_min_gpu_ref") {}
+        ArgMaxMinKernelGPURef() : ArgMaxMinKernelBase("arg_max_min_gpu_ref") {}
 		virtual ~ArgMaxMinKernelGPURef() {}
 
 		virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;

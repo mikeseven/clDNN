@@ -1,4 +1,3 @@
-/*
 // Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,26 +11,17 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-*/
 
-#pragma once
 
-#include "kernel_selector.h"
+#include "include/include_all.cl"
 
-namespace KernelSelector
+KERNEL(lookup_table)(const __global UNIT_TYPE* input0, const __global uint* input1, __global UNIT_TYPE* output)
 {
-	class ArgMaxMinKernelSelctor : public KernelSelctorBase
-	{
-	public:
-		static ArgMaxMinKernelSelctor &Instance() {
-			static ArgMaxMinKernelSelctor instance_;
-			return instance_;
-		}
-
-		ArgMaxMinKernelSelctor();
-
-		virtual ~ArgMaxMinKernelSelctor() {}
-
-		virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
-	};
+    const uint x    = (uint)get_global_id(0);
+    const uint b    = (uint)get_global_id(1);
+	const uint size = INPUT0_SIZE_X * INPUT0_SIZE_Y * INPUT0_FEATURE_NUM;
+	const uint global_index = b * VAL_NUM + x;
+    
+    output[global_index] = input0[input1[global_index] + b*size];
 }
+	

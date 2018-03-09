@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,9 +35,6 @@ namespace cldnn {
 			{
 				bool res = parent::validate(instance);
 
-				// Check whether all memory elements use the same unit type (FP16 or FP32).
-				CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory().get_layout().data_type, "output memory", instance.output_memory().get_layout().data_type, "");
-
 				return res;
 			}
 
@@ -53,9 +50,6 @@ namespace cldnn {
 			static primitive_impl* create(const arg_max_min_node &arg)
 			{
 				const auto& primitive = arg.get_primitive();
-				//const auto& input_layout = arg.input().get_output_layout();
-
-				//const auto& input_size = input_layout.size;
 
 				const auto& axis = primitive->axis;
 				const auto& top_k = primitive->top_k;
@@ -65,22 +59,23 @@ namespace cldnn {
 				auto argm_params = get_default_params<kernel_selector::arg_max_min_params>(arg);
 				auto argm_optional_params = get_default_optional_params<kernel_selector::arg_max_min_optional_params>(arg.get_program());
 
-				if (primitive->with_activation)
-					convert_activation_func_params(primitive, argm_params);
-
 				argm_params.argMaxParams.topK = top_k;
 				if (with_axis) {
 					switch (axis)
 					{
-					case 0:
+                    case arg_max_min::batch:
 						argm_params.argMaxParams.argMaxMinAxis = kernel_selector::argm_axis::BATCH;
-					case 1:
+                        break;
+					case arg_max_min::feature:
 						argm_params.argMaxParams.argMaxMinAxis = kernel_selector::argm_axis::FEATURE;
-					case 2:
+                        break;
+                    case arg_max_min::x:
 						argm_params.argMaxParams.argMaxMinAxis = kernel_selector::argm_axis::X;
-					case 3:
+                        break;
+                    case arg_max_min::y:
 						argm_params.argMaxParams.argMaxMinAxis = kernel_selector::argm_axis::Y;
-					default:
+                        break;
+                    default:
 						break;
 					}
 				}
@@ -104,13 +99,9 @@ namespace cldnn {
 		namespace {
 			struct attach {
 				attach() {
-					implementation_map<arg_max_min>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), arg_max_min_gpu::create);
-					implementation_map<arg_max_min>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), arg_max_min_gpu::create);
 					implementation_map<arg_max_min>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), arg_max_min_gpu::create);
 					implementation_map<arg_max_min>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), arg_max_min_gpu::create);
 					implementation_map<arg_max_min>::add(std::make_tuple(engine_types::ocl, data_types::i8, format::bfyx), arg_max_min_gpu::create);
-					implementation_map<arg_max_min>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::byxf), arg_max_min_gpu::create);
-					implementation_map<arg_max_min>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::byxf), arg_max_min_gpu::create);
 				}
 				~attach() {}
 			};

@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -35,6 +35,21 @@ namespace cldnn
 
 		auto input_layout = node.input().get_output_layout();
 
+		if (desc->with_axis){
+			switch (desc->axis){
+				case arg_max_min::x:
+					return layout{ data_types::f32, format::bfyx, tensor{ input_layout.size.batch[0], input_layout.size.feature[0], (int32_t)desc->top_k, input_layout.size.spatial[1] }};
+				case arg_max_min::y:
+					return layout{ data_types::f32, format::bfyx, tensor{ input_layout.size.batch[0], input_layout.size.feature[0], input_layout.size.spatial[0], (int32_t)desc->top_k }};
+				case arg_max_min::feature:
+					return layout{ data_types::f32, format::bfyx, tensor{ input_layout.size.batch[0], (int32_t)desc->top_k, input_layout.size.spatial[0], input_layout.size.spatial[1] }};
+				case arg_max_min::batch:
+					return layout{ data_types::f32, format::bfyx, tensor{ (int32_t)desc->top_k, input_layout.size.feature[0], input_layout.size.spatial[0], input_layout.size.spatial[1] }};
+				default:
+					break;
+			}
+		}
+
 		return layout{ data_types::f32, format::bfyx, tensor{ input_layout.size.batch[0], 1, (int32_t)desc->top_k, 1 } };
 	}
 
@@ -42,7 +57,6 @@ namespace cldnn
 	{
 		auto desc = node.get_primitive();
 		auto node_info = node.desc_to_json();
-		auto activation = desc->with_activation ? "true" : "false";
 		auto axis = desc->with_axis ? "true" : "false";
 		auto out_type = desc->output_type ? "max" : "min";
 
@@ -54,8 +68,6 @@ namespace cldnn
 		if (desc->with_axis)
 			conv_info.add("axis", desc->axis);
 		conv_info.add("output type", out_type);
-		conv_info.add("with activation", activation);
-		conv_info.add("slope", desc->activation_negative_slope);
 		node_info.add("arg_max_min info", conv_info);
 		node_info.dump(primitive_description);
 
@@ -65,10 +77,5 @@ namespace cldnn
 	arg_max_min_inst::typed_primitive_inst(network_impl& network, arg_max_min_node const& node)
 		: parent(network, node)
 	{
-		auto output_size = output_memory().get_layout().size;
-
-		auto input_inst = input_memory().get_layout();
-		auto output_inst = output_memory().get_layout();
-		//TODO add some tests
 	}
 }

@@ -14,24 +14,20 @@
 // limitations under the License.
 */
 
-#pragma once
+#include "lookup_table_kernel_selector.h"
+#include "lookup_table_kernel_ref.h"
+#include "lookup_table_kernel_axis.h"
 
-#include "kernel_selector.h"
+namespace KernelSelector {
 
-namespace KernelSelector
-{
-	class ArgMaxMinKernelSelctor : public KernelSelctorBase
-	{
-	public:
-		static ArgMaxMinKernelSelctor &Instance() {
-			static ArgMaxMinKernelSelctor instance_;
-			return instance_;
-		}
+    LookUpTableKernelSelctor::LookUpTableKernelSelctor()
+    {
+        Attach<LookUpTableKernelRef>();
+        Attach<LookUpTableKernelAxis>();
+    }
 
-		ArgMaxMinKernelSelctor();
-
-		virtual ~ArgMaxMinKernelSelctor() {}
-
-		virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
-	};
+    KernelsData LookUpTableKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    {
+        return GetNaiveBestKernel(params, options, KernelType::LOOKUP_TABLE);
+    }
 }

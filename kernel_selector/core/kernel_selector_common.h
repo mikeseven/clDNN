@@ -136,7 +136,6 @@ namespace KernelSelector {
             OUTPUT,
             WEIGHTS,
             BIAS,
-            LOOKUP_TABLE,
             SCALE_TABLE,
             SLOPE,
             SPLIT,
@@ -397,6 +396,19 @@ namespace KernelSelector {
 		default: return "";
 		}
 	}
+
+    inline std::string toString(LookUpTableAxis mode)
+    {
+        switch (mode)
+        {
+        case LookUpTableAxis::BATCH: return "BATCH";
+        case LookUpTableAxis::FEATURE: return "FEATURE";
+        case LookUpTableAxis::X: return "X";
+        case LookUpTableAxis::Y: return "Y";
+        case LookUpTableAxis::NONE: return "NONE";
+        default: return "";
+        }
+    }
 
     inline std::string toString(PoolType mode)
     {

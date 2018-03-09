@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,13 +16,17 @@
 
 #include "arg_max_min_kernel_selector.h"
 #include "arg_max_min_kernel_gpu_ref.h"
+#include "arg_max_min_kernel_opt.h"
+#include "arg_max_min_kernel_axis.h"
 
 namespace KernelSelector {
 
 	ArgMaxMinKernelSelctor::ArgMaxMinKernelSelctor()
 	{
 		Attach<ArgMaxMinKernelGPURef>();
-	}
+        //Attach<ArgMaxMinKernelOpt>();
+        Attach<ArgMaxMinKernelAxis>();
+    }
 
 	KernelsData ArgMaxMinKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
 	{

@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,39 +38,19 @@ namespace KernelSelector
 
 	ArgMaxMinKernelBase::DispatchData ArgMaxMinKernelBase::SetDefault(const ArgMaxMinParams& params) const
 	{
-		const auto& output = params.output;
-
 		DispatchData kd;
 
 		kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 
-		if (output.GetLayout() == DataLayout::bfyx || output.GetLayout() == DataLayout::byxf)
-		{
-			// Determine global work sizes.
-			kd.gws0 = Align(output.X().v, 16);     // X
-			kd.gws1 = params.inputs[0].Batch().v;                   // Y
-			kd.gws2 = output.Batch().v * output.Feature().v;    // B, F
+		// Determine global work sizes.
+		kd.gws0 = 128;     // X
+		kd.gws1 = params.inputs[0].Batch().v;                   // Y
+		kd.gws2 = 1; // output.Batch().v * output.Feature().v;    // B, F
 
-																// Find largest positive local work size that is divider for global work size.
-			kd.lws0 = 16;
-			kd.lws1 = params.inputs[0].Batch().v;
-			kd.lws2 = 1;
-		}
-		else
-		{
-			// Determine global work sizes.
-			kd.gws0 = output.Batch().v * output.Feature().v;    // B, F
-			kd.gws1 = output.X().v;                             // X
-			kd.gws2 = output.Y().v;                             // Y
-
-			kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
-			while (kd.gws0 % kd.lws0 != 0)
-			{
-				--kd.lws0;
-			}
-			kd.lws1 = 1;
-			kd.lws2 = 1;
-		}
+															// Find largest positive local work size that is divider for global work size.
+		kd.lws0 = 128;
+		kd.lws1 = 1;
+		kd.lws2 = 1;
 
 		return kd;
 	}

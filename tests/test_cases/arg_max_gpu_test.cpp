@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,10 +28,11 @@ using namespace std;
 using namespace tests;
 
 
+
+
 TEST(arg_max_gpu, base) {
 	//  Input  : 2x3x2x2
-	static const int32_t x_size = 2, y_size = 2, feature_num = 3,
-		batch_num = 2;
+	static const int32_t x_size = 2, y_size = 2, feature_num = 3, batch_num = 2;
 	engine engine;
 
 	auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_num, feature_num, x_size , y_size } });
@@ -60,14 +61,14 @@ TEST(arg_max_gpu, base) {
 	EXPECT_EQ(outputs.begin()->first, "arg_max");
 
 	auto output = outputs.at("arg_max").get_memory();
-	auto output_ptr = output.pointer<float>();;
-	float out_buffer[batch_num];
+	auto output_ptr = output.pointer<int>();;
+	int out_buffer[batch_num];
 	for (uint32_t i = 0; i < batch_num; i++)
 	{
-		out_buffer[i] = get_value<float>(output_ptr, i);
+		out_buffer[i] = get_value<int>(output_ptr, i);
 	}	
 	int size = x_size * y_size * feature_num;
-	float index;
+	int index;
 	float value;
 	for (int i = 0; i < batch_num; i++) {
 		EXPECT_GE(out_buffer[i], 0);
@@ -81,9 +82,202 @@ TEST(arg_max_gpu, base) {
 	}
 }
 
-TEST(arg_min_gpu, base) {
+TEST(arg_max_gpu_batch_one, base) {
+    //  Input  : 2x3x2x2
+    static const int32_t x_size = 2, y_size = 2, feature_num = 36, batch_num = 1, top_k = 8;
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_num, feature_num, x_size , y_size } });
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(arg_max_min("arg_max", "input", arg_max_min::max, top_k));
+
+    vector<float> input_vec = {
+        //y0x0 y0x1 y1x0 y1x1
+        /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
+        /*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f3*/3.f,  0.5f,  7.f,   10.f,
+        /*b0f4*/4.f,  0.5f,  8.f,   8.2f,
+        /*b0f5*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
+        /*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f3*/3.f,  0.5f,  7.f,   10.f,
+        /*b0f4*/4.f,  0.5f,  8.f,   8.2f,
+        /*b0f5*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
+        /*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f3*/3.f,  0.5f,  7.f,   10.f,
+        /*b0f4*/4.f,  0.5f,  8.f,   8.2f,
+        /*b0f5*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
+        /*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f3*/3.f,  0.5f,  7.f,   10.f,
+        /*b0f4*/4.f,  0.5f,  8.f,   8.2f,
+        /*b0f5*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
+        /*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f3*/3.f,  0.5f,  7.f,   10.f,
+        /*b0f4*/4.f,  0.5f,  8.f,   8.2f,
+        /*b0f5*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
+        /*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f3*/3.f,  0.5f,  7.f,   10.f,
+        /*b0f4*/4.f,  0.5f,  8.f,   8.2f,
+        /*b0f5*/0.2f, 0.2f,  -10.f, 5.2f
+    };
+    set_values(input, input_vec);
+
+    network network(engine, topology);
+
+    network.set_input_data("input", input);
+    auto outputs = network.execute();
+
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "arg_max");
+
+    auto output = outputs.at("arg_max").get_memory();
+    auto output_ptr = output.pointer<float>();;
+    float out_buffer[batch_num * top_k];
+    for (uint32_t i = 0; i < batch_num * top_k; i++)
+    {
+        out_buffer[i] = get_value<float>(output_ptr, i);
+    }
+     /*int size = x_size * y_size * feature_num;
+     int index;
+     float value;
+     for (int i = 0; i < batch_num; i++) {
+         int count = 0;
+         int amount = 0;
+         int same_values = 1;
+         int j;
+         for (j = 0; j < top_k; j++) {
+             EXPECT_GE(out_buffer[i*top_k + j], 0);
+             EXPECT_LT(out_buffer[i*top_k + j], size);
+             if (top_k - 1 == j) {
+                 if (input_vec[i*size + out_buffer[i*top_k + j]] != input_vec[i*size + out_buffer[i*top_k + j - 1]]) {
+                     amount += j;
+                 }
+                 else
+                     amount += same_values * (j - same_values + 1);
+             }
+             else if (input_vec[i*size + out_buffer[i*top_k + j]] != input_vec[i*size + out_buffer[i*top_k + j + 1]]) {
+                 if (same_values != j + 1) {
+                     amount += same_values * (j - same_values + 1);
+                     same_values = 1;
+                 }
+             }
+             else
+                 same_values++;
+         }
+         EXPECT_GE(out_buffer[i*top_k + top_k - 1], 0);
+         EXPECT_LT(out_buffer[i*top_k + top_k - 1], size);
+         for (int j = 0; j < top_k; j++)
+         {
+             index = out_buffer[i*top_k + j];
+             value = input_vec[i*size + index];
+             for (int k = 0; k < size; k++)
+             {
+                 if (input_vec[i*size + k] > value)
+                     count++;
+             }
+         }
+         EXPECT_EQ(count, amount);
+     }*/
+}
+
+TEST(arg_max_gpu_top_k, base) {
 	//  Input  : 2x3x2x2
-	static const int32_t x_size = 2, y_size = 2, feature_num = 3,
+	static const int32_t x_size = 2, y_size = 2, feature_num = 5, batch_num = 2;
+	engine engine;
+	const int top_k = 8;
+	auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_num, feature_num, x_size , y_size } });
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(arg_max_min("arg_max", "input", arg_max_min::max, top_k));
+
+	vector<float> input_vec = {
+		//y0x0 y0x1 y1x0 y1x1
+		/*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
+		/*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
+		/*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
+		/*b0f3*/0.2f, 0.2f,  -10.f, 4.2f,
+		/*b0f3*/0.1f, 0.3f,  -11.f, 15.0f,
+
+		/*b1f0*/3.f,  0.5f,  7.f,   10.f,
+		/*b1f1*/4.f,  0.5f,  8.f,   8.2f,
+		/*b1f2*/0.2f, 0.2f,  -10.f, 5.2f,
+		/*b1f3*/4.f,  0.5f,  8.f,   8.2f,
+		/*b0f3*/0.1f, 0.3f,  -11.f, 15.0f,
+	};
+	set_values(input, input_vec);
+
+	network network(engine, topology);
+
+	network.set_input_data("input", input);
+	auto outputs = network.execute();
+
+	EXPECT_EQ(outputs.size(), size_t(1));
+	EXPECT_EQ(outputs.begin()->first, "arg_max");
+
+	auto output = outputs.at("arg_max").get_memory();
+	auto output_ptr = output.pointer<int>();;
+	int out_buffer[batch_num * top_k];
+	for (uint32_t i = 0; i < batch_num * top_k; i++)
+	{
+		out_buffer[i] = get_value<int>(output_ptr, i);
+	}
+	int size = x_size * y_size * feature_num;
+	int index;
+	float value;
+	for (int i = 0; i < batch_num; i++) {
+		int count = 0;
+		int amount = 0;
+		int same_values = 1;
+		int j;
+		for (j = 0; j < top_k; j++) {
+			EXPECT_GE(out_buffer[i*top_k + j], 0);
+			EXPECT_LT(out_buffer[i*top_k + j], size);
+			if (top_k - 1 == j) {
+				if (input_vec[i*size + out_buffer[i*top_k + j]] != input_vec[i*size + out_buffer[i*top_k + j - 1]]) {
+					amount += j;
+				}
+				else
+					amount += same_values * (j - same_values + 1);
+			}
+			else if (input_vec[i*size + out_buffer[i*top_k + j]] != input_vec[i*size + out_buffer[i*top_k + j + 1]]) {
+				if (same_values != j+1) {
+					amount += same_values * (j - same_values + 1);
+					same_values = 1;
+				}
+			}
+			else
+				same_values++;
+		}
+		EXPECT_GE(out_buffer[i*top_k + top_k - 1], 0);
+		EXPECT_LT(out_buffer[i*top_k + top_k - 1], size);
+		for (int j = 0; j < top_k; j++)
+		{
+			index = out_buffer[i*top_k + j];
+			value = input_vec[i*size + index];
+			for (int k = 0; k < size; k++)
+			{
+				if (input_vec[i*size + k] > value)
+					count++;
+			}
+		}
+		EXPECT_EQ(count, amount);
+	}
+}
+
+TEST(arg_max_gpu_min, base) {
+	//  Input  : 2x3x2x2
+	static const int32_t x_size = 2, y_size = 2, feature_num = 4,
 		batch_num = 2;
 	engine engine;
 
@@ -97,10 +291,12 @@ TEST(arg_min_gpu, base) {
 		/*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
 		/*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
 		/*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
+		/*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
 
 		/*b1f0*/3.f,  0.5f,  7.f,   10.f,
 		/*b1f1*/4.f,  0.5f,  8.f,   8.2f,
-		/*b1f2*/0.2f, 0.2f,  -10.f, 5.2f
+		/*b1f2*/0.2f, 0.2f,  -10.f, 5.2f,
+		/*b0f2*/0.2f, 0.2f,  -10.f, 5.2f
 	};
 	set_values(input, input_vec);
 
@@ -113,20 +309,20 @@ TEST(arg_min_gpu, base) {
 	EXPECT_EQ(outputs.begin()->first, "arg_max");
 
 	auto output = outputs.at("arg_max").get_memory();
-	auto output_ptr = output.pointer<float>();;
-	float out_buffer[batch_num];
+	auto output_ptr = output.pointer<int>();;
+	int out_buffer[batch_num];
 	for (uint32_t i = 0; i < batch_num; i++)
 	{
-		out_buffer[i] = get_value<float>(output_ptr, i);
+		out_buffer[i] = get_value<int>(output_ptr, i);
 	}
 	int size = x_size * y_size * feature_num;
-	float index;
+	int index;
 	float value;
 	for (int i = 0; i < batch_num; i++) {
 		EXPECT_GE(out_buffer[i], 0);
 		EXPECT_LT(out_buffer[i], size);
 		index = out_buffer[i];
-		value = input_vec[i*size + (int)index];
+		value = input_vec[i*size + index];
 		for (int j = 0; j < size; j++)
 		{
 			EXPECT_GE(input_vec[i*size + j], value);
@@ -134,165 +330,129 @@ TEST(arg_min_gpu, base) {
 	}
 }
 
+TEST(arg_max_gpu_min_top_k, base) {
+	//  Input  : 2x3x2x2
+	static const int32_t x_size = 2, y_size = 2, feature_num = 4, batch_num = 2;
+	engine engine;
+	const int top_k = 3;
+	auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_num, feature_num, x_size , y_size } });
+	topology topology;
+	topology.add(input_layout("input", input.get_layout()));
+	topology.add(arg_max_min("arg_max", "input", arg_max_min::min, top_k));
 
-class arg_max_test : public tests::generic_test
-{
+	vector<float> input_vec = {
+		//y0x0 y0x1 y1x0 y1x1
+		/*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
+		/*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
+		/*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
+		/*b0f3*/0.2f, 0.2f,  -10.f, 4.2f,
 
-public:
-	arg_max_test() : tests::generic_test()
+		/*b1f0*/3.f,  0.5f,  7.f,   10.f,
+		/*b1f1*/4.f,  0.5f,  8.f,   8.2f,
+		/*b1f2*/0.2f, 0.2f,  -10.f, 5.2f,
+		/*b1f3*/4.f,  0.5f,  8.f,   8.2f
+	};
+	set_values(input, input_vec);
+
+	network network(engine, topology);
+
+	network.set_input_data("input", input);
+	auto outputs = network.execute();
+
+	EXPECT_EQ(outputs.size(), size_t(1));
+	EXPECT_EQ(outputs.begin()->first, "arg_max");
+
+	auto output = outputs.at("arg_max").get_memory();
+	auto output_ptr = output.pointer<int>();;
+	int out_buffer[batch_num * top_k];
+	for (uint32_t i = 0; i < batch_num * top_k; i++)
 	{
+		out_buffer[i] = get_value<int>(output_ptr, i);
 	}
-
-	virtual void SetUp() override
-	{
-		max_ulps_diff_allowed = 6;
-	}
-
-	static void TearDownTestCase()
-	{
-		for (auto generic_params : all_generic_params)
-		{
-			delete generic_params;
-		}
-
-		for (auto layer_params : all_layer_params)
-		{
-			delete layer_params;
-		}
-	}
-
-	static std::vector<cldnn::primitive*> generate_specific_test_params()
-	{
-		all_layer_params.push_back(new arg_max_min("arg_max_min", "input0", arg_max_min::max));
-
-		//The test checks only valid combinations.
-		//TODO: add more combinations.
-
-		return all_layer_params;
-	}
-
-	static std::vector<tests::test_params*> generate_generic_test_params()
-	{
-		return generic_test::generate_generic_test_params(all_generic_params);
-	}
-
-	virtual bool is_format_supported(cldnn::format format) override
-	{
-		return
-			format == cldnn_format_type::cldnn_format_yxfb ||
-			format == cldnn_format_type::cldnn_format_bfyx ||
-			format == cldnn_format_type::cldnn_format_byxf;
-	}
-
-	template<typename Type>
-	memory generate_reference_typed(const std::vector<memory> & inputs)
-	{
-		assert(inputs.size() == 1);
-		const memory & input = inputs[0];
-
-		//Output is bfyx
-		auto output = memory::allocate(engine, cldnn::layout(input.get_layout().data_type, input.get_layout().format, input.get_layout().size));
-
-		//        const auto params = static_cast<cldnn::arg_max *>(layer_parmas);
-
-		const auto in0_mem = input.pointer<Type>();
-		auto out_mem = output.pointer<Type>();
-
-		const int in0_b = input.get_layout().size.sizes()[0];
-		const int in0_f = input.get_layout().size.sizes()[1];
-		const int in0_h = input.get_layout().size.sizes()[3];
-		const int in0_w = input.get_layout().size.sizes()[2];
-
-		//        const int out_b = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[0];
-		//        const int out_f = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[1];
-		//        const int out_h = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[2];
-		//        const int out_w = output.get_layout().size.transform(cldnn::format::bfyx, 0).sizes()[3];
-
-		//        assert(in0_b == out_b);
-		//        assert(in0_f == out_f);
-		//        assert(in0_h == out_h);
-		//        assert(in0_w == out_w);
-
-		std::vector<float> cached_exp_vals;
-		cached_exp_vals.resize(in0_f);
-
-		const auto input_desc = get_linear_memory_desc(input.get_layout());
-
-		for (int n = 0; n < in0_b; ++n)
-			for (int y = 0; y < in0_h; ++y)
-				for (int x = 0; x < in0_w; ++x)
-				{
-					float max_val = -std::numeric_limits<float>::infinity();
-
-					for (int c = 0; c < in0_f; ++c)
-					{
-						const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x, input_desc);
-
-						max_val = std::max(max_val, static_cast<float>(in0_mem[in0_idx]));
-					}
-
-					float Z = 0;
-
-					for (int c = 0; c < in0_f; ++c)
-					{
-						const size_t in0_idx = get_linear_index(input.get_layout(), n, c, y, x, input_desc);
-
-						float tmp = static_cast<float>((Type)std::exp(static_cast<float>(in0_mem[in0_idx]) - max_val));
-						Z += tmp;
-						cached_exp_vals[c] = tmp;
-					}
-
-					for (int c = 0; c < in0_f; ++c)
-					{
-						const size_t out_idx = get_linear_index(output.get_layout(), n, c, y, x, input_desc);
-						out_mem[out_idx] = (Type)(cached_exp_vals[c] / Z);
-					}
+	int size = x_size * y_size * feature_num;
+	int index;
+	float value;
+	for (int i = 0; i < batch_num; i++) {
+		int count = 0;
+		int amount = 0;
+		int same_values = 1;
+		int j;
+		for (j = 0; j < top_k; j++) {
+			EXPECT_GE(out_buffer[i*top_k + j], 0);
+			EXPECT_LT(out_buffer[i*top_k + j], size);
+			if (top_k - 1 == j) {
+				if (input_vec[i*size + out_buffer[i*top_k + j]] != input_vec[i*size + out_buffer[i*top_k + j - 1]]) {
+					amount += j;
 				}
-
-		return output;
-	}
-
-	virtual memory generate_reference(const std::vector<memory> & inputs) override
-	{
-		if (generic_params->data_type == data_types::f32)
-		{
-			return generate_reference_typed<float>(inputs);
+				else
+					amount += same_values * (j - same_values + 1);
+			}
+			else if (input_vec[i*size + out_buffer[i*top_k + j]] != input_vec[i*size + out_buffer[i*top_k + j + 1]]) {
+				if (same_values != j + 1) {
+					amount += same_values * (j - same_values + 1);
+					same_values = 1;
+				}
+			}
+			else
+				same_values++;
 		}
-		else
+		EXPECT_GE(out_buffer[i*top_k + top_k - 1], 0);
+		EXPECT_LT(out_buffer[i*top_k + top_k - 1], size);
+		for (int j = 0; j < top_k; j++)
 		{
-			return generate_reference_typed<FLOAT16>(inputs);
-		}
-	}
-
-	static std::string custom_param_name(const ::testing::TestParamInfo<std::tuple<test_params*, cldnn::primitive*>>& info)
-	{
-		std::stringstream res;
-
-		const auto & p = std::get<0>(info.param);
-
-		assert(p->data_type == data_types::f32 ||
-			p->data_type == data_types::f16);
-
-		res << info.index
-			<< "_" << (p->data_type == data_types::f32 ? "f32" : "f16");
-
-		for (unsigned i = 0; i < p->input_layouts.size(); ++i)
-		{
-			const auto chans = format::traits(p->fmt).order;
-
-			res << "_" << "Input" << i;
-			for (unsigned int j = 0; j < p->input_layouts[i].size.sizes(p->fmt).size(); ++j)
+			index = out_buffer[i*top_k + j];
+			value = input_vec[i*size + index];
+			for (int k = 0; k < size; k++)
 			{
-				res << chans[j] << p->input_layouts[i].size.sizes(p->fmt)[j];
+				if (input_vec[i*size + k] < value)
+					count++;
 			}
 		}
-
-		return res.str();
+		EXPECT_EQ(count, amount);
 	}
+}
 
-private:
+TEST(arg_max_gpu_min_axis_batch, base) {
+    //  Input  : 2x3x2x2
+    static const int32_t x_size = 2, y_size = 2, feature_num = 4, batch_num = 2;
+    engine engine;
+    const int top_k = 2;
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_num, feature_num, x_size , y_size } });
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+    topology.add(arg_max_min("arg_max", "input", arg_max_min::min, arg_max_min::batch, top_k));
 
-	static std::vector<tests::test_params*> all_generic_params;
-	static std::vector<cldnn::primitive*> all_layer_params;
+    vector<float> input_vec = {
+        //y0x0 y0x1 y1x0 y1x1
+        /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
+        /*b0f1*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f2*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b0f3*/0.2f, 0.2f,  -10.f, 4.2f,
 
-};
+        /*b1f0*/3.f,  0.5f,  7.f,   10.f,
+        /*b1f1*/4.f,  0.5f,  8.f,   8.2f,
+        /*b1f2*/0.2f, 0.2f,  -10.f, 5.2f,
+        /*b1f3*/4.f,  0.5f,  8.f,   8.2f
+    };
+    set_values(input, input_vec);
+
+    network network(engine, topology);
+
+    network.set_input_data("input", input);
+    auto outputs = network.execute();
+
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "arg_max");
+    const int out_size = y_size * feature_num * x_size * top_k;
+    auto output = outputs.at("arg_max").get_memory();
+    auto output_ptr = output.pointer<int>();
+    int out_buffer[out_size];
+    for (uint32_t i = 0; i < out_size; i++)
+    {
+        out_buffer[i] = get_value<int>(output_ptr, i);
+    }
+    for (int i = 0; i < out_size; i++)
+    {
+        EXPECT_EQ(out_buffer[i], i % 2 == 0 ? 0 : 1);
+    }
+}

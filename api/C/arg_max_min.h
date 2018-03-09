@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -33,26 +33,30 @@ extern "C" {
 /// @brief Enum type to specify output type - index of max or min values
 typedef enum
 {
-	cldnn_arg_max,
-	cldnn_arg_min,
+    cldnn_arg_max,
+    cldnn_arg_min,
 } cldnn_arg_max_min_out;
 
 
+/// @brief Enum type to specify axis to maximize/minimize along.
+typedef enum
+{
+    cldnn_arg_max_min_batch,
+    cldnn_arg_max_min_feature,
+    cldnn_arg_max_min_x,
+    cldnn_arg_max_min_y
+} cldnn_arg_max_min_axis;
+
 /// @brief Finds the index of the k max/min values of input.
-/// Also supports built-in Relu @CLDNN_PRIMITIVE_DESC{activation} available by setting it in arguments.
 CLDNN_BEGIN_PRIMITIVE_DESC(arg_max_min)
-/// @brief Enable Relu activation.
-uint32_t with_activation;
-/// @brief Relu activation slope.
-float activation_negative_slope;
-/// @brief Number of maximal indexes to output.
+/// @brief Number of indexes to output.
 uint32_t top_k;
 /// @brief Type of output - max or mix.
 cldnn_arg_max_min_out output_type;
-/// @brief Indicates that the primitive has user defined axis to maximize along.
+/// @brief Indicates that the primitive has user defined axis to maximize/minimize along.
 uint32_t with_axis;
-/// @brief Axis to maximize along. If not set, maximize the flattened trailing dimensions for each index of the first dimension.
-uint32_t axis;
+/// @brief Axis to maximize/minimize along. If not set, maximize the flattened x, y ,f dimensions for each index of the first dimension.
+cldnn_arg_max_min_axis axis;
 CLDNN_END_PRIMITIVE_DESC(arg_max_min)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(arg_max_min);
@@ -64,5 +68,5 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(arg_max_min);
 /// @}
 /// @}
 /// @}
-#endif /* ARG_MAX.H */
+#endif /* ARG_MAX_MIN.H */
 

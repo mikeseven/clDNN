@@ -21,20 +21,20 @@
 
 namespace KernelSelector
 {
-	class ArgMaxMinKernelBase : public CommonKernelBase
-	{
-	public:
-		using CommonKernelBase::CommonKernelBase;
-		virtual ~ArgMaxMinKernelBase() {}
+    class LookUpTableKernelBase : public CommonKernelBase
+    {
+    public:
+        using CommonKernelBase::CommonKernelBase;
+        virtual ~LookUpTableKernelBase() {}
 
-		struct DispatchData : public CommonDispatchData
-		{
-		};
+        struct DispatchData : public CommonDispatchData
+        {
+        };
 
-	protected:
-		virtual bool Validate(const Params&, const OptionalParams&) const override;
-		virtual JitConstants GetJitConstants(const ArgMaxMinParams& params) const;
-		virtual DispatchData SetDefault(const ArgMaxMinParams& params) const;
-		KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimatedTime) const;
-	};
+    protected:
+        virtual bool Validate(const Params&, const OptionalParams&) const override;
+        virtual JitConstants GetJitConstants(const LookUpTableParams& params) const;
+        virtual DispatchData SetDefault(const LookUpTableParams& params) const;
+        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimatedTime) const;
+    };
 }

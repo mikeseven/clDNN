@@ -20,18 +20,18 @@
 
 namespace KernelSelector
 {
-	class ArgMaxMinKernelSelctor : public KernelSelctorBase
-	{
-	public:
-		static ArgMaxMinKernelSelctor &Instance() {
-			static ArgMaxMinKernelSelctor instance_;
-			return instance_;
-		}
+    class LookUpTableKernelSelctor : public KernelSelctorBase
+    {
+    public:
+        static LookUpTableKernelSelctor &Instance() {
+            static LookUpTableKernelSelctor instance_;
+            return instance_;
+        }
 
-		ArgMaxMinKernelSelctor();
+        LookUpTableKernelSelctor();
 
-		virtual ~ArgMaxMinKernelSelctor() {}
+        virtual ~LookUpTableKernelSelctor() {}
 
-		virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
-	};
+        virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
+    };
 }

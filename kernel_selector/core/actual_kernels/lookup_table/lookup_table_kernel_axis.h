@@ -16,22 +16,17 @@
 
 #pragma once
 
-#include "kernel_selector.h"
+#include "lookup_table_kernel_base.h"
 
 namespace KernelSelector
 {
-	class ArgMaxMinKernelSelctor : public KernelSelctorBase
-	{
-	public:
-		static ArgMaxMinKernelSelctor &Instance() {
-			static ArgMaxMinKernelSelctor instance_;
-			return instance_;
-		}
+    class LookUpTableKernelAxis : public LookUpTableKernelBase
+    {
+    public:
+        LookUpTableKernelAxis() : LookUpTableKernelBase("lookup_table_axis") {}
+        virtual ~LookUpTableKernelAxis() {}
 
-		ArgMaxMinKernelSelctor();
-
-		virtual ~ArgMaxMinKernelSelctor() {}
-
-		virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
-	};
+        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual ParamsKey GetSupportedKey() const override;
+    };
 }

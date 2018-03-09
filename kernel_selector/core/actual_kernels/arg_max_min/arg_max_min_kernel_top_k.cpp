@@ -14,11 +14,11 @@
 // limitations under the License.
 */
 
-#include "arg_max_min_kernel_gpu_ref.h"
+#include "arg_max_min_kernel_top_k.h"
 
 namespace KernelSelector
 {
-	ParamsKey ArgMaxMinKernelGPURef::GetSupportedKey() const
+	ParamsKey ArgMaxMinKernelTopK::GetSupportedKey() const
 	{
 		ParamsKey k;
 		k.EnableInputDataType(Datatype::F16);
@@ -34,8 +34,8 @@ namespace KernelSelector
 		return k;
 	}
 
-	KernelsData ArgMaxMinKernelGPURef::GetKernelsData(const Params& params, const OptionalParams& options) const
+	KernelsData ArgMaxMinKernelTopK::GetKernelsData(const Params& params, const OptionalParams& options) const
 	{
-		return GetCommonKernelsData(params, options, FORCE_PRIORITY_9);
+		return GetCommonKernelsData(params, options, FORCE_PRIORITY_8);
 	}
 }

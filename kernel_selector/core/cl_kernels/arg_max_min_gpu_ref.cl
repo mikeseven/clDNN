@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,10 +14,9 @@
 
 
 #include "include/include_all.cl"
-
-#define GLOBAL_SIZE 16
-#define LOCAL_SIZE 16
-
+    
+#define GLOBAL_SIZE 128
+#define LOCAL_SIZE 128
 
 typedef struct /* Index and Value type that holds index and value used in this kernel */
 {
@@ -25,108 +24,85 @@ typedef struct /* Index and Value type that holds index and value used in this k
     UNIT_TYPE value; 
 } iav_type;
 
-__attribute__((reqd_work_group_size(LOCAL_SIZE, INPUT0_BATCH_NUM, 1)))
-KERNEL(arg_max_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
-{
-	__local iav_type scratch[INPUT0_BATCH_NUM][LOCAL_SIZE];
-    const uint x    = (uint)get_global_id(0);
-    const uint y    = (uint)get_global_id(1);
-    const uint bf   = (uint)get_global_id(2);
-    const uint f    = bf % INPUT0_FEATURE_NUM;
-    const uint b    = bf / INPUT0_FEATURE_NUM;
-	const uint size = INPUT0_SIZE_X * INPUT0_SIZE_Y * INPUT0_FEATURE_NUM;
-	uint global_index = b * size + f * INPUT0_SIZE_X * INPUT0_SIZE_Y + y * INPUT0_SIZE_X + x;
-	const uint current_batch = get_local_id(1);
-	const uint batch_offset = current_batch * size;
-	uint local_index = get_local_id(0);
-	iav_type accumulator;
-	while(global_index < batch_offset){
-		global_index += size;
-	}
-	while(global_index > batch_offset + size)
-		global_index -= size;
-	accumulator.index = global_index;
-	accumulator.value = input[global_index];
 #ifdef MAX_OUT
-	__attribute__((opencl_unroll_hint))
-	while (global_index < size + batch_offset) 
-	{
-		iav_type element;
-		element.value = input[global_index];
-		element.index = global_index;
-
-		if(accumulator.value < element.value)
-		{
-			accumulator.value = element.value;
-			accumulator.index = element.index;
-		}
-		global_index += GLOBAL_SIZE;
-	}
-
-	scratch[current_batch][local_index] = accumulator;
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	__attribute__((opencl_unroll_hint))
-	for(uint offset = LOCAL_SIZE / 2; offset > 0; offset /= 2) 
-	{
-		if (local_index < offset) 
-		{
-			iav_type other = scratch[current_batch][local_index + offset];
-			iav_type mine = scratch[current_batch][local_index];
-
-			if(mine.value < other.value)
-			{
-				scratch[current_batch][local_index] = other;
-			}
-		}
-		barrier(CLK_LOCAL_MEM_FENCE);
-	}
-
-	if (local_index == 0) 
-	{
-		output[current_batch] = scratch[current_batch][0].index % size;
-	}
-}
+    #define COMPARE_SIGN <
+    #define UNIT_FILL_VAL UNIT_VAL_MIN
 #else
-__attribute__((opencl_unroll_hint))
-	while (global_index < size + batch_offset) 
-	{
-		iav_type element;
-		element.value = input[global_index];
-		element.index = global_index;
-
-		if(accumulator.value > element.value)
-		{
-			accumulator.value = element.value;
-			accumulator.index = element.index;
-		}
-		global_index += GLOBAL_SIZE;
-	}
-
-	scratch[current_batch][local_index] = accumulator;
-
-	barrier(CLK_LOCAL_MEM_FENCE);
-
-	__attribute__((opencl_unroll_hint))
-	for(uint offset = LOCAL_SIZE / 2; offset > 0; offset /= 2) 
-	{
-		if (local_index < offset) 
-		{
-			iav_type other = scratch[current_batch][local_index + offset];
-			iav_type mine = scratch[current_batch][local_index];
-
-			if(mine.value > other.value)
-			{
-				scratch[current_batch][local_index] = other;
-			}
-		}
-		barrier(CLK_LOCAL_MEM_FENCE);
-	}
-
-	if (local_index == 0) 
-	{
-		output[current_batch] = scratch[current_batch][0].index % size;
-	}
-}
+    #define COMPARE_SIGN >
+    #define UNIT_FILL_VAL UNIT_VAL_MAX    
 #endif
+
+__attribute__((reqd_work_group_size(LOCAL_SIZE, 1, 1)))
+KERNEL(arg_max_gpu_top_k)(const __global UNIT_TYPE* input, __global uint* output)
+{
+    uint results[TOP_K];
+    __local iav_type scratch[LOCAL_SIZE];
+    const uint size = INPUT0_SIZE_X * INPUT0_SIZE_Y * INPUT0_FEATURE_NUM;
+    const uint current_batch = (uint)get_global_id(1);
+    const uint batch_offset = current_batch * size;
+    uint local_index = get_local_id(0);
+    uint global_index = batch_offset + local_index;
+
+    iav_type accumulator;
+
+    uint temp_index = global_index;
+
+    for (uint i = 0; i < TOP_K; i++){
+        accumulator.index = global_index;
+        accumulator.value = input[global_index];
+        for (int j = 0; j < i; j++){
+            if (accumulator.index % size == results[j])
+                accumulator.value = UNIT_FILL_VAL;
+        }
+        global_index += GLOBAL_SIZE;
+        __attribute__((opencl_unroll_hint))
+        while (global_index < size + batch_offset) 
+        {
+            iav_type element;
+            element.value = input[global_index];
+            element.index = global_index;
+            for (int j = 0; j < i; j++){
+                if (element.index % size == results[j])
+                    element.value = UNIT_FILL_VAL;
+            }
+            if(accumulator.value COMPARE_SIGN element.value)
+            {
+                accumulator.value = element.value;
+                accumulator.index = element.index;
+            }
+            global_index += GLOBAL_SIZE;
+        }
+        if (local_index < size)
+            scratch[local_index] = accumulator;
+        else
+            scratch[local_index].value = UNIT_FILL_VAL;
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        __attribute__((opencl_unroll_hint))
+        for(uint offset = LOCAL_SIZE / 2; offset > 0; offset /= 2) 
+        {
+            if (local_index < offset) 
+            {
+                iav_type other = scratch[local_index + offset];
+                iav_type mine = scratch[local_index];
+
+                if(mine.value COMPARE_SIGN other.value)
+                {
+                    scratch[local_index] = other;
+                }
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
+        }
+
+        if (local_index == 0) 
+        {
+            output[current_batch * TOP_K + i] = scratch[0].index % size;
+        }
+        global_index = temp_index;
+        results[i] = scratch[0].index % size;
+    }
+}
+
+#undef COMPARE_SIGN
+#undef UNIT_FILL_VAL

@@ -68,6 +68,14 @@ namespace KernelSelector
 
                     union dedicated_t
                     {
+                        struct lookt_t
+                        {
+                            uint32_t axisX : 1;
+                            uint32_t axisY : 1;
+                            uint32_t axisFeature : 1;
+                            uint32_t axisBatch : 1;
+                            uint32_t axisNone : 1;
+                        } lookt;
 						struct argm_t
 						{
 							uint32_t axisX : 1;
@@ -413,6 +421,30 @@ namespace KernelSelector
                 break;
             case LRNMode::WITHIN_CHANNEL:
                 key.restrict.val.dedicated.norm.within = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
+        void EnableLookUpTableAxis(LookUpTableAxis m) 
+        {
+            switch (m)
+            {
+            case KernelSelector::LookUpTableAxis::BATCH:
+                key.restrict.val.dedicated.lookt.axisBatch = 1;
+                break;
+            case KernelSelector::LookUpTableAxis::FEATURE:
+                key.restrict.val.dedicated.lookt.axisFeature = 1;
+                break;
+            case KernelSelector::LookUpTableAxis::X:
+                key.restrict.val.dedicated.lookt.axisX = 1;
+                break;
+            case KernelSelector::LookUpTableAxis::Y:
+                key.restrict.val.dedicated.lookt.axisY = 1;
+                break;
+            case KernelSelector::LookUpTableAxis::NONE:
+                key.restrict.val.dedicated.lookt.axisNone = 1;
                 break;
             default:
                 break;
@@ -983,9 +1015,8 @@ namespace KernelSelector
     };
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// ArgMaxParams
+	// ArgMaxMinParams
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
 	struct ArgMaxMinParams : public BaseParams
 	{
 		ArgMaxMinParams() : BaseParams(KernelType::ARG_MAX_MIN), argMaxParams() {}
@@ -1008,6 +1039,31 @@ namespace KernelSelector
 			return k;
 		}
 	};
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // LookUpTableParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct LookUpTableParams : public BaseParams
+    {
+        LookUpTableParams() : BaseParams(KernelType::LOOKUP_TABLE), lookUpTableParams() {}
+
+        struct DedicatedParams
+        {
+            LookUpTableAxis	lookUpTableAxis = LookUpTableAxis::NONE;
+            uint32_t		numberOfValues;
+            DataTensor      inputIndexes;
+        };
+
+        DedicatedParams lookUpTableParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            ParamsKey k = BaseParams::GetParamsKey();
+            k.EnableLookUpTableAxis(lookUpTableParams.lookUpTableAxis);
+
+            return k;
+        }
+    };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // PoolingParams
@@ -1493,6 +1549,14 @@ namespace KernelSelector
 	{
 		ArgMaxMinOptionalParams() : OptionalParams(KernelType::ARG_MAX_MIN) {}
 	};
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // LookUpTableOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct LookUpTableOptionalParams : OptionalParams
+    {
+        LookUpTableOptionalParams() : OptionalParams(KernelType::LOOKUP_TABLE) {}
+    };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // PoolingOptionalParams

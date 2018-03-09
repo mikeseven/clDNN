@@ -16,22 +16,17 @@
 
 #pragma once
 
-#include "kernel_selector.h"
+#include "arg_max_min_kernel_base.h"
 
 namespace KernelSelector
 {
-	class ArgMaxMinKernelSelctor : public KernelSelctorBase
+	class ArgMaxMinKernelTopK : public ArgMaxMinKernelBase
 	{
 	public:
-		static ArgMaxMinKernelSelctor &Instance() {
-			static ArgMaxMinKernelSelctor instance_;
-			return instance_;
-		}
+		ArgMaxMinKernelTopK() : ArgMaxMinKernelBase("arg_max_min_top_k") {}
+		virtual ~ArgMaxMinKernelTopK() {}
 
-		ArgMaxMinKernelSelctor();
-
-		virtual ~ArgMaxMinKernelSelctor() {}
-
-		virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
+		virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+		virtual ParamsKey GetSupportedKey() const override;
 	};
 }
