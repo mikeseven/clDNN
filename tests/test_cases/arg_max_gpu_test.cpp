@@ -190,6 +190,7 @@ TEST(arg_max_gpu, base) {
 //         EXPECT_EQ(count, amount);
 //     }
 //}
+//
 
 TEST(arg_max_gpu_top_k, base) {
 	//  Input  : 2x3x2x2
