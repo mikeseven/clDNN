@@ -261,6 +261,8 @@ inline kernel_selector::weights_layout to_weights_layout(format f)
     case format::winograd_2x3_s1_weights:       return kernel_selector::weights_layout::winograd_2x3_s1_weights;
     case format::winograd_2x3_s1_fused_weights: return kernel_selector::weights_layout::winograd_2x3_s1_fused_weights;
     case format::winograd_6x3_s1_fused_weights: return kernel_selector::weights_layout::winograd_6x3_s1_fused_weights;
+    case format::image_2d_weights_winograd_6x3_s1_fbxyb:     return kernel_selector::weights_layout::image_2d_weights_winograd_6x3_s1_fbxyb;
+    case format::image_2d_weights_winograd_6x3_s1_xfbyb:     return kernel_selector::weights_layout::image_2d_weights_winograd_6x3_s1_xfbyb;
     default:
         return kernel_selector::weights_layout::oi;
     }
@@ -285,6 +287,8 @@ static inline cldnn::format::type from_weights_layout(kernel_selector::weights_l
     case kernel_selector::weights_layout::winograd_2x3_s1_weights:          return cldnn::format::winograd_2x3_s1_weights;
     case kernel_selector::weights_layout::winograd_2x3_s1_fused_weights:    return cldnn::format::winograd_2x3_s1_fused_weights;
     case kernel_selector::weights_layout::winograd_6x3_s1_fused_weights:    return cldnn::format::winograd_6x3_s1_fused_weights;
+    case kernel_selector::weights_layout::image_2d_weights_winograd_6x3_s1_fbxyb:        return cldnn::format::image_2d_weights_winograd_6x3_s1_fbxyb;
+    case kernel_selector::weights_layout::image_2d_weights_winograd_6x3_s1_xfbyb:        return cldnn::format::image_2d_weights_winograd_6x3_s1_xfbyb;
     default:
         return cldnn::format::bfyx;
     }
@@ -412,6 +416,8 @@ inline kernel_selector::activation_function get_kernel_selector_activation_param
         return kernel_selector::activation_function::SQUARE;
     case activation_sqrt:
         return kernel_selector::activation_function::SQRT;
+    case activation_elu:
+        return kernel_selector::activation_function::ELU;
     default:
         throw std::runtime_error("Unknown activation function");
         break;
@@ -446,8 +452,11 @@ inline params_t get_default_params(const arg_t& arg, uint32_t split = 1)
     params.engineInfo.bSubGroupShortSupport = context->extension_supported("cl_intel_subgroups_short");
     params.engineInfo.bFP16Support          = context->extension_supported("cl_khr_fp16");
     params.engineInfo.bFP64Support          = context->extension_supported("cl_khr_fp64");
+    params.engineInfo.bImageSupport         = engine_info.supports_image != 0;
     params.engineInfo.maxWorkGroupSize      = engine_info.max_work_group_size;
     params.engineInfo.maxLocalMemSize       = engine_info.max_local_mem_size;
+    params.engineInfo.maxImage2dWidth       = engine_info.max_image2d_width;
+    params.engineInfo.maxImage2dHeight      = engine_info.max_image2d_height;
     params.engineInfo.deviceId              = engine_info.dev_id;
     params.engineInfo.driverVersion         = engine_info.driver_version;
     params.engineInfo.hostVersion           = to_host_version(cldnn::get_version());

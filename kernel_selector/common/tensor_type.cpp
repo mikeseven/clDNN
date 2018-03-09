@@ -258,7 +258,7 @@ namespace KernelSelector
                     vec[Channelndex(l, WeightsChannelName::X)] = 4;
                     vec[Channelndex(l, WeightsChannelName::Y)] = 3;
                 }
-                else if (l == WeightsLayout::winograd_6x3_s1_fused_weights)
+                else if (l == WeightsLayout::winograd_6x3_s1_fused_weights || l == WeightsLayout::image_2d_weights_winograd_6x3_s1_fbxyb || l == WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb)
                 {
                     vec[Channelndex(l, WeightsChannelName::X)] = 8;
                     vec[Channelndex(l, WeightsChannelName::Y)] = 3;

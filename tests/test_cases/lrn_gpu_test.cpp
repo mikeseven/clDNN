@@ -708,7 +708,7 @@ public:
 
     virtual bool is_format_supported(cldnn::format format)
     {
-        return ((format == cldnn_format_type::cldnn_format_yxfb) || (format == cldnn_format_type::cldnn_format_bfyx));
+        return ((format == cldnn_format_type::cldnn_format_yxfb) || (format == cldnn_format_type::cldnn_format_bfyx) || (format == cldnn_format_type::cldnn_format_byxf));
     }
 
     template<typename Type>

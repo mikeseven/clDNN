@@ -15,6 +15,7 @@
 */
 
 #include "deconvolution_kernel_base.h"
+#include "kernel_selector_utils.h"
 
 namespace KernelSelector 
 {
@@ -45,5 +46,45 @@ namespace KernelSelector
         kd.lws2 = 1;
         kd.effiency = DONT_USE_IF_HAVE_SOMETHING_ELSE;
         return kd;
+    }
+
+    KernelsData DeconvolutionKernelBase::GetKernelsData(const Params& params, const OptionalParams& options) const
+    {
+        assert(params.GetType() == KernelType::DECONVOLUTION);
+
+        const DeconvolutionParams& orgParams = static_cast<const DeconvolutionParams&>(params);
+
+        const std::vector<WeightsLayout> weightsLayouts = {
+            WeightsLayout::yxio,
+            WeightsLayout::iyxo,
+            WeightsLayout::oyxi,
+            WeightsLayout::oiyx };
+
+        DispatchData runInfo = SetDefault(orgParams);
+        KernelData kd = KernelData::Default<DeconvolutionParams>(params);
+        DeconvolutionParams& newParams = *static_cast<DeconvolutionParams*>(kd.params.get());
+
+        bool succeed = UpdateWeightsParams(
+            newParams,
+            options,
+            weightsLayouts,
+            kd.weightsReorderParams);
+
+        if (!succeed)
+        {
+            return{};
+        }
+
+        auto cldnn_jit = GetJitConstants(orgParams);
+        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);
+        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
+
+        auto& kernel = kd.kernels[0];
+        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, ROUND_ROBIN, true, !orgParams.bias.empty());
+        kernel.arguments.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
+
+        kd.estimatedTime = runInfo.effiency;
+
+        return{ kd };
     }
 }

@@ -14,20 +14,19 @@
 // limitations under the License.
 */
 
-#include "deconvolution_kernel_selector.h"
-#include "deconvolution_kernel_ref.h"
-#include "deconvolution_kernel_bfyx_opt.h"
- 
-namespace KernelSelector 
-{
-    DeconvolutionKernelSelctor::DeconvolutionKernelSelctor()
-    {
-        Attach<DeconvolutionKernelRef>();
-        Attach<DeconvolutionKernel_bfyx_opt>();
-    }
+#pragma once
 
-    KernelsData DeconvolutionKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+#include "reorder_kernel_base.h"
+
+namespace KernelSelector
+{
+    class ReorderWeightsImageWinograd6x3Kernel : public ReorderKernelBase
     {
-        return GetNaiveBestKernel(params, options, KernelType::DECONVOLUTION);
-    }
+    public:
+        ReorderWeightsImageWinograd6x3Kernel() : ReorderKernelBase("reorder_weights_image_winograd_6x3_s1") {}
+
+        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual ParamsKey GetSupportedKey() const override;
+        virtual DispatchData SetDefault(const ReorderWeightsParams& arg) const override;
+    };
 }

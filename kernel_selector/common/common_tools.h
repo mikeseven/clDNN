@@ -69,6 +69,7 @@ namespace KernelSelector
             paramsNum = 2;
             break;
         case ActivationFunction::RELU_NEGATIVE_SLOPE:
+        case ActivationFunction::ELU:
             paramsNum = 1;
             break;
         default:

@@ -38,6 +38,8 @@ gpu_toolkit_config convert_configuration(const engine_configuration conf)
     result.host_out_of_order = true; //TODO: enable when barriers in driver will be fixed
     result.log = conf.engine_log;
     result.ocl_sources_dumps_dir = conf.sources_dumps_dir;
+    result.priority_mode = static_cast<cldnn_priority_mode_type>(conf.priority_mode);
+    result.throttle_mode = static_cast<cldnn_throttle_mode_type>(conf.throttle_mode);
     return result;
 }
 

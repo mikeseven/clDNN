@@ -82,6 +82,19 @@ namespace KernelSelector {
         return jit;
     }
 
+    std::vector<WeightsLayout> ConvolutionKernel_Winograd_6x3_s1_fused::GetSupportedWeightLayouts(const ConvolutionParams& params) const
+    {
+        //check if image weights layout will fit into device memory, if not then try to fallback to buffer
+        if (CheckImageSize(params, WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb))
+        {
+            return{ WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb };
+        }
+        else
+        {
+            return{ WeightsLayout::winograd_6x3_s1_fused_weights };
+        }
+    }
+
     ConvolutionKernel_Winograd_6x3_s1_fused::Parent::DispatchData ConvolutionKernel_Winograd_6x3_s1_fused::SetDefault(const ConvolutionParams& arg, int) const
     {
         Parent::DispatchData runInfo = Parent::SetDefault(arg);
