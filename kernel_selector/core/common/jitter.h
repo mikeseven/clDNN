@@ -484,7 +484,7 @@ inline JitConstants MakeConvolutionParamsJitConstants(const ConvolutionParams& p
 
     if (params.convParams.int8_quantization)
     {
-        jit.AddConstants({MakeJitConstant("W_QF",       params.quantization_factors[0])});
+        jit.AddConstants({MakeJitConstant("W_QF",       params.weights_quantization_factors[0])});
     }
 
     return jit;

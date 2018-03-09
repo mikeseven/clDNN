@@ -65,7 +65,7 @@ public:
         return get_dependency(1 + this->get_split() + idx);
     }
 
-    decltype(auto) quantization_factors(size_t idx = 0) const
+    decltype(auto) weights_quantization_factors(size_t idx = 0) const
     {
         if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("quantization factor offset too big");
@@ -119,7 +119,7 @@ public:
         return dep_memory(1 + node.get_split() + index);
     }
 
-    decltype(auto) quantization_factors_memory(size_t index) const
+    decltype(auto) weights_quantization_factors_memory(size_t index) const
     {
         if (static_cast<int32_t>(index) >= node.get_split())
             throw std::range_error("quantization factors offset too big");
@@ -132,7 +132,7 @@ public:
         return node.bias_term();
     }
 
-    bool quantization_factors_term() const
+    bool weights_quantization_factors_term() const
     {
         return node.weights_quantization_term();
     }

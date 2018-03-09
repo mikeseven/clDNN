@@ -94,9 +94,9 @@ namespace {
                 }
                 break;
             case kernel_selector::kernel_argument_types::QUANTIZATION_FACTORS:
-                if (data.quantization_factors)
+                if (data.weights_quantization_factors)
                 {
-                    status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.quantization_factors).get_buffer());
+                    status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.weights_quantization_factors).get_buffer());
                 }
                 break;
             case kernel_selector::kernel_argument_types::LOOKUP_TABLE:

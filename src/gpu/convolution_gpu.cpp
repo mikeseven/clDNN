@@ -47,7 +47,7 @@ protected:
 
         args.weights              = &instance.weights_memory(split);
         args.bias                 = instance.bias_term() ? &instance.bias_memory(split) : nullptr;
-        args.quantization_factors = instance.quantization_factors_term() ? &instance.quantization_factors_memory(split) : nullptr;
+        args.weights_quantization_factors = instance.weights_quantization_factors_term() ? &instance.weights_quantization_factors_memory(split) : nullptr;
 
         return args;
     }
@@ -127,7 +127,7 @@ public:
         conv_params.convParams.int8_quantization = int8_quantization;
         if (int8_quantization)
         {
-            conv_params.quantization_factors.push_back(convert_data_tensor(arg.quantization_factors().get_output_layout()).FlattenFeatureAndSpatials());
+            conv_params.weights_quantization_factors.push_back(convert_data_tensor(arg.weights_quantization_factors().get_output_layout()).FlattenFeatureAndSpatials());
         }
 
         auto& kernel_selector = kernel_selector::convolution_kernel_selector::Instance();

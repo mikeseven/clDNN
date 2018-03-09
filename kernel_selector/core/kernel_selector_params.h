@@ -811,7 +811,7 @@ namespace KernelSelector
         };
 
         DedicatedParams convParams;
-        MultiDataTensor quantization_factors;
+        MultiDataTensor weights_quantization_factors;
         virtual std::string to_string() const override;
 
         virtual ParamsKey GetParamsKey() const override
