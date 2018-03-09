@@ -40,7 +40,7 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
     /// @param input Input primitive id.
     /// @param weights List of primitive ids containing weights data.
     /// @param bias List of primitive ids containing bias data. Provide empty vector if using next parameters without bias.
-    /// @param input_offset Input padding/offset.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the deconvolution window should start calculations.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param with_activation Enables Relu activation.
     /// @param activation_slp Relu activation slope.
@@ -72,7 +72,7 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
     /// @param id This primitive id.
     /// @param input Input primitive id.
     /// @param weights List of primitive ids containing weights data.
-    /// @param input_offset Input padding/offset.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the deconvolution window should start calculations.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param with_activation Enables Relu activation.
     /// @param activation_slp Relu activation slope.
@@ -104,7 +104,7 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
     /// @param input Input primitive id.
     /// @param weights List of primitive ids containing weights data.
     /// @param bias List of primitive ids containing bias data. Provide empty vector if using next parameters without bias.
-    /// @param input_offset Input padding/offset.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the deconvolution window should start calculations.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param with_activation Enables Relu activation.
     /// @param activation_slp Relu activation slope.
@@ -139,7 +139,7 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
     /// @param id This primitive id.
     /// @param input Input primitive id.
     /// @param weights List of primitive ids containing weights data.
-    /// @param input_offset Input padding/offset.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the deconvolution window should start calculations.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param with_activation Enables Relu activation.
     /// @param activation_slp Relu activation slope.
@@ -192,7 +192,7 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
     /// @param input Input primitive id.
     /// @param weights List of primitive ids containing weights data.
     /// @param bias List of primitive ids containing bias data. Provide empty vector if using next parameters without bias.
-    /// @param input_offset Input padding/offset.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the deconvolution window should start calculations.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param with_activation Enables Relu activation.
     /// @param activation_slp Relu activation slope.
@@ -219,7 +219,7 @@ struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC
     /// @param id This primitive id.
     /// @param input Input primitive id.
     /// @param weights List of primitive ids containing weights data.
-    /// @param input_offset Input padding/offset.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the deconvolution window should start calculations.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param with_activation Enables Relu activation.
     /// @param activation_slp Relu activation slope.

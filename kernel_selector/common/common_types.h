@@ -88,6 +88,7 @@ namespace KernelSelector
         SQUARE,
         SQRT,
         LINEAR,
+        ELU,
         NONE
     };
 

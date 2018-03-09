@@ -153,6 +153,29 @@ struct execution_params {
     bool disable_mem_pool; // memory optimization
 };
 
+struct memory_filler
+{
+    typedef enum
+    {
+        zero = 0,
+        one,
+        zero_to_nine,
+    } filler_type;
+
+    template<typename T>
+    static void fill_memory(const cldnn::memory& memory, filler_type fill)
+    {
+        auto mem_ptr = memory.pointer<T>();
+        float val = (fill == filler_type::zero) ? 0.0f : 1.0f;
+        for (auto& it : mem_ptr)
+        {
+            if (fill == zero_to_nine)
+                val += fmod(val + 1.0f, 10.0f);
+            it = T(val);
+        }
+    }
+};
+
 std::vector<std::string> get_directory_images(const std::string& images_path);
 std::vector<std::string> get_directory_weights(const std::string& images_path);
 

@@ -40,7 +40,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
     /// @param input Input primitive id.
     /// @param weights List of primitive ids containing weights data.
     /// @param bias List of primitive ids containing bias data.
-    /// @param input_offset Input padding/offset.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution window should start calculations.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param dilation Defines gaps in the input - dilation rate k=1 is normal convolution, k=2 means skipping one pixel per input, k=4 means skipping 3 pixels.
     /// As an example in one dimension, a filter w of size 3 would compute over input x the following: w[0]*x[0] + w[1]*x[1] + w[2]*x[2] for dilation of 1.
@@ -79,7 +79,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
     /// @param id This primitive id.
     /// @param input Input primitive id.
     /// @param weights List of primitive ids containing weights data.
-    /// @param input_offset Input padding/offset.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution window should start calculations.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param dilation Defines gaps in the input - dilation rate k=1 is normal convolution, k=2 means skipping one pixel per input, k=4 means skipping 3 pixels.
     /// As an example in one dimension, a filter w of size 3 would compute over input x the following: w[0]*x[0] + w[1]*x[1] + w[2]*x[2] for dilation of 1.
@@ -116,7 +116,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
     /// @param input Input primitive id.
     /// @param weights List of primitive ids containing weights data.
     /// @param bias List of primitive ids containing bias data.
-    /// @param input_offset Input padding/offset.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution window should start calculations.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param dilation Defines gaps in the input - dilation rate k=1 is normal convolution, k=2 means skipping one pixel per input, k=4 means skipping 3 pixels.
     /// As an example in one dimension, a filter w of size 3 would compute over input x the following: w[0]*x[0] + w[1]*x[1] + w[2]*x[2] for dilation of 1.
@@ -158,7 +158,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
     /// @param id This primitive id.
     /// @param input Input primitive id.
     /// @param weights List of primitive ids containing weights data.
-    /// @param input_offset Input padding/offset.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution window should start calculations.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param dilation Defines gaps in the input - dilation rate k=1 is normal convolution, k=2 means skipping one pixel per input, k=4 means skipping 3 pixels.
     /// As an example in one dimension, a filter w of size 3 would compute over input x the following: w[0]*x[0] + w[1]*x[1] + w[2]*x[2] for dilation of 1.
@@ -217,7 +217,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
     /// @param input Input primitive id.
     /// @param weights List of primitive ids containing weights data.
     /// @param bias List of primitive ids containing bias data.
-    /// @param input_offset Input padding/offset.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution window should start calculations.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param dilation Defines gaps in the input - dilation rate k=1 is normal convolution, k=2 means skipping one pixel per input, k=4 means skipping 3 pixels.
     /// As an example in one dimension, a filter w of size 3 would compute over input x the following: w[0]*x[0] + w[1]*x[1] + w[2]*x[2] for dilation of 1.
@@ -248,7 +248,7 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
     /// @param id This primitive id.
     /// @param input Input primitive id.
     /// @param weights List of primitive ids containing weights data.
-    /// @param input_offset Input padding/offset.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution window should start calculations.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
     /// @param dilation Defines gaps in the input - dilation rate k=1 is normal convolution, k=2 means skipping one pixel per input, k=4 means skipping 3 pixels.
     /// As an example in one dimension, a filter w of size 3 would compute over input x the following: w[0]*x[0] + w[1]*x[1] + w[2]*x[2] for dilation of 1.

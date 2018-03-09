@@ -265,6 +265,7 @@ namespace KernelSelector {
         case ActivationFunction::SQUARE:                method = "SQUARE"; break;
         case ActivationFunction::SQRT:                  method = "SQRT"; break;
         case ActivationFunction::LINEAR:                method = "LINEAR"; break;
+        case ActivationFunction::ELU:                   method = "ELU"; break;
         case ActivationFunction::NONE:                  method = "NONE"; break;
         default: break;
         }
@@ -486,6 +487,8 @@ namespace KernelSelector {
         case WeightsLayout::winograd_2x3_s1_weights:    return "WINOGRAD_2x3_S1_WEIGHTS";
         case WeightsLayout::winograd_2x3_s1_fused_weights:    return "WINOGRAD_2x3_S1_FUSED_WEIGHTS";
         case WeightsLayout::winograd_6x3_s1_fused_weights:    return "WINOGRAD_6x3_S1_FUSED_WEIGHTS";
+        case WeightsLayout::image_2d_weights_winograd_6x3_s1_fbxyb: return "IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_FBXYB";
+        case WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb: return "IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_XFBYB";
         default:
             return "";
             break;

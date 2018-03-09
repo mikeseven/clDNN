@@ -30,7 +30,7 @@ namespace cldnn
     {
         auto input_layout = node.input().get_output_layout();
 
-        cldnn::layout layoutTemp = cldnn::layout(input_layout.data_type, format::bfyx, tensor(input_layout.size.batch[0],
+        cldnn::layout layoutTemp = cldnn::layout(input_layout.data_type, input_layout.format, tensor(input_layout.size.batch[0],
             input_layout.size.feature[0] * input_layout.size.spatial[0] * input_layout.size.spatial[1], 1, 1));
         return layoutTemp;
     }

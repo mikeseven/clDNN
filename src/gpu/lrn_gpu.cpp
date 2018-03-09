@@ -65,6 +65,8 @@ namespace {
             implementation_map<lrn>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), lrn_gpu::create);
             implementation_map<lrn>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), lrn_gpu::create);
             implementation_map<lrn>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), lrn_gpu::create);
+            implementation_map<lrn>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::byxf), lrn_gpu::create);
+            implementation_map<lrn>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::byxf), lrn_gpu::create);
         }
         ~attach() {}
     };
