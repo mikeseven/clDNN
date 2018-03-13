@@ -26,6 +26,7 @@
 #include "lrn/lrn_kernel_selector.h"
 #include "normalize/normalize_kernel_selector.h"
 #include "pooling/pooling_kernel_selector.h"
+#include "max_unpooling/max_unpooling_kernel_selector.h"
 #include "roi_pooling/roi_pooling_kernel_selector.h"
 #include "fully_connected/fully_connected_kernel_selector.h"
 #include "activation/activation_kernel_selector.h"
@@ -86,6 +87,7 @@ namespace kernel_selector
     using lrn_params                        = KernelSelector::LRNParams;
     using normalize_params                  = KernelSelector::NormalizeParams;
     using pooling_params                    = KernelSelector::PoolingParams;
+    using max_unpooling_params              = KernelSelector::MaxUnpoolingParams;
     using roi_pooling_v1_params             = KernelSelector::ROIPoolingParams;
     using fully_connected_params            = KernelSelector::FullyConnectedParams;
     using activation_params                 = KernelSelector::ActivationParams;
@@ -109,6 +111,7 @@ namespace kernel_selector
     using lrn_optional_params               = KernelSelector::LRNOptionalParams;
     using normalize_optional_params         = KernelSelector::NormalizeOptionalParams;
     using pooling_optional_params           = KernelSelector::PoolingOptionalParams;
+    using max_unpooling_optional_params     = KernelSelector::MaxUnpoolingOptionalParams;
     using roi_pooling_optional_params       = KernelSelector::ROIPoolingOptionalParams;
     using fully_connected_optional_params   = KernelSelector::FullyConnectedOptionalParams;
     using activation_optional_params        = KernelSelector::ActivationOptionalParams;
@@ -125,6 +128,7 @@ namespace kernel_selector
     using lrn_kernel_selector               = KernelSelector::LRNKernelSelctor;
     using normalize_kernel_selector         = KernelSelector::NormalizeKernelSelctor;
     using pooling_kernel_selector           = KernelSelector::PoolingKernelSelctor;
+    using max_unpooling_kernel_selector     = KernelSelector::MaxUnpoolingKernelSelctor;
     using roi_pooling_v1_kernel_selector    = KernelSelector::ROIPoolingKernelSelctor;
     using fully_connected_kernel_selector   = KernelSelector::FullyConnectedKernelSelctor;
     using activation_kernel_selector        = KernelSelector::ActivationKernelSelctor;

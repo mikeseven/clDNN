@@ -41,7 +41,8 @@ namespace KernelSelector
         CONCATENATION,
         UPSAMPLING,
         REGION_YOLO,
-        REORG_YOLO
+        REORG_YOLO,
+        MAX_UNPOOLING
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
