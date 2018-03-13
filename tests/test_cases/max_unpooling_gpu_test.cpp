@@ -105,7 +105,7 @@ TEST(max_unpooling_gpu, basic_in2x3x2x2) {
         0.f, 0.f, 0.f,
         12.f, 0.f, 17.f,
     };
-    for (int i = 0; i < expected_output_vec.size(); ++i) {
+    for (size_t i = 0; i < expected_output_vec.size(); ++i) {
         EXPECT_EQ(expected_output_vec[i], output_ptr[i]);
     }
 }
@@ -195,7 +195,7 @@ TEST(max_unpooling_gpu, basic_in2x3x2x2_output_padding) {
         0.f, 0.f, 0.f, 0.f, 0.f,
     };
     std::vector<float> out;
-    for (int i = 0; i < expected_output_vec.size(); ++i) {
+    for (size_t i = 0; i < expected_output_vec.size(); ++i) {
         out.push_back(output_ptr[i]);
         EXPECT_EQ(expected_output_vec[i], output_ptr[i]);
     }
@@ -277,7 +277,7 @@ TEST(max_unpooling_gpu, basic_in2x3x2x2_output_size) {
         0.f, 0.f, 0.f,
         12.f, 0.f, 17.f,
     };
-    for (int i = 0; i < expected_output_vec.size(); ++i) {
+    for (size_t i = 0; i < expected_output_vec.size(); ++i) {
         EXPECT_EQ(expected_output_vec[i], output_ptr[i]);
     }
 }
@@ -358,7 +358,7 @@ TEST(max_unpooling_gpu, basic_in2x3x2x2_fp16) {
         0.f, 0.f, 0.f,
         12.f, 0.f, 17.f,
     };
-    for (int i = 0; i < expected_output_vec.size(); ++i) {
+    for (size_t i = 0; i < expected_output_vec.size(); ++i) {
         EXPECT_EQ(expected_output_vec[i], float16_to_float32(output_ptr[i]));
     }
 }
