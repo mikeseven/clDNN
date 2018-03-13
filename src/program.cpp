@@ -353,6 +353,7 @@ void program_impl::init_graph(topology_impl const& topology)
         auto& n = get_or_create(prim.second);
         inputs.push_back(&n);
     }
+    
     replace_nodes_pre();
 
     for (auto itr = inputs.begin(); itr != inputs.end(); )
@@ -362,8 +363,6 @@ void program_impl::init_graph(topology_impl const& topology)
         auto deps = node->get_primitive()->dependencies();
         if (deps.empty())
             continue;
-
-        node->get_primitive();
 
         //add pointers to node's dependencies
         for (auto& dep : deps)
@@ -382,6 +381,7 @@ void program_impl::init_graph(topology_impl const& topology)
         //primitive has dependencies so remove it from 'inputs'
         inputs.erase(node_itr);
     }
+
     replace_nodes_post();
     set_outputs();
     calc_processing_order();

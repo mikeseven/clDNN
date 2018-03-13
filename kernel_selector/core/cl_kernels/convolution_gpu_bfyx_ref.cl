@@ -70,8 +70,8 @@ KERNEL(convolution)(
                     {
                         uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH + k*INPUT0_FEATURE_PITCH;
                         uint filter_idx = filter_offset + k*FILTER_IFM_PITCH + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
-#if DEPTHWISE_SEPARABLE_OPT
-                        // emulation dpas with 32bit accumulator
+#if QUANTIZATION_TERM
+                        // emulation dpas with 32bit accumulatorS
                         dotProd += (int)input[input_idx] * (int)weights[filter_idx];
 #else
                         dotProd += input[input_idx] * weights[filter_idx];

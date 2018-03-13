@@ -1469,7 +1469,6 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2_depthw
 TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2_depthwise_sep_opt_bfyx) {
     //  Test for depthwise separable optimization, there are 16 weights and biases (split 16)
     //  data is similar as in basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2 but with batch 1
-
     engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 2, 16, 4, 4 } });
