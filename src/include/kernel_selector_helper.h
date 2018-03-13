@@ -417,6 +417,22 @@ inline kernel_selector::activation_function get_kernel_selector_activation_param
     }
 }
 
+inline kernel_selector::activation_function get_kernel_selector_activation_grad_param(cldnn_activation_grad_func activation_grad_func)
+{
+    switch (activation_grad_func)
+    {
+    case activation_grad_none:
+        return kernel_selector::activation_function::NONE;
+    case activation_grad_relu:
+        return kernel_selector::activation_function::RELU_GRAD;
+    case activation_grad_relu_negative_slope:
+        return kernel_selector::activation_function::RELU_NEGATIVE_SLOPE_GRAD;
+    default:
+        throw std::runtime_error("Unknown activation_grad function");
+        break;
+    }
+}
+
 template <typename arg_t>
 inline void convert_fused_activation_func_params(const arg_t& arg, kernel_selector::base_params& params)
 {
@@ -427,7 +443,7 @@ inline void convert_fused_activation_func_params(const arg_t& arg, kernel_select
 
 template <typename p_type>
 inline void convert_new_activation_func(const p_type primitive, kernel_selector::base_params& params)
-{        
+{
     params.activationFunc = get_kernel_selector_activation_param(primitive->activation_func);
     params.activationParams.m = primitive->additional_params.a;
     params.activationParams.n = primitive->additional_params.b;

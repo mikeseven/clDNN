@@ -88,6 +88,8 @@ namespace KernelSelector
         SQRT,
         LINEAR,
         ELU,
+        RELU_GRAD,
+        RELU_NEGATIVE_SLOPE_GRAD,
         NONE
     };
 
