@@ -1,5 +1,5 @@
 ﻿/*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -43,14 +43,12 @@ namespace KernelSelector
 
         DispatchData kd;
 
-        kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
-
         if (input.GetLayout() == DataLayout::bfyx || input.GetLayout() == DataLayout::byxf)
         {
             // Determine global work sizes.
             kd.gws2 = input.Batch().v * input.Feature().v;    // B, F
-            kd.gws0 = Align(input.X().v, 32);        // X
-            kd.gws1 = input.Y().v;                             // Y
+            kd.gws0 = Align(input.X().v, 32);                 // X
+            kd.gws1 = input.Y().v;                            // Y
 
             // Find largest positive local work size that is divider for global work size.
             kd.lws0 = 32;
@@ -61,8 +59,8 @@ namespace KernelSelector
         {
             // Determine global work sizes.
             kd.gws0 = input.Batch().v * input.Feature().v;    // B, F
-            kd.gws1 = input.X().v;                             // X
-            kd.gws2 = input.Y().v;                             // Y
+            kd.gws1 = input.X().v;                            // X
+            kd.gws2 = input.Y().v;                            // Y
 
             kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
             while (kd.gws0 % kd.lws0 != 0)
