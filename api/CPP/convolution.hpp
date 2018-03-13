@@ -261,6 +261,8 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , weights(_weights.cpp_ids)
         , bias(_bias.cpp_ids)
         , weights_quantization_factors(_weights_quantization_factors.cpp_ids)
+        , input_quantization_factor(dto->input_quantization_factor)
+        , output_quantization_factor(dto->output_quantization_factor)
         , input_offset(dto->input_offset)
         , stride(dto->stride)
         , dilation(dto->dilation)

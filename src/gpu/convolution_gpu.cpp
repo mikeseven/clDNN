@@ -123,11 +123,12 @@ public:
             (uint32_t)std::min(dilation.spatial[1], input_size.spatial[1])
         };
         
-        bool int8_quantization = primitive->weights_quantization_factors.size() != 0;
-        conv_params.convParams.int8_quantization = int8_quantization;
-        if (int8_quantization)
+        if (primitive->weights_quantization_factors.size() != 0)
         {
+            conv_params.convParams.int8_quantization = true;
             conv_params.weights_quantization_factors.push_back(convert_data_tensor(arg.weights_quantization_factors().get_output_layout()).FlattenFeatureAndSpatials());
+            conv_params.convParams.input_quantization_factor = arg.get_input_qf();
+            conv_params.convParams.output_quantization_factor = arg.get_output_qf();
         }
 
         auto& kernel_selector = kernel_selector::convolution_kernel_selector::Instance();

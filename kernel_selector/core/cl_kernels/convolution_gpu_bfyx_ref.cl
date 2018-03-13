@@ -36,8 +36,11 @@ KERNEL(convolution)(
     const uint b = get_global_id(2) / OUTPUT_FEATURE_NUM;
 #endif
 
+#if QUANTIZATION_TERM
+    int dotProd = 0;
+#else
     UNIT_TYPE dotProd = UNIT_VAL_ZERO;
-
+#endif
     const int input_x = x * STRIDE_SIZE_X - PADDING_SIZE_X;
     const int input_y = y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
 
@@ -67,7 +70,12 @@ KERNEL(convolution)(
                     {
                         uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH + k*INPUT0_FEATURE_PITCH;
                         uint filter_idx = filter_offset + k*FILTER_IFM_PITCH + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
-                        dotProd += input[input_idx]*weights[filter_idx];
+#if DEPTHWISE_SEPARABLE_OPT
+                        // emulation dpas with 32bit accumulator
+                        dotProd += (int)input[input_idx] * (int)weights[filter_idx];
+#else
+                        dotProd += input[input_idx] * weights[filter_idx];
+#endif                     
                     }
                 }
             }
@@ -81,15 +89,18 @@ KERNEL(convolution)(
     const uint bias_index = f;
 #endif
 #if QUANTIZATION_TERM
-    dotProd = (UNIT_TYPE)((float)dotProd * quantizations[f] + biases[bias_index]);
+    dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * O_QF);
 #else
     dotProd += (UNIT_TYPE)biases[bias_index];
 #endif
 #endif
 
-
-
     const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * OUTPUT_FEATURE_NUM;
     const uint dst_index = GET_DATA_INDEX(OUTPUT, b, f, y, x) + out_split_offset;
+#if QUANTIZATION_TERM
+    output[dst_index] = convert_char(ACTIVATION(dotProd, NL_M, NL_N));
+#else
     output[dst_index] = ACTIVATION(dotProd, NL_M, NL_N);
+#endif   
+    
 }

@@ -35,6 +35,8 @@ public:
         , split(this->get_primitive()->split())
         , depthwise_sep_opt(false)
         , transposed(false)
+        , input_qf(this->get_primitive()->input_quantization_factor)
+        , output_qf(this->get_primitive()->output_quantization_factor)
     {
     }
 
@@ -82,11 +84,16 @@ public:
     {
         return get_primitive()->weights_quantization_factors.size() > 0;
     }
-    
+
+    float get_input_qf() const { return input_qf; }
+    float get_output_qf() const { return output_qf; }
+
 private:
     int32_t split;
     bool depthwise_sep_opt;
     bool transposed;
+    float input_qf;
+    float output_qf;
 };
 
 using convolution_node = typed_program_node<convolution>;

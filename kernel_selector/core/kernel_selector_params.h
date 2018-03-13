@@ -808,6 +808,8 @@ namespace KernelSelector
             bool     depthwiseSeparableOpt = false;
             bool     transposed = false;
             bool     int8_quantization = false;
+            float    input_quantization_factor = 1.0f;
+            float    output_quantization_factor = 1.0f;
         };
 
         DedicatedParams convParams;
