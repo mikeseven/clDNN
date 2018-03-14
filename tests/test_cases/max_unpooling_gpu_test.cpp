@@ -35,7 +35,7 @@ TEST(max_unpooling_gpu, basic_in2x3x2x2) {
     //  Argmax : 2x2x2x1
     //  Output : 2x2x3x2
 
-    //  Orginal Input:
+    //  Forward Max Pooling Input:
     //  f0: b0:  1    2  -10   b1:   0    0     -11
     //  f0: b0:  3    4  -14   b1:   0.5 -0.5   -15
     //  f1: b0:  5    6  -12   b1:   1.5  5.2   -13
@@ -105,6 +105,7 @@ TEST(max_unpooling_gpu, basic_in2x3x2x2) {
         0.f, 0.f, 0.f,
         12.f, 0.f, 17.f,
     };
+
     for (size_t i = 0; i < expected_output_vec.size(); ++i) {
         EXPECT_EQ(expected_output_vec[i], output_ptr[i]);
     }
@@ -116,7 +117,7 @@ TEST(max_unpooling_gpu, basic_in2x3x2x2_output_padding) {
     //  Output : 2x2x3x2
     //  Output Padding : 0x0x1x1
 
-    //  Orginal Input:
+    //  Forward Max Pooling Input:
     //  f0: b0:  1    2  -10   b1:   0    0     -11
     //  f0: b0:  3    4  -14   b1:   0.5 -0.5   -15
     //  f1: b0:  5    6  -12   b1:   1.5  5.2   -13
@@ -205,9 +206,9 @@ TEST(max_unpooling_gpu, basic_in2x3x2x2_output_size) {
     //  Input  : 2x2x2x1
     //  Argmax : 2x2x2x1
     //  Output : 2x2x3x2
-    //  Oustput size explicitly provided
+    //  Output size explicitly provided
 
-    //  Orginal Input:
+    //  Forward Max Pooling Input:
     //  f0: b0:  1    2  -10   b1:   0    0     -11
     //  f0: b0:  3    4  -14   b1:   0.5 -0.5   -15
     //  f1: b0:  5    6  -12   b1:   1.5  5.2   -13
@@ -288,7 +289,7 @@ TEST(max_unpooling_gpu, basic_in2x3x2x2_fp16) {
     //  Output : 2x2x3x2
     //  Input values in fp16
 
-    //  Orginal Input:
+    //  Forward Max Pooling Input:
     //  f0: b0:  1    2  -10   b1:   0    0     -11
     //  f0: b0:  3    4  -14   b1:   0.5 -0.5   -15
     //  f1: b0:  5    6  -12   b1:   1.5  5.2   -13

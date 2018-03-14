@@ -50,7 +50,6 @@ namespace KernelSelector
             kd.gws0 = Align(input.X().v, 32);                 // X
             kd.gws1 = input.Y().v;                            // Y
 
-            // Find largest positive local work size that is divider for global work size.
             kd.lws0 = 32;
             kd.lws1 = 1;
             kd.lws2 = 1;
