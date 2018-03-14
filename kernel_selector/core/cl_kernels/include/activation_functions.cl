@@ -31,8 +31,8 @@
 #define ACTIVATION_SQUARE(input)                        (input*input)
 #define ACTIVATION_SQRT(input)                          (sqrt(input))
 
-#define ACTIVATION_RELU_GRAD(input_grad, input)                          (input_grad * TO_UNIT_TYPE(input > UNIT_VAL_ZERO))
-#define ACTIVATION_RELU_NEGATIVE_SLOPE_GRAD(input_grad, input, slope)    (input_grad * (TO_UNIT_TYPE(input > UNIT_VAL_ZERO) + TO_UNIT_TYPE(slope) * TO_UNIT_TYPE(input <= 0)))
+#define ACTIVATION_RELU_GRAD(input_grad, input)                          (input_grad * (input > UNIT_VAL_ZERO ? TO_UNIT_TYPE(1) : TO_UNIT_TYPE(0)))
+#define ACTIVATION_RELU_NEGATIVE_SLOPE_GRAD(input_grad, input, slope)    (input_grad * ((input > UNIT_VAL_ZERO ? TO_UNIT_TYPE(1) : TO_UNIT_TYPE(0)) + TO_UNIT_TYPE(slope) * (input <= 0 ? TO_UNIT_TYPE(1) : TO_UNIT_TYPE(0))))
 
 #if defined ACTIVATION_FUNCTION_LOGISTIC
     #define ACTIVATION(input, m, n) ACTIVATION_LOGISTIC(input)
