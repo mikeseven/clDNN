@@ -269,6 +269,8 @@ namespace KernelSelector {
         case ActivationFunction::SQRT:                  method = "SQRT"; break;
         case ActivationFunction::LINEAR:                method = "LINEAR"; break;
         case ActivationFunction::ELU:                   method = "ELU"; break;
+        case ActivationFunction::RELU_GRAD:             method = "RELU_GRAD"; break;
+        case ActivationFunction::RELU_NEGATIVE_SLOPE_GRAD: method = "RELU_NEGATIVE_SLOPE_GRAD"; break;
         case ActivationFunction::NONE:                  method = "NONE"; break;
         default: break;
         }

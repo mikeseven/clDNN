@@ -26,6 +26,7 @@
 #include "lrn/lrn_kernel_selector.h"
 #include "normalize/normalize_kernel_selector.h"
 #include "pooling/pooling_kernel_selector.h"
+#include "max_unpooling/max_unpooling_kernel_selector.h"
 #include "roi_pooling/roi_pooling_kernel_selector.h"
 #include "fully_connected/fully_connected_kernel_selector.h"
 #include "activation/activation_kernel_selector.h"
@@ -86,6 +87,7 @@ namespace kernel_selector
     using lrn_params                        = KernelSelector::LRNParams;
     using normalize_params                  = KernelSelector::NormalizeParams;
     using pooling_params                    = KernelSelector::PoolingParams;
+    using max_unpooling_params              = KernelSelector::MaxUnpoolingParams;
     using roi_pooling_v1_params             = KernelSelector::ROIPoolingParams;
     using fully_connected_params            = KernelSelector::FullyConnectedParams;
     using activation_params                 = KernelSelector::ActivationParams;
@@ -109,6 +111,7 @@ namespace kernel_selector
     using lrn_optional_params               = KernelSelector::LRNOptionalParams;
     using normalize_optional_params         = KernelSelector::NormalizeOptionalParams;
     using pooling_optional_params           = KernelSelector::PoolingOptionalParams;
+    using max_unpooling_optional_params     = KernelSelector::MaxUnpoolingOptionalParams;
     using roi_pooling_optional_params       = KernelSelector::ROIPoolingOptionalParams;
     using fully_connected_optional_params   = KernelSelector::FullyConnectedOptionalParams;
     using activation_optional_params        = KernelSelector::ActivationOptionalParams;
@@ -125,6 +128,7 @@ namespace kernel_selector
     using lrn_kernel_selector               = KernelSelector::LRNKernelSelctor;
     using normalize_kernel_selector         = KernelSelector::NormalizeKernelSelctor;
     using pooling_kernel_selector           = KernelSelector::PoolingKernelSelctor;
+    using max_unpooling_kernel_selector     = KernelSelector::MaxUnpoolingKernelSelctor;
     using roi_pooling_v1_kernel_selector    = KernelSelector::ROIPoolingKernelSelctor;
     using fully_connected_kernel_selector   = KernelSelector::FullyConnectedKernelSelctor;
     using activation_kernel_selector        = KernelSelector::ActivationKernelSelctor;
@@ -413,6 +417,22 @@ inline kernel_selector::activation_function get_kernel_selector_activation_param
     }
 }
 
+inline kernel_selector::activation_function get_kernel_selector_activation_grad_param(cldnn_activation_grad_func activation_grad_func)
+{
+    switch (activation_grad_func)
+    {
+    case activation_grad_none:
+        return kernel_selector::activation_function::NONE;
+    case activation_grad_relu:
+        return kernel_selector::activation_function::RELU_GRAD;
+    case activation_grad_relu_negative_slope:
+        return kernel_selector::activation_function::RELU_NEGATIVE_SLOPE_GRAD;
+    default:
+        throw std::runtime_error("Unknown activation_grad function");
+        break;
+    }
+}
+
 template <typename arg_t>
 inline void convert_fused_activation_func_params(const arg_t& arg, kernel_selector::base_params& params)
 {
@@ -423,7 +443,7 @@ inline void convert_fused_activation_func_params(const arg_t& arg, kernel_select
 
 template <typename p_type>
 inline void convert_new_activation_func(const p_type primitive, kernel_selector::base_params& params)
-{        
+{
     params.activationFunc = get_kernel_selector_activation_param(primitive->activation_func);
     params.activationParams.m = primitive->additional_params.a;
     params.activationParams.n = primitive->additional_params.b;
