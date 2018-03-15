@@ -93,10 +93,16 @@ namespace {
                     status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.bias).get_buffer());
                 }
                 break;
-            case kernel_selector::kernel_argument_types::QUANTIZATION_FACTORS:
+            case kernel_selector::kernel_argument_types::WEIGHTS_QUANTIZATION_FACTORS:
                 if (data.weights_quantization_factors)
                 {
                     status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.weights_quantization_factors).get_buffer());
+                }
+                break;
+            case kernel_selector::kernel_argument_types::OUTPUT_CALIBRATION_FACTORS:
+                if (data.output_calibration_factors)
+                {
+                    status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.output_calibration_factors).get_buffer());
                 }
                 break;
             case kernel_selector::kernel_argument_types::LOOKUP_TABLE:

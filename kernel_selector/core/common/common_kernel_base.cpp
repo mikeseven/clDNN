@@ -109,7 +109,7 @@ namespace KernelSelector
         return jit;
     }
 
-    Arguments CommonKernelBase::GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias, bool use_quantization) const
+    Arguments CommonKernelBase::GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias, bool use_quantization, bool use_output_calibration) const
     {
         Arguments args;
 
@@ -132,7 +132,12 @@ namespace KernelSelector
 
         if (use_quantization)
         {
-            args.push_back({ ArgumentDescriptor::Types::QUANTIZATION_FACTORS, 0 });
+            args.push_back({ ArgumentDescriptor::Types::WEIGHTS_QUANTIZATION_FACTORS, 0 });
+        }
+
+        if (use_output_calibration)
+        {
+            args.push_back({ ArgumentDescriptor::Types::OUTPUT_CALIBRATION_FACTORS, 0 });
         }
 
         return args;
@@ -156,11 +161,12 @@ namespace KernelSelector
         return kernel_string;
     }
 
-    void CommonKernelBase::FillCLKernelData(clKernelData& kernel, const CommonDispatchData& runInfo, std::string kernelMapName, std::string jit, std::string entryPoint, std::string exeMode, bool weights, bool bias, bool quantization) const
+    void CommonKernelBase::FillCLKernelData(clKernelData& kernel, const CommonDispatchData& runInfo,
+        std::string kernelMapName, std::string jit, std::string entryPoint, std::string exeMode, bool weights, bool bias, bool quantization, bool calibration) const
     {
         kernel.workGroups.global = { runInfo.gws0, runInfo.gws1, runInfo.gws2 };
         kernel.workGroups.local = { runInfo.lws0, runInfo.lws1, runInfo.lws2 };
         kernel.kernelString = GetKernelString(kernelMapName, jit, entryPoint, exeMode);
-        kernel.arguments = GetArgsDesc(1, weights, bias, quantization);
+        kernel.arguments = GetArgsDesc(1, weights, bias, quantization, calibration);
     }
 }

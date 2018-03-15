@@ -75,6 +75,14 @@ public:
         return get_dependency(1 + 2*this->get_split() + idx);
     }
 
+    decltype(auto) output_calibration_factors(size_t idx = 0) const
+    {
+        if (static_cast<int32_t>(idx) >= this->get_split())
+            throw std::range_error("calibration factor offset too big");
+
+        return get_dependency(1 + 3 * this->get_split() + idx);
+    }
+
     bool bias_term() const
     {
         return get_primitive()->bias.size() > 0;
@@ -85,6 +93,11 @@ public:
         return get_primitive()->weights_quantization_factors.size() > 0;
     }
 
+    bool output_calibration_term() const
+    {
+        return get_primitive()->output_calibration_factors.size() > 0;
+    }
+    
     float get_input_qf() const { return input_qf; }
     float get_output_qf() const { return output_qf; }
 
@@ -134,6 +147,14 @@ public:
         return dep_memory(1 + 2*node.get_split() + index);
     }
 
+    decltype(auto) output_calibration_factors_memory(size_t index) const
+    {
+        if (static_cast<int32_t>(index) >= node.get_split())
+            throw std::range_error("quantization factors offset too big");
+
+        return dep_memory(1 + 3 * node.get_split() + index);
+    }
+
     bool bias_term() const
     {
         return node.bias_term();
@@ -142,6 +163,11 @@ public:
     bool weights_quantization_factors_term() const
     {
         return node.weights_quantization_term();
+    }
+
+    bool output_calibration_factors_term() const
+    {
+        return node.output_calibration_term();
     }
 };
 

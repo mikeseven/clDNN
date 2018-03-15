@@ -24,6 +24,9 @@ KERNEL(convolution)(
 #if QUANTIZATION_TERM
     __global float* quantizations,
 #endif
+#if CALIBRATION_TERM
+    __global float* calibrations,
+#endif
     uint split_idx)
 {
     const uint x = get_global_id(0);
@@ -89,10 +92,14 @@ KERNEL(convolution)(
     const uint bias_index = f;
 #endif
 #if QUANTIZATION_TERM
+#if CALIBRATION_TERM
+    dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
+#else  // CALIBRATION_TERM
     dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * O_QF);
-#else
+#endif // CALIBRATION_TERM
+#else  // QUANTIZATION_TERM
     dotProd += (UNIT_TYPE)biases[bias_index];
-#endif
+#endif // QUANTIZATION_TERM
 #endif
 
     const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * OUTPUT_FEATURE_NUM;

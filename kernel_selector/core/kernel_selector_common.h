@@ -142,7 +142,8 @@ namespace KernelSelector {
             SPLIT,
             INTERNAL_BUFFER,
             SCALAR,
-            QUANTIZATION_FACTORS,
+            WEIGHTS_QUANTIZATION_FACTORS,
+            OUTPUT_CALIBRATION_FACTORS
         };
 
         enum class ScalarTypes

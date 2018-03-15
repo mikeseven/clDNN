@@ -92,6 +92,7 @@ namespace KernelSelector
                             uint32_t depthwiseSeparableOpt : 1;
                             uint32_t transposed : 1;
                             uint32_t quantization : 1;
+                            uint32_t calibration : 1;
                         } conv;
                         struct fc_t {} fc;
                         struct softmax_t 
@@ -513,6 +514,11 @@ namespace KernelSelector
             key.restrict.val.dedicated.conv.quantization = 1;
         }
 
+        void EnableOutputCalibration()
+        {
+            key.restrict.val.dedicated.conv.calibration = 1;
+        }
+
         void EnableWinogradReorder()
         {
             key.restrict.val.dedicated.reorder.winograd = 1;
@@ -808,12 +814,14 @@ namespace KernelSelector
             bool     depthwiseSeparableOpt = false;
             bool     transposed = false;
             bool     int8_quantization = false;
+            bool     output_calibration = false;
             float    input_quantization_factor = 1.0f;
             float    output_quantization_factor = 1.0f;
         };
 
         DedicatedParams convParams;
         MultiDataTensor weights_quantization_factors;
+        MultiDataTensor output_calibration_factors;
         virtual std::string to_string() const override;
 
         virtual ParamsKey GetParamsKey() const override
@@ -844,6 +852,11 @@ namespace KernelSelector
             if (convParams.int8_quantization)
             {
                 k.Enableint8Quantization();
+            }
+
+            if (convParams.output_calibration)
+            {
+                k.EnableOutputCalibration();
             }
 
             return k;
