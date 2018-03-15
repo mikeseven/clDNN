@@ -272,8 +272,6 @@ protected:
 
     bool optimized = false;
 
-    bool has_bias = false;
-
     mutable bool has_reused_memory = false;
     mutable uint32_t reused_memory_color = 0;
 

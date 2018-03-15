@@ -2270,7 +2270,7 @@ TEST(convolution_f32_fw_gpu, quantized_convolution_low_prec_single_ofq) {
 
     auto input = memory::allocate(engine, { data_types::i8, format::bfyx,{ 1, 1, 5, 4 } });
     auto weights = memory::allocate(engine, { data_types::i8, format::bfyx,{ 2, 1, 3, 2 } });
-    float i_qf = 1.0f; // max_abs<float>(input_f);
+    float i_qf = 1.0f; 
     float o_qf = 127.0f / max_abs<float>(output_memory_f);
 
     std::vector<char> weights_values = { 1, 2, 1, 2, 1, 2, 19, 17, -1, -10, 32, 23 };
@@ -2291,8 +2291,6 @@ TEST(convolution_f32_fw_gpu, quantized_convolution_low_prec_single_ofq) {
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
-    // TODO: uncomment when w_qfs will be input to conv
-    //EXPECT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "conv");
 
     auto output_memory = outputs.at("conv").get_memory();
@@ -2357,7 +2355,6 @@ TEST(convolution_f32_fw_gpu, quantized_convolution_high_prec_calib_per_ofm) {
     std::vector<float> weights_values_f = { 1.0, 2.0, 1.0, 2.0, 1.0, 2.0, 19.0, 17.0, -1.0, -10.0, 32.0, 23.0 };
     set_values<float>(input_f, { 1.0, 2.0, 3.0, 4.0, 5.0, 2.0, 2.0, 3.0, 4.0, 6.0, 3.0, 3.0, 3.0, 5.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 });
     set_values<float>(weights_f, weights_values_f);
-    // quantize_weights<char>(weights, weigths_qfs);
     set_values(biases, { 1.0f, -8.0f });
     VVVF<float> output_vec = {
         {
