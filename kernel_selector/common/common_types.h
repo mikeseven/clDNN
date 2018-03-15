@@ -41,7 +41,8 @@ namespace KernelSelector
         CONCATENATION,
         UPSAMPLING,
         REGION_YOLO,
-        REORG_YOLO
+        REORG_YOLO,
+        MAX_UNPOOLING
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -87,6 +88,8 @@ namespace KernelSelector
         SQRT,
         LINEAR,
         ELU,
+        RELU_GRAD,
+        RELU_NEGATIVE_SLOPE_GRAD,
         NONE
     };
 
