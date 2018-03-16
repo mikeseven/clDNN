@@ -71,7 +71,6 @@ namespace cldnn
             , with_axis(axis == axis_name::xyf ? false : true)
         {}
 
-
         /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{arg_max_min}
         arg_max_min(const dto* dto)
             :primitive_base(dto)
