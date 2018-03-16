@@ -77,18 +77,19 @@ namespace cldnn
             :primitive_base(dto)
             , top_k(dto->top_k)
             , output_type(static_cast<out_type>(dto->output_type))
-            , with_axis(dto->with_axis != 0)
             , axis(static_cast<axis_name>(dto->axis))
+            , with_axis(dto->with_axis != 0)
         {}
 
         /// @brief Number of indices to output.
         uint32_t top_k;
         /// @brief Type of output - max or mix.
         out_type output_type;
-        /// @brief Indicates that the primitive has user defined axis to maximize/minimize along;
-        bool with_axis;
         /// @brief Axis to maximize/minimize along. If not set, maximize the flattened trailing dimensions for each index of the batch dimension.
         axis_name axis;
+        /// @brief Indicates that the primitive has user defined axis to maximize/minimize along;
+        bool with_axis;
+        
 
     protected:
 

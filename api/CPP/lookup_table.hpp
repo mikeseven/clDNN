@@ -63,14 +63,14 @@ namespace cldnn
         /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{lookup_table}
         lookup_table(const dto* dto)
             :primitive_base(dto)
-            , with_axis(dto->with_axis != 0)
             , axis(static_cast<axis_name>(dto->axis))
+            , with_axis(dto->with_axis != 0)
         {}
 
-        /// @brief Indicates that the primitive has user defined axis to return values from.
-        uint32_t with_axis;
         /// @brief Axis to return values from. If not set, returns data which index is pointing at in the flattened x, y, f dimensions for each batch.
         axis_name axis;
+        /// @brief Indicates that the primitive has user defined axis to return values from.
+        bool with_axis;
 
     protected:
 

@@ -53,10 +53,10 @@ CLDNN_BEGIN_PRIMITIVE_DESC(arg_max_min)
 uint32_t top_k;
 /// @brief Type of output - max or mix.
 cldnn_arg_max_min_out output_type;
-/// @brief Indicates that the primitive has user defined axis to maximize/minimize along.
-uint32_t with_axis;
 /// @brief Axis to maximize/minimize along. If not set, maximize the flattened x, y ,f dimensions for each index of the first dimension.
 cldnn_arg_max_min_axis axis;
+/// @brief Indicates that the primitive has user defined axis to maximize/minimize along.
+uint32_t with_axis;
 CLDNN_END_PRIMITIVE_DESC(arg_max_min)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(arg_max_min);

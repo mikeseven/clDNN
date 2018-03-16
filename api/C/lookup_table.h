@@ -42,10 +42,10 @@ typedef enum
 
 /// @brief Returns values from data on which given indices are pointing at.
 CLDNN_BEGIN_PRIMITIVE_DESC(lookup_table)
-/// @brief Indicates that the primitive has user defined axis to return values from.
-uint32_t with_axis;
 /// @brief Axis to return values from. If not set, returns data which index is pointing at in the flattened x, y, f dimensions for each batch.
 cldnn_lookup_table_axis axis;
+/// @brief Indicates that the primitive has user defined axis to return values from.
+uint32_t with_axis;
 CLDNN_END_PRIMITIVE_DESC(lookup_table)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(lookup_table);

@@ -848,7 +848,9 @@ extern "C" CLDNN_API cldnn_primitive_type_id cldnn_##PType##_type_id(cldnn_statu
 }
 
 PRIMITIVE_TYPE_ID_CALL_IMPL(activation)
-PRIMITIVE_TYPE_ID_CALL_IMPL(activation_grad)PRIMITIVE_TYPE_ID_CALL_IMPL(arg_max_min)PRIMITIVE_TYPE_ID_CALL_IMPL(batch_norm)
+PRIMITIVE_TYPE_ID_CALL_IMPL(activation_grad)
+PRIMITIVE_TYPE_ID_CALL_IMPL(arg_max_min)
+PRIMITIVE_TYPE_ID_CALL_IMPL(batch_norm)
 PRIMITIVE_TYPE_ID_CALL_IMPL(convolution)
 PRIMITIVE_TYPE_ID_CALL_IMPL(crop)
 PRIMITIVE_TYPE_ID_CALL_IMPL(data)
