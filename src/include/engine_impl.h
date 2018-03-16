@@ -85,6 +85,7 @@ public:
     
     void dump_memory_pool(const program_impl& program, std::string path, std::string dependencies) { _memory_pool.dump_memory_pool(program, path, dependencies); }
 
+    bool use_memory_pool() const;
 private:
     engine_configuration _configuration;
     std::shared_ptr<gpu_toolkit> _context;

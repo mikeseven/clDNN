@@ -142,6 +142,16 @@ public:
     void log(uint64_t id, std::string const& msg);
     bool logging_enabled() const { return !_configuration.log.empty(); }
 
+    bool is_neo_driver()
+    {
+        auto device_version = _device.getInfo<CL_DEVICE_VERSION>();
+        if (strstr(device_version.c_str(), "NEO"))
+        {
+            return true;
+        }
+        return false;
+    }
+
 private:
     configuration _configuration;
     cl::Device _device;
