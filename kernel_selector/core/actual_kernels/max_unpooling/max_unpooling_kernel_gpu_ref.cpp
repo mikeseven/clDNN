@@ -1,5 +1,5 @@
 ﻿/*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,30 +14,34 @@
 // limitations under the License.
 */
 
-#include "activation_kernel_ref.h"
-#include "kernel_selector_utils.h"
+#include "max_unpooling_kernel_gpu_ref.h"
  
-namespace KernelSelector {
-
-    ParamsKey ActivationKernelRef::GetSupportedKey() const
+namespace KernelSelector 
+{
+    ParamsKey MaxUnpoolingKernelGPURef::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
         k.EnableInputDataType(Datatype::F32);
+        k.EnableInputDataType(Datatype::INT8);
         k.EnableOutputDataType(Datatype::F16);
         k.EnableOutputDataType(Datatype::F32);
-        k.EnableActivationAdditionalParamsAsInput();
-        k.EnableAllInputLayout();
-        k.EnableAllOutputLayout();
+        k.EnableOutputDataType(Datatype::INT8);
+        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableInputLayout(DataLayout::yxfb);
+        k.EnableInputLayout(DataLayout::byxf);
+        k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::yxfb);
+        k.EnableOutputLayout(DataLayout::byxf);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableBatching();
-        k.EnableGradient();
+        k.EnableDifferentTypes();
         return k;
     }
 
-    KernelsData ActivationKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData MaxUnpoolingKernelGPURef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        return GetCommonKernelsData(params, options);
+        return GetCommonKernelsData(params, options, FORCE_PRIORITY_9);
     }
 }

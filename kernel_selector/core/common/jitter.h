@@ -426,6 +426,7 @@ inline JitConstants MakeBaseParamsJitConstants(const BaseParams& params)
         MakeJitConstant("NL_M",                 params.activationParams.m),
         MakeJitConstant("NL_N",                 params.activationParams.n),
         MakeJitConstant("ACTIVATION_FUNCTION_"  + toString(params.activationFunc), ""),
+        MakeJitConstant("GRADIENT",             params.gradient),
     };
 
     for (size_t i = 0; i < params.inputs.size(); i++)

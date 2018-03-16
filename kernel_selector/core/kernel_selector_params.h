@@ -65,6 +65,7 @@ namespace KernelSelector
                     uint32_t nonBias : 1;
                     uint32_t activationAdditionalParamsAsInput : 1;
                     uint32_t FP16Emulation : 1;
+                    uint32_t gradient : 1;
 
                     union dedicated_t
                     {
@@ -380,6 +381,11 @@ namespace KernelSelector
         void EnableBatching()
         {
             key.restrict.val.batching = 1;
+        }
+
+        void EnableGradient()
+        {
+            key.restrict.val.gradient = 1;
         }
 
         void EnableSubGroup()
@@ -750,7 +756,8 @@ namespace KernelSelector
         ActivationFunction  activationFunc = ActivationFunction::NONE;
         NonLinearParams     activationParams;
         MultiDataTensor     inputs;
-        DataTensor          output;        
+        DataTensor          output;
+        bool                gradient = false;
 
         virtual std::string to_string() const;
 
@@ -806,6 +813,11 @@ namespace KernelSelector
             {
                 // I'm not sure it's the best idea, but we can live with it right now
                 k.EnableFP16Emulation();
+            }
+
+            if (gradient)
+            {
+                k.EnableGradient();
             }
 
             return k;
@@ -1444,6 +1456,19 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // MaxUnpoolingParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct MaxUnpoolingParams : public BaseParams
+    {
+        MaxUnpoolingParams() : BaseParams(KernelType::MAX_UNPOOLING) {}
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            return BaseParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Auto tuner parameters
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class KernelRunnerInterface;
@@ -1665,5 +1690,13 @@ namespace KernelSelector
     struct UpSamplingOptionalParams : OptionalParams
     {
         UpSamplingOptionalParams() : OptionalParams(KernelType::UPSAMPLING) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // MaxUnpoolingOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct MaxUnpoolingOptionalParams : OptionalParams
+    {
+        MaxUnpoolingOptionalParams() : OptionalParams(KernelType::MAX_UNPOOLING) {}
     };
 }

@@ -41,32 +41,45 @@ namespace KernelSelector
         const ArgMaxMinParams& orgParams = static_cast<const ArgMaxMinParams&>(params);
 
         int topK = orgParams.argMaxParams.topK;
-        long size = (long)(orgParams.inputs[0].X().v * orgParams.inputs[0].Y().v * orgParams.inputs[0].Feature().v) / 128;
-        long outSize = size * topK;
+        long size = (long)(orgParams.inputs[0].X().v * orgParams.inputs[0].Y().v * orgParams.inputs[0].Feature().v) / 8;
+        long outSize = size/16 * topK;
         int kernelAmount = 1;
-        for (; outSize > 128; outSize = (long)(outSize / 128.0 * topK))
+        for (; outSize > 128; outSize = (long)((outSize / 128 + 1) * topK))
         {
             kernelAmount++;
         }
-        DispatchData runInfo;
-        runInfo.fp16UnitUsed = orgParams.inputs[0].GetDType() == Datatype::F16;
+        KernelData kd = KernelData::Default<ArgMaxMinParams>(params, kernelAmount);
+        for (int i = 0; i < kernelAmount; i++)
+        {
+            DataTensor input;
+            if (i == 0)
+                input = orgParams.inputs[0];
+            else
+                input = orgParams.output;
 
-        runInfo.gws0 = Align(size, 16);
-        runInfo.gws1 = orgParams.inputs[0].Batch().v;                  // B
-        runInfo.gws2 = 1;
+            auto newParams = orgParams;
+            newParams.inputs.resize(1);
+            newParams.inputs[0] = input;
 
-        runInfo.lws0 = 16;
-        runInfo.lws1 = 1;
-        runInfo.lws2 = 1;
+            auto& kernel = kd.kernels[i];
+            DispatchData runInfo = SetDefault(newParams);
+            auto cldnnJit = GetJitConstants(newParams);
+            auto entryPoint = GetEntryPoint(kernelName, newParams.layerID, options);
+            auto jit = CreateJit(kernelName, cldnnJit, entryPoint);
 
-        KernelData kd = KernelData::Default<ArgMaxMinParams>(params, 1);
+            runInfo.fp16UnitUsed = orgParams.inputs[0].GetDType() == Datatype::F16;
 
-        auto cldnn_jit = GetJitConstants(orgParams);
-        auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);
-        auto jit = CreateJit(kernelName, cldnn_jit, entry_point);
+            runInfo.gws0 = Align(size, 16);
+            runInfo.gws1 = orgParams.inputs[0].Batch().v;                  // B
+            runInfo.gws2 = 1;
 
-        auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point);
+            runInfo.lws0 = 16;
+            runInfo.lws1 = 1;
+            runInfo.lws2 = 1;
+
+            FillCLKernelData(kernel, runInfo, kernelName, jit, entryPoint);
+            size = (size / 128 + 1) * topK;
+        }
 
         kd.estimatedTime = FORCE_PRIORITY_9;
 

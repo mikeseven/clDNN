@@ -55,10 +55,11 @@ namespace KernelSelector
         const DeconvolutionParams& orgParams = static_cast<const DeconvolutionParams&>(params);
 
         const std::vector<WeightsLayout> weightsLayouts = {
-            WeightsLayout::yxio,
+            WeightsLayout::oiyx,
             WeightsLayout::iyxo,
-            WeightsLayout::oyxi,
-            WeightsLayout::oiyx };
+            WeightsLayout::yxio,
+            WeightsLayout::oyxi
+        };
 
         DispatchData runInfo = SetDefault(orgParams);
         KernelData kd = KernelData::Default<DeconvolutionParams>(params);

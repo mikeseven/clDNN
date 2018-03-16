@@ -410,6 +410,14 @@ typedef enum cldnn_activation_func_t
     activation_elu,                     // max(0, val) + a * (exp(min(0, val) - 1) (a is additional param)
 } cldnn_activation_func;
 
+/// @brief activation gradient functions
+typedef enum cldnn_activation_grad_func_t
+{
+    activation_grad_none,                    // val
+    activation_grad_relu,                    // val * (input > 0)
+    activation_grad_relu_negative_slope,     // val * ((input > 0) + a * (input <= 0)    (a is additional param)
+} cldnn_activation_grad_func;
+
 /// @brief activation additional params
 typedef struct cldnn_activation_additional_params_t
 {
