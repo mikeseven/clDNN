@@ -25,9 +25,14 @@ namespace KernelSelector
         k.EnableInputDataType(Datatype::F32);
         k.EnableInputDataType(Datatype::INT8);
         k.EnableOutputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::INT8);
+        k.EnableLookUpTableIndicesFormat(Datatype::F32);
         k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableInputLayout(DataLayout::yxfb);
         k.EnableOutputLayout(DataLayout::bfyx);
-        k.EnableLookUpTableAxis(LookUpTableAxis::NONE);
+        k.EnableOutputLayout(DataLayout::yxfb);
+        k.EnableLookUpTableAxis(LookUpTableAxis::XYF);
         k.EnableBatching();
         return k;
     }

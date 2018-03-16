@@ -102,6 +102,9 @@ namespace cldnn {
 					implementation_map<arg_max_min>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), arg_max_min_gpu::create);
 					implementation_map<arg_max_min>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), arg_max_min_gpu::create);
 					implementation_map<arg_max_min>::add(std::make_tuple(engine_types::ocl, data_types::i8, format::bfyx), arg_max_min_gpu::create);
+					implementation_map<arg_max_min>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), arg_max_min_gpu::create);
+					implementation_map<arg_max_min>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), arg_max_min_gpu::create);
+					implementation_map<arg_max_min>::add(std::make_tuple(engine_types::ocl, data_types::i8, format::yxfb), arg_max_min_gpu::create);
 				}
 				~attach() {}
 			};

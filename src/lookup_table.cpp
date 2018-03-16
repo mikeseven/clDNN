@@ -34,9 +34,9 @@ namespace cldnn
         auto desc = node.get_primitive();
 
         auto input_data_layout = node.input().get_output_layout();
-        auto input_indexes_layout = node.input2().get_output_layout();
+        auto input_indices_layout = node.indices().get_output_layout();
 
-        return layout{ input_data_layout.data_type, format::bfyx, input_indexes_layout.size };
+        return layout{ input_data_layout.data_type, input_data_layout.format, input_indices_layout.size };
     }
 
     std::string lookup_table_inst::to_string(lookup_table_node const& node)
@@ -48,7 +48,6 @@ namespace cldnn
         std::stringstream primitive_description;
 
         json_composite conv_info;
-        conv_info.add("number of values", desc->number_of_values);
         conv_info.add("with axis", axis);
         if (desc->with_axis)
             conv_info.add("axis", desc->axis);

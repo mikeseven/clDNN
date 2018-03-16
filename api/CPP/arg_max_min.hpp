@@ -46,46 +46,29 @@ namespace cldnn
             batch,
             feature,
             x,
-            y
+            y,
+            xyf
         };
 
         /// @brief Constructs arg_max_min primitive.
         /// @param id This primitive id.
         /// @param input Input primitive id.
         /// @param out_type Type of output - max or mix.
-        /// @param top_k Number of indexes to output.
-        arg_max_min(
-            const primitive_id& id,
-            const primitive_id& input,
-            out_type output_type,
-            uint32_t top_k = 1,
-            const padding& output_padding = padding()
-        )
-            :primitive_base(id, { input }, output_padding)
-            , top_k(top_k)
-            , output_type(output_type)
-            , with_axis(false)
-        {}
-
-        /// @brief Constructs arg_max_min primitive with axis to maximize along;
-        /// @param id This primitive id.
-        /// @param input Input primitive id.
-        /// @param out_type Type of output - max or mix.
+        /// @param top_k Number of indices to output.
         /// @param axis Axis to maximize/minimize along.
-        /// @param top_k Number of indexes to output.
         arg_max_min(
             const primitive_id& id,
             const primitive_id& input,
             out_type output_type,
-            axis_name axis,
             uint32_t top_k = 1,
+            axis_name axis = axis_name::xyf,
             const padding& output_padding = padding()
         )
             :primitive_base(id, { input }, output_padding)
             , top_k(top_k)
             , output_type(output_type)
-            , with_axis(true)
             , axis(axis)
+            , with_axis(axis == axis_name::xyf ? false : true)
         {}
 
 
@@ -98,7 +81,7 @@ namespace cldnn
             , axis(static_cast<axis_name>(dto->axis))
         {}
 
-        /// @brief Number of indexes to output.
+        /// @brief Number of indices to output.
         uint32_t top_k;
         /// @brief Type of output - max or mix.
         out_type output_type;

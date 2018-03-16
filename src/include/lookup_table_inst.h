@@ -35,7 +35,7 @@ namespace cldnn
         {
         }
         decltype(auto) input() const { return get_dependency(0); }
-        decltype(auto) input2() const { return get_dependency(1); }
+        decltype(auto) indices() const { return get_dependency(1); }
     };
 
     using lookup_table_node = typed_program_node<lookup_table>;

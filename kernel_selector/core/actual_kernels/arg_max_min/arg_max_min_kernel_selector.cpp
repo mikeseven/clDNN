@@ -24,7 +24,7 @@ namespace KernelSelector {
 	ArgMaxMinKernelSelctor::ArgMaxMinKernelSelctor()
 	{
 		Attach<ArgMaxMinKernelGPURef>();
-        //Attach<ArgMaxMinKernelOpt>();
+        //Attach<ArgMaxMinKernelOpt>(); not yet implemented
         Attach<ArgMaxMinKernelAxis>();
     }
 

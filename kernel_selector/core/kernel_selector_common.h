@@ -385,6 +385,16 @@ namespace KernelSelector {
         }
     }
 
+    inline std::string toString(ArgMaxMinOut mode)
+    {
+        switch (mode)
+        {
+        case ArgMaxMinOut::MAX: return "MAX";
+        case ArgMaxMinOut::MIN: return "MIN";
+        default: return "";
+        }
+    }
+
 	inline std::string toString(ArgMaxMinAxis mode) 
 	{
 		switch (mode)
@@ -393,7 +403,7 @@ namespace KernelSelector {
 		case ArgMaxMinAxis::FEATURE: return "FEATURE";
 		case ArgMaxMinAxis::X: return "X";
 		case ArgMaxMinAxis::Y: return "Y";
-		case ArgMaxMinAxis::NONE: return "NONE";
+		case ArgMaxMinAxis::XYF: return "XYF";
 		default: return "";
 		}
 	}
@@ -406,7 +416,7 @@ namespace KernelSelector {
         case LookUpTableAxis::FEATURE: return "FEATURE";
         case LookUpTableAxis::X: return "X";
         case LookUpTableAxis::Y: return "Y";
-        case LookUpTableAxis::NONE: return "NONE";
+        case LookUpTableAxis::XYF: return "XYF";
         default: return "";
         }
     }

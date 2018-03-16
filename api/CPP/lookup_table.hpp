@@ -28,7 +28,7 @@ namespace cldnn
     /// @addtogroup cpp_primitives Primitives
     /// @{
 
-    /// @brief Returns values from data on which given indexes are pointing at.
+    /// @brief Returns values from data on which given indices are pointing at.
     struct lookup_table : public primitive_base<lookup_table, CLDNN_PRIMITIVE_DESC(lookup_table)>
     {
         CLDNN_DECLATE_PRIMITIVE(lookup_table)
@@ -39,57 +39,34 @@ namespace cldnn
             batch,
             feature,
             x,
-            y
+            y,
+            xyf
         };
 
         /// @brief Constructs lookup_table primitive.
         /// @param id This primitive id.
         /// @param input_data Input data primitive id.
-        /// @param input_indexes Input indexes primitive id.
-        /// @param number_of_values Number of values to output per batch/dimensions.
-        lookup_table(
-            const primitive_id& id,
-            const primitive_id& input_data,
-            const primitive_id& input_indexes,
-            uint32_t number_of_values,
-            const padding& output_padding = padding()
-        )
-            :primitive_base(id, { input_data, input_indexes }, output_padding)
-            , number_of_values(number_of_values)
-            , with_axis(false)
-        {}
-
-        /// @brief Constructs lookup_table primitive with axis to return values from.
-        /// @param id This primitive id.
-        /// @param input_data Input data primitive id.
-        /// @param input_indexes Input indexes primitive id.
-        /// @param number_of_values Number of values to output per batch/dimensions.
+        /// @param input_indices Input indices primitive id.
         /// @param axis Axis to return values from.
         lookup_table(
             const primitive_id& id,
             const primitive_id& input_data,
-            const primitive_id& input_indexes,
-            uint32_t number_of_values,
-            axis_name axis,
+            const primitive_id& input_indices,
+            axis_name axis = axis_name::xyf,
             const padding& output_padding = padding()
         )
-            :primitive_base(id, { input_data, input_indexes }, output_padding)
-            , number_of_values(number_of_values)
-            , with_axis(true)
+            :primitive_base(id, { input_data, input_indices }, output_padding)
             , axis(axis)
+            , with_axis(axis == axis_name::xyf ? false : true)
         {}
-
 
         /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{lookup_table}
         lookup_table(const dto* dto)
             :primitive_base(dto)
-            , number_of_values(dto->number_of_values)
             , with_axis(dto->with_axis != 0)
             , axis(static_cast<axis_name>(dto->axis))
         {}
 
-        /// @brief Number of values to output per batch/dimensions.
-        uint32_t number_of_values;
         /// @brief Indicates that the primitive has user defined axis to return values from.
         uint32_t with_axis;
         /// @brief Axis to return values from. If not set, returns data which index is pointing at in the flattened x, y, f dimensions for each batch.
@@ -99,7 +76,6 @@ namespace cldnn
 
         void update_dto(dto& dto) const override
         {
-            dto.number_of_values = number_of_values;
             dto.with_axis = with_axis;
             dto.axis = static_cast<cldnn_lookup_table_axis>(axis);
         }

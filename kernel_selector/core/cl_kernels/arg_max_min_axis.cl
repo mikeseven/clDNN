@@ -16,7 +16,7 @@
 #include "include/include_all.cl"
     
 #define GLOBAL_SIZE 128
-#define LOCAL_SIZE 128
+#define LOCAL_SIZE GLOBAL_SIZE
 
 typedef struct /* Index and Value type that holds index and value used in this kernel */
 {
@@ -86,10 +86,11 @@ KERNEL(arg_max_gpu_axis)(const __global UNIT_TYPE* input, __global uint* output)
     iav_type accumulator;
 
     uint temp_index = global_index;
-
+    uint start_index = (global_index - offset) / GAP_SIZE;
+    __attribute__((opencl_unroll_hint))
     for (uint i = 0; i < TOP_K; i++)
     {
-        accumulator.index = (global_index - offset) / GAP_SIZE;
+        accumulator.index = start_index;
         accumulator.value = input[global_index];
         for (int j = 0; j < i; j++)
         {
@@ -97,12 +98,12 @@ KERNEL(arg_max_gpu_axis)(const __global UNIT_TYPE* input, __global uint* output)
                 accumulator.value = UNIT_FILL_VAL;
         }
         global_index += GLOBAL_SIZE * GAP_SIZE;
-        __attribute__((opencl_unroll_hint))
+        uint element_index = start_index + GLOBAL_SIZE;
         while (global_index < offset + VALUES_NUM * GAP_SIZE) 
         {
             iav_type element;
             element.value = input[global_index];
-            element.index = (global_index - offset) / GAP_SIZE;
+            element.index = element_index;
             for (int j = 0; j < i; j++){
                 if (element.index == results[j])
                     element.value = UNIT_FILL_VAL;
@@ -112,6 +113,7 @@ KERNEL(arg_max_gpu_axis)(const __global UNIT_TYPE* input, __global uint* output)
                 accumulator.value = element.value;
                 accumulator.index = element.index;
             }
+            element_index += GLOBAL_SIZE;
             global_index += GLOBAL_SIZE * GAP_SIZE;
         }
         if (local_index < VALUES_NUM)

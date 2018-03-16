@@ -25,6 +25,9 @@ namespace KernelSelector
         k.EnableInputDataType(Datatype::F32);
         k.EnableInputDataType(Datatype::INT8);
         k.EnableOutputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::INT8);
+        k.EnableLookUpTableIndicesFormat(Datatype::F32);
         k.EnableInputLayout(DataLayout::bfyx);
         k.EnableOutputLayout(DataLayout::bfyx);
         k.EnableLookUpTableAxis(LookUpTableAxis::BATCH);
@@ -68,7 +71,11 @@ namespace KernelSelector
             runInfo.gws2 = orgParams.inputs[0].Batch().v;
         }
 
-        runInfo.lws0 = 1;
+        runInfo.lws0 = std::min(std::max(runInfo.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
+        while (runInfo.gws0 % runInfo.lws0 != 0)
+        {
+            --runInfo.lws0;
+        }
         runInfo.lws1 = 1;
         runInfo.lws2 = 1;
 

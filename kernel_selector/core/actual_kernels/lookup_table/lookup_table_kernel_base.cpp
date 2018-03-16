@@ -32,7 +32,6 @@ namespace KernelSelector
     JitConstants LookUpTableKernelBase::GetJitConstants(const LookUpTableParams& params) const
     {
         JitConstants mem_consts = MakeLookUpTableJitConstants(params);
-
         return mem_consts;
     }
 
@@ -43,12 +42,15 @@ namespace KernelSelector
         kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 
         // Determine global work sizes.
-        kd.gws0 = params.lookUpTableParams.inputIndexes.X().v;
-        kd.gws1 = params.lookUpTableParams.inputIndexes.Batch().v;                   // B
+        kd.gws0 = params.lookUpTableParams.inputIndices.X().v;
+        kd.gws1 = params.lookUpTableParams.inputIndices.Batch().v;                   // B
         kd.gws2 = 1;
 
-                     // Find largest positive local work size that is divider for global work size.
-        kd.lws0 = 1;
+        kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));
+        while (kd.gws0 % kd.lws0 != 0)
+        {
+            --kd.lws0;
+        }
         kd.lws1 = 1;
         kd.lws2 = 1;
 

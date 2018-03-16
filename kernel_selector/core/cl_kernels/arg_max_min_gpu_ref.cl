@@ -16,7 +16,7 @@
 #include "include/include_all.cl"
     
 #define GLOBAL_SIZE 128
-#define LOCAL_SIZE 128
+#define LOCAL_SIZE GLOBAL_SIZE
 
 typedef struct /* Index and Value type that holds index and value used in this kernel */
 {
@@ -35,6 +35,7 @@ typedef struct /* Index and Value type that holds index and value used in this k
 __attribute__((reqd_work_group_size(LOCAL_SIZE, 1, 1)))
 KERNEL(arg_max_gpu_top_k)(const __global UNIT_TYPE* input, __global uint* output)
 {
+#ifdef INPUT0_LAYOUT_BFYX
     uint results[TOP_K];
     __local iav_type scratch[LOCAL_SIZE];
     const uint size = INPUT0_SIZE_X * INPUT0_SIZE_Y * INPUT0_FEATURE_NUM;
@@ -47,6 +48,7 @@ KERNEL(arg_max_gpu_top_k)(const __global UNIT_TYPE* input, __global uint* output
 
     uint temp_index = global_index;
 
+    __attribute__((opencl_unroll_hint))
     for (uint i = 0; i < TOP_K; i++){
         accumulator.index = global_index;
         accumulator.value = input[global_index];
@@ -55,7 +57,7 @@ KERNEL(arg_max_gpu_top_k)(const __global UNIT_TYPE* input, __global uint* output
                 accumulator.value = UNIT_FILL_VAL;
         }
         global_index += GLOBAL_SIZE;
-        __attribute__((opencl_unroll_hint))
+
         while (global_index < size + batch_offset) 
         {
             iav_type element;
@@ -103,6 +105,77 @@ KERNEL(arg_max_gpu_top_k)(const __global UNIT_TYPE* input, __global uint* output
         results[i] = scratch[0].index % size;
     }
 }
+#else
+    uint results[TOP_K];
+    __local iav_type scratch[LOCAL_SIZE];
+    const uint size = INPUT0_SIZE_X * INPUT0_SIZE_Y * INPUT0_FEATURE_NUM * INPUT0_BATCH_NUM;
+    const uint fyx_size = INPUT0_SIZE_X * INPUT0_SIZE_Y * INPUT0_FEATURE_NUM;
+    const uint current_batch = (uint)get_global_id(1);
+    uint local_index = get_local_id(0);
+    uint global_index = current_batch + local_index*INPUT0_BATCH_NUM;
+
+    iav_type accumulator;
+
+    uint temp_index = global_index;
+
+    __attribute__((opencl_unroll_hint))
+    for (uint i = 0; i < TOP_K; i++){
+        accumulator.index = global_index;
+        accumulator.value = input[global_index];
+        for (int j = 0; j < i; j++){
+            if (accumulator.index == results[j])
+                accumulator.value = UNIT_FILL_VAL;
+        }
+        global_index += GLOBAL_SIZE;
+
+        while (global_index < size) 
+        {
+            iav_type element;
+            element.value = input[global_index];
+            element.index = global_index;
+            for (int j = 0; j < i; j++){
+                if (element.index == results[j])
+                    element.value = UNIT_FILL_VAL;
+            }
+            if(accumulator.value COMPARE_SIGN element.value)
+            {
+                accumulator.value = element.value;
+                accumulator.index = element.index;
+            }
+            global_index += GLOBAL_SIZE * INPUT0_BATCH_NUM;
+        }
+        if (local_index < fyx_size)
+            scratch[local_index] = accumulator;
+        else
+            scratch[local_index].value = UNIT_FILL_VAL;
+
+        barrier(CLK_LOCAL_MEM_FENCE);
+
+        __attribute__((opencl_unroll_hint))
+        for(uint offset = LOCAL_SIZE / 2; offset > 0; offset /= 2) 
+        {
+            if (local_index < offset) 
+            {
+                iav_type other = scratch[local_index + offset];
+                iav_type mine = scratch[local_index];
+
+                if(mine.value COMPARE_SIGN other.value)
+                {
+                    scratch[local_index] = other;
+                }
+            }
+            barrier(CLK_LOCAL_MEM_FENCE);
+        }
+
+        if (local_index == 0) 
+        {
+            output[current_batch + i*INPUT0_BATCH_NUM] = scratch[0].index / INPUT0_BATCH_NUM;
+        }
+        global_index = temp_index;
+        results[i] = scratch[0].index;
+    }
+}
+#endif
 
 #undef COMPARE_SIGN
 #undef UNIT_FILL_VAL

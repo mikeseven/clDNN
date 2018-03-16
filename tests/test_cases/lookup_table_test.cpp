@@ -39,7 +39,7 @@ TEST(lookup_table_base, base) {
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("input2", input2.get_layout()));
-    topology.add(lookup_table("table", "input", "input2", 1));
+    topology.add(lookup_table("table", "input", "input2"));
     vector<float> input_vec = {
         //y0x0 y0x1 y1x0 y1x1
         /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
@@ -90,7 +90,7 @@ TEST(lookup_table_num, base) {
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("input2", input2.get_layout()));
-    topology.add(lookup_table("table", "input", "input2", number_of_values));
+    topology.add(lookup_table("table", "input", "input2"));
     vector<float> input_vec = {
         //y0x0 y0x1 y1x0 y1x1
         /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
@@ -162,11 +162,11 @@ TEST(lookup_table_with_arg_max, base) {
     static const int32_t x_size = 2, y_size = 2, feature_num = 3, batch_num = 2;
     engine engine;
 
-    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_num, feature_num, x_size , y_size } });
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb,{ batch_num, feature_num, x_size , y_size } });
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(arg_max_min("arg_max", "input", arg_max_min::max));
-    topology.add(lookup_table("table", "input", "arg_max", 1));
+    topology.add(lookup_table("table", "input", "arg_max"));
     vector<float> input_vec = {
         //y0x0 y0x1 y1x0 y1x1
         /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,
@@ -214,7 +214,7 @@ TEST(lookup_table_axis, base) {
     topology topology;
     topology.add(input_layout("input", input.get_layout()));
     topology.add(input_layout("input2", input2.get_layout()));
-    topology.add(lookup_table("table", "input", "input2", number_of_values, lookup_table::batch));
+    topology.add(lookup_table("table", "input", "input2", lookup_table::batch));
     vector<float> input_vec = {
         //y0x0 y0x1 y1x0 y1x1
         /*b0f0*/0.1f, -0.1f, 0.9f,  1.5f,

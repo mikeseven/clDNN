@@ -50,7 +50,7 @@ namespace cldnn
 			}
 		}
 
-		return layout{ data_types::f32, format::bfyx, tensor{ input_layout.size.batch[0], 1, (int32_t)desc->top_k, 1 } };
+		return layout{ data_types::f32, input_layout.format, tensor{ input_layout.size.batch[0], 1, (int32_t)desc->top_k, 1 } };
 	}
 
 	std::string arg_max_min_inst::to_string(arg_max_min_node const& node)

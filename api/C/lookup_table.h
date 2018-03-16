@@ -36,14 +36,12 @@ typedef enum
     cldnn_lookup_table_batch,
     cldnn_lookup_table_feature,
     cldnn_lookup_table_x,
-    cldnn_lookup_table_y
+    cldnn_lookup_table_y,
+    cldnn_lookup_table_xyf
 } cldnn_lookup_table_axis;
 
-/// @brief Returns values from data on which given indexes are pointing at.
+/// @brief Returns values from data on which given indices are pointing at.
 CLDNN_BEGIN_PRIMITIVE_DESC(lookup_table)
-float activation_negative_slope;
-/// @brief Number of values to output per batch/dimensions.
-uint32_t number_of_values;
 /// @brief Indicates that the primitive has user defined axis to return values from.
 uint32_t with_axis;
 /// @brief Axis to return values from. If not set, returns data which index is pointing at in the flattened x, y, f dimensions for each batch.

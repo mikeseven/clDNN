@@ -27,9 +27,7 @@ namespace KernelSelector
         k.EnableOutputDataType(Datatype::F32);
         k.EnableInputLayout(DataLayout::bfyx);
         k.EnableOutputLayout(DataLayout::bfyx);
-        k.EnableArgMaxMinAxis(ArgMaxMinAxis::NONE);
-        k.EnableArgMaxMinOutVal(ArgMaxMinOut::MAX);
-        k.EnableArgMaxMinOutVal(ArgMaxMinOut::MIN);
+        k.EnableArgMaxMinAxis(ArgMaxMinAxis::XYF);
         return k;
     }
 
@@ -39,22 +37,29 @@ namespace KernelSelector
         {
             return{};
         }
-
+      
         const ArgMaxMinParams& orgParams = static_cast<const ArgMaxMinParams&>(params);
 
+        int topK = orgParams.argMaxParams.topK;
+        long size = (long)(orgParams.inputs[0].X().v * orgParams.inputs[0].Y().v * orgParams.inputs[0].Feature().v) / 128;
+        long outSize = size * topK;
+        int kernelAmount = 1;
+        for (; outSize > 128; outSize = (long)(outSize / 128.0 * topK))
+        {
+            kernelAmount++;
+        }
         DispatchData runInfo;
         runInfo.fp16UnitUsed = orgParams.inputs[0].GetDType() == Datatype::F16;
 
-        runInfo.gws0 = Align(orgParams.inputs[0].X().v, 16);    // X
-        runInfo.gws1 = orgParams.inputs[0].Y().v;                   // Y
-        runInfo.gws2 = orgParams.inputs[0].Batch().v * orgParams.inputs[0].Feature().v;    // B, F
+        runInfo.gws0 = Align(size, 16);
+        runInfo.gws1 = orgParams.inputs[0].Batch().v;                  // B
+        runInfo.gws2 = 1;
 
-                     // Find largest positive local work size that is divider for global work size.
         runInfo.lws0 = 16;
         runInfo.lws1 = 1;
         runInfo.lws2 = 1;
 
-        KernelData kd = KernelData::Default<ArgMaxMinParams>(params);
+        KernelData kd = KernelData::Default<ArgMaxMinParams>(params, 1);
 
         auto cldnn_jit = GetJitConstants(orgParams);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);

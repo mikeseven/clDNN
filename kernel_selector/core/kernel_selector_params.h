@@ -74,7 +74,9 @@ namespace KernelSelector
                             uint32_t axisY : 1;
                             uint32_t axisFeature : 1;
                             uint32_t axisBatch : 1;
-                            uint32_t axisNone : 1;
+                            uint32_t axisXYF : 1;
+                            uint32_t indicesF32 : 1;
+                            uint32_t indicesOther : 1;
                         } lookt;
 						struct argm_t
 						{
@@ -82,9 +84,7 @@ namespace KernelSelector
 							uint32_t axisY : 1;
 							uint32_t axisFeature : 1;
 							uint32_t axisBatch : 1;
-							uint32_t axisNone : 1;
-							uint32_t outputMax : 1;
-							uint32_t outputMin : 1;
+							uint32_t axisXYF : 1;
 						} argm;
                         struct norm_t
                         {
@@ -443,8 +443,8 @@ namespace KernelSelector
             case KernelSelector::LookUpTableAxis::Y:
                 key.restrict.val.dedicated.lookt.axisY = 1;
                 break;
-            case KernelSelector::LookUpTableAxis::NONE:
-                key.restrict.val.dedicated.lookt.axisNone = 1;
+            case KernelSelector::LookUpTableAxis::XYF:
+                key.restrict.val.dedicated.lookt.axisXYF = 1;
                 break;
             default:
                 break;
@@ -618,22 +618,8 @@ namespace KernelSelector
             key.restrict.val.dedicated.concat.oneKernel = 1;
         }
 
-		void EnableArgMaxMinOutVal(ArgMaxMinOut a) {
-			switch (a)
-			{
-			case ArgMaxMinOut::MAX:
-				key.restrict.val.dedicated.argm.outputMax = 1;
-				break;
-			case ArgMaxMinOut::MIN:
-				key.restrict.val.dedicated.argm.outputMin = 1;
-				break;
-			default:
-				break;
-			}
-			
-		}
-
-		void EnableArgMaxMinAxis(ArgMaxMinAxis a) {
+		void EnableArgMaxMinAxis(ArgMaxMinAxis a) 
+        {
 			switch (a)
 			{
 			case ArgMaxMinAxis::X:
@@ -648,13 +634,21 @@ namespace KernelSelector
 			case ArgMaxMinAxis::BATCH:
 				key.restrict.val.dedicated.argm.axisBatch = 1;
 				break;
-			case ArgMaxMinAxis::NONE:
-				key.restrict.val.dedicated.argm.axisNone = 1;
+			case ArgMaxMinAxis::XYF:
+				key.restrict.val.dedicated.argm.axisXYF = 1;
 				break;
 			default:
 				break;
 			}
 		}
+
+        void EnableLookUpTableIndicesFormat(Datatype a)
+        {
+            if (a == Datatype::F32)
+                key.restrict.val.dedicated.lookt.indicesF32 = 1;
+            else
+                key.restrict.val.dedicated.lookt.indicesOther = 1;
+        }
 
         bool Support(const ParamsKey& k) const
         {
@@ -1026,7 +1020,7 @@ namespace KernelSelector
 
 		struct DedicatedParams
 		{
-			ArgMaxMinAxis	argMaxMinAxis	= ArgMaxMinAxis::NONE;
+			ArgMaxMinAxis	argMaxMinAxis	= ArgMaxMinAxis::XYF;
 			ArgMaxMinOut	argMaxMinOut	= ArgMaxMinOut::MAX;
 			uint32_t		topK			= 1;
 		};
@@ -1036,7 +1030,6 @@ namespace KernelSelector
 		virtual ParamsKey GetParamsKey() const
 		{
 			ParamsKey k = BaseParams::GetParamsKey();
-			k.EnableArgMaxMinOutVal(argMaxParams.argMaxMinOut);
 			k.EnableArgMaxMinAxis(argMaxParams.argMaxMinAxis);
 
 			return k;
@@ -1052,9 +1045,9 @@ namespace KernelSelector
 
         struct DedicatedParams
         {
-            LookUpTableAxis	lookUpTableAxis = LookUpTableAxis::NONE;
+            LookUpTableAxis	lookUpTableAxis = LookUpTableAxis::XYF;
             uint32_t		numberOfValues;
-            DataTensor      inputIndexes;
+            DataTensor      inputIndices;
         };
 
         DedicatedParams lookUpTableParams;
@@ -1063,7 +1056,7 @@ namespace KernelSelector
         {
             ParamsKey k = BaseParams::GetParamsKey();
             k.EnableLookUpTableAxis(lookUpTableParams.lookUpTableAxis);
-
+            k.EnableLookUpTableIndicesFormat(lookUpTableParams.inputIndices.GetDType());
             return k;
         }
     };

@@ -26,10 +26,10 @@ namespace KernelSelector
 		k.EnableInputDataType(Datatype::INT8);
 		k.EnableOutputDataType(Datatype::F32);
 		k.EnableInputLayout(DataLayout::bfyx);
+		k.EnableInputLayout(DataLayout::yxfb);
 		k.EnableOutputLayout(DataLayout::bfyx);
-		k.EnableArgMaxMinAxis(ArgMaxMinAxis::NONE);
-		k.EnableArgMaxMinOutVal(ArgMaxMinOut::MAX);
-		k.EnableArgMaxMinOutVal(ArgMaxMinOut::MIN);
+        k.EnableOutputLayout(DataLayout::yxfb);
+		k.EnableArgMaxMinAxis(ArgMaxMinAxis::XYF);
 		k.EnableBatching();
 		return k;
 	}

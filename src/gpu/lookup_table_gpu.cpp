@@ -58,35 +58,40 @@ namespace cldnn {
                 //const auto& input_size = input_layout.size;
 
                 const auto& axis = primitive->axis;
-                const auto& number_of_values = primitive->number_of_values;
                 const auto& with_axis = primitive->with_axis;
 
                 auto lookt_params = get_default_params<kernel_selector::lookup_table_params>(arg);
                 auto lookt_optional_params = get_default_optional_params<kernel_selector::lookup_table_optional_params>(arg.get_program());
 
-                lookt_params.lookUpTableParams.numberOfValues = number_of_values;
+                lookt_params.lookUpTableParams.inputIndices = convert_data_tensor(arg.indices().get_output_layout());
                 if (with_axis) {
                     switch (axis)
                     {
-                    case 0:
+                    case lookup_table::batch:
                         lookt_params.lookUpTableParams.lookUpTableAxis = kernel_selector::lookt_axis::BATCH;
+                        lookt_params.lookUpTableParams.numberOfValues = (uint32_t)lookt_params.lookUpTableParams.inputIndices.Batch().v;
                         break;
-                    case 1:
+                    case lookup_table::feature:
                         lookt_params.lookUpTableParams.lookUpTableAxis = kernel_selector::lookt_axis::FEATURE;
+                        lookt_params.lookUpTableParams.numberOfValues = (uint32_t)lookt_params.lookUpTableParams.inputIndices.Feature().v;
                         break;
-                    case 2:
+                    case lookup_table::x:
                         lookt_params.lookUpTableParams.lookUpTableAxis = kernel_selector::lookt_axis::X;
+                        lookt_params.lookUpTableParams.numberOfValues = (uint32_t)lookt_params.lookUpTableParams.inputIndices.X().v;
                         break;
-                    case 3:
+                    case lookup_table::y:
                         lookt_params.lookUpTableParams.lookUpTableAxis = kernel_selector::lookt_axis::Y;
+                        lookt_params.lookUpTableParams.numberOfValues = (uint32_t)lookt_params.lookUpTableParams.inputIndices.Y().v;
                         break;
                     default:
                         break;
                     }
                 }
-                lookt_params.lookUpTableParams.inputIndexes = convert_data_tensor(arg.input2().get_output_layout());
+                else
+                    lookt_params.lookUpTableParams.numberOfValues = (uint32_t)lookt_params.lookUpTableParams.inputIndices.X().v;
+                
                 auto& kernel_selector = kernel_selector::lookup_table_kernel_selector::Instance();
-
+                
                 KernelSelector::KernelsData best_kernels = kernel_selector.GetBestKernels(lookt_params, lookt_optional_params);
 
                 CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
@@ -102,11 +107,10 @@ namespace cldnn {
                 attach() {
                     implementation_map<lookup_table>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::yxfb), lookup_table_gpu::create);
                     implementation_map<lookup_table>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::yxfb), lookup_table_gpu::create);
+                    implementation_map<lookup_table>::add(std::make_tuple(engine_types::ocl, data_types::i8, format::yxfb), lookup_table_gpu::create);
                     implementation_map<lookup_table>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), lookup_table_gpu::create);
                     implementation_map<lookup_table>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), lookup_table_gpu::create);
                     implementation_map<lookup_table>::add(std::make_tuple(engine_types::ocl, data_types::i8, format::bfyx), lookup_table_gpu::create);
-                    implementation_map<lookup_table>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::byxf), lookup_table_gpu::create);
-                    implementation_map<lookup_table>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::byxf), lookup_table_gpu::create);
                 }
                 ~attach() {}
             };

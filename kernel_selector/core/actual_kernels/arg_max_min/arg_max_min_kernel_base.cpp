@@ -32,7 +32,6 @@ namespace KernelSelector
 	JitConstants ArgMaxMinKernelBase::GetJitConstants(const ArgMaxMinParams& params) const
 	{
 		JitConstants mem_consts = MakeArgMaxJitConstants(params);
-
 		return mem_consts;
 	}
 
@@ -43,11 +42,10 @@ namespace KernelSelector
 		kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 
 		// Determine global work sizes.
-		kd.gws0 = 128;     // X
-		kd.gws1 = params.inputs[0].Batch().v;                   // Y
-		kd.gws2 = 1; // output.Batch().v * output.Feature().v;    // B, F
+		kd.gws0 = 128; 
+		kd.gws1 = params.inputs[0].Batch().v;        
+		kd.gws2 = 1; 
 
-															// Find largest positive local work size that is divider for global work size.
 		kd.lws0 = 128;
 		kd.lws1 = 1;
 		kd.lws2 = 1;

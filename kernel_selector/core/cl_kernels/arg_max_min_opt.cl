@@ -47,13 +47,14 @@
 
 __attribute__((intel_reqd_sub_group_size(SG_SIZE)))
 __attribute__((reqd_work_group_size(SG_SIZE, 1, 1)))
-KERNEL(arg_max_min_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output)
+KERNEL(arg_max_min_opt)(const __global UNIT_TYPE* input, __global uint* output)
 {
     const uint input_size = INPUT0_FEATURE_NUM * INPUT0_SIZE_X * INPUT0_SIZE_Y;
     const uint gid = get_group_id(0);
     const uint lid = get_sub_group_local_id();
 
     UNIT_TYPE input_blocks[INB_ARRAY_SIZE];
+    uint indices[INB_ARRAY_SIZE];
 
     // Read INB_ARRAY_SIZE * SG_SIZE elements (cache them in registers, fill unaligned/unpadded data with
     //                                         UNIT_FILL_VAL).
@@ -69,6 +70,7 @@ KERNEL(arg_max_min_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE* out
         {
             // Can be exchanged with sub-group block read to INB_ARRAY_SIZE-component vector.
             input_blocks[ai] = input[gid * INB_ARRAY_SIZE * SG_SIZE + ai * SG_SIZE + lid];
+            indices[ai] = gid * INB_ARRAY_SIZE * SG_SIZE + ai * SG_SIZE + lid;
         }
     }
     else
@@ -80,14 +82,16 @@ KERNEL(arg_max_min_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE* out
         for (uint last_base_off = last_gid * INB_ARRAY_SIZE * SG_SIZE; last_base_off + SG_SIZE <= input_size; last_base_off += SG_SIZE)
         {
             // Can be exchanged with sub-group block read to scalar.
-            input_blocks[ai++] = input[last_base_off + lid];
+            input_blocks[ai] = input[last_base_off + lid];
+            indices[ai++] = last_base_off + lid;
         }
 
         const uint remainder_off = input_size / SG_SIZE * SG_SIZE;
 
         if (remainder_off < input_size)
         {
-            input_blocks[ai++] = lid < input_size - remainder_off ? input[remainder_off + lid] : UNIT_FILL_VAL;
+            input_blocks[ai] = lid < input_size - remainder_off ? input[remainder_off + lid] : UNIT_FILL_VAL;
+            indices[ai++] = lid < input_size - remainder_off ? remainder_off + lid : 0;
         }
 
         __attribute__((opencl_unroll_hint))
@@ -101,11 +105,13 @@ KERNEL(arg_max_min_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE* out
     // Sort TOP_K elements (by linear scan and insert).
     const uint minmax_acc_array_size = (TOP_K + SG_SIZE - 1) / SG_SIZE;
     UNIT_TYPE acc[minmax_acc_array_size];
+    uint result[minmax_acc_array_size];
 
     __attribute__((opencl_unroll_hint))
     for (uint ai = 0; ai < minmax_acc_array_size; ++ai)
     {
         acc[ai] = UNIT_FILL_VAL;
+        result[ai] = 0;
     }
 
     //__attribute__((opencl_unroll_hint))
@@ -113,7 +119,7 @@ KERNEL(arg_max_min_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE* out
     for (uint ii = 0; ii < INB_ARRAY_SIZE * SG_SIZE; ++ii)
     {
         UNIT_TYPE in_val = intel_sub_group_shuffle(input_blocks[ii / SG_SIZE], ii % SG_SIZE);
-
+        uint in_index = intel_sub_group_shuffle(input_blocks[ii / SG_SIZE], ii % SG_SIZE);
         __attribute__((opencl_unroll_hint))
         for (uint ai = 0; ai < minmax_acc_array_size; ++ai)
         {
@@ -124,9 +130,12 @@ KERNEL(arg_max_min_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE* out
                 for (uint aj = minmax_acc_array_size; aj > ai + 1; --aj)
                 {
                     acc[aj - 1] = intel_sub_group_shuffle_up(acc[aj - 2], acc[aj - 1], 1);
+                    result[aj - 1] = intel_sub_group_shuffle_up(result[aj - 2], acc[aj - 1], 1);
                 }
                 UNIT_TYPE in_val_acc_mask = select(in_val, acc[ai], insert_flag);
+                uint in_index_mask = select(in_index, result[ai], insert_flag);
                 acc[ai] = select(acc[ai], intel_sub_group_shuffle_up(in_val, in_val_acc_mask, 1), insert_flag);
+                result[ai] = select(result[ai], intel_sub_group_shuffle_up(in_index, in_index_mask, 1), insert_flag);
                 break;
             }
         }
@@ -138,13 +147,13 @@ KERNEL(arg_max_min_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE* out
     __attribute__((opencl_unroll_hint))
     for (uint k_base_off = 0; k_base_off + SG_SIZE <= TOP_K; k_base_off += SG_SIZE)
     {
-        output[k_base_off + lid] = acc[ai++];
+        output[k_base_off + lid] = result[ai++] % input_size;
     }
 
     const uint k_remainder_off = TOP_K / SG_SIZE * SG_SIZE;
     if (k_remainder_off < TOP_K && lid < TOP_K - k_remainder_off)
     {
-        output[k_remainder_off + lid] = acc[ai];
+        output[k_remainder_off + lid] = result[ai] % input_size;
     }
 }
 

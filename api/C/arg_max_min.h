@@ -37,19 +37,19 @@ typedef enum
     cldnn_arg_min,
 } cldnn_arg_max_min_out;
 
-
 /// @brief Enum type to specify axis to maximize/minimize along.
 typedef enum
 {
     cldnn_arg_max_min_batch,
     cldnn_arg_max_min_feature,
     cldnn_arg_max_min_x,
-    cldnn_arg_max_min_y
+    cldnn_arg_max_min_y,
+    cldnn_arg_max_min_xyf
 } cldnn_arg_max_min_axis;
 
 /// @brief Finds the index of the k max/min values of input.
 CLDNN_BEGIN_PRIMITIVE_DESC(arg_max_min)
-/// @brief Number of indexes to output.
+/// @brief Number of indices to output.
 uint32_t top_k;
 /// @brief Type of output - max or mix.
 cldnn_arg_max_min_out output_type;
