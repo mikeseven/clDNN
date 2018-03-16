@@ -515,7 +515,7 @@ namespace KernelSelector
             key.restrict.val.dedicated.conv.transposed = 1;
         }
 
-        void Enableint8Quantization()
+        void EnableInt8Quantization()
         {
             key.restrict.val.dedicated.conv.quantization = 1;
         }
@@ -863,7 +863,7 @@ namespace KernelSelector
 
             if (convParams.int8_quantization)
             {
-                k.Enableint8Quantization();
+                k.EnableInt8Quantization();
             }
 
             if (convParams.output_calibration)

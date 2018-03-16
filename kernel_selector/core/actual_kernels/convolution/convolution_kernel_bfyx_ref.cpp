@@ -42,7 +42,7 @@ namespace KernelSelector {
         k.EnableBatching();
         k.EnableSplitSupport();
         k.EnableDepthwiseSeparableOpt();
-        k.Enableint8Quantization();
+        k.EnableInt8Quantization();
         k.EnableOutputCalibration();
         return k;
     }
