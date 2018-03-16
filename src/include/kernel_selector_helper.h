@@ -422,7 +422,7 @@ inline kernel_selector::activation_function get_kernel_selector_activation_grad_
     switch (activation_grad_func)
     {
     case activation_grad_none:
-        return kernel_selector::activation_function::NONE;
+        return kernel_selector::activation_function::NONE_GRAD;
     case activation_grad_relu:
         return kernel_selector::activation_function::RELU_GRAD;
     case activation_grad_relu_negative_slope:

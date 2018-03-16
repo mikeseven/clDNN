@@ -270,6 +270,7 @@ namespace KernelSelector {
         case ActivationFunction::RELU_GRAD:             method = "RELU_GRAD"; break;
         case ActivationFunction::RELU_NEGATIVE_SLOPE_GRAD: method = "RELU_NEGATIVE_SLOPE_GRAD"; break;
         case ActivationFunction::NONE:                  method = "NONE"; break;
+        case ActivationFunction::NONE_GRAD:             method = "NONE_GRAD"; break;
         default: break;
         }
         return method;

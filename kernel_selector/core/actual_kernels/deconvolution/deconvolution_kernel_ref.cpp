@@ -41,6 +41,7 @@ namespace KernelSelector
         k.EnableBatching();
         k.EnableSplitSupport();
         k.EnableDepthwiseSeparableOpt();
+        k.EnableGradient();
         return k;
     }
 

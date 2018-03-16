@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,8 +15,8 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#ifndef DECONVOLUTION_H
-#define DECONVOLUTION_H
+#ifndef CONVOLUTION_GRAD_INPUT_H
+#define CONVOLUTION_GRAD_INPUT_H
 
 #include "cldnn.h"
 /// @addtogroup c_api C API
@@ -32,16 +32,12 @@ extern "C" {
 
 /// @brief Performs transposed convolution.
 /// Also supports built-in Relu @CLDNN_PRIMITIVE_DESC{activation} available by setting it in arguments.
-/// @details Deconvolution is similar to convolution layer with the weights flipped on the axis and stride and input padding parameters used in opposite sense as in convolution.
-CLDNN_BEGIN_PRIMITIVE_DESC(deconvolution)
-/// @brief Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the deconvolution window should start calculations.
+/// @details convolution_grad_input is similar to convolution layer with the weights flipped on the axis and stride and input padding parameters used in opposite sense as in convolution.
+CLDNN_BEGIN_PRIMITIVE_DESC(convolution_grad_input)
+/// @brief Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution_grad_input window should start calculations.
 cldnn_tensor input_offset;
 /// @brief Defines the spatial dimensions of stride of adjacent elements in input buffer.
 cldnn_tensor stride;
-/// @brief Enables Relu activation.
-uint32_t with_activation;
-/// @brief Relu activation slope.
-float activation_negative_slope;
 /// @brief On how many cards split the computation to.
 uint32_t split;
 /// @brief Indicates that the primitive has user-defined output size (non-zero value).
@@ -50,13 +46,9 @@ uint32_t with_output_size;
 cldnn_tensor output_size;
 /// @brief Array of primitive ids containing weights data. Size of array should be equivalent to @p split.
 cldnn_primitive_id_arr weights;
-/// @brief Array of primitive ids containing bias data. Size of array should be equivalent to @p split or should be empty (if not using bias).
-cldnn_primitive_id_arr bias;
-/// @brief Indicates that deconvolution is used for convolution backward computation (convolution_grad_input)
-uint32_t gradient;
-CLDNN_END_PRIMITIVE_DESC(deconvolution)
+CLDNN_END_PRIMITIVE_DESC(convolution_grad_input)
 
-CLDNN_DECLARE_PRIMITIVE_TYPE_ID(deconvolution);
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(convolution_grad_input);
 
 #ifdef __cplusplus
 }
@@ -65,5 +57,5 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(deconvolution);
 /// @}
 /// @}
 /// @}
-#endif /* DECONVOLUTION_H */
+#endif /* CONVOLUTION_GRAD_INPUT_H */
 
