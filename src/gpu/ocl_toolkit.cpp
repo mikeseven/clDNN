@@ -106,16 +106,6 @@ namespace {
     }
 }
 
-bool driver_supports_oooq(cl::Device const& dev)
-{
-    auto device_version = dev.getInfo<CL_DEVICE_VERSION>();
-    if (strstr(device_version.c_str(), "NEO"))
-    {
-        return true;
-    }
-    return false;
-}
-
 cl::Device get_gpu_device(const configuration& config, cl_platform_id& platform_id)
 {
     std::list<std::string> reasons;
@@ -173,13 +163,14 @@ std::shared_ptr<gpu_toolkit> gpu_toolkit::create(const configuration & cfg)
 gpu_toolkit::gpu_toolkit(const configuration& config) 
     : _configuration(config)
     , _device(get_gpu_device(config, _platform_id))
+    , _neo_driver(strstr(get_device_version().c_str(), "NEO") ? true : false)
     , _context(_device)
     , _command_queue(_context,
                      _device,
                      (config.enable_profiling
                         ? cl::QueueProperties::Profiling
                         : cl::QueueProperties::None) | 
-                     (config.host_out_of_order && driver_supports_oooq(_device)
+                     (config.host_out_of_order && _neo_driver
                         ? cl::QueueProperties::OutOfOrder
                         : cl::QueueProperties::None))
     , _engine_info(*this)
@@ -192,7 +183,7 @@ gpu_toolkit::gpu_toolkit(const configuration& config)
             CL_QUEUE_PROFILING_ENABLE :
             0) |
             ((config.host_out_of_order &&
-                driver_supports_oooq(_device)) ?
+                _neo_driver) ?
                 CL_QUEUE_OUT_OF_ORDER_EXEC_MODE_ENABLE :
                 0);
 

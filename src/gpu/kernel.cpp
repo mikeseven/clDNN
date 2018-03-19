@@ -105,12 +105,6 @@ namespace {
                     status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.output_calibration_factors).get_buffer());
                 }
                 break;
-            case kernel_selector::kernel_argument_types::LOOKUP_TABLE:
-                if (data.lookup_table)
-                {
-                    status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.lookup_table).get_buffer());
-                }
-                break;
             case kernel_selector::kernel_argument_types::SCALE_TABLE:
                 if (data.scale_table)
                 {

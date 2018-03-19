@@ -50,6 +50,9 @@ KERNEL(deconvolution_gpu_bfyx_opt)(
     const int in_x = (int)id_x + PADDING_SIZE_X - (FILTER_SIZE_X - 1);
     const int in_y = (int)id_y + PADDING_SIZE_Y - (FILTER_SIZE_Y - 1);
 
+    const uint start_x = (STRIDE_SIZE_X - (in_x % STRIDE_SIZE_X)) % STRIDE_SIZE_X;
+    const uint start_y = (STRIDE_SIZE_Y - (in_y % STRIDE_SIZE_Y)) % STRIDE_SIZE_Y;
+
 #if DEPTHWISE_SEPARABLE_OPT
     const uint in_split_offset = (ofm_offset / FILTER_OFM_NUM) * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
 #else
@@ -57,17 +60,17 @@ KERNEL(deconvolution_gpu_bfyx_opt)(
 #endif
     const uint input_offset = INPUT0_OFFSET + batch_offset*INPUT0_BATCH_PITCH + in_split_offset;
 
-    for (uint i = 0; i < FILTER_SIZE_Y; i++)
+    for (uint i = start_y; i < FILTER_SIZE_Y; i+=STRIDE_SIZE_Y)
     {
         const int input_offset_y = in_y + i;
-        const bool zero_y = (input_offset_y >= INPUT0_SIZE_Y * STRIDE_SIZE_Y) || (input_offset_y < 0) || ((input_offset_y % STRIDE_SIZE_Y) != 0);
+        const bool zero_y = (input_offset_y >= INPUT0_SIZE_Y * STRIDE_SIZE_Y) || (input_offset_y < 0);
 
         if(!zero_y)
         {
-            for (uint j = 0; j < FILTER_SIZE_X; j++)
+            for (uint j = start_x; j < FILTER_SIZE_X; j+=STRIDE_SIZE_X)
             {
                 const int input_offset_x = in_x + j;
-                const bool zero_x = (input_offset_x >= INPUT0_SIZE_X * STRIDE_SIZE_X) || (input_offset_x < 0) || ((input_offset_x % STRIDE_SIZE_X) != 0);
+                const bool zero_x = (input_offset_x >= INPUT0_SIZE_X * STRIDE_SIZE_X) || (input_offset_x < 0);
 
                 if(!zero_x)
                 {
