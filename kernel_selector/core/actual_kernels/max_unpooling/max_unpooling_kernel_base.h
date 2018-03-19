@@ -29,7 +29,7 @@ namespace KernelSelector
 
         struct DispatchData : public CommonDispatchData
         {
-            bool needsBoundary;
+            bool needsBoundary = false;
         };
 
     protected:
