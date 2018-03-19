@@ -142,15 +142,7 @@ public:
     void log(uint64_t id, std::string const& msg);
     bool logging_enabled() const { return !_configuration.log.empty(); }
 
-    bool is_neo_driver()
-    {
-        auto device_version = _device.getInfo<CL_DEVICE_VERSION>();
-        if (strstr(device_version.c_str(), "NEO"))
-        {
-            return true;
-        }
-        return false;
-    }
+    bool is_neo_driver() { return _neo_driver; }
 
 private:
     configuration _configuration;
@@ -172,7 +164,10 @@ private:
     //returns whether a barrier has been added
     void sync_events(std::vector<event_impl::ptr> const& deps);
     bool _output_event = false;
+    bool _neo_driver = false;
     std::ofstream& open_log();
+
+    std::string get_device_version() { return _device.getInfo<CL_DEVICE_VERSION>(); }
 };
 
 }}
