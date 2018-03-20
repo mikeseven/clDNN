@@ -222,7 +222,7 @@ namespace KernelSelector
         auto jit = CreateJit(finalKernelName, cldnnJit, entryPoint);
 
         auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, runInfo, finalKernelName, jit, entryPoint, exeMode, true, !newParams.bias.empty(), newParams.convParams.int8_quantization, newParams.convParams.output_calibration);
+        FillCLKernelData(kernel, runInfo, finalKernelName, jit, entryPoint, exeMode, true, !newParams.bias.empty(), 1, newParams.convParams.int8_quantization, newParams.convParams.output_calibration);
         kernel.arguments.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
 
         kd.estimatedTime = runInfo.effiency;
