@@ -104,7 +104,6 @@ public:
     json_composite desc_to_json() const;
     //do not modify primitive directly to keep synchronisation wit graph
     std::shared_ptr<const primitive> get_primitive() const { return desc; }
-
     //primitive modification functions
     void set_output_padding(padding const& padd)
     {

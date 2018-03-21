@@ -69,6 +69,24 @@ namespace KernelSelector
 
                     union dedicated_t
                     {
+                        struct lookt_t
+                        {
+                            uint32_t axisX : 1;
+                            uint32_t axisY : 1;
+                            uint32_t axisFeature : 1;
+                            uint32_t axisBatch : 1;
+                            uint32_t axisXYF : 1;
+                            uint32_t indicesF32 : 1;
+                            uint32_t indicesOther : 1;
+                        } lookt;
+						struct argm_t
+						{
+							uint32_t axisX : 1;
+							uint32_t axisY : 1;
+							uint32_t axisFeature : 1;
+							uint32_t axisBatch : 1;
+							uint32_t axisXYF : 1;
+						} argm;
                         struct norm_t
                         {
                             uint32_t across : 1;
@@ -92,6 +110,8 @@ namespace KernelSelector
                             uint32_t dilation : 1;
                             uint32_t depthwiseSeparableOpt : 1;
                             uint32_t transposed : 1;
+                            uint32_t quantization : 1;
+                            uint32_t calibration : 1;
                         } conv;
                         struct fc_t {} fc;
                         struct softmax_t 
@@ -415,6 +435,30 @@ namespace KernelSelector
             }
         }
 
+        void EnableLookUpTableAxis(LookUpTableAxis m) 
+        {
+            switch (m)
+            {
+            case KernelSelector::LookUpTableAxis::BATCH:
+                key.restrict.val.dedicated.lookt.axisBatch = 1;
+                break;
+            case KernelSelector::LookUpTableAxis::FEATURE:
+                key.restrict.val.dedicated.lookt.axisFeature = 1;
+                break;
+            case KernelSelector::LookUpTableAxis::X:
+                key.restrict.val.dedicated.lookt.axisX = 1;
+                break;
+            case KernelSelector::LookUpTableAxis::Y:
+                key.restrict.val.dedicated.lookt.axisY = 1;
+                break;
+            case KernelSelector::LookUpTableAxis::XYF:
+                key.restrict.val.dedicated.lookt.axisXYF = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
         void EnableNormalizeMode(NormalizeMode m)
         {
             switch (m)
@@ -513,6 +557,16 @@ namespace KernelSelector
             key.restrict.val.dedicated.conv.transposed = 1;
         }
 
+        void EnableInt8Quantization()
+        {
+            key.restrict.val.dedicated.conv.quantization = 1;
+        }
+
+        void EnableOutputCalibration()
+        {
+            key.restrict.val.dedicated.conv.calibration = 1;
+        }
+
         void EnableWinogradReorder()
         {
             key.restrict.val.dedicated.reorder.winograd = 1;
@@ -580,6 +634,38 @@ namespace KernelSelector
         void EnableConcatOneKernel()
         {
             key.restrict.val.dedicated.concat.oneKernel = 1;
+        }
+
+		void EnableArgMaxMinAxis(ArgMaxMinAxis a) 
+        {
+			switch (a)
+			{
+			case ArgMaxMinAxis::X:
+				key.restrict.val.dedicated.argm.axisX = 1;
+				break;
+			case ArgMaxMinAxis::Y:
+				key.restrict.val.dedicated.argm.axisY = 1;
+				break;
+			case ArgMaxMinAxis::FEATURE:
+				key.restrict.val.dedicated.argm.axisFeature = 1;
+				break;
+			case ArgMaxMinAxis::BATCH:
+				key.restrict.val.dedicated.argm.axisBatch = 1;
+				break;
+			case ArgMaxMinAxis::XYF:
+				key.restrict.val.dedicated.argm.axisXYF = 1;
+				break;
+			default:
+				break;
+			}
+		}
+
+        void EnableLookUpTableIndicesFormat(Datatype a)
+        {
+            if (a == Datatype::F32)
+                key.restrict.val.dedicated.lookt.indicesF32 = 1;
+            else
+                key.restrict.val.dedicated.lookt.indicesOther = 1;
         }
 
         bool Support(const ParamsKey& k) const
@@ -813,10 +899,15 @@ namespace KernelSelector
             uint32_t split = 1;
             bool     depthwiseSeparableOpt = false;
             bool     transposed = false;
+            bool     int8_quantization = false;
+            bool     output_calibration = false;
+            float    input_quantization_factor = 1.0f;
+            float    output_quantization_factor = 1.0f;
         };
 
         DedicatedParams convParams;
-
+        MultiDataTensor weights_quantization_factors;
+        MultiDataTensor output_calibration_factors;
         virtual std::string to_string() const override;
 
         virtual ParamsKey GetParamsKey() const override
@@ -842,6 +933,16 @@ namespace KernelSelector
             if (convParams.transposed)
             {
                 k.EnableTranspose();
+            }
+
+            if (convParams.int8_quantization)
+            {
+                k.EnableInt8Quantization();
+            }
+
+            if (convParams.output_calibration)
+            {
+                k.EnableOutputCalibration();
             }
 
             return k;
@@ -945,6 +1046,56 @@ namespace KernelSelector
 
             k.EnableNormalizeMode(normParams.normMode);
 
+            return k;
+        }
+    };
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// ArgMaxMinParams
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	struct ArgMaxMinParams : public BaseParams
+	{
+		ArgMaxMinParams() : BaseParams(KernelType::ARG_MAX_MIN), argMaxParams() {}
+
+		struct DedicatedParams
+		{
+			ArgMaxMinAxis	argMaxMinAxis	= ArgMaxMinAxis::XYF;
+			ArgMaxMinOut	argMaxMinOut	= ArgMaxMinOut::MAX;
+			uint32_t		topK			= 1;
+		};
+
+		DedicatedParams argMaxParams;
+
+		virtual ParamsKey GetParamsKey() const
+		{
+			ParamsKey k = BaseParams::GetParamsKey();
+			k.EnableArgMaxMinAxis(argMaxParams.argMaxMinAxis);
+
+			return k;
+		}
+	};
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // LookUpTableParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct LookUpTableParams : public BaseParams
+    {
+        LookUpTableParams() : BaseParams(KernelType::LOOKUP_TABLE), lookUpTableParams() {}
+
+        struct DedicatedParams
+        {
+            LookUpTableAxis	lookUpTableAxis = LookUpTableAxis::XYF;
+            uint32_t		numberOfValues;
+            DataTensor      inputIndices;
+        };
+
+        DedicatedParams lookUpTableParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            ParamsKey k = BaseParams::GetParamsKey();
+            k.EnableLookUpTableAxis(lookUpTableParams.lookUpTableAxis);
+            k.EnableLookUpTableIndicesFormat(lookUpTableParams.inputIndices.GetDType());
             return k;
         }
     };
@@ -1437,6 +1588,22 @@ namespace KernelSelector
     struct NormalizeOptionalParams : OptionalParams
     {
         NormalizeOptionalParams() : OptionalParams(KernelType::NORMALIZE) {}
+    };
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	// ArgMaxMinOptionalParams
+	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+	struct ArgMaxMinOptionalParams : OptionalParams
+	{
+		ArgMaxMinOptionalParams() : OptionalParams(KernelType::ARG_MAX_MIN) {}
+	};
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // LookUpTableOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct LookUpTableOptionalParams : OptionalParams
+    {
+        LookUpTableOptionalParams() : OptionalParams(KernelType::LOOKUP_TABLE) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

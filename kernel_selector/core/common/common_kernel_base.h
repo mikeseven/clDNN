@@ -50,8 +50,8 @@ namespace KernelSelector
         virtual bool                    Validate(const Params&, const OptionalParams&) const { return true; }
         std::string                     CreateJit(const std::string& template_name, JitConstants constants, std::string kernel_name) const;
         std::string                     GetEntryPoint(const std::string& templateName, const std::string& layerID, const OptionalParams& options) const;
-        Arguments                       GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias) const;
+        Arguments                       GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias, bool use_quantization = false, bool use_calibration = 0) const;
         std::shared_ptr<KernelString>   GetKernelString(std::string kernel_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN) const;
-        void                            FillCLKernelData(clKernelData& kernel, const CommonDispatchData& runInfo, std::string kernel_map_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN, bool weights = false, bool bias = false) const;
-    };
+        void                            FillCLKernelData(clKernelData& kernel, const CommonDispatchData& runInfo, std::string kernel_map_name, std::string jit, std::string entry_point, std::string exe_mode = ROUND_ROBIN,
+                                                            bool weights = false, bool bias = false, int number_of_imputs = 1, bool quantization = false, bool calibration = false) const;    };
 }

@@ -136,12 +136,13 @@ namespace KernelSelector {
             OUTPUT,
             WEIGHTS,
             BIAS,
-            LOOKUP_TABLE,
             SCALE_TABLE,
             SLOPE,
             SPLIT,
             INTERNAL_BUFFER,
             SCALAR,
+            WEIGHTS_QUANTIZATION_FACTORS,
+            OUTPUT_CALIBRATION_FACTORS
         };
 
         enum class ScalarTypes
@@ -270,6 +271,7 @@ namespace KernelSelector {
         case ActivationFunction::RELU_GRAD:             method = "RELU_GRAD"; break;
         case ActivationFunction::RELU_NEGATIVE_SLOPE_GRAD: method = "RELU_NEGATIVE_SLOPE_GRAD"; break;
         case ActivationFunction::NONE:                  method = "NONE"; break;
+        case ActivationFunction::NONE_GRAD:             method = "NONE_GRAD"; break;
         default: break;
         }
         return method;
@@ -384,6 +386,42 @@ namespace KernelSelector {
         case MeanSubtractMode::NONE:            return "NONE";
         case MeanSubtractMode::INSIDE_PARAMS:   return "INSIDE_PARAMS";
         case MeanSubtractMode::IN_BUFFER:       return "IN_BUFFER";
+        default: return "";
+        }
+    }
+
+    inline std::string toString(ArgMaxMinOut mode)
+    {
+        switch (mode)
+        {
+        case ArgMaxMinOut::MAX: return "MAX";
+        case ArgMaxMinOut::MIN: return "MIN";
+        default: return "";
+        }
+    }
+
+	inline std::string toString(ArgMaxMinAxis mode) 
+	{
+		switch (mode)
+		{
+		case ArgMaxMinAxis::BATCH: return "BATCH";
+		case ArgMaxMinAxis::FEATURE: return "FEATURE";
+		case ArgMaxMinAxis::X: return "X";
+		case ArgMaxMinAxis::Y: return "Y";
+		case ArgMaxMinAxis::XYF: return "XYF";
+		default: return "";
+		}
+	}
+
+    inline std::string toString(LookUpTableAxis mode)
+    {
+        switch (mode)
+        {
+        case LookUpTableAxis::BATCH: return "BATCH";
+        case LookUpTableAxis::FEATURE: return "FEATURE";
+        case LookUpTableAxis::X: return "X";
+        case LookUpTableAxis::Y: return "Y";
+        case LookUpTableAxis::XYF: return "XYF";
         default: return "";
         }
     }

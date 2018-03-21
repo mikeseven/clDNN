@@ -56,7 +56,7 @@ memory_impl::ptr engine_impl::allocate_memory(layout layout)
 
 memory_impl::ptr engine_impl::allocate_memory(layout layout, primitive_id id, std::set<primitive_id> dependencies, bool reusable)
 {
-    if (configuration().enable_memory_pool)
+    if (use_memory_pool())
         return _memory_pool.get_memory(layout, id, dependencies, reusable);
     return _memory_pool.get_memory(layout);
 }
@@ -138,6 +138,15 @@ void engine_impl::compile_program(program_impl&)
 {
     //TODO: better compilation logic instead of a simple 'compile all'?
     _context->get_kernels_cache().build_all();
+}
+
+bool engine_impl::use_memory_pool() const
+{
+    if (configuration().enable_memory_pool && get_context()->is_neo_driver())
+    {
+        return true;
+    }
+    return false;
 }
 
 }

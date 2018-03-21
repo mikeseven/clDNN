@@ -45,9 +45,10 @@ protected:
     {
         kernel::kernel_arguments_data args = parent::get_arguments(instance, split);
 
-        args.weights    = &instance.weights_memory(split);
-        args.bias       = instance.bias_term() ? &instance.bias_memory(split) : nullptr;
-
+        args.weights              = &instance.weights_memory(split);
+        args.bias                 = instance.bias_term() ? &instance.bias_memory(split) : nullptr;
+        args.weights_quantization_factors = instance.weights_quantization_factors_term() ? &instance.weights_quantization_factors_memory(split) : nullptr;
+        args.output_calibration_factors = instance.output_calibration_factors_term() ? &instance.output_calibration_factors_memory(split) : nullptr;
         return args;
     }
 
@@ -121,6 +122,21 @@ public:
             (uint32_t)std::min(dilation.spatial[0], input_size.spatial[0]),
             (uint32_t)std::min(dilation.spatial[1], input_size.spatial[1])
         };
+        
+        if (primitive->weights_quantization_factors.size() > 0)
+        {
+            conv_params.convParams.int8_quantization = true;
+            conv_params.weights_quantization_factors.push_back(convert_data_tensor(arg.weights_quantization_factors().get_output_layout()).FlattenFeatureAndSpatials());
+            conv_params.convParams.input_quantization_factor = arg.get_input_qf();
+
+            if (primitive->output_calibration_factors.size() > 0)
+            {
+                conv_params.convParams.output_calibration = true;
+                conv_params.output_calibration_factors.push_back(convert_data_tensor(arg.output_calibration_factors().get_output_layout()).FlattenFeatureAndSpatials());
+            }
+            else
+                conv_params.convParams.output_quantization_factor = arg.get_output_qf();
+        }
 
         auto& kernel_selector = kernel_selector::convolution_kernel_selector::Instance();
 

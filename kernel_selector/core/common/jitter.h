@@ -480,7 +480,23 @@ inline JitConstants MakeConvolutionParamsJitConstants(const ConvolutionParams& p
         MakeJitConstant("FILTER_ARRAY_NUM",             params.convParams.split),
         MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
         MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      params.convParams.depthwiseSeparableOpt),
+        MakeJitConstant("QUANTIZATION_TERM",            params.convParams.int8_quantization),
     });
+
+    if (params.convParams.int8_quantization)
+    {
+        jit.AddConstants({MakeJitConstant("W_QF", params.weights_quantization_factors[0])});
+        jit.AddConstants({ MakeJitConstant("I_QF",params.convParams.input_quantization_factor) });
+
+        if (params.convParams.output_calibration)
+        {
+            jit.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.convParams.output_calibration));
+            jit.AddConstant(MakeJitConstant("O_QF", params.output_calibration_factors[0]));
+
+        }
+        else
+            jit.AddConstants({ MakeJitConstant("O_QF",       params.convParams.output_quantization_factor) });
+    }
 
     return jit;
 }
@@ -542,6 +558,40 @@ inline JitConstants MakeLRNJitConstants(const LRNParams& params)
         MakeJitConstant("K",            np.k),
         MakeJitConstant(toString(np.divMode) + "_KERNEL_DIVIDER", ""),
         MakeJitConstant(toString(np.normMode), ""),
+    });
+
+    return jit;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MakeArgMaxJitConstants
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+inline JitConstants MakeArgMaxJitConstants(const ArgMaxMinParams& params) {
+	JitConstants jit = MakeBaseParamsJitConstants(params);
+
+	const auto& pp = params.argMaxParams;
+
+	jit.AddConstants({
+		MakeJitConstant("TOP_K", pp.topK),
+		MakeJitConstant(toString(pp.argMaxMinAxis) + "_AXIS", 1),
+		pp.argMaxMinOut == ArgMaxMinOut::MAX ? MakeJitConstant("MAX_OUT", 1) : MakeJitConstant("MIN_OUT", 1)
+	});
+
+	return jit;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MakeLookUpTableJitConstants
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+inline JitConstants MakeLookUpTableJitConstants(const LookUpTableParams& params) {
+    JitConstants jit = MakeBaseParamsJitConstants(params);
+
+    const auto& pp = params.lookUpTableParams;
+
+    jit.AddConstants({
+        MakeJitConstant("VAL_NUM", pp.numberOfValues),
+        MakeJitConstant(toString(pp.lookUpTableAxis) + "_AXIS", 1),
     });
 
     return jit;

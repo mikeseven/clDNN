@@ -1469,7 +1469,6 @@ TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2_depthw
 TEST(convolution_f32_fw_gpu, basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2_depthwise_sep_opt_bfyx) {
     //  Test for depthwise separable optimization, there are 16 weights and biases (split 16)
     //  data is similar as in basic_wsiz2x2_wstr2x2_in4x4x2x2_nopad_split2 but with batch 1
-
     engine engine;
 
     auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 2, 16, 4, 4 } });
@@ -2152,6 +2151,284 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxfb_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)
     }
 
 #undef USE_OLD_WEIGHTS_FORMAT
+}
+template<typename T>
+void quantize_weights(cldnn::memory& weights, cldnn::memory& w_qf)
+{
+    auto batch_pitch = weights.get_layout().get_pitches().batch[0];
+    auto ptr = weights.pointer<T>();
+    auto wqf_ptr = w_qf.pointer<float>();
+    T max = (T) 0.0f;
+    for (int ofm = 0; ofm < weights.get_layout().size.batch[0]; ofm++)
+    {
+        max = (T) 0.0f;
+        for (int w = 0; w < batch_pitch; w++)
+            if (max < abs(ptr[ofm* batch_pitch + w]))
+                max = abs(ptr[ofm* batch_pitch + w]);
+        for (int w = 0; w < batch_pitch; w++)
+            ptr[ofm* batch_pitch + w] = (T)round((float)ptr[ofm* batch_pitch + w] * 127.0f / (float)max);
+        wqf_ptr[ofm] = max/127.0f;
+    }
+}
+template<typename T>
+void calibrate(const cldnn::memory& output, cldnn::memory& calibrations)
+{
+    auto feature_pitch = output.get_layout().get_pitches().feature[0];
+    auto ptr = output.pointer<T>();
+    auto calibrations_ptr = calibrations.pointer<float>();
+    T max = (T) 0.0f;
+    for (int ofm = 0; ofm < output.get_layout().size.feature[0]; ofm++)
+    {
+        max = (T) 0.0f;
+        for (int w = 0; w < feature_pitch; w++)
+            if (max < abs(ptr[ofm* feature_pitch + w]))
+                max = abs(ptr[ofm* feature_pitch + w]);
+        calibrations_ptr[ofm] =  127.0f / max;
+    }
+}
+
+template<typename T>
+T max_abs(const cldnn::memory& mem)
+{
+    T max = (T)0;
+    auto ptr = mem.pointer<T>();
+    for (auto& a : ptr)
+        if (max < abs(a))
+            max = abs(a);
+    return max;
+}
+
+TEST(convolution_f32_fw_gpu, quantized_convolution_low_prec_single_ofq) {
+    //  Filter : 2x3
+    //  Stride : 2x1
+    //  Input  : 4x5
+    //  Output : 2x3
+    //
+    //  Input:
+    //  1  2  3  4  5
+    //  2  2  3  4  6
+    //  3  3  3  5  1
+    //  1  1  1  1  1
+    //
+    //  Filter:
+    //  1  2  1
+    //  2  1  2
+    //
+    //  19 17 -1
+    // -10 32 23
+    //
+    //  Output:
+    // 21  28  39
+    // 18  20  20
+    //
+    // -101 -11 92
+    // -114 -116 -78
+    //
+    //  Bias:
+    //  1 -8
+    engine_configuration eng_conf(false,false,false,"","",true,"","kernels");
+    engine engine{ eng_conf };
+
+    auto input_f = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 5, 4 } });
+    auto weights_f = memory::allocate(engine, { data_types::f32, format::bfyx,{ 2, 1, 3, 2 } });
+    cldnn::memory biases = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 1 } });
+    auto weigths_qfs = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 1 } });
+
+    std::vector<float> weights_values_f = { 1.0, 2.0, 1.0, 2.0, 1.0, 2.0, 19.0, 17.0, -1.0, -10.0, 32.0, 23.0 };
+    set_values<float>(input_f, { 1.0, 2.0, 3.0, 4.0, 5.0, 2.0, 2.0, 3.0, 4.0, 6.0, 3.0, 3.0, 3.0, 5.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 });
+    set_values<float>(weights_f, weights_values_f);
+
+    set_values(biases, { 1.0f, -8.0f });
+    VVVF<float> output_vec = {
+        { 
+            { 21.0f, 28.0f, 39.0f },
+            { 18.0f, 20.0f, 20.0f }
+        },
+        { 
+            { 155.0f, 245.0f, 348.0f },
+            { 142.0f, 140.0f, 178.0f }
+        } };
+
+    topology topology_f(
+        input_layout("input_f", input_f.get_layout()),
+        data("weights_f", weights_f),
+        data("biases", biases),
+        convolution("conv_f", "input_f", { "weights_f" }, { "biases" }, { 0, 0, 1, 2 }));
+
+    build_options opts;
+    opts.set_option(build_option::optimize_data(true));
+    opts.set_option(build_option::graph_dumps_dir("graph"));
+    network network_f(engine, topology_f, opts);
+    network_f.set_input_data("input_f", input_f);
+
+    auto outputs_f = network_f.execute();
+    EXPECT_EQ(outputs_f.begin()->first, "conv_f");
+
+    auto output_memory_f = outputs_f.at("conv_f").get_memory();
+    auto output_ptr_f = output_memory_f.pointer<float>();
+
+
+    auto input = memory::allocate(engine, { data_types::i8, format::bfyx,{ 1, 1, 5, 4 } });
+    auto weights = memory::allocate(engine, { data_types::i8, format::bfyx,{ 2, 1, 3, 2 } });
+    float i_qf = 1.0f; 
+    float o_qf = 127.0f / max_abs<float>(output_memory_f);
+
+    std::vector<char> weights_values = { 1, 2, 1, 2, 1, 2, 19, 17, -1, -10, 32, 23 };
+    set_values<char>(input, { 1, 2, 3, 4, 5, 2, 2, 3, 4, 6, 3, 3, 3, 5, 1, 1, 1, 1, 1, 1 });
+    set_values<char>(weights, weights_values);
+    set_values<float>(weigths_qfs, { 1.0f, 1.0f });
+    quantize_weights<char>(weights, weigths_qfs);
+
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        data("w_qfs",weigths_qfs),
+        convolution("conv", "input", { "weights" }, { "biases" }, { "w_qfs" },i_qf, o_qf, { 0, 0, 1, 2 }));
+
+    network network(engine, topology, opts);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.begin()->first, "conv");
+
+    auto output_memory = outputs.at("conv").get_memory();
+    auto output_layout = output_memory.get_layout();
+    auto output_ptr = output_memory.pointer<char>();
+
+    int y_size = output_layout.size.spatial[1];
+    int x_size = output_layout.size.spatial[0];
+    int f_size = output_layout.size.feature[0];
+    int b_size = output_layout.size.batch[0];
+    EXPECT_EQ(output_layout.format, format::bfyx);
+    EXPECT_EQ(y_size, 2);
+    EXPECT_EQ(x_size, 3);
+    EXPECT_EQ(f_size, 2);
+    EXPECT_EQ(b_size, 1);
+    for (int f = 0; f < f_size; f++)
+        for (int y = 0; y < y_size; ++y) {
+            for (int x = 0; x < x_size; ++x) {
+                EXPECT_NEAR(output_vec[f][y][x], ((float)output_ptr[f*y_size*x_size + y * x_size + x]) / o_qf, 3.0f);
+            }
+        }
+}
+
+
+TEST(convolution_f32_fw_gpu, quantized_convolution_high_prec_calib_per_ofm) {
+    //  Filter : 2x3
+    //  Stride : 2x1
+    //  Input  : 4x5
+    //  Output : 2x3
+    //
+    //  Input:
+    //  1  2  3  4  5
+    //  2  2  3  4  6
+    //  3  3  3  5  1
+    //  1  1  1  1  1
+    //
+    //  Filter:
+    //  1  2  1
+    //  2  1  2
+    //
+    //  19 17 -1
+    // -10 32 23
+    //
+    //  Output:
+    // 21  28  39
+    // 18  20  20
+    //
+    // -101 -11 92
+    // -114 -116 -78
+    //
+    //  Bias:
+    //  1 -8
+    engine_configuration eng_conf(false, false, false, "", "", true, "", "kernels");
+    engine engine{ eng_conf };
+
+    auto input_f = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 5, 4 } });
+    auto weights_f = memory::allocate(engine, { data_types::f32, format::bfyx,{ 2, 1, 3, 2 } });
+    cldnn::memory biases = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 1 } });
+    auto weigths_qfs = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 1 } });
+    auto output_calibrations = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 1 } });
+
+    std::vector<float> weights_values_f = { 1.0, 2.0, 1.0, 2.0, 1.0, 2.0, 19.0, 17.0, -1.0, -10.0, 32.0, 23.0 };
+    set_values<float>(input_f, { 1.0, 2.0, 3.0, 4.0, 5.0, 2.0, 2.0, 3.0, 4.0, 6.0, 3.0, 3.0, 3.0, 5.0, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0 });
+    set_values<float>(weights_f, weights_values_f);
+    set_values(biases, { 1.0f, -8.0f });
+    VVVF<float> output_vec = {
+        {
+            { 21.0f, 28.0f, 39.0f },
+            { 18.0f, 20.0f, 20.0f }
+        },
+        {
+            { 155.0f, 245.0f, 348.0f },
+            { 142.0f, 140.0f, 178.0f }
+        } };
+
+    topology topology_f(
+        input_layout("input_f", input_f.get_layout()),
+        data("weights_f", weights_f),
+        data("biases", biases),
+        convolution("conv_f", "input_f", { "weights_f" }, { "biases" }, { 0, 0, 1, 2 }));
+
+    build_options opts;
+    opts.set_option(build_option::optimize_data(true));
+    opts.set_option(build_option::graph_dumps_dir("graph"));
+    network network_f(engine, topology_f, opts);
+    network_f.set_input_data("input_f", input_f);
+
+    auto outputs_f = network_f.execute();
+    EXPECT_EQ(outputs_f.begin()->first, "conv_f");
+
+    auto output_memory_f = outputs_f.at("conv_f").get_memory();
+    auto output_ptr_f = output_memory_f.pointer<float>();
+    
+    auto input = memory::allocate(engine, { data_types::i8, format::bfyx,{ 1, 1, 5, 4 } });
+    auto weights = memory::allocate(engine, { data_types::i8, format::bfyx,{ 2, 1, 3, 2 } });
+    float i_qf = 1.0f; 
+
+    std::vector<char> weights_values = { 1, 2, 1, 2, 1, 2, 19, 17, -1, -10, 32, 23 };
+    set_values<char>(input, { 1, 2, 3, 4, 5, 2, 2, 3, 4, 6, 3, 3, 3, 5, 1, 1, 1, 1, 1, 1 });
+    set_values<char>(weights, weights_values);
+    set_values<float>(weigths_qfs, { 1.0f, 1.0f });
+    quantize_weights<char>(weights, weigths_qfs);
+    calibrate<float>(output_memory_f, output_calibrations);
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        data("weights", weights),
+        data("biases", biases),
+        data("w_qfs", weigths_qfs),
+        data("out_calibrations", output_calibrations),
+        convolution( "conv", "input", { "weights" }, { "biases" },
+                   { "w_qfs" }, { "out_calibrations" }, i_qf, { 0, 0, 1, 2 }));
+
+    network network(engine, topology, opts);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.begin()->first, "conv");
+
+    auto output_memory = outputs.at("conv").get_memory();
+    auto output_layout = output_memory.get_layout();
+    auto output_ptr = output_memory.pointer<char>();
+    auto o_qf = output_calibrations.pointer<float>();
+    int y_size = output_layout.size.spatial[1];
+    int x_size = output_layout.size.spatial[0];
+    int f_size = output_layout.size.feature[0];
+    int b_size = output_layout.size.batch[0];
+    EXPECT_EQ(output_layout.format, format::bfyx);
+    EXPECT_EQ(y_size, 2);
+    EXPECT_EQ(x_size, 3);
+    EXPECT_EQ(f_size, 2);
+    EXPECT_EQ(b_size, 1);
+    for (int f = 0; f < f_size; f++)
+        for (int y = 0; y < y_size; ++y) {
+            for (int x = 0; x < x_size; ++x) {
+                EXPECT_NEAR(output_vec[f][y][x], ((float)output_ptr[f*y_size*x_size + y * x_size + x]) / o_qf[f], 3.0f);
+            }
+        }
 }
 
 TEST(convolution_gpu, basic_yxfb_4_4_yxfb_2_2_b16_if2_of16_st2_2_p0_sp1_fp16)

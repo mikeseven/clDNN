@@ -27,8 +27,10 @@
 #include "normalize/normalize_kernel_selector.h"
 #include "pooling/pooling_kernel_selector.h"
 #include "max_unpooling/max_unpooling_kernel_selector.h"
+#include "arg_max_min/arg_max_min_kernel_selector.h"
 #include "roi_pooling/roi_pooling_kernel_selector.h"
 #include "fully_connected/fully_connected_kernel_selector.h"
+#include "lookup_table/lookup_table_kernel_selector.h"
 #include "activation/activation_kernel_selector.h"
 #include "softmax/softmax_kernel_selector.h"
 #include "region_yolo/region_yolo_kernel_selector.h"
@@ -62,6 +64,9 @@ namespace kernel_selector
     using activation_function               = KernelSelector::ActivationFunction;
     using pool_type                         = KernelSelector::PoolType;
     using pool_remainder                    = KernelSelector::PoolRemainder;
+	using argm_axis							= KernelSelector::ArgMaxMinAxis;
+	using argm_output						= KernelSelector::ArgMaxMinOut;
+    using lookt_axis                        = KernelSelector::LookUpTableAxis;
     using lrn_mode                          = KernelSelector::LRNMode;
     using normalize_mode                    = KernelSelector::NormalizeMode;
     using kernel_divider_mode               = KernelSelector::KernelDividerMode;
@@ -82,6 +87,8 @@ namespace kernel_selector
     using params                            = KernelSelector::Params;
     using base_params                       = KernelSelector::BaseParams;
     using weight_bias_params                = KernelSelector::WeightBiasParams;
+	using arg_max_min_params				= KernelSelector::ArgMaxMinParams;
+    using lookup_table_params               = KernelSelector::LookUpTableParams;
     using convolution_params                = KernelSelector::ConvolutionParams;
     using deconvolution_params              = KernelSelector::DeconvolutionParams;
     using lrn_params                        = KernelSelector::LRNParams;
@@ -106,6 +113,8 @@ namespace kernel_selector
 
     using optional_params                   = KernelSelector::OptionalParams;
     using weights_bias_optional_params      = KernelSelector::WeightsBiasOptionalParams;
+	using arg_max_min_optional_params		= KernelSelector::ArgMaxMinOptionalParams;
+    using lookup_table_optional_params      = KernelSelector::LookUpTableOptionalParams;
     using convolution_optional_params       = KernelSelector::ConvolutionOptionalParams;
     using deconvolution_optional_params     = KernelSelector::DeconvolutionOptionalParams;
     using lrn_optional_params               = KernelSelector::LRNOptionalParams;
@@ -123,6 +132,8 @@ namespace kernel_selector
     using concatenation_optional_params     = KernelSelector::ConcatenationOptionalParams;
     using upsampling_optional_params        = KernelSelector::UpSamplingOptionalParams;
 
+	using arg_max_min_kernel_selector		= KernelSelector::ArgMaxMinKernelSelctor;
+    using lookup_table_kernel_selector      = KernelSelector::LookUpTableKernelSelctor;
     using convolution_kernel_selector       = KernelSelector::ConvolutionKernelSelctor;
     using deconvolution_kernel_selector     = KernelSelector::DeconvolutionKernelSelctor;
     using lrn_kernel_selector               = KernelSelector::LRNKernelSelctor;
@@ -422,7 +433,7 @@ inline kernel_selector::activation_function get_kernel_selector_activation_grad_
     switch (activation_grad_func)
     {
     case activation_grad_none:
-        return kernel_selector::activation_function::NONE;
+        return kernel_selector::activation_function::NONE_GRAD;
     case activation_grad_relu:
         return kernel_selector::activation_function::RELU_GRAD;
     case activation_grad_relu_negative_slope:

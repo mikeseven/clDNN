@@ -142,9 +142,12 @@ public:
     void log(uint64_t id, std::string const& msg);
     bool logging_enabled() const { return !_configuration.log.empty(); }
 
+    bool is_neo_driver() { return _neo_driver; }
+
 private:
     configuration _configuration;
     cl::Device _device;
+    bool _neo_driver = false;
     cl::Context _context;
     cl::CommandQueue _command_queue;
     cl_platform_id _platform_id;
@@ -163,6 +166,8 @@ private:
     void sync_events(std::vector<event_impl::ptr> const& deps);
     bool _output_event = false;
     std::ofstream& open_log();
+
+    std::string get_device_version() { return _device.getInfo<CL_DEVICE_VERSION>(); }
 };
 
 }}

@@ -64,6 +64,8 @@ public:
         memory_impl::cptr output;
         memory_impl::cptr weights;
         memory_impl::cptr bias;
+        memory_impl::cptr weights_quantization_factors;
+        memory_impl::cptr output_calibration_factors;
         memory_impl::cptr lookup_table;
         memory_impl::cptr scale_table;
         memory_impl::cptr slope;

@@ -31,7 +31,9 @@ typedef std::map<primitive_id, std::shared_ptr<primitive>> topology_map;
 struct topology_impl : public refcounted_obj<topology_impl>
 {
 public:
-    topology_impl(const topology_map& map = topology_map()) : _primitives(map) {}
+    topology_impl(const topology_map& map = topology_map())
+        : _primitives(map) 
+    {}
 
     void add(std::shared_ptr<primitive> desc)
     {
