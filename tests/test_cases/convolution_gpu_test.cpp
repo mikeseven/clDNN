@@ -2165,6 +2165,10 @@ void quantize_weights(cldnn::memory& weights, cldnn::memory& w_qf)
         for (int w = 0; w < batch_pitch; w++)
             if (max < abs(ptr[ofm* batch_pitch + w]))
                 max = abs(ptr[ofm* batch_pitch + w]);
+       
+        if (max == (T)0)
+            max = (T)1; // do not quantize
+
         for (int w = 0; w < batch_pitch; w++)
             ptr[ofm* batch_pitch + w] = (T)round((float)ptr[ofm* batch_pitch + w] * 127.0f / (float)max);
         wqf_ptr[ofm] = max/127.0f;
