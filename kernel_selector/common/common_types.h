@@ -44,7 +44,8 @@ namespace KernelSelector
         UPSAMPLING,
         REGION_YOLO,
         REORG_YOLO,
-        MAX_UNPOOLING
+        MAX_UNPOOLING,
+        CONVOLUTION_GRAD_WEIGHTS
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -17,6 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #include "primitive_inst.h"
 #include "data_inst.h"
+#include "mutable_data_inst.h"
 #include "generic_layer_inst.h"
 #include "input_layout_inst.h"
 #include "max_unpooling_inst.h"
@@ -70,6 +71,7 @@ memory_impl::ptr primitive_inst::allocate_output()
     // do not reuse weights!
     if (_node.is_type<generic_layer>() ||
         _node.is_type<data>() ||
+        _node.is_type<mutable_data>() ||
         _node.is_type<input_layout>() ||
         //for max_unpooling initial zero values are significant
         _node.is_type<max_unpooling>() ||

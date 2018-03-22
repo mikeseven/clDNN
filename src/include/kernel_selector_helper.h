@@ -41,6 +41,7 @@
 #include "reshape/reshape_kernel_selector.h"
 #include "concatenation/concatenation_kernel_selector.h"
 #include "upsampling/upsampling_kernel_selector.h"
+#include "convolution_grad_weights/convolution_grad_weights_kernel_selector.h"
 #include "jitter.h"
 
 using namespace cldnn;
@@ -110,6 +111,7 @@ namespace kernel_selector
     using weights_reorder_params            = KernelSelector::WeightsReorderParams;
     using generic_kernel_params             = KernelSelector::GenericKernelParams;
     using upsampling_params                 = KernelSelector::UpSamplingParams;
+    using convolution_grad_weights_params   = KernelSelector::ConvolutionGradWeightsParams;
 
     using optional_params                   = KernelSelector::OptionalParams;
     using weights_bias_optional_params      = KernelSelector::WeightsBiasOptionalParams;
@@ -131,6 +133,7 @@ namespace kernel_selector
     using reorder_optional_params           = KernelSelector::ReorderOptionalParams;
     using concatenation_optional_params     = KernelSelector::ConcatenationOptionalParams;
     using upsampling_optional_params        = KernelSelector::UpSamplingOptionalParams;
+    using convolution_grad_weights_optional_params = KernelSelector::ConvolutiongradWeightsOptionalParams;
 
 	using arg_max_min_kernel_selector		= KernelSelector::ArgMaxMinKernelSelctor;
     using lookup_table_kernel_selector      = KernelSelector::LookUpTableKernelSelctor;
@@ -152,6 +155,7 @@ namespace kernel_selector
     using permute_kernel_selector           = KernelSelector::PermuteKernelSelctor;
     using concatenation_kernel_selector     = KernelSelector::ConcatenationKernelSelctor;
     using upsampling_kernel_selector        = KernelSelector::UpSamplingKernelSelector;
+    using convolution_grad_weights_kernel_selector = KernelSelector::ConvolutionGradWeightsKernelSelctor;
 }
 
 inline kernel_selector::data_type to_data_type(data_types dt)

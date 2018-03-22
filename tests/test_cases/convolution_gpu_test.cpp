@@ -89,19 +89,6 @@ VVF<T> reference_convolve(VVVF<T> &input, VVVF<T> &filter, int stride_y, int str
     return output;
 }
 
-
-
-// rounds floating point number, fraction precision should be in the range [0,23]
-// masks the bits:
-// 1 11111111 11111111111111100000000
-// |      |            |
-// sign  exp        fraction
-float float_round(float x, size_t fraction_precision = 15) {
-    uint32_t mask = ~((1 << (23 - fraction_precision)) - 1);
-    reinterpret_cast<uint32_t&>(x) &= mask;
-    return x;
-}
-
 void dump_buffer(memory const& mem, std::string const& name)
 {
     std::ofstream out(name);

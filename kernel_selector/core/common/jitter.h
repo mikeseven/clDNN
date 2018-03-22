@@ -883,4 +883,29 @@ inline JitConstants MakeUpSamplingJitConstants(const UpSamplingParams& params)
     return jit;
 }
 
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MakeConvolutionGradWeightsJitConstants
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+inline JitConstants MakeConvolutionGradWeightsJitConstants(const ConvolutionGradWeightsParams& params)
+{
+    JitConstants jit = MakeWeightBiasParamsJitConstants(params);
+    const auto& dp = params.convGradWeightsParams;
+    const auto& padding = dp.padding;
+    const auto& input = params.inputs[0];
+
+    int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - (dp.filterSize.x - 1 + padding.x)*input.X().pitch - (dp.filterSize.y - 1 + padding.y)*input.Y().pitch;
+    input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);
+
+    jit.AddConstants({
+        MakeJitConstant("STRIDE",                       dp.stride),
+        MakeJitConstant("PADDING",                      dp.padding),
+        MakeJitConstant("DILATION",                     dp.dilation),
+        MakeJitConstant("FILTER_ARRAY_NUM",             dp.split),
+        MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
+        MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      dp.depthwiseSeparableOpt),
+    });
+
+    return jit;
+}
+
 }
