@@ -95,13 +95,13 @@ TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_p
     for (unsigned int i = 0; i < expected_weights_vec.size(); i++)
     {
         float x = float_round(expected_weights_vec[i]), y = float_round(weights_ptr[i]);
-        EXPECT_FLOAT_EQ(x, y) << "random seed = " << random_seed << std::endl;
+        EXPECT_FLOAT_EQ(x, y) << "on weights verification" << random_seed << std::endl;
     }
 
     for (unsigned int i = 0; i < expected_bias_vec.size(); i++)
     {
         float x = float_round(expected_bias_vec[i]), y = float_round(biases_ptr[i]);
-        EXPECT_FLOAT_EQ(x, y) << "random seed = " << random_seed << std::endl;
+        EXPECT_FLOAT_EQ(x, y) << "on biases verification" << random_seed << std::endl;
     }
 }
 
@@ -160,7 +160,7 @@ TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_p
     for (unsigned int i = 0; i < expected_weights_vec.size(); i++)
     {
         float x = float_round(expected_weights_vec[i]), y = float_round(weights_ptr[i]);
-        EXPECT_FLOAT_EQ(x, y) << "random seed = " << random_seed << std::endl;
+        EXPECT_FLOAT_EQ(x, y) << "on weights verification" << random_seed << std::endl;
     }
 }
 
@@ -228,14 +228,14 @@ TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_p
     for (unsigned int i = 0; i < expected_output_vec.size(); i++)
     {
         float x = float_round(expected_output_vec[i]), y = float_round(output_ptr[i]);
-        EXPECT_FLOAT_EQ(x, y) << "random seed = " << random_seed << std::endl;
+        EXPECT_FLOAT_EQ(x, y) << "on output verification" << random_seed << std::endl;
         x = float_round(expected_weights_vec[i]);
         y = float_round(weights_ptr[i]);
-        EXPECT_FLOAT_EQ(x, y) << "random seed = " << random_seed << std::endl;
+        EXPECT_FLOAT_EQ(x, y) << "on weights verification" << random_seed << std::endl;
     }
 
     float x = float_round(expected_bias_vec[0]), y = float_round(biases_ptr[0]);
-    EXPECT_FLOAT_EQ(x, y) << "random seed = " << random_seed << std::endl;
+    EXPECT_FLOAT_EQ(x, y) << "on biases verification" << random_seed << std::endl;
 }
 
 TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_pad1_split2) {
@@ -312,18 +312,18 @@ TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_p
     for (unsigned int i = 0; i < expected_weights_vec.size(); i++)
     {
         float x = float_round(expected_weights_vec[i]), y = float_round(weights_ptr[i]);
-        EXPECT_FLOAT_EQ(x, y) << "random seed = " << random_seed << std::endl;
+        EXPECT_FLOAT_EQ(x, y) << "on weights verification" << random_seed << std::endl;
         x = float_round(expected_weights2_vec[i]);
         y = float_round(weights2_ptr[i]);
-        EXPECT_FLOAT_EQ(x, y) << "random seed = " << random_seed << std::endl;
+        EXPECT_FLOAT_EQ(x, y) << "on weights verification" << random_seed << std::endl;
     }
 
     for (unsigned int i = 0; i < expected_bias_vec.size(); i++)
     {
         float x = float_round(expected_bias_vec[i]), y = float_round(biases_ptr[i]);
-        EXPECT_FLOAT_EQ(x, y) << "random seed = " << random_seed << std::endl;
+        EXPECT_FLOAT_EQ(x, y) << "on biases verification" << random_seed << std::endl;
         x = float_round(expected_bias2_vec[i]);
         y = float_round(biases2_ptr[i]);
-        EXPECT_FLOAT_EQ(x, y) << "random seed = " << random_seed << std::endl;
+        EXPECT_FLOAT_EQ(x, y) << "on biases verification" << random_seed << std::endl;
     }
 }
