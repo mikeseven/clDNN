@@ -39,6 +39,7 @@ struct custom_gpu_primitive;
 struct generic_layer;
 struct reshape;
 struct data;
+struct mutable_data;
 struct input_layout;
 struct prior_box;
 
@@ -112,6 +113,16 @@ struct implementation_key<data>
 {
     typedef cldnn::engine_types type;
     type operator()(engine_types engine_type, const typed_program_node<data>&)
+    {
+        return engine_type;
+    }
+};
+
+template<>
+struct implementation_key<mutable_data>
+{
+    typedef cldnn::engine_types type;
+    type operator()(engine_types engine_type, const typed_program_node<mutable_data>&)
     {
         return engine_type;
     }
