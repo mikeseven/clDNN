@@ -150,7 +150,8 @@ struct execution_params {
     size_t loop = 1; // running the same input in a loop for smoothing perf results
 
     bool perf_per_watt; // power instrumentation
-    bool disable_mem_pool; // memory optimization
+    bool disable_mem_pool; // memory 
+    bool calibration; // int8 precission
 };
 
 struct memory_filler

@@ -34,3 +34,5 @@ cldnn::topology build_gender(const std::string& weights_dir, const cldnn::engine
 cldnn::topology build_microbench(const std::string& weights_dir, const cldnn::engine& wo, std::map<cldnn::primitive_id, cldnn::layout>& inputs, int32_t batch_size);
 
 cldnn::topology build_squeezenet(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size);
+
+cldnn::topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size);
