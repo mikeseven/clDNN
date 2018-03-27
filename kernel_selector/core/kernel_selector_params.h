@@ -99,6 +99,7 @@ namespace KernelSelector
                             uint32_t max : 1;
                             uint32_t avg : 1;
                             uint32_t floor : 1;
+                            uint32_t max_with_argmax : 1;
                             uint32_t ceil : 1;
                             uint32_t fixedKenrelDivider : 1;
                             uint32_t dynamicKenrelDivider : 1;
@@ -516,6 +517,9 @@ namespace KernelSelector
                 break;
             case PoolType::AVG:
                 key.restrict.val.dedicated.pooling.avg = 1;
+                break;
+            case PoolType::MAX_WITH_ARGMAX:
+                key.restrict.val.dedicated.pooling.max_with_argmax = 1;
                 break;
             default:
                 break;

@@ -124,6 +124,8 @@ namespace KernelSelector
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point);
+        if(orgParams.poolParams.poolType == PoolType::MAX_WITH_ARGMAX)
+            kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 1 });
 
         kd.estimatedTime = estimatedTime;
 
