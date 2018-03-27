@@ -162,6 +162,13 @@ namespace KernelSelector
                         {
                             uint32_t winograd : 1;
                         } reorder;
+                        struct lstm_gemm_t {
+                            uint32_t bias : 1;
+                            uint32_t hidden : 1;
+                        } lstm_gemm;
+                        struct lstm_elt_t {
+                            uint32_t cell : 1;
+                        } lstm_elt;
                     } dedicated;
                 } val;
                 uint64_t raw;
@@ -656,6 +663,19 @@ namespace KernelSelector
                 break;
             }
         }
+
+        void EnableLSTMGEMMBias() {
+            key.restrict.val.dedicated.lstm_gemm.bias = 1;
+        }
+
+        void EnableLSTMGEMMHidden() {
+            key.restrict.val.dedicated.lstm_gemm.hidden = 1;
+        }
+
+        void EnableLSTMEltCell() {
+            key.restrict.val.dedicated.lstm_elt.cell = 1;
+        }
+
 
         void EnableConcatKernelPerInput()
         {
@@ -1624,7 +1644,74 @@ namespace KernelSelector
             {
                 k.EnableDepthwiseSeparableOpt();
             }
+            return k;
+        }
+    };
 
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // LSTMGemmParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct LSTMGemmParams : public BaseParams
+    {
+        LSTMGemmParams() : BaseParams(KernelType::LSTM_GEMM) {}
+
+        DataTensor weights;
+        DataTensor recurrent;
+        DataTensor bias;
+        DataTensor hidden;
+        bool hasBias = false;
+        bool hasHidden = false;
+
+        void SetBias(const DataTensor& v) {
+            bias = v;
+            hasBias = true;
+        }
+
+        void SetHidden(const DataTensor& v) {
+            hidden = v;
+            hasHidden = true;
+        }
+
+        virtual ParamsKey GetParamsKey() const override
+        {
+            ParamsKey k = BaseParams::GetParamsKey();
+
+            if (hasBias)
+            {
+                k.EnableLSTMGEMMBias();
+            }
+
+            if (hasHidden)
+            {
+                k.EnableLSTMGEMMHidden();
+            }
+
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // LSTMEltParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct LSTMEltParams : public BaseParams
+    {
+        LSTMEltParams() : BaseParams(KernelType::LSTM_ELT) {}
+
+        DataTensor cell;
+        bool hasCell = false;
+
+        void SetCell(const DataTensor& v) {
+            cell = v;
+            hasCell = true;
+        }
+
+        virtual ParamsKey GetParamsKey() const override
+        {
+            ParamsKey k = BaseParams::GetParamsKey();
+            if (hasCell)
+            {
+                k.EnableLSTMEltCell();
+            }
             return k;
         }
     };
@@ -1918,4 +2005,21 @@ namespace KernelSelector
     {
         FullyConnectedGradWeightsOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
     };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // LSTMGemmOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct LSTMGemmOptionalParams : OptionalParams
+    {
+        LSTMGemmOptionalParams() : OptionalParams(KernelType::LSTM_GEMM) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // LSTMEltOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct LSTMEltOptionalParams : OptionalParams
+    {
+        LSTMEltOptionalParams() : OptionalParams(KernelType::LSTM_ELT) {}
+    };
+
 }

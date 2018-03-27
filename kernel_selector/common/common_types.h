@@ -48,7 +48,9 @@ namespace KernelSelector
         CONVOLUTION_GRAD_WEIGHTS,
         MVN,
         FULLY_CONNECTED_GRAD_INPUT,
-        FULLY_CONNECTED_GRAD_WEIGHTS
+        FULLY_CONNECTED_GRAD_WEIGHTS,
+        LSTM_GEMM,
+        LSTM_ELT
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

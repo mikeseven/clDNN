@@ -160,6 +160,33 @@ namespace {
                         break;
                     }
                 }
+            case kernel_selector::kernel_argument_types::RECURRENT: // RNN/LSTM/GRU layers
+                if (data.recurrent)
+                {
+                    if (data.recurrent->get_layout().format.is_image_2d())
+                        status = kernel.setArg(i, dynamic_cast<const gpu::gpu_image2d&>(*data.recurrent).get_buffer());
+                    else
+                        status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.recurrent).get_buffer());
+                }
+                break;
+            case kernel_selector::kernel_argument_types::HIDDEN: // RNN/LSTM/GRU layers
+                if (data.hidden)
+                {
+                    if (data.hidden->get_layout().format.is_image_2d())
+                        status = kernel.setArg(i, dynamic_cast<const gpu::gpu_image2d&>(*data.hidden).get_buffer());
+                    else
+                        status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.hidden).get_buffer());
+                }
+                break;
+            case kernel_selector::kernel_argument_types::CELL: // LSTMlayers
+                if (data.cell)
+                {
+                    if (data.cell->get_layout().format.is_image_2d())
+                        status = kernel.setArg(i, dynamic_cast<const gpu::gpu_image2d&>(*data.cell).get_buffer());
+                    else
+                        status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.cell).get_buffer());
+                }
+                break;
             default:
                 break;
             }

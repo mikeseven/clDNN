@@ -142,7 +142,11 @@ namespace KernelSelector {
             INTERNAL_BUFFER,
             SCALAR,
             WEIGHTS_QUANTIZATION_FACTORS,
-            OUTPUT_CALIBRATION_FACTORS
+            OUTPUT_CALIBRATION_FACTORS,
+            RECURRENT, // RNN/LSTM/GRU recurrent weights
+            HIDDEN,    // RNN/LSTM/GRU hidden input
+            CELL,      // LSTM cell input
+            LSTM_PACK  // LSTM packed output
         };
 
         enum class ScalarTypes

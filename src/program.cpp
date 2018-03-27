@@ -55,6 +55,9 @@
 #include "eltwise_inst.h"
 #include "fully_connected_inst.h"
 #include "mvn_inst.h"
+#include "lstm_inst.h"
+#include "lstm_gemm_inst.h"
+#include "lstm_elt_inst.h"
 
 #include "network_impl.h"
 #include "kernel_selector_helper.h"
@@ -63,6 +66,10 @@
 
 #include <fstream>
 #include <algorithm>
+#include <stdio.h>
+#include <iostream>
+#include <sstream>
+#include <iomanip>
 
 namespace cldnn
 {
@@ -356,7 +363,6 @@ void program_impl::init_graph(topology_impl const& topology)
         auto& n = get_or_create(prim.second);
         inputs.push_back(&n);
     }
-    
     replace_nodes_pre();
 
     for (auto itr = inputs.begin(); itr != inputs.end(); )
@@ -490,6 +496,13 @@ void program_impl::cleanup()
     }
 }
 
+
+std::string getIdString(size_t i) {
+    std::stringstream ss;
+    ss << std::setw(5) << std::setfill('0') << i;
+    return ss.str();
+}
+
 void program_impl::replace_nodes_pre()
 {
     auto itr = nodes_map.begin();
@@ -515,6 +528,70 @@ void program_impl::replace_nodes_pre()
                 get_or_create(crop_prim);
             }
         }
+
+        if (node->is_type<lstm>()) {
+            auto lstm_prim = node->as<lstm>().typed_desc();
+            size_t sequence_len = lstm_prim->input.size();
+            auto pnode = node->as<lstm>().get_primitive();
+
+            tensor input_size;
+            // Check if the input is an output from a split node
+            // We assume that all inputs are the same size
+            // Ideally we would like to propagate output layouts so we won't need this hack.
+            auto strInput = lstm_prim->input[0];
+            size_t found = lstm_prim->input[0].find(":"); // first ocurrence
+            if (found != std::string::npos) {
+                std::string strInputParent = strInput.substr(0, found);
+                // find the splitInput name
+                auto split_node = nodes_map.at(strInputParent);
+                // get the split primitive
+                auto split_prim = split_node->as<split>().typed_desc();
+                // finally get the input size from the input node output layout
+                auto input = nodes_map.at(split_prim->input[0]);
+                input_size = input->get_output_layout().size;
+            }
+            else {
+                input_size = nodes_map.at(lstm_prim->input[0])->get_output_layout().size;
+            }
+            auto recurrent_size = nodes_map.at(lstm_prim->recurrent)->get_output_layout().size;
+            // computing hidden_size from recurrent and input sizes
+            auto hidden_size = tensor(1, recurrent_size.feature[0], recurrent_size.spatial[0], input_size.spatial[1]);
+
+            std::vector<primitive_id> output_ids_offsets;
+            primitive_id weights_id = lstm_prim->weights;
+            primitive_id recurrent_id = lstm_prim->recurrent;
+            primitive_id bias_id = node->as<lstm>().bias_term() ? lstm_prim->bias : "";
+            primitive_id hidden_id = node->as<lstm>().initial_hidden_term() ? lstm_prim->initial_hidden : "";
+            primitive_id cell_id = node->as<lstm>().initial_cell_term() ? lstm_prim->initial_cell : "";
+
+            for (size_t i = 0; i < sequence_len; ++i) {
+                primitive_id lstm_gemm_id = node->id() + ":lstm_gemm" + getIdString(i);
+                primitive_id lstm_elt_id = node->id() + ":lstm_elt" + getIdString(i);
+                primitive_id crop_id = node->id() + ":crop" + getIdString(i);
+                primitive_id lstm_gemm_input_id = lstm_prim->input[i];
+                auto lstm_gemm_node = std::make_shared<lstm_gemm>(lstm_gemm_id, lstm_gemm_input_id, weights_id, recurrent_id, bias_id, hidden_id);
+                auto &n1 = get_or_create(lstm_gemm_node);
+                inputs.push_back(&n1);
+                auto lstm_elt_node = std::make_shared<lstm_elt>(lstm_elt_id, lstm_gemm_id, cell_id);
+                auto &n2 = get_or_create(lstm_elt_node);
+                inputs.push_back(&n2);
+                hidden_id = crop_id + ":hidden";
+                auto crop_hidden = std::make_shared<crop>(hidden_id, lstm_elt_id, hidden_size, tensor{ 0,0,0,0 });
+                auto &n3 = get_or_create(crop_hidden);
+                inputs.push_back(&n3);
+                if (i < sequence_len - 1) {
+                    cell_id = crop_id + ":cell";
+                    auto crop_cell = std::make_shared<crop>(cell_id, lstm_elt_id, hidden_size, tensor{ 1,0,0,0 });
+                    auto &n4 = get_or_create(crop_cell);
+                    inputs.push_back(&n4);
+                }
+                output_ids_offsets.push_back(hidden_id);
+            }
+            primitive_id concatenation_id = node->id() + ":concatenation";
+            auto concatenation_node = std::make_shared<concatenation>(concatenation_id, output_ids_offsets, concatenation::along_b);
+            auto &n5 = get_or_create(concatenation_node);
+            inputs.push_back(&n5);
+        }
     }
 }
 
@@ -526,6 +603,12 @@ void program_impl::replace_nodes_post()
     {
         auto node_itr = itr++;
         auto& node = (*node_itr).second;
+        if (node->is_type<lstm>()) {
+            remove_all_connections(*node);
+            optimized_out.push_back(node->id());
+            nodes_map.erase(node->id());
+            continue;
+        }
 
         //find split primitives and create crop primitives out of them
         if(node->is_type<split>())
@@ -1002,7 +1085,7 @@ void program_impl::calc_dominators()
     auto root_itr = processing_order.begin();
     while (root_itr != processing_order.end())
     {
-        if ((*root_itr)->get_users().size() > 1)
+        if ((*root_itr)->is_in_data_flow() && (*root_itr)->get_users().size() > 1)
             break;
 
         ++root_itr;
@@ -1048,7 +1131,7 @@ void program_impl::calc_dominators()
         while (itr != processing_order.end())
         {
             auto node = *(itr++);
-            if (!node->is_in_data_flow()) //eliminate helper nodes
+            if (!node->is_in_data_flow()) //eliminate helper nodes  || node->get_dependencies().size() == 0
                 continue;
 
             //pick first (processed) predecessor
@@ -1083,7 +1166,9 @@ void program_impl::calc_dominators()
     while (ritr != processing_order.rend())
     {
         auto node = *(ritr++);
-        if (!node->is_in_data_flow())
+        if (!node->dominator)
+            continue;
+        else if (!node->is_in_data_flow())
             continue;
         else if (node->dominator == node)
             node->dominator = nullptr;

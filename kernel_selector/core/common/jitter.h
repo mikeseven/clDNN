@@ -469,7 +469,6 @@ inline JitConstants MakeWeightBiasParamsJitConstants(const WeightBiasParams& par
             MakeJitConstant("BIAS_PER_OFM",     !sameDims),
         });
     }
-
     return jit;
 }
 
@@ -958,6 +957,49 @@ inline JitConstants MakeFullyConnectedGradWeightsJitConstants(const FullyConnect
 {
     JitConstants jit = MakeWeightBiasParamsJitConstants(params);
 
+    return jit;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MakeLSTMGemmJitConstants
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+inline JitConstants MakeLSTMGemmJitConstants(const LSTMGemmParams& params)
+{
+    JitConstants jit = MakeBaseParamsJitConstants(params);
+    const auto& weights = params.weights;
+    const auto& recurrent = params.recurrent;
+    const auto& hidden = params.hidden;
+    const auto& bias = params.bias;
+    if (params.hasBias) {
+        jit.AddConstants({ MakeJitConstant("BIAS", bias), MakeJitConstant("BIAS_TERM", true) });
+    }
+    if (params.hasHidden) {
+        jit.AddConstants({ MakeJitConstant("HIDDEN", hidden), MakeJitConstant("HIDDEN_TERM", true) , MakeJitConstant("RECURRENT", recurrent) });
+    }
+
+    jit.AddConstants({ MakeJitConstant("WEIGHTS", weights)});
+
+    return jit;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MakeLSTMEltJitConstants
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+inline JitConstants MakeLSTMEltJitConstants(const LSTMEltParams& params)
+{
+    JitConstants jit = MakeBaseParamsJitConstants(params);
+
+    if (params.hasCell) {
+        const auto& cell = params.cell;
+        jit.AddConstants({ MakeJitConstant("CELL_TERM", true), MakeJitConstant("CELL", cell) });
+    }
+
+    const auto& GEMMInput = params.inputs[0];
+    jit.AddConstants({
+        MakeJitConstant("GEMM_OFFSET1", GEMMInput.X().v / 4),
+        MakeJitConstant("GEMM_OFFSET2", GEMMInput.X().v / 2),
+        MakeJitConstant("GEMM_OFFSET3", 3 * GEMMInput.X().v / 4),
+    });
     return jit;
 }
 

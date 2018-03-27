@@ -45,6 +45,8 @@
 #include "convolution_grad_weights/convolution_grad_weights_kernel_selector.h"
 #include "fully_connected_grad_input/fully_connected_grad_input_kernel_selector.h"
 #include "fully_connected_grad_weights/fully_connected_grad_weights_kernel_selector.h"
+#include "lstm/lstm_gemm_kernel_selector.h"
+#include "lstm/lstm_elt_kernel_selector.h"
 #include "jitter.h"
 
 using namespace cldnn;
@@ -120,6 +122,8 @@ namespace kernel_selector
     using generic_kernel_params             = KernelSelector::GenericKernelParams;
     using upsampling_params                 = KernelSelector::UpSamplingParams;
     using convolution_grad_weights_params   = KernelSelector::ConvolutionGradWeightsParams;
+    using lstm_gemm_params                  = KernelSelector::LSTMGemmParams;
+    using lstm_elt_params                   = KernelSelector::LSTMEltParams;
 
     using optional_params                   = KernelSelector::OptionalParams;
     using weights_bias_optional_params      = KernelSelector::WeightsBiasOptionalParams;
@@ -145,6 +149,8 @@ namespace kernel_selector
     using concatenation_optional_params     = KernelSelector::ConcatenationOptionalParams;
     using upsampling_optional_params        = KernelSelector::UpSamplingOptionalParams;
     using convolution_grad_weights_optional_params = KernelSelector::ConvolutiongradWeightsOptionalParams;
+    using lstm_gemm_optional_params         = KernelSelector::LSTMGemmOptionalParams;
+    using lstm_elt_optional_params          = KernelSelector::LSTMEltOptionalParams;
 
 	using arg_max_min_kernel_selector		= KernelSelector::ArgMaxMinKernelSelctor;
     using lookup_table_kernel_selector      = KernelSelector::LookUpTableKernelSelctor;
@@ -170,6 +176,8 @@ namespace kernel_selector
     using concatenation_kernel_selector     = KernelSelector::ConcatenationKernelSelctor;
     using upsampling_kernel_selector        = KernelSelector::UpSamplingKernelSelector;
     using convolution_grad_weights_kernel_selector = KernelSelector::ConvolutionGradWeightsKernelSelctor;
+    using lstm_gemm_kernel_selector         = KernelSelector::LSTMGemmKernelSelector;
+    using lstm_elt_kernel_selector          = KernelSelector::LSTMEltKernelSelector;
 }
 
 inline kernel_selector::data_type to_data_type(data_types dt)
