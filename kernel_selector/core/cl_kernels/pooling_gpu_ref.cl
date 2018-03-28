@@ -160,6 +160,7 @@ KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output
     output[output_pos] = ACTIVATION(result, NL_M ,NL_N);
 
 #if MAX_WITH_ARGMAX_POOLING
+    //INPUT1 macro stands for Argmax
     const uint arg_max_pos = GET_DATA_INDEX(INPUT1, b, f, y, x);
     arg_max[arg_max_pos] = convert_float(arg_max_idx);
 #endif
