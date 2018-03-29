@@ -125,6 +125,7 @@ private:
     void analyze_output_size_handling_need();
     void replace_nodes_pre();
     void replace_nodes_post();
+    void handle_reshape();
 
     /*
     ** Optimization functions

@@ -422,6 +422,7 @@ void program_impl::pre_optimize_graph()
         dump_program("4_reordered_inputs", true);
     }
 
+    handle_reshape();
     remove_redundant_reorders(); dump_program("5_removed_redundant_reorders", true);
     prepare_padding();
     prepare_depthwise_sep_opt();
@@ -1801,6 +1802,85 @@ void program_impl::prepare_depthwise_sep_opt()
             prepare_depthwise_sep_opt,   //case for deconvolution
             prepare_depthwise_sep_opt    //case for convolution
             );
+    }
+}
+
+void program_impl::handle_reshape()
+{
+    //reshape primitive by definition does not change underlying data, only shape description
+    //however during graph initialization and data optimization the layouts can be changed without user's knowledge,
+    //when reshape is followed by reorder, it is likely that reorder's output will not be as expected (for example reshape with flattened shape)
+    //this pass resolved the issue by changing graph in the following way
+    //- in case reshape has multiple users with reshape->reorder sequence, it will be splitted to multiple reshape primitives with single user
+    //- in case of reshape->reorder sequence, the additional reorder before reshape will be added,
+    //  if last reorder does not contain padding or mean subtract, it will be removed later in the graph
+
+    for (const auto& node : processing_order)
+    {
+        if (node->is_type<reshape>())
+        {
+            auto& input_node = node->get_dependency(0);
+            
+            if (input_node.is_type<reorder>())
+                continue;
+            
+            //vector for storing nodes that are reorder type, for which splitted primitives are needed (except for the first one where orginal reshape will be used)
+            std::vector<program_node*> reorder_node_to_split;
+            
+            //find the users of reshape that are reorder type, if none present then skip the current node
+            for (const auto& user : node->get_users())
+            {
+                if (user->is_type<reorder>())
+                    reorder_node_to_split.push_back(user);
+            }
+            
+            if (reorder_node_to_split.empty())
+                continue;
+            
+            auto& prim_node = node->as<reshape>();
+            const auto& prim = prim_node.get_primitive();
+            auto output_shape = prim->output_shape;
+            
+            //vector for storing reshape nodes to connect to new reorder nodes (if needed)
+            std::vector<program_node*> reorder_reshape_nodes;
+            
+            bool skip_first_user = false;
+            auto reshape_users = node->get_users();
+            for (const auto& user : reshape_users)
+            {
+                //reshape node for first user will be the orginal reshape from the graph
+                if (!skip_first_user)
+                {
+                    if (std::find(reorder_node_to_split.begin(), reorder_node_to_split.end(), user) != reorder_node_to_split.end())
+                        reorder_reshape_nodes.push_back(node);
+                    skip_first_user = true;
+                    continue;
+                }
+            
+                //other reshapes will be clones of the orginal one connected to reshape->reorder sequences
+                if (std::find(reorder_node_to_split.begin(), reorder_node_to_split.end(), user) != reorder_node_to_split.end())
+                {
+                    auto new_reshape = std::make_shared<reshape>("_reshape_split_" + user->id() + "_" + node->id(), input_node.id(), output_shape);
+                    auto& new_reshape_node = get_or_create(new_reshape);
+                    add_connection(input_node, new_reshape_node);
+                    user->replace_dependency(0, new_reshape_node);
+                    new_reshape_node.processing_itr = processing_order.insert(std::next(input_node.processing_itr), &new_reshape_node);
+                    reorder_reshape_nodes.push_back(&new_reshape_node);
+                }
+            }
+            
+            //add new reorder nodes to proper reshape node
+            auto reshape_reorder_id = 0;
+            for (const auto& reorder_node : reorder_node_to_split)
+            {
+                auto& reorder_reshape_node = reorder_reshape_nodes[reshape_reorder_id];
+                auto reshape_in_layout = reorder_node->get_output_layout();
+                auto reshape_input = std::make_shared<reorder>("_reshape_input_" + reorder_node->id() + "_" + reorder_reshape_node->id(), input_node.id(), reshape_in_layout.format, reshape_in_layout.data_type);
+                auto& reshape_input_node = get_or_create(reshape_input);
+                add_intermediate(reshape_input_node, *reorder_reshape_node, 0, reshape_input_node.dependencies.empty());
+                reshape_reorder_id++;
+            }
+        }
     }
 }
 
