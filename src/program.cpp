@@ -2194,7 +2194,6 @@ void program_impl::prepare_buffer_fusing()
             // it could break desired memory alignment. On the other hand, if this node uses all inputs
             // exclusively (see check above) they should not have output padding set since concatenation
             // does not ask for any.
-            assert(!node.has_padded_dependency());
             if (node.has_padded_dependency())
                 return;
 
