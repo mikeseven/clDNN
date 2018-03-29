@@ -529,7 +529,7 @@ namespace KernelSelector
             { "6642767323474835034", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 327) },
             { "3215659303601163167", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 334) },
             { "54975980454651672", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 334) },
-            { "11529876081402974396", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 322) },
+            { "11529876081402974396", std::make_tuple("convolution_gpu_bfyx_os_iyx_osv16", 327) },
             { "3644282167178264526", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "360872770877634346", std::make_tuple("convolution_gpu_bfyx_gemm_like", -1) },
             { "16720108310653948550", std::make_tuple("convolution_gpu_winograd_6x3_s1_fused", -1) },
