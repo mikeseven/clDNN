@@ -2224,7 +2224,7 @@ void program_impl::prepare_buffer_fusing()
                     // todo: in future, if this case is problem, it can be optimized further to enable buffer fusing
                     //       per single input rather than all/none
                     // + restrict input types to pooling, convolution and activation only due to problems with output padding on b and f
-                    if ((!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>() && !input->is_type<concatenation>()) ||
+                    if ((!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>() && !input->is_type<concatenation>() && !input->is_type<crop>()) ||
                         (input->is_output() && !is_debug) ||
                         input->get_users().size() > 2)
                         return;
@@ -2297,6 +2297,10 @@ void program_impl::prepare_buffer_fusing()
 
             //connector mights have been added at the end of the network, if that is a case ignore it
             if (node.get_users().size() == 1 && node.get_users().front()->is_type<connector>())
+                return;
+
+            //do not optimize when next node is concatenation which is not output
+            if (node.get_users().size() == 1 && node.get_users().front()->is_type<concatenation>() && !node.get_users().front()->is_output())
                 return;
 
             if (node.get_dependencies().size() == 1 &&
