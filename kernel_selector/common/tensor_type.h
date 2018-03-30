@@ -483,6 +483,21 @@ namespace KernelSelector
 
                 return same;
             }
+
+            bool SameDimsSizes(const TensorBaseT& t) const
+            {
+                bool same =
+                    dims.size() == t.dims.size();
+                if (same)
+                {
+                    for (size_t i = 0; i < dims.size(); i++)
+                    {
+                        same &= dims[i].v == t.dims[i].v;
+                    }
+                }
+
+                return same;
+            }
         };
 
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
