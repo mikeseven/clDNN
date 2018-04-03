@@ -264,7 +264,7 @@ TEST(memory_pool, shared_mem_pool_same_topology_twice) {
     auto output_layout_second = output_memory_second.get_layout();
     auto output_ptr_second = output_memory_second.pointer<float>();
 
-    EXPECT_EQ(engine.get_max_used_device_memory_size(), (uint64_t)6400);
+    EXPECT_EQ(engine.get_max_used_device_memory_size(), (uint64_t)5376);
     EXPECT_EQ(output_layout_first, output_layout_second);
 
     int y_size = output_layout_first.size.spatial[1];
@@ -323,7 +323,7 @@ TEST(memory_pool, shared_mem_pool_same_topology_twice_weights) {
     network_first.set_input_data("input", input);
     auto outputs = network_first.execute();
 
-    EXPECT_EQ(engine.get_max_used_device_memory_size(), (uint64_t)848);
+    EXPECT_EQ(engine.get_max_used_device_memory_size(), (uint64_t)824);
 
     auto output_memory_first = outputs.at("softmax").get_memory();
     auto output_layout_first = output_memory_first.get_layout();
@@ -337,7 +337,7 @@ TEST(memory_pool, shared_mem_pool_same_topology_twice_weights) {
     auto output_layout_second = output_memory_second.get_layout();
     auto output_ptr_second = output_memory_second.pointer<float>();
 
-    EXPECT_EQ(engine.get_max_used_device_memory_size(), (uint64_t)1464);
+    EXPECT_EQ(engine.get_max_used_device_memory_size(), (uint64_t)1224);
     EXPECT_EQ(output_layout_first, output_layout_second);
 
     int y_size = output_layout_first.size.spatial[1];
@@ -400,7 +400,7 @@ TEST(memory_pool, shared_mem_pool_diff_batches) {
     network_first.set_input_data("input", input_8);
     auto outputs = network_first.execute();
 
-    EXPECT_EQ(engine.get_max_used_device_memory_size(), (uint64_t)3952);
+    EXPECT_EQ(engine.get_max_used_device_memory_size(), (uint64_t)3928);
 
     topo.change_input_layout("input", input_1.get_layout());//change input layout to batch=1
 
@@ -408,5 +408,5 @@ TEST(memory_pool, shared_mem_pool_diff_batches) {
     network_second.set_input_data("input", input_1);
     auto outputs_second = network_second.execute();
 
-    EXPECT_EQ(engine.get_max_used_device_memory_size(), (uint64_t)4568);
+    EXPECT_EQ(engine.get_max_used_device_memory_size(), (uint64_t)3928);
 }
