@@ -132,7 +132,7 @@ public:
     refcounted_obj_ptr<memory_impl> get_memory(const layout& layout);
     refcounted_obj_ptr<memory_impl> get_from_non_padded_pool(const layout& layout, const primitive_id& id, uint32_t network_id, const std::set<primitive_id>&);
     refcounted_obj_ptr<memory_impl> get_from_padded_pool(const layout& layout, const primitive_id& id, uint32_t network_id, const std::set<primitive_id>& restrictions);
-    refcounted_obj_ptr<memory_impl> get_from_no_reusable_pool(const layout& layout, const primitive_id& id, uint32_t network_id);
+    refcounted_obj_ptr<memory_impl> get_from_across_networks_pool(const layout& layout, const primitive_id& id, uint32_t network_id);
     void clear_pool();
     void color_graph(const program_impl&);
     void dump_memory_pool(const program_impl&, std::string, std::string);

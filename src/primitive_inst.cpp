@@ -21,7 +21,6 @@
 #include "generic_layer_inst.h"
 #include "input_layout_inst.h"
 #include "max_unpooling_inst.h"
-#include "concatenation_inst.h"
 
 #include "network_impl.h"
 #include "engine_impl.h"
@@ -55,7 +54,6 @@ event_impl::ptr primitive_inst::execute(const std::vector<event_impl::ptr>& even
 primitive_inst::primitive_inst(network_impl& network, program_node const& node, bool allocate_memory)
     : _network(network)
     , _node(node)
-    , _my_network_id(network.get_id())
     , _impl(node.get_selected_impl())
     , _deps(network.get_primitives(node.get_dependencies()))
     , _exec_deps(build_exec_deps(_deps))
@@ -74,7 +72,7 @@ memory_impl::ptr primitive_inst::allocate_output()
         (_node.can_be_optimized() ||
         _node.is_type<generic_layer>()))
     {
-        return get_network().get_engine().allocate_memory(layout, _node.id(), _my_network_id, _node.get_memory_dependencies(), false);
+        return get_network().get_engine().allocate_memory(layout, _node.id(), get_network_id(), _node.get_memory_dependencies(), false);
     }
     else if (_network.is_internal() ||
         _node.is_type<data>() ||
@@ -86,7 +84,7 @@ memory_impl::ptr primitive_inst::allocate_output()
     {
         return get_network().get_engine().allocate_memory(layout);
     }
-    return get_network().get_engine().allocate_memory(layout, _node.id(), _my_network_id, _node.get_memory_dependencies(), true);
+    return get_network().get_engine().allocate_memory(layout, _node.id(), get_network_id(), _node.get_memory_dependencies(), true);
 }
 
 std::vector<std::shared_ptr<primitive_inst>> primitive_inst::build_exec_deps(std::vector<std::shared_ptr<primitive_inst>> const& mem_deps)

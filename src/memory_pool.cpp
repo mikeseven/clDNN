@@ -138,13 +138,13 @@ namespace cldnn
     }
 
     /*
-        no_reusable_pool is not reusable within one network or its internal miconetworks. But we can use this memory records between networks.
+        This is not reusable within one network or it's internal micronetworks. But we can use this memory records between networks.
     */
-    memory_impl::ptr memory_pool::get_from_no_reusable_pool(const layout& layout, const primitive_id& id, uint32_t network_id)
+    memory_impl::ptr memory_pool::get_from_across_networks_pool(const layout& layout, const primitive_id& id, uint32_t network_id)
     {
         auto it = _no_reusable_pool.lower_bound(layout.bytes_count());
 
-        if (it->second._network_id != network_id) // dont use non reusable resources within the same network
+        if (it->second._network_id != network_id) // don't use non reusable resources within the same network
         {
             while (it != _no_reusable_pool.end())
             {
@@ -174,9 +174,9 @@ namespace cldnn
         return alloc_memory(layout);
     }
 
-    memory_impl::ptr memory_pool::get_memory(const layout& layout, const primitive_id& id, uint32_t network_id, const std::set<primitive_id>& restrictions, bool reusable)
+    memory_impl::ptr memory_pool::get_memory(const layout& layout, const primitive_id& id, uint32_t network_id, const std::set<primitive_id>& restrictions, bool reusable_across_network)
     {
-        if (reusable) //reusable within the same network
+        if (reusable_across_network) //reusable within the same network
         {
             if (!layout.format.is_image() && layout.data_padding == padding{ { 0,0,0,0 }, 0 }) // non-padded buffers
             {
@@ -194,7 +194,7 @@ namespace cldnn
         }
         else
         {
-            return get_from_no_reusable_pool(layout, id, network_id);
+            return get_from_across_networks_pool(layout, id, network_id);
         }
     }
 
