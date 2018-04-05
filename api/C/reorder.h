@@ -43,6 +43,8 @@ cldnn_data_type output_data_type;
 cldnn_primitive_id mean_subtract;
 /// @brief Array of mean subtract values.
 cldnn_float_arr subtract_per_feature;
+/// @brief mode of mean execution
+cldnn_reorder_mean_mode mean_mode;
 CLDNN_END_PRIMITIVE_DESC(reorder)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(reorder);

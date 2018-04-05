@@ -424,6 +424,16 @@ typedef struct cldnn_activation_additional_params_t
     float a, b;
 } cldnn_activation_additional_params;
 
+
+/// @brief reorder mean operation modes
+typedef enum cldnn_reorder_mean_mode_t
+{
+    mean_none,                    // val
+    mean_subtract,                // val - mean
+    mean_mul,                     // val * mean
+    mean_div,                     // val/mean
+} cldnn_reorder_mean_mode;
+
 /// @brief Begin primitive description definition
 /// @details Defines @p 'cldnn_primitive_type_desc' structure with first 5 fields
 /// common for all primitive descriptors. Other fields should be added after this macro.

@@ -80,6 +80,18 @@ inline std::string toCLType(Datatype dType)
     }
 }
 
+inline std::string getMeanOpString(MeanOp op)
+{
+    switch (op)
+    {
+    case MeanOp::NONE:   return "val";
+    case MeanOp::DIV:    return "val/mean_val";
+    case MeanOp::MUL:    return "val*mean_val";
+    case MeanOp::SUB:    return "val-mean_val";
+    default: return "";
+    }
+}
+
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // ToCodeString functions
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -777,7 +789,8 @@ inline JitConstants MakeReorderJitConstants(const ReorderParams& params)
         MakeJitConstant("TO_CALC_TYPE",      "convert_" + toCLType(calc_type)),
         MakeJitConstant("INPUT_REORDER_TYPE",             useUshort ? toCLType(Datatype::UINT16) : "INPUT0_TYPE"),
         MakeJitConstant("OUTPUT_REORDER_TYPE",            useUshort ? toCLType(Datatype::UINT16) : "OUTPUT_TYPE"),
-        MakeJitConstant("TO_OUTPUT_REORDER_TYPE",         useUshort ? "" : "TO_OUTPUT_TYPE")
+        MakeJitConstant("TO_OUTPUT_REORDER_TYPE",         useUshort ? "" : "TO_OUTPUT_TYPE"),
+        MakeJitConstant("MEAN_OP(val,mean_val)",          getMeanOpString(params.reorderParams.mean_op))
     });
 
     return jit;

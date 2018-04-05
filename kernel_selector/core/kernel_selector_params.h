@@ -1369,6 +1369,7 @@ namespace KernelSelector
         struct DedicatedParams
         {
             MeanSubtractMode    mode = MeanSubtractMode::NONE;
+            MeanOp              mean_op = MeanOp::SUB;
             std::vector<float>  meanValues;
             DataTensor          mean;
             uint32_t            winograd_input_offset_x;
