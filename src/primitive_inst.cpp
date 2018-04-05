@@ -63,9 +63,12 @@ primitive_inst::primitive_inst(network_impl& network, program_node const& node, 
 {
     if (allocate_memory)
     {
-        if (node.get_users().size() == 1 && node.get_users().front()->is_type<mutable_data>())
+        if (node.get_users().size() == 1)
         {
-            _output = node.get_users().front()->as<mutable_data>().get_attached_memory_ptr();
+            if(node.get_users().front()->is_type<mutable_data>())
+                _output = node.get_users().front()->as<mutable_data>().get_attached_memory_ptr();
+            else
+                _output = allocate_output();
         }
         else
            _output = allocate_output();
