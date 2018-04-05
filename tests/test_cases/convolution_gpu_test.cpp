@@ -2232,6 +2232,22 @@ cldnn::memory create_int8_weights(engine engine, cldnn::memory& in_weights)
     return out_weights;
 }
 
+void add_primitives(const engine& engine, topology& topology)
+{
+    auto weights = memory::allocate(engine, { data_types::i8, format::bfyx,{ 2, 1, 3, 2 } });
+
+    std::vector<char> weights_values = { 1, 2, 1, 2, 1, 2, 19, 17, -1, -10, 32, 23 };
+    set_values<char>(weights, weights_values);
+    cldnn::memory biases = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 1 } });
+    auto weigths_qfs = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 1 } });
+    set_values(biases, { 1.0f, -8.0f });
+
+    topology.add(
+        data("weights", weights),
+        data("biases", biases),
+        data("w_qfs", weigths_qfs),
+        convolution("conv", "input", { "weights" }, { "biases" }, { 0, 0, 1, 2 }, { 0, 0, 0, 0 }, { 1, 1, 1, 1 }, true));
+}
 
 TEST(convolution_f32_fw_gpu, byte_activation) {
     //  Filter : 2x3
@@ -2263,10 +2279,8 @@ TEST(convolution_f32_fw_gpu, byte_activation) {
     //  1 -8
     engine_configuration eng_conf(false, false, false, "", "", true, "", "kernels");
     engine engine{ eng_conf };
-
-    cldnn::memory biases = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 1 } });
-    auto weigths_qfs = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 1 } });
-    set_values(biases, { 1.0f, -8.0f });
+    auto input = memory::allocate(engine, { data_types::i8, format::bfyx,{ 1, 1, 5, 4 } });
+       
     VVVF<char> output_vec = {
         {
             { 11, 0, 15 },
@@ -2274,27 +2288,18 @@ TEST(convolution_f32_fw_gpu, byte_activation) {
         },
         {
             { 33, 0, 0 },
-            {  0, 0, 0 }
+            { 0, 0, 0 }
         } };
 
     build_options opts;
     opts.set_option(build_option::optimize_data(true));
     opts.set_option(build_option::graph_dumps_dir("graph"));
 
-    auto input = memory::allocate(engine, { data_types::i8, format::bfyx,{ 1, 1, 5, 4 } });
-    auto weights = memory::allocate(engine, { data_types::i8, format::bfyx,{ 2, 1, 3, 2 } });
-
-    std::vector<char> weights_values = { 1, 2, 1, 2, 1, 2, 19, 17, -1, -10, 32, 23 };
     set_values<char>(input, { 1, 2, -3, 4, -5, 2, -2, 3, -4, 6, -3, 3, -3, 5, -1, -1, -1, -1, -1, -1 });
-    set_values<char>(weights, weights_values);
 
     topology topology(
-        input_layout("input", input.get_layout()),
-        data("weights", weights),
-        data("biases", biases),
-        data("w_qfs", weigths_qfs),
-        convolution("conv", "input", { "weights" }, { "biases" }, { 0, 0, 1, 2 }, { 0,0,0,0 }, { 1,1,1,1 }, true));
-
+        input_layout("input", input.get_layout()));
+    add_primitives(engine, topology);
     network network(engine, topology, opts);
     network.set_input_data("input", input);
 
