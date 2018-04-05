@@ -33,6 +33,7 @@ extern "C" {
 /// @brief Provides mutable data.
 /// @details This primitive allows to pass data which can be written to during training.
 /// For example, weights and biases for scoring networks.
+/// This primitive can be also set as other primitive's output. In this case the underlying buffer will be the same in mutable_data and preceding primitive.
 CLDNN_BEGIN_PRIMITIVE_DESC(mutable_data)
 /// @brief Memory object which contains data.
 /// @note If memory is attached by ::cldnn_attach_memory(),

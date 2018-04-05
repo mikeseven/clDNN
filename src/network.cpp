@@ -209,7 +209,7 @@ void network_impl::allocate_primitive_instance(program_node const& node)
 
     auto inst = node.type()->create_instance(*this, node);
     _primitives[node.id()] = inst;
-    if (!node.is_type<data>() && !node.is_type<mutable_data>())
+    if (!node.is_type<data>() && !(node.is_type<mutable_data>() && node.get_dependencies().empty()))
         _exec_order.push_back(inst);
     if (node.is_input())
         _inputs.push_back(inst);

@@ -204,7 +204,8 @@ namespace KernelSelector
         SCALAR,
         INPUT_BUFFER,
         UNORDERED_ACCESS_INPUT_BUFFER,
-        INTERMEDIATE_RESULTS_INDEX
+        INTERMEDIATE_RESULTS_INDEX,
+        OUTPUT_BUFFER
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

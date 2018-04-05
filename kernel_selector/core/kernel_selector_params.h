@@ -1308,6 +1308,13 @@ namespace KernelSelector
                 input.scalar = s;
                 return input;
             }
+
+            static InputType OutBuffer()
+            {
+                EltwiseParams::InputType output;
+                output.mode = EltwiseInputMode::OUTPUT_BUFFER;
+                return output;
+            }
         };
 
         struct Node
@@ -1316,9 +1323,16 @@ namespace KernelSelector
             EltwiseMode mode;
         };
 
+        struct UpdateInputData
+        {
+            uint32_t inputId;
+            uint32_t tmpId;
+        };
+
         struct DedicatedParams
         {
             std::vector<EltwiseParams::Node> operations;
+            std::vector<UpdateInputData> updateInputIds;
             bool layoutBased = false;
         };
 
