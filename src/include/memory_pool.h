@@ -58,13 +58,8 @@ struct memory_user_comparer
     bool operator()(const memory_user& l_mu, const memory_user& r_mu) const
     {
         if (l_mu._network_id != r_mu._network_id)
-        {
-            return true;
-        }
-        else
-        {
-            return l_mu._id < r_mu._id;
-        }
+            return l_mu._network_id < r_mu._network_id;
+        return l_mu._id < r_mu._id;
     }
 };
 
