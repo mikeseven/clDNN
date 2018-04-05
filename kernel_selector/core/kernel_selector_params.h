@@ -1,4 +1,4 @@
-﻿/*
+/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -66,6 +66,7 @@ namespace KernelSelector
                     uint32_t activationAdditionalParamsAsInput : 1;
                     uint32_t FP16Emulation : 1;
                     uint32_t gradient : 1;
+                    uint32_t forbidTuning : 1;
 
                     union dedicated_t
                     {
@@ -635,6 +636,11 @@ namespace KernelSelector
             key.restrict.val.dedicated.concat.kernelPerInput = 1;
         }
 
+        void EnableForbidTuning()
+        {
+            key.restrict.val.forbidTuning = 1;
+        }
+
         void EnableConcatOneKernel()
         {
             key.restrict.val.dedicated.concat.oneKernel = 1;
@@ -684,7 +690,8 @@ namespace KernelSelector
                 ((key.inputLayout & k.key.inputLayout) != 0 || key.inputLayout == k.key.inputLayout) &&
                 ((key.outputLayout & k.key.outputLayout) != 0 || key.outputLayout == k.key.outputLayout) &&
                 ((key.weightsInputLayout & k.key.weightsInputLayout) != 0 || key.weightsInputLayout == k.key.weightsInputLayout) &&
-                ((key.weightsOutputLayout & k.key.weightsOutputLayout) != 0 || key.weightsOutputLayout == k.key.weightsOutputLayout);
+                ((key.weightsOutputLayout & k.key.weightsOutputLayout) != 0 || key.weightsOutputLayout == k.key.weightsOutputLayout) &&
+                (!key.restrict.val.forbidTuning);
         }
 
         ParamsKey Merge(const ParamsKey& k) const
