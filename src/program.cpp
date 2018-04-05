@@ -2882,8 +2882,7 @@ void program_impl::dump_memory_pool() const
 //TODO: break this function into number of smaller ones + add per-primitive fields (possibly use primitive_inst::to_string?)
 void program_impl::dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter) const
 {
-    //auto path = get_dir_path(options);
-    std::string path = "c:\\git\\clDNN\\DEBUG_Generic\\graph\\";
+    auto path = get_dir_path(options);
     if (path.empty())
     {
         return;
