@@ -70,7 +70,7 @@ typedef struct /* Index and Value type that holds index and value used in this k
 #endif
 
 __attribute__((reqd_work_group_size(LOCAL_SIZE, 1, 1)))
-KERNEL(arg_max_gpu_axis)(const __global UNIT_TYPE* input, __global uint* output)
+KERNEL(arg_max_gpu_axis)(const __global UNIT_TYPE* input, __global float* output)
 {
     uint results[TOP_K];
     __local iav_type scratch[LOCAL_SIZE];
