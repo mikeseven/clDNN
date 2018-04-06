@@ -286,6 +286,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
         int count = 0;
         for (int image = 0; image < num_of_images; ++image)
         {
+            int saved_detections_per_image = 0;
             const std::vector<std::vector<bounding_box> >& bboxes_per_image = all_bboxes[image];
             auto& final_detections_per_image = final_detections[image];
             for (int label = 0; label < (int)final_detections_per_image.size(); ++label)
@@ -304,21 +305,21 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
                     out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 5] = (dtype)bbox.xmax;
                     out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 6] = (dtype)bbox.ymax;
                     ++count;
+                    ++saved_detections_per_image;
                 }
             }
-        }
-
-        //In case number of detections is smaller than keep_top_k fill the rest of the buffer with invalid image id (-1).
-        while (count < num_of_images*args.keep_top_k)
-        {
-            out_ptr[count * DETECTION_OUTPUT_ROW_SIZE] = (dtype)-1.f;
-            out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 1] = (dtype)0.f;
-            out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 2] = (dtype)0.f;
-            out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 3] = (dtype)0.f;
-            out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 4] = (dtype)0.f;
-            out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 5] = (dtype)0.f;
-            out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 6] = (dtype)0.f;
-            ++count;
+            //In case number of detections is smaller than keep_top_k fill the rest of the buffer with invalid image id (-1).
+            for (auto j = saved_detections_per_image; j < args.keep_top_k; ++j)
+            {
+                out_ptr[count * DETECTION_OUTPUT_ROW_SIZE] = (dtype)-1.f;
+                out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 1] = (dtype)0.f;
+                out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 2] = (dtype)0.f;
+                out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 3] = (dtype)0.f;
+                out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 4] = (dtype)0.f;
+                out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 5] = (dtype)0.f;
+                out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 6] = (dtype)0.f;
+                ++count;
+            }
         }
     }
 
