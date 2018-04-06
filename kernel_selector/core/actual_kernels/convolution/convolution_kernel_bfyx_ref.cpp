@@ -44,7 +44,7 @@ namespace KernelSelector {
         k.EnableDepthwiseSeparableOpt();
         k.EnableInt8Quantization();
         k.EnableOutputCalibration();
-        k.EnableForbidTuning();
+        k.DisableTuning();
         return k;
     }
 

@@ -42,7 +42,7 @@ namespace KernelSelector
         //k.EnableBatching();
         k.EnableSplitSupport();
         k.EnableGradient();
-        k.EnableForbidTuning();
+        k.DisableTuning();
         return k;
     }
 }
