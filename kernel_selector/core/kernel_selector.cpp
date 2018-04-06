@@ -151,7 +151,7 @@ namespace KernelSelector {
             options.GetType() == kType)
         {
             std::string hash = std::to_string(std::hash<std::string>{}(params.to_string()));
-            const ParamsKey requireKey = params.GetParamsKey().Merge(options.GetSupportedKey());
+            ParamsKey requireKey = params.GetParamsKey().Merge(options.GetSupportedKey());
             
             std::tuple<std::string, int> cachedKernelConfig;
             if (options.tuningParams.mode == TuningMode::TUNING_DISABLED) // Try to load kernel/config from offline cache
@@ -206,14 +206,14 @@ namespace KernelSelector {
             // Start on-line tuning
             assert(options.tuningParams.runner);
 
-           // std::cout << params.layerID << " ---layerID" << std::endl;
+            std::cout << params.layerID << " ---layerID" << std::endl;
             for (const auto& implementation : implementations)
             {
                 
-               // std::cout << implementation->GetName() << " ---kernelName" << std::endl;
+                std::cout << implementation->GetName() << " ---kernelName" << std::endl;
                 const ParamsKey implKey = implementation->GetSupportedKey();
                 auto nazwa = implementation->GetName();
-                if (implKey.Support(requireKey))
+                if (implKey.Support(requireKey) && implKey.TuningSupport())
                 {
                     try
                     {
@@ -222,7 +222,7 @@ namespace KernelSelector {
                         
                         for (size_t i = 0; i < kds.size(); i++)
                         {
-                            //std::cout << "Kernel: " << kds[i].kernelName <<  "TIME: " << runTimes[i] << std::endl;
+                            std::cout << "Kernel: " << kds[i].kernelName <<  "TIME: " << runTimes[i] << std::endl;
                             kds[i].runTime = runTimes[i];  
                             if (kernelsData.size() == 0 || kds[i].runTime < kernelsData[0].runTime)
                             {
@@ -243,7 +243,7 @@ namespace KernelSelector {
             {
                 kernelsData[0].kernelName = kernelName;
                 kernelsData[0].kernels[0].layerID = params.layerID;
-                //std::cout << " Best TIME: " << kernelsData[0].runTime << "Kernel: " << kernelsData[0].kernelName << kernelsData[0].autoTuneIndex << "hash: "<< hash << std::endl;
+                std::cout << " Best TIME: " << kernelsData[0].runTime << "Kernel: " << kernelsData[0].kernelName << kernelsData[0].autoTuneIndex << "hash: "<< hash << std::endl;
                 autoTuner.StoreKernel(options.tuningParams.cacheFilePath, hash, kernelName, kernelsData[0].autoTuneIndex);
             }
         } 

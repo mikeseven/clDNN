@@ -38,7 +38,7 @@ namespace KernelSelector
         k.EnableSplitSupport();
         k.EnableDilation();
         k.EnableDepthwiseSeparableOpt();
-        k.EnableForbidTuning();
+        k.DisableTuning();
         return k;
     }
 

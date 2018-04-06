@@ -39,6 +39,7 @@ namespace KernelSelector
         ParamsKey()
         {
             key.restrict.raw = 0;
+            key.enableTuning = 1;
             key.machineInfo.raw = 0;
             key.inputType.raw = 0;
             key.outputType.raw = 0;
@@ -66,7 +67,6 @@ namespace KernelSelector
                     uint32_t activationAdditionalParamsAsInput : 1;
                     uint32_t FP16Emulation : 1;
                     uint32_t gradient : 1;
-                    uint32_t forbidTuning : 1;
 
                     union dedicated_t
                     {
@@ -189,7 +189,7 @@ namespace KernelSelector
                 uint32_t raw;
             } DataTypesKey;
 
-
+            uint32_t enableTuning;
             DataTypesKey inputType;
             DataTypesKey outputType;
             DataTypesKey inputWeightsType;
@@ -636,11 +636,11 @@ namespace KernelSelector
             key.restrict.val.dedicated.concat.kernelPerInput = 1;
         }
 
-        void EnableForbidTuning()
+        void DisableTuning()
         {
-            key.restrict.val.forbidTuning = 1;
+            key.enableTuning = 0;
         }
-
+        
         void EnableConcatOneKernel()
         {
             key.restrict.val.dedicated.concat.oneKernel = 1;
@@ -690,8 +690,14 @@ namespace KernelSelector
                 ((key.inputLayout & k.key.inputLayout) != 0 || key.inputLayout == k.key.inputLayout) &&
                 ((key.outputLayout & k.key.outputLayout) != 0 || key.outputLayout == k.key.outputLayout) &&
                 ((key.weightsInputLayout & k.key.weightsInputLayout) != 0 || key.weightsInputLayout == k.key.weightsInputLayout) &&
-                ((key.weightsOutputLayout & k.key.weightsOutputLayout) != 0 || key.weightsOutputLayout == k.key.weightsOutputLayout) &&
-                (!key.restrict.val.forbidTuning);
+                ((key.weightsOutputLayout & k.key.weightsOutputLayout) != 0 || key.weightsOutputLayout == k.key.weightsOutputLayout);
+        }
+
+        bool TuningSupport() const
+        {
+            if (key.enableTuning == 1)
+                return true;
+            return false;
         }
 
         ParamsKey Merge(const ParamsKey& k) const
