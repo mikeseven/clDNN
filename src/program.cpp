@@ -446,7 +446,7 @@ void program_impl::compile_graph()
         if (!node->is_type<internal_primitive>() && !node->is_type<data>())
         {
             node->get_output_layout();
-            if (!node->is_type<data>() && !node->is_type<mutable_data>())
+            if (!node->is_type<data>() && !(node->is_type<mutable_data>() && node->get_dependencies().empty()))
                 node->selected_impl = node->type()->choose_impl(*engine, *node);
         }
     }
@@ -2169,6 +2169,20 @@ void program_impl::propagate_constants()
         auto const_data = std::make_shared<data>("_cldnn_const_prop_" + id_to_replace, api_memory /* <<< REMOVE ME WHEN POSSIBLE */);
         auto& new_node = get_or_create(const_data);
         auto& curr_node = *nodes_map.at(id_to_replace);
+
+        if (!curr_node.is_type<generic_layer>())
+        {
+            auto curr_node_deps = curr_node.get_dependencies();
+            for (auto& dep : curr_node_deps)
+            {
+                auto dep_users = dep->get_users();
+                for (auto& dep_user : dep_users)
+                {
+                    if (dep_user == &curr_node)
+                        remove_connection(*dep, curr_node);
+                }
+            }
+        }
 
         curr_node.dependencies.clear();
         //remove all constant users (as they will be either removed or replaced by cldnn::data which does not have any dependencies)

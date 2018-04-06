@@ -32,6 +32,7 @@ namespace cldnn
 /// @brief Provides mutable data.
 /// @details This primitive allows to pass data which can be written to during training.
 /// For example, weights and biases for scoring networks.
+/// This primitive can be also set as other primitive's output. In this case the underlying buffer will be the same in mutable_data and preceding primitive.
 struct mutable_data : public primitive_base<mutable_data, CLDNN_PRIMITIVE_DESC(mutable_data)>
 {
     CLDNN_DECLATE_PRIMITIVE(mutable_data)
@@ -42,6 +43,16 @@ struct mutable_data : public primitive_base<mutable_data, CLDNN_PRIMITIVE_DESC(m
     /// @note If memory is attached by memory::attach(), the attached buffer should be valid till network build.
     mutable_data(const primitive_id& id, const memory& mem)
         :primitive_base(id, {}, padding())
+        , mem(mem)
+    {}
+
+    /// @brief Constructs mutable_data primitive with inputs.
+    /// @param id This primitive id.
+    /// @param input Vector of input primitives ids.
+    /// @param mem @ref memory object which contains data.
+    /// @note If memory is attached by memory::attach(), the attached buffer should be valid till network build.
+    mutable_data(const primitive_id& id, const std::vector<primitive_id>& input, const memory& mem)
+        :primitive_base(id, { input }, padding())
         , mem(mem)
     {}
 

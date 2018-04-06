@@ -21,6 +21,7 @@
 #include "generic_layer_inst.h"
 #include "input_layout_inst.h"
 #include "max_unpooling_inst.h"
+#include "apply_adam_inst.h"
 
 #include "network_impl.h"
 #include "engine_impl.h"
@@ -61,7 +62,12 @@ primitive_inst::primitive_inst(network_impl& network, program_node const& node, 
     , _output_changed(false)
 {
     if (allocate_memory)
-        _output = allocate_output();
+    {
+        if (node.get_users().size() == 1 && node.get_users().front()->is_type<mutable_data>())
+            _output = node.get_users().front()->as<mutable_data>().get_attached_memory_ptr();
+        else
+            _output = allocate_output();
+    }
 }
 
 memory_impl::ptr primitive_inst::allocate_output()
@@ -80,6 +86,9 @@ memory_impl::ptr primitive_inst::allocate_output()
         _node.is_type<input_layout>() ||
         //for max_unpooling initial zero values are significant
         _node.is_type<max_unpooling>() ||
+        //apply adam's output initial val should be either 0 or use same buffer as mutable_data after it (no allocation needed)
+        _node.is_type<apply_adam>() ||
+        _node.can_be_optimized() ||
         _node.is_output())
     {
         return get_network().get_engine().allocate_memory(layout);
