@@ -28,7 +28,7 @@
 #elif defined(__linux__)
 #include <fstream>
 #endif
-
+#include <iostream>
 namespace cldnn { namespace gpu{
 
 namespace {
@@ -134,15 +134,33 @@ struct device_info
 const device_info& get_device_info(int device_id)
 {
 #define GEN_DEVICE(code, dev_id, model, arch, conf) { dev_id, {engine_info_internal::model, engine_info_internal::arch, engine_info_internal::conf, #code} },
-    static const std::unordered_map<int, device_info> device_map{
+    static const std::unordered_map<int, device_info> device_map
+    {
 #include "gpu_devices.inc"
     };
 #undef GEN_DEVICE
 
+    bool public_caps = true;
+#ifdef INTERNAL_CAPS
+    public_caps = false;
+#undef INTERNAL_CAPS
+#endif
+
+    std::cout << to_string_hex(device_id) << std::endl;
     auto it = device_map.find(device_id);
     if (it == device_map.end())
-        throw std::runtime_error(std::string(device_info_failed_msg) + " - unsupported device id: " + to_string_hex(device_id) + ". Note: HD5xx+ devices are supported");
-
+    {
+        if (public_caps)
+        {
+            throw std::runtime_error(std::string(device_info_failed_msg) + " - unsupported device id: " + to_string_hex(device_id) + ". Note: HD5xx+ devices are supported");
+        }
+        else
+        {
+            std::cerr << "[WARNING]. Device ID (" << to_string_hex(device_id) << ") not supported. Pretending to behave like SKL GT2." << std::endl;
+            int new_device_id = 6433;
+            return device_map.at(new_device_id);
+        }
+    }
     return device_map.at(device_id);
 }
 

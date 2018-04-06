@@ -15,6 +15,7 @@
 */
 
 #include "../public/gpu_devices.inc"
+#define INTERNAL_CAPS
 
 
 //HSW Classic
@@ -156,4 +157,4 @@ GEN_DEVICE(iGLKGT2, 0x3184, FUTURE, GEN9, GT2)
 GEN_DEVICE(iGLK   , 0x3185, FUTURE, GEN9, GT2)
 
 //ATS Simulation
-GEN_DEVICE(iGLKGT2, 0x9A49, FUTURE, GEN_UNKNOWN, GT2)  
+GEN_DEVICE(iGLKGT2, 0x9A49, FUTURE, GEN_UNKNOWN, GT2)
