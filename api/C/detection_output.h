@@ -62,16 +62,6 @@ int32_t code_type;
 uint32_t variance_encoded_in_target;
 /// @brief Only keep detections with confidences larger than this threshold.
 float confidence_threshold;
-/// @brief Number of elements in a single prior description (4 if priors calculated using PriorBox layer, 5 - if Proposal)
-int32_t prior_info_size;
-/// @brief Offset of the box coordinates w.r.t. the beginning of a prior info record
-int32_t prior_coordinates_offset;
-/// @brief If true, priors are normalized to [0; 1] range.
-uint32_t prior_is_normalized;
-/// @brief Width of input image.
-int32_t input_width;
-/// @brief Height of input image.
-int32_t input_height;
 CLDNN_END_PRIMITIVE_DESC(detection_output)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(detection_output);
