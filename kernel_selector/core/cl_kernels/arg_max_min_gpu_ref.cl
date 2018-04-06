@@ -63,8 +63,11 @@ KERNEL(arg_max_gpu_top_k)(const __global UNIT_TYPE* input, __global float* outpu
                 accumulator.value = UNIT_FILL_VAL;
         }
         global_index += GLOBAL_SIZE;
-
-        while (global_index < size + batch_offset) 
+#ifdef INPUT0_LAYOUT_BFYX
+            while (global_index < size + batch_offset) 
+#else
+            while (global_index < size)
+#endif   
         {
             iav_type element;
             element.value = input[global_index];

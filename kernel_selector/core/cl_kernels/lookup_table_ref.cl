@@ -15,17 +15,17 @@
 
 #include "include/include_all.cl"
 
-KERNEL(lookup_table)(const __global UNIT_TYPE* input0, const __global uint* indices, __global UNIT_TYPE* output)
+KERNEL(lookup_table)(const __global UNIT_TYPE* input0, const __global float* indices, __global UNIT_TYPE* output)
 {
     const uint x    = (uint)get_global_id(0);
     const uint b    = (uint)get_global_id(1);
 	const uint size = INPUT0_SIZE_X * INPUT0_SIZE_Y * INPUT0_FEATURE_NUM;
     #ifdef INPUT0_LAYOUT_BFYX
     const uint global_index = b * VAL_NUM + x;
-    output[global_index] = input0[indices[global_index] + b*size];
+    output[global_index] = input0[(int)indices[global_index] + b*size];
     #elif defined INPUT0_LAYOUT_YXFB
     const uint global_index = b + x * INPUT0_BATCH_NUM;
-    output[global_index] = input0[indices[global_index]*INPUT0_BATCH_NUM + b];
+    output[global_index] = input0[(int)indices[global_index]*INPUT0_BATCH_NUM + b];
     #endif
 }
 	
