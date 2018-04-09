@@ -245,7 +245,7 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
         { 1,1,2,2 }); // strd
 
 
-    auto fire2_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire2_squeeze1x1_weights.nnd")});
+   /* auto fire2_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire2_squeeze1x1_weights.nnd")});
     auto fire2_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire2_squeeze1x1_bias.nnd")});
     auto fire2_squeeze1x1 = convolution(
         "fire2_squeeze1x1",
@@ -279,10 +279,56 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
         { 1,1,1,1 },
         { 0, 0, -1,-1 },
         { 1,1,1,1 },
+        true);*/
+
+    add_calibration(engine, weights_dir, "fire2_squeeze1x1", conv1_calib, fire2_squeeze1x1_calib, topology);
+    auto fire2_squeeze1x1_calibrator = reorder("fire2_squeeze1x1_calib", "pool1",
+        format::bfyx, data_types::i8, conv1_calib, cldnn_reorder_mean_mode::mean_mul);
+    auto fire2_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire2_squeeze1x1_bias.nnd") });
+    auto fire2_squeeze1x1 = convolution(
+        "fire2_squeeze1x1",
+        fire2_squeeze1x1_calibrator,
+        { "fire2_squeeze1x1_weights_int" },
+        { fire2_squeeze1x1_bias },
+        { "fire2_squeeze1x1_w_qf" },
+        { "fire2_squeeze1x1_o_qf" },
+        1.0f, // do not scale input
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+        { 1,1,1,1 },
         true);
 
+    add_calibration(engine, weights_dir, "fire2_expand1x1", fire2_squeeze1x1_calib, fire2_expand1x1_calib, topology);
+    auto fire2_expand1x1_bias = file::create({ engine, join_path(weights_dir, "fire2_expand1x1_bias.nnd") });
+    auto fire2_expand1x1 = convolution(
+        "fire2_expand1x1",
+        fire2_squeeze1x1,
+        { "fire2_expand1x1_weights_int" },
+        { fire2_expand1x1_bias },
+        { "fire2_expand1x1_w_qf" },
+        { "fire2_expand1x1_o_qf" },
+        1.0f, // do not scale input
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+        { 1,1,1,1 },
+        true);
 
-    auto fire2_concat = concatenation(   
+    add_calibration(engine, weights_dir, "fire2_expand3x3", fire2_squeeze1x1_calib, fire2_expand3x3_calib, topology);
+    auto fire2_expand3x3_bias = file::create({ engine, join_path(weights_dir, "fire2_expand3x3_bias.nnd") });
+    auto fire2_expand3x3 = convolution(
+        "fire2_expand3x3",
+        fire2_squeeze1x1,
+        { "fire2_expand3x3_weights_int" },
+        { fire2_expand3x3_bias },
+        { "fire2_expand3x3_w_qf" },
+        { "fire2_expand3x3_o_qf" },
+        1.0f, // do not scale input
+        { 1,1,1,1 },
+        { 0, 0, -1,-1 },
+        { 1,1,1,1 },
+        true);
+
+    auto fire2_concat = concatenation(
         "fire2_concat",
         {
             fire2_expand1x1,
@@ -291,8 +337,69 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
         concatenation::along_f
     );
 
+    auto fire2_concat_decalibrator = reorder("fire2_concat_decalib", "fire2_concat",
+        format::bfyx, data_types::f32, fire2_concat_calib, cldnn_reorder_mean_mode::mean_div);
 
-    auto fire3_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire3_squeeze1x1_weights.nnd")});
+    add_calibration(engine, weights_dir, "fire3_squeeze1x1", fire2_concat_calib, fire3_squeeze1x1_calib, topology);
+    auto fire3_squeeze1x1_calibrator = reorder("fire3_squeeze1x1_calib", "fire2_concat_decalib",
+        format::bfyx, data_types::i8, fire2_concat_calib, cldnn_reorder_mean_mode::mean_mul);
+    auto fire3_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire3_squeeze1x1_bias.nnd") });
+    auto fire3_squeeze1x1 = convolution(
+        "fire3_squeeze1x1",
+        fire3_squeeze1x1_calibrator,
+        { "fire3_squeeze1x1_weights_int" },
+        { fire3_squeeze1x1_bias },
+        { "fire3_squeeze1x1_w_qf" },
+        { "fire3_squeeze1x1_o_qf" },
+        1.0f, // do not scale input
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+        { 1,1,1,1 },
+        true);
+
+    add_calibration(engine, weights_dir, "fire3_expand1x1", fire3_squeeze1x1_calib, fire3_expand1x1_calib, topology);
+    auto fire3_expand1x1_bias = file::create({ engine, join_path(weights_dir, "fire3_expand1x1_bias.nnd") });
+    auto fire3_expand1x1 = convolution(
+        "fire3_expand1x1",
+        fire3_squeeze1x1,
+        { "fire3_expand1x1_weights_int" },
+        { fire3_expand1x1_bias },
+        { "fire3_expand1x1_w_qf" },
+        { "fire3_expand1x1_o_qf" },
+        1.0f, // do not scale input
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+        { 1,1,1,1 },
+        true);
+
+    add_calibration(engine, weights_dir, "fire3_expand3x3", fire3_squeeze1x1_calib, fire3_expand3x3_calib, topology);
+    auto fire3_expand3x3_bias = file::create({ engine, join_path(weights_dir, "fire3_expand3x3_bias.nnd") });
+    auto fire3_expand3x3 = convolution(
+        "fire3_expand3x3",
+        fire3_squeeze1x1,
+        { "fire3_expand3x3_weights_int" },
+        { fire3_expand3x3_bias },
+        { "fire3_expand3x3_w_qf" },
+        { "fire3_expand3x3_o_qf" },
+        1.0f, // do not scale input
+        { 1,1,1,1 },
+        { 0, 0, -1,-1 },
+        { 1,1,1,1 },
+        true);
+
+    auto fire3_concat = concatenation(
+        "fire3_concat",
+        {
+            fire3_expand1x1,
+            fire3_expand3x3
+        },
+        concatenation::along_f
+    );
+
+    auto fire3_concat_decalibrator = reorder("fire3_concat_decalib", "fire3_concat",
+        format::bfyx, data_types::f32, fire3_concat_calib, cldnn_reorder_mean_mode::mean_div);
+
+ /*   auto fire3_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire3_squeeze1x1_weights.nnd")});
     auto fire3_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire3_squeeze1x1_bias.nnd")});
     auto fire3_squeeze1x1 = convolution(
         "fire3_squeeze1x1",
@@ -335,16 +442,75 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
             fire3_expand3x3
         },
         concatenation::along_f
-    );
+    );*/
 
     auto pool3 = pooling(
         "pool3",
-        fire3_concat,
+        "fire3_concat_decalib",
         pooling_mode::max,
         { 1,1,3,3 }, // kernel
         { 1,1,2,2 }); // strd
 
-    auto fire4_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire4_squeeze1x1_weights.nnd")});
+    add_calibration(engine, weights_dir, "fire4_squeeze1x1", fire3_concat_calib, fire4_squeeze1x1_calib, topology);
+    auto fire4_squeeze1x1_calibrator = reorder("fire4_squeeze1x1_calib", "pool3",
+        format::bfyx, data_types::i8, fire3_concat_calib, cldnn_reorder_mean_mode::mean_mul);
+    auto fire4_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire4_squeeze1x1_bias.nnd") });
+    auto fire4_squeeze1x1 = convolution(
+        "fire4_squeeze1x1",
+        fire4_squeeze1x1_calibrator,
+        { "fire4_squeeze1x1_weights_int" },
+        { fire4_squeeze1x1_bias },
+        { "fire4_squeeze1x1_w_qf" },
+        { "fire4_squeeze1x1_o_qf" },
+        1.0f, // do not scale input
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+        { 1,1,1,1 },
+        true);
+
+    add_calibration(engine, weights_dir, "fire4_expand1x1", fire4_squeeze1x1_calib, fire4_expand1x1_calib, topology);
+    auto fire4_expand1x1_bias = file::create({ engine, join_path(weights_dir, "fire4_expand1x1_bias.nnd") });
+    auto fire4_expand1x1 = convolution(
+        "fire4_expand1x1",
+        fire4_squeeze1x1,
+        { "fire4_expand1x1_weights_int" },
+        { fire4_expand1x1_bias },
+        { "fire4_expand1x1_w_qf" },
+        { "fire4_expand1x1_o_qf" },
+        1.0f, // do not scale input
+        { 1,1,1,1 },
+        { 0,0,0,0 },
+        { 1,1,1,1 },
+        true);
+
+    add_calibration(engine, weights_dir, "fire4_expand3x3", fire4_squeeze1x1_calib, fire4_expand3x3_calib, topology);
+    auto fire4_expand3x3_bias = file::create({ engine, join_path(weights_dir, "fire4_expand3x3_bias.nnd") });
+    auto fire4_expand3x3 = convolution(
+        "fire4_expand3x3",
+        fire4_squeeze1x1,
+        { "fire4_expand3x3_weights_int" },
+        { fire4_expand3x3_bias },
+        { "fire4_expand3x3_w_qf" },
+        { "fire4_expand3x3_o_qf" },
+        1.0f, // do not scale input
+        { 1,1,1,1 },
+        { 0, 0, -1,-1 },
+        { 1,1,1,1 },
+        true);
+
+    auto fire4_concat = concatenation(
+        "fire4_concat",
+        {
+            fire4_expand1x1,
+            fire4_expand3x3
+        },
+        concatenation::along_f
+    );
+
+    auto fire4_concat_decalibrator = reorder("fire4_concat_decalib", "fire4_concat",
+        format::bfyx, data_types::f32, fire4_concat_calib, cldnn_reorder_mean_mode::mean_div);
+
+    /*auto fire4_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire4_squeeze1x1_weights.nnd")});
     auto fire4_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire4_squeeze1x1_bias.nnd")});
     auto fire4_squeeze1x1 = convolution(
         "fire4_squeeze1x1",
@@ -387,39 +553,50 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
             fire4_expand3x3
         },
         concatenation::along_f
-    );
+    );*/
 
-    auto fire5_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire5_squeeze1x1_weights.nnd")});
-    auto fire5_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire5_squeeze1x1_bias.nnd")});
+    add_calibration(engine, weights_dir, "fire5_squeeze1x1", fire4_concat_calib, fire5_squeeze1x1_calib, topology);
+    auto fire5_squeeze1x1_calibrator = reorder("fire5_squeeze1x1_calib", "fire4_concat_decalib",
+        format::bfyx, data_types::i8, fire4_concat_calib, cldnn_reorder_mean_mode::mean_mul);
+    auto fire5_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire5_squeeze1x1_bias.nnd") });
     auto fire5_squeeze1x1 = convolution(
         "fire5_squeeze1x1",
-        fire4_concat,
-        { fire5_squeeze1x1_weights },
+        fire5_squeeze1x1_calibrator,
+        { "fire5_squeeze1x1_weights_int" },
         { fire5_squeeze1x1_bias },
+        { "fire5_squeeze1x1_w_qf" },
+        { "fire5_squeeze1x1_o_qf" },
+        1.0f, // do not scale input
         { 1,1,1,1 },
         { 0,0,0,0 },
         { 1,1,1,1 },
         true);
 
-    auto fire5_expand1x1_weights = file::create({ engine, join_path(weights_dir, "fire5_expand1x1_weights.nnd")});
-    auto fire5_expand1x1_bias = file::create({ engine, join_path(weights_dir, "fire5_expand1x1_bias.nnd")});
+    add_calibration(engine, weights_dir, "fire5_expand1x1", fire5_squeeze1x1_calib, fire5_expand1x1_calib, topology);
+    auto fire5_expand1x1_bias = file::create({ engine, join_path(weights_dir, "fire5_expand1x1_bias.nnd") });
     auto fire5_expand1x1 = convolution(
         "fire5_expand1x1",
         fire5_squeeze1x1,
-        { fire5_expand1x1_weights },
+        { "fire5_expand1x1_weights_int" },
         { fire5_expand1x1_bias },
+        { "fire5_expand1x1_w_qf" },
+        { "fire5_expand1x1_o_qf" },
+        1.0f, // do not scale input
         { 1,1,1,1 },
         { 0,0,0,0 },
         { 1,1,1,1 },
         true);
 
-    auto fire5_expand3x3_weights = file::create({ engine, join_path(weights_dir, "fire5_expand3x3_weights.nnd")});
-    auto fire5_expand3x3_bias = file::create({ engine, join_path(weights_dir, "fire5_expand3x3_bias.nnd")});
+    add_calibration(engine, weights_dir, "fire5_expand3x3", fire5_squeeze1x1_calib, fire5_expand3x3_calib, topology);
+    auto fire5_expand3x3_bias = file::create({ engine, join_path(weights_dir, "fire5_expand3x3_bias.nnd") });
     auto fire5_expand3x3 = convolution(
         "fire5_expand3x3",
         fire5_squeeze1x1,
-        { fire5_expand3x3_weights },
+        { "fire5_expand3x3_weights_int" },
         { fire5_expand3x3_bias },
+        { "fire5_expand3x3_w_qf" },
+        { "fire5_expand3x3_o_qf" },
+        1.0f, // do not scale input
         { 1,1,1,1 },
         { 0, 0, -1,-1 },
         { 1,1,1,1 },
@@ -434,50 +611,64 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
         concatenation::along_f
     );
 
+    auto fire5_concat_decalibrator = reorder("fire5_concat_decalib", "fire5_concat",
+        format::bfyx, data_types::f32, fire5_concat_calib, cldnn_reorder_mean_mode::mean_div);
+
     auto pool5 = pooling(
         "pool5",
-        fire5_concat,
+        fire5_concat_decalibrator,
         pooling_mode::max,
         { 1,1,3,3 }, // kernel
         { 1,1,2,2 }); // strd
 
-    auto fire6_squeeze1x1_weights = file::create({ engine, join_path(weights_dir, "fire6_squeeze1x1_weights.nnd")});
-    auto fire6_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire6_squeeze1x1_bias.nnd")});
+    add_calibration(engine, weights_dir, "fire6_squeeze1x1", fire5_concat_calib, fire6_squeeze1x1_calib, topology);
+    auto fire6_squeeze1x1_calibrator = reorder("fire6_squeeze1x1_calib", "pool5",
+        format::bfyx, data_types::i8, fire5_concat_calib, cldnn_reorder_mean_mode::mean_mul);
+    auto fire6_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire6_squeeze1x1_bias.nnd") });
     auto fire6_squeeze1x1 = convolution(
         "fire6_squeeze1x1",
-        pool5,
-        { fire6_squeeze1x1_weights },
+        fire6_squeeze1x1_calibrator,
+        { "fire6_squeeze1x1_weights_int" },
         { fire6_squeeze1x1_bias },
+        { "fire6_squeeze1x1_w_qf" },
+        { "fire6_squeeze1x1_o_qf" },
+        1.0f, // do not scale input
         { 1,1,1,1 },
         { 0,0,0,0 },
         { 1,1,1,1 },
         true);
 
-    auto fire6_expand1x1_weights = file::create({ engine, join_path(weights_dir, "fire6_expand1x1_weights.nnd")});
-    auto fire6_expand1x1_bias = file::create({ engine, join_path(weights_dir, "fire6_expand1x1_bias.nnd")});
+    add_calibration(engine, weights_dir, "fire6_expand1x1", fire6_squeeze1x1_calib, fire6_expand1x1_calib, topology);
+    auto fire6_expand1x1_bias = file::create({ engine, join_path(weights_dir, "fire6_expand1x1_bias.nnd") });
     auto fire6_expand1x1 = convolution(
         "fire6_expand1x1",
         fire6_squeeze1x1,
-        { fire6_expand1x1_weights },
+        { "fire6_expand1x1_weights_int" },
         { fire6_expand1x1_bias },
+        { "fire6_expand1x1_w_qf" },
+        { "fire6_expand1x1_o_qf" },
+        1.0f, // do not scale input
         { 1,1,1,1 },
         { 0,0,0,0 },
         { 1,1,1,1 },
         true);
 
-    auto fire6_expand3x3_weights = file::create({ engine, join_path(weights_dir, "fire6_expand3x3_weights.nnd")});
-    auto fire6_expand3x3_bias = file::create({ engine, join_path(weights_dir, "fire6_expand3x3_bias.nnd")});
+    add_calibration(engine, weights_dir, "fire6_expand3x3", fire6_squeeze1x1_calib, fire6_expand3x3_calib, topology);
+    auto fire6_expand3x3_bias = file::create({ engine, join_path(weights_dir, "fire6_expand3x3_bias.nnd") });
     auto fire6_expand3x3 = convolution(
         "fire6_expand3x3",
         fire6_squeeze1x1,
-        { fire6_expand3x3_weights },
+        { "fire6_expand3x3_weights_int" },
         { fire6_expand3x3_bias },
+        { "fire6_expand3x3_w_qf" },
+        { "fire6_expand3x3_o_qf" },
+        1.0f, // do not scale input
         { 1,1,1,1 },
         { 0, 0, -1,-1 },
         { 1,1,1,1 },
         true);
 
-    auto fire6_concat = concatenation( 
+    auto fire6_concat = concatenation(
         "fire6_concat",
         {
             fire6_expand1x1,
@@ -485,14 +676,12 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
         },
         concatenation::along_f
     );
-
+  
     add_calibration(engine, weights_dir, "fire7_squeeze1x1", fire6_concat_calib, fire7_squeeze1x1_calib, topology);
-    auto fire7_squeeze1x1_calibrator = reorder("fire7_squeeze1x1_calib", "fire6_concat",
-        format::bfyx, data_types::i8, fire6_concat_calib, cldnn_reorder_mean_mode::mean_mul);
     auto fire7_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire7_squeeze1x1_bias.nnd")});
     auto fire7_squeeze1x1 = convolution(
         "fire7_squeeze1x1",
-        fire7_squeeze1x1_calibrator,
+        fire6_concat,
         { "fire7_squeeze1x1_weights_int" },
         { fire7_squeeze1x1_bias },
         { "fire7_squeeze1x1_w_qf" },
@@ -688,38 +877,38 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
         reordered_input,
         conv1, conv1_weights, conv1_bias,
         pool1,
-        fire2_squeeze1x1, fire2_squeeze1x1_weights, fire2_squeeze1x1_bias
+        fire2_squeeze1x1, fire2_squeeze1x1_bias
     );
     
-    topology.add(fire2_expand1x1, fire2_expand1x1_weights, fire2_expand1x1_bias);
-    topology.add(fire2_expand3x3, fire2_expand3x3_weights, fire2_expand3x3_bias);
+    topology.add(fire2_expand1x1, fire2_expand1x1_bias);
+    topology.add(fire2_expand3x3, fire2_expand3x3_bias);
         
     topology.add(
         fire2_concat);
     topology.add(
-        fire3_squeeze1x1, fire3_squeeze1x1_weights, fire3_squeeze1x1_bias,
-        fire3_expand1x1, fire3_expand1x1_weights, fire3_expand1x1_bias,
-        fire3_expand3x3, fire3_expand3x3_weights, fire3_expand3x3_bias,
+        fire3_squeeze1x1, fire3_squeeze1x1_bias,
+        fire3_expand1x1,  fire3_expand1x1_bias,
+        fire3_expand3x3,  fire3_expand3x3_bias,
         fire3_concat,
         pool3);
     topology.add(
-        fire4_squeeze1x1, fire4_squeeze1x1_weights, fire4_squeeze1x1_bias,
-        fire4_expand1x1, fire4_expand1x1_weights, fire4_expand1x1_bias,
-        fire4_expand3x3, fire4_expand3x3_weights, fire4_expand3x3_bias,
+        fire4_squeeze1x1, fire4_squeeze1x1_bias,
+        fire4_expand1x1, fire4_expand1x1_bias,
+        fire4_expand3x3, fire4_expand3x3_bias,
         fire4_concat);
     topology.add(
-        fire5_squeeze1x1, fire5_squeeze1x1_weights, fire5_squeeze1x1_bias,
-        fire5_expand1x1, fire5_expand1x1_weights, fire5_expand1x1_bias,
-        fire5_expand3x3, fire5_expand3x3_weights, fire5_expand3x3_bias,
+        fire5_squeeze1x1, fire5_squeeze1x1_bias,
+        fire5_expand1x1,  fire5_expand1x1_bias,
+        fire5_expand3x3,  fire5_expand3x3_bias,
         fire5_concat,
         pool5);
     topology.add(
-        fire6_squeeze1x1, fire6_squeeze1x1_weights, fire6_squeeze1x1_bias,
-        fire6_expand1x1, fire6_expand1x1_weights, fire6_expand1x1_bias,
-        fire6_expand3x3, fire6_expand3x3_weights, fire6_expand3x3_bias,
+        fire6_squeeze1x1,  fire6_squeeze1x1_bias,
+        fire6_expand1x1,  fire6_expand1x1_bias,
+        fire6_expand3x3,  fire6_expand3x3_bias,
         fire6_concat);
     topology.add(
-        fire7_squeeze1x1, fire7_squeeze1x1_calibrator, fire7_squeeze1x1_bias,
+        fire7_squeeze1x1, fire7_squeeze1x1_bias,
         fire7_expand1x1,  fire7_expand1x1_bias,
         fire7_expand3x3,  fire7_expand3x3_bias,
         fire7_concat);
@@ -738,8 +927,16 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
         pool10,
         softmax);
     topology.add(
-        /*conv10_calibrator,*/  conv10_decalibrator
-        /*fire9_expand3x3_calibrator, fire9_expand3x3_decalibrator,
-        fire9_expand1x1_calibrator, fire9_expand1x1_decalibrator*/);
+        conv10_decalibrator,
+        fire6_squeeze1x1_calibrator,
+        fire5_concat_decalibrator,
+        fire5_squeeze1x1_calibrator,
+        fire4_concat_decalibrator,
+        fire4_squeeze1x1_calibrator,
+        fire3_concat_decalibrator,
+        fire3_squeeze1x1_calibrator,
+        fire2_concat_decalibrator,
+        fire2_squeeze1x1_calibrator
+        );
     return topology;
 }
