@@ -144,9 +144,9 @@ namespace cldnn
     {
         auto it = _no_reusable_pool.lower_bound(layout.bytes_count());
 
-        while (it != _no_reusable_pool.end())
+        if (it->second._network_id != network_id) // don't use non reusable resources within the same network
         {
-            if (it->second._network_id != network_id) // don't use non reusable resources within the same network
+            while (it != _no_reusable_pool.end())
             {
                 if (!has_conflict(it->second._users, {}, network_id))
                 {
@@ -154,7 +154,10 @@ namespace cldnn
                     auto ret_mem = _engine->reinterpret_buffer(*it->second._memory, layout);
                     return ret_mem;
                 }
-                ++it;
+                else
+                {
+                    ++it;
+                }
             }
         }
         auto mem = alloc_memory(layout);

@@ -2682,7 +2682,7 @@ TEST(convolution_f32_fw_gpu, calibration_advance) {
     for (int f = 0; f < out_size.feature[0]; f++)
         for (int y = 0; y < out_size.spatial[1]; ++y) {
             for (int x = 0; x < out_size.spatial[0]; ++x) {
-                EXPECT_NEAR(ref_ptr[x + out_size.spatial[0] * (y + out_size.spatial[1]*f)], ((float)test_ptr[x + out_size.spatial[0] * (y + out_size.spatial[1] * f)]) / o_qf[f], 0.0f);
+                EXPECT_NEAR(ref_ptr[x + out_size.spatial[0] * (y + out_size.spatial[1]*f)], ((float)test_ptr[x + out_size.spatial[0] * (y + out_size.spatial[1] * f)]) / o_qf[f], 3.0f);
             }
         }
 
