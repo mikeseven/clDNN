@@ -35,7 +35,8 @@ void set_values(const cldnn::memory& mem,const std::vector<T>& args) {
     for (auto x : args)
         *it++ = x;
 }
-
+const std::vector<float> reorder_calib = {
+    0.89441f,  0.918088f,  0.959787f, };
 const std::vector<float> fire2_expand3x3_calib = {
     0.510171f,  2.096004f,  0.565724f,  0.623843f,  0.537084f,  0.48958f,  0.498908f,  0.49709f,  1.198249f,  0.747151f,  0.622598f,  0.361132f,  0.320793f,  0.436224f,  0.507754f,  0.511956f,  0.519636f,  0.393847f,  0.354905f,  0.632829f,  0.728219f,  0.467211f,  0.965024f,  0.497723f,  0.646926f,  0.402597f,  0.33591f,  0.404938f,  0.871911f,  0.352999f,  0.499787f,  0.355056f,  0.390055f,  0.480144f,  0.305641f,  0.7672f,  0.591835f,  0.299113f,  0.595009f,  0.806482f,  0.96215f,  1.09741f,  0.631926f,  0.857262f,  0.464112f,  0.582312f,  0.479643f,  1.162759f,  0.405418f,  1.136842f,  0.351943f,  0.399737f,  0.468669f,  0.342121f,  1.058219f,  0.668562f,  0.390548f,  0.521299f,  1.090194f,  0.787133f,  0.882177f,  0.376192f,  0.568401f,  0.324013f, };
 const std::vector<float> fire2_squeeze1x1_calib = {
@@ -225,17 +226,23 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
         { input_layout.data_type, input_layout.format, input_layout.size },
         std::vector<float>{ (float)104.0069879317889, (float)116.66876761696767, (float)122.6789143406786 });
 
-    auto conv1_weights = file::create({ engine, join_path(weights_dir, "conv1_weights.nnd")});
+    add_calibration(engine, weights_dir, "conv1", reorder_calib, conv1_calib, topology);
+    auto conv1_calibrator = reorder("conv1_calib", "reorder",
+        format::bfyx, data_types::i8, reorder_calib, cldnn_reorder_mean_mode::mean_mul);
     auto conv1_bias = file::create({ engine, join_path(weights_dir, "conv1_bias.nnd")});
     auto conv1 = convolution(
         "conv1",
-        reordered_input,
-        { conv1_weights },
+        conv1_calibrator,
+        { "conv1_weights_int" },
         { conv1_bias },
+        { "conv1_w_qf" },
+        { "conv1_o_qf" },
+        1.0f, // do not scale input
         { 1,1,2,2 },
         { 0,0,0,0 },
         { 1,1,1,1 },
         true);
+
 
     auto pool1 = pooling(
         "pool1",
@@ -245,12 +252,10 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
         { 1,1,2,2 }); // strd
 
     add_calibration(engine, weights_dir, "fire2_squeeze1x1", conv1_calib, fire2_squeeze1x1_calib, topology);
-    auto fire2_squeeze1x1_calibrator = reorder("fire2_squeeze1x1_calib", "pool1",
-        format::bfyx, data_types::i8, conv1_calib, cldnn_reorder_mean_mode::mean_mul);
     auto fire2_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire2_squeeze1x1_bias.nnd") });
     auto fire2_squeeze1x1 = convolution(
         "fire2_squeeze1x1",
-        fire2_squeeze1x1_calibrator,
+        pool1,
         { "fire2_squeeze1x1_weights_int" },
         { fire2_squeeze1x1_bias },
         { "fire2_squeeze1x1_w_qf" },
@@ -729,7 +734,7 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
     topology.add(
         input,
         reordered_input,
-        conv1, conv1_weights, conv1_bias,
+        conv1, conv1_bias,
         pool1,
         fire2_squeeze1x1, fire2_squeeze1x1_bias
     );
@@ -782,7 +787,7 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
         softmax);
     topology.add(
         conv10_decalibrator,
-        fire2_squeeze1x1_calibrator
+        conv1_calibrator
         );
     return topology;
 }
