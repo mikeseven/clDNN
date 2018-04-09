@@ -139,14 +139,8 @@ const device_info& get_device_info(int device_id)
 #include "gpu_devices.inc"
     };
 #undef GEN_DEVICE
-
-    bool public_caps = true;
-#ifdef INTERNAL_CAPS
-    public_caps = false;
-#undef INTERNAL_CAPS
-#endif
-
-    std::cout << to_string_hex(device_id) << std::endl;
+    
+    #include "mode.inc"
     auto it = device_map.find(device_id);
     if (it == device_map.end())
     {
