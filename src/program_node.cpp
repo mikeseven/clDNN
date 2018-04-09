@@ -40,8 +40,6 @@ void program_node::replace_dependency(size_t idx, program_node& new_dep, bool de
     myprog.remove_if_dangling(*dependencies[idx], detach_whole_branch);
 
     dependencies[idx] = &new_dep;
-    if (!is_type<internal_primitive>())
-        desc->dependencies()[idx].get() = new_dep.id();
     new_dep.users.push_back(this);
 }
 

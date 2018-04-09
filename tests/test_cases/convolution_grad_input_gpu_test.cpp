@@ -44,8 +44,8 @@ TEST(convolution_grad_input_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_pad
     //   7  -0.5
     //
     //  Output:
-    //  -3    4.5    0.5   22
-    //   13  -17     5    -7
+    //  -4    3.5    -0.5   21
+    //   12  -18      4     -9
 
     engine engine;
 
@@ -99,8 +99,8 @@ TEST(convolution_grad_input_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_pad
     //   7  -0.5
     //
     //  Output:
-    //  -3    4.5    0.5   22
-    //   13  -17     5    -7
+    //  -4    3.5    -0.5   21
+    //   12  -18      4     -9
 
     engine engine;
 

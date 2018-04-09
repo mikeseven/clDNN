@@ -1,3 +1,0 @@
-[submodule "inference_engine/dpd_vcp_dl-scoring_engine"]
-	path = inference_engine/dpd_vcp_dl-scoring_engine
-	url = git@gitlab-icv.inn.intel.com:inference-engine/inference-engine.git

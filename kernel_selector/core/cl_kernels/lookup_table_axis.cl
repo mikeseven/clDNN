@@ -52,7 +52,7 @@
 
 #include "include/include_all.cl"
 
-KERNEL(lookup_table_axis)(const __global UNIT_TYPE* input0, const __global uint* indices, __global UNIT_TYPE* output)
+KERNEL(lookup_table_axis)(const __global UNIT_TYPE* input0, const __global float* indices, __global UNIT_TYPE* output)
 {
     const uint first_dim_id = (uint)get_global_id(0);
     const uint second_dim_id = (uint)get_global_id(1);
@@ -61,7 +61,7 @@ KERNEL(lookup_table_axis)(const __global UNIT_TYPE* input0, const __global uint*
     const uint val_index = (first_dim_id + second_dim_id * FIRST_DIM_SIZE + third_dim_id * FIRST_DIM_SIZE * SECOND_DIM_SIZE) * VAL_NUM;
 	for (uint i = 0; i < VAL_NUM; i++)
     {
-        uint global_index = offset + indices[val_index + i] * GAP_SIZE;
+        uint global_index = offset + (int)indices[val_index + i] * GAP_SIZE;
         output[val_index + i] = input0[global_index];
     }
 }

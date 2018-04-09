@@ -108,6 +108,23 @@ void cldnn_add_primitive(cldnn_topology topology, const CLDNN_PRIMITIVE_DESC(pri
     });
 }
 
+void cldnn_change_input_layout(cldnn_topology topology, cldnn_primitive_id id, cldnn_layout new_layout, cldnn_status* status)
+{
+    return exception_handler(CLDNN_ERROR, status, [&]()
+    {
+        SHOULD_NOT_BE_NULL(topology, "Topology");
+        SHOULD_NOT_BE_NULL(id, "Input layout id");
+        if (new_layout.format < cldnn_format_any || new_layout.format >= cldnn_format_format_num)
+            throw std::invalid_argument("Unknown format of layout.");
+        if (new_layout.data_type != cldnn_data_type::cldnn_f16 &&
+            new_layout.data_type != cldnn_data_type::cldnn_f32 &&
+            new_layout.data_type != cldnn_data_type::cldnn_i8 &&
+            new_layout.data_type != cldnn_data_type::cldnn_u8)
+            throw std::invalid_argument("Unknown data_type of layout.");
+        api_cast(topology)->change_input_layout(id, new_layout);
+    });
+}
+
 void cldnn_get_primitive_ids(cldnn_topology topology, char* ids, size_t size, size_t* size_ret, cldnn_status* status)
 {
     return exception_handler(CLDNN_ERROR, status, [&]()
@@ -242,12 +259,21 @@ cldnn_engine_info cldnn_get_engine_info(cldnn_engine engine, cldnn_status* statu
     });
 }
 
-int64_t cldnn_get_total_device_memory_size(cldnn_engine engine, cldnn_status* status)
+int64_t cldnn_get_max_used_device_memory_size(cldnn_engine engine, cldnn_status* status)
 {
     return exception_handler<int32_t>(CLDNN_ERROR, status, cldnn_engine_ocl, [&]()
     {
         SHOULD_NOT_BE_NULL(engine, "Engine");
-        return static_cast<int32_t>(api_cast(engine)->get_total_device_memory());
+        return static_cast<int32_t>(api_cast(engine)->get_max_used_device_memory());
+    });
+}
+
+int64_t cldnn_get_temp_used_device_memory_size(cldnn_engine engine, cldnn_status* status)
+{
+    return exception_handler<int32_t>(CLDNN_ERROR, status, cldnn_engine_ocl, [&]()
+    {
+        SHOULD_NOT_BE_NULL(engine, "Engine");
+        return static_cast<int32_t>(api_cast(engine)->get_used_device_memory());
     });
 }
 
@@ -854,6 +880,7 @@ PRIMITIVE_TYPE_ID_CALL_IMPL(batch_norm)
 PRIMITIVE_TYPE_ID_CALL_IMPL(convolution)
 PRIMITIVE_TYPE_ID_CALL_IMPL(crop)
 PRIMITIVE_TYPE_ID_CALL_IMPL(data)
+PRIMITIVE_TYPE_ID_CALL_IMPL(mutable_data)
 PRIMITIVE_TYPE_ID_CALL_IMPL(deconvolution)
 PRIMITIVE_TYPE_ID_CALL_IMPL(concatenation)
 PRIMITIVE_TYPE_ID_CALL_IMPL(eltwise)
@@ -879,3 +906,5 @@ PRIMITIVE_TYPE_ID_CALL_IMPL(generic_layer)
 PRIMITIVE_TYPE_ID_CALL_IMPL(custom_gpu_primitive)
 PRIMITIVE_TYPE_ID_CALL_IMPL(split)
 PRIMITIVE_TYPE_ID_CALL_IMPL(upsampling)
+PRIMITIVE_TYPE_ID_CALL_IMPL(convolution_grad_weights)
+PRIMITIVE_TYPE_ID_CALL_IMPL(apply_adam)

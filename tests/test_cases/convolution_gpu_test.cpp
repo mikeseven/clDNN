@@ -28,6 +28,7 @@
 #include <api/CPP/data.hpp>
 
 #include <algorithm>
+#include <cmath>
 #include <iostream>
 #include <iomanip>
 #include <thread>
@@ -87,19 +88,6 @@ VVF<T> reference_convolve(VVVF<T> &input, VVVF<T> &filter, int stride_y, int str
         }
     }
     return output;
-}
-
-
-
-// rounds floating point number, fraction precision should be in the range [0,23]
-// masks the bits:
-// 1 11111111 11111111111111100000000
-// |      |            |
-// sign  exp        fraction
-float float_round(float x, size_t fraction_precision = 15) {
-    uint32_t mask = ~((1 << (23 - fraction_precision)) - 1);
-    reinterpret_cast<uint32_t&>(x) &= mask;
-    return x;
 }
 
 void dump_buffer(memory const& mem, std::string const& name)
@@ -2156,6 +2144,8 @@ TEST(convolution_gpu, basic_yxfb_4_4_yxfb_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)
 template<typename T>
 void quantize_weights(cldnn::memory& weights, cldnn::memory& w_qf)
 {
+    using std::abs;
+
     auto batch_pitch = weights.get_layout().get_pitches().batch[0];
     auto ptr = weights.pointer<T>();
     auto wqf_ptr = w_qf.pointer<float>();
@@ -2178,6 +2168,8 @@ void quantize_weights(cldnn::memory& weights, cldnn::memory& w_qf)
 template<typename T>
 void calibrate(const cldnn::memory& output, cldnn::memory& calibrations)
 {
+    using std::abs;
+
     auto feature_pitch = output.get_layout().get_pitches().feature[0];
     auto ptr = output.pointer<T>();
     auto calibrations_ptr = calibrations.pointer<float>();
@@ -2195,6 +2187,8 @@ void calibrate(const cldnn::memory& output, cldnn::memory& calibrations)
 template<typename T>
 T max_abs(const cldnn::memory& mem)
 {
+    using std::abs;
+
     T max = (T)0;
     auto ptr = mem.pointer<T>();
     for (auto& a : ptr)

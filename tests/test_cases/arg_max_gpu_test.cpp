@@ -61,11 +61,11 @@ TEST(arg_max_gpu, base) {
 	EXPECT_EQ(outputs.begin()->first, "arg_max");
 
 	auto output = outputs.at("arg_max").get_memory();
-	auto output_ptr = output.pointer<int>();;
-	int out_buffer[batch_num];
+	auto output_ptr = output.pointer<float>();
+	float out_buffer[batch_num];
 	for (uint32_t i = 0; i < batch_num; i++)
 	{
-		out_buffer[i] = get_value<int>(output_ptr, i);
+		out_buffer[i] = get_value<float>(output_ptr, i);
 	}	
 	int size = x_size * y_size * feature_num;
 	int index;
@@ -73,7 +73,7 @@ TEST(arg_max_gpu, base) {
 	for (int i = 0; i < batch_num; i++) {
 		EXPECT_GE(out_buffer[i], 0);
 		EXPECT_LT(out_buffer[i], size);
-		index = out_buffer[i];
+		index = (int)out_buffer[i];
 		value = input_vec[i*size + (int)index];
 		for (int j = 0; j < size; j++)
 		{
@@ -111,11 +111,11 @@ TEST(arg_max_gpu_batch_one, base) {
     EXPECT_EQ(outputs.begin()->first, "arg_max");
 
     auto output = outputs.at("arg_max").get_memory();
-    auto output_ptr = output.pointer<int>();;
-    int out_buffer[batch_num * top_k];
+    auto output_ptr = output.pointer<float>();
+    float out_buffer[batch_num * top_k];
     for (uint32_t i = 0; i < batch_num * top_k; i++)
     {
-        out_buffer[i] = get_value<int>(output_ptr, i);
+        out_buffer[i] = get_value<float>(output_ptr, i);
     }
      int size = x_size * y_size * feature_num;
      int index;
@@ -126,16 +126,16 @@ TEST(arg_max_gpu_batch_one, base) {
          int same_values = 1;
          int j;
          for (j = 0; j < top_k; j++) {
-             EXPECT_GE(out_buffer[i*top_k + j], 0);
-             EXPECT_LT(out_buffer[i*top_k + j], size);
+             EXPECT_GE((int)out_buffer[i*top_k + j], 0);
+             EXPECT_LT((int)out_buffer[i*top_k + j], size);
              if (top_k - 1 == j) {
-                 if (input_vec[i*size + out_buffer[i*top_k + j]] != input_vec[i*size + out_buffer[i*top_k + j - 1]]) {
+                 if (input_vec[i*size + (int)out_buffer[i*top_k + j]] != input_vec[i*size + (int)out_buffer[i*top_k + j - 1]]) {
                      amount += j;
                  }
                  else
                      amount += same_values * (j - same_values + 1);
              }
-             else if (input_vec[i*size + out_buffer[i*top_k + j]] != input_vec[i*size + out_buffer[i*top_k + j + 1]]) {
+             else if (input_vec[i*size + (int)out_buffer[i*top_k + j]] != input_vec[i*size + (int)out_buffer[i*top_k + j + 1]]) {
                  if (same_values != j + 1) {
                      amount += same_values * (j - same_values + 1);
                      same_values = 1;
@@ -148,7 +148,7 @@ TEST(arg_max_gpu_batch_one, base) {
          EXPECT_LT(out_buffer[i*top_k + top_k - 1], size);
          for (int j = 0; j < top_k; j++)
          {
-             index = out_buffer[i*top_k + j];
+             index = (int)out_buffer[i*top_k + j];
              value = input_vec[i*size + index];
              for (int k = 0; k < size; k++)
              {
@@ -196,11 +196,11 @@ TEST(arg_max_gpu_top_k, base) {
 	EXPECT_EQ(outputs.begin()->first, "arg_max");
 
 	auto output = outputs.at("arg_max").get_memory();
-	auto output_ptr = output.pointer<int>();;
-	int out_buffer[batch_num * top_k];
+	auto output_ptr = output.pointer<float>();
+	float out_buffer[batch_num * top_k];
 	for (uint32_t i = 0; i < batch_num * top_k; i++)
 	{
-		out_buffer[i] = get_value<int>(output_ptr, i);
+		out_buffer[i] = get_value<float>(output_ptr, i);
 	}
 	int size = x_size * y_size * feature_num;
 	int index;
@@ -211,16 +211,16 @@ TEST(arg_max_gpu_top_k, base) {
 		int same_values = 1;
 		int j;
 		for (j = 0; j < top_k; j++) {
-			EXPECT_GE(out_buffer[i*top_k + j], 0);
-			EXPECT_LT(out_buffer[i*top_k + j], size);
+			EXPECT_GE((int)out_buffer[i*top_k + j], 0);
+			EXPECT_LT((int)out_buffer[i*top_k + j], size);
 			if (top_k - 1 == j) {
-				if (input_vec[i*size + out_buffer[i*top_k + j]] != input_vec[i*size + out_buffer[i*top_k + j - 1]]) {
+				if (input_vec[i*size + (int)(int)out_buffer[i*top_k + j]] != input_vec[i*size + (int)(int)out_buffer[i*top_k + j - 1]]) {
 					amount += j;
 				}
 				else
 					amount += same_values * (j - same_values + 1);
 			}
-			else if (input_vec[i*size + out_buffer[i*top_k + j]] != input_vec[i*size + out_buffer[i*top_k + j + 1]]) {
+			else if (input_vec[i*size + (int)(int)out_buffer[i*top_k + j]] != input_vec[i*size + (int)(int)out_buffer[i*top_k + j + 1]]) {
 				if (same_values != j+1) {
 					amount += same_values * (j - same_values + 1);
 					same_values = 1;
@@ -233,7 +233,7 @@ TEST(arg_max_gpu_top_k, base) {
 		EXPECT_LT(out_buffer[i*top_k + top_k - 1], size);
 		for (int j = 0; j < top_k; j++)
 		{
-			index = out_buffer[i*top_k + j];
+			index = (int)out_buffer[i*top_k + j];
 			value = input_vec[i*size + index];
 			for (int k = 0; k < size; k++)
 			{
@@ -279,11 +279,11 @@ TEST(arg_max_gpu_min, base) {
 	EXPECT_EQ(outputs.begin()->first, "arg_max");
 
 	auto output = outputs.at("arg_max").get_memory();
-	auto output_ptr = output.pointer<int>();;
-	int out_buffer[batch_num];
+	auto output_ptr = output.pointer<float>();
+	float out_buffer[batch_num];
 	for (uint32_t i = 0; i < batch_num; i++)
 	{
-		out_buffer[i] = get_value<int>(output_ptr, i);
+		out_buffer[i] = get_value<float>(output_ptr, i);
 	}
 	int size = x_size * y_size * feature_num;
 	int index;
@@ -291,7 +291,7 @@ TEST(arg_max_gpu_min, base) {
 	for (int i = 0; i < batch_num; i++) {
 		EXPECT_GE(out_buffer[i], 0);
 		EXPECT_LT(out_buffer[i], size);
-		index = out_buffer[i];
+		index = (int)out_buffer[i];
 		value = input_vec[i*size + index];
 		for (int j = 0; j < size; j++)
 		{
@@ -333,11 +333,11 @@ TEST(arg_max_gpu_min_top_k, base) {
 	EXPECT_EQ(outputs.begin()->first, "arg_max");
 
 	auto output = outputs.at("arg_max").get_memory();
-	auto output_ptr = output.pointer<int>();;
-	int out_buffer[batch_num * top_k];
+	auto output_ptr = output.pointer<float>();
+	float out_buffer[batch_num * top_k];
 	for (uint32_t i = 0; i < batch_num * top_k; i++)
 	{
-		out_buffer[i] = get_value<int>(output_ptr, i);
+		out_buffer[i] = get_value<float>(output_ptr, i);
 	}
 	int size = x_size * y_size * feature_num;
 	int index;
@@ -348,16 +348,16 @@ TEST(arg_max_gpu_min_top_k, base) {
 		int same_values = 1;
 		int j;
 		for (j = 0; j < top_k; j++) {
-			EXPECT_GE(out_buffer[i*top_k + j], 0);
-			EXPECT_LT(out_buffer[i*top_k + j], size);
+			EXPECT_GE((int)out_buffer[i*top_k + j], 0);
+			EXPECT_LT((int)out_buffer[i*top_k + j], size);
 			if (top_k - 1 == j) {
-				if (input_vec[i*size + out_buffer[i*top_k + j]] != input_vec[i*size + out_buffer[i*top_k + j - 1]]) {
+				if (input_vec[i*size + (int)out_buffer[i*top_k + j]] != input_vec[i*size + (int)out_buffer[i*top_k + j - 1]]) {
 					amount += j;
 				}
 				else
 					amount += same_values * (j - same_values + 1);
 			}
-			else if (input_vec[i*size + out_buffer[i*top_k + j]] != input_vec[i*size + out_buffer[i*top_k + j + 1]]) {
+			else if (input_vec[i*size + (int)out_buffer[i*top_k + j]] != input_vec[i*size + (int)out_buffer[i*top_k + j + 1]]) {
 				if (same_values != j + 1) {
 					amount += same_values * (j - same_values + 1);
 					same_values = 1;
@@ -370,7 +370,7 @@ TEST(arg_max_gpu_min_top_k, base) {
 		EXPECT_LT(out_buffer[i*top_k + top_k - 1], size);
 		for (int j = 0; j < top_k; j++)
 		{
-			index = out_buffer[i*top_k + j];
+			index = (int)out_buffer[i*top_k + j];
 			value = input_vec[i*size + index];
 			for (int k = 0; k < size; k++)
 			{
@@ -415,11 +415,11 @@ TEST(arg_max_gpu_min_axis_batch, base) {
     EXPECT_EQ(outputs.begin()->first, "arg_max");
     const int out_size = y_size * feature_num * x_size * top_k;
     auto output = outputs.at("arg_max").get_memory();
-    auto output_ptr = output.pointer<int>();
-    int out_buffer[out_size];
+    auto output_ptr = output.pointer<float>();
+    float out_buffer[out_size];
     for (uint32_t i = 0; i < out_size; i++)
     {
-        out_buffer[i] = get_value<int>(output_ptr, i);
+        out_buffer[i] = get_value<float>(output_ptr, i);
     }
     for (int i = 0; i < out_size; i++)
     {

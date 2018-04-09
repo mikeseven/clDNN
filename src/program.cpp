@@ -38,6 +38,7 @@
 #include "concatenation_inst.h"
 #include "crop_inst.h"
 #include "data_inst.h"
+#include "mutable_data_inst.h"
 #include "deconvolution_inst.h"
 #include "detection_output_inst.h"
 #include "lrn_inst.h"
@@ -217,7 +218,7 @@ namespace {
             return{ false, false };
         if (l1.get_linear_size() != l2.get_linear_size())
             return{ false, false };
-        if ((l1.format == format::bf8_xy16 && l2.format != format::bf8_xy16) || 
+        if ((l1.format == format::bf8_xy16 && l2.format != format::bf8_xy16) ||
             (l2.format == format::bf8_xy16 && l1.format != format::bf8_xy16))
             return{ false, false };
 
@@ -261,7 +262,7 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
 
     engine->compile_program(*this);
 
-    this->dump_program("13_finished", true);
+     this->dump_program("13_finished", true);
     cleanup();
 }
 
@@ -330,7 +331,7 @@ void program_impl::analyze_output_size_handling_need()
                 handling_needed = true;
         }
     }
-  
+
     output_size_handling_enabled = handling_needed;
 }
 
@@ -421,6 +422,7 @@ void program_impl::pre_optimize_graph()
         dump_program("4_reordered_inputs", true);
     }
 
+    handle_reshape();
     remove_redundant_reorders(); dump_program("5_removed_redundant_reorders", true);
     prepare_padding();
     prepare_depthwise_sep_opt();
@@ -444,7 +446,7 @@ void program_impl::compile_graph()
         if (!node->is_type<internal_primitive>() && !node->is_type<data>())
         {
             node->get_output_layout();
-            if (!node->is_type<data>())
+            if (!node->is_type<data>() && !(node->is_type<mutable_data>() && node->get_dependencies().empty()))
                 node->selected_impl = node->type()->choose_impl(*engine, *node);
         }
     }
@@ -886,7 +888,7 @@ void program_impl::mark_data_flow()
     std::list<program_node*> stack;
     for (auto const& node : processing_order)
     {
-        if (node->is_endpoint() && !node->constant)
+        if ((node->is_endpoint() && !node->constant) || node->is_type<mutable_data>())
         {
             stack.push_back(node);
             node->data_flow = true;
@@ -1171,7 +1173,7 @@ void program_impl::trim_to_outputs()
         for (auto user : node->users)
             if (user->is_marked())
                 user->dependencies.erase(std::remove(user->dependencies.begin(), user->dependencies.end(), node), user->dependencies.end());
-        
+
         optimized_out.push_back(node->id());
         nodes_map.erase(node->id());
     }
@@ -1240,7 +1242,7 @@ void program_impl::skipped_branch_memory_dependencies()
             {
                 // if at least one user will be processed after 'node', node2 has to be added to forbiden list
                 for (auto usr : node2->get_users())
-                {                       
+                {
                     if (usr->get_processing_num() > node->get_processing_num())
                     {
                         add_memory_dependency(node, node2);
@@ -1256,7 +1258,7 @@ void program_impl::skipped_branch_memory_dependencies()
 void program_impl::oooq_memory_dependencies()
 {
     auto itr = processing_order.begin();
-    // This order let us build dependencies based on syncing points. 
+    // This order let us build dependencies based on syncing points.
     // Set of nodes between two syncing points will be called sync_region.
     // Major rules is: can't share resource with nodes in my sync_region
 
@@ -1291,13 +1293,13 @@ void program_impl::oooq_memory_dependencies()
                     add_memory_dependency(*nd2, *nd1);
                 }
             }
-            
+
             // collect dependencies of every node in sync region
             std::vector<cldnn::program_node*> deps;
             for (auto& nd_in_region : sync_region)
                 for (auto& dep : nd_in_region->get_dependencies())
                     deps.emplace_back(dep);
-            
+
 
             for (auto& nd_in_region : sync_region)
                 for (auto& dep : deps)
@@ -1316,7 +1318,7 @@ void program_impl::prepare_memory_dependencies()
 {
     if (!get_engine().configuration().enable_memory_pool)
         return;
-    
+
     basic_memory_dependencies();
     skipped_branch_memory_dependencies();
     oooq_memory_dependencies();
@@ -1591,7 +1593,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
             conv_node.output_layout.data_padding = padding{};
             auto& back_node = get_or_create(winograd_output);
             back_node.processing_itr = processing_order.insert(std::next(conv_node.processing_itr), &back_node);
-            
+
             auto bias_term = conv_node.bias_term();
             //create additional eltwise node after reorder to compute bias
             if (bias_term)
@@ -1599,7 +1601,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
                 auto& bias_node = conv_node.get_dependency(2);
                 std::vector<primitive_id> inputs = { back_node.id(), bias_node.id() };
                 auto winograd_output_biases = std::make_shared<eltwise>(back_node.id() + "_bias", inputs,
-                    cldnn::eltwise_mode::sum, conv_prim->with_activation, conv_prim->activation_negative_slope, 
+                    cldnn::eltwise_mode::sum, conv_prim->with_activation, conv_prim->activation_negative_slope,
                     back_node.output_layout.data_padding);
                 back_node.output_layout.data_padding = padding{};
                 auto& back_bias_node = get_or_create(winograd_output_biases);
@@ -1688,7 +1690,7 @@ void program_impl::reorder_inputs(layout_optimizer& lo)
     const auto reorder_input_detection_output = [this, &lo](typed_program_node<detection_output>& detection_output_node)
     {
         auto detection_output_prim = detection_output_node.get_primitive();
-         
+
         for (size_t i = 0; i < detection_output_node.get_dependencies().size(); i++)
         {
             auto& input = detection_output_node.get_dependency(i);
@@ -1781,7 +1783,7 @@ void program_impl::prepare_depthwise_sep_opt()
             !(node.get_primitive()->split() >= 16))
             return;
 
-        //make sure the weights and biases are data type and 
+        //make sure the weights and biases are data type and
         //are not reused in other primitives as they will be overriden with concatenated ones
         for (size_t i = 1; i < node.get_dependencies().size(); i++)
         {
@@ -1801,6 +1803,85 @@ void program_impl::prepare_depthwise_sep_opt()
             prepare_depthwise_sep_opt,   //case for deconvolution
             prepare_depthwise_sep_opt    //case for convolution
             );
+    }
+}
+
+void program_impl::handle_reshape()
+{
+    //reshape primitive by definition does not change underlying data, only shape description
+    //however during graph initialization and data optimization the layouts can be changed without user's knowledge,
+    //when reshape is followed by reorder, it is likely that reorder's output will not be as expected (for example reshape with flattened shape)
+    //this pass resolved the issue by changing graph in the following way
+    //- in case reshape has multiple users with reshape->reorder sequence, it will be splitted to multiple reshape primitives with single user
+    //- in case of reshape->reorder sequence, the additional reorder before reshape will be added,
+    //  if last reorder does not contain padding or mean subtract, it will be removed later in the graph
+
+    for (const auto& node : processing_order)
+    {
+        if (node->is_type<reshape>())
+        {
+            auto& input_node = node->get_dependency(0);
+            
+            if (input_node.is_type<reorder>())
+                continue;
+            
+            //vector for storing nodes that are reorder type, for which splitted primitives are needed (except for the first one where orginal reshape will be used)
+            std::vector<program_node*> reorder_node_to_split;
+            
+            //find the users of reshape that are reorder type, if none present then skip the current node
+            for (const auto& user : node->get_users())
+            {
+                if (user->is_type<reorder>())
+                    reorder_node_to_split.push_back(user);
+            }
+            
+            if (reorder_node_to_split.empty())
+                continue;
+            
+            auto& prim_node = node->as<reshape>();
+            const auto& prim = prim_node.get_primitive();
+            auto output_shape = prim->output_shape;
+            
+            //vector for storing reshape nodes to connect to new reorder nodes (if needed)
+            std::vector<program_node*> reorder_reshape_nodes;
+            
+            bool skip_first_user = false;
+            auto reshape_users = node->get_users();
+            for (const auto& user : reshape_users)
+            {
+                //reshape node for first user will be the orginal reshape from the graph
+                if (!skip_first_user)
+                {
+                    if (std::find(reorder_node_to_split.begin(), reorder_node_to_split.end(), user) != reorder_node_to_split.end())
+                        reorder_reshape_nodes.push_back(node);
+                    skip_first_user = true;
+                    continue;
+                }
+            
+                //other reshapes will be clones of the orginal one connected to reshape->reorder sequences
+                if (std::find(reorder_node_to_split.begin(), reorder_node_to_split.end(), user) != reorder_node_to_split.end())
+                {
+                    auto new_reshape = std::make_shared<reshape>("_reshape_split_" + user->id() + "_" + node->id(), input_node.id(), output_shape);
+                    auto& new_reshape_node = get_or_create(new_reshape);
+                    add_connection(input_node, new_reshape_node);
+                    user->replace_dependency(0, new_reshape_node);
+                    new_reshape_node.processing_itr = processing_order.insert(std::next(input_node.processing_itr), &new_reshape_node);
+                    reorder_reshape_nodes.push_back(&new_reshape_node);
+                }
+            }
+            
+            //add new reorder nodes to proper reshape node
+            auto reshape_reorder_id = 0;
+            for (const auto& reorder_node : reorder_node_to_split)
+            {
+                auto& reorder_reshape_node = reorder_reshape_nodes[reshape_reorder_id];
+                auto reshape_in_layout = reorder_node->get_output_layout();
+                auto reshape_input = std::make_shared<reorder>("_reshape_input_" + reorder_node->id() + "_" + reorder_reshape_node->id(), input_node.id(), reshape_in_layout.format, reshape_in_layout.data_type);
+                auto& reshape_input_node = get_or_create(reshape_input);
+                add_intermediate(reshape_input_node, *reorder_reshape_node, 0, reshape_input_node.dependencies.empty());
+                reshape_reorder_id++;
+            }
+        }
     }
 }
 
@@ -1917,7 +1998,7 @@ void program_impl::apply_needed_padding(program_node& node, program_node& prev_n
         return;
 
     // Special handling for input nodes.
-    if (prev_node.is_type<input_layout>())
+    if (prev_node.is_type<input_layout>() || prev_node.is_type<mutable_data>())
     {
         target_layout.data_padding = needed_padding;
 
@@ -1940,7 +2021,7 @@ void program_impl::prepare_padding()
             {
                 auto& prim_node = node->as<convolution>();
                 const auto& prim = prim_node.get_primitive();
-                
+
                 if (!prim->with_output_size)
                     continue;
 
@@ -2012,7 +2093,7 @@ void program_impl::prepare_padding()
         auto filter_prim = filter_node.get_primitive();
 
         layout filter_layout = filter_node.get_output_layout();
-        
+
         // convolution have only one input primitive
         auto prev_prim_output_layout = conv_input_node.get_output_layout();
 
@@ -2050,7 +2131,7 @@ void program_impl::propagate_constants()
         prop.visit_node(*node);
 
     auto&& to_replace = prop.calculate();
-    
+
     //remove all nodes which are no longer relevant, i.e. nodes which:
     // 1. are constants, and
     // 2. do not have non-const user (so their data are not used during inference), and
@@ -2090,6 +2171,20 @@ void program_impl::propagate_constants()
         auto& new_node = get_or_create(const_data);
         auto& curr_node = *nodes_map.at(id_to_replace);
 
+        if (!curr_node.is_type<generic_layer>())
+        {
+            auto curr_node_deps = curr_node.get_dependencies();
+            for (auto& dep : curr_node_deps)
+            {
+                auto dep_users = dep->get_users();
+                for (auto& dep_user : dep_users)
+                {
+                    if (dep_user == &curr_node)
+                        remove_connection(*dep, curr_node);
+                }
+            }
+        }
+
         curr_node.dependencies.clear();
         //remove all constant users (as they will be either removed or replaced by cldnn::data which does not have any dependencies)
         curr_node.users.erase(
@@ -2097,6 +2192,7 @@ void program_impl::propagate_constants()
             curr_node.users.end()
         );
         replace(curr_node, new_node, false, false);
+
     }
 }
 
@@ -2114,7 +2210,6 @@ void program_impl::prepare_buffer_fusing()
             // it could break desired memory alignment. On the other hand, if this node uses all inputs
             // exclusively (see check above) they should not have output padding set since concatenation
             // does not ask for any.
-            assert(!node.has_padded_dependency());
             if (node.has_padded_dependency())
                 return;
 
@@ -2145,7 +2240,7 @@ void program_impl::prepare_buffer_fusing()
                     // todo: in future, if this case is problem, it can be optimized further to enable buffer fusing
                     //       per single input rather than all/none
                     // + restrict input types to pooling, convolution and activation only due to problems with output padding on b and f
-                    if ((!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>() && !input->is_type<concatenation>()) ||
+                    if ((!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>() && !input->is_type<concatenation>() && !input->is_type<crop>()) ||
                         (input->is_output() && !is_debug) ||
                         input->get_users().size() > 2)
                         return;
@@ -2209,7 +2304,7 @@ void program_impl::prepare_buffer_fusing()
             node.can_be_optimized(true);
         });
 
-        // zero copy 
+        // zero copy
         do_for_types<crop>(*node, [this, is_debug](crop_node& node)
         {
             //if the node is marked as network output, prevent optimizations which would affect a form of its output, unless debug flag is set
@@ -2220,11 +2315,15 @@ void program_impl::prepare_buffer_fusing()
             if (node.get_users().size() == 1 && node.get_users().front()->is_type<connector>())
                 return;
 
+            //do not optimize when next node is concatenation which is not output
+            if (node.get_users().size() == 1 && node.get_users().front()->is_type<concatenation>() && !node.get_users().front()->is_output())
+                return;
+
             if (node.get_dependencies().size() == 1 &&
                 node.get_users().size() > 0)
             {
                 // optimization is avaiable for croping across depth(features) only
-                // if output padding has defined padding accross featuers already it wouldn't 
+                // if output padding has defined padding accross featuers already it wouldn't
                 // work because it expect to have zeros in the padded area.
                 auto format = node.get_output_layout().format;
                 auto crop_prim = node.get_primitive();
@@ -2239,14 +2338,14 @@ void program_impl::prepare_buffer_fusing()
                     out_padd.lower_size().batch[0] == 0 &&
                     out_padd.upper_size().batch[0] == 0 &&
                     out_padd.lower_size().spatial[0] == 0 &&
-                    out_padd.lower_size().spatial[1] == 0 && 
-                    out_padd.upper_size().spatial[0] == 0 && 
+                    out_padd.lower_size().spatial[1] == 0 &&
+                    out_padd.upper_size().spatial[0] == 0 &&
                     out_padd.upper_size().spatial[1] == 0)
                 {
                     //  Regular crop
                     //  crop input buffer
                     //  |___________data____________|
-                    //  
+                    //
                     //  crop output buffer
                     //  |-------->| offsets[f]  |<--|
                     //            |_____data____|
@@ -2314,7 +2413,7 @@ void program_impl::prepare_buffer_fusing()
             {
                 auto user = node.get_users().front();
                 auto users_users = node.get_users().front()->get_users();
-                
+
                 for (auto const& users_user : users_users)
                 {
                     if (users_user->get_output_layout().format != format::byxf && !users_user->is_type<eltwise>())

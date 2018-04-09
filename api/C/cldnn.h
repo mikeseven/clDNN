@@ -471,6 +471,11 @@ CLDNN_API cldnn_topology cldnn_create_topology(cldnn_status* status);
 /// @param[in] dto The pointer to a structure defined by @ref CLDNN_BEGIN_PRIMITIVE_DESC and @ref CLDNN_END_PRIMITIVE_DESC
 CLDNN_API void cldnn_add_primitive(cldnn_topology topology, const struct CLDNN_PRIMITIVE_DESC(primitive)* dto, cldnn_status* status);
 
+/// @brief Change input layout of the topology.
+/// @param[in] id of the input layout in the topology
+/// @param[in] new_layout of the input layout
+CLDNN_API void cldnn_change_input_layout(cldnn_topology topology, cldnn_primitive_id id, cldnn_layout new_layout, cldnn_status* status);
+
 /// @brief Return all primitives id from topology.
 /// @details Function fills user provided buffer by primitive ids. Each id is followed by '\0'.
 /// @param[in] ids Pointer to user-allocated buffer to store names.
@@ -510,8 +515,11 @@ CLDNN_API cldnn_engine_info cldnn_get_engine_info(cldnn_engine engine, cldnn_sta
 CLDNN_API /*cldnn_engine_type*/ int32_t cldnn_get_engine_type(cldnn_engine engine, cldnn_status* status);
 
 /// @brief Returns total size of all resources allocated using given engine
-CLDNN_API int64_t cldnn_get_total_device_memory_size(cldnn_engine engine, cldnn_status* status);
+CLDNN_API int64_t cldnn_get_temp_used_device_memory_size(cldnn_engine engine, cldnn_status* status);
 /// @}
+
+/// @brief Returns max size of resources allocated using given engine
+CLDNN_API int64_t cldnn_get_max_used_device_memory_size(cldnn_engine engine, cldnn_status* status);
 
 /// @addtogroup c_network
 /// @{

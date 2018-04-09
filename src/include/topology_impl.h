@@ -17,7 +17,7 @@
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
 #include "api/CPP/primitive.hpp"
-
+#include "api/CPP/input_layout.hpp"
 #include "api_impl.h"
 #include "refcounted_obj.h"
 
@@ -62,6 +62,17 @@ public:
             throw std::runtime_error("Topology doesn't contain primtive: " + id);
         }
         
+    }
+
+    void change_input_layout(const primitive_id& id, layout new_layout)
+    {
+        auto& inp_layout = this->at(id);
+        if (inp_layout->type != input_layout::type_id())
+        {
+            throw std::runtime_error("Primitive: " + id + " is not input_layout.");
+        }
+        auto inp_lay_prim = static_cast<input_layout*>(inp_layout.get());
+        inp_lay_prim->change_layout(new_layout);
     }
 
     const topology_map& get_primitives() const { return _primitives; }
