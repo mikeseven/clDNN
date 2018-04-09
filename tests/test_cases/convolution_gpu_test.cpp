@@ -2650,9 +2650,9 @@ TEST(convolution_f32_fw_gpu, calibration_advance) {
     quantize_weights<float>(weights_f, w_qf);
     quantize_weights<float>(weights_f_2, w_qf_2);
 
-    auto& weights   = create_int8_weights(engine, weights_f);
-    auto& weigths_2 = create_int8_weights(engine, weights_f_2);
-    auto& input = create_int8_weights(engine, input_f);
+    auto weights   = create_int8_weights(engine, weights_f);
+    auto weigths_2 = create_int8_weights(engine, weights_f_2);
+    auto input = create_int8_weights(engine, input_f);
 
     topology topology(
         input_layout("input", input.get_layout()),
