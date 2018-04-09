@@ -95,6 +95,12 @@ namespace KernelSelector
                             uint32_t fixedKenrelDivider : 1;
                             uint32_t dynamicKenrelDivider : 1;
                         } norm;
+                        struct mvn_t
+                        {
+                            uint32_t across : 1;
+                            uint32_t within : 1;
+                            uint32_t normalize_variance : 1;
+                        } mvn;
                         struct pooling_t
                         {
                             uint32_t max : 1;
@@ -474,6 +480,26 @@ namespace KernelSelector
             default:
                 break;
             }
+        }
+
+        void EnableMVNMode(MVNMode m)
+        {
+            switch (m)
+            {
+            case MVNMode::ACROSS_CHANNELS:
+                key.restrict.val.dedicated.mvn.across = 1;
+                break;
+            case MVNMode::WITHIN_CHANNELS:
+                key.restrict.val.dedicated.mvn.within = 1;
+                break;
+            default:
+                break;
+            }
+        }
+
+        void EnableMVNNormalizeVariance()
+        {
+            key.restrict.val.dedicated.mvn.normalize_variance = 1;
         }
 
         void EnableLRNKernelDividerMode(KernelDividerMode m)
@@ -1062,6 +1088,35 @@ namespace KernelSelector
             ParamsKey k = BaseParams::GetParamsKey();
 
             k.EnableNormalizeMode(normParams.normMode);
+
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // MVNParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct MVNParams : public BaseParams
+    {
+        MVNParams() : BaseParams(KernelType::MVN), mvnParams() {}
+
+        struct DedicatedParams
+        {
+            MVNMode mvnMode = MVNMode::WITHIN_CHANNELS;
+            bool mvnNormalizeVariance = true;
+            float         epsilon = 1e-10f;
+        };
+
+        DedicatedParams mvnParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            ParamsKey k = BaseParams::GetParamsKey();
+
+            k.EnableMVNMode(mvnParams.mvnMode);
+
+            if (mvnParams.mvnNormalizeVariance)
+                k.EnableMVNNormalizeVariance();
 
             return k;
         }
@@ -1666,6 +1721,14 @@ namespace KernelSelector
     struct NormalizeOptionalParams : OptionalParams
     {
         NormalizeOptionalParams() : OptionalParams(KernelType::NORMALIZE) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // MVNOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct MVNOptionalParams : OptionalParams
+    {
+        MVNOptionalParams() : OptionalParams(KernelType::MVN) {}
     };
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -54,6 +54,7 @@
 #include "upsampling_inst.h"
 #include "eltwise_inst.h"
 #include "fully_connected_inst.h"
+#include "mvn_inst.h"
 
 #include "network_impl.h"
 #include "kernel_selector_helper.h"
@@ -2484,7 +2485,7 @@ void program_impl::prepare_primitive_fusing()
                     !input.is_type<fully_connected>() && !input.is_type<lrn>() && !input.is_type<normalize>() &&
                     !input.is_type<permute>() && !input.is_type<pooling>() && !input.is_type<reorder>() &&
                     !input.is_type<reshape>() && !input.is_type<roi_pooling>() && !input.is_type<scale>() &&
-                    !input.is_type<softmax>() && !input.is_type<upsampling>()))
+                    !input.is_type<softmax>() && !input.is_type<upsampling>() && !input.is_type<mvn>()))
                 return;
 
             input.set_fused_activation(node.get_primitive()->activation_func, node.get_primitive()->additional_params);

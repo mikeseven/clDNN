@@ -480,6 +480,16 @@ namespace KernelSelector {
         }
     }
 
+    inline std::string toString(MVNMode mode)
+    {
+        switch (mode)
+        {
+        case MVNMode::ACROSS_CHANNELS:         return "ACROSS_CHANNELS";
+        case MVNMode::WITHIN_CHANNELS:         return "WITHIN_CHANNELS";
+        default: return "";
+        }
+    }
+
     inline std::string toString(WeightsLayout layout)
     {
         switch (layout)
