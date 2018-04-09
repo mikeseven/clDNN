@@ -180,7 +180,6 @@ namespace KernelSelector
         kd.cldnnStyle.inputBlockWidth = 0;
         kd.cldnnStyle.leftovers = 0;
         kd.effiency = DONT_USE_IF_HAVE_SOMETHING_ELSE;
-      
         return kd;
     }
 

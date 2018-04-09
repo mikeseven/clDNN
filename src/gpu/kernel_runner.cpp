@@ -91,23 +91,6 @@ void kernel_runner::prepare_kernel_args(const KernelSelector::KernelsData& kerne
             weight_buffers.push_back(engine->allocate_memory({ from_weights_type(weights_bias_params.weights.GetDType()), fmt, tensor(num_of_weight_elements_ofm, num_of_weight_elements_ifm, num_of_weight_elements_spatial_x, num_of_weight_elements_spatial_y) }));
 
         }
-        /*
-        else if (weight_buffers[0]->get_layout().format != fmt)
-            weight_buffers[0] = engine->allocate_memory({ from_weights_type(weights_bias_params.weights.GetDType()), fmt, tensor(num_of_weight_elements_ofm, 1, num_of_weight_elements_spatial, 1) }, base_params.layerID, fake_dependencies, true);
-            
-        else
-        {
-            while (weight_buffers[0]->get_layout().bytes_count() < weights_bias_params.weights.PhysicalSizeInBytes())
-            {
-                // Weights layout depends on the kernel. Multiply the buffer size by 2 until it is big enough 
-                // (to avoid complex computations of the exact buffer size according to the chosen layout). 
-                weight_buffers.clear();
-                num_of_weight_elements_spatial *= 2;
-                weight_buffers.push_back(engine->allocate_memory({ from_weights_type(weights_bias_params.weights.GetDType()), fmt, tensor(num_of_weight_elements_ofm, 1, num_of_weight_elements_spatial, 1) }, base_params.layerID, fake_dependencies, true));
-            }
-
-        }
-        */
         args.weights = weight_buffers[0];
 
         // Prepare bias buffer
