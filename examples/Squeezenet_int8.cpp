@@ -35,6 +35,8 @@ void set_values(const cldnn::memory& mem,const std::vector<T>& args) {
     for (auto x : args)
         *it++ = x;
 }
+
+// those values where calibrated for very small image set. Needs to improve
 const std::vector<float> reorder_calib = {
     0.89441f,  0.918088f,  0.959787f, };
 const std::vector<float> fire2_expand3x3_calib = {
@@ -242,7 +244,6 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
         { 0,0,0,0 },
         { 1,1,1,1 },
         true);
-
 
     auto pool1 = pooling(
         "pool1",
@@ -482,7 +483,6 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
         { 1,1,2,2 }); // strd
 
     add_calibration(engine, weights_dir, "fire6_squeeze1x1", fire5_concat_calib, fire6_squeeze1x1_calib, topology);
-
     auto fire6_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire6_squeeze1x1_bias.nnd") });
     auto fire6_squeeze1x1 = convolution(
         "fire6_squeeze1x1",
@@ -591,7 +591,6 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
     );
 
     add_calibration(engine, weights_dir, "fire8_squeeze1x1", fire7_concat_calib, fire8_squeeze1x1_calib, topology);
-
     auto fire8_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire8_squeeze1x1_bias.nnd")});
     auto fire8_squeeze1x1 = convolution(
         "fire8_squeeze1x1",
@@ -647,7 +646,6 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
 
     add_calibration(engine, weights_dir, "fire9_squeeze1x1", fire8_concat_calib, fire9_squeeze1x1_calib, topology);
     auto fire9_squeeze1x1_bias = file::create({ engine, join_path(weights_dir, "fire9_squeeze1x1_bias.nnd")});
-
     auto fire9_squeeze1x1 = convolution(
         "fire9_squeeze1x1",
         fire8_concat,
@@ -663,7 +661,6 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
 
     add_calibration(engine, weights_dir, "fire9_expand1x1", fire9_squeeze1x1_calib, fire9_expand1x1_calib, topology);
     auto fire9_expand1x1_bias = file::create({ engine, join_path(weights_dir, "fire9_expand1x1_bias.nnd")});
-
     auto fire9_expand1x1 = convolution(
         "fire9_expand1x1",
         fire9_squeeze1x1,
@@ -679,7 +676,6 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
 
     add_calibration(engine, weights_dir, "fire9_expand3x3", fire9_squeeze1x1_calib, fire9_expand3x3_calib, topology);
     auto fire9_expand3x3_bias = file::create({ engine, join_path(weights_dir, "fire9_expand3x3_bias.nnd")});
-
     auto fire9_expand3x3 = convolution(
         "fire9_expand3x3",
         fire9_squeeze1x1,
@@ -704,7 +700,6 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
 
     auto conv10_bias = file::create({ engine, join_path(weights_dir, "conv10_bias.nnd") });
     add_calibration(engine, weights_dir, "conv10", fire9_concat_calib, conv10_calib, topology);
-
     auto conv10 = convolution(
         "conv10",
         fire9_concat,
