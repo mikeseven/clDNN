@@ -15,7 +15,6 @@
 */
 
 #include "../public/gpu_devices.inc"
-#define INTERNAL_CAPS
 
 
 //HSW Classic
