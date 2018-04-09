@@ -44,7 +44,8 @@ namespace KernelSelector
         UPSAMPLING,
         REGION_YOLO,
         REORG_YOLO,
-        MAX_UNPOOLING
+        MAX_UNPOOLING,
+        CONVOLUTION_GRAD_WEIGHTS
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -103,6 +104,7 @@ namespace KernelSelector
     {
         MAX,
         AVG,
+        MAX_WITH_ARGMAX
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -202,7 +204,8 @@ namespace KernelSelector
         SCALAR,
         INPUT_BUFFER,
         UNORDERED_ACCESS_INPUT_BUFFER,
-        INTERMEDIATE_RESULTS_INDEX
+        INTERMEDIATE_RESULTS_INDEX,
+        OUTPUT_BUFFER
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

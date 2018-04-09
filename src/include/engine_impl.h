@@ -53,7 +53,7 @@ public:
     engine_types type() const { return engine_types::ocl; }
 
     refcounted_obj_ptr<memory_impl> allocate_memory(layout layout);
-    refcounted_obj_ptr<memory_impl> allocate_memory(layout layout, primitive_id, std::set<primitive_id> ,bool reusable = true);
+    refcounted_obj_ptr<memory_impl> allocate_memory(layout layout, primitive_id, uint32_t, std::set<primitive_id>, bool reusable = true);
     refcounted_obj_ptr<memory_impl> reinterpret_buffer(const memory_impl& memory, layout new_layout);
     bool is_the_same_buffer(const memory_impl& mem1, const memory_impl& mem2);
 
@@ -64,7 +64,7 @@ public:
     void compile_program(program_impl& prog);
 
     refcounted_obj_ptr<network_impl> allocate_network(const program_impl& program);
-    refcounted_obj_ptr<network_impl> build_network(const topology_impl& topology, const build_options& options);
+    refcounted_obj_ptr<network_impl> build_network(const topology_impl& topology, const build_options& options, bool internal_network = false);
     void flush_network();
 
     template <class T>
@@ -80,12 +80,14 @@ public:
     const engine_configuration& configuration() const { return _configuration; }
     std::shared_ptr<gpu_toolkit> get_context() const { return _context; }
     gpu::engine_info_internal get_engine_info() const;
+    memory_pool& get_memory_pool() { return _memory_pool; }
 
-    uint64_t get_total_device_memory() const { return _memory_pool.get_total_device_memory_used(); }
-    
+    uint64_t get_max_used_device_memory() const { return _memory_pool.get_max_peak_device_memory_used(); }
+    uint64_t get_used_device_memory() const { return _memory_pool.get_temp_memory_used(); }
+
     void dump_memory_pool(const program_impl& program, std::string path, std::string dependencies) { _memory_pool.dump_memory_pool(program, path, dependencies); }
-
     bool use_memory_pool() const;
+
 private:
     engine_configuration _configuration;
     std::shared_ptr<gpu_toolkit> _context;

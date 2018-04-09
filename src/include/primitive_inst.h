@@ -24,6 +24,7 @@
 #include "memory_impl.h"
 #include "meta_utils.h"
 #include "kernel_selector_helper.h"
+#include "network_impl.h"
 
 #include <memory>
 #include <vector>
@@ -93,7 +94,8 @@ public:
     bool can_be_optimized() const { return _node.can_be_optimized(); }
     const auto desc() const { return _node.get_primitive(); }
     network_impl& get_network() const { return _network; }
-    
+    uint32_t get_network_id() const { return _network.get_id(); }
+
     //return pointer to const to prevent arbitrary 'execute' call -> use primitive_inst.execute() instead
     const auto get_impl() const { return _impl.get(); }
 

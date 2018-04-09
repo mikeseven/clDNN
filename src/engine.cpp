@@ -54,10 +54,10 @@ memory_impl::ptr engine_impl::allocate_memory(layout layout)
     return _memory_pool.get_memory(layout);
 }
 
-memory_impl::ptr engine_impl::allocate_memory(layout layout, primitive_id id, std::set<primitive_id> dependencies, bool reusable)
+memory_impl::ptr engine_impl::allocate_memory(layout layout, primitive_id id, uint32_t network_id, std::set<primitive_id> dependencies, bool reusable)
 {
     if (use_memory_pool())
-        return _memory_pool.get_memory(layout, id, dependencies, reusable);
+        return _memory_pool.get_memory(layout, id, network_id, dependencies, reusable);
     return _memory_pool.get_memory(layout);
 }
 
@@ -113,9 +113,9 @@ program_impl::ptr engine_impl::build_program(const topology_impl& topology, cons
     return{ new program_impl(*this, topology, options), false };
 }
 
-network_impl::ptr engine_impl::build_network(const topology_impl& topology, const build_options& options)
+network_impl::ptr engine_impl::build_network(const topology_impl& topology, const build_options& options, bool internal_network)
 {
-    return{ new network_impl(*this, topology, options), false };
+    return{ new network_impl(*this, topology, options, internal_network), false };
 }
 
 network_impl::ptr engine_impl::allocate_network(const program_impl& program)

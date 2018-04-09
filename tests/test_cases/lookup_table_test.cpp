@@ -50,7 +50,7 @@ TEST(lookup_table_base, base) {
         /*b1f1*/4.f,  0.5f,  8.f,   8.2f,
         /*b1f2*/0.2f, 0.2f,  -10.f, 5.2f
     };
-    vector<int> input2_vec = { 11, 3 };
+    vector<float> input2_vec = { 11, 3 };
     set_values(input, input_vec);
     set_values(input2, input2_vec);
 
@@ -101,7 +101,7 @@ TEST(lookup_table_num, base) {
         /*b1f1*/4.f,  0.5f,  8.f,   8.2f,
         /*b1f2*/0.2f, 0.2f,  -10.f, 5.2f
     };
-    vector<int> input2_vec = { 11, 7, 3, 3, 7, 6};
+    vector<float> input2_vec = { 11, 7, 3, 3, 7, 6};
     set_values(input, input_vec);
     set_values(input2, input2_vec);
 
@@ -129,13 +129,13 @@ TEST(lookup_table_num, base) {
         int j;
         for (j = 0; j < number_of_values; j++) {
             if (number_of_values - 1 == j) {
-                if (input_vec[i*size + input2_vec[i*number_of_values + j]] != input_vec[i*size + input2_vec[i*number_of_values + j - 1]]) {
+                if (input_vec[i*size + (int)input2_vec[i*number_of_values + j]] != input_vec[i*size + (int)input2_vec[i*number_of_values + j - 1]]) {
                     amount += j;
                 }
                 else
                     amount += same_values * (j - same_values + 1);
             }
-            else if (input_vec[i*size + input2_vec[i*number_of_values + j]] != input_vec[i*size + input2_vec[i*number_of_values + j + 1]]) {
+            else if (input_vec[i*size + (int)input2_vec[i*number_of_values + j]] != input_vec[i*size + (int)input2_vec[i*number_of_values + j + 1]]) {
                 if (same_values != j + 1) {
                     amount += same_values * (j - same_values + 1);
                     same_values = 1;
@@ -225,7 +225,7 @@ TEST(lookup_table_axis, base) {
         /*b1f1*/4.f,  0.5f,  8.f,   8.2f,
         /*b1f2*/0.2f, 0.2f,  -10.f, 5.2f
     };
-    vector<int> input2_vec = { 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
+    vector<float> input2_vec = { 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1};
     set_values(input, input_vec);
     set_values(input2, input2_vec);
 

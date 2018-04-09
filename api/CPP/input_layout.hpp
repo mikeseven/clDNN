@@ -57,7 +57,12 @@ struct input_layout : public primitive_base<input_layout, CLDNN_PRIMITIVE_DESC(i
     }
 
     /// @brief Defines layout for the data will be passed to network.
-    const cldnn::layout layout;
+    mutable cldnn::layout layout;
+
+    void change_layout(cldnn::layout new_layout)
+    {
+        layout = new_layout;
+    }
 
 private:
     void update_dto(dto& dto) const override

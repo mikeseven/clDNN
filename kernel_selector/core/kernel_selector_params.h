@@ -99,6 +99,7 @@ namespace KernelSelector
                             uint32_t max : 1;
                             uint32_t avg : 1;
                             uint32_t floor : 1;
+                            uint32_t max_with_argmax : 1;
                             uint32_t ceil : 1;
                             uint32_t fixedKenrelDivider : 1;
                             uint32_t dynamicKenrelDivider : 1;
@@ -516,6 +517,9 @@ namespace KernelSelector
                 break;
             case PoolType::AVG:
                 key.restrict.val.dedicated.pooling.avg = 1;
+                break;
+            case PoolType::MAX_WITH_ARGMAX:
+                key.restrict.val.dedicated.pooling.max_with_argmax = 1;
                 break;
             default:
                 break;
@@ -1304,6 +1308,13 @@ namespace KernelSelector
                 input.scalar = s;
                 return input;
             }
+
+            static InputType OutBuffer()
+            {
+                EltwiseParams::InputType output;
+                output.mode = EltwiseInputMode::OUTPUT_BUFFER;
+                return output;
+            }
         };
 
         struct Node
@@ -1312,9 +1323,16 @@ namespace KernelSelector
             EltwiseMode mode;
         };
 
+        struct UpdateInputData
+        {
+            uint32_t inputId;
+            uint32_t tmpId;
+        };
+
         struct DedicatedParams
         {
             std::vector<EltwiseParams::Node> operations;
+            std::vector<UpdateInputData> updateInputIds;
             bool layoutBased = false;
         };
 
@@ -1492,6 +1510,51 @@ namespace KernelSelector
         virtual ParamsKey GetParamsKey() const
         {
             return BaseParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ConvolutionGradWeightsParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ConvolutionGradWeightsParams : public WeightBiasParams
+    {
+        ConvolutionGradWeightsParams() : WeightBiasParams(KernelType::CONVOLUTION_GRAD_WEIGHTS), convGradWeightsParams() {}
+
+        struct DedicatedParams
+        {
+            uSize    filterSize;
+            uSize    stride;
+            uSize    dilation;
+            uSize    padding;
+            uint32_t split = 1;
+            bool     depthwiseSeparableOpt = false;
+        };
+
+        DedicatedParams convGradWeightsParams;
+
+        virtual std::string to_string() const override;
+
+        virtual ParamsKey GetParamsKey() const override
+        {
+            ParamsKey k = WeightBiasParams::GetParamsKey();
+
+            if (convGradWeightsParams.split > 1)
+            {
+                k.EnableSplitSupport();
+            }
+
+            if (convGradWeightsParams.dilation.x != 1 ||
+                convGradWeightsParams.dilation.y != 1)
+            {
+                k.EnableDilation();
+            }
+
+            if (convGradWeightsParams.depthwiseSeparableOpt)
+            {
+                k.EnableDepthwiseSeparableOpt();
+            }
+
+            return k;
         }
     };
 
@@ -1725,5 +1788,13 @@ namespace KernelSelector
     struct MaxUnpoolingOptionalParams : OptionalParams
     {
         MaxUnpoolingOptionalParams() : OptionalParams(KernelType::MAX_UNPOOLING) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ConvolutiongradWeightsOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct ConvolutiongradWeightsOptionalParams : WeightsBiasOptionalParams
+    {
+        ConvolutiongradWeightsOptionalParams() : WeightsBiasOptionalParams(KernelType::CONVOLUTION_GRAD_WEIGHTS) {}
     };
 }

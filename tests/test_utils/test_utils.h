@@ -52,6 +52,17 @@ namespace tests {
     unsigned int const random_seed = 1337;
 #endif
 
+// rounds floating point number, fraction precision should be in the range [0,23]
+// masks the bits:
+// 1 11111111 11111111111111100000000
+// |      |            |
+// sign  exp        fraction
+inline float float_round(float x, size_t fraction_precision = 15) {
+    uint32_t mask = ~((1 << (23 - fraction_precision)) - 1);
+    reinterpret_cast<uint32_t&>(x) &= mask;
+    return x;
+}
+
 template<typename T>
 using VF = std::vector<T>;        // float vector
 template<typename T>
