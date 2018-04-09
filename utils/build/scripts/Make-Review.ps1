@@ -1,5 +1,5 @@
 # INTEL CONFIDENTIAL
-# Copyright 2016 Intel Corporation
+# Copyright 2016, 2018 Intel Corporation
 #
 # The source code contained or described herein and all documents related to the source code ("Material") are owned by
 # Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its
@@ -15,7 +15,7 @@
 #
 #
 # For details about script please contact following people:
-#  * [Version: 1.0] Walkowiak, Marcin <marcin.walkowiak@intel.com>
+#  * [Version: 1.1] Walkowiak, Marcin <marcin.walkowiak@intel.com>
 
 
 param([string] $InputServerUri,
@@ -434,14 +434,19 @@ try {
                 $UComment = $DiffSpecification;
             }
         } else { $UComment = $UploadComment; }
+        # The ccollab tool has a lot of problems with escaped double-quotes. It seems that parser of command-line is not fully-compliant with Windows approach.
+        $UCommentCmdParam = '"' + ($UComment -replace '"', "''") + '"';
 
         git fetch -q origin $MergeTargetBranch 2>&1 | ? { $_ -is [string] };
         if ($LASTEXITCODE -ne 0) {
             throw 'Creating / updating review failed. Fetching merge branch (for diff) failed.';
         }
-
-        ccollab --url $ServerUri --user $User --password $Password --non-interactive --no-browser addgitdiffs --upload-comment $UComment $ReviewId $DiffSpecification 2>&1 | ? { $_ -is [string] };
+        
+        $FullCCAppLog = @();
+        ccollab --url $ServerUri --user $User --password $Password --non-interactive --no-browser addgitdiffs --upload-comment $UCommentCmdParam $ReviewId $DiffSpecification 2>&1 | Tee-Object -Variable 'FullCCAppLog' | ? { $_ -is [string] };
         if ($LASTEXITCODE -ne 0) {
+            Write-Host -ForegroundColor Blue ('Full "ccollab" application log (id: {0}, comment: {1}):' -f $ReviewId, $UComment);
+            $FullCCAppLog | % { if ($_ -is [System.Management.Automation.ErrorRecord]) { Write-Host -ForegroundColor Red $_; } else { Write-host $_; } }
             throw 'Creating / updating review failed. File upload failed.';
         }
     }
