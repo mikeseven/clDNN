@@ -334,11 +334,11 @@ int main(int argc, char* argv[])
             std::cerr << options.help_message() << std::endl;
             return 1;
         }
-        if (parsed_args.count("use_calibration") && parsed_args["model"].as<std::string>() != "squeezenet" )
+        if (parsed_args["use_calibration"].as<bool>() && parsed_args["model"].as<std::string>() != "squeezenet" )
         {
             std::cerr << "calibration is supported for squeezenet only" << std::endl;
             
-            if (parsed_args.count("use_half"))
+            if (parsed_args["use_half"].as<bool>())
             {
                 std::cerr << "Can't use half and int8 precision together" << std::endl;
             }
