@@ -1963,7 +1963,7 @@ TEST(convolution_gpu, DISABLED_two_1x1_kernels_after_each_other) {
 
     engine engine;
 
-    extern std::vector<float> conv_1x1_output;
+    extern const std::vector<float> conv_1x1_output;
 
     auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 16, 8, 16, 16 } });
     auto weights_conv_1 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 8, 8, 1, 1 } });
