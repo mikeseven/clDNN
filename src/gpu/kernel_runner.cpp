@@ -1,4 +1,4 @@
-﻿/*
+/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -31,7 +31,6 @@ kernel_runner::kernel_runner(engine_impl& engine_ref, bool weights_and_bias_exis
 void kernel_runner::prepare_kernel_args(const KernelSelector::KernelsData& kernels_data, gpu::kernel::kernel_arguments_data& args)
 {
     const auto& base_params = *static_cast<KernelSelector::BaseParams*>(kernels_data[0].params.get());
-
     // Prepare input buffers
     if (input_buffers.empty())
     {
@@ -59,33 +58,38 @@ void kernel_runner::prepare_kernel_args(const KernelSelector::KernelsData& kerne
     {
         // Prepare weight buffer
         const auto& weights_bias_params = *static_cast<KernelSelector::WeightBiasParams*>(kernels_data[0].params.get());
-        int num_of_weight_elements_spatial = static_cast<int>(weights_bias_params.weights.IFM().v*weights_bias_params.weights.X().v*weights_bias_params.weights.Y().v);
-        int num_of_weight_elements_ofm = static_cast<int>(weights_bias_params.weights.OFM().v);
+        int num_of_weight_elements_ifm = static_cast<int>(weights_bias_params.weights.IFM().v);
+        int num_of_weight_elements_spatial_y = static_cast<int>(weights_bias_params.weights.Y().v);
+        int num_of_weight_elements_spatial_x = static_cast<int>(weights_bias_params.weights.X().v);
+        int num_of_weight_elements_spatial = (int)weights_bias_params.weights.PhysicalSize();
+        int num_of_weight_elements_ofm = 1;
 
         cldnn::format::type fmt = cldnn::format::bfyx;
-        if (cldnn::format::is_image_2d(from_weights_layout(weights_bias_params.weights.GetLayout())))
+
+        if (!cldnn::format::is_image_2d(from_weights_layout(weights_bias_params.weights.GetLayout())))
         {
-            fmt = cldnn::format::image_2d_weights_c1_b_fyx;
+            if (weight_buffers.empty())
+                weight_buffers.push_back(engine->allocate_memory({ from_weights_type(weights_bias_params.weights.GetDType()), fmt, tensor(num_of_weight_elements_ofm, 1, num_of_weight_elements_spatial, 1) }));
+
+            if (weight_buffers[0]->get_layout().format != fmt)
+                weight_buffers[0] = engine->allocate_memory({ from_weights_type(weights_bias_params.weights.GetDType()), fmt, tensor(num_of_weight_elements_ofm, 1, num_of_weight_elements_spatial, 1) });
+
+            while (weight_buffers[0]->get_layout().bytes_count() < weights_bias_params.weights.PhysicalSizeInBytes())
+            {
+                // Weights layout depends on the kernel. Multiply the buffer size by 2 until it is big enough 
+                // (to avoid complex computations of the exact buffer size according to the chosen layout). 
+                weight_buffers.clear();
+                num_of_weight_elements_spatial *= 2;
+                weight_buffers.push_back(engine->allocate_memory({ from_weights_type(weights_bias_params.weights.GetDType()), fmt, tensor(num_of_weight_elements_ofm, 1, num_of_weight_elements_spatial, 1) }));
+            }
         }
         else
         {
-            num_of_weight_elements_spatial = (int)weights_bias_params.weights.PhysicalSize();
-            num_of_weight_elements_ofm = 1;
-        }
-
-        if (weight_buffers.empty())
-            weight_buffers.push_back(engine->allocate_memory({ from_weights_type(weights_bias_params.weights.GetDType()), fmt, tensor(num_of_weight_elements_ofm, 1, num_of_weight_elements_spatial, 1) }));
-        
-        if(weight_buffers[0]->get_layout().format != fmt)
-            weight_buffers[0] = engine->allocate_memory({ from_weights_type(weights_bias_params.weights.GetDType()), fmt, tensor(num_of_weight_elements_ofm, 1, num_of_weight_elements_spatial, 1) });
-
-        while (weight_buffers[0]->get_layout().bytes_count() < weights_bias_params.weights.PhysicalSizeInBytes())
-        {
-            // Weights layout depends on the kernel. Multiply the buffer size by 2 until it is big enough 
-            // (to avoid complex computations of the exact buffer size according to the chosen layout). 
             weight_buffers.clear();
-            num_of_weight_elements_spatial *= 2;
-            weight_buffers.push_back(engine->allocate_memory({ from_weights_type(weights_bias_params.weights.GetDType()), fmt, tensor(num_of_weight_elements_ofm, 1, num_of_weight_elements_spatial, 1) }));
+            fmt = from_weights_layout(weights_bias_params.weights.GetLayout());
+            num_of_weight_elements_ofm = static_cast<int>(weights_bias_params.weights.OFM().v);
+            weight_buffers.push_back(engine->allocate_memory({ from_weights_type(weights_bias_params.weights.GetDType()), fmt, tensor(num_of_weight_elements_ofm, num_of_weight_elements_ifm, num_of_weight_elements_spatial_x, num_of_weight_elements_spatial_y) }));
+
         }
         args.weights = weight_buffers[0];
 

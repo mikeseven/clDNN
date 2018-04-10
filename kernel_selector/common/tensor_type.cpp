@@ -1,4 +1,4 @@
-﻿/*
+/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -279,7 +279,7 @@ namespace KernelSelector
                     vec[Channelndex(l, WeightsChannelName::X)] = 4;
                     vec[Channelndex(l, WeightsChannelName::Y)] = 3;
                 }
-                else if (l == WeightsLayout::winograd_6x3_s1_fused_weights || l == WeightsLayout::image_2d_weights_winograd_6x3_s1_fbxyb || l == WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb)
+                else if (l == WeightsLayout::winograd_6x3_s1_fused_weights)
                 {
                     vec[Channelndex(l, WeightsChannelName::X)] = 8;
                     vec[Channelndex(l, WeightsChannelName::Y)] = 3;

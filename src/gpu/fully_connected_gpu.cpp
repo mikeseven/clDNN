@@ -22,6 +22,7 @@
 #include "kernel_selector_helper.h"
 #include "network_impl.h"
 #include "error_handler.h"
+#include "kernel_runner.h"
 
 #include "api/CPP/reorder.hpp"
 #include "api/CPP/input_layout.hpp"
@@ -91,6 +92,8 @@ public:
         fc_params.output = fc_params.output.FlattenFeatureAndSpatials();
 
         const auto primitive = arg.get_primitive();
+
+        fc_optional_params.tuningParams.runner = std::make_shared<gpu::kernel_runner>(arg.get_program().get_engine(), true);
 
         auto& kernel_selector = kernel_selector::fully_connected_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(fc_params, fc_optional_params);
