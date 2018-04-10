@@ -1,4 +1,4 @@
-﻿/*
+/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -39,6 +39,7 @@ namespace KernelSelector
         ParamsKey()
         {
             key.restrict.raw = 0;
+            key.enableTuning = 1;
             key.machineInfo.raw = 0;
             key.inputType.raw = 0;
             key.outputType.raw = 0;
@@ -188,7 +189,7 @@ namespace KernelSelector
                 uint32_t raw;
             } DataTypesKey;
 
-
+            uint32_t enableTuning;
             DataTypesKey inputType;
             DataTypesKey outputType;
             DataTypesKey inputWeightsType;
@@ -635,6 +636,11 @@ namespace KernelSelector
             key.restrict.val.dedicated.concat.kernelPerInput = 1;
         }
 
+        void DisableTuning()
+        {
+            key.enableTuning = 0;
+        }
+        
         void EnableConcatOneKernel()
         {
             key.restrict.val.dedicated.concat.oneKernel = 1;
@@ -685,6 +691,13 @@ namespace KernelSelector
                 ((key.outputLayout & k.key.outputLayout) != 0 || key.outputLayout == k.key.outputLayout) &&
                 ((key.weightsInputLayout & k.key.weightsInputLayout) != 0 || key.weightsInputLayout == k.key.weightsInputLayout) &&
                 ((key.weightsOutputLayout & k.key.weightsOutputLayout) != 0 || key.weightsOutputLayout == k.key.weightsOutputLayout);
+        }
+
+        bool TuningSupport() const
+        {
+            if (key.enableTuning == 1)
+                return true;
+            return false;
         }
 
         ParamsKey Merge(const ParamsKey& k) const

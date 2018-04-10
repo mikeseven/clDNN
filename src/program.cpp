@@ -61,6 +61,7 @@
 #include "error_handler.h"
 
 #include <fstream>
+#include <algorithm>
 
 namespace cldnn
 {
@@ -2145,8 +2146,20 @@ void program_impl::propagate_constants()
         if (node->has_non_const_user() || (node->is_output() && !node->is_type<data>()))
             continue;
 
-        node->users.clear();
-        node->dependencies.clear();
+        auto& users = node->users;
+        auto& deps = node->dependencies;
+
+        for (size_t idx = 0; idx < deps.size(); idx++)
+        {
+            deps.at(idx)->users.remove(node);
+        }
+        deps.clear();
+
+        for (auto& usr : users) {
+            auto& usr_deps = usr->dependencies;
+            usr_deps.erase(std::remove(usr_deps.begin(), usr_deps.end(), node), usr_deps.end());
+        }
+        users.clear();
 
         if (!node->is_output())
         {

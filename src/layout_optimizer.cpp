@@ -63,7 +63,8 @@ layout_optimizer::layout_optimizer(bool output_size_handling_enabled)
 bool layout_optimizer::convolution_bfyx_opt(layout const& output_layout, const layout& weights_layout, std::shared_ptr<const convolution> conv)
 {
     //A set of rules that define when bfyx mem format has better performance than yxfb
-    if (output_layout.size.batch[0] % 16 != 0 || output_layout.data_type != data_types::f16 || weights_layout.size.batch[0] % 16 != 0 ||
+    if (output_layout.size.batch[0] == 16 || output_layout.size.batch[0] % 16 != 0 || 
+        output_layout.data_type != data_types::f16 || weights_layout.size.batch[0] % 16 != 0 ||
         !((weights_layout.size.spatial[0] == 1 && weights_layout.size.spatial[1] == 1) ||
         (weights_layout.size.spatial[0] >= 5 && weights_layout.size.spatial[1] >= 5) ||
             (conv->stride.spatial[0] > 1 && conv->stride.spatial[1] > 1) ||
