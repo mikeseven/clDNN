@@ -67,3 +67,39 @@ TEST(region_yolo_gpu_f32, region_yolo_test)
     }
 
 }
+
+TEST(region_yolo_gpu_f32, region_yolo_v3_test)
+{
+    //  region yolo v3 test
+    //  Input: bfyx:1x255x13x13
+    //  Input: yolo_v3_region_test_data.cpp
+
+    extern std::vector<float> yolo_v3_region_input;
+    extern std::vector<float> yolo_v3_region_ref;
+    engine engine;
+    const auto inpute_size = 255 * 13 * 13;
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 255, 13, 13 } });
+
+    set_values(input, yolo_v3_region_input);
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        region_yolo("region_yolo", "input", 4, 80, 9, 3, false));
+
+    network network(engine, topology);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "region_yolo");
+
+    auto output = outputs.begin()->second.get_memory();
+
+    float epsilon = 0.00001f;
+    auto output_ptr = output.pointer<float>();
+    for (int i = 0; i < inpute_size; i++)
+    {
+        EXPECT_NEAR(yolo_v3_region_ref[i], output_ptr[i], epsilon);
+    }
+
+}
