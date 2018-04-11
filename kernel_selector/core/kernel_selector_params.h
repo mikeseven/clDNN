@@ -1244,6 +1244,8 @@ namespace KernelSelector
             uint32_t coords;
             uint32_t classes;
             uint32_t num;
+            uint32_t mask_size;
+            bool do_softmax;
         };
 
         struct DedicatedParams ryParams;

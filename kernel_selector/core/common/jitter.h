@@ -643,9 +643,11 @@ inline JitConstants MakeRegionYoloJitConstants(const RegionYoloParams& params)
     const auto& ry = params.ryParams;
 
     jit.AddConstants({
-        MakeJitConstant("COORDS_",  ry.coords),
-        MakeJitConstant("CLASSES_",  ry.classes),
-        MakeJitConstant("NUM_", ry.num)
+        MakeJitConstant("COORDS",  ry.coords),
+        MakeJitConstant("CLASSES",  ry.classes),
+        MakeJitConstant("NUM", ry.num),
+        MakeJitConstant("DO_SOFTMAX", ry.do_softmax),
+        MakeJitConstant("MASK_SIZE", ry.mask_size)
     });
 
     return jit;
