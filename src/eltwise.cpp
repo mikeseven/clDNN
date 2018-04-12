@@ -33,6 +33,23 @@ layout eltwise_inst::calc_output_layout(eltwise_node const& node)
     return node.input().get_non_padded_output_layout();
 }
 
+static inline std::string stringify_vector(std::vector<float> v)
+{
+    std::stringstream s;
+
+    s << "{ ";
+
+    for (size_t i = 0; i < v.size(); ++i)
+    {
+        s << v.at(i);
+        if (i + 1 < v.size()) s << ", ";
+    }
+
+    s << " }";
+
+    return s.str();
+}
+
 std::string eltwise_inst::to_string(eltwise_node const& node)
 {
     auto node_info  = node.desc_to_json();
@@ -79,6 +96,10 @@ std::string eltwise_inst::to_string(eltwise_node const& node)
         eltwise_info.add("input_"+std::to_string(i), node.input(i).id());
     }
     eltwise_info.add("mode", str_mode);
+    if (desc->mode == eltwise_mode::sum)
+    {
+        eltwise_info.add("coefficients", stringify_vector(desc->coefficients));
+    }
     if (desc->with_activation)
     {
         eltwise_info.add("with activation", activation);

@@ -49,6 +49,8 @@ std::string detection_output_inst::to_string(detection_output_node const& node)
     auto share_location      = desc->share_location ? "true" : "false";
     auto variance_encoded    = desc->variance_encoded_in_target ? "true" : "false";
     auto prior_is_normalized = desc->prior_is_normalized ? "true" : "false";
+    auto decrease_label_id   = desc->decrease_label_id ? "true" : "false";
+    auto clip                = desc->clip ? "true" : "false";
     auto& input_location     = node.location();
     auto& input_prior_box    = node.prior_box();
     auto& input_confidence   = node.confidence();
@@ -92,6 +94,8 @@ std::string detection_output_inst::to_string(detection_output_node const& node)
     detec_out_info.add("prior_is_normalized", prior_is_normalized);
     detec_out_info.add("input_width", desc->input_width);
     detec_out_info.add("input_height", desc->input_height);
+    detec_out_info.add("decrease_label_id", decrease_label_id);
+    detec_out_info.add("clip", clip);
     detec_out_info.dump(primitive_description);
 
     node_info.add("dection output info", detec_out_info);

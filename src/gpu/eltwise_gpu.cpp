@@ -83,6 +83,11 @@ public:
                                                             convect_to_eltwise_mode(primitive->mode) });
         }
 
+        if (primitive->mode == eltwise_mode::sum)
+        {
+            ew_params.eltwiseParams.coefficients = primitive->coefficients;
+        }
+
         for (size_t i = 0; i < ew_params.inputs.size(); i++)
         {
             if (!ew_params.inputs[i].SameDims(ew_params.output))

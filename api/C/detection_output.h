@@ -72,6 +72,10 @@ uint32_t prior_is_normalized;
 int32_t input_width;
 /// @brief Height of input image.
 int32_t input_height;
+/// @brief Decrease label id to skip background label equal to 0. Can't be used simultaneously with background_label_id.
+int32_t decrease_label_id;
+/// @brief Clip decoded boxes
+int32_t clip;
 CLDNN_END_PRIMITIVE_DESC(detection_output)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(detection_output);

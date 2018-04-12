@@ -63,6 +63,8 @@ cldnn_primitive_id output_calibration_factors;
 float output_quantization_factor;
 /// @brief Eltwise mode. See #cldnn_eltwise_mode.
 int32_t mode; /*cldnn_eltwise_mode*/
+/// @brief Blob-wise coefficient for SUM operation
+cldnn_float_arr coefficients;
 /// @brief Enables Relu activation.
 uint32_t with_activation;
 /// @brief Relu activation slope.

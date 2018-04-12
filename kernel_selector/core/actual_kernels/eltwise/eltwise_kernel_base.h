@@ -90,6 +90,7 @@ namespace kernel_selector
         struct DedicatedParams
         {
             std::vector<eltwise_params::Node> operations;
+            std::vector<float> coefficients;
             std::vector<UpdateInputData> updateInputIds;
             bool layoutBased = false;
             bool     int8_quantization = false;

@@ -143,7 +143,8 @@ namespace kernel_selector
 
         std::string do_eltwise;
 
-        auto& operations = params.eltwiseParams.operations;
+        auto& operations   = params.eltwiseParams.operations;
+        auto& coefficients = params.eltwiseParams.coefficients;
 
         for (size_t op_num = 0; op_num < operations.size(); op_num++)
         {
@@ -199,6 +200,25 @@ namespace kernel_selector
 
             input0_str = cast_type + "INPUT_" + op_num_str + "_0";
             input1_str = cast_type + "INPUT_" + op_num_str + "_1";
+
+            if (ew.mode == EltwiseMode::ADD)
+            {
+                std::vector<std::string> coeff_strings(ew.inputs.size(), "");
+                for (size_t input_idx = 0; input_idx < ew.inputs.size(); input_idx++)
+                {
+                    const auto& input = ew.inputs[input_idx];
+                    if (input.mode == EltwiseInputMode::INPUT_BUFFER && input.index < coefficients.size())
+                    {
+                        const float c = coefficients[input.index];
+                        if (c != 1.0f)
+                            coeff_strings[input_idx] = cast_type + "(" + std::to_string(c) + ")*";
+                    }
+                }
+
+                input0_str = coeff_strings[0] + input0_str;
+                input1_str = coeff_strings[1] + input1_str;
+            }
+
 
             switch (ew.mode)
             {

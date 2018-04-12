@@ -68,7 +68,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
         const bounding_box& prior_bbox, const std::array<float, PRIOR_BOX_SIZE>& prior_variance,
         const prior_box_code_type code_type, const bool variance_encoded_in_target,
         const bounding_box& bbox, bounding_box* decoded_bbox,
-        const bool prior_is_normalized, const size_t image_width, const size_t image_height)
+        const bool prior_is_normalized, const size_t image_width, const size_t image_height, const bool clip)
     {
         float prior_bbox_xmin = prior_bbox.xmin;
         float prior_bbox_ymin = prior_bbox.ymin;
@@ -169,6 +169,14 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
             {
                 assert(0);
             }
+        }
+
+        if (clip)
+        {
+            decoded_bbox->xmin = std::max(0.0f, std::min(1.0f, decoded_bbox->xmin));
+            decoded_bbox->ymin = std::max(0.0f, std::min(1.0f, decoded_bbox->ymin));
+            decoded_bbox->xmax = std::max(0.0f, std::min(1.0f, decoded_bbox->xmax));
+            decoded_bbox->ymax = std::max(0.0f, std::min(1.0f, decoded_bbox->ymax));
         }
     }
 
@@ -314,7 +322,8 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
                 for (std::pair<float,int> score_prior : label_detections)
                 {
                     out_ptr[count * DETECTION_OUTPUT_ROW_SIZE] = (dtype)(float)image;
-                    out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 1] = (dtype)(float)label;
+                    out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 1] = args.decrease_label_id ? ((dtype)((float)label - 1.0f))
+                                                                                            : (dtype)(float)label;
                     out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 2] = (dtype)score_prior.first;
                     const bounding_box& bbox = bboxes[score_prior.second];
                     out_ptr[count * DETECTION_OUTPUT_ROW_SIZE + 3] = (dtype)bbox.xmin;
@@ -568,7 +577,7 @@ struct detection_output_gpu : typed_primitive_impl<detection_output>
                 {
                     bounding_box decoded_bbox;
                     decode_bounding_box(prior_bboxes[i], prior_variances[i], args.code_type, args.variance_encoded_in_target, label_loc_preds[i], &decoded_bbox,
-                                        args.prior_is_normalized, args.input_width, args.input_height);
+                                        args.prior_is_normalized, args.input_width, args.input_height, args.clip);
                     bboxes_per_image[label].emplace_back(decoded_bbox);
                 }
             }
