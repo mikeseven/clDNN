@@ -105,7 +105,7 @@ KERNEL(convolution)(
     const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * OUTPUT_FEATURE_NUM;
     const uint dst_index = GET_DATA_INDEX(OUTPUT, b, f, y, x) + out_split_offset;
 #if QUANTIZATION_TERM
-    output[dst_index] = convert_char(ACTIVATION(dotProd, NL_M, NL_N));
+    output[dst_index] = ACTIVATION(convert_char(dotProd), NL_M, NL_N);
 #else
     output[dst_index] = ACTIVATION(dotProd, NL_M, NL_N);
 #endif   

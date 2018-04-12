@@ -91,6 +91,11 @@ namespace instrumentation {
         return convert_half_to_float(h);
     }
 
+    float convert_element(char c)
+    {
+        return (float)c;
+    }
+
     template<typename elemType>
     void dump_byxf(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id, std::vector<std::vector<std::stringstream>> & streams)
     {
@@ -414,8 +419,10 @@ namespace instrumentation {
 
         if (mem.get_layout().data_type == cldnn::data_types::f32)
             dump<float>(mem, streams);
-        else
+        else if (mem.get_layout().data_type == cldnn::data_types::f16)
             dump<half_t>(mem, streams);
+        else
+            dump<char>(mem, streams);
 
         for (cldnn::tensor::value_type b = 0; b < batch; b++)
             for (cldnn::tensor::value_type f = 0; f < feature; f++)

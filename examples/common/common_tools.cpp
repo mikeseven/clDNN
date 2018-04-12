@@ -684,8 +684,17 @@ void run_topology(const execution_params &ep)
         primitives = build_gender(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "microbench")
         primitives = build_microbench(ep.weights_dir, engine, microbench_inputs, gpu_batch_size);
-    else if(ep.topology_name == "squeezenet")
-        primitives = build_squeezenet(ep.weights_dir, engine, input_layout, gpu_batch_size);
+    else if (ep.topology_name == "squeezenet")
+    {
+        if (ep.calibration)
+        {
+            primitives = build_squeezenet_quant(ep.weights_dir, engine, input_layout, gpu_batch_size);
+        }
+        else
+        {
+            primitives = build_squeezenet(ep.weights_dir, engine, input_layout, gpu_batch_size);
+        }
+    }
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
     microbench_inputs.erase("input_layout");

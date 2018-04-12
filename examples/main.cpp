@@ -207,6 +207,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("use_half", bpo::bool_switch(),
             "Uses half precision floating point numbers (FP16, halfs) instead of single precision ones (float) in "
             "computations of selected model.")
+        ("use_calibration", bpo::bool_switch(),
+            "Uses int8 precision and output calibration. Supported topologies: squeezenet")
         ("no_oooq", bpo::bool_switch(),
             "Do not use out-of-order queue for ocl engine.")
         ("meaningful_names", bpo::bool_switch(),
@@ -332,6 +334,16 @@ int main(int argc, char* argv[])
             std::cerr << options.help_message() << std::endl;
             return 1;
         }
+        if (parsed_args["use_calibration"].as<bool>() && parsed_args["model"].as<std::string>() != "squeezenet" )
+        {
+            std::cerr << "calibration is supported for squeezenet only" << std::endl;
+            
+            if (parsed_args["use_half"].as<bool>())
+            {
+                std::cerr << "Can't use half and int8 precision together" << std::endl;
+            }
+            return 0;
+        }
     }
     catch (const std::exception& ex)
     {
@@ -455,6 +467,7 @@ int main(int argc, char* argv[])
         ep.perf_per_watt = parsed_args["perf_per_watt"].as<bool>();
         ep.loop = parsed_args["loop"].as<std::uint32_t>();
         ep.disable_mem_pool = parsed_args["memory_opt_disable"].as<bool>();
+        ep.calibration = parsed_args["use_calibration"].as<bool>();
 
         std::uint32_t print = parsed_args["print_type"].as<std::uint32_t>();
         ep.print_type = (PrintType)((print >= (std::uint32_t)PrintType::PrintType_count) ? 0 : print);

@@ -772,7 +772,7 @@ TEST(reorder_gpu_f32, basic_yxfb_to_bfyx_input_padding)
 
     topology topology(
         input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout().format, input.get_layout().data_type, "", { { 0, 0, 1, 2 }, 0 }),
+        reorder("reorder", "input", input.get_layout().format, input.get_layout().data_type, "", cldnn_reorder_mean_mode::mean_subtract, { { 0, 0, 1, 2 }, 0 }),
         reorder("reorder2", "reorder", output_layout));
 
     network network(engine, topology);
@@ -851,7 +851,7 @@ TEST(reorder_gpu_f32, basic_bfyx_to_yxfb_input_padding)
 
     topology topology(
         input_layout("input", input.get_layout()),
-        reorder("reorder", "input", input.get_layout().format, input.get_layout().data_type, "", { { 0, 0, 2, 1 }, 0 }),
+        reorder("reorder", "input", input.get_layout().format, input.get_layout().data_type, "", cldnn_reorder_mean_mode::mean_subtract, { { 0, 0, 2, 1 }, 0 }),
         reorder("reorder2", "reorder", output_layout));
 
     network network(engine, topology);
@@ -990,6 +990,140 @@ TEST(reorder_gpu_opt, non_trivial_remove_redundant)
     EXPECT_TRUE(executed_primitives.at("in") == outputs.at("r1").get_event());
     ASSERT_TRUE(outputs.count("r1") == 1);
     EXPECT_TRUE(outputs.at("r1").get_memory().get_layout().format == format::bfyx);
+}
+
+
+TEST(reorder_gpu_opt, mean_mul)
+{
+    engine eng;
+
+    memory in  = memory::allocate(eng, { data_types::i8, format::bfyx, tensor{ 1, 3, 1, 2 } });
+    memory mul = memory::allocate(eng, { data_types::f32, format::bfyx, tensor{1, 3, 1, 2 } });
+
+    set_values<char>(in,
+    { 1, 2,
+      3, 4,
+      5, 6 });
+    set_values<float>(mul,
+    { 0.5f, 2.5f, -5.0f, 4.3f, 1.2f, -3.5f });
+
+    topology tpl{
+        input_layout("in", in.get_layout()),
+        data("mul",mul),
+        reorder("r1", "in", format::bfyx, data_types::f32,"mul", cldnn_reorder_mean_mode::mean_mul)
+    };
+
+    float answers[] = { 0.5f, 5.0f, -15.0f, 17.2f, 6.0f, -21.0f };
+    build_options opts;
+    opts.set_option(build_option::optimize_data(true));
+    network net(eng, tpl, opts);
+    net.set_input_data("in", in);
+
+    auto outputs = net.execute();
+    auto output = outputs.begin()->second.get_memory();
+    auto ptr = output.pointer<float>();
+    float* a_ptr = answers;
+    for (auto& val : ptr)
+        EXPECT_FLOAT_EQ(*(a_ptr++), val);;
+
+}
+
+
+TEST(reorder_gpu_opt, mean_div)
+{
+    engine eng;
+
+    memory in = memory::allocate(eng, { data_types::i8, format::bfyx, tensor{ 1, 3, 1, 2 } });
+    memory mul = memory::allocate(eng, { data_types::f32, format::bfyx, tensor{ 1, 3, 1, 2 } });
+
+    set_values<char>(in,
+    { 1, 2,
+      3, 4,
+      5, 6 });
+    set_values<float>(mul,
+    { 0.5f, 2.0f, -3.0f, 8.0f, 1.25f, -3.0f });
+
+    topology tpl{
+        input_layout("in", in.get_layout()),
+        data("mul",mul),
+        reorder("r1", "in", format::bfyx, data_types::f32,"mul", cldnn_reorder_mean_mode::mean_div)
+    };
+
+    float answers[] = { 2.0f, 1.0f, -1.0f, 0.5f, 4.0f, -2.0f };
+    build_options opts;
+    opts.set_option(build_option::optimize_data(true));
+    network net(eng, tpl, opts);
+    net.set_input_data("in", in);
+
+    auto outputs = net.execute();
+    auto output = outputs.begin()->second.get_memory();
+    auto ptr = output.pointer<float>();
+    float* a_ptr = answers;
+    for (auto& val : ptr)
+        EXPECT_FLOAT_EQ(*(a_ptr++), val);;
+
+}
+
+
+TEST(reorder_gpu_opt, mean_mul_val)
+{
+    engine eng;
+
+    memory in = memory::allocate(eng, { data_types::i8, format::bfyx, tensor{ 1, 3, 1, 2 } });
+
+    set_values<char>(in,
+    { 1, 2,
+      3, 4,
+      5, 60 });
+    std::vector<float> mul_val = { 2.0f, 0.5f, 10.0f };
+    topology tpl{
+        input_layout("in", in.get_layout()),
+        reorder("r1", "in", format::bfyx, data_types::f32, mul_val, cldnn_reorder_mean_mode::mean_mul)
+    };
+
+    float answers[] = { 2.0f, 4.0f, 1.5f, 2.0f, 50.0f, 600.0f };
+    build_options opts;
+    opts.set_option(build_option::optimize_data(true));
+    network net(eng, tpl, opts);
+    net.set_input_data("in", in);
+
+    auto outputs = net.execute();
+    auto output = outputs.begin()->second.get_memory();
+    auto ptr = output.pointer<float>();
+    float* a_ptr = answers;
+    for (auto& val : ptr)
+        EXPECT_FLOAT_EQ(*(a_ptr++), val);;
+}
+
+
+TEST(reorder_gpu_opt, mean_mul_val_float_to_int)
+{
+    engine eng;
+
+    memory in = memory::allocate(eng, { data_types::f32, format::bfyx, tensor{ 1, 3, 1, 2 } });
+
+    set_values<float>(in,
+    { 0.6f, 1.5f,
+      3.0f, 4.2f,
+      5.0f, 60.0f });
+    std::vector<float> mul_val = { 1.4f, 0.5f, 5.0f };
+    topology tpl{
+        input_layout("in", in.get_layout()),
+        reorder("r1", "in", format::bfyx, data_types::i8, mul_val, cldnn_reorder_mean_mode::mean_mul)
+    };
+
+    char answers[] = { 0, 2, 1, 2, 25, 127 };
+    build_options opts;
+    opts.set_option(build_option::optimize_data(true));
+    network net(eng, tpl, opts);
+    net.set_input_data("in", in);
+
+    auto outputs = net.execute();
+    auto output = outputs.begin()->second.get_memory();
+    auto ptr = output.pointer<char>();
+    char* a_ptr = answers;
+    for (auto& val : ptr)
+        EXPECT_EQ(*(a_ptr++), val);
 }
 
 using namespace cldnn;
