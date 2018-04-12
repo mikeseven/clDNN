@@ -31,7 +31,7 @@ namespace cldnn
 
 /// @brief Changes how data is ordered in memory. Value type is not changed & all information is preserved.
 /// @details Corresponding values are bitwise equal before/after reorder.
-/// Also merged with subtraction layer, which can subtract values while doing reordering.
+/// Also merged with subtraction layer, which can subtract, multiply or divide values based on mean_mode value, while doing reordering.
 /// NOTE THAT THIS WILL SUBTRACT THE SAME VALUES FROM EACH BATCH.
 struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
 {
@@ -144,7 +144,7 @@ struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
     primitive_id mean;
     /// @brief Array of mean subtract values.
     std::vector<float> subtract_per_feature;
-    /// @brief mode of mean execution
+    /// @brief Mode of mean execution
     cldnn_reorder_mean_mode mean_mode;
 
 protected:

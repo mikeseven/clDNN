@@ -89,7 +89,8 @@ public:
             case cldnn_reorder_mean_mode::mean_div:
                 reorder_params.reorderParams.mean_op = kernel_selector::mean_op::DIV;
                 break;
-
+            default:
+                throw std::out_of_range(arg.id() + ": unsupported mean_mode value.");
             }
         }
 
