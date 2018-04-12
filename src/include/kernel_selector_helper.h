@@ -25,6 +25,7 @@
 #include "deconvolution/deconvolution_kernel_selector.h"
 #include "lrn/lrn_kernel_selector.h"
 #include "normalize/normalize_kernel_selector.h"
+#include "mvn/mvn_kernel_selector.h"
 #include "pooling/pooling_kernel_selector.h"
 #include "max_unpooling/max_unpooling_kernel_selector.h"
 #include "arg_max_min/arg_max_min_kernel_selector.h"
@@ -70,6 +71,7 @@ namespace kernel_selector
     using lookt_axis                        = KernelSelector::LookUpTableAxis;
     using lrn_mode                          = KernelSelector::LRNMode;
     using normalize_mode                    = KernelSelector::NormalizeMode;
+    using mvn_mode                          = KernelSelector::MVNMode;
     using kernel_divider_mode               = KernelSelector::KernelDividerMode;
     using eltwise_mode                      = KernelSelector::EltwiseMode;
     using eltwise_input_mode                = KernelSelector::EltwiseInputMode;
@@ -94,6 +96,7 @@ namespace kernel_selector
     using deconvolution_params              = KernelSelector::DeconvolutionParams;
     using lrn_params                        = KernelSelector::LRNParams;
     using normalize_params                  = KernelSelector::NormalizeParams;
+    using mvn_params                        = KernelSelector::MVNParams;
     using pooling_params                    = KernelSelector::PoolingParams;
     using max_unpooling_params              = KernelSelector::MaxUnpoolingParams;
     using roi_pooling_v1_params             = KernelSelector::ROIPoolingParams;
@@ -121,6 +124,7 @@ namespace kernel_selector
     using deconvolution_optional_params     = KernelSelector::DeconvolutionOptionalParams;
     using lrn_optional_params               = KernelSelector::LRNOptionalParams;
     using normalize_optional_params         = KernelSelector::NormalizeOptionalParams;
+    using mvn_optional_params               = KernelSelector::MVNOptionalParams;
     using pooling_optional_params           = KernelSelector::PoolingOptionalParams;
     using max_unpooling_optional_params     = KernelSelector::MaxUnpoolingOptionalParams;
     using roi_pooling_optional_params       = KernelSelector::ROIPoolingOptionalParams;
@@ -141,6 +145,7 @@ namespace kernel_selector
     using deconvolution_kernel_selector     = KernelSelector::DeconvolutionKernelSelctor;
     using lrn_kernel_selector               = KernelSelector::LRNKernelSelctor;
     using normalize_kernel_selector         = KernelSelector::NormalizeKernelSelctor;
+    using mvn_kernel_selector               = KernelSelector::MVNKernelSelctor;
     using pooling_kernel_selector           = KernelSelector::PoolingKernelSelctor;
     using max_unpooling_kernel_selector     = KernelSelector::MaxUnpoolingKernelSelctor;
     using roi_pooling_v1_kernel_selector    = KernelSelector::ROIPoolingKernelSelctor;

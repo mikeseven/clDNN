@@ -26,7 +26,6 @@
 #include "test_utils/test_utils.h"
 #include "test_utils/float16.h"
 #include <api/CPP/data.hpp>
-
 #include <algorithm>
 #include <cmath>
 #include <iostream>
@@ -123,6 +122,7 @@ void dump_buffer(memory const& mem, std::string const& name)
         out << "\n";
     }
 }
+
 
 TEST(convolution_f32_fw_gpu, basic_convolution_no_bias) {
     //  Filter : 2x3
@@ -1957,6 +1957,73 @@ TEST(convolution_gpu, relu_with_negative_slope) {
     EXPECT_FLOAT_EQ(-0.35f, get_value<float>(output_ptr, 1));
     EXPECT_FLOAT_EQ(2.0f, get_value<float>(output_ptr, 2));
     EXPECT_FLOAT_EQ(5.0f, get_value<float>(output_ptr, 3));
+}
+
+TEST(convolution_gpu, DISABLED_two_1x1_kernels_after_each_other) {
+
+    engine engine;
+
+    extern const std::vector<float> conv_1x1_output;
+
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 16, 8, 16, 16 } });
+    auto weights_conv_1 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 8, 8, 1, 1 } });
+    auto weights_conv_2 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 8, 1, 1 } });
+
+    set_random_values<float>(input);
+    set_random_values<float>(weights_conv_1);
+    set_random_values<float>(weights_conv_2);
+
+    auto inp_lay = input_layout("input", input.get_layout());
+    auto conv_1 = convolution(
+        "conv_1",
+        "input",
+        { "weights_conv_1" });
+    auto conv_2 = convolution(
+        "conv_2",
+        "conv_1",
+        { "weights_conv_2" });
+
+    topology topology(
+        inp_lay,
+        data("weights_conv_1", weights_conv_1),
+        conv_1,
+        data("weights_conv_2", weights_conv_2),
+        conv_2
+    );
+
+    build_options bo;
+    bo.set_option(build_option::optimize_data(true));
+    network network(engine, topology, bo);
+    network.set_input_data("input", input);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+
+    auto output_prim = outputs.at("conv_2").get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+    auto output_layout = output_prim.get_layout();
+    
+    int y_size = output_layout.size.spatial[1];
+    int x_size = output_layout.size.spatial[0];
+    int f_size = output_layout.size.feature[0];
+    int b_size = output_layout.size.batch[0];
+    int f_offset = y_size * x_size;
+    int b_offset = f_size * f_offset;
+    for (int b = 0; b < b_size; ++b)
+    {
+        for (int f = 0; f < f_size; ++f)
+        {
+            for (int y = 0; y < y_size; ++y)
+            {
+                for (int x = 0; x < x_size; ++x)
+                {
+                    int idx = b * b_offset + f * f_offset + y * x_size + x;
+                    EXPECT_TRUE(are_equal(conv_1x1_output[idx], get_value<float>(output_ptr, idx)));
+                }
+            }
+        }
+    }
 }
 
 TEST(convolution_gpu, basic_yxfb_4_4_yxfb_2_2_b16_if2_of16_st2_2_p0_sp1_fp32)

@@ -643,9 +643,11 @@ inline JitConstants MakeRegionYoloJitConstants(const RegionYoloParams& params)
     const auto& ry = params.ryParams;
 
     jit.AddConstants({
-        MakeJitConstant("COORDS_",  ry.coords),
-        MakeJitConstant("CLASSES_",  ry.classes),
-        MakeJitConstant("NUM_", ry.num)
+        MakeJitConstant("COORDS",  ry.coords),
+        MakeJitConstant("CLASSES",  ry.classes),
+        MakeJitConstant("NUM", ry.num),
+        MakeJitConstant("DO_SOFTMAX", ry.do_softmax),
+        MakeJitConstant("MASK_SIZE", ry.mask_size)
     });
 
     return jit;
@@ -680,6 +682,24 @@ inline JitConstants MakeNormalizeJitConstants(const NormalizeParams& params)
         MakeJitConstant("EPSILON",              np.epsilon),
         MakeJitConstant(toString(np.normMode),  ""),
         MakeJitConstant("THRESHOLD",            0.0001f),
+    });
+
+    return jit;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MakeMVNJitConstants
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+inline JitConstants MakeMVNJitConstants(const MVNParams& params)
+{
+    JitConstants jit = MakeBaseParamsJitConstants(params);
+
+    const auto& mvnp = params.mvnParams;
+
+    jit.AddConstants({
+        MakeJitConstant("EPSILON",              mvnp.epsilon),
+        MakeJitConstant(toString(mvnp.mvnMode), ""),
+        MakeJitConstant("NORMALIZE_VARIANCE",   mvnp.mvnNormalizeVariance),
     });
 
     return jit;
