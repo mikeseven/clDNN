@@ -26,7 +26,6 @@ KERNEL (mvn_gpu_ref_within_channels)(const __global UNIT_TYPE* input, __global U
 {
     const uint b = get_global_id(0);
     const uint f = get_global_id(1);
-    float epsilon = EPSILON;
     float mean = 0.f;
 
     const uint input_first = INPUT0_OFFSET + b * INPUT0_BATCH_PITCH + f * INPUT0_FEATURE_PITCH;
@@ -78,7 +77,7 @@ KERNEL (mvn_gpu_ref_within_channels)(const __global UNIT_TYPE* input, __global U
 
     //normalize variance
     variance /= INPUT0_SIZE_Y * INPUT0_SIZE_X;
-    variance = native_powr(variance + epsilon, -0.5f);
+    variance = native_powr(variance + (float)EPSILON, -0.5f);
 
     input_idx = input_first;
     for (uint y = 0; y < INPUT0_SIZE_Y; y++)
