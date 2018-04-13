@@ -44,6 +44,7 @@ namespace KernelSelector
         k.EnablePoolKernelDividerMode(KernelDividerMode::FIXED);
         k.EnablePoolKernelDividerMode(KernelDividerMode::DYNAMIC);
         k.EnablePoolKernelDividerMode(KernelDividerMode::DYNAMIC_WITH_PADDING);
+        k.EnableDifferentTypes();
         return k;
     }
 
