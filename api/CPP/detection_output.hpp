@@ -42,7 +42,7 @@ enum class prior_box_code_type : int32_t
 /// If number of detections per image is lower than keep_top_k, will write dummy results at the end with image_id=-1. 
 struct detection_output : public primitive_base<detection_output, CLDNN_PRIMITIVE_DESC(detection_output)>
 {
-    CLDNN_DECLATE_PRIMITIVE(detection_output)
+    CLDNN_DECLARE_PRIMITIVE(detection_output)
 
     /// @brief Constructs detection output primitive.
     /// @param id This primitive id.

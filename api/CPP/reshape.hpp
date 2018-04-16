@@ -35,7 +35,7 @@ namespace cldnn
 /// Please note that there is no guarantee that underlying data will be in proper format if primitive was explicitly added to output list.
 struct reshape : public primitive_base<reshape, CLDNN_PRIMITIVE_DESC(reshape)>
 {
-    CLDNN_DECLATE_PRIMITIVE(reshape)
+    CLDNN_DECLARE_PRIMITIVE(reshape)
 
     /// @brief Constructs reshape primitive.
     /// @param id This primitive id.

@@ -31,7 +31,7 @@ namespace cldnn
     /// @brief Returns values from data on which given indices are pointing at.
     struct lookup_table : public primitive_base<lookup_table, CLDNN_PRIMITIVE_DESC(lookup_table)>
     {
-        CLDNN_DECLATE_PRIMITIVE(lookup_table)
+        CLDNN_DECLARE_PRIMITIVE(lookup_table)
 
         /// @brief Enum type to specify axis to maximize/minimize along.
         enum axis_name

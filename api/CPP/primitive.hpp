@@ -233,7 +233,7 @@ private:
         });\
     }
 
-#define CLDNN_DECLATE_PRIMITIVE(PType) typedef CLDNN_PRIMITIVE_DESC(PType) dto;\
+#define CLDNN_DECLARE_PRIMITIVE(PType) typedef CLDNN_PRIMITIVE_DESC(PType) dto;\
     CLDNN_DEFINE_TYPE_ID(PType)
 /// @}
 /// @}

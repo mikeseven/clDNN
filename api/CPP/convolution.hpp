@@ -33,7 +33,7 @@ namespace cldnn
 /// @details Parameters are defined in context of "direct" convolution, but actual algorithm is not implied.
 struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(convolution)>
 {
-    CLDNN_DECLATE_PRIMITIVE(convolution)
+    CLDNN_DECLARE_PRIMITIVE(convolution)
 
     /// @brief Constructs convolution primitive.
     /// @param id This primitive id.

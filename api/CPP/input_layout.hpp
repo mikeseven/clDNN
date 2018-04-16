@@ -38,7 +38,7 @@ namespace cldnn
 /// @sa network::set_input_data(), cldnn::data
 struct input_layout : public primitive_base<input_layout, CLDNN_PRIMITIVE_DESC(input_layout)>
 {
-    CLDNN_DECLATE_PRIMITIVE(input_layout)
+    CLDNN_DECLARE_PRIMITIVE(input_layout)
 
     /// @brief Constructs input layout primitive.
     /// @param id This primitive id.

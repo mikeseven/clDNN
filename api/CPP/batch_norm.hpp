@@ -39,7 +39,7 @@ namespace cldnn
 
 struct batch_norm : public primitive_base<batch_norm, CLDNN_PRIMITIVE_DESC(batch_norm)>
 {
-    CLDNN_DECLATE_PRIMITIVE(batch_norm)
+    CLDNN_DECLARE_PRIMITIVE(batch_norm)
 
     /// @brief Constructs batch normalization primitive.
     /// @param id This primitive id.

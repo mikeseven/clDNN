@@ -52,7 +52,7 @@ namespace cldnn
 
 struct fully_connected : public primitive_base<fully_connected, CLDNN_PRIMITIVE_DESC(fully_connected)>
 {
-    CLDNN_DECLATE_PRIMITIVE(fully_connected)
+    CLDNN_DECLARE_PRIMITIVE(fully_connected)
 
     /// @brief Constructs fully connected layer.
     /// @param id This primitive id.

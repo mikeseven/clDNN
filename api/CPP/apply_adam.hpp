@@ -42,7 +42,7 @@ namespace cldnn
 
 struct apply_adam : public primitive_base<apply_adam, CLDNN_PRIMITIVE_DESC(apply_adam)>
 {
-    CLDNN_DECLATE_PRIMITIVE(apply_adam)
+    CLDNN_DECLARE_PRIMITIVE(apply_adam)
 
     /// @brief Constructs apply Adam primitive.
     /// @param id This primitive id.
