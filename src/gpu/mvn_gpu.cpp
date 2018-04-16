@@ -51,9 +51,9 @@ public:
 
         CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 
-        auto lrn = new mvn_gpu(arg, best_kernels[0]);
+        auto mvn = new mvn_gpu(arg, best_kernels[0]);
 
-        return lrn;
+        return mvn;
     }
 
 };
