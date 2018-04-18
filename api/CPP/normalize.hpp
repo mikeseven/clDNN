@@ -46,7 +46,7 @@ namespace cldnn
 ///   @li scale(i) : the scale value of the i-th feature map.
 struct normalize :public primitive_base<normalize, CLDNN_PRIMITIVE_DESC(normalize)>
 {
-    CLDNN_DECLATE_PRIMITIVE(normalize)
+    CLDNN_DECLARE_PRIMITIVE(normalize)
 
     /// @brief Constructs normalize primitive.
     /// @param id This primitive id.

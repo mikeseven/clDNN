@@ -34,7 +34,7 @@ namespace cldnn
 /// such as: sources, entry point, work sizes and parameter bindings.
     struct custom_gpu_primitive : public primitive_base<custom_gpu_primitive, CLDNN_PRIMITIVE_DESC(custom_gpu_primitive)>
     {
-        CLDNN_DECLATE_PRIMITIVE(custom_gpu_primitive)
+        CLDNN_DECLARE_PRIMITIVE(custom_gpu_primitive)
 
             /// @brief Constructs custom_gpu_primitive primitive
             /// @param id This primitive id.

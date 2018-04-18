@@ -35,7 +35,7 @@ namespace cldnn
 /// NOTE THAT THIS WILL SUBTRACT THE SAME VALUES FROM EACH BATCH.
 struct reorder : public primitive_base<reorder, CLDNN_PRIMITIVE_DESC(reorder)>
 {
-    CLDNN_DECLATE_PRIMITIVE(reorder)
+    CLDNN_DECLARE_PRIMITIVE(reorder)
 
     /// @brief Constructs reorder primitive with directly provided mean subtract values.
     /// @param id This primitive id.

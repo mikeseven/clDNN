@@ -37,7 +37,7 @@ namespace cldnn
 /// Second feature stores the variance of each prior coordinate.
 struct prior_box : public primitive_base<prior_box, CLDNN_PRIMITIVE_DESC(prior_box)>
 {
-    CLDNN_DECLATE_PRIMITIVE(prior_box)
+    CLDNN_DECLARE_PRIMITIVE(prior_box)
 
     /// @brief Constructs prior-box primitive.
     /// @param id This primitive id.

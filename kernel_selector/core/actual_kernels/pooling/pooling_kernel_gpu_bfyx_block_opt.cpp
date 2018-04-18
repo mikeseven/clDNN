@@ -36,6 +36,7 @@ namespace KernelSelector
         k.EnablePoolRemainder(PoolRemainder::FLOOR);
         k.EnablePoolRemainder(PoolRemainder::CEIL);
         k.EnablePoolKernelDividerMode(KernelDividerMode::FIXED);
+        k.EnableDifferentTypes();
         return k;
     }
 

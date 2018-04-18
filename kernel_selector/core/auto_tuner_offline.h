@@ -1,4 +1,4 @@
-﻿/*
+/*
 // Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -54,7 +54,8 @@ namespace KernelSelector
             { "0x1912" , tuning_cache_1912 },
             { "0x5927" , tuning_cache_5927 },
             { "0x5A84" , tuning_cache_5A84 },
-            { "0x5A85" , tuning_cache_5A85 },
+            { "0x5A85" , tuning_cache_5A84 },
+            { "0x3184" , tuning_cache_5A84 },
         };
 
     public:

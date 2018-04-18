@@ -14,20 +14,24 @@
 // limitations under the License.
 */
 
-#include "mvn_kernel_selector.h"
-#include "mvn_kernel_ref.h"
-#include "mvn_kernel_bfyx_opt.h"
+#pragma once
+
+#include "mvn_kernel_base.h"
  
 namespace KernelSelector 
-{
-    MVNKernelSelctor::MVNKernelSelctor()
+{    
+    class MVNKernelBfyxOpt : public MVNKernelBase
     {
-        Attach<MVNKernelRef>();
-        Attach<MVNKernelBfyxOpt>();
-    }
+    public:
+        MVNKernelBfyxOpt() : MVNKernelBase("mvn_gpu_bfyx_opt") {}
+        virtual ~MVNKernelBfyxOpt() {}
 
-    KernelsData MVNKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
-    {
-        return GetNaiveBestKernel(params, options, KernelType::MVN);
-    }
+        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual ParamsKey GetSupportedKey() const override;
+        using Parent = MVNKernelBase;
+
+    private:
+        DispatchData SetDefault(const MVNParams& params) const override;
+        JitConstants GetJitConstants(const MVNParams& params, MVNKernelBase::DispatchData kd) const override;
+    };
 }

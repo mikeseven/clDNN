@@ -31,7 +31,7 @@ namespace cldnn
     /// @brief Finds the index of the k max values of input.
     struct arg_max_min : public primitive_base<arg_max_min, CLDNN_PRIMITIVE_DESC(arg_max_min)>
     {
-        CLDNN_DECLATE_PRIMITIVE(arg_max_min)
+        CLDNN_DECLARE_PRIMITIVE(arg_max_min)
 
         /// @brief Enum type to specify axis to return values from.
         enum out_type

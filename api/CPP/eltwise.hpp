@@ -48,7 +48,7 @@ enum class eltwise_mode : int32_t
 /// - format of both inputs has to be the same
 struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
 {
-    CLDNN_DECLATE_PRIMITIVE(eltwise)
+    CLDNN_DECLARE_PRIMITIVE(eltwise)
 
     /// @brief Constructs eltwise primitive.
     /// @param id This primitive id.

@@ -35,7 +35,7 @@ namespace cldnn
 /// This primitive can be also set as other primitive's output. In this case the underlying buffer will be the same in mutable_data and preceding primitive.
 struct mutable_data : public primitive_base<mutable_data, CLDNN_PRIMITIVE_DESC(mutable_data)>
 {
-    CLDNN_DECLATE_PRIMITIVE(mutable_data)
+    CLDNN_DECLARE_PRIMITIVE(mutable_data)
 
     /// @brief Constructs mutable_data primitive.
     /// @param id This primitive id.
