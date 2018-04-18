@@ -32,6 +32,8 @@ namespace KernelSelector
 
         std::vector<size_t> global(3);
 
+        kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
+
         if (params.mvnParams.mvnMode == MVNMode::WITHIN_CHANNELS)
         {
             global = { output.Batch().v, output.Feature().v, 1 };

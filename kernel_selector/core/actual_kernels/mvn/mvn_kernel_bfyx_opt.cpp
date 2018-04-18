@@ -41,6 +41,8 @@ namespace KernelSelector
 
         const auto& input = params.inputs[0];
 
+        kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
+
         if (params.mvnParams.mvnMode == MVNMode::WITHIN_CHANNELS)
         {
             kd.dataSetSize = input.X().v * input.Y().v;
