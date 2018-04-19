@@ -185,7 +185,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "For character-model topos it says how many characters will be predicted.")
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
-            "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, resnet50, resnet50-i8, microbench_conv, microbench_lstm, ssd_mobilenet, ssd_mobilenet-i8, lstm_char.")
+            "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, resnet50, resnet50-i8, microbench_conv, microbench_lstm, ssd_mobilenet, ssd_mobilenet-i8, lstm_char, lenet.")
         ("run_until_primitive", bpo::value<std::string>()->value_name("<primitive_name>"),
             "Runs topology until specified primitive.")
         ("run_single_layer", bpo::value<std::string>()->value_name("<primitive_name>"),
@@ -555,6 +555,7 @@ int main(int argc, char* argv[])
             ep.topology_name == "googlenet" ||
             ep.topology_name == "gender" ||
             ep.topology_name == "squeezenet" ||
+            ep.topology_name == "lenet" ||
             ep.topology_name == "resnet50" ||
             ep.topology_name == "resnet50-i8" ||
             ep.topology_name == "microbench_conv" ||

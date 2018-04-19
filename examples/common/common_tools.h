@@ -205,6 +205,9 @@ std::vector<std::string> get_directory_weights(const std::string& images_path);
 template <typename MemElemTy = float>
 void load_images_from_file_list(const std::vector<std::string>& images_list, cldnn::memory& memory); 
 
+template <typename MemElemTy = float>
+void load_data_from_file_list_lenet(const std::vector<std::string>& images_list, cldnn::memory& memory);
+
 /// function moved from alexnet.cpp, they will be probably used by each topology
 void print_profiling_table(std::ostream& os, const std::vector<cldnn::instrumentation::profiling_info>& profiling_info);
 cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology& topology, const execution_params &ep);

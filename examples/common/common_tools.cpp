@@ -269,7 +269,7 @@ void load_images_from_file_list(
 
     auto dim = memory_layout.size.spatial;
 
-    if(memory_layout.format != cldnn::format::byxf) throw std::runtime_error("Only bfyx format is supported as input to images from files");
+    if(memory_layout.format != cldnn::format::byxf) throw std::runtime_error("Only byxf format is supported as input to images from files");
 
     if(!cldnn::data_type_match<MemElemTy>(memory_layout.data_type))
         throw std::runtime_error("Memory format expects different type of elements than specified");
@@ -285,6 +285,45 @@ void load_images_from_file_list(
 // Explicit instantiation of all used template function instances used in examples.
 template void load_images_from_file_list<float>(const std::vector<std::string>&, cldnn::memory&);
 template void load_images_from_file_list<half_t>(const std::vector<std::string>&, cldnn::memory&);
+
+template <typename MemElemTy>
+void load_data_from_file_list_lenet(
+    const std::vector<std::string>& images_list,
+    cldnn::memory& memory)
+{
+    auto dst_ptr = memory.pointer<MemElemTy>();
+    auto it = dst_ptr.begin();
+
+    auto memory_layout = memory.get_layout();
+    auto dim = memory_layout.size.spatial;
+
+    if (!cldnn::data_type_match<MemElemTy>(memory_layout.data_type))
+        throw std::runtime_error("Memory format expects different type of elements than specified");
+    auto single_image_size = dim[0] * dim[1];
+    uint32_t single_image_size_with_header = single_image_size + 16; //16 bytes for header
+    for (auto img : images_list)
+    {
+        std::ifstream rfile(img, std::ios::binary);
+        std::vector<unsigned char> tmpBuffer(single_image_size_with_header);
+        std::vector<float> tmpBufferf(single_image_size_with_header);
+
+        if (rfile)
+        {
+            rfile.read(reinterpret_cast<char *>(&tmpBuffer[0]), single_image_size_with_header);
+            rfile.close();
+
+            for (uint32_t i = 16; i < single_image_size_with_header; ++i) {
+                *it = static_cast<MemElemTy>(tmpBuffer[i]);
+                it++;
+            }
+        }
+        else
+            throw std::runtime_error("Cannot read image for lenet topology.");
+    }
+}
+
+template void load_data_from_file_list_lenet<float>(const std::vector<std::string>&, cldnn::memory&);
+template void load_data_from_file_list_lenet<half_t>(const std::vector<std::string>&, cldnn::memory&);
 
 void print_profiling_table(std::ostream& os, const std::vector<cldnn::instrumentation::profiling_info>& profiling_info) {
     if (profiling_info.size() == 0)
@@ -783,7 +822,9 @@ void run_topology(const execution_params &ep)
             primitives = build_squeezenet(ep.weights_dir, engine, input_layout, gpu_batch_size);
         }
     }
-    else if (ep.topology_name == "microbench_lstm") 
+    else if (ep.topology_name == "lenet")
+        primitives = build_lenet(ep.weights_dir, engine, input_layout, gpu_batch_size);
+    else if (ep.topology_name == "microbench_lstm") {
         primitives = build_microbench_lstm(ep.weights_dir, engine, ep.lstm_ep, microbench_lstm_inputs);
     else if (ep.topology_name == "ssd_mobilenet")
         primitives = build_ssd_mobilenet(ep.weights_dir, engine, input_layout, gpu_batch_size);
@@ -819,6 +860,8 @@ void run_topology(const execution_params &ep)
         auto neurons_list_filename = "names.txt";
         if (ep.topology_name == "vgg16_face")
             neurons_list_filename = "vgg16_face.txt";
+        if (ep.topology_name == "lenet")
+            neurons_list_filename = "lenet.txt";
         else if (ep.topology_name == "gender")
             neurons_list_filename = "gender.txt";
         auto input_list = get_input_list(ep.input_dir);
@@ -840,7 +883,7 @@ void run_topology(const execution_params &ep)
 
             lstm_utils lstm_data(ep.sequence_length, batch_size, ep.loop, ep.temperature);
             // load croped and resized images into input
-            if (!ep.rnn_type_of_topology)
+            if (!ep.rnn_type_of_topology && ep.topology_name != "lenet")
             {
                 if (ep.use_half)
                 {
@@ -849,6 +892,19 @@ void run_topology(const execution_params &ep)
                 else
                 {
                     load_images_from_file_list(input_files_in_batch, input);
+                }
+
+            }
+			else if(ep.topology_name == "lenet")
+            {
+                load_images_from_file_list(images_in_batch, input);
+                if (ep.use_half)
+                {
+                    load_data_from_file_list_lenet<half_t>(images_in_batch, input);
+                }
+                else
+                {
+                    load_data_from_file_list_lenet(images_in_batch, input);
                 }
 
             }
