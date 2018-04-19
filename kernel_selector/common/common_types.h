@@ -46,7 +46,9 @@ namespace KernelSelector
         REORG_YOLO,
         MAX_UNPOOLING,
         CONVOLUTION_GRAD_WEIGHTS,
-        MVN
+        MVN,
+        FULLY_CONNECTED_GRAD_INPUT,
+        FULLY_CONNECTED_GRAD_WEIGHTS
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
