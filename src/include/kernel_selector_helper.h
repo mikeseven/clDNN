@@ -43,6 +43,8 @@
 #include "concatenation/concatenation_kernel_selector.h"
 #include "upsampling/upsampling_kernel_selector.h"
 #include "convolution_grad_weights/convolution_grad_weights_kernel_selector.h"
+#include "fully_connected_grad_input/fully_connected_grad_input_kernel_selector.h"
+#include "fully_connected_grad_weights/fully_connected_grad_weights_kernel_selector.h"
 #include "jitter.h"
 
 using namespace cldnn;
@@ -102,6 +104,8 @@ namespace kernel_selector
     using max_unpooling_params              = KernelSelector::MaxUnpoolingParams;
     using roi_pooling_v1_params             = KernelSelector::ROIPoolingParams;
     using fully_connected_params            = KernelSelector::FullyConnectedParams;
+    using fully_connected_grad_input_params = KernelSelector::FullyConnectedGradInputParams;
+    using fully_connected_grad_weights_params = KernelSelector::FullyConnectedGradWeightsParams;
     using activation_params                 = KernelSelector::ActivationParams;
     using softmax_params                    = KernelSelector::SoftmaxParams;
     using region_yolo_params                = KernelSelector::RegionYoloParams;
@@ -130,6 +134,8 @@ namespace kernel_selector
     using max_unpooling_optional_params     = KernelSelector::MaxUnpoolingOptionalParams;
     using roi_pooling_optional_params       = KernelSelector::ROIPoolingOptionalParams;
     using fully_connected_optional_params   = KernelSelector::FullyConnectedOptionalParams;
+    using fully_connected_grad_input_optional_params = KernelSelector::FullyConnectedGradInputOptionalParams;
+    using fully_connected_grad_weights_optional_params = KernelSelector::FullyConnectedGradWeightsOptionalParams;
     using activation_optional_params        = KernelSelector::ActivationOptionalParams;
     using softmax_optional_params           = KernelSelector::SoftmaxOptionalParams;
     using region_yolo_optional_params       = KernelSelector::RegionYoloOptionalParams;
@@ -151,6 +157,8 @@ namespace kernel_selector
     using max_unpooling_kernel_selector     = KernelSelector::MaxUnpoolingKernelSelctor;
     using roi_pooling_v1_kernel_selector    = KernelSelector::ROIPoolingKernelSelctor;
     using fully_connected_kernel_selector   = KernelSelector::FullyConnectedKernelSelctor;
+    using fully_connected_grad_input_kernel_selector = KernelSelector::FullyConnectedGradInputKernelSelctor;
+    using fully_connected_grad_weights_kernel_selector = KernelSelector::FullyConnectedGradWeightsKernelSelctor;
     using activation_kernel_selector        = KernelSelector::ActivationKernelSelctor;
     using softmax_kernel_selector           = KernelSelector::SoftmaxKernelSelctor;
     using region_yolo_kernel_selector       = KernelSelector::RegionYoloKernelSelctor;
