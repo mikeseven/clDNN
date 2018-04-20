@@ -167,13 +167,13 @@
             "proposal": "0x396816558D25A0D7FC7CE5A0D07ED1F7"
         }, 
         "Perc_ZF_fasterRCNN_fp16": {
-            "bbox_pred": "0x9A2752BE32623326ECDB783711D597A2", 
-            "loss_cls": "0xE8BE38DE04EBC13100EC721714C7D9F6", 
+            "bbox_pred": "0x93B89D345F3746ED618E4E7E48A4CA8D", 
+            "loss_cls": "0x77B9A52CBC268455C77A204DE91EBB11", 
             "proposal": "0xCEAD295012CD08023813A53541976E54"
         }, 
         "Perc_ZF_fasterRCNN_fp16_dropout_fuse": {
-            "bbox_pred": "0x3615BCEE90AEA33CD701ED00CBF5F123", 
-            "loss_cls": "0x8A851B970017A3346C9595F8E96BEA3F", 
+            "bbox_pred": "0x0AD40450B6B84088B35A87ED0524C69D", 
+            "loss_cls": "0x738415F9A26AC13E8A6A84804916512C", 
             "proposal": "0xCEAD295012CD08023813A53541976E54"
         }, 
         "Perc_ZF_fasterRCNN_fp32": {
