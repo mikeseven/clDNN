@@ -496,6 +496,8 @@ CLDNN_API void cldnn_release_topology(cldnn_topology topology, cldnn_status* sta
 /// @brief number of available engines of the particular type
 CLDNN_API uint32_t cldnn_get_engine_count(/*cldnn_engine_type*/ int32_t type, cldnn_status* status);
 
+CLDNN_API void cldnn_flush_memory(cldnn_engine engine, cldnn_status* status);
+
 /// @brief Create new engine of the specified @p type, @p engine_num, and @p configuration options.
 /// @param[in] type Engine type @ref cldnn_engine_type. Only OCL engine is supported.
 /// @param[in] engine_num Engine index. Should be 0.

@@ -397,6 +397,18 @@ void gpu_toolkit::flush()
         log(0, "Flush");
     queue().flush();
 }
+void gpu_toolkit::flush_memory()
+{
+    /*
+    Temp. solution.
+    */
+    void* ptr = nullptr;
+    ptr = _aligned_malloc(4096, 4096);
+    queue().finish();
+    cl::Buffer flusher(_context, CL_MEM_USE_HOST_PTR, (size_t)4096, ptr);  
+    flusher = (cl_mem)nullptr; //clear buffer
+    _aligned_free(ptr);
+}
 
 void gpu_toolkit::wait_for_events(std::vector<event_impl::ptr> const & events)
 {

@@ -198,6 +198,15 @@ uint32_t cldnn_get_engine_count(/*cldnn_engine_type*/ int32_t type, cldnn_status
     }
 }
 
+void cldnn_flush_memory(cldnn_engine engine, cldnn_status* status)
+{
+    return exception_handler(CLDNN_ERROR, status, [&]()
+    {
+        SHOULD_NOT_BE_NULL(engine, "engine");
+        api_cast(engine)->flush_memory();
+    });
+}
+
 cldnn_engine cldnn_create_engine(/*cldnn_engine_type*/ int32_t type, uint32_t engine_num, const cldnn_engine_configuration* configuration, cldnn_status* status)
 {
     if (engine_num > 0 || (type != cldnn_engine_type::cldnn_engine_ocl))
