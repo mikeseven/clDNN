@@ -17,7 +17,7 @@
 
 #define VECTOR_TYPE MAKE_VECTOR_TYPE(UNIT_TYPE,8)
 #define FEATURE_PER_ITEM 8
-#define FEATURE_BLOCK_NUM ((OUTPUT_FEATURE_NUM + 7) / 8)
+#define FEATURE_BLOCK_NUM (OUTPUT_FEATURE_NUM / 8)
 
 #if   defined MAX_POOLING
     #define UNIT_INIT_VAL UNIT_VAL_MIN
@@ -55,11 +55,7 @@ KERNEL(pooling_gpu_byxf_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE
 
     int input_idx = b*FEATURE_BLOCK_NUM*INPUT0_SIZE_X*INPUT0_SIZE_Y + FEATURE_BLOCK_NUM*INPUT0_SIZE_X*offset_y + FEATURE_BLOCK_NUM*offset_x + bf / INPUT0_BATCH_NUM;
     
-#if defined MAX_POOLING
-    out = UNIT_VAL_MIN;
-#elif defined AVG_POOLING
-    out = 0;
-#endif
+    out = UNIT_INIT_VAL;
 
     __attribute__((opencl_unroll_hint))
     for(uint j = 0; j < POOL_SIZE_Y; j++)
@@ -67,18 +63,7 @@ KERNEL(pooling_gpu_byxf_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE
         __attribute__((opencl_unroll_hint))
         for(uint i = 0; i < POOL_SIZE_X; i++)
         {
-            if(f+8 >= INPUT0_FEATURE_NUM)
-            {
-                for(uint k = 0; k < FEATURE_PER_ITEM; k++)
-                {
-                    if(f+k < INPUT0_FEATURE_NUM)
-                    {
-                        feature_block[k] = input[(input_idx+FEATURE_BLOCK_NUM*i)*8+k];
-                    }
-                }
-            }
-            else
-                feature_block = vload8(input_idx+FEATURE_BLOCK_NUM*i, input);
+            feature_block = vload8(input_idx+FEATURE_BLOCK_NUM*i, input);
             out = FUNC_CALL(apply_pooling)(out, feature_block);
         }
         input_idx += FEATURE_BLOCK_NUM*INPUT0_SIZE_X;
@@ -98,6 +83,7 @@ KERNEL(pooling_gpu_byxf_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE
     }
 }
 
+#undef FEATURE_BLOCK_NUM
 #undef FEATURE_PER_ITEM
 #undef UNIT_INIT_VAL
 #undef VECTOR_TYPE
