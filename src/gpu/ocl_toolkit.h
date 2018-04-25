@@ -137,7 +137,7 @@ public:
     event_impl::ptr enqueue_kernel(cl::Kernel const& kern, cl::NDRange const& global, cl::NDRange const& local, std::vector<event_impl::ptr> const& deps);
     event_impl::ptr enqueue_marker(std::vector<event_impl::ptr> const& deps);
     void flush();
-    void flush_memory();
+    void release_pending_memory();
     void wait_for_events(std::vector<event_impl::ptr> const& events);
 
     void log(uint64_t id, std::string const& msg);

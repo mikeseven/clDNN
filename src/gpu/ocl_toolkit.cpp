@@ -397,10 +397,10 @@ void gpu_toolkit::flush()
         log(0, "Flush");
     queue().flush();
 }
-void gpu_toolkit::flush_memory()
+void gpu_toolkit::release_pending_memory()
 {
-    /*
-    Temp. solution.
+    /* 
+    TODO: Temp. solution, untill proper API calls from OpenCL are released.
     */
     void* ptr = nullptr;
     ptr = _aligned_malloc(4096, 4096);
