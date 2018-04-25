@@ -16,12 +16,14 @@
 
 #include "mvn_kernel_selector.h"
 #include "mvn_kernel_ref.h"
+#include "mvn_kernel_bfyx_opt.h"
  
 namespace KernelSelector 
 {
     MVNKernelSelctor::MVNKernelSelctor()
     {
         Attach<MVNKernelRef>();
+        Attach<MVNKernelBfyxOpt>();
     }
 
     KernelsData MVNKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const

@@ -33,7 +33,7 @@ namespace cldnn
 /// @details Deconvolution is similar to convolution layer with the weights flipped on the axis and stride and input padding parameters used in opposite sense as in convolution.
 struct deconvolution : public primitive_base<deconvolution, CLDNN_PRIMITIVE_DESC(deconvolution)>
 {
-    CLDNN_DECLATE_PRIMITIVE(deconvolution)
+    CLDNN_DECLARE_PRIMITIVE(deconvolution)
 
     /// @brief Constructs deconvolution primitive.
     /// @param id This primitive id.

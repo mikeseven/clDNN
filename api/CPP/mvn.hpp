@@ -32,7 +32,7 @@ namespace cldnn
 /// @details Normalizes the input to have 0-mean and/or unit (1) variance.
 struct mvn :public primitive_base<mvn, CLDNN_PRIMITIVE_DESC(mvn)>
 {
-    CLDNN_DECLATE_PRIMITIVE(mvn)
+    CLDNN_DECLARE_PRIMITIVE(mvn)
 
     /// @brief Constructs mvn primitive.
     /// @param id This primitive id.

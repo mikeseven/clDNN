@@ -19,7 +19,7 @@
 
 namespace KernelSelector 
 {
-    JitConstants MVNKernelBase::GetJitConstants(const MVNParams& params) const
+    JitConstants MVNKernelBase::GetJitConstants(const MVNParams& params, MVNKernelBase::DispatchData) const
     {
         return MakeMVNJitConstants(params);
     }
@@ -30,9 +30,9 @@ namespace KernelSelector
 
         DispatchData kd;
 
-        kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
-
         std::vector<size_t> global(3);
+
+        kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 
         if (params.mvnParams.mvnMode == MVNMode::WITHIN_CHANNELS)
         {
@@ -69,7 +69,7 @@ namespace KernelSelector
         KernelData kd = KernelData::Default<MVNParams>(params);
 
         auto finalKernelName = GetKernelName(orgParams);
-        auto cldnn_jit = GetJitConstants(orgParams);
+        auto cldnn_jit = GetJitConstants(orgParams, runInfo);
         auto entry_point = GetEntryPoint(finalKernelName, orgParams.layerID, options);
         auto jit = CreateJit(finalKernelName, cldnn_jit, entry_point);
 

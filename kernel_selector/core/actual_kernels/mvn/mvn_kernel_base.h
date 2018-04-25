@@ -27,11 +27,17 @@ namespace KernelSelector
         using CommonKernelBase::CommonKernelBase;
         virtual ~MVNKernelBase() {}
 
-        using DispatchData = CommonDispatchData;
+        struct DispatchData : public CommonDispatchData
+        {
+            size_t itemsNum;
+            size_t leftovers;
+            size_t dataSetsCount;
+            size_t dataSetSize;
+        };
 
     protected:
-        JitConstants GetJitConstants(const MVNParams& params) const;
-        DispatchData SetDefault(const MVNParams& params) const;
+        virtual JitConstants GetJitConstants(const MVNParams& params, DispatchData kd) const;
+        virtual DispatchData SetDefault(const MVNParams& params) const;
         virtual std::string GetKernelName(const MVNParams&) const { return kernelName; }
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimated_time) const;
     };

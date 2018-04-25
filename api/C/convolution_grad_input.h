@@ -31,7 +31,6 @@ extern "C" {
 #endif
 
 /// @brief Performs transposed convolution.
-/// Also supports built-in Relu @CLDNN_PRIMITIVE_DESC{activation} available by setting it in arguments.
 /// @details convolution_grad_input is similar to convolution layer with the weights flipped on the axis and stride and input padding parameters used in opposite sense as in convolution.
 CLDNN_BEGIN_PRIMITIVE_DESC(convolution_grad_input)
 /// @brief Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution_grad_input window should start calculations.

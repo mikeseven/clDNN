@@ -45,7 +45,7 @@ enum class pooling_mode : int32_t
 /// @details Pools the input image by taking the max, average, etc. within regions.
 struct pooling : public primitive_base<pooling, CLDNN_PRIMITIVE_DESC(pooling)>
 {
-    CLDNN_DECLATE_PRIMITIVE(pooling)
+    CLDNN_DECLARE_PRIMITIVE(pooling)
 
     /// @brief Constructs pooling primitive.
     /// @param id This primitive id.

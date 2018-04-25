@@ -32,7 +32,7 @@ namespace cldnn
 /// @details Reverse operation of max pooling, based on the argmax data where indices of each max pooling region are stored.
 struct max_unpooling : public primitive_base<max_unpooling, CLDNN_PRIMITIVE_DESC(max_unpooling)>
 {
-    CLDNN_DECLATE_PRIMITIVE(max_unpooling)
+    CLDNN_DECLARE_PRIMITIVE(max_unpooling)
 
     /// @brief Constructs max_unpooling primitive.
     /// @param id This primitive id.

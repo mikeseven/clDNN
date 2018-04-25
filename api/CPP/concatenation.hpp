@@ -52,7 +52,7 @@ namespace cldnn
 ///   @li outputIdx : index of destination feature 
 struct concatenation : public primitive_base<concatenation, CLDNN_PRIMITIVE_DESC(concatenation)>
 {
-    CLDNN_DECLATE_PRIMITIVE(concatenation)
+    CLDNN_DECLARE_PRIMITIVE(concatenation)
 
     enum concatenation_axis
     {

@@ -33,7 +33,7 @@ namespace cldnn
 /// @details Please note that this primitive was not heavily tested and currently only batch=1 is enabled for this primitive.
 struct convolution_grad_weights : public primitive_base<convolution_grad_weights, CLDNN_PRIMITIVE_DESC(convolution_grad_weights)>
 {
-    CLDNN_DECLATE_PRIMITIVE(convolution_grad_weights)
+    CLDNN_DECLARE_PRIMITIVE(convolution_grad_weights)
 
     /// @brief Constructs convolution_grad_weights primitive.
     /// @param id This primitive id.

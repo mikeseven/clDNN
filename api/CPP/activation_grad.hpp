@@ -37,7 +37,7 @@ namespace cldnn
 ///   @li slope(i) : the slope value of the i-th feature map (can be shared across channels or one slope per channel).
 struct activation_grad : public primitive_base<activation_grad, CLDNN_PRIMITIVE_DESC(activation_grad)>
 {
-    CLDNN_DECLATE_PRIMITIVE(activation_grad)
+    CLDNN_DECLARE_PRIMITIVE(activation_grad)
 
     /// @brief Constructs Relu grad primitive.
     /// @param id This primitive id.
