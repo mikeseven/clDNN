@@ -405,8 +405,15 @@ void gpu_toolkit::release_pending_memory()
     void* ptr = nullptr;
     ptr = _mm_malloc(4096, 4096);
     queue().finish();
-    cl::Buffer flusher(_context, CL_MEM_USE_HOST_PTR, (size_t)4096, ptr);  
-    flusher = (cl_mem)nullptr; //clear buffer
+    try
+    {
+        cl::Buffer flusher(_context, CL_MEM_USE_HOST_PTR, (size_t)4096, ptr);
+        flusher = (cl_mem)nullptr; //clear buffer
+    }
+    catch (...)
+    {
+        _mm_free(ptr);
+    }
     _mm_free(ptr);
 }
 

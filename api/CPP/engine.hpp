@@ -187,7 +187,7 @@ struct engine
     }
 
 
-    /// @brief Returns information about properties and capabilities for the engine.
+    /// @brief Release pending memory allocated in OpenCL context.
     void release_pending_memory() const
     {
         check_status<void>("flush_memory failed", [=](status_t* status)
