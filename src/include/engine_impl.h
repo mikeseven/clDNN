@@ -66,6 +66,7 @@ public:
     refcounted_obj_ptr<network_impl> allocate_network(const program_impl& program);
     refcounted_obj_ptr<network_impl> build_network(const topology_impl& topology, const build_options& options, bool internal_network = false);
     void flush_network();
+    void release_pending_memory();
 
     template <class T>
     std::unique_ptr<primitive_impl> create_primitive_impl(typed_program_node<T> const& node)
