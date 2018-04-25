@@ -33,6 +33,8 @@ namespace KernelSelector {
         k.EnableInputWeightsType(WeightsType::INT8);
         k.EnableInputLayout(DataLayout::bfyx);
         k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableInputLayout(DataLayout::byxf);
+        k.EnableOutputLayout(DataLayout::byxf);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableDilation();
