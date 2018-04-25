@@ -188,11 +188,11 @@ struct engine
 
 
     /// @brief Returns information about properties and capabilities for the engine.
-    void flush_memory() const
+    void release_pending_memory() const
     {
         check_status<void>("flush_memory failed", [=](status_t* status)
         {
-            return cldnn_flush_memory(_impl, status);
+            return cldnn_release_pending_memory(_impl, status);
         });
     }
 

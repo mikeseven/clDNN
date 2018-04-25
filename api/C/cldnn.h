@@ -496,7 +496,11 @@ CLDNN_API void cldnn_release_topology(cldnn_topology topology, cldnn_status* sta
 /// @brief number of available engines of the particular type
 CLDNN_API uint32_t cldnn_get_engine_count(/*cldnn_engine_type*/ int32_t type, cldnn_status* status);
 
-CLDNN_API void cldnn_flush_memory(cldnn_engine engine, cldnn_status* status);
+/// @brief Release pending memory, allocated in OpenCL context.
+/// @param[in] type Engine type @ref cldnn_engine_type. Only OCL engine is supported.
+/// @details OpenCL does not guarantee that the memory will be released (even with cl:Buffers releaed).
+/// Use this function to manually release memory. 
+CLDNN_API void cldnn_release_pending_memory(cldnn_engine engine, cldnn_status* status);
 
 /// @brief Create new engine of the specified @p type, @p engine_num, and @p configuration options.
 /// @param[in] type Engine type @ref cldnn_engine_type. Only OCL engine is supported.

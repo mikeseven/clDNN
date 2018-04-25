@@ -108,9 +108,9 @@ void engine_impl::flush_network()
     get_context()->flush();
 }
 
-void engine_impl::flush_memory()
+void engine_impl::release_pending_memory()
 {
-    get_context()->flush_memory();
+    get_context()->release_pending_memory();
 }
 
 program_impl::ptr engine_impl::build_program(const topology_impl& topology, const build_options& options)

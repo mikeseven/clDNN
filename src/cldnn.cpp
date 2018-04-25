@@ -198,12 +198,12 @@ uint32_t cldnn_get_engine_count(/*cldnn_engine_type*/ int32_t type, cldnn_status
     }
 }
 
-void cldnn_flush_memory(cldnn_engine engine, cldnn_status* status)
+void cldnn_release_pending_memory(cldnn_engine engine, cldnn_status* status)
 {
     return exception_handler(CLDNN_ERROR, status, [&]()
     {
         SHOULD_NOT_BE_NULL(engine, "engine");
-        api_cast(engine)->flush_memory();
+        api_cast(engine)->release_pending_memory();
     });
 }
 
