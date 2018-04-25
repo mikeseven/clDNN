@@ -403,11 +403,11 @@ void gpu_toolkit::release_pending_memory()
     TODO: Temp. solution, untill proper API calls from OpenCL are released.
     */
     void* ptr = nullptr;
-    ptr = _aligned_malloc(4096, 4096);
+    ptr = _mm_malloc(4096, 4096);
     queue().finish();
     cl::Buffer flusher(_context, CL_MEM_USE_HOST_PTR, (size_t)4096, ptr);  
     flusher = (cl_mem)nullptr; //clear buffer
-    _aligned_free(ptr);
+    _mm_free(ptr);
 }
 
 void gpu_toolkit::wait_for_events(std::vector<event_impl::ptr> const & events)
