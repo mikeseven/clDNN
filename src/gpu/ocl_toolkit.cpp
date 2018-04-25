@@ -413,6 +413,7 @@ void gpu_toolkit::release_pending_memory()
     catch (...)
     {
         _mm_free(ptr);
+        throw;
     }
     _mm_free(ptr);
 }
