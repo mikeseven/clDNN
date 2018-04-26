@@ -18,6 +18,7 @@
 
 #include <boost/filesystem.hpp>
 #include <api/CPP/data.hpp>
+#include <api/CPP/mutable_data.hpp>
 
 #include <cstdint>
 #include <fstream>
@@ -236,6 +237,12 @@ cldnn::data file::create(file::arguments arg, bool validate_magic) {
     return cldnn::data(data_prim_id, file::read(arg, validate_magic));
 }
 
+
+cldnn::mutable_data file::create_mutable(file::arguments arg) {
+    auto data_id = boost::filesystem::path(arg.name).filename().string();
+    return cldnn::mutable_data(data_id, file::read(arg));
+}
+
 void file::serialize(const cldnn::memory& data, const std::string& file_name, bool old_layout_mode)
 {
     auto size   = memory_traits(data, old_layout_mode).size;
@@ -270,16 +277,40 @@ void file::serialize(const cldnn::memory& data, const std::string& file_name, bo
     if (fh.dimension == 0 || fh.dimension > 4)
         throw std::runtime_error("Number of dimensions is out of supported range.");
 
-    fh_ext.layout = format;
+    if (fh.dimension == 1)
+        fh_ext.layout = cldnn::backward_comp::neural_memory::format::type::bias_x_f32;
+    else if (fh.dimension == 2)
+        fh_ext.layout = cldnn::backward_comp::neural_memory::format::type::fc_bx_f32;
+    else
+        fh_ext.layout = cldnn::backward_comp::neural_memory::format::type::weights_bfyx_f32;
+    if (fh.dimension == 0 || fh.dimension > 4) throw std::runtime_error("dimensions mismatch");
+    //fh_ext.layout = format;
 
     fstream.write(reinterpret_cast<const char*>(&fh),     sizeof(fh));
     fstream.write(reinterpret_cast<const char*>(&fh_ext), sizeof(fh_ext));
 
     std::vector<std::uint64_t> array(fh.dimension);
-    const auto dimension_offset = size.raw.size() - fh.dimension; // TODO!!! do it better way, this is needed because weights can have 5 dimensions with batch dimension always equal 1!
-    for (auto ar = 0; ar < fh.dimension; ar++)
+    //const auto dimension_offset = size.raw.size() - 4 - fh.dimension; // TODO!!! do it better way, this is needed because weights can have 5 dimensions with batch dimension always equal 1!
+    //for (auto ar = 0; ar < fh.dimension; ar++)
+    //{
+    //    array[ar] = size.raw[dimension_offset + ar];
+    //}
+
+    if (fh.dimension == 1)
     {
-        array[ar] = size.raw[dimension_offset + ar];
+        array[0] = size.raw[2];
+    }
+    else if (fh.dimension == 2)
+    {
+        array[1] = size.raw[0];
+        array[0] = size.raw[2];
+    }
+    else
+    {
+        array[3] = size.raw[0];
+        array[2] = size.raw[1];
+        array[1] = size.raw[2];
+        array[0] = size.raw[3];
     }
 
     fstream.write(reinterpret_cast<const char*>(&array[0]), array.size()*sizeof(uint64_t));

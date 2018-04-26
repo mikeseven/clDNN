@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <api/CPP/data.hpp>
 #include <api/CPP/network.hpp>
+#include "file.h"
 
 using namespace boost::filesystem;
 
@@ -116,7 +117,7 @@ static inline std::vector<std::string> get_directory_files(const std::string& im
 // returns list of files (path+filename) from specified directory
 std::vector<std::string> get_input_list(const std::string& images_path)
 {
-    std::regex allowed_exts("^\\.(jpe?g|png|bmp|gif|j2k|jp2|tiff|txt)$",
+    std::regex allowed_exts("^\\.(jpe?g|png|bmp|gif|j2k|jp2|tiff|txt|idx3\\-ubyte)$",
                             std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
     return get_directory_files(images_path, allowed_exts);
 }
@@ -282,6 +283,11 @@ void load_images_from_file_list(
     }
 }
 
+uint32_t swap_endian(uint32_t val) {
+    val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0xFF00FF);
+    return (val << 16) | (val >> 16);
+}
+
 // Explicit instantiation of all used template function instances used in examples.
 template void load_images_from_file_list<float>(const std::vector<std::string>&, cldnn::memory&);
 template void load_images_from_file_list<half_t>(const std::vector<std::string>&, cldnn::memory&);
@@ -289,8 +295,10 @@ template void load_images_from_file_list<half_t>(const std::vector<std::string>&
 template <typename MemElemTy>
 void load_data_from_file_list_lenet(
     const std::vector<std::string>& images_list,
-    cldnn::memory& memory)
+    cldnn::memory& memory, const uint32_t images_offset, const uint32_t images_number, const bool train, cldnn::memory& memory_labels)
 {
+    // TODO: this function assumes execution is ran with batch=1.
+    // When support to bigger batches will be added in grad weights primitives, it will be neede to read batch number of images and labels
     auto dst_ptr = memory.pointer<MemElemTy>();
     auto it = dst_ptr.begin();
 
@@ -299,22 +307,76 @@ void load_data_from_file_list_lenet(
 
     if (!cldnn::data_type_match<MemElemTy>(memory_layout.data_type))
         throw std::runtime_error("Memory format expects different type of elements than specified");
-    auto single_image_size = dim[0] * dim[1];
-    uint32_t single_image_size_with_header = single_image_size + 16; //16 bytes for header
+
     for (auto img : images_list)
     {
         std::ifstream rfile(img, std::ios::binary);
-        std::vector<unsigned char> tmpBuffer(single_image_size_with_header);
-        std::vector<float> tmpBufferf(single_image_size_with_header);
 
         if (rfile)
         {
-            rfile.read(reinterpret_cast<char *>(&tmpBuffer[0]), single_image_size_with_header);
+            // Read the magic and the meta data
+            uint32_t magic;
+            uint32_t num_items;
+            uint32_t rows;
+            uint32_t cols;
+
+            rfile.read(reinterpret_cast<char*>(&magic), 4);
+            magic = swap_endian(magic);
+            if (magic != 2051)
+                throw std::runtime_error("Incorrect image file magic.");
+            rfile.read(reinterpret_cast<char*>(&num_items), 4);
+            num_items = swap_endian(num_items);
+            rfile.read(reinterpret_cast<char*>(&rows), 4);
+            rows = swap_endian(rows);
+            rfile.read(reinterpret_cast<char*>(&cols), 4);
+            cols = swap_endian(cols);
+            auto img_size = rows * cols;
+
+            std::vector<unsigned char> tmpBuffer(img_size);
+
+            rfile.seekg(images_offset * img_size, rfile.cur);
+            rfile.read(reinterpret_cast<char *>(&tmpBuffer[0]), img_size);
             rfile.close();
 
-            for (uint32_t i = 16; i < single_image_size_with_header; ++i) {
+            for (uint32_t i = 0; i < img_size; ++i) {
                 *it = static_cast<MemElemTy>(tmpBuffer[i]);
                 it++;
+            }
+
+            //read in labels
+            if (train)
+            {
+                auto labels_ptr = memory_labels.pointer<MemElemTy>();
+                auto labels_it = labels_ptr.begin();
+                
+                std::string img_ext = "-images.idx3-ubyte";
+                auto labels_file = img.substr(0, img.length() - img_ext.length()) + "-labels.idx1-ubyte";
+                std::ifstream rfile_labels(labels_file, std::ios::binary);
+
+                if (rfile_labels)
+                {
+                    // Read the magic and the meta data
+                    uint32_t magic;
+                    uint32_t num_items;
+
+                    rfile_labels.read(reinterpret_cast<char*>(&magic), 4);
+                    magic = swap_endian(magic);
+                    if (magic != 2049)
+                        throw std::runtime_error("Incorrect image file magic.");
+                    rfile_labels.read(reinterpret_cast<char*>(&num_items), 4);
+                    num_items = swap_endian(num_items);
+
+                    std::vector<unsigned char> tmpBuffer(sizeof(char));
+
+                    rfile_labels.seekg(images_offset, rfile_labels.cur);
+                    rfile_labels.read(reinterpret_cast<char *>(&tmpBuffer[0]), 1);
+                    rfile_labels.close();
+
+                    for (uint32_t i = 0; i < 1; ++i) {
+                        *labels_it = static_cast<MemElemTy>(tmpBuffer[0]);
+                        labels_it++;
+                    }
+                }
             }
         }
         else
@@ -322,8 +384,8 @@ void load_data_from_file_list_lenet(
     }
 }
 
-template void load_data_from_file_list_lenet<float>(const std::vector<std::string>&, cldnn::memory&);
-template void load_data_from_file_list_lenet<half_t>(const std::vector<std::string>&, cldnn::memory&);
+template void load_data_from_file_list_lenet<float>(const std::vector<std::string>&, cldnn::memory&, const uint32_t, const uint32_t, const bool, cldnn::memory&);
+template void load_data_from_file_list_lenet<half_t>(const std::vector<std::string>&, cldnn::memory&, const uint32_t, const uint32_t, const bool, cldnn::memory&);
 
 void print_profiling_table(std::ostream& os, const std::vector<cldnn::instrumentation::profiling_info>& profiling_info) {
     if (profiling_info.size() == 0)
@@ -405,7 +467,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     cldnn::build_options options;
 
     //TODO set proper network build options
-    options.set_option(cldnn::build_option::optimize_data(true));
+    options.set_option(cldnn::build_option::optimize_data(false));
     options.set_option(cldnn::build_option::debug(ep.dump_hidden_layers || ep.profiling));
 	options.set_option(cldnn::build_option::serialize_network(ep.serialization));
 
@@ -447,6 +509,24 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
             outputs.push_back("output");
 
         outputs.push_back(ep.dump_layer_name);
+    }
+
+    if (ep.topology_name == "lenet_train")
+    {
+        //set weights outputs for lenet training
+        outputs.push_back("conv1_bias.nnd");
+        outputs.push_back("conv1_weights.nnd");
+        outputs.push_back("conv2_bias.nnd");
+        outputs.push_back("conv2_weights.nnd");
+        outputs.push_back("ip1_bias.nnd");
+        outputs.push_back("ip1_weights.nnd");
+        outputs.push_back("ip2_bias.nnd");
+        outputs.push_back("ip2_weights.nnd");
+
+        outputs.push_back("ip2_grad_weights");
+        outputs.push_back("ip1_grad_weights");
+        outputs.push_back("conv2_grad_weights");
+        outputs.push_back("output");
     }
 
     options.set_option(cldnn::build_option::outputs(outputs));
@@ -651,6 +731,14 @@ std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& tim
         output = outputs.at(output_primitve_id).get_memory();
     }
 
+    if (ep.topology_name == "lenet_train")
+    {
+        for (auto& p : outputs)
+        {
+            file::serialize(p.second.get_memory(), join_path(ep.weights_dir, p.first));
+        }
+    }
+
     auto execution_time(timer_execution.uptime());
 
     if (log_energy)
@@ -824,6 +912,8 @@ void run_topology(const execution_params &ep)
     }
     else if (ep.topology_name == "lenet")
         primitives = build_lenet(ep.weights_dir, engine, input_layout, gpu_batch_size);
+    else if (ep.topology_name == "lenet_train")
+        primitives = build_lenet_train(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "microbench_lstm") {
         primitives = build_microbench_lstm(ep.weights_dir, engine, ep.lstm_ep, microbench_lstm_inputs);
     else if (ep.topology_name == "ssd_mobilenet")
@@ -857,15 +947,17 @@ void run_topology(const execution_params &ep)
     if (ep.topology_name != "microbench_conv" && ep.topology_name != "microbench_lstm")
     {
         auto input = cldnn::memory::allocate(engine, input_layout);
+        auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx, { input_layout.size.batch[0],1,1,1 } });
         auto neurons_list_filename = "names.txt";
         if (ep.topology_name == "vgg16_face")
             neurons_list_filename = "vgg16_face.txt";
-        if (ep.topology_name == "lenet")
+        if (ep.topology_name == "lenet" || ep.topology_name == "lenet_train")
             neurons_list_filename = "lenet.txt";
         else if (ep.topology_name == "gender")
             neurons_list_filename = "gender.txt";
-        auto input_list = get_input_list(ep.input_dir);
-        if (input_list.empty())
+
+        auto img_list = get_directory_images(ep.input_dir);
+        if (img_list.empty())
             throw std::runtime_error("specified input images directory is empty (does not contain image data)");
 
         auto number_of_batches = (input_list.size() % batch_size == 0)
@@ -883,7 +975,7 @@ void run_topology(const execution_params &ep)
 
             lstm_utils lstm_data(ep.sequence_length, batch_size, ep.loop, ep.temperature);
             // load croped and resized images into input
-            if (!ep.rnn_type_of_topology && ep.topology_name != "lenet")
+            if (!ep.rnn_type_of_topology && ep.topology_name != "lenet" && ep.topology_name != "lenet_train")
             {
                 if (ep.use_half)
                 {
@@ -897,14 +989,32 @@ void run_topology(const execution_params &ep)
             }
 			else if(ep.topology_name == "lenet")
             {
-                load_images_from_file_list(images_in_batch, input);
                 if (ep.use_half)
-                {
-                    load_data_from_file_list_lenet<half_t>(images_in_batch, input);
-                }
+                    load_data_from_file_list_lenet<half_t>(images_in_batch, input, 0, 1, ep.topology_name == "lenet_train", labels);
                 else
+                    load_data_from_file_list_lenet(images_in_batch, input, 0, 1, ep.topology_name == "lenet_train", labels);
+            }
+
+            double time_in_sec = 0.0;
+            if (ep.topology_name != "lenet_train")
+            {
+                network.set_input_data("input", input);
+                auto time = execute_topology(network, ep, energyLib, output);
+                time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
+            }
+            else if(ep.topology_name == "lenet")
+            {
+                for (uint32_t learn_it = 0; learn_it < ep.image_number; ++learn_it)
                 {
-                    load_data_from_file_list_lenet(images_in_batch, input);
+                    if (ep.use_half)
+                        load_data_from_file_list_lenet<half_t>(images_in_batch, input, learn_it, ep.image_offset, true, labels);
+                    else
+                        load_data_from_file_list_lenet(images_in_batch, input, learn_it, ep.image_offset, true, labels);
+
+                    network.set_input_data("input", input);
+                    network.set_input_data("labels", labels);
+                    auto time = execute_topology(network, ep, energyLib, output);
+                    time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
                 }
 
             }

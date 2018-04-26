@@ -66,7 +66,10 @@ public:
         const auto& primitive = arg.get_primitive();
         const auto& weights_layout = arg.weights(0).get_output_layout();
 
-        assert(arg.get_output_layout().size.feature[0] / arg.get_primitive()->split() == weights_layout.size.batch[0]); // memory::format oixy
+        if(primitive->gradient())
+            assert(arg.get_output_layout().size.feature[0] / arg.get_primitive()->split() == weights_layout.size.feature[0]);
+        else
+            assert(arg.get_output_layout().size.feature[0] / arg.get_primitive()->split() == weights_layout.size.batch[0]);
 
         switch (weights_layout.fused_format())
         {
@@ -92,8 +95,6 @@ public:
         const auto depthwise_separable_opt = arg.get_depthwise_sep_opt();
 
         const auto& input_offset = primitive->input_offset;
-
-        assert(arg.get_output_layout().size.feature[0] / primitive->split() == weights_layout.size.batch[0]);
 
         auto deconv_params = get_weights_bias_default_params<kernel_selector::deconvolution_params>(arg, depthwise_separable_opt ? 1 : split);
         auto deconv_optional_params = get_default_weights_bias_optional_params<kernel_selector::deconvolution_optional_params>(arg.get_program());

@@ -14,6 +14,8 @@
 
 #include "include/include_all.cl"
 
+#define LR_RATE 0.01f
+
 KERNEL(convolution_grad_weights_gpu_ref)(
     const __global UNIT_TYPE* input_grad,
     __global UNIT_TYPE* output,
@@ -58,14 +60,14 @@ KERNEL(convolution_grad_weights_gpu_ref)(
             {
                 uint input_idx = in_split_offset + (uint)ifm*INPUT1_FEATURE_PITCH + (uint)input_offset_x*INPUT1_X_PITCH + (uint)input_offset_y*INPUT1_Y_PITCH;
 #if BIAS_TERM
-                result = fma(input[input_idx], grad, result);
+                result = fma(LR_RATE * input[input_idx], grad, result);
 #else
                 uint input_grad_idx = grad_split_offset + (uint)ofm*INPUT0_FEATURE_PITCH + j*INPUT0_X_PITCH + i*INPUT0_Y_PITCH;
-                result = fma(input[input_idx], input_grad[input_grad_idx], result);
+                result = fma(LR_RATE * input[input_idx], input_grad[input_grad_idx], result);
 #endif
             }
 #if BIAS_TERM
-            result_bias += grad;
+            result_bias += LR_RATE * grad;
 #endif
         }
     }

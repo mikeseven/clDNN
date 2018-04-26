@@ -15,6 +15,8 @@
 
 #include "include/include_all.cl"
 
+#define LR_RATE 0.01f
+
 KERNEL(fully_connected_grad_weights_gpu_ref)(
     const __global INPUT0_TYPE* input_grad,
     __global OUTPUT_TYPE* output,
@@ -38,12 +40,12 @@ KERNEL(fully_connected_grad_weights_gpu_ref)(
     const uint input_idx = GET_DATA_INDEX(INPUT1, 0, ifm, id_y, id_x);
 
     UNIT_TYPE grad = input_grad[input_grad_idx];
-    weights[filter_idx] += input[input_idx] * grad;
+    weights[filter_idx] += LR_RATE * input[input_idx] * grad;
 
 #if BIAS_TERM
     if(ifm == 0 && id_x == 0 && id_y == 0)
     {
-        bias[ofm] += grad;
+        bias[ofm] += LR_RATE * grad;
     }
 #endif
 }

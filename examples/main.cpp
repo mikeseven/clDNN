@@ -254,6 +254,10 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "LSTM use initial hidden tensor.")
         ("lstm_initial_cell", bpo::bool_switch(),
             "LSTM use initial cell tensor.")
+        ("image_number", bpo::value<std::uint32_t>()->value_name("<image_number>")->default_value(8),
+            "Number of images that will be used for traning.")
+        ("image_offset", bpo::value<std::uint32_t>()->value_name("<image_offset>")->default_value(0),
+            "How many images should be skipped in mnist data on execution.")
         ("version", "Show version of the application.")
         ("help", "Show help message and available command-line options.");
 
@@ -518,6 +522,8 @@ int main(int argc, char* argv[])
         ep.calibration = parsed_args["use_calibration"].as<bool>();
         ep.sequence_length = parsed_args["sequence_length"].as<std::uint32_t>();
         ep.temperature = parsed_args["temperature"].as<float>();
+        ep.image_number = parsed_args["image_number"].as<std::uint32_t>();
+        ep.image_offset = parsed_args["image_offset"].as<std::uint32_t>();
 
         if (ep.rnn_type_of_topology) //we care about temperature for some rnn topologies.
         {
@@ -556,6 +562,7 @@ int main(int argc, char* argv[])
             ep.topology_name == "gender" ||
             ep.topology_name == "squeezenet" ||
             ep.topology_name == "lenet" ||
+            ep.topology_name == "lenet_train" ||
             ep.topology_name == "resnet50" ||
             ep.topology_name == "resnet50-i8" ||
             ep.topology_name == "microbench_conv" ||

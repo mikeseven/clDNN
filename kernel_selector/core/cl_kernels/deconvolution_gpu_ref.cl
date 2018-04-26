@@ -69,15 +69,23 @@ KERNEL(deconvolution_gpu_yxfb_ref)(
                     uint fixed_input_offset_x = (uint)input_offset_x / STRIDE_SIZE_X;
                     uint fixed_input_offset_y = (uint)input_offset_y / STRIDE_SIZE_Y;
                     uint input_idx = input_offset + (uint)fixed_input_offset_x*INPUT0_X_PITCH + (uint)fixed_input_offset_y*INPUT0_Y_PITCH;
-
+#if GRADIENT
+                    uint filter_idx = ofm_offset*FILTER_IFM_PITCH + (FILTER_SIZE_Y - i - 1)*FILTER_Y_PITCH + (FILTER_SIZE_X - j - 1)*FILTER_X_PITCH;
+                    for (uint h = 0; h < FILTER_OFM_NUM; h++)
+                    {
+                        result = fma(input[input_idx], filter[filter_idx], result);
+                        filter_idx += FILTER_OFM_PITCH;
+                        input_idx += INPUT0_FEATURE_PITCH;
+                    }
+#else
                     uint filter_idx = ofm_offset*FILTER_OFM_PITCH + (FILTER_SIZE_Y - i - 1)*FILTER_Y_PITCH + (FILTER_SIZE_X - j - 1)*FILTER_X_PITCH;
-
                     for (uint h = 0; h < FILTER_IFM_NUM; h++)
                     {
                         result = fma(input[input_idx], filter[filter_idx], result);
                         filter_idx += FILTER_IFM_PITCH;
                         input_idx += INPUT0_FEATURE_PITCH;
                     }
+#endif
                 }
             }
         }

@@ -174,6 +174,10 @@ struct execution_params {
     float       temperature;
     std::string vocabulary_file;
     uint32_t    sequence_length;
+
+    //training
+    uint32_t image_number;
+    uint32_t image_offset;
 };
 
 struct memory_filler
@@ -183,6 +187,7 @@ struct memory_filler
         zero = 0,
         one,
         zero_to_nine,
+        xavier,
     } filler_type;
 
     template<typename T>
@@ -206,7 +211,7 @@ template <typename MemElemTy = float>
 void load_images_from_file_list(const std::vector<std::string>& images_list, cldnn::memory& memory); 
 
 template <typename MemElemTy = float>
-void load_data_from_file_list_lenet(const std::vector<std::string>& images_list, cldnn::memory& memory);
+void load_data_from_file_list_lenet(const std::vector<std::string>& images_list, cldnn::memory& memory, const uint32_t images_offset, const uint32_t images_number, const bool train = false, cldnn::memory& memory_labels = nullptr);
 
 /// function moved from alexnet.cpp, they will be probably used by each topology
 void print_profiling_table(std::ostream& os, const std::vector<cldnn::instrumentation::profiling_info>& profiling_info);

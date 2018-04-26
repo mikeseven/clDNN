@@ -36,6 +36,7 @@ namespace file
         std::string                  name;
     };
 
+    cldnn::mutable_data create_mutable(arguments arg);
     /// @brief Reads .nnd file pointed by passed arguments into newly created clDNN memory object.
     ///
     /// @param arg            Arguments describing file location and engine on which returned 
