@@ -153,17 +153,21 @@ reorder_inst::typed_primitive_inst(network_impl& network, reorder_node const& no
     : parent(network, node, !node.can_be_optimized())
 {
     if (node.can_be_optimized())
+    {
+        build_deps();
         reuse_input();
+    }
 
-    auto& input_mem = input_memory();
-    auto& output_mem = output_memory();
 
-    CLDNN_ERROR_LESS_THAN(node.id(), "Input dimension size", input_mem.get_layout().size.raw.size(), "ouput dimension size", output_mem.get_layout().size.raw.size(), "Input dimension < output dimension. Reorder primitive woks only with same dimension sizes (reorder) or when input > output (flatten).");
+    auto input_layout = node.input().get_output_layout();
+    auto output_layout = node.get_output_layout();
+
+    CLDNN_ERROR_LESS_THAN(node.id(), "Input dimension size", input_layout.size.raw.size(), "ouput dimension size", output_layout.size.raw.size(), "Input dimension < output dimension. Reorder primitive woks only with same dimension sizes (reorder) or when input > output (flatten).");
     
     if (!argument.subtract_per_feature.empty())
     {
-        CLDNN_ERROR_GREATER_THAN(node.id(), "Input feature dimension size", input_mem.get_layout().size.feature.size(), "value", 1, "Subtracting values work only for formats that have feature dimension == 1");
-        CLDNN_ERROR_NOT_EQUAL(node.id(), "Input feature size[0]", static_cast<size_t>(input_mem.get_layout().size.feature[0]), "argument subtract per feature size", argument.subtract_per_feature.size(), "Number of features/channels in input does not match the number of features/channels in values to subtract");
+        CLDNN_ERROR_GREATER_THAN(node.id(), "Input feature dimension size", input_layout.size.feature.size(), "value", 1, "Subtracting values work only for formats that have feature dimension == 1");
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "Input feature size[0]", static_cast<size_t>(input_layout.size.feature[0]), "argument subtract per feature size", argument.subtract_per_feature.size(), "Number of features/channels in input does not match the number of features/channels in values to subtract");
     }
 }
 

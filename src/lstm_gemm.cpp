@@ -71,7 +71,7 @@ std::string lstm_gemm_inst::to_string(lstm_gemm_node const& node)
 lstm_gemm_inst::typed_primitive_inst(network_impl& network, lstm_gemm_node const& node)
     :parent(network, node)
 {
-    auto input_size = input_memory().get_layout();
+    auto input_size = node.input().get_output_layout();
     CLDNN_ERROR_NOT_PROPER_FORMAT(node.id(), "input format", input_size.format.value, "expected format", format::bfyx);
 }
 }

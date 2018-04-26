@@ -37,8 +37,8 @@ protected:
         bool res = parent::validate(instance);
 
         // Check whether all memory elements use the same unit type (FP16 or FP32).
-        CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory().get_layout().data_type, "output memory", instance.output_memory().get_layout().data_type, "");
-        CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory().get_layout().data_type, "filter memory", instance.weights_memory(0).get_layout().data_type, "");
+        CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.node.input().get_output_layout().data_type, "output memory", instance.node.get_output_layout().data_type, "");
+        CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.node.input().get_output_layout().data_type, "filter memory", instance.weights_memory(0).get_layout().data_type, "");
 
         return res;
     }

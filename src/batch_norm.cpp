@@ -37,7 +37,7 @@ std::string batch_norm_inst::to_string(batch_norm_node const& node)
     auto desc      = node.get_primitive();
     auto node_info = node.desc_to_json();
     auto& mean     = node.mean();
-    auto& variance = node.variance();
+    bool variance_term = node.variance_term();
     auto& inv_var  = node.inv_variance();
 
     std::stringstream primitive_description;
@@ -46,7 +46,10 @@ std::string batch_norm_inst::to_string(batch_norm_node const& node)
     if (node.use_global_stats())
     {
         batch_norm_info.add("mean_id", mean.id());
-        batch_norm_info.add("variance_id", variance.id());
+        if (variance_term)
+        {
+            batch_norm_info.add("variance_id", node.variance().id());
+        }
     }
     if (node.forwad_pass())
     {
@@ -65,8 +68,8 @@ batch_norm_inst::typed_primitive_inst(network_impl& network, batch_norm_node con
 {
     if (use_global_stats())
     {
-        auto mean_format = mean_memory().get_layout().format;
-        auto variance_format = variance_memory().get_layout().format;
+        auto mean_format = node.mean().get_output_layout().format;
+        auto variance_format = node.variance().get_output_layout().format;
 
         CLDNN_ERROR_NOT_PROPER_FORMAT(node.id(), "Mean format", mean_format.value, "supported mean formats", format::yxfb, format::bfyx);
         CLDNN_ERROR_NOT_PROPER_FORMAT(node.id(), "Variance format", variance_format.value, "supported variance formats", format::yxfb, format::bfyx);

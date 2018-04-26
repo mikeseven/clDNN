@@ -238,6 +238,26 @@ namespace cldnn
             return out;
         };
 
+        const auto dump_mem_info = [](program_node* ptr)
+        {
+            std::string out = "size_info: ";
+            auto out_layout = ptr->get_output_layout();
+            auto tensor_str = out_layout.size.to_string();
+            auto padding = out_layout.data_padding;
+            out += tensor_str;
+            if (!padding)
+            {
+                out += " (nonpadded)";
+            }
+            else
+            {
+                out += "\nl: " + padding.lower_size().to_string()
+                    + "\nu: " + padding.upper_size().to_string();
+            }
+            
+            return out;
+        };
+
         graph << "digraph cldnn_program {\n";
         for (auto& node : program.get_nodes())
         {
@@ -255,7 +275,8 @@ namespace cldnn
                 << "\\nprocessing number: " << node->get_processing_num() << "\\n color:" << (node->is_reusing_memory() ? std::to_string(node->get_reused_memory_color()) : "none")
                 << (node->can_be_optimized() ? "\\n optimized out" : "");
             if (node_type != "struct cldnn::data" && node_type != "struct cldnn::input_layout" && !node->can_be_optimized())
-                graph << "\\n Selected kernel: " << (node->get_selected_impl() == nullptr ? "none" : node->get_selected_impl().get()->get_kernel_name());
+                graph << "\\n Selected kernel: " << (node->get_selected_impl() == nullptr ? "none" : node->get_selected_impl().get()->get_kernel_name()
+                    + "\n" + dump_mem_info(node.get()));
             graph << "\"";
             #ifdef __clang__
                 #pragma clang diagnostic pop

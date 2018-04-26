@@ -1364,6 +1364,16 @@ void program_impl::trim_to_outputs()
 
 void add_memory_dependency(program_node* node, program_node* dep)
 {
+    if (node->can_be_optimized())
+    {
+        return;
+    }
+
+    if (node->id() == dep->id())
+    {
+        return;
+    }
+
     if (!dep->can_be_optimized())
     {
         node->add_memory_dependency(dep->id());
@@ -1371,7 +1381,10 @@ void add_memory_dependency(program_node* node, program_node* dep)
     else
     {
         for (auto subdep : dep->get_dependencies())
+        {
             add_memory_dependency(node, subdep);
+            add_memory_dependency(subdep, node);
+        }        
     }
 }
 
@@ -2425,7 +2438,6 @@ void program_impl::propagate_constants()
             curr_node.users.end()
         );
         replace(curr_node, new_node, false, false);
-
     }
 }
 
@@ -3106,10 +3118,6 @@ void program_impl::dump_memory_pool() const
     {
         return;
     }
-    if (path.back() != '/' && path.back() != '\\')
-    {
-        path += "/";
-    }
 
     path += "cldnn_memory_pool.log";
     auto dep = get_memory_dependencies_string();
@@ -3124,10 +3132,6 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
     if (path.empty())
     {
         return;
-    }
-    if (path.back() != '/' && path.back() != '\\')
-    {
-        path += "/";
     }
 
     std::ofstream graph(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".graph");

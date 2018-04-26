@@ -62,7 +62,7 @@ namespace cldnn
 	embed_inst::typed_primitive_inst(network_impl& network, embed_node const& node)
 		:parent(network, node)
 	{
-		auto input_size = input_memory().get_layout();
+        auto input_size = node.input().get_output_layout();
 		auto output_size = output_memory().get_layout();
 		CLDNN_ERROR_NOT_PROPER_FORMAT(node.id(), "input format", input_size.format.value, "expected format", format::yxfb, format::bfyx);
 		CLDNN_ERROR_NOT_EQUAL(node.id(), "Input size", input_size.size.raw.size(), "output size", output_size.size.raw.size(), "");

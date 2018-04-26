@@ -101,11 +101,10 @@ std::string fully_connected_inst::to_string(fully_connected_node const& node)
 fully_connected_inst::typed_primitive_inst(network_impl& network, fully_connected_node const& node)
     :parent(network, node)
 {
-    auto input_size = input_memory().get_layout();
-    auto output_size = output_memory().get_layout();
+    auto input_layout = node.input().get_output_layout();
+    auto output_layout = node.get_output_layout();
 
-    CLDNN_ERROR_NOT_PROPER_FORMAT(node.id(), "input format", input_size.format.value, "expected format", format::yxfb, format::bfyx, format::byxf_af32);
-    CLDNN_ERROR_NOT_EQUAL(node.id(), "Input size", input_size.size.raw.size(), "output size", output_size.size.raw.size(), "");
-
+    CLDNN_ERROR_NOT_PROPER_FORMAT(node.id(), "input format", input_layout.format.value, "expected format", format::yxfb, format::bfyx, format::byxf_af32);
+    CLDNN_ERROR_NOT_EQUAL(node.id(), "Input size", input_layout.size.raw.size(), "output size", output_layout.size.raw.size(), "");
 }
 }

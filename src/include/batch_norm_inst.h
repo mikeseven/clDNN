@@ -34,8 +34,10 @@ public:
     decltype(auto) mean() const { return get_dependency(1); }
     decltype(auto) variance() const { return get_dependency(2); }
     decltype(auto) inv_variance() const { return get_dependency(1); };
+    bool variance_term() const { return !get_primitive()->variance.empty(); }
     bool use_global_stats() const { return !get_primitive()->mean.empty() && !get_primitive()->variance.empty(); };
     bool forwad_pass() const { return !get_primitive()->inv_variance.empty(); };
+
 };
 
 using batch_norm_node = typed_program_node<batch_norm>;

@@ -18,6 +18,8 @@
 #pragma once
 
 #include "api/CPP/primitive.hpp"
+#include "api/CPP/concatenation.hpp"
+#include <api/CPP/scale.hpp>
 
 #include "event_impl.h"
 #include "program_impl.h"
@@ -25,6 +27,7 @@
 #include "meta_utils.h"
 #include "kernel_selector_helper.h"
 #include "network_impl.h"
+#include "program_node.h"
 
 #include <memory>
 #include <vector>
@@ -95,6 +98,8 @@ public:
     const auto desc() const { return _node.get_primitive(); }
     network_impl& get_network() const { return _network; }
     uint32_t get_network_id() const { return _network.get_id(); }
+    auto get_executed_event() const { return _event; }
+    void set_event(event_impl::ptr ev) { _event = ev; }
 
     //return pointer to const to prevent arbitrary 'execute' call -> use primitive_inst.execute() instead
     const auto get_impl() const { return _impl.get(); }
@@ -111,6 +116,15 @@ public:
     auto output_changed() const { return _output_changed; }
     void reset_output_change() { _output_changed = false; }
 
+    void build_deps()
+    {
+        if (_deps.empty() && !_node.get_dependencies().empty())
+        {
+             _deps = _network.get_primitives(_node.get_dependencies());
+             _exec_deps = build_exec_deps(_deps);
+        }
+    }
+
 protected:
     primitive_inst(network_impl& network, program_node const& node, bool allocate_memory);
 
@@ -118,6 +132,7 @@ protected:
     program_node const& _node;
 
     std::shared_ptr<primitive_impl> _impl;
+    event_impl::ptr _event;
 
     //this is a set of dependencies in terms of memory, if execution of this primitive requires data from another one, it should be added to this set
     std::vector<std::shared_ptr<primitive_inst>> _deps;
@@ -186,7 +201,7 @@ namespace details
         const PType& argument;
 
         api_typed_primitive_inst_base(network_impl& network, typed_node const& node)
-            : api_typed_primitive_inst_base(network, node, true)
+            : api_typed_primitive_inst_base(network, node, do_allocate_memory(node))
         {}
 
     protected:
@@ -200,6 +215,18 @@ namespace details
             : api_typed_primitive_inst_base(network, node, false)
         {
             _output = &buffer;
+        }
+
+    private:
+        bool do_allocate_memory(typed_node const& typ_node)
+        {
+            if (typ_node.template is_predecessor_of_type<concatenation>() &&
+                typ_node.get_users().size() == 1 &&
+                typ_node.get_users().front()->can_be_optimized()) //check if the only user is concat
+            {
+                return false;
+            }
+            return true;
         }
     };
 
