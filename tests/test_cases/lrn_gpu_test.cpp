@@ -29,6 +29,7 @@
 #include "float16.h"
 
 
+
 TEST(local_response_normalization_gpu_yxfb_output_padding, lrn_test) {
 
     using namespace cldnn;
@@ -301,6 +302,81 @@ TEST(local_response_normalization_gpu, lrn_input_padding_bfyx_within_channel_tes
 
         for (size_t i = 0; i < output_vec.size(); ++i) {
             EXPECT_NEAR(output_vec[i], output_ptr[i], 1e-04F);
+        }
+    }
+    catch (const std::exception& E) {
+        std::cout << E.what() << std::endl;
+    }
+
+}
+
+TEST(local_response_normalization_gpu, lrn_input_padding_byxf_within_channel_test) {
+
+    using namespace cldnn;
+    using namespace tests;
+
+    // input-output parameters:
+    const int32_t px = 3, py = 3, pb = 1, pf = 16, psize = 3;
+
+    // lrn parameters:
+    const float pk = 1.0f, palpha = 1.0f, pbeta = 0.75f;
+    engine engine;
+    auto input = memory::allocate(engine, { data_types::f32,format::byxf,{ pb, pf, px, py } });
+    set_values(input, {
+        -1.0f, -2.0f, -1.3f, -2.2f, -1.1f, -3.5f, -2.0f, -2.0f,
+        -0.5f, -1.7f, -5.5f, -1.7f, -0.5f, -1.7f, -0.5f, -6.2f,
+        0.2f, -1.2f,  0.0f, -1.2f, 0.0f, -1.2f,  0.0f, -1.2f,
+        0.7f, -0.7f, 0.5f, -0.7f, 0.5f, -0.7f, 0.5f, -0.7f,
+        2.3f, -5.2f, 1.4f,  2.2f, 1.9f, -6.2f, 1.0f, -0.2f,
+        1.4f,  0.3f, 1.5f,  0.3f, 1.5f,  0.3f, 1.5f,  0.3f,
+        2.0f,  0.8f, 2.0f,  2.8f, 2.0f,  1.8f, 2.0f,  3.4f,
+        2.0f,  0.8f, 3.4f,  0.8f, 2.0f,  0.8f, 5.0f,  6.8f,
+        -1.0f, -2.0f, -1.3f, -2.2f, -1.1f, -3.5f, -2.0f, -2.0f,
+
+        -1.0f, -2.0f, -1.3f, -2.2f, -1.1f, -3.5f, -2.0f, -2.0f,
+        -0.5f, -1.7f, -5.5f, -1.7f, -0.5f, -1.7f, -0.5f, -6.2f,
+        0.2f, -1.2f,  0.0f, -1.2f, 0.0f, -1.2f,  0.0f, -1.2f,
+        0.7f, -0.7f, 0.5f, -0.7f, 0.5f, -0.7f, 0.5f, -0.7f,
+        2.3f, -5.2f, 1.4f,  2.2f, 1.9f, -6.2f, 1.0f, -0.2f,
+        1.4f,  0.3f, 1.5f,  0.3f, 1.5f,  0.3f, 1.5f,  0.3f,
+        2.0f,  0.8f, 2.0f,  2.8f, 2.0f,  1.8f, 2.0f,  3.4f,
+        2.0f,  0.8f, 3.4f,  0.8f, 2.0f,  0.8f, 5.0f,  6.8f,
+        -1.0f, -2.0f, -1.3f, -2.2f, -1.1f, -3.5f, -2.0f, -2.0f
+    });
+    VF<float> output_vec = {
+        -0.680371f, -1.13836f, -0.82964f, -0.94016f, -0.734533f, -1.18406f, -1.05937f, -0.81072f, -0.345365f, -1.05417f, -1.46008f, -1.01676f, -0.345894f, -0.783749f, -0.168096f, -1.03297f, 0.107554f, -0.336628f, 0.0f, -0.427025f, 0.0f, -0.234178f, 0.0f, -0.261933f, 0.439505f, -0.406932f, 0.128641f, -0.393638f, 0.310873f, -0.308801f, 0.161085f, -0.115281f, 1.524f, -1.57169f, 0.433977f, 1.0881f, 1.35899f, -1.42343f, 0.708469f, -0.052966f, 1.09493f, 0.204315f, 1.12613f, 0.196144f, 1.15788f, 0.147132f, 0.997756f, 0.204315f, 1.21512f, 0.44523f, 1.14739f, 1.17828f, 1.19319f, 0.602097f, 0.973668f, 1.35857f, 0.957517f, 0.240459f, 0.832965f, 0.319978f, 1.01202f, 0.177607f, 1.53386f, 1.0419f, -0.438326f, -0.550794f, -0.303343f, -0.76339f, -0.499588f, -0.675264f, -0.554775f, -0.295352f, -0.438326f, -0.550794f, -0.303343f, -0.76339f, -0.499588f, -0.675264f, -0.554775f, -0.295352f, -0.259847f, -0.507573f, -1.38293f, -0.821335f, -0.271462f, -0.386991f, -0.158897f, -1.02453f, 0.121512f, -0.667845f, 0.0f, -0.504978f, 0.0f, -0.401398f, 0.0f, -0.479496f, 0.445303f, -0.496713f, 0.307748f, -0.354925f, 0.314354f, -0.324649f, 0.279979f, -0.323971f, 1.12728f, -1.65793f, 0.594303f, 0.960854f, 0.9779f, -1.43098f, 0.309443f, -0.0425601f, 0.749605f, 0.180262f, 0.366129f, 0.136212f, 0.795664f, 0.126046f, 0.450483f, 0.0459507f, 0.948648f, 0.23247f, 0.812753f, 1.04626f, 0.988534f, 0.358912f, 0.578947f, 0.684467f, 1.2864f, 0.505008f, 0.877754f, 0.486675f, 1.25742f, 0.373263f, 1.61831f, 1.13641f, -0.680371f, -1.13836f, -0.82964f, -0.94016f, -0.734533f, -1.18406f, -1.05937f, -0.81072f
+    };
+
+    topology topology(
+        input_layout("input", input.get_layout()),
+        reorder("reorder", "input", input.get_layout().with_padding({ { 0,0,3,3 }, 0 })),
+        lrn("lrn", "reorder", psize, pk, palpha, pbeta, cldnn_lrn_norm_region_within_channel, { { 0, 0, 0, 0 }, 0 })
+    );
+
+    network network(engine, topology);
+    network.set_input_data("input", input);
+
+
+    // ------------------------------------------------------------------------------------------------
+    // test run
+    auto outputs = network.execute();
+    auto output_memory = outputs.at("lrn").get_memory();
+    auto output_layout = output_memory.get_layout();
+    auto output_ptr = output_memory.pointer<float>();
+
+    try {
+        int y_size = output_layout.size.sizes()[3];
+        int x_size = output_layout.size.sizes()[2];
+        int f_size = output_layout.size.sizes()[1];
+        int b_size = output_layout.size.sizes()[0];
+        EXPECT_EQ(y_size, py);
+        EXPECT_EQ(x_size, px);
+        EXPECT_EQ(f_size, pf);
+        EXPECT_EQ(b_size, pb);
+
+        for (size_t i = 0; i < output_vec.size(); ++i) {
+            EXPECT_NEAR(output_vec[i], output_ptr[i], 1e-04F);
+            //std::cout << output_ptr[i] << "f, ";
         }
     }
     catch (const std::exception& E) {
