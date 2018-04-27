@@ -626,7 +626,10 @@
                 "conv4-2": "0x37612B93F787C7C7E3E04D2BE9A52876", 
                 "prob1": "0xCDF825DFA446B6D47C7DE1E49DF95EA2"
             }, 
-            "128": {}
+            "128": {
+                "conv4-2": "x", 
+                "prob1": "x"
+            }
         }, 
         "mxnet_resnet-152": {
             "1": "0x060506665A0E885083EBDC20ECCFD673", 
