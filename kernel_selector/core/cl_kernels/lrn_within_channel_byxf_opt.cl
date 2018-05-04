@@ -58,7 +58,7 @@ KERNEL(lrn_within_channel_byxf_opt)(__global const INPUT0_TYPE* input, __global 
 
             VECTOR_TYPE val = zero ? UNIT_VAL_ZERO : vload8(input_offset+FEATURE_BLOCK_NUM*i, input);
             
-            sum += val*val;
+            sum = mad(val,val,sum);
 #ifdef DYNAMIC_KERNEL_DIVIDER
             num_elementes += zero ? 0 : 1;
 #endif
@@ -72,7 +72,7 @@ KERNEL(lrn_within_channel_byxf_opt)(__global const INPUT0_TYPE* input, __global 
     const UNIT_TYPE num_elementes_div = NUM_ELEMENTS_DIV;
 #endif
     
-    const VECTOR_TYPE base = TO_UNIT_TYPE(K) + (ACCUMULATOR_TYPE)ALPHA*sum * num_elementes_div;
+    const VECTOR_TYPE base = mad((ACCUMULATOR_TYPE)ALPHA*num_elementes_div, sum, TO_UNIT_TYPE(K));
     const VECTOR_TYPE normalization_factor = native_powr(base, TO_UNIT_TYPE(-BETA));
     const VECTOR_TYPE val = vload8(input_index/FEATURE_PER_ITEM, input);
     const VECTOR_TYPE normres = val*normalization_factor;
