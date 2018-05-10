@@ -293,12 +293,12 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_format, expected_tensor);
 }
 
-layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, detection_output_node const& node, layout const& /*output_or_weights_layout*/)
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, detection_output_node const& node, layout const& output_or_weights_layout)
 {
     auto prim = node.get_primitive();
     auto expected_tensor = current_layout.size;
     auto expected_data_type = data_types::f32;
-    auto expected_format = current_layout.format;
+    auto expected_format = output_or_weights_layout.format;
 
     if (type != data_type::input)
         CLDNN_ERROR_MESSAGE(prim->id, "detection_output only supports optimization of its output (no weights/biases)");
