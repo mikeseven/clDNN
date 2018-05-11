@@ -33,6 +33,13 @@ namespace KernelSelector
             size_t leftovers;
             size_t dataSetsCount;
             size_t dataSetSize;
+
+            DispatchData() 
+                : itemsNum(0)
+                , leftovers(0)
+                , dataSetsCount(0)
+                , dataSetSize(0)
+            {}
         };
 
     protected:
