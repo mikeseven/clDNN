@@ -58,14 +58,18 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true, HelpMessage = 'Provide path to .xml file with IE model', ValueFromPipeline = $true)]
+    [Parameter(Position = 0, Mandatory = $true, HelpMessage = 'Provide path to .xml file with IE model', ValueFromPipeline = $true)]
     [Alias('ModelName', 'Name')]
     [string] $ModelPath,
-    [Parameter(ValueFromPipelineByPropertyName = $true)]
-    [string[]] $Filter,
-    [Parameter(ValueFromPipelineByPropertyName = $true)]
+    [Parameter(Position = 1, Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
     [Alias('OutDir')]
     [string] $OutputDir,
+    [Parameter(Position = 2, Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+    [Alias('OutFormat', 'OFormat')]
+    [ValidateSet('Text', 'NND')]
+    [string] $OutputFormat = 'Text',
+    [Parameter(ValueFromPipelineByPropertyName = $true)]
+    [string[]] $Filter,
     [Parameter(ValueFromPipelineByPropertyName = $true)]
     [switch] $WeightsOnly,
     [Parameter(ValueFromPipelineByPropertyName = $true)]
@@ -164,6 +168,49 @@ begin
     }
 
     $_normPattern = '.*(?:batchnorm|scale|shift|norm|relu).*';
+
+    function Write-NndHeader([System.IO.BinaryWriter] $NndFileWriter, [PSObject] $BlobMetadata, [int] $NndVersion = 3)
+    {
+        if ($NndVersion -ne 3) { Write-Error ('Unsupported NND version ({0}).' -f $NndVersion); return; }
+        switch ($BlobMetadata.DataType)
+        {
+            'FP32'  { $_nndDataType = 'F'; $_elemSize = 4; }
+            'FP16'  { $_nndDataType = 'H'; $_elemSize = 2; }
+            'I16'   { $_nndDataType = 'S'; $_elemSize = 2; } # ?
+            'U16'   { $_nndDataType = 's'; $_elemSize = 2; } # ?
+            'I8'    { $_nndDataType = 'C'; $_elemSize = 1; } # ?
+            'U8'    { $_nndDataType = 'c'; $_elemSize = 1; } # ?
+            default { Write-Error ('Unknown data format ({0}).' -f $_); return; }
+        }
+        if ($BlobMetadata.Type -match $_normPattern)
+        {
+            $_nndDims   = @($BlobMetadata.OutputFeaturesCount);
+            $_nndLayout = 2; # BFYX aka OIYX aka NCHW
+        }
+        elseif ($BlobMetadata.Kind -ceq 'biases')
+        {
+            $_nndDims = @($BlobMetadata.OutputFeaturesCount);
+            $_nndLayout = 2; # BFYX aka OIYX aka NCHW
+        }
+        else
+        {
+            $_nndDims = @($BlobMetadata.OutputFeaturesCount, $BlobMetadata.InputFeaturesCount, $BlobMetadata.Height, $BlobMetadata.Width);
+            $_nndLayout = 2; # BFYX aka OIYX aka NCHW
+        }
+
+        $NndFileWriter.Seek(0, [System.IO.SeekOrigin]::Begin) | Out-Null;
+
+        $NndFileWriter.Write([System.Text.Encoding]::ASCII.GetBytes('nnd'));         # off: 0 (MAGIC)
+        $NndFileWriter.Write([System.Text.Encoding]::ASCII.GetBytes($_nndDataType)); # off: 3 (DATA TYPE)
+        $NndFileWriter.Write([byte] $NndVersion);                                    # off: 4 (VERSION)
+        $NndFileWriter.Write([byte] $_nndDims.Length);                               # off: 5 (DIM. COUNT)
+        $NndFileWriter.Write([byte] $_elemSize);                                     # off: 6 (SIZE OF DATA ELEMENT)
+
+        $NndFileWriter.Write([byte] $_nndLayout);                                    # off: 7 (LAYOUT)
+
+        [Array]::Reverse($_nndDims);
+        $_nndDims | % { $NndFileWriter.Write([System.UInt64] $_); }                  # off: 8 (SIZES)
+    }
 }
 process
 {
@@ -245,6 +292,12 @@ process
     else
     {
         $_filterSB = { $_xpMatch = $_; @($Filter | ? { $_xpMatch.ParentNode.name -like $_ }).Count -gt 0 }
+    }
+
+    switch ($OutputFormat)
+    {
+        'Text' { $_weightFNameTmpl = '{0}__weights{1}.txt'; $_biasFNameTmpl = '{0}__biases{1}.txt' }
+        'NND'  { $_weightFNameTmpl = '{0}__weights{2}.nnd'; $_biasFNameTmpl = '{0}__biases{2}.nnd' }
     }
 
     Write-Verbose ('Filtering nodes if necessary: "{0}".' -f $_modelTopologyPath);
@@ -330,8 +383,17 @@ process
             }
         }
 
+        if ($_dumpNameCounters[$_primName] -gt 0)
+        {
+            $_optNameCounter = $_dumpNameCounters[$_primName];
+        }
+        else
+        {
+            $_optNameCounter = '';
+        }
+
         return New-Object PSObject -Property @{
-               DumpFileName = ('{0}__weights{1}.txt' -f $_primName, $_dumpNameCounters[$_primName]);
+               DumpFileName = ($_weightFNameTmpl -f $_primName, $_dumpNameCounters[$_primName], $_optNameCounter);
                DataOffset   = [long] $_.offset;
                DataSize     = [long] $_.size;
                InputFeaturesCount  = $_inFeatCount;
@@ -391,8 +453,17 @@ process
             }
         }
 
+        if ($_dumpNameCounters[$_primName] -gt 0)
+        {
+            $_optNameCounter = $_dumpNameCounters[$_primName];
+        }
+        else
+        {
+            $_optNameCounter = '';
+        }
+
         return New-Object PSObject -Property @{
-               DumpFileName = ('{0}__biases{1}.txt' -f $_primName, $_dumpNameCounters[$_primName]);
+               DumpFileName = ($_biasFNameTmpl -f $_primName, $_dumpNameCounters[$_primName], $_optNameCounter);
                DataOffset   = [long] $_.offset;
                DataSize     = [long] $_.size;
                InputFeaturesCount  = $_inFeatCount;
