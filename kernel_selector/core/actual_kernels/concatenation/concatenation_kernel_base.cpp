@@ -31,7 +31,7 @@ namespace KernelSelector
         default: break;
         }
 
-        return Tensor::Channelndex(params.output.GetLayout(), name);
+        return DataTensor::Channelndex(params.output.GetLayout(), name);
     }
 
     bool ConcatenationKernelBase::Validate(const Params& p, const OptionalParams&) const

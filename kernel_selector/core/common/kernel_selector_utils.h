@@ -228,9 +228,9 @@ namespace KernelSelector { namespace
 
     inline JitConstants GetTensorFriendlyWorkGroupsJit(const DataTensor& t)
     {
-        auto b = Tensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::BATCH);
-        auto f = Tensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::FEATURE);
-        auto x = Tensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::X);
+        auto b = DataTensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::BATCH);
+        auto f = DataTensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::FEATURE);
+        auto x = DataTensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::X);
 
         if (x == -1)
         {
@@ -254,7 +254,7 @@ namespace KernelSelector { namespace
     inline std::vector<size_t> GetTensorFriendlyWorkGroups(const DataTensor& t)
     {
         std::vector<size_t> sizes;
-        auto y = Tensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::Y);
+        auto y = DataTensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::Y);
         for (size_t i = 0; i < t.GetDims().size(); i++)
         {
             const auto& o = t.GetDims()[i];
