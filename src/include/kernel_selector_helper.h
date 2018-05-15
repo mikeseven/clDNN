@@ -343,7 +343,7 @@ inline kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_
     const auto& lower_pad = pad.lower_size().sizes(l.format);
     const auto& upper_pad = pad.upper_size().sizes(l.format);
     const auto ks_layout = to_data_layout(l.format);
-    kernel_selector::n_dims vec(KernelSelector::Tensor::ChannelsCount(ks_layout));
+    kernel_selector::n_dims vec(KernelSelector::DataTensor::ChannelsCount(ks_layout));
 
     size_t pitch = 1;
     size_t offset = 0;
@@ -365,7 +365,7 @@ inline kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_
         pitch *= (d + lp + up);
     }
 
-    const int feature_index = KernelSelector::Tensor::Channelndex(ks_layout, KernelSelector::Tensor::DataChannelName::FEATURE);
+    const int feature_index = KernelSelector::DataTensor::Channelndex(ks_layout, KernelSelector::Tensor::DataChannelName::FEATURE);
     vec[feature_index].v /= split;
 
     return kernel_selector::data_tensor(
@@ -382,7 +382,7 @@ inline kernel_selector::weights_tensor convert_weights_tensor(const layout& l)
     const auto base_layout = kernel_selector::weights_layout::oiyx;
     const auto ks_type = to_weights_type(l.data_type);
     const auto ks_layout = to_weights_layout(l.format);
-    std::vector<size_t> vec(KernelSelector::Tensor::ChannelsCount(base_layout));
+    std::vector<size_t> vec(KernelSelector::WeightsTensor::ChannelsCount(base_layout));
 
     for (size_t i = 0; i < vec.size(); i++)
     {

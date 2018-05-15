@@ -114,8 +114,8 @@ namespace KernelSelector
             if (t.PitchesDifferFromLogicalDims())
             {
                 auto feature = t.Feature();
-                auto featureIndex = Tensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::FEATURE);
-                if (featureIndex >= 0 && featureIndex+1 < (int)Tensor::ChannelsCount(t.GetLayout()))
+                auto featureIndex = DataTensor::Channelndex(t.GetLayout(), Tensor::DataChannelName::FEATURE);
+                if (featureIndex >= 0 && featureIndex+1 < (int)DataTensor::ChannelsCount(t.GetLayout()))
                 {
                     if (feature.v*split <= t.GetDims()[featureIndex+1].pitch)
                     {
