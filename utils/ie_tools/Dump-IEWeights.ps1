@@ -32,15 +32,20 @@
 .PARAMETER ModelPath
     Path to file name of .xml file of the model to dump.
 
+.PARAMETER OutputDir
+    Name of output directory to which weights/biases will be written.
+    
+    If not specified, current directory is used.
+
+.PARAMETER OutputFormat
+    Type of output format in which weights/biases will be written.
+
+    Allowed values: 'Text' (the default), 'NND'.
+
 .PARAMETER Filter
     Specify wildcards filter of primitive/layer names which should be dumped.
 
     If not specified, weights/biases of all primitve/layers are dumped.
-
-.PARAMETER OutputDir
-    Name of output directory to which weights will be written.
-    
-    If not specified, current directory is used.
 
 .PARAMETER WeightsOnly
     Dump only weights.
