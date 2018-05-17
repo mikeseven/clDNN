@@ -180,15 +180,15 @@ begin
     {
         if ($PrimitiveType -match $_normPattern)
         {
-            $_nndLayout = 2; # BFYX aka OIYX aka NCHW
+            $_nndLayout = 0; # BFYX aka OIYX aka NCHW
         }
         elseif ($DataKind -ceq 'biases')
         {
-            $_nndLayout = 2; # BFYX aka OIYX aka NCHW
+            $_nndLayout = 0; # BFYX aka OIYX aka NCHW
         }
         else
         {
-            $_nndLayout = 2; # BFYX aka OIYX aka NCHW
+            $_nndLayout = 8; # BFYX aka OIYX aka NCHW
         }
 
         return $_nndLayout;
@@ -343,10 +343,10 @@ process
         }
         'NND' {
             $_weightFNameTmpl = 'weights_format_num{3}\{0}_weights{2}.nnd';
-            $_biasFNameTmpl   = 'weights_format_num{3}\{0}_biases{2}.nnd';
+            $_biasFNameTmpl   = 'weights_format_num{3}\{0}_bias{2}.nnd';
 
             $_weightGrpFNameTmpl = 'weights_format_num{3}\{0}_g{4}_weights{2}.nnd';
-            $_biasGrpFNameTmpl   = 'weights_format_num{3}\{0}_g{4}_biases{2}.nnd';
+            $_biasGrpFNameTmpl   = 'weights_format_num{3}\{0}_g{4}_bias{2}.nnd';
         }
     }
 
