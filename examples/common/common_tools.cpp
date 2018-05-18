@@ -684,6 +684,8 @@ void run_topology(const execution_params &ep)
         primitives = build_gender(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "microbench")
         primitives = build_microbench(ep.weights_dir, engine, microbench_inputs, gpu_batch_size);
+    else if (ep.topology_name == "resnet")
+        primitives = build_resnet50(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "squeezenet")
     {
         if (ep.calibration)
