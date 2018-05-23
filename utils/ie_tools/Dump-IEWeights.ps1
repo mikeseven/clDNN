@@ -32,15 +32,20 @@
 .PARAMETER ModelPath
     Path to file name of .xml file of the model to dump.
 
+.PARAMETER OutputDir
+    Name of output directory to which weights/biases will be written.
+    
+    If not specified, current directory is used.
+
+.PARAMETER OutputFormat
+    Type of output format in which weights/biases will be written.
+
+    Allowed values: 'Text' (the default), 'NND'.
+
 .PARAMETER Filter
     Specify wildcards filter of primitive/layer names which should be dumped.
 
     If not specified, weights/biases of all primitve/layers are dumped.
-
-.PARAMETER OutputDir
-    Name of output directory to which weights will be written.
-    
-    If not specified, current directory is used.
 
 .PARAMETER WeightsOnly
     Dump only weights.
@@ -58,14 +63,18 @@
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory = $true, HelpMessage = 'Provide path to .xml file with IE model', ValueFromPipeline = $true)]
+    [Parameter(Position = 0, Mandatory = $true, HelpMessage = 'Provide path to .xml file with IE model', ValueFromPipeline = $true)]
     [Alias('ModelName', 'Name')]
     [string] $ModelPath,
-    [Parameter(ValueFromPipelineByPropertyName = $true)]
-    [string[]] $Filter,
-    [Parameter(ValueFromPipelineByPropertyName = $true)]
+    [Parameter(Position = 1, Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
     [Alias('OutDir')]
     [string] $OutputDir,
+    [Parameter(Position = 2, Mandatory = $false, ValueFromPipelineByPropertyName = $true)]
+    [Alias('OutFormat', 'OFormat')]
+    [ValidateSet('Text', 'NND')]
+    [string] $OutputFormat = 'Text',
+    [Parameter(ValueFromPipelineByPropertyName = $true)]
+    [string[]] $Filter,
     [Parameter(ValueFromPipelineByPropertyName = $true)]
     [switch] $WeightsOnly,
     [Parameter(ValueFromPipelineByPropertyName = $true)]
@@ -163,10 +172,79 @@ begin
         return Normalize-Size ($_portDims[-$Dim-1]) -AllowZero:$AllowZero.IsPresent;
     }
 
-    $_normPattern = '.*(?:batchnorm|scale|shift|norm|relu).*';
+
+    $_normPattern          = '.*(?:batchnorm|scale|shift|norm|relu).*';
+    $_groupPlaceholderMark = '|G|';
+
+    function Get-NndLayout([string] $PrimitiveType, [string] $DataKind)
+    {
+        if ($PrimitiveType -match $_normPattern)
+        {
+            $_nndLayout = 0; # BFYX aka OIYX aka NCHW
+        }
+        elseif ($DataKind -ceq 'biases')
+        {
+            $_nndLayout = 0; # BFYX aka OIYX aka NCHW
+        }
+        else
+        {
+            $_nndLayout = 8; # BFYX aka OIYX aka NCHW
+        }
+
+        return $_nndLayout;
+    }
+
+    function Write-NndHeader([System.IO.BinaryWriter] $NndFileWriter, [PSObject] $BlobMetadata, [int] $NndVersion = 3)
+    {
+        if ($NndVersion -ne 3) { Write-Error ('Unsupported NND version ({0}).' -f $NndVersion); return; }
+        switch ($BlobMetadata.DataType)
+        {
+            'FP32'  { $_nndDataType = 'F'; $_elemSize = 4; }
+            'FP16'  { $_nndDataType = 'H'; $_elemSize = 2; }
+            'I16'   { $_nndDataType = 'S'; $_elemSize = 2; } # ?
+            'U16'   { $_nndDataType = 's'; $_elemSize = 2; } # ?
+            'I8'    { $_nndDataType = 'C'; $_elemSize = 1; } # ?
+            'U8'    { $_nndDataType = 'c'; $_elemSize = 1; } # ?
+            default { Write-Error ('Unknown data format ({0}).' -f $_); return; }
+        }
+        $_nndLayout = Get-NndLayout $BlobMetadata.Type $BlobMetadata.Kind;
+
+        $_calcMod = [long] 0;
+        $_inputFeaturesCount  = [Math]::DivRem($BlobMetadata.InputFeaturesCount, $BlobMetadata.GroupCount, [ref] $_calcMod);
+        $_outputFeaturesCount = [Math]::DivRem($BlobMetadata.OutputFeaturesCount, $BlobMetadata.GroupCount, [ref] $_calcMod);
+
+        if ($BlobMetadata.Type -match $_normPattern)
+        {
+            $_nndDims   = @($_outputFeaturesCount);
+        }
+        elseif ($BlobMetadata.Kind -ceq 'biases')
+        {
+            $_nndDims = @($_outputFeaturesCount);
+        }
+        else
+        {
+            $_nndDims = @($_outputFeaturesCount, $_inputFeaturesCount, $BlobMetadata.Height, $BlobMetadata.Width);
+        }
+
+        $NndFileWriter.Seek(0, [System.IO.SeekOrigin]::Begin) | Out-Null;
+
+        $NndFileWriter.Write([System.Text.Encoding]::ASCII.GetBytes('nnd'));         # off: 0 (MAGIC)
+        $NndFileWriter.Write([System.Text.Encoding]::ASCII.GetBytes($_nndDataType)); # off: 3 (DATA TYPE)
+        $NndFileWriter.Write([byte] $NndVersion);                                    # off: 4 (VERSION)
+        $NndFileWriter.Write([byte] $_nndDims.Length);                               # off: 5 (DIM. COUNT)
+        $NndFileWriter.Write([byte] $_elemSize);                                     # off: 6 (SIZE OF DATA ELEMENT)
+
+        $NndFileWriter.Write([byte] $_nndLayout);                                    # off: 7 (LAYOUT)
+
+        [Array]::Reverse($_nndDims);
+        $_nndDims | % { $NndFileWriter.Write([System.UInt64] $_); }                  # off: 8 (SIZES)
+    }
 }
 process
 {
+    # -----------------------------------------------------------------------------------------------------------------
+    # VALIDATING INPUT AND PRE-PROCESSING OF PARAMETERS
+    # -----------------------------------------------------------------------------------------------------------------
     Write-Verbose ('Checking validity of the model path: "{0}".' -f $ModelPath);
     if (!(Test-Path -LiteralPath $ModelPath -PathType Leaf -IsValid))
     {
@@ -247,10 +325,38 @@ process
         $_filterSB = { $_xpMatch = $_; @($Filter | ? { $_xpMatch.ParentNode.name -like $_ }).Count -gt 0 }
     }
 
+    # Formatting placeholders (file names):
+    # 0 - primitive name
+    # 1 - non-optional counter of primitives with the same name (0-based)
+    # 2 - optional counter of primitives with the same name (empty for first instance of primitive name, 1-based for rest)
+    # 3 - number identifying NND layout or output layout of data.
+    # Formatting placeholders (group file names):
+    # 4 - group id (1-based)
+    switch ($OutputFormat)
+    {
+        'Text' {
+            $_weightFNameTmpl = '{0}__weights{1}.txt'; 
+            $_biasFNameTmpl   = '{0}__biases{1}.txt';
+
+            $_weightGrpFNameTmpl = '{0}__weights{1}.txt';
+            $_biasGrpFNameTmpl   = '{0}__biases{1}.txt';
+        }
+        'NND' {
+            $_weightFNameTmpl = 'weights_format_num{3}\{0}_weights{2}.nnd';
+            $_biasFNameTmpl   = 'weights_format_num{3}\{0}_bias{2}.nnd';
+
+            $_weightGrpFNameTmpl = 'weights_format_num{3}\{0}_g{4}_weights{2}.nnd';
+            $_biasGrpFNameTmpl   = 'weights_format_num{3}\{0}_g{4}_bias{2}.nnd';
+        }
+    }
+
     Write-Verbose ('Filtering nodes if necessary: "{0}".' -f $_modelTopologyPath);
     $_weightNodesFiltered = @($_weightNodes.Node | ? { !$BiasesOnly.IsPresent } | ? $_filterSB); 
     $_biasNodesFiltered   = @($_biasNodes.Node | ? { !$WeightsOnly.IsPresent } | ? $_filterSB);
 
+    # -----------------------------------------------------------------------------------------------------------------
+    # GATHERING INFORMATION ABOUT ITEMS TO DUMP (METADATA)
+    # -----------------------------------------------------------------------------------------------------------------
     Write-Verbose ('Gathering primitive/layer information (weights): "{0}".' -f $_modelTopologyPath);
     $_dumpNameCounters = @{};
 
@@ -330,10 +436,21 @@ process
             }
         }
 
+        if ($_dumpNameCounters[$_primName] -gt 0)
+        {
+            $_optNameCounter = $_dumpNameCounters[$_primName];
+        }
+        else
+        {
+            $_optNameCounter = '';
+        }
+        $_dumpLayout = Get-NndLayout $_primType 'weights';
+
         return New-Object PSObject -Property @{
-               DumpFileName = ('{0}__weights{1}.txt' -f $_primName, $_dumpNameCounters[$_primName]);
-               DataOffset   = [long] $_.offset;
-               DataSize     = [long] $_.size;
+               DumpFileName        = ($_weightFNameTmpl    -f $_primName, $_dumpNameCounters[$_primName], $_optNameCounter, $_dumpLayout);
+               DumpGroupFileName   = ($_weightGrpFNameTmpl -f $_primName, $_dumpNameCounters[$_primName], $_optNameCounter, $_dumpLayout, $_groupPlaceholderMark);
+               DataOffset          = [long] $_.offset;
+               DataSize            = [long] $_.size;
                InputFeaturesCount  = $_inFeatCount;
                OutputFeaturesCount = $_outFeatCount;
                GroupCount          = $_groupCount;
@@ -391,10 +508,21 @@ process
             }
         }
 
+        if ($_dumpNameCounters[$_primName] -gt 0)
+        {
+            $_optNameCounter = $_dumpNameCounters[$_primName];
+        }
+        else
+        {
+            $_optNameCounter = '';
+        }
+        $_dumpLayout = Get-NndLayout $_primType 'biases';
+
         return New-Object PSObject -Property @{
-               DumpFileName = ('{0}__biases{1}.txt' -f $_primName, $_dumpNameCounters[$_primName]);
-               DataOffset   = [long] $_.offset;
-               DataSize     = [long] $_.size;
+               DumpFileName        = ($_biasFNameTmpl    -f $_primName, $_dumpNameCounters[$_primName], $_optNameCounter, $_dumpLayout);
+               DumpGroupFileName   = ($_biasGrpFNameTmpl -f $_primName, $_dumpNameCounters[$_primName], $_optNameCounter, $_dumpLayout, $_groupPlaceholderMark);
+               DataOffset          = [long] $_.offset;
+               DataSize            = [long] $_.size;
                InputFeaturesCount  = $_inFeatCount;
                OutputFeaturesCount = $_outFeatCount;
                GroupCount          = $_groupCount;
@@ -412,8 +540,12 @@ process
     $_dataStream   = $_dataFile.OpenRead();
     $_dataReader   = New-Object System.IO.BinaryReader $_dataStream;
 
+    # -----------------------------------------------------------------------------------------------------------------
+    # DUMPING DATA
+    # -----------------------------------------------------------------------------------------------------------------
     $_allMeta = @($_weightMeta; $_biasMeta);
     $_allMeta | % {
+        # Select dump formatters.
         switch ($_.DataType)
         {
             'FP32'  { $_dataSize = 4; $_dataTypeName = $_.ToLower(); $_dataPrint = { param([byte[]] $Data, [int] $Index, [System.IO.StringWriter] $Writer) $_dataPoint = [BitConverter]::ToSingle($Data, $Index); $Writer.Write('{0,15:E7}', $_dataPoint); }; }
@@ -425,37 +557,62 @@ process
             default { Write-Error ('Unknown data format ({0}).' -f $_); return; }
         }
 
+        # Verify sizes and constrains of each primitive data (weights, biases, etc.).
         $_calcMod = [long] 0;
-        $_calcSize = [Math]::DivRem($_.OutputFeaturesCount * $_.InputFeaturesCount * $_.Width * $_.Height * $_dataSize, $_.GroupCount, [ref] $_calcMod);
-        if (($_calcSize -ne $_.DataSize) -and (($_.Kind -ne 'biases') -or ($_.DataSize -ne 0)))
+        $_calcDataSize = [Math]::DivRem($_.OutputFeaturesCount * $_.InputFeaturesCount * $_.Width * $_.Height * $_dataSize, $_.GroupCount, [ref] $_calcMod);
+        if (($_calcDataSize -ne $_.DataSize) -and (($_.Kind -ne 'biases') -or ($_.DataSize -ne 0)))
         {
-            Write-Warning ('"{2}": Calculated size of weights/biases is different than stored size ({0}B != {1}B).' -f $_calcSize, $_.DataSize, $_.DumpFileName);
+            Write-Warning ('"{2}": Calculated size of weights/biases is different than stored size ({0}B != {1}B).' -f $_calcDataSize, $_.DataSize, $_.DumpFileName);
 
-            if ($_calcSize -gt $_.DataSize)
+
+            if ($_calcDataSize -le 0)
+            {
+                Write-Error ('"{0}": Calculated number of bytes of data ({1}B) is zero or less than zero.' -f $_.DumpFileName, $_calcDataSize);
+                return;
+            }
+            if ($_calcDataSize -gt $_.DataSize)
             {
                 Write-Error ('"{0}": Declared size of data is not sufficient to dump all required weights/biases.' -f $_.DumpFileName);
                 return;
             }
         }
 
+        $_calcGroupDataSize = [Math]::DivRem($_calcDataSize, $_.GroupCount, [ref] $_calcMod);
+        if ($_calcGroupDataSize -le 0)
+        {
+            Write-Error ('"{0}": Calculated number of bytes of data per group ({1}B) is zero or less than zero.' -f $_.DumpFileName, $_calcGroupDataSize);
+            return;
+        }
+
+
         if ($_dataFileSize -lt ($_.DataOffset + $_.DataSize))
         {
-            Write-Error ('"{0}": Physical size of data ({1}B) is not sufficient to dump all required weights/biases.' -f $_.DumpFileName, $_dataSize);
+            Write-Error ('"{0}": Physical size of data file ({1}B) is not sufficient to dump all required weights/biases.' -f $_.DumpFileName, $_dataFileSize);
             return;
         }
 
         $_inputFeaturesCount  = [Math]::DivRem($_.InputFeaturesCount, $_.GroupCount, [ref] $_calcMod);
+        if ($_inputFeaturesCount -le 0)
+        {
+            Write-Error ('"{0}": Calculated number of input features per group ({1}) is zero or less than zero.' -f $_.DumpFileName, $_inputFeaturesCount);
+            return;
+        }
         if ($_calcMod -ne 0)
         {
             Write-Warning ('"{2}": Declared number of input features/channels ({0}) cannot be split into declared number of groups ({1}).' -f $_.InputFeaturesCount, $_.GroupCount, $_.DumpFileName);
         }
         $_outputFeaturesCount = [Math]::DivRem($_.OutputFeaturesCount, $_.GroupCount, [ref] $_calcMod);
+        if ($_outputFeaturesCount -le 0)
+        {
+            Write-Error ('"{0}": Calculated number of output features per group ({1}) is zero or less than zero.' -f $_.DumpFileName, $_outputFeaturesCount);
+            return;
+        }
         if ($_calcMod -ne 0)
         {
             Write-Warning ('"{2}": Declared number of output features/channels ({0}) cannot be split into declared number of groups ({1}).' -f $_.OutputFeaturesCount, $_.GroupCount, $_.DumpFileName);
         }
 
-
+        # Only verify correctness of IE .dat file (do not dump anything).
         Write-Verbose (' - "{0}"' -f $_.DumpFileName);
         if ($Verify.IsPresent)
         {
@@ -468,83 +625,144 @@ process
             return;
         }
 
-        $_dataReader.BaseStream.Seek($_.DataOffset, [System.IO.SeekOrigin]::Begin) | Out-Null;
-        $_dumpData = $_dataReader.ReadBytes($_.DataSize);
+        # Prepare dump files.
+        $_dumpItem = $_;
+
+        $_dataReader.BaseStream.Seek($_dumpItem.DataOffset, [System.IO.SeekOrigin]::Begin) | Out-Null;
+        $_dumpData = $_dataReader.ReadBytes($_dumpItem.DataSize);
         $_dumpDataPos = 0
         $_dumpDataElemPos = 0;
 
-        $_dumpFile = New-Item (Join-Path $_dumpDir $_.DumpFileName) -ItemType File -Force:$Force.IsPresent;
-        $_dumpWriter = New-Object 'System.IO.StringWriter' ([System.Globalization.CultureInfo]::InvariantCulture);
-
-        $_dumpWriter.WriteLine('{');
-        $_dumpWriter.WriteLine('  "topology":   "{0}",', $_modelTopologyFileName);
-        $_dumpWriter.WriteLine('  "name":       "{0}",', $_.DumpFileName);
-        $_dumpWriter.WriteLine('  "kind":       "{0}",', $_.Kind);
-        $_dumpWriter.WriteLine('  "data_type":  "{0}",', $_dataTypeName);
-        $_dumpWriter.WriteLine('  "user_type":  "{0}",', $_.Type);
-        $_dumpWriter.WriteLine('  "dimensions": {{"grp": {0}, "of": {1}, "if": {2}, "h": {3}, "w": {4}}},', $_.GroupCount, $_outputFeaturesCount, $_inputFeaturesCount, $_.Height, $_.Width);
-        $_dumpWriter.WriteLine('  "range":      {{"start": {0}, "size": {1}}},', $_.DataOffset, $_.DataSize);
-        $_dumpWriter.WriteLine();
-        $_dumpWriter.WriteLine('  "values": [');
-        $_dumpWriter.ToString() | Out-File $_dumpFile -Encoding utf8 -Width 65536 -NoNewline; $_dumpWriter.GetStringBuilder().Clear() | Out-Null;
-        for ([long] $gi = 0; $gi -lt $_.GroupCount; ++$gi)
+        # - Check whether groups should be splitted into separate files.
+        if ($_dumpItem.GroupCount -gt 1)
         {
-            for ([long] $ofi = 0; $ofi -lt $_outputFeaturesCount; ++$ofi)
+            $_dumpFileName = $_dumpItem.DumpGroupFileName;
+
+            if ($_dumpFileName.IndexOf($_groupPlaceholderMark) -ge 0)
             {
-                $_dumpWriter.WriteLine('    {');
-                $_dumpWriter.WriteLine('      "grp_index": {0}', $gi);
-                $_dumpWriter.WriteLine('      "of_index":  {0}', $ofi);
-                $_dumpWriter.WriteLine('      "values": [');
-                for ([long] $ifi = 0; $ifi -lt $_inputFeaturesCount; ++$ifi)
-                {
-                    $_dumpWriter.WriteLine('        {');
-                    $_dumpWriter.WriteLine('          "if_index": {0}', $ifi);
-                    $_dumpWriter.Write('          "values": [');
-                    $_sepH = $_dumpWriter.NewLine;
-                    for ([long] $hi = 0; $hi -lt $_.Height; ++$hi)
-                    {
-                        $_dumpWriter.Write($_sepH);
-                        $_sepH = ",$($_dumpWriter.NewLine)";
-
-                        $_dumpWriter.Write('            [ ');
-                        $_sepW = '';
-                        for ([long] $wi = 0; $wi -lt $_.Width; ++$wi)
-                        {
-                            $_dumpWriter.Write($_sepW);
-                            $_sepW = ', ';
-
-                            & $_dataPrint $_dumpData $_dumpDataPos $_dumpWriter;
-                            $_dumpDataPos += $_dataSize;
-                            ++$_dumpDataElemPos;
-                        }
-                        $_dumpWriter.Write(' ]');
-                    }
-                    $_dumpWriter.WriteLine();
-                    $_dumpWriter.WriteLine('          ]');
-                    $_dumpWriter.Write('        }');
-
-                    if ($ifi + 1 -ne $_inputFeaturesCount) { $_dumpWriter.WriteLine(','); } else { $_dumpWriter.WriteLine(''); }
-                }
-                $_dumpWriter.WriteLine('      ]');
-                $_dumpWriter.Write('    }');
-
-                if (($gi + 1 -ne $_.GroupCount) -or ($ofi + 1 -ne $_outputFeaturesCount)) { $_dumpWriter.WriteLine(','); } else { $_dumpWriter.WriteLine(''); }
-
-                # Write larger dump chunks.
-                if ($_dumpDataElemPos -gt 100000)
-                {
-                    $_dumpWriter.ToString() | Out-File $_dumpFile -Encoding utf8 -Width 65536 -NoNewline -Append; $_dumpWriter.GetStringBuilder().Clear() | Out-Null;
-                    $_dumpDataElemPos = 0;
-                }
+                $_groupIds = @(1..$_dumpItem.GroupCount);
+            }
+            else
+            {
+                $_groupIds = @(1);
             }
         }
-        $_dumpWriter.WriteLine('  ]');
-        $_dumpWriter.WriteLine('}');
-        $_dumpWriter.ToString() | Out-File $_dumpFile -Encoding utf8 -Width 65536 -NoNewline -Append; $_dumpWriter.GetStringBuilder().Clear() | Out-Null;
+        else
+        {
+            $_dumpFileName = $_dumpItem.DumpFileName;
+            $_groupIds = @(1);
+        }
 
-        $_dumpWriter.Close();
+        # - Create dump files and directories.
+        $_groupIds | % {
+            $_dumpFilePath = Join-Path $_dumpDir ($_dumpFileName -creplace [regex]::Escape($_groupPlaceholderMark), "${_}");
+            $_dumpFileDir = Split-Path -LiteralPath $_dumpFilePath;
+            mkdir $_dumpFileDir -ErrorAction SilentlyContinue | Out-Null;
+            $_dumpFile = New-Item $_dumpFilePath -ItemType File -Force:$Force.IsPresent;
 
-        Write-Output $_dumpFile;
+            # Select dump type.
+            switch ($OutputFormat)
+            {
+                'Text' {
+                    $_dumpWriter = New-Object 'System.IO.StringWriter' ([System.Globalization.CultureInfo]::InvariantCulture);
+
+                    $_dumpWriter.WriteLine('{');
+                    $_dumpWriter.WriteLine('  "topology":   "{0}",', $_modelTopologyFileName);
+                    $_dumpWriter.WriteLine('  "name":       "{0}",', $_dumpItem.DumpFileName);
+                    $_dumpWriter.WriteLine('  "kind":       "{0}",', $_dumpItem.Kind);
+                    $_dumpWriter.WriteLine('  "data_type":  "{0}",', $_dataTypeName);
+                    $_dumpWriter.WriteLine('  "user_type":  "{0}",', $_dumpItem.Type);
+                    $_dumpWriter.WriteLine('  "dimensions": {{"grp": {0}, "of": {1}, "if": {2}, "h": {3}, "w": {4}}},', $_dumpItem.GroupCount, $_outputFeaturesCount, $_inputFeaturesCount, $_dumpItem.Height, $_dumpItem.Width);
+                    $_dumpWriter.WriteLine('  "range":      {{"start": {0}, "size": {1}}},', $_dumpItem.DataOffset, $_dumpItem.DataSize);
+                    $_dumpWriter.WriteLine();
+                    $_dumpWriter.WriteLine('  "values": [');
+                    $_dumpWriter.ToString() | Out-File $_dumpFile -Encoding utf8 -Width 65536 -NoNewline; $_dumpWriter.GetStringBuilder().Clear() | Out-Null;
+                    for ([long] $gi = 0; $gi -lt $_dumpItem.GroupCount; ++$gi)
+                    {
+                        for ([long] $ofi = 0; $ofi -lt $_outputFeaturesCount; ++$ofi)
+                        {
+                            $_dumpWriter.WriteLine('    {');
+                            $_dumpWriter.WriteLine('      "grp_index": {0}', $gi);
+                            $_dumpWriter.WriteLine('      "of_index":  {0}', $ofi);
+                            $_dumpWriter.WriteLine('      "values": [');
+                            for ([long] $ifi = 0; $ifi -lt $_inputFeaturesCount; ++$ifi)
+                            {
+                                $_dumpWriter.WriteLine('        {');
+                                $_dumpWriter.WriteLine('          "if_index": {0}', $ifi);
+                                $_dumpWriter.Write('          "values": [');
+                                $_sepH = $_dumpWriter.NewLine;
+                                for ([long] $hi = 0; $hi -lt $_dumpItem.Height; ++$hi)
+                                {
+                                    $_dumpWriter.Write($_sepH);
+                                    $_sepH = ",$($_dumpWriter.NewLine)";
+
+                                    $_dumpWriter.Write('            [ ');
+                                    $_sepW = '';
+                                    for ([long] $wi = 0; $wi -lt $_dumpItem.Width; ++$wi)
+                                    {
+                                        $_dumpWriter.Write($_sepW);
+                                        $_sepW = ', ';
+
+                                        & $_dataPrint $_dumpData $_dumpDataPos $_dumpWriter;
+                                        $_dumpDataPos += $_dataSize;
+                                        ++$_dumpDataElemPos;
+                                    }
+                                    $_dumpWriter.Write(' ]');
+                                }
+                                $_dumpWriter.WriteLine();
+                                $_dumpWriter.WriteLine('          ]');
+                                $_dumpWriter.Write('        }');
+
+                                if ($ifi + 1 -ne $_inputFeaturesCount) { $_dumpWriter.WriteLine(','); } else { $_dumpWriter.WriteLine(''); }
+                            }
+                            $_dumpWriter.WriteLine('      ]');
+                            $_dumpWriter.Write('    }');
+
+                            if (($gi + 1 -ne $_dumpItem.GroupCount) -or ($ofi + 1 -ne $_outputFeaturesCount)) { $_dumpWriter.WriteLine(','); } else { $_dumpWriter.WriteLine(''); }
+
+                            # Write larger dump chunks.
+                            if ($_dumpDataElemPos -gt 100000)
+                            {
+                                $_dumpWriter.ToString() | Out-File $_dumpFile -Encoding utf8 -Width 65536 -NoNewline -Append; $_dumpWriter.GetStringBuilder().Clear() | Out-Null;
+                                $_dumpDataElemPos = 0;
+                            }
+                        }
+                    }
+                    $_dumpWriter.WriteLine('  ]');
+                    $_dumpWriter.WriteLine('}');
+                    $_dumpWriter.ToString() | Out-File $_dumpFile -Encoding utf8 -Width 65536 -NoNewline -Append; $_dumpWriter.GetStringBuilder().Clear() | Out-Null;
+
+                    $_dumpWriter.Close();
+                }
+
+                'NND' {
+                    $_dumpStream = $_dumpFile.OpenWrite();
+                    $_dumpWriter = New-Object 'System.IO.BinaryWriter' ($_dumpStream, [System.Text.Encoding]::ASCII);
+
+                    Write-NndHeader $_dumpWriter $_dumpItem;
+
+                    # Split into multiple files if necessary.
+                    if ($_groupIds.Length -gt 1)
+                    {
+                        $_dumpGrpData = [byte[]] @();
+                        [array]::Resize([ref] $_dumpGrpData, $_calcGroupDataSize);
+                        [array]::Copy($_dumpData, $_dumpDataPos, $_dumpGrpData, 0, $_calcGroupDataSize);
+                        $_dumpDataPos += $_calcGroupDataSize;
+
+                        $_dumpWriter.Write($_dumpGrpData);
+                    }
+                    else
+                    {
+                        $_dumpWriter.Write($_dumpData);
+                    }
+
+                    $_dumpWriter.Close();
+                    $_dumpStream.Close();
+                }
+            }
+
+            Write-Output $_dumpFile;
+        }
     }
 
     $_dataReader.Close();
