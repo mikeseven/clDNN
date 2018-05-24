@@ -100,6 +100,8 @@ struct format
         winograd_6x3_s1_fused_weights,    ///< format used for weights for winograd fused convolution, F(6,3) -- filter 3x3 with stride 1
         image_2d_weights_winograd_6x3_s1_fbxyb,      ///< image format used for weights for winograd fused convolution, F(6,3) -- filter 3x3 with stride 1
         image_2d_weights_winograd_6x3_s1_xfbyb,      ///< image format used for weights for winograd fused convolution, F(6,3) -- filter 3x3 with stride 1
+        os_yx_is_isv32_osv8,                        /// format for weights for DPAS convolution
+        byxf_af32,           /// < \n format for input for primitives using DPAS
         format_num = cldnn_format_format_num, ///< number of format types
         any = cldnn_format_any
     };
@@ -125,7 +127,10 @@ struct format
             { winograd_2x3_s1_fused_weights, { 1, 1, 2, "xyfb", "bfxy" } },
             { winograd_6x3_s1_fused_weights,{ 1, 1, 2, "xyfb", "bfxy" } },
             { image_2d_weights_winograd_6x3_s1_fbxyb,{ 1, 1, 2, "xyfb", "bfxy" } },
-            { image_2d_weights_winograd_6x3_s1_xfbyb,{ 1, 1, 2, "xyfb", "bfxy" } } };
+            { image_2d_weights_winograd_6x3_s1_xfbyb,{ 1, 1, 2, "xyfb", "bfxy" } },
+            { os_yx_is_isv32_osv8, { 1, 1, 2, "bfyx", "bfxy" } },
+            { byxf_af32, { 1, 1, 2, "byxf", "bfxy" } }
+        };
         return traits.at(fmt);
     }
 
@@ -682,6 +687,18 @@ public:
             adjusted_coords[1] = align_to(adjusted_coords[1], 8);
             adjusted_coords[3] = align_to(adjusted_coords[3], 16);
             adjusted_coords[2] = 1;
+        }
+        else if (fmt == cldnn::format::os_yx_is_isv32_osv8 && !(is_aligned_to(my_sizes[0], 8)) && !(is_aligned_to(my_sizes[1], 32)))
+        {
+            my_sizes[0] = align_to(my_sizes[0], 8);
+            my_sizes[1] = align_to(my_sizes[1], 32);
+            adjusted_coords[0] = align_to(adjusted_coords[0], 8);
+            adjusted_coords[1] = align_to(adjusted_coords[1], 32);
+        }
+        else if (fmt == cldnn::format::byxf_af32 && !(is_aligned_to(my_sizes[1], 32)))
+        {
+            my_sizes[1] = align_to(my_sizes[1], 32);
+            adjusted_coords[1] = align_to(adjusted_coords[1], 32);
         }
 
         assert(my_sizes.size() == adjusted_coords.size());

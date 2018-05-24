@@ -274,6 +274,8 @@ typedef enum /*:int32_t*/
                                       ///< \n \image html image_2d_weights_c4_fyx_b.jpg
     cldnn_format_image_2d_weights_c1_b_fyx, ///< image format for weights, image 2d, single channel, width size is b, height is f*y*x
                                       ///< \n \image html image_2d_weights_c1_b_fyx.jpg
+    cldnn_format_byxf_af32,           /// < \n format for input for primitives using DPAS
+    cldnn_format_os_yx_is_isv32_osv8, /// < \n format for weights for DPAS convolutions
     cldnn_format_format_num,    ///< number of format types
     cldnn_format_any = -1
 } cldnn_format_type;

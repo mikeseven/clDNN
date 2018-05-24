@@ -292,6 +292,7 @@ namespace KernelSelector {
         case KernelSelector::DataLayout::bf8_xy16:          return "BF8_XY16";
         case KernelSelector::DataLayout::brfyx:             return "BRFYX";
         case KernelSelector::DataLayout::winograd_2x3_s1_data: return "WINOGRAD_2x3_S1_DATA";
+        case KernelSelector::DataLayout::byxf_af32: return "BFYX_AF32";
         default: return "";
         }
     }
@@ -515,6 +516,7 @@ namespace KernelSelector {
         case WeightsLayout::winograd_6x3_s1_fused_weights:    return "WINOGRAD_6x3_S1_FUSED_WEIGHTS";
         case WeightsLayout::image_2d_weights_winograd_6x3_s1_fbxyb: return "IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_FBXYB";
         case WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb: return "IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_XFBYB";
+        case WeightsLayout::os_yx_is_isv32_osv8: return "OS_YX_IS_ISV32_OSV8";
         default:
             return "";
             break;

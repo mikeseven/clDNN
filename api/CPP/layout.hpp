@@ -353,6 +353,15 @@ struct layout
             sizes[3] = align_to(sizes[2]*sizes[3], 16);
             sizes[2] = 1;
         }
+        else if (this->format == cldnn::format::byxf_af32 && !(is_aligned_to(sizes[1], 32)))
+        {
+            sizes[1] = align_to(sizes[1], 32);
+        }
+        else if (this->format == cldnn::format::os_yx_is_isv32_osv8 && !(is_aligned_to(sizes[0], 8)) && !(is_aligned_to(sizes[1], 32)))
+        {
+            sizes[0] = align_to(sizes[0], 8);
+            sizes[1] = align_to(sizes[1], 32);
+        }
         return std::accumulate(
             sizes.begin(),
             sizes.end(),

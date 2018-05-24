@@ -35,6 +35,7 @@ namespace KernelSelector
             { 0, 1, 2,-1, 3 },  // DataLayout::bf8_xy16
             { 0, 1, 2, 3, 4 },  // DataLayout::brfyx
             { 2, 1, 0,-1, 3 },  // DataLayout::winograd_2x3_s1_data
+            { 1, 2, 0,-1, 3 },  // DataLayout::byxf_af32
         } };
 
         std::array<std::array<int, 4>, WeightsLayout::WeightsLayoutCount> WeightsTensor::weightsChannelArray
@@ -60,6 +61,7 @@ namespace KernelSelector
             { 0, 1, 2, 3 },  // WeightsLayout::winograd_6x3_s1_fused_weights
             { 0, 1, 2, 3 },  // WeightsLayout::image_2d_weights_winograd_6x3_s1_fbxyb
             { 0, 1, 2, 3 },  // WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb
+            { 0, 1, 2, 3},   // WeightsLayout::os_yx_is_isv32_osv8
         } };
 
         NDims DataTensor::GetSimpleDims(const std::vector<size_t>& d, DataLayout l)
@@ -84,6 +86,10 @@ namespace KernelSelector
                 newDims[1] = RoundUp(newDims[1], 8);
                 newDims[3] = RoundUp(newDims[2] * newDims[3], 16);
                 newDims[2] = 1;
+                break;
+            case byxf_af32:
+                assert(newDims.size() == 4);
+                newDims[0] = RoundUp(newDims[0], 32);
                 break;
             default:
                 break;
@@ -259,6 +265,11 @@ namespace KernelSelector
             case iy_xs_os_xsv2_osv8__ao32:
                 assert(newDims.size() == 4);
                 newDims[0] = RoundUp(newDims[0], 32);
+                break;
+            case os_yx_is_isv32_osv8:
+                assert(newDims.size() == 4);
+                newDims[3] = RoundUp(newDims[3], 8);
+                newDims[2] = RoundUp(newDims[2], 32);
                 break;
             default:
                 break;
