@@ -516,7 +516,7 @@ namespace KernelSelector {
         case WeightsLayout::winograd_6x3_s1_fused_weights:    return "WINOGRAD_6x3_S1_FUSED_WEIGHTS";
         case WeightsLayout::image_2d_weights_winograd_6x3_s1_fbxyb: return "IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_FBXYB";
         case WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb: return "IMAGE_2D_WEIGHTS_WINOGRAD_6x3_S1_XFBYB";
-        case WeightsLayout::os_yx_is_isv32_osv8: return "OS_YX_IS_ISV32_OSV8";
+        case WeightsLayout::os_is_yx_isa8_osv8_isv4: return "OS_IS_YX_ISA8_OSV8_ISV4";
         default:
             return "";
             break;

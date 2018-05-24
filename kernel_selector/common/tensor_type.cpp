@@ -61,7 +61,7 @@ namespace KernelSelector
             { 0, 1, 2, 3 },  // WeightsLayout::winograd_6x3_s1_fused_weights
             { 0, 1, 2, 3 },  // WeightsLayout::image_2d_weights_winograd_6x3_s1_fbxyb
             { 0, 1, 2, 3 },  // WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb
-            { 0, 1, 2, 3},   // WeightsLayout::os_yx_is_isv32_osv8
+            { 0, 1, 2, 3},   // WeightsLayout::os_is_yx_isa8_osv8_isv4
         } };
 
         NDims DataTensor::GetSimpleDims(const std::vector<size_t>& d, DataLayout l)
@@ -266,7 +266,7 @@ namespace KernelSelector
                 assert(newDims.size() == 4);
                 newDims[0] = RoundUp(newDims[0], 32);
                 break;
-            case os_yx_is_isv32_osv8:
+            case os_is_yx_isa8_osv8_isv4:
                 assert(newDims.size() == 4);
                 newDims[3] = RoundUp(newDims[3], 8);
                 newDims[2] = RoundUp(newDims[2], 32);

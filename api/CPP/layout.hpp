@@ -357,7 +357,7 @@ struct layout
         {
             sizes[1] = align_to(sizes[1], 32);
         }
-        else if (this->format == cldnn::format::os_yx_is_isv32_osv8 && !(is_aligned_to(sizes[0], 8)) && !(is_aligned_to(sizes[1], 32)))
+        else if (this->format == cldnn::format::os_is_yx_isa8_osv8_isv4 && !(is_aligned_to(sizes[0], 8)) && !(is_aligned_to(sizes[1], 32)))
         {
             sizes[0] = align_to(sizes[0], 8);
             sizes[1] = align_to(sizes[1], 32);
