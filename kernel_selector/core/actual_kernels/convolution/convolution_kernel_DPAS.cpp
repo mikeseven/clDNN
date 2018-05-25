@@ -44,6 +44,8 @@ namespace KernelSelector {
 
     KernelsData ConvolutionKernel_DPAS::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        return GetCommonKernelsData(params, options);
+        KernelsData kd = GetCommonKernelsData(params, options);
+        kd[0].estimatedTime = FORCE_PRIORITY_1;
+        return kd;//return GetCommonKernelsData(params, options);
     }
 }

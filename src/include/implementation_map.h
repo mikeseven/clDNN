@@ -17,6 +17,7 @@
 
 #include <map>
 #include <functional>
+#include <typeinfo>
 
 template<typename T, typename U>
 class singleton_map : public std::map<T, U> {
@@ -161,7 +162,7 @@ public:
         auto key = key_builder()(engine_type, primitive);
         auto it = map_type::instance().find(key);
         if (it == std::end(map_type::instance())) 
-            throw std::runtime_error("not yet implemented");
+            throw std::runtime_error(std::string("implementation_map for ")+typeid(primitive_kind).name() +" could not find any implementation to match key");
 
         // create implementation & attach it to result 
         return it->second;
