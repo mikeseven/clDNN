@@ -292,7 +292,7 @@ namespace KernelSelector {
         case KernelSelector::DataLayout::bf8_xy16:          return "BF8_XY16";
         case KernelSelector::DataLayout::brfyx:             return "BRFYX";
         case KernelSelector::DataLayout::winograd_2x3_s1_data: return "WINOGRAD_2x3_S1_DATA";
-        case KernelSelector::DataLayout::byxf_af32: return "BFYX_AF32";
+        case KernelSelector::DataLayout::byxf_af32: return "BYXF_AF32";
         default: return "";
         }
     }

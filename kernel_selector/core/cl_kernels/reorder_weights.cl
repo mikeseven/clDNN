@@ -37,7 +37,7 @@ inline uint FUNC(get_input_index)(uint o, uint i, uint y, uint x)
 elif defined OUTPUT_LAYOUT_OS_IS_YX_ISA8_OSV8_ISV4
 	return GET_FILTER_OS_IS_YX_ISA8_OSV8_ISV4(OUTPUT, o, i, y, x);
 #else
-#error - not supported
+#error reorder_weights.cl: input format - not supported
 #endif
 }
 
@@ -63,7 +63,7 @@ inline uint FUNC(get_output_index)(uint o, uint i, uint y, uint x)
 elif defined OUTPUT_LAYOUT_OS_IS_YX_ISA8_OSV8_ISV4
 	return GET_FILTER_OS_IS_YX_ISA8_OSV8_ISV4(OUTPUT, o, i, y, x);
 #else
-#error - not supported
+#error reorder_weights.cl: output format - not supported
 #endif
 }
 

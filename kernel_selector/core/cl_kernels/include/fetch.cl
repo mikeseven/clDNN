@@ -66,7 +66,7 @@ inline uint FUNC(get_byxf_af32_index)(uint b, uint f, uint y, uint x, uint x_siz
 }
 
 #define GET_DATA_BYXF_AF32_INDEX(prefix, b, f, y, x)\
-	FUNC_CALL(get_byx_af32_index)(                 \
+	FUNC_CALL(get_byxf_af32_index)(                 \
 		b, f, y, x, CAT(prefix, _SIZE_X),          \
 		CAT(prefix, _SIZE_Y),                      \
 		CAT(prefix, _FEATURE_NUM),                 \
