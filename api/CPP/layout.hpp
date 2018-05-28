@@ -293,6 +293,10 @@ struct layout
     tensor get_pitches() const
     {
         auto sizes = get_buffer_size().sizes(format);
+        if (format == format::byxf_af32)
+        {
+            sizes[3] = align_to(sizes[3], 32);
+        }
         std::vector<tensor::value_type> pitches(sizes.size(), tensor::value_type(1));
         std::partial_sum(sizes.rbegin(), sizes.rend() - 1, pitches.rbegin() + 1, std::multiplies<tensor::value_type>());
         return{ format, pitches };

@@ -57,7 +57,7 @@ inline uint FUNC(get_bf8_xy16_index)(uint b, uint f, uint y, uint x, uint x_size
 
 inline uint FUNC(get_byxf_af32_index)(uint b, uint f, uint y, uint x, uint x_size, uint y_size, uint f_size, uint offset)
 {
-	const uint f_aligned_to_32 = ((f + 31) / 32) * 32;
+	const uint f_aligned_to_32 = ((f_size + 31) / 32) * 32;
 	const uint b_offset = b * x_size * y_size * f_aligned_to_32;
 	const uint xy_offset = f_aligned_to_32 * (x + y * x_size);
 	const uint f_offset = f;

@@ -48,7 +48,7 @@ inline uint FUNC(get_output_index)(uint b, uint f, uint y, uint x)
 #elif defined OUTPUT_LAYOUT_BYXF_AF32
 	return GET_DATA_BYXF_AF32_INDEX(OUTPUT, b, f, y, x);
 #elif defined OUTPUT_LAYOUT_BYXF_AF32
-	return GET_DATA_BYXF_AF32_INDEX(INPUT0, b, f, y, x);
+	return GET_DATA_BYXF_AF32_INDEX(OUTPUT, b, f, y, x);
 #else
 #error reorder_data.cl: output format - not supported
 #endif
@@ -75,7 +75,14 @@ KERNEL (reorder_data)(
     uint4 ov = FUNC_CALL(reshape_dims)(b,f,y,x, INPUT0_SIZE_Y, INPUT0_SIZE_X, OUTPUT_SIZE_Y, OUTPUT_SIZE_X, INPUT0_DIMS, OUTPUT_DIMS);
     const uint input_idx  = FUNC_CALL(get_input_index)(b, f, y, x);
     const uint output_idx = FUNC_CALL(get_output_index)(ov[0],ov[1],ov[2],ov[3]);
-    
+
+/*#if defined OUTPUT_LAYOUT_BYXF_AF32
+	if(b == 0 && f == 0 && x == 0)
+	{
+		printf("X: %u Y: %u F: %u B: %u IDX: %u \n", x, y, f, b, output_idx);    
+	}
+#endif*/
+
 #if defined MEAN_SUBTRACT_INSIDE_PARAMS
     float res = TO_MEAN_TYPE(input[input_idx]);
     res = MEAN_OP(res, VALUE_TO_SUBTRACT[f % VALUE_TO_SUBTRACT_SIZE]);

@@ -385,7 +385,7 @@ namespace instrumentation {
     {
         auto mem_ptr = mem.pointer<T>();
 
-        auto&& pitches = mem.get_layout().get_pitches();
+        auto pitches = mem.get_layout().get_pitches();
         auto size = mem.get_layout().size;
         if (mem.get_layout().format == cldnn::format::byxf_af32)
         {

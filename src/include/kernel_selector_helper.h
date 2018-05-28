@@ -363,9 +363,11 @@ inline kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_
     for (size_t i = 0; i < vec.size(); i++)
     {
         const size_t tensor_index = vec.size() - 1 - i;
-        const auto d = new_vals[tensor_index];
+        const auto d = vals[tensor_index];
         const auto lp = lower_pad[tensor_index];
         const auto up = upper_pad[tensor_index];
+        // tells us how many elements are reserved in memory for this tensor index
+        const auto reserved_in_mem_count = new_vals[tensor_index];
 
         auto& elm = vec[i];
         elm.v = static_cast<size_t>(d - add_offsets[tensor_index]);
@@ -374,7 +376,7 @@ inline kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_
         elm.pad.after = up;
 
         offset += pitch*(add_offsets[tensor_index]);
-        pitch *= (d + lp + up);
+        pitch *= (reserved_in_mem_count + lp + up);
     }
 
     const int feature_index = KernelSelector::DataTensor::Channelndex(ks_layout, KernelSelector::Tensor::DataChannelName::FEATURE);
