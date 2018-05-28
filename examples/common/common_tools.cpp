@@ -369,7 +369,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     options.set_option(cldnn::build_option::optimize_data(true));
     options.set_option(cldnn::build_option::debug(ep.dump_hidden_layers || ep.profiling));
 
-    if (ep.dump_graphs)
+    if (ep.dump_graphs || ep.serialization)
     {
         std::string err;
         auto graphs_dumps_dir = instrumentation::logger::create_graphs_dumps_dir(err);
@@ -377,7 +377,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
             options.set_option(cldnn::build_option::graph_dumps_dir(graphs_dumps_dir));
         else
         {
-            std::cout << "Could not create requested directory for graph dumps: '" << graphs_dumps_dir << "'\n    error:\n"
+            std::cout << "Could not create requested directory for graph/serialization dumps: '" << graphs_dumps_dir << "'\n    error:\n"
                 << err << "\n    -- dumping will be disabled" << std::endl;
         }
     }

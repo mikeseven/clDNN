@@ -145,6 +145,7 @@ struct execution_params {
     bool        dump_graphs;
     bool        log_engine;
     bool        dump_sources;
+	bool		serialization;
 
     PrintType print_type = PrintType::Verbose; // printing modes - to support Verbose, vs Perf ony, vs ImageNet testing prints
     size_t loop = 1; // running the same input in a loop for smoothing perf results

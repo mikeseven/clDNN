@@ -196,7 +196,9 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Dump informations about stages of graph compilation to files in .graph format.\n"
             "Dump informations about primitives in graph to .info format.\n"
             "GraphViz is needed for converting .graph files to pdf format. (example command line in cldnn_dumps folder: dot -Tpdf cldnn_program_1_0_init.graph -o outfile.pdf\n")
-        ("log_engine", bpo::bool_switch(),
+		("serialization", bpo::bool_switch(),
+			"Dump informations required for serialization.\n")
+		("log_engine", bpo::bool_switch(),
             "Log engine actions during execution of a network.")
         ("dump_sources", bpo::bool_switch(),
             "Dump ocl source code per compilation.")
@@ -462,6 +464,7 @@ int main(int argc, char* argv[])
         ep.dump_single_feature = parsed_args.count("dump_feature") != 0;
         ep.dump_feature_id = ep.dump_single_feature ? parsed_args["dump_feature"].as<uint32_t>() : 0;
         ep.dump_graphs = parsed_args["dump_graphs"].as<bool>();
+		ep.serialization = parsed_args["serialization"].as<bool>();
         ep.log_engine = parsed_args["log_engine"].as<bool>();
         ep.dump_sources = parsed_args["dump_sources"].as<bool>();
         ep.perf_per_watt = parsed_args["perf_per_watt"].as<bool>();
