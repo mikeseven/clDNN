@@ -105,6 +105,15 @@ namespace KernelSelector
                 pitch *= newDims[i];
             }
 
+            if (l == byxf_af32)
+            {
+                ret[0].pitch = 1;
+                ret[1].pitch = ret[0].pitch * newDims[0];
+                ret[2].pitch = ret[1].pitch * newDims[1];
+                ret[3].pitch = ret[2].pitch * newDims[2];
+                ret[4].pitch = ret[3].pitch * newDims[3];
+            }
+
             return ret;
         }
 
@@ -298,6 +307,11 @@ namespace KernelSelector
                 
                 ret[3].pitch     = ret[2].v * ret[2].pitch;
                 ret[2].pad.after = newDims[2] - ret[2].v;
+            }
+            else if (l == os_is_yx_isa8_osv8_isv4)
+            {
+                ret[0].pitch = newDims[2] * newDims[3];
+                ret[1].pitch = ret[0].pitch * ret[0].v;
             }
 
             return ret;

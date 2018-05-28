@@ -46,6 +46,7 @@
 #include "fully_connected_grad_input/fully_connected_grad_input_kernel_selector.h"
 #include "fully_connected_grad_weights/fully_connected_grad_weights_kernel_selector.h"
 #include "jitter.h"
+#include "common_tools.h"
 
 using namespace cldnn;
 
@@ -352,10 +353,17 @@ inline kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_
     size_t pitch = 1;
     size_t offset = 0;
 
+    auto new_vals = vals;
+
+    if (ks_layout == KernelSelector::Tensor::byxf_af32)
+    {
+        new_vals[3] = align_to(vals[3], 32);
+    }
+
     for (size_t i = 0; i < vec.size(); i++)
     {
         const size_t tensor_index = vec.size() - 1 - i;
-        const auto d = vals[tensor_index];
+        const auto d = new_vals[tensor_index];
         const auto lp = lower_pad[tensor_index];
         const auto up = upper_pad[tensor_index];
 

@@ -33,7 +33,7 @@ inline UNIT_TYPE FUNC(apply_pooling)(UNIT_TYPE tmp, UNIT_TYPE in)
 #endif
 }
 
-KERNEL(pooling_gpu)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output
+KERNEL(pooling_gpu_DPAS)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output
 #if MAX_WITH_ARGMAX_POOLING
 , __global float* arg_max
 #endif

@@ -386,7 +386,11 @@ namespace instrumentation {
         auto mem_ptr = mem.pointer<T>();
 
         auto&& pitches = mem.get_layout().get_pitches();
-        auto&& size = mem.get_layout().size;
+        auto size = mem.get_layout().size;
+        if (mem.get_layout().format == cldnn::format::byxf_af32)
+        {
+            size.feature[0] = ((size.feature[0] + 31) / 32) * 32;
+        }
         for (cldnn::tensor::value_type b = 0; b < size.batch[0]; ++b)
         {
             for (cldnn::tensor::value_type f = 0; f < size.feature[0]; ++f)
@@ -410,6 +414,10 @@ namespace instrumentation {
         boost::filesystem::create_directories(dump_dir);
         auto batch = mem.get_layout().size.batch[0];
         auto feature = mem.get_layout().size.feature[0];
+        if (mem.get_layout().format == cldnn::format::byxf_af32)
+        {
+            feature = ((feature + 31) / 32) * 32;
+        }
         auto eng_type =  "gpu" ;
         std::vector<std::vector<std::stringstream>> streams(batch);
         for(cldnn::tensor::value_type b = 0; b < batch; b++)
