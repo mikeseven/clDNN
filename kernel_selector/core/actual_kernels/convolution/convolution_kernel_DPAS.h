@@ -23,6 +23,7 @@ namespace KernelSelector {
     class ConvolutionKernel_DPAS : public ConvolutionKernelBase
     {
     public:
+        using Parent = ConvolutionKernelBase;
         ConvolutionKernel_DPAS() : ConvolutionKernelBase("convolution_gpu_dpas") {}
         virtual ~ConvolutionKernel_DPAS() {}
 
@@ -30,6 +31,8 @@ namespace KernelSelector {
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
+        JitConstants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const override;
+        DispatchData SetDefault(const ConvolutionParams& arg, int autoTuneIndex = -1) const override;
         virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const ConvolutionParams&) const override
         {
             return{

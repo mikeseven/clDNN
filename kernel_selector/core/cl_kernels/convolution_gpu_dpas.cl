@@ -17,10 +17,40 @@
 #include "include/data_types.cl"
 #include "include/fetch.cl"
 
+inline int FUNC(dp4a_SW)(uchar4 input, char4 weight, int acc)
+{
+	acc += (input[0] * weight[0]);
+	acc += (input[1] * weight[1]);
+	acc += (input[2] * weight[2]);
+	acc += (input[3] * weight[3]);
+	return acc;
+}
+
+inline int FUNC(dp4a_s8)(uint8 A_scalars, int8 B_vectors, int acc)
+{
+	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[0]), as_char4(B_vectors[0]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[1]), as_char4(B_vectors[1]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[2]), as_char4(B_vectors[2]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[3]), as_char4(B_vectors[3]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[4]), as_char4(B_vectors[4]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[5]), as_char4(B_vectors[5]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[6]), as_char4(B_vectors[6]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[7]), as_char4(B_vectors[7]), acc);
+
+	return acc;
+}
+
+#if DPAS_SUPPORTED == 1
+// here declare compiler DPAS intrinsic
+#else
+#define DPAS(A, B, C) FUNC_CALL(dp4a_s8)(A, B, C)
+#endif
+
+__attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
 KERNEL(convolution_DPAS)(
     __global INPUT0_TYPE* input, 
     __global OUTPUT_TYPE* output, 
-    __global FILTER_TYPE* weights, 
+    __global int* weights, 
 #if BIAS_TERM
     __global BIAS_TYPE* biases,
 #endif
@@ -32,6 +62,9 @@ KERNEL(convolution_DPAS)(
 #endif
     uint split_idx)
 {
+	const uint filter_ifm_dpas_num = ((FILTER_IFM_NUM + 31) / 32);
+	const uint filter_ifm_aligned = ((FILTER_IFM_NUM + 31) / 32) * 32;
+
     const uint x = get_global_id(0);
     const uint y = get_global_id(1);
 #if OUTPUT_BATCH_NUM == 1
@@ -55,10 +88,10 @@ KERNEL(convolution_DPAS)(
 #else
     const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
 #endif
-    const uint filter_offset = f*FILTER_OFM_PITCH;
+    const uint filter_offset = get_group_id(2) * FILTER_Y_PITCH * FILTER_SIZE_Y * 8;//f*FILTER_OFM_PITCH;
     const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
 
-    for (uint k = 0; k < FILTER_IFM_NUM; ++k)
+    for (uint k = 0; k < filter_ifm_dpas_num; ++k)
     {
         for (uint j = 0; j < FILTER_SIZE_Y ; ++j)
         {
@@ -74,11 +107,25 @@ KERNEL(convolution_DPAS)(
 
                     if(!zero_x)
                     {
-                        uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH + k*INPUT0_FEATURE_PITCH;
-                        uint filter_idx = filter_offset + k*FILTER_IFM_PITCH + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
+                        uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH + k*8;//8 not 32 because we load ints that store 4x char
+                        uint filter_idx = filter_offset + k*32 + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
 #if QUANTIZATION_TERM
+						int input_data = as_int(intel_sub_group_block_read((const __global uint*)(input + input_idx)));
+						uint8 activations;  //activations of all lanes
+						activations.s0 = sub_group_broadcast(input_data, 0); 
+                        activations.s1 = sub_group_broadcast(input_data, 1); 
+                        activations.s2 = sub_group_broadcast(input_data, 2); 
+                        activations.s3 = sub_group_broadcast(input_data, 3); 
+                        activations.s4 = sub_group_broadcast(input_data, 4); 
+                        activations.s5 = sub_group_broadcast(input_data, 5); 
+                        activations.s6 = sub_group_broadcast(input_data, 6); 
+                        activations.s7 = sub_group_broadcast(input_data, 7); 
+
+						int8 weights_data = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
+
+						dotProd += DPAS(activations, weights_data, dotProd);
                         // emulation dpas with 32bit accumulatorS
-                        dotProd += (int)input[input_idx] * (int)weights[filter_idx];
+//                        dotProd += (int)input[input_idx] * (int)weights[filter_idx];
 #else
                         dotProd += input[input_idx] * weights[filter_idx];
 #endif                     
