@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "include/include_all.cl"
+#include "include/common.cl"
+#include "include/activation_functions.cl"
+#include "include/data_types.cl"
 
-KERNEL(convolution)(
+KERNEL(convolution_DPAS)(
     __global INPUT0_TYPE* input, 
     __global OUTPUT_TYPE* output, 
     __global FILTER_TYPE* weights, 

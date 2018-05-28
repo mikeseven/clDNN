@@ -23,8 +23,10 @@ namespace KernelSelector
     ParamsKey ReorderWeightsKernel::GetSupportedKey() const
     {
         ParamsKey k;
+        k.EnableInputWeightsType(WeightsType::INT8);
         k.EnableInputWeightsType(WeightsType::F16);
         k.EnableInputWeightsType(WeightsType::F32);
+        k.EnableOutputWeightsType(WeightsType::INT8);
         k.EnableOutputWeightsType(WeightsType::F16);
         k.EnableOutputWeightsType(WeightsType::F32);
         k.EnableAllInputWeightsLayout();

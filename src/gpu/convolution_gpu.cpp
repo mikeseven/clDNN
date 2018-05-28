@@ -171,6 +171,8 @@ namespace{
             implementation_map<convolution>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bf8_xy16), convolution_gpu::create);
             implementation_map<convolution>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::byxf), convolution_gpu::create);
             implementation_map<convolution>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::byxf), convolution_gpu::create);
+            // DPAS
+            implementation_map<convolution>::add(std::make_tuple(engine_types::ocl, data_types::i8, format::byxf_af32), convolution_gpu::create);
         }
         ~attach() {}
     };
