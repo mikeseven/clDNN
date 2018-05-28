@@ -21,7 +21,7 @@ namespace KernelSelector
     std::string GetStringEnv(const char* varName)
     {
         std::string str;
-#ifdef WIN32
+#ifdef _WIN32
         char* env = nullptr;
         size_t len = 0;
         errno_t err = _dupenv_s(&env, &len, varName);
