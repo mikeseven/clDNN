@@ -34,7 +34,39 @@ There is also inline documentation available that can be [generated with Doxygen
 
 Accelerate Deep Learning Inference with Intel® Processor Graphics whitepaper [link](https://software.intel.com/en-us/articles/accelerating-deep-learning-inference-with-intel-processor-graphics).
 
+## Intel® OpenVino™ Toolkit and clDNN
+
+clDNN is released also together with Intel® OpenVino™ Toolkit, which contains:
+- *Model Optimizer* a Python*-based command line tool, which imports trained models from popular deep learning frameworks such as Caffe*, TensorFlow*, and Apache MXNet*.
+- *Inference Engine* an execution engine which uses a common API to deliver inference solutions on the platform of your choice (for example GPU with clDNN library)
+
+You can find more information [here](https://software.intel.com/en-us/openvino-toolkit/deep-learning-cv).
+
 ## Changelog
+
+### Drop 7.0
+    New features:
+    - support for img_info=4 in proposal_gpu
+    - support images format in winograd
+    - support for 2 or more inputs in eltwise
+    - priority and throttle hints
+    - deconvolution_grad_input primitive
+    - fc_grad_input and fc_grad_weights primitives
+    Bug fixes:
+    - tensor fixes (i.e. less operator fix)
+    - cascade concat fixes
+    - winograd fixes for bfyx format
+    - auto-tuning fixes for weights calculation
+    UX:
+    - memory pool (reusing memory buffers)
+    - added choosen kernel name in graph dump
+    - flush memory functionality
+    Performance:
+    - graph optimizations
+    - depth-concatenation with fused relu optimization
+    - winograd optimizations
+    - deconvolution optimizations (i.e bfyx opt)
+
 
 ### Drop 6.0
 	New features:
@@ -193,12 +225,12 @@ on version of CMake, we strongly recommend 3.9+)
 ---
 
 - The software was validated on:
-    * CentOS* 7.2 with GNU* Compiler Collection 5.2 (64-bit only), using Intel® intel-opencl-r.5.0 (SRB5.0) [Linux driver package](https://software.intel.com/en-us/articles/opencl-drivers) .
-    * Windows® 10 and Windows® Server 2012 R2 with MSVC 14.0, using [Intel® Graphics Driver for Windows* [15.46] driver package](https://downloadcenter.intel.com/download/27058).
+    * CentOS* 7.2 with GNU* Compiler Collection 5.2 (64-bit only), using [Intel® Graphics Compute Runtime for OpenCL(TM)](https://software.intel.com/en-us/articles/opencl-drivers) .
+    * Windows® 10 and Windows® Server 2012 R2 with MSVC 14.0, using [Intel® Graphics Driver for Windows* [24.20] driver package](https://downloadcenter.intel.com/download/27803/Graphics-Intel-Graphics-Driver-for-Windows-10?v=t).
 
 	More information on Intel® OpenCL™ drivers can be found [here](https://software.intel.com/en-us/articles/opencl-drivers).
 
-We recommend to use SRB5.0 for Linux and 15.46 driver for Windows.
+We recommend to use latest for Linux [link](https://github.com/intel/compute-runtime/releases) and 24.20 driver for Windows [link](https://downloadcenter.intel.com/download/27803/Graphics-Intel-Graphics-Driver-for-Windows-10?v=t).
 
 ## Installation
 
