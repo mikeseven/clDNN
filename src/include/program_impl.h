@@ -215,6 +215,7 @@ private:
 
     void dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter = nullptr) const;
 	void dump_serialization(const char* stage, std::string network_name, std::function<bool(program_node const&)> const& filter = nullptr) const;
+
 };
 }
 
