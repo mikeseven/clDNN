@@ -171,6 +171,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
     standard_cmdline_options.add_options()
         ("input", bpo::value<std::string>()->value_name("<input-dir>"),
             "Path to input directory containing images to classify (mandatory when running classification).")
+		("serialization", bpo::value<std::string>()->value_name("<network name>"),
+			"Given name for serialization process.")
         ("batch", bpo::value<std::uint32_t>()->value_name("<batch-size>")->default_value(8),
             "Size of a group of images that are classified together (large batch sizes have better performance).")
         ("loop", bpo::value<std::uint32_t>()->value_name("<loop-count>")->default_value(1),
@@ -196,8 +198,6 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Dump informations about stages of graph compilation to files in .graph format.\n"
             "Dump informations about primitives in graph to .info format.\n"
             "GraphViz is needed for converting .graph files to pdf format. (example command line in cldnn_dumps folder: dot -Tpdf cldnn_program_1_0_init.graph -o outfile.pdf\n")
-		("serialization", bpo::bool_switch(),
-			"Dump informations required for serialization.\n")
 		("log_engine", bpo::bool_switch(),
             "Log engine actions during execution of a network.")
         ("dump_sources", bpo::bool_switch(),
@@ -449,6 +449,7 @@ int main(int argc, char* argv[])
         }
 
         ep.topology_name = parsed_args["model"].as<std::string>();
+		ep.serialization = parsed_args["serialization"].as<std::string>();
         ep.batch = parsed_args["batch"].as<std::uint32_t>();
         ep.meaningful_kernels_names = parsed_args["meaningful_names"].as<bool>();
         ep.profiling = parsed_args["profiling"].as<bool>();
@@ -464,7 +465,6 @@ int main(int argc, char* argv[])
         ep.dump_single_feature = parsed_args.count("dump_feature") != 0;
         ep.dump_feature_id = ep.dump_single_feature ? parsed_args["dump_feature"].as<uint32_t>() : 0;
         ep.dump_graphs = parsed_args["dump_graphs"].as<bool>();
-		ep.serialization = parsed_args["serialization"].as<bool>();
         ep.log_engine = parsed_args["log_engine"].as<bool>();
         ep.dump_sources = parsed_args["dump_sources"].as<bool>();
         ep.perf_per_watt = parsed_args["perf_per_watt"].as<bool>();

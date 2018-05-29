@@ -271,8 +271,15 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
 
     engine->compile_program(*this);
 
-     this->dump_program("13_finished", true);
-	 this->serialization("serialization");
+    this->dump_program("13_finished", true);
+
+	//Make serialization with given name.
+	auto serialization_network_name = get_serialization_network_name(options);
+	if (serialization_network_name != "")
+	{
+		this->dump_serialization("serialization", serialization_network_name);
+	}
+
     cleanup();
 }
 
@@ -3014,21 +3021,11 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
     dump_graph_optimized(graph, *this);
 }
 
-void program_impl::serialization(const char* stage, std::function<bool(program_node const&)> const& filter) const
+void program_impl::dump_serialization(const char* stage, std::string network_name, std::function<bool(program_node const&)> const& filter) const
 {
-	auto path = get_dir_path(options);
-	if (path.empty())
-	{
-		return;
-	}
-	if (path.back() != '/' && path.back() != '\\')
-	{
-		path += "/";
-	}
-
-	std::ofstream graph(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".graph");
+	std::ofstream graph(network_name + "_" + stage + ".graph");
 	dump_graph_init(graph, *this, filter);
 
-	graph.open(path + "cldnn_program_" + std::to_string(prog_id) + "_" + stage + ".xml");
+	graph.open(network_name + "_" + stage + ".xml");
 	dump_graph_info(graph, *this, filter);
 }
