@@ -482,7 +482,7 @@ int main(int argc, char* argv[])
             ep.topology_name == "gender" ||
             ep.topology_name == "squeezenet" ||
             ep.topology_name == "microbench" ||
-            ep.topology_name == "resnet")
+            ep.topology_name == "resnet50")
         {
             run_topology(ep);
             return 0;

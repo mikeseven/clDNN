@@ -34,80 +34,136 @@
 using namespace cldnn;
 using namespace std;
 
-void add_conv(const engine& engine, topology& tpl, const string& name, const primitive_id& input,
-    const std::string& weights_dir, const tensor& padding = { 0,0,0,0 }, const tensor& stride = { 1,1,1,1 })
+primitive_id add_conv_layer(const std::string& weights_dir, const engine& engine, topology& topology_inst,
+                            const string& layer_name, const primitive_id& input,
+                            const tensor& padding = {0, 0, 0, 0}, const tensor& stride = {1, 1, 1, 1},
+                            const bool add_relu = true)
 {
+    auto weights_data = file::create({engine, join_path(weights_dir, layer_name + "_weights.nnd")});
+    auto bias_data    = file::create({engine, join_path(weights_dir, layer_name + "_bias.nnd")});
 
-    auto w = file::create({ engine, join_path(weights_dir, name + "_weights.nnd") });
-    auto b = file::create({ engine, join_path(weights_dir, name + "_bias.nnd") });
-    auto c = convolution(
-        name,
+    auto conv_layer = convolution(
+        layer_name,
         input,
-        { w },
-        { b },
+        {weights_data},
+        {bias_data},
         stride,
         padding,
-        { 1, 1, 1, 1 },
-        true);
-    tpl.add(w, b, c);
+        {1, 1, 1, 1},
+        add_relu);
+
+    topology_inst.add(weights_data, bias_data, conv_layer);
+
+    return conv_layer;
 }
 
-void add_residual(const engine& engine, topology& tpl,const string& branch, const primitive_id& input, bool conv_in_branch1, const std::string& weights_dir, tensor stride2a = { 1,1,1,1 })
+primitive_id add_conv_layer_no_relu(const std::string& weights_dir, const engine& engine, topology& topology_inst,
+                                    const string& layer_name, const primitive_id& input,
+                                    const tensor& padding = {0, 0, 0, 0}, const tensor& stride = {1, 1, 1, 1})
 {
-    add_conv(engine, tpl, branch + "_branch2a", input, weights_dir);
-    add_conv(engine, tpl, branch + "_branch2b", branch + "_branch2a", weights_dir, { 0,0,-1,-1 });
-    add_conv(engine, tpl, branch + "_branch2c", branch + "_branch2b", weights_dir);
+    return add_conv_layer(weights_dir, engine, topology_inst, layer_name, input, padding, stride, false);
+}
 
-    primitive_id branch1 = input;
+primitive_id add_residual_layers(const std::string& weights_dir, const engine& engine, topology& topology_inst,
+                                 const string& res_name, const primitive_id& input,
+                                 bool conv_in_branch1, const tensor& res_stride = {1, 1, 1, 1})
+{
+    auto conv_branch2a = add_conv_layer(weights_dir, engine, topology_inst, res_name + "_branch2a", input,
+                                        {0, 0, 0, 0}, res_stride);
+    auto conv_branch2b = add_conv_layer(weights_dir, engine, topology_inst, res_name + "_branch2b", conv_branch2a,
+                                        {0, 0, -1, -1});
+    auto conv_branch2c = add_conv_layer_no_relu(weights_dir, engine, topology_inst, res_name + "_branch2c", conv_branch2b);
 
+    primitive_id conv_branch1 = input;
     if (conv_in_branch1)
-    {
-        add_conv(engine, tpl, branch + "_branch1", input, weights_dir);
-        branch1 = branch + "_branch1";
-    }
-    const primitive_id branch2 = branch + "_branch2c";
-    tpl.add(eltwise(branch, { branch1, branch2 }, eltwise_mode::sum, true));
+        conv_branch1 = add_conv_layer_no_relu(weights_dir, engine, topology_inst, res_name + "_branch1", input,
+                                              {0, 0, 0, 0}, res_stride);
+
+    auto res_sum = eltwise(res_name, conv_branch1, conv_branch2c, eltwise_mode::sum, true);
+    topology_inst.add(res_sum);
+
+    return res_sum;
 }
 
-cldnn::topology build_resnet50(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)
+cldnn::topology build_resnet50(const std::string& weights_dir, const cldnn::engine& engine,
+                               cldnn::layout& input_layout, int32_t batch_size, const bool mean_subtract)
 {
-    // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
+    // [224x224x3xF] input->convolution(conv1)->relu(conv1_relu)->pooling[max](pool1) [56x56x64xF].
     input_layout.size = { batch_size, 3, 224, 224 };
     auto input = cldnn::input_layout("input", input_layout);
-    cldnn::topology topology{
-        input };
-   
-    // subtract mean values
-    auto reordered_input = reorder(
-        "reorder",
-        input,
-        { input_layout.data_type, format::bfyx, input_layout.size });
+    topology topology_inst{input};
 
-    auto conv1_w = file::create({ engine, join_path(weights_dir, "conv1_weights.nnd")});
-    auto conv1_b = file::create({ engine, join_path(weights_dir, "conv1_bias.nnd")});
-    auto conv1 = convolution(
-        "conv1",
-        "reorder",
-        { conv1_w },
-        { conv1_b },
-        { 1, 1, 2, 2 },
-        { 0, 0, -3, -3 },
-        { 1, 1, 1, 1 },
-        true);
+    primitive_id corrected_input = input;
+    if (mean_subtract)
+    {
+        // Subtract mean values if necessary.
+        auto reorder_mean = file::create({engine, join_path(weights_dir, "resnet50_mean.nnd")});
+        auto reordered_input = reorder(
+            "reorder",
+            input,
+            { input_layout.data_type, format::bfyx, input_layout.size },
+            reorder_mean);
+        topology_inst.add(reorder_mean, reordered_input);
+        corrected_input = reordered_input;
+    }
+
+    auto conv1 = add_conv_layer(weights_dir, engine, topology_inst, "conv1", corrected_input,
+                                {0,0,-3,-3}, {1, 1, 2, 2});
 
     auto pool1 = pooling(
         "pool1",
-        "conv1",
+        conv1,
         pooling_mode::max,
-        { 1,1,3,3 },  // kernel
-        { 1,1,2,2 }); // strd
+        {1, 1, 3, 3},
+        {1, 1, 2, 2});
+    topology_inst.add(pool1);
 
-    topology.add(reordered_input,
-        conv1_w, conv1_b, conv1, pool1);
+    // [56x56x64xF] res2a->res2b->res2c [56x56x256xF].
+    auto res2a = add_residual_layers(weights_dir, engine, topology_inst, "res2a", pool1, true);
+    auto res2b = add_residual_layers(weights_dir, engine, topology_inst, "res2b", res2a, false);
+    auto res2c = add_residual_layers(weights_dir, engine, topology_inst, "res2c", res2b, false);
 
-    add_residual(engine, topology, "res2a", "pool1", true, weights_dir);
+    // [56x56x256xF] res3a->res3b->res3c->res3d [28x28x512xF].
+    auto res3a = add_residual_layers(weights_dir, engine, topology_inst, "res3a", res2c, true, {1, 1, 2, 2});
+    auto res3b = add_residual_layers(weights_dir, engine, topology_inst, "res3b", res3a, false);
+    auto res3c = add_residual_layers(weights_dir, engine, topology_inst, "res3c", res3b, false);
+    auto res3d = add_residual_layers(weights_dir, engine, topology_inst, "res3d", res3c, false);
 
-    auto output = activation("output", "reorder", activation_relu);
-    topology.add(output);
-    return topology;
+    // [28x28x512xF] res4a->res4b->res4c->res4d->res4e->res4f [14x14x1024xF].
+    auto res4a = add_residual_layers(weights_dir, engine, topology_inst, "res4a", res3d, true, {1, 1, 2, 2});
+    auto res4b = add_residual_layers(weights_dir, engine, topology_inst, "res4b", res4a, false);
+    auto res4c = add_residual_layers(weights_dir, engine, topology_inst, "res4c", res4b, false);
+    auto res4d = add_residual_layers(weights_dir, engine, topology_inst, "res4d", res4c, false);
+    auto res4e = add_residual_layers(weights_dir, engine, topology_inst, "res4e", res4d, false);
+    auto res4f = add_residual_layers(weights_dir, engine, topology_inst, "res4f", res4e, false);
+
+    // [14x14x1024xF] res5a->res5b->res5c [7x7x2048xF].
+    auto res5a = add_residual_layers(weights_dir, engine, topology_inst, "res5a", res4f, true, {1, 1, 2, 2});
+    auto res5b = add_residual_layers(weights_dir, engine, topology_inst, "res5b", res5a, false);
+    auto res5c = add_residual_layers(weights_dir, engine, topology_inst, "res5c", res5b, false);
+
+    // TODO: Avergae no padding?
+    auto pool5 = pooling(
+        "pool5",
+        res5c,
+        pooling_mode::average,
+        {1, 1, 7, 7},
+        {1, 1, 1, 1});
+
+    auto fc1000_weights_data = file::create({engine, join_path(weights_dir, "fc1000_weights.nnd")});
+    auto fc1000_bias_data    = file::create({engine, join_path(weights_dir, "fc1000_bias.nnd")});
+    auto fc1000 = fully_connected(
+        "fc1000",
+        pool5,
+        fc1000_weights_data,
+        fc1000_bias_data);
+
+    auto softmax = cldnn::softmax(
+        "output",
+        fc1000);
+
+    topology_inst.add(pool5,
+                      fc1000_weights_data, fc1000_bias_data, fc1000,
+                      softmax);
+    return topology_inst;
 }
