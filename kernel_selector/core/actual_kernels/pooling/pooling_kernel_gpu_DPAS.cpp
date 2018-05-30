@@ -21,13 +21,8 @@ namespace KernelSelector
     ParamsKey PoolingKerneGPU_DPAS::GetSupportedKey() const
     {
         ParamsKey k;
-        k.EnableInputDataType(Datatype::F16);
-        k.EnableInputDataType(Datatype::F32);
         k.EnableInputDataType(Datatype::INT8);
-        k.EnableOutputDataType(Datatype::F16);
-        k.EnableOutputDataType(Datatype::F32);
         k.EnableOutputDataType(Datatype::INT8);
-        k.EnableInputLayout(DataLayout::byxf_af32);
         k.EnableInputLayout(DataLayout::byxf_af32);
         k.EnableOutputLayout(DataLayout::byxf_af32);
         k.EnableTensorOffset();
@@ -35,7 +30,6 @@ namespace KernelSelector
         k.EnableBatching();
         k.EnablePoolType(PoolType::MAX);
         k.EnablePoolType(PoolType::AVG);
-        k.EnablePoolType(PoolType::MAX_WITH_ARGMAX);
         k.EnablePoolRemainder(PoolRemainder::FLOOR);
         k.EnablePoolRemainder(PoolRemainder::CEIL);
         k.EnablePoolKernelDividerMode(KernelDividerMode::FIXED);
@@ -45,6 +39,24 @@ namespace KernelSelector
         return k;
     }
 
+    PoolingKernelBase::DispatchData PoolingKerneGPU_DPAS::SetDefault(const PoolingParams& params) const
+    {
+        constexpr int simdSize = 8;
+
+        DispatchData runInfo = PoolingKernelBase::SetDefault(params);
+
+        runInfo.gws0 = params.output.X().v;
+        runInfo.gws1 = params.output.Y().v;
+        // we got byxf_af32 format, so if we process 4 features per workitem, that means we process 32 per simd, so divide by 4 and we end up with 8
+        runInfo.gws2 = (RoundUp(params.output.Feature().v, 32) * params.output.Batch().v) / 4;
+
+        runInfo.lws0 = 1;
+        runInfo.lws1 = 1;
+        runInfo.lws2 = 8;
+
+        return runInfo;
+    }
+    
     KernelsData PoolingKerneGPU_DPAS::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         return GetCommonKernelsData(params, options, FORCE_PRIORITY_1);

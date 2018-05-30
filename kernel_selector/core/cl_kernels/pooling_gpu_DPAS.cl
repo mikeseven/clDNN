@@ -24,7 +24,7 @@
 #endif
 
 
-inline UNIT_TYPE FUNC(apply_pooling)(UNIT_TYPE tmp, UNIT_TYPE in)
+inline UNIT_TYPE FUNC(apply_pooling)(int tmp, int in)
 {
 #if MAX_POOLING || MAX_WITH_ARGMAX_POOLING
     return max(tmp, in);
@@ -33,7 +33,7 @@ inline UNIT_TYPE FUNC(apply_pooling)(UNIT_TYPE tmp, UNIT_TYPE in)
 #endif
 }
 
-KERNEL(pooling_gpu_DPAS)(const __global UNIT_TYPE* input, __global UNIT_TYPE* output
+KERNEL(pooling_gpu_DPAS)(const __global int* input, __global UNIT_TYPE* output
 #if MAX_WITH_ARGMAX_POOLING
 , __global float* arg_max
 #endif
@@ -42,8 +42,10 @@ KERNEL(pooling_gpu_DPAS)(const __global UNIT_TYPE* input, __global UNIT_TYPE* ou
     const uint x    = (uint)get_global_id(0);
     const uint y    = (uint)get_global_id(1);
     const uint bf   = (uint)get_global_id(2);
-    const uint f    = bf % INPUT0_FEATURE_NUM;
-    const uint b    = bf / INPUT0_FEATURE_NUM;
+	// we process 4 features per workitem that's why we need to divide it
+    const uint aligned32_features = ((INPUT0_FEATURE_NUM + 31) / 32) * 32;
+    const uint f    = 4 * (bf % (aligned32_features / 4));
+    const uint b    = bf / (aligned32_features / 4);
     
     if (x >= OUTPUT_SIZE_X)
     {
@@ -53,11 +55,7 @@ KERNEL(pooling_gpu_DPAS)(const __global UNIT_TYPE* input, __global UNIT_TYPE* ou
     const int offset_x = (int)x*STRIDE_SIZE_X - PADDING_SIZE_X;
     const int offset_y = (int)y*STRIDE_SIZE_Y - PADDING_SIZE_Y;
     
-    UNIT_TYPE result = UNIT_INIT_VAL;
-    
-#if MAX_WITH_ARGMAX_POOLING
-    uint arg_max_idx = 0;
-#endif
+    int4 result = UNIT_INIT_VAL;
 
 #ifdef CHECK_BOUNDRY
     if (offset_x + POOL_SIZE_X < 0 || offset_x >= INPUT0_SIZE_X ||
@@ -84,15 +82,12 @@ KERNEL(pooling_gpu_DPAS)(const __global UNIT_TYPE* input, __global UNIT_TYPE* ou
                 if(!zero)
                 {
                     const uint input_idx = batch_and_feature_offset + input_offset_y*INPUT0_Y_PITCH + input_offset_x*INPUT0_X_PITCH;
-
-#if MAX_WITH_ARGMAX_POOLING
-                    if(input[input_idx] > result)
-                    {
-                        const uint input_idx_bfyx_no_padding = input_offset_x + INPUT0_SIZE_X * (input_offset_y + INPUT0_SIZE_Y * (f + INPUT0_FEATURE_NUM * b));
-                        arg_max_idx = input_idx_bfyx;
-                    }
-#endif
-                    result = FUNC_CALL(apply_pooling)(result, input[input_idx]);
+                    
+                    char4 input_data = as_char4(input[input_idx/4]);
+                    result[0] = FUNC_CALL(apply_pooling)(result[0], input_data[0]);
+                    result[1] = FUNC_CALL(apply_pooling)(result[1], input_data[1]);
+                    result[2] = FUNC_CALL(apply_pooling)(result[2], input_data[2]);
+                    result[3] = FUNC_CALL(apply_pooling)(result[3], input_data[3]);
                     
 #ifdef DYNAMIC_KERNEL_DIVIDER
                     num_elementes++;
@@ -109,30 +104,19 @@ KERNEL(pooling_gpu_DPAS)(const __global UNIT_TYPE* input, __global UNIT_TYPE* ou
 #else
     uint input_idx = GET_DATA_INDEX(INPUT0, b, f, offset_y, offset_x);
 
-#if MAX_WITH_ARGMAX_POOLING
-    uint input_idx_bfyx_no_padding = offset_x + INPUT0_SIZE_X * (offset_y + INPUT0_SIZE_Y * (f + INPUT0_FEATURE_NUM * b));
-#endif
-
     for(uint j = 0; j < POOL_SIZE_Y; j++)
     {
         for(uint i = 0; i < POOL_SIZE_X; i++)
         {
+            char4 input_data = as_char4(input[input_idx/4]);
+            result[0] = FUNC_CALL(apply_pooling)(result[0], input_data[0]);
+            result[1] = FUNC_CALL(apply_pooling)(result[1], input_data[1]);
+            result[2] = FUNC_CALL(apply_pooling)(result[2], input_data[2]);
+            result[3] = FUNC_CALL(apply_pooling)(result[3], input_data[3]);
 
-#if MAX_WITH_ARGMAX_POOLING
-            if(input[input_idx] > result)
-                arg_max_idx = input_idx_bfyx_no_padding;
-#endif
-
-            result = FUNC_CALL(apply_pooling)(result, input[input_idx]);
             input_idx += INPUT0_X_PITCH;
-#if MAX_WITH_ARGMAX_POOLING
-            input_idx_bfyx_no_padding++;
-#endif
         }
         input_idx += (INPUT0_Y_PITCH - POOL_SIZE_X*INPUT0_X_PITCH);
-#if MAX_WITH_ARGMAX_POOLING
-        input_idx_bfyx_no_padding += (INPUT0_SIZE_X - POOL_SIZE_X);
-#endif
     }
     
 #if defined(DYNAMIC_KERNEL_DIVIDER) || defined(DYNAMIC_WITH_PADDING_KERNEL_DIVIDER)
@@ -148,14 +132,11 @@ KERNEL(pooling_gpu_DPAS)(const __global UNIT_TYPE* input, __global UNIT_TYPE* ou
     #endif
 #endif
 
-    const uint output_pos = GET_DATA_INDEX(OUTPUT, b, f, y, x);
-    output[output_pos] = ACTIVATION(result, NL_M ,NL_N);
-
-#if MAX_WITH_ARGMAX_POOLING
-    //INPUT1 macro stands for Argmax
-    const uint arg_max_pos = GET_DATA_INDEX(INPUT1, b, f, y, x);
-    arg_max[arg_max_pos] = convert_float(arg_max_idx);
-#endif
+for(uint op = 0; op < 4; op++)
+{
+    const uint output_pos = GET_DATA_INDEX(OUTPUT, b, f+op, y, x);
+    output[output_pos] = ACTIVATION(result[op], NL_M ,NL_N);
+}
 
 }
 

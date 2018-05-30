@@ -197,7 +197,7 @@ inline uint FUNC(get_os_is_yx_isa8_osv8_isv4_index)(uint o, uint i, uint y, uint
 	idx += x * 4 * 8 * 8;
 	idx += y * size_x * 4 * 8 * 8;
 	idx += is_idx * size_y * size_x * 4 * 8 * 8;
-	idx += os_idx * f_32_aligned * size_y * size_x * 4 * 8 * 8;
+	idx += os_idx * (f_32_aligned/32) * size_y * size_x * 4 * 8 * 8;
 
     return idx;
 }

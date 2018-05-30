@@ -88,7 +88,12 @@ KERNEL(convolution_DPAS)(
 #else
     const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
 #endif
-    const uint filter_offset = get_group_id(2) * FILTER_Y_PITCH * FILTER_SIZE_Y * 8;//f*FILTER_OFM_PITCH;
+// calculate alignment of input features
+    const uint f32_aligned = ((FILTER_IFM_NUM + 31)/32) * 32;
+    const uint filter_ofm_pitch = (f32_aligned/32) * FILTER_SIZE_X * FILTER_SIZE_Y * 4 * 8 * 8;
+// end of calculations
+
+    const uint filter_offset = get_group_id(2) * filter_ofm_pitch;//f*FILTER_OFM_PITCH;
     const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
 
     for (uint k = 0; k < filter_ifm_dpas_num; ++k)
@@ -127,7 +132,7 @@ KERNEL(convolution_DPAS)(
 						dotProd = DPAS(activations, weights_data, dotProd);
 
 /*#if FILTER_IFM_NUM == 3
-if(x==0 && y==25 && f==0)
+if(x==0 && y==0 && f==8)
 {
 	uchar4 ddd = as_uchar4(input_data);
 	char4 www = as_char4(weights_data[0]);
@@ -157,7 +162,7 @@ if(x==0 && y==25 && f==0)
 #if CALIBRATION_TERM
 
 /*#if FILTER_IFM_NUM == 3
-if(x==0 && y==25 && f==0)
+if(x==0 && y==0 && f==8)
 {
 	printf("Quant F: %f IQF: %f bias: %f calibrations: %f dotProd: %d\n", quantizations[f], (float)I_QF, (float)biases[bias_index], calibrations[f], dotProd);
 }
