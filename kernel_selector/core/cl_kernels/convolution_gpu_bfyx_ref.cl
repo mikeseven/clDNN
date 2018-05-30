@@ -75,8 +75,8 @@ KERNEL(convolution)(
                         uint filter_idx = filter_offset + k*FILTER_IFM_PITCH + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
 #if QUANTIZATION_TERM
 
-/*#if FILTER_IFM_NUM == 3
-if(x==0 && y==0 && f==8)
+/*#if FILTER_IFM_NUM == 64 && FILTER_OFM_NUM == 16
+if(x==0 && y==4 && f==0)
 {
 	printf("input uchar: %u char: %d \n", (unsigned char)input[input_idx], (char)input[input_idx]);
 	printf("weights uchar: %u char: %d \n", (unsigned char)weights[filter_idx], (char)weights[filter_idx]);
@@ -103,8 +103,8 @@ if(x==0 && y==0 && f==8)
 #if QUANTIZATION_TERM
 #if CALIBRATION_TERM
 
-/*#if FILTER_IFM_NUM == 3
-if(x==0 && y==0 && f==8)
+/*#if FILTER_IFM_NUM == 64 && FILTER_OFM_NUM == 16
+if(x==0 && y==4 && f==0)
 {
 	printf("Quant F: %f IQF: %f bias: %f calibrations: %f dotProd: %d\n", quantizations[f], (float)I_QF, (float)biases[bias_index], calibrations[f], dotProd);
 }

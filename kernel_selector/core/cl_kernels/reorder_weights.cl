@@ -98,7 +98,7 @@ KERNEL (reorder_weights)(const __global INPUT0_TYPE* input, __global OUTPUT_TYPE
     output[FUNC_CALL(get_output_index)(o, i, y, x)] = TO_OUTPUT_TYPE(input[FUNC_CALL(get_input_index)(ir[0],ir[1],ir[2],ir[3])]);
 
 /*#if defined OUTPUT_LAYOUT_OS_IS_YX_ISA8_OSV8_ISV4
-if(x==1 && y==0 && o==0 && i==0 && OUTPUT_SIZE_X == 3 && OUTPUT_IFM_NUM==3 && OUTPUT_OFM_NUM==64)
+if(x==0 && y==0 && o==0 && i==32 && OUTPUT_SIZE_X == 1 && OUTPUT_IFM_NUM==64 && OUTPUT_OFM_NUM==16)
 {
 	printf("%d %d %d %d out idx: %u out int: %d\n",(int)o, (int)i, (int)x, (int)y, (uint)FUNC_CALL(get_output_index)(o, i, y, x), (int)TO_OUTPUT_TYPE(input[FUNC_CALL(get_input_index)(ir[0],ir[1],ir[2],ir[3])]));
 }

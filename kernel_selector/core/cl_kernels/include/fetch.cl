@@ -189,7 +189,7 @@ inline uint FUNC(get_os_is_yx_isa8_osv8_isv4_index)(uint o, uint i, uint y, uint
     const uint f_32_aligned = ((size_ifm + 31)/32) * 32;
 	const uint isv2_idx = i % 4;
 	const uint osv_idx = o % 8;
-	const uint isv1_idx = i / 4;
+	const uint isv1_idx = (i / 4) % 8;
 	const uint is_idx = i / 32;
 	const uint os_idx = o / 8;
 

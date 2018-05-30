@@ -112,7 +112,7 @@ KERNEL(convolution_DPAS)(
 
                     if(!zero_x)
                     {
-                        uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH + k*8;//8 not 32 because we load ints that store 4x char
+                        uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH + k*32;//8 not 32 because we load ints that store 4x char
                         uint filter_idx = filter_offset + k*8*8*4 + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
 						filter_idx /= 4; // divide by 4 because we load in a packs of 4x char 
 #if QUANTIZATION_TERM
@@ -131,14 +131,21 @@ KERNEL(convolution_DPAS)(
 
 						dotProd = DPAS(activations, weights_data, dotProd);
 
-/*#if FILTER_IFM_NUM == 3
-if(x==0 && y==0 && f==8)
+/*#if FILTER_IFM_NUM == 64 && FILTER_OFM_NUM == 16
+if(x==0 && y==4 && f==0)
 {
 	uchar4 ddd = as_uchar4(input_data);
+    uchar4 ddd2 = as_uchar4(activations.s1);
+    uchar4 ddd3 = as_uchar4(activations.s2);
 	char4 www = as_char4(weights_data[0]);
+    char4 www2 = as_char4(weights_data[1]);
 	int test_mul = ddd[0] * www[0];
-	printf("input int: %d, as uchar %u %u %u %u\n", input_data, ddd[0], ddd[1], ddd[2], ddd[3]);
-	printf("weights int: %d, as char %d %d %d %d weights_idx: %u\n", weights_data[0], www[0], www[1], www[2], www[3], filter_idx);
+	printf("input int: %d, as uchar %u %u %u %u : %u %u %u %u : %u %u %u %u input idx: %d\n", input_data,
+     ddd[0], ddd[1], ddd[2], ddd[3],
+     ddd2[0], ddd2[1], ddd2[2], ddd2[3],
+     ddd3[0], ddd3[1], ddd3[2], ddd3[3],
+     input_idx);
+	printf("weights int: %d, as char %d %d %d %d : %d %d %d %d weights_idx: %u\n", weights_data[0], www[0], www[1], www[2], www[3], www2[0], www2[1], www2[2], www2[3], filter_idx);
 	printf("dotProd: %d test_mul: %d\n", (int)dotProd, (int)test_mul);
 }
 #endif*/
@@ -161,8 +168,8 @@ if(x==0 && y==0 && f==8)
 #if QUANTIZATION_TERM
 #if CALIBRATION_TERM
 
-/*#if FILTER_IFM_NUM == 3
-if(x==0 && y==0 && f==8)
+/*#if FILTER_IFM_NUM == 64 && FILTER_OFM_NUM == 16
+if(x==0 && y==4 && f==0)
 {
 	printf("Quant F: %f IQF: %f bias: %f calibrations: %f dotProd: %d\n", quantizations[f], (float)I_QF, (float)biases[bias_index], calibrations[f], dotProd);
 }
