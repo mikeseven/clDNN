@@ -171,7 +171,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
     standard_cmdline_options.add_options()
         ("input", bpo::value<std::string>()->value_name("<input-dir>"),
             "Path to input directory containing images to classify (mandatory when running classification).")
-		("serialization", bpo::value<std::string>()->value_name("<network name>"),
+		("serialization", bpo::value<std::string>()->value_name("<network name>")->default_value(""),
 			"Name for serialization process.")
         ("batch", bpo::value<std::uint32_t>()->value_name("<batch-size>")->default_value(8),
             "Size of a group of images that are classified together (large batch sizes have better performance).")

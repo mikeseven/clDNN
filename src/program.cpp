@@ -275,7 +275,7 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
 
 	//Make serialization with given name.
 	auto serialization_network_name = get_serialization_network_name(options);
-	if (serialization_network_name != "")
+	if (!serialization_network_name.empty())
 	{
 		this->dump_serialization("serialization", serialization_network_name);
 	}
