@@ -34,8 +34,8 @@ inline uint FUNC(get_input_index)(uint o, uint i, uint y, uint x)
     return GET_FILTER_IY_XS_OS_XSV2_OSV_INDEX(INPUT0, o, i, y, x, SUB_GROUP_SIZE);
 #elif defined INPUT0_LAYOUT_IMAGE_2D_WEIGHTS_C1_B_FYX
     #error - not supported yet
-#elif defined OUTPUT_LAYOUT_OS_IS_YX_ISA8_OSV8_ISV4
-	return GET_FILTER_OS_IS_YX_ISA8_OSV8_ISV4(OUTPUT, o, i, y, x);
+#elif defined INPUT0_LAYOUT_OS_IS_YX_ISA8_OSV8_ISV4
+	return GET_FILTER_OS_IS_YX_ISA8_OSV8_ISV4(INPUT0, o, i, y, x);
 #else
 #error reorder_weights.cl: input format - not supported
 #endif
@@ -96,5 +96,12 @@ KERNEL (reorder_weights)(const __global INPUT0_TYPE* input, __global OUTPUT_TYPE
 #endif
     uint4 ir = FUNC_CALL(reshape_dims)(o,i,y,x, OUTPUT_SIZE_Y, OUTPUT_SIZE_X, INPUT0_SIZE_Y, INPUT0_SIZE_X, OUTPUT_DIMS, INPUT0_DIMS);
     output[FUNC_CALL(get_output_index)(o, i, y, x)] = TO_OUTPUT_TYPE(input[FUNC_CALL(get_input_index)(ir[0],ir[1],ir[2],ir[3])]);
+
+/*#if defined OUTPUT_LAYOUT_OS_IS_YX_ISA8_OSV8_ISV4
+if(x==1 && y==0 && o==0 && i==0 && OUTPUT_SIZE_X == 3 && OUTPUT_IFM_NUM==3 && OUTPUT_OFM_NUM==64)
+{
+	printf("%d %d %d %d out idx: %u out int: %d\n",(int)o, (int)i, (int)x, (int)y, (uint)FUNC_CALL(get_output_index)(o, i, y, x), (int)TO_OUTPUT_TYPE(input[FUNC_CALL(get_input_index)(ir[0],ir[1],ir[2],ir[3])]));
+}
+#endif*/
 }
 #endif

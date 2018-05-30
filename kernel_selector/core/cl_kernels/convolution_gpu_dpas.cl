@@ -17,7 +17,7 @@
 #include "include/data_types.cl"
 #include "include/fetch.cl"
 
-inline int FUNC(dp4a_SW)(uchar4 input, char4 weight, int acc)
+inline int FUNC(dp4a_SW)(char4 input, char4 weight, int acc)
 {
 	acc += (input[0] * weight[0]);
 	acc += (input[1] * weight[1]);
@@ -26,16 +26,16 @@ inline int FUNC(dp4a_SW)(uchar4 input, char4 weight, int acc)
 	return acc;
 }
 
-inline int FUNC(dp4a_s8)(uint8 A_scalars, int8 B_vectors, int acc)
+inline int FUNC(dp4a_s8)(int8 A_scalars, int8 B_vectors, int acc)
 {
-	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[0]), as_char4(B_vectors[0]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[1]), as_char4(B_vectors[1]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[2]), as_char4(B_vectors[2]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[3]), as_char4(B_vectors[3]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[4]), as_char4(B_vectors[4]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[5]), as_char4(B_vectors[5]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[6]), as_char4(B_vectors[6]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_uchar4(A_scalars[7]), as_char4(B_vectors[7]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[0]), as_char4(B_vectors[0]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[1]), as_char4(B_vectors[1]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[2]), as_char4(B_vectors[2]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[3]), as_char4(B_vectors[3]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[4]), as_char4(B_vectors[4]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[5]), as_char4(B_vectors[5]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[6]), as_char4(B_vectors[6]), acc);
+	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[7]), as_char4(B_vectors[7]), acc);
 
 	return acc;
 }
@@ -108,10 +108,11 @@ KERNEL(convolution_DPAS)(
                     if(!zero_x)
                     {
                         uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH + k*8;//8 not 32 because we load ints that store 4x char
-                        uint filter_idx = filter_offset + k*32 + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
+                        uint filter_idx = filter_offset + k*8*8*4 + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
+						filter_idx /= 4; // divide by 4 because we load in a packs of 4x char 
 #if QUANTIZATION_TERM
 						int input_data = as_int(intel_sub_group_block_read((const __global uint*)(input + input_idx)));
-						uint8 activations;  //activations of all lanes
+						int8 activations;  //activations of all lanes
 						activations.s0 = sub_group_broadcast(input_data, 0); 
                         activations.s1 = sub_group_broadcast(input_data, 1); 
                         activations.s2 = sub_group_broadcast(input_data, 2); 
@@ -123,9 +124,20 @@ KERNEL(convolution_DPAS)(
 
 						int8 weights_data = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
 
-						dotProd += DPAS(activations, weights_data, dotProd);
-                        // emulation dpas with 32bit accumulatorS
-//                        dotProd += (int)input[input_idx] * (int)weights[filter_idx];
+						dotProd = DPAS(activations, weights_data, dotProd);
+
+/*#if FILTER_IFM_NUM == 3
+if(x==0 && y==25 && f==0)
+{
+	uchar4 ddd = as_uchar4(input_data);
+	char4 www = as_char4(weights_data[0]);
+	int test_mul = ddd[0] * www[0];
+	printf("input int: %d, as uchar %u %u %u %u\n", input_data, ddd[0], ddd[1], ddd[2], ddd[3]);
+	printf("weights int: %d, as char %d %d %d %d weights_idx: %u\n", weights_data[0], www[0], www[1], www[2], www[3], filter_idx);
+	printf("dotProd: %d test_mul: %d\n", (int)dotProd, (int)test_mul);
+}
+#endif*/
+
 #else
                         dotProd += input[input_idx] * weights[filter_idx];
 #endif                     
@@ -143,6 +155,14 @@ KERNEL(convolution_DPAS)(
 #endif
 #if QUANTIZATION_TERM
 #if CALIBRATION_TERM
+
+/*#if FILTER_IFM_NUM == 3
+if(x==0 && y==25 && f==0)
+{
+	printf("Quant F: %f IQF: %f bias: %f calibrations: %f dotProd: %d\n", quantizations[f], (float)I_QF, (float)biases[bias_index], calibrations[f], dotProd);
+}
+#endif*/
+
     dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
 #else  // CALIBRATION_TERM
     dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * O_QF);

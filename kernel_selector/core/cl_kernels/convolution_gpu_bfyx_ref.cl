@@ -74,6 +74,15 @@ KERNEL(convolution)(
                         uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH + k*INPUT0_FEATURE_PITCH;
                         uint filter_idx = filter_offset + k*FILTER_IFM_PITCH + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
 #if QUANTIZATION_TERM
+
+/*#if FILTER_IFM_NUM == 3
+if(x==0 && y==25 && f==0)
+{
+	printf("input uchar: %u char: %d \n", (unsigned char)input[input_idx], (char)input[input_idx]);
+	printf("weights uchar: %u char: %d \n", (unsigned char)weights[filter_idx], (char)weights[filter_idx]);
+}
+#endif*/
+
                         // emulation dpas with 32bit accumulatorS
                         dotProd += (int)input[input_idx] * (int)weights[filter_idx];
 #else
@@ -93,6 +102,14 @@ KERNEL(convolution)(
 #endif
 #if QUANTIZATION_TERM
 #if CALIBRATION_TERM
+
+/*#if FILTER_IFM_NUM == 3
+if(x==0 && y==25 && f==0)
+{
+	printf("Quant F: %f IQF: %f bias: %f calibrations: %f dotProd: %d\n", quantizations[f], (float)I_QF, (float)biases[bias_index], calibrations[f], dotProd);
+}
+#endif*/
+
     dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
 #else  // CALIBRATION_TERM
     dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * O_QF);

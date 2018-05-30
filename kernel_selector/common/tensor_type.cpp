@@ -310,7 +310,7 @@ namespace KernelSelector
             }
             else if (l == os_is_yx_isa8_osv8_isv4)
             {
-                ret[0].pitch = newDims[2] * newDims[3];
+                ret[0].pitch = 256;
                 ret[1].pitch = ret[0].pitch * ret[0].v;
             }
 

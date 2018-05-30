@@ -184,8 +184,9 @@ inline uint FUNC(get_iy_xs_os_xsv2_osv_index)(uint o, uint i, uint y, uint x, ui
         CAT(prefix, _OFFSET),                                                   \
         sub_group_size)
 
-inline uint FUNC(get_os_is_yx_isa8_osv8_isv4_index)(uint o, uint i, uint y, uint x, uint x_size, uint i_pitch, uint y_pitch, uint x_pitch, uint offset)
+inline uint FUNC(get_os_is_yx_isa8_osv8_isv4_index)(uint o, uint i, uint y, uint x, uint size_x, uint size_y, uint size_ifm, uint size_ofm, uint offset)
 {
+    const uint f_32_aligned = ((size_ifm + 31)/32) * 32;
 	const uint isv2_idx = i % 4;
 	const uint osv_idx = o % 8;
 	const uint isv1_idx = i / 4;
@@ -194,9 +195,9 @@ inline uint FUNC(get_os_is_yx_isa8_osv8_isv4_index)(uint o, uint i, uint y, uint
 
 	size_t idx = offset + isv2_idx + 4 * (osv_idx + 8 * isv1_idx);
 	idx += x * 4 * 8 * 8;
-	idx += y * x_pitch;
-	idx += is_idx * y_pitch;
-	idx += os_idx + y_pitch * i_pitch;
+	idx += y * size_x * 4 * 8 * 8;
+	idx += is_idx * size_y * size_x * 4 * 8 * 8;
+	idx += os_idx * f_32_aligned * size_y * size_x * 4 * 8 * 8;
 
     return idx;
 }
@@ -204,9 +205,9 @@ inline uint FUNC(get_os_is_yx_isa8_osv8_isv4_index)(uint o, uint i, uint y, uint
 #define GET_FILTER_OS_IS_YX_ISA8_OSV8_ISV4(prefix, o, i, y, x) \
 	FUNC_CALL(get_os_is_yx_isa8_osv8_isv4_index)(                               \
         o, i, y, x, CAT(prefix, _SIZE_X ),                                      \
-        CAT(prefix, _IFM_PITCH),                                                \
-        CAT(prefix, _Y_PITCH),                                                  \
-        CAT(prefix, _X_PITCH),                                                  \
+        CAT(prefix, _SIZE_Y),                                                \
+        CAT(prefix, _IFM_NUM),                                                  \
+        CAT(prefix, _OFM_NUM),                                                  \
         CAT(prefix, _OFFSET))
 
 #define DECLARE_SAMPLER const sampler_t imageSampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST
