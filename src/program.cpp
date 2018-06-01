@@ -273,11 +273,12 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
 
     this->dump_program("13_finished", true);
 
-	//Make serialization with given name.
+	//Makes serialization with given name.
+	//Placeholder, not working yet, in progress.
 	auto serialization_network_name = get_serialization_network_name(options);
 	if (!serialization_network_name.empty())
 	{
-		this->dump_serialization("serialization", serialization_network_name);
+		this->serialize("serialization", serialization_network_name);
 	}
 
     cleanup();
@@ -3024,7 +3025,9 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
     dump_graph_optimized(graph, *this);
 }
 
-void program_impl::dump_serialization(const char* stage, std::string network_name, std::function<bool(program_node const&)> const& filter) const
+//Makes serialization with given name.
+//Placeholder, not working yet, in progress.
+void program_impl::serialize(const char* stage, std::string network_name, std::function<bool(program_node const&)> const& filter) const
 {
 	std::ofstream graph(network_name + "_" + stage + ".graph");
 	dump_graph_init(graph, *this, filter);

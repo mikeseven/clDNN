@@ -59,7 +59,7 @@ enum class build_option_type
     /// @brief Specifies a directory to which stages of network compilation should be dumped. (default: empty, i.e. no dumping)
     graph_dumps_dir = cldnn_build_option_graph_dumps_dir,
 	/// @brief Name for serialization process
-	serialization_network = cldnn_build_option_serialization
+	serialize_network = cldnn_build_option_serialization
 };
 
 /// @brief Tuning mode.
@@ -115,7 +115,7 @@ struct build_option
     static std::shared_ptr<const build_option> graph_dumps_dir(const std::string& dir_path);
 
 	/// @brief Specifies a name for serialization process.
-	static std::shared_ptr<const build_option> serialization_network(const std::string& dir_path);
+	static std::shared_ptr<const build_option> serialize_network(const std::string& dir_path);
 
     virtual ~build_option() = default;
 
@@ -308,7 +308,7 @@ struct build_option_serialization : build_option
 
 private:
 
-	build_option_type get_type() const override { return build_option_type::serialization_network; }
+	build_option_type get_type() const override { return build_option_type::serialize_network; }
 
 	const void* get_data() const override { return (serialization_network_name.empty() ? nullptr : serialization_network_name.c_str()); }
 
@@ -401,10 +401,10 @@ namespace detail
             return std::make_shared<object_type>(option);
         }
     };
-	template<> struct build_option_traits<build_option_type::serialization_network>
+	template<> struct build_option_traits<build_option_type::serialize_network>
 	{
-		typedef build_option_serialization<build_option_type::serialization_network> object_type;
-		static std::shared_ptr<const build_option> make_default() { return build_option::serialization_network({}); }
+		typedef build_option_serialization<build_option_type::serialize_network> object_type;
+		static std::shared_ptr<const build_option> make_default() { return build_option::serialize_network({}); }
 		static std::shared_ptr<const build_option> make_option(const cldnn_build_option& option)
 		{
 			assert(option.type == cldnn_build_option_serialization);
@@ -444,9 +444,9 @@ inline std::shared_ptr<const build_option> build_option::graph_dumps_dir(const s
 {
     return std::make_shared<build_option_directory<build_option_type::graph_dumps_dir>>(dir_path);
 }
-inline std::shared_ptr<const build_option> build_option::serialization_network(const std::string& name)
+inline std::shared_ptr<const build_option> build_option::serialize_network(const std::string& name)
 {
-	return std::make_shared<build_option_serialization<build_option_type::serialization_network>>(name);
+	return std::make_shared<build_option_serialization<build_option_type::serialize_network>>(name);
 }
 #endif
 
@@ -544,7 +544,7 @@ private:
         case cldnn_build_option_graph_dumps_dir:
             return detail::build_option_traits<build_option_type::graph_dumps_dir>::make_option(option);
 		case cldnn_build_option_serialization:
-			return detail::build_option_traits<build_option_type::serialization_network>::make_option(option);
+			return detail::build_option_traits<build_option_type::serialize_network>::make_option(option);
         default: throw std::out_of_range("unsupported build option type");
         }
     }

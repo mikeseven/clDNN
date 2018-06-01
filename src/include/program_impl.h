@@ -214,7 +214,7 @@ private:
     void backward_bfs(std::function<void(program_node&)> const& mark_func = nullptr, std::function<void(program_node&)> const& unmark_func = nullptr) const;
 
     void dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter = nullptr) const;
-	void dump_serialization(const char* stage, std::string network_name, std::function<bool(program_node const&)> const& filter = nullptr) const;
+	void serialize(const char* stage, std::string network_name, std::function<bool(program_node const&)> const& filter = nullptr) const;
 
 };
 }
