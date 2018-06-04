@@ -2085,7 +2085,7 @@ void program_impl::prepare_padding()
         auto conv_layout = node.get_output_layout();
 
         // right now output padding optimization is only available for bfyx format and data type = float32
-        if (conv_layout.format != cldnn::format::bfyx && conv_layout.format != cldnn::format::bf8_xy16)
+        if (conv_layout.format != cldnn::format::bfyx && conv_layout.format != cldnn::format::bf8_xy16 && conv_layout.format != cldnn::format::byxf_af32)
         {
             continue;
         }

@@ -54,7 +54,8 @@ KERNEL(convolution)(
 #endif
     const uint filter_offset = f*FILTER_OFM_PITCH;
     const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
-
+/*    int testing_val = 0;
+    int counterrr = 0;*/
     for (uint k = 0; k < FILTER_IFM_NUM; ++k)
     {
         for (uint j = 0; j < FILTER_SIZE_Y ; ++j)
@@ -75,11 +76,17 @@ KERNEL(convolution)(
                         uint filter_idx = filter_offset + k*FILTER_IFM_PITCH + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
 #if QUANTIZATION_TERM
 
-/*#if FILTER_IFM_NUM == 64 && FILTER_OFM_NUM == 16
-if(x==0 && y==4 && f==0)
+/*#if FILTER_IFM_NUM == 48 && FILTER_OFM_NUM == 192 && FILTER_SIZE_X == 3 && INPUT0_SIZE_X ==14
+if(x==0 && y==0 && f==0 && i==1 && j==1)
 {
-	printf("input uchar: %u char: %d \n", (unsigned char)input[input_idx], (char)input[input_idx]);
+    if(counterrr == 32)
+        testing_val = 0;
+    counterrr++;
+
+    testing_val += (int)input[input_idx] * (int)weights[filter_idx];
+	printf("input uchar: %u char: %d testing_val: %d \n", (unsigned char)input[input_idx], (char)input[input_idx], testing_val);
 	printf("weights uchar: %u char: %d \n", (unsigned char)weights[filter_idx], (char)weights[filter_idx]);
+    
 }
 #endif*/
 
@@ -103,8 +110,8 @@ if(x==0 && y==4 && f==0)
 #if QUANTIZATION_TERM
 #if CALIBRATION_TERM
 
-/*#if FILTER_IFM_NUM == 64 && FILTER_OFM_NUM == 16
-if(x==0 && y==4 && f==0)
+/*#if FILTER_IFM_NUM == 48 && FILTER_OFM_NUM == 192 && FILTER_SIZE_X == 3 && INPUT0_SIZE_X ==14
+if(x==0 && y==0 && f==0)
 {
 	printf("Quant F: %f IQF: %f bias: %f calibrations: %f dotProd: %d\n", quantizations[f], (float)I_QF, (float)biases[bias_index], calibrations[f], dotProd);
 }
