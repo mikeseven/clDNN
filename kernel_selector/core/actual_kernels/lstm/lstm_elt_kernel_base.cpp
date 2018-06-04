@@ -76,7 +76,7 @@ namespace kernel_selector
         auto entryPoint = GetEntryPoint(kernelName, newParams.layerID, options);
         auto jit = CreateJit(kernelName, cldnnJit, entryPoint);
 
-        kernel.workGroups.global = { out.X().v, out.Y().v, 1 };
+        kernel.workGroups.global = { out.X().v, out.Batch().v, 1 };
         kernel.kernelString = GetKernelString(kernelName, jit, entryPoint);
         kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 0 });
         kernel.arguments.push_back({ ArgumentDescriptor::Types::OUTPUT, 0 });

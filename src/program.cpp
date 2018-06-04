@@ -48,6 +48,7 @@
 #include "reorder_inst.h"
 #include "reshape_inst.h"
 #include "scale_inst.h"
+#include "embed_inst.h"
 #include "softmax_inst.h"
 #include "split_inst.h"
 #include "program_dump_graph.h"
@@ -58,6 +59,7 @@
 #include "lstm_inst.h"
 #include "lstm_gemm_inst.h"
 #include "lstm_elt_inst.h"
+#include "embed_inst.h"
 
 #include "network_impl.h"
 #include "kernel_selector_helper.h"
@@ -271,6 +273,7 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
 
     engine->compile_program(*this);
 
+
     this->dump_program("13_finished", true);
 
 	//Make serialization with given name.
@@ -400,6 +403,7 @@ void program_impl::init_graph(topology_impl const& topology)
     }
 
     replace_nodes_post();
+	handle_lstm();
     set_outputs();
     calc_processing_order();
 
@@ -537,71 +541,7 @@ void program_impl::replace_nodes_pre()
                 get_or_create(crop_prim);
             }
         }
-
-        if (node->is_type<lstm>()) {
-            auto lstm_prim = node->as<lstm>().typed_desc();
-            size_t sequence_len = lstm_prim->input.size();
-            auto pnode = node->as<lstm>().get_primitive();
-
-            tensor input_size;
-            // Check if the input is an output from a split node
-            // We assume that all inputs are the same size
-            // Ideally we would like to propagate output layouts so we won't need this hack.
-            auto strInput = lstm_prim->input[0];
-            size_t found = lstm_prim->input[0].find(":"); // first ocurrence
-            if (found != std::string::npos) {
-                std::string strInputParent = strInput.substr(0, found);
-                // find the splitInput name
-                auto split_node = nodes_map.at(strInputParent);
-                // get the split primitive
-                auto split_prim = split_node->as<split>().typed_desc();
-                // finally get the input size from the input node output layout
-                auto input = nodes_map.at(split_prim->input[0]);
-                input_size = input->get_output_layout().size;
-            }
-            else {
-                input_size = nodes_map.at(lstm_prim->input[0])->get_output_layout().size;
-            }
-            auto recurrent_size = nodes_map.at(lstm_prim->recurrent)->get_output_layout().size;
-            // computing hidden_size from recurrent and input sizes
-            auto hidden_size = tensor(1, recurrent_size.feature[0], recurrent_size.spatial[0], input_size.spatial[1]);
-
-            std::vector<primitive_id> output_ids_offsets;
-            primitive_id weights_id = lstm_prim->weights;
-            primitive_id recurrent_id = lstm_prim->recurrent;
-            primitive_id bias_id = node->as<lstm>().bias_term() ? lstm_prim->bias : "";
-            primitive_id hidden_id = node->as<lstm>().initial_hidden_term() ? lstm_prim->initial_hidden : "";
-            primitive_id cell_id = node->as<lstm>().initial_cell_term() ? lstm_prim->initial_cell : "";
-
-            for (size_t i = 0; i < sequence_len; ++i) {
-                primitive_id lstm_gemm_id = node->id() + ":lstm_gemm" + getIdString(i);
-                primitive_id lstm_elt_id = node->id() + ":lstm_elt" + getIdString(i);
-                primitive_id crop_id = node->id() + ":crop" + getIdString(i);
-                primitive_id lstm_gemm_input_id = lstm_prim->input[i];
-                auto lstm_gemm_node = std::make_shared<lstm_gemm>(lstm_gemm_id, lstm_gemm_input_id,
-                                            weights_id, recurrent_id, bias_id, hidden_id);
-                inputs.push_back(&get_or_create(lstm_gemm_node));
-                auto lstm_elt_node = std::make_shared<lstm_elt>(lstm_elt_id, lstm_gemm_id, cell_id, lstm_prim->clip, lstm_prim->input_forget,
-                                        lstm_prim->activations, lstm_prim->activation_params, lstm_prim->offset_order);
-                inputs.push_back(&get_or_create(lstm_elt_node));
-                hidden_id = crop_id + ":hidden";
-                auto crop_hidden = std::make_shared<crop>(hidden_id, lstm_elt_id, hidden_size, tensor{ 0,0,0,0 });
-                inputs.push_back(&get_or_create(crop_hidden));
-                if (i < sequence_len - 1) {
-                    cell_id = crop_id + ":cell";
-                    auto crop_cell = std::make_shared<crop>(cell_id, lstm_elt_id, hidden_size, tensor{ 1,0,0,0 });
-                    inputs.push_back(&get_or_create(crop_cell));
-                }
-                output_ids_offsets.push_back(hidden_id);
-            }
-            // rename the lstm node so the concatenation node can have the same id as the lstm node
-            primitive_id original_id = node->id();
-            rename(*node, original_id + ":cldnn_tmp_lstm");
-            primitive_id concatenation_id = original_id;
-            auto concatenation_node = std::make_shared<concatenation>(concatenation_id, output_ids_offsets, concatenation::along_f);
-            inputs.push_back(&get_or_create(concatenation_node));
-        }
-    }
+	}
 }
 
 
@@ -612,12 +552,6 @@ void program_impl::replace_nodes_post()
     {
         auto node_itr = itr++;
         auto& node = (*node_itr).second;
-        if (node->is_type<lstm>()) {
-            remove_all_connections(*node);
-            optimized_out.push_back(node->id());
-            nodes_map.erase(node->id());
-            continue;
-        }
 
         //find split primitives and create crop primitives out of them
         if(node->is_type<split>())
@@ -844,6 +778,150 @@ void program_impl::replace_nodes_post()
             continue;
         }
     }
+}
+
+void program_impl::handle_lstm()
+{
+	bool hasLSTMParent;
+	auto itr = nodes_map.begin(); //note we need to use iterators since currently processed element can be removed
+	while (itr != nodes_map.end())
+	{
+		auto node_itr = itr++;
+		auto& node = (*node_itr).second;
+		hasLSTMParent = false;
+		// remove lstm nodes since they have been replaced by sequnces of lstm_gemm + lstm_elt
+		if (node->is_type<lstm>()) {
+
+			auto lstm_prim = node->as<lstm>().typed_desc();
+			std::vector<primitive_id> output_ids_offsets;
+			std::list<program_node*> concat_depends;
+			std::list<program_node*> cell_list;
+			primitive_id weights_id = lstm_prim->weights;
+			primitive_id recurrent_id = lstm_prim->recurrent;
+			primitive_id bias_id = node->as<lstm>().bias_term() ? lstm_prim->bias : "";
+			primitive_id hidden_id = node->as<lstm>().initial_hidden_term() ? lstm_prim->initial_hidden : "";
+			primitive_id cell_id = node->as<lstm>().initial_cell_term() ? lstm_prim->initial_cell : "";
+			//removing connection with weights to get proper dependency order for next operations
+			remove_connection(*nodes_map.at(weights_id), *node);
+			remove_connection(*nodes_map.at(recurrent_id), *node);
+			if (node->as<lstm>().bias_term())
+				remove_connection(*nodes_map.at(bias_id), *node);
+
+			//input size lstm
+			size_t sequence_len = 0;
+			for (auto& depend : node->get_dependencies())
+			{
+				if (depend->is_type<crop>())
+				{
+					sequence_len++;
+				}
+
+			}
+			//calculating sizes
+			tensor input_size = { nodes_map.at("input")->get_output_layout().size.batch[0], nodes_map.at("input")->get_output_layout().size.spatial[1], node->get_dependency(0).get_output_layout().size.feature[0] ,1 };
+			auto recurrent_size = nodes_map.at(lstm_prim->recurrent)->get_output_layout().size;
+			auto hidden_size = tensor(input_size.batch[0], recurrent_size.feature[0], recurrent_size.spatial[0], input_size.spatial[0]);
+
+			//check if parent is lstm node
+			for (auto& user : node->get_users())
+			{
+				if (user->is_type<lstm>())
+				{
+					hasLSTMParent = true;
+				}
+			}
+
+			//lstm expanding
+			for (size_t i = 0; i < sequence_len; ++i) {
+				primitive_id lstm_gemm_id = node->id() + ":lstm_gemm" + getIdString(i);
+				primitive_id lstm_elt_id = node->id() + ":lstm_elt" + getIdString(i);
+				primitive_id crop_id = node->id() + ":crop" + getIdString(i);
+				primitive_id lstm_gemm_input_id = node->get_dependency(i).get_org_primitive_id();
+
+				auto lstm_gemm_node = std::make_shared<lstm_gemm>(lstm_gemm_id, lstm_gemm_input_id, weights_id, recurrent_id, bias_id, hidden_id);
+				auto &n1 = get_or_create(lstm_gemm_node);
+
+
+				auto lstm_elt_node = std::make_shared<lstm_elt>(lstm_elt_id, lstm_gemm_id, cell_id, lstm_prim->offset_order);
+				auto &n2 = get_or_create(lstm_elt_node);
+				//adding lstm_elt as user
+				add_connection(n1, n2);
+				//adding dependecy to lstm_gemm node
+				//input
+				add_connection(node->get_dependency(i), n1);
+				//adding weights and initial values to lstm_gemm
+				add_connection(*nodes_map.at(weights_id), n1);
+				add_connection(*nodes_map.at(recurrent_id), n1);
+				if (node->as<lstm>().bias_term())
+					add_connection(*nodes_map.at(bias_id), n1);
+
+				//adding cell and hiddens as dependencies
+				if (i > 0)
+				{
+					add_connection(*cell_list.back(), n2);
+					add_connection(*concat_depends.back(), n1);
+				}
+				else
+				{
+					if (node->as<lstm>().initial_hidden_term())
+						add_connection(*nodes_map.at(hidden_id), n1);
+					if (node->as<lstm>().initial_cell_term())
+						add_connection(*nodes_map.at(cell_id), n2);
+				}
+
+				//lstm_hidden
+				hidden_id = crop_id + ":hidden";
+				auto crop_hidden = std::make_shared<crop>(hidden_id, lstm_elt_id, hidden_size, tensor{ 0,0,0,0 });
+				auto &n3 = get_or_create(crop_hidden);
+				//adding eltwise as dependency to hidden
+				add_connection(n2, n3);
+
+				//if parent is lstm adding hiddens as dependency
+				if (hasLSTMParent)
+				{
+					for (auto& user : node->get_users())
+					{
+						add_connection(n3, *user);
+					}
+				}
+				concat_depends.push_back(&n3);
+
+				//lstm_cell
+				if (i < sequence_len - 1) {
+					cell_id = crop_id + ":cell";
+					auto crop_cell = std::make_shared<crop>(cell_id, lstm_elt_id, hidden_size, tensor{ 0,1,0,0 });
+					auto &n4 = get_or_create(crop_cell);
+					add_connection(n2, n4);
+					cell_list.push_back(&n4);
+				}
+				output_ids_offsets.push_back(hidden_id);
+			}
+
+			//if theres no next lstm, concatenation is created
+			if (!hasLSTMParent)
+			{
+				primitive_id original_id = node->id();
+				primitive_id concatenation_id = original_id + ":concat";
+				auto concatenation_node = std::make_shared<concatenation>(concatenation_id, output_ids_offsets, concatenation::along_f);
+				auto &n5 = get_or_create(concatenation_node);
+				for (auto concat_dependency : concat_depends)
+				{
+					add_connection(*concat_dependency, n5);
+				}
+				for (auto& user : node->get_users())
+				{
+					add_connection(n5, *user);
+				}
+			}
+
+			//removing expanded node
+			remove_all_connections(*node);
+			optimized_out.push_back(node->id());
+			nodes_map.erase(node->id());
+			continue;
+		}
+	}
+
 }
 
 void program_impl::set_outputs()
@@ -1830,8 +1908,8 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
             node,
             output_layout);
 
-        if (reorder.first)
-            this->add_intermediate(reorder.first, node, dep_idx);
+        if(reorder.first)
+            this->add_intermediate(reorder.first, node, dep_idx, !reorder.second);
     };
 
     //generic lambda function which prepares given primitive for weights optimization
@@ -1869,6 +1947,14 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
             if (!prim.as<fully_connected>().weights_quantization_term())
                 prep_opt(prim.as<fully_connected>());
         }
+        else if (prim.type() == embed::type_id())
+        {
+            prep_opt(prim.as<embed>());
+        }
+        //else if (prim.type() == lstm_gemm::type_id()) //TODO: Enable preoptimize bias for lstm
+        //{
+        //    prep_opt(prim.as<lstm_gemm>());
+        //}
     }
 }
 void program_impl::prepare_depthwise_sep_opt()
@@ -2016,7 +2102,7 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
     //generic lambda function which prepares given primitive for weights optimization
     //it deduces the type of weights from the type of the argument and calls 'add_weights' for all
     //weights used by given primitive.
-    //argument should match few requirements:
+    //argument should match few requirements:;
     // - it should be of a form 'typed_program_node<T>&'
     // - 'T.weights' should be either of type 'primitive_id' or 'std::vector<primitive_id>'
     const auto prep_opt = [this, &add_weights](auto& node) -> void
@@ -2044,6 +2130,10 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
         {
             prep_opt(prim.as<fully_connected>());
         }
+        //else if (prim.type() == lstm_gemm::type_id())//TODO: Enable postoptimize weights for lstm
+        //{
+        //    prep_opt(prim.as<lstm_gemm>()); //we should take care of weights and reccurent
+        //}
     }
 }
 

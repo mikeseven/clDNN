@@ -273,6 +273,32 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
     return layout(expected_data_type, expected_format, expected_tensor);
 }
 
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, lstm_gemm_node const& node, layout const& output_or_weights_layout)
+{
+    auto prim = node.get_primitive();
+    auto expected_tensor = current_layout.size;
+    auto expected_data_type = current_layout.data_type;
+    auto expected_format = current_layout.format;
+
+    if (type == data_type::weights || type == data_type::bias)
+    {
+        expected_data_type = output_or_weights_layout.data_type;
+    }
+
+    switch (type)
+    {
+    case data_type::bias:
+        expected_tensor = cldnn::tensor(1, 1, static_cast<tensor::value_type>(current_layout.count()), 1);
+        expected_format = cldnn::format::bfyx;
+        break;
+
+    default:
+        throw std::runtime_error("Unsupported data type in layout_optimizer::get_expected_layout for fully-connected primitive");
+    }
+
+    return layout(expected_data_type, expected_format, expected_tensor);
+}
+
 layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, deconvolution_node const& node, layout const& output_or_weights_layout)
 {
     auto prim = node.get_primitive();
@@ -308,6 +334,32 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
 
     if (type != data_type::input)
         CLDNN_ERROR_MESSAGE(prim->id, "detection_output only supports optimization of its output (no weights/biases)");
+
+    return layout(expected_data_type, expected_format, expected_tensor);
+}
+
+layout layout_optimizer::get_expected_layout(layout const& current_layout, data_type type, embed_node const& node, layout const& output_or_weights_layout)
+{
+    auto prim = node.get_primitive();
+    auto expected_tensor = current_layout.size;
+    auto expected_data_type = current_layout.data_type;
+    auto expected_format = current_layout.format;
+
+    if (type == data_type::weights || type == data_type::bias)
+    {
+        expected_data_type = output_or_weights_layout.data_type;
+    }
+
+    switch (type)
+    {
+    case data_type::bias:
+        expected_tensor = cldnn::tensor(1, 1, static_cast<tensor::value_type>(current_layout.count()), 1);
+        expected_format = cldnn::format::bfyx;
+        break;
+
+    default:
+        throw std::runtime_error("Unsupported data type in layout_optimizer::get_expected_layout for embed primitive");
+    }
 
     return layout(expected_data_type, expected_format, expected_tensor);
 }

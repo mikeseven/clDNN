@@ -46,6 +46,7 @@ namespace instrumentation {
         static std::string create_graphs_dumps_dir(std::string& err_str); //err_str is not empty in case of failure, returned value does not contain trailing /
 		static std::string get_dumps_dir(); //returns empty if could not create, returned values does not contain trailing /
         static std::string create_sources_dumps_dir(std::string& err_str); //err_str is not empty in case of failure, returned value does not contain trailing /
+        static void replace_forbidden_txt_characters(std::string& str); // .txt file names have 8 forbidden characters: <>/\?*|:". Replace them in string (dump filename) with "_".
     private:
         static const std::string dump_dir;
     };

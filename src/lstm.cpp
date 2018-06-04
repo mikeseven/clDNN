@@ -40,8 +40,8 @@ layout lstm_inst::calc_output_layout(lstm_node const& node)
     // biases    = [        1,         1,       direction, 4 * hidden_size ]
     // hidden    = [        1, direction,           batch,     hidden_size ]
     // cell      = [        1, direction,           batch,     hidden_size ]
-    // output    = [direction,  sequence,           batch,     hidden_size ]
-    auto result = layout(input_layout.data_type, format::bfyx,
+    // output    = [ sequence, direction,           batch,     hidden_size ]    
+	auto result = layout(input_layout.data_type, format::bfyx,
                   tensor(hidden_layout.size.feature[0], input_layout.size.feature[0], hidden_layout.size.spatial[0], hidden_layout.size.spatial[1]));
     return result;
 }

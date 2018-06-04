@@ -35,14 +35,14 @@ layout lstm_gemm_inst::calc_output_layout(lstm_gemm_node const& node)
     auto input_layout = node.input().get_output_layout();
     auto weights_layout = node.weights().get_output_layout();
 
-    // input     = [        1,  sequence,           batch,      input_size ]
-    // weights   = [        1, direction, 4 * hidden_size,      input_size ]
-    // recurrent = [        1, direction, 4 * hidden_size,     hidden_size ]
-    // biases    = [        1,         1,       direction, 4 * hidden_size ]
-    // hidden    = [        1, direction,           batch,     hidden_size ] optional
-    // tempGEMM  = [        1, direction,           batch, 4 * hidden_size ] output
-    auto result = layout(weights_layout.data_type, format::bfyx, tensor(1,
-                         weights_layout.size.feature[0], weights_layout.size.spatial[1], input_layout.size.spatial[1]));
+    //   input{bfyx}     = [b: batch, f: sequence,   x: input_size,      y: 1]
+    //   weights{bfyx}   = [b: 1,     f: direction,  x: 4 * hidden_size, y: input_size ]
+    //   recurrent{bfyx} = [b: 1,     f: direction,  x: 4 * hidden_size, y: hidden_size ]
+    //   biases{bfyx}    = [b: 1,     f:1 ,          x: direction,       y:  4 * hidden_size ]
+    //   hidden{bfyx}    = [b: batch, f:  direction, x: 1 ,              y: hidden_size ] optional
+    //   tempGEMM{bfyx}  = [b: batch, f: direction,  x: 4*hidden_size,   y: 1] output
+
+    auto result = layout(input_layout.data_type, format::bfyx, tensor(input_layout.size.batch[0], weights_layout.size.feature[0], weights_layout.size.spatial[1], 1));
     return result;
 }
 

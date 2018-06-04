@@ -18,6 +18,7 @@
 
 #include "common_kernel_base.h"
 #include "kernel_selector_params.h"
+#include "weight_bias_kernel_base.h"
 
 namespace kernel_selector
 {
@@ -77,7 +78,7 @@ namespace kernel_selector
     class LSTMGemmKernelBase : public common_kernel_base
     {
     public:
-        using common_kernel_base::common_kernel_base;
+        using WeightBiasKernelBase::WeightBiasKernelBase;
         virtual ~LSTMGemmKernelBase() {}
 
         struct DispatchData : public CommonDispatchData

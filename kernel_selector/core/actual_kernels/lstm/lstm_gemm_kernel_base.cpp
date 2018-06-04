@@ -57,13 +57,13 @@ namespace kernel_selector
         newParams.inputs.resize(1);
         newParams.inputs[0] = input;
         auto out = newParams.output;
-
+        //TODO: REORDER WEIGHTS IF NEEDED
         auto& kernel = kd.kernels[0];
         auto cldnnJit = GetJitConstants(newParams);
         auto entryPoint = GetEntryPoint(kernelName, newParams.layerID, options);
         auto jit = CreateJit(kernelName, cldnnJit, entryPoint);
 
-        kernel.workGroups.global = { out.X().v, out.Y().v, 1 };
+        kernel.workGroups.global = { out.X().v, out.Batch().v, 1 };
         kernel.kernelString = GetKernelString(kernelName, jit, entryPoint);
         kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 0 });
         kernel.arguments.push_back({ ArgumentDescriptor::Types::OUTPUT, 0 });

@@ -101,6 +101,7 @@ namespace {
 
             implementation_map<lstm_gemm>::add({
                 { std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), val_fw },
+                { std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), val_fw },
             });
         }
         ~attach() {}
