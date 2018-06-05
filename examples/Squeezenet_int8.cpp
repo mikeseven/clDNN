@@ -213,6 +213,17 @@ void add_calibration(
     topology.add(weigths_int, weights_qf, output_qf);
 }
 
+void add_mean_per_feature_data(
+    const std::string& primitive_id,
+    const std::vector<float>& data,
+    topology& topology)
+{
+    cldnn::layout layout = cldnn::layout(cldnn::data_types::f32, cldnn::format::bfyx, { 1, (int)conv10_calib.size(), 1, 1 });
+    cldnn::memory mem = cldnn::memory::attach(layout, (float*)&conv10_calib[0], conv10_calib.size());
+    cldnn::data mean_data = cldnn::data(primitive_id, mem);
+    topology.add(mean_data);
+}
+
 topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)
 {
     cldnn::topology topology;
@@ -711,8 +722,10 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
         { 0,0,0,0 },
         { 1,1,1,1 },
         true);
+
+    add_mean_per_feature_data("conv10_decalib_mean", conv10_calib, topology);
     auto conv10_decalibrator = reorder("conv10_decalib", "conv10",
-        format::bfyx, data_types::f32, conv10_calib, cldnn_reorder_mean_mode::mean_div);
+        format::bfyx, data_types::f32, "conv10_decalib_mean", cldnn_reorder_mean_mode::mean_div);
 
     auto pool10 = pooling(
         "pool10",

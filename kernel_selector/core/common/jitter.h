@@ -794,6 +794,13 @@ inline JitConstants MakeReorderJitConstants(const ReorderParams& params)
     }
     else if (params.reorderParams.mode == MeanSubtractMode::IN_BUFFER)
     {
+        // this is for case when we have mean per feature only
+        auto &mean = params.reorderParams.mean;
+        if (mean.X().v == 1 && mean.Y().v == 1 && mean.Batch().v == 1 && mean.Feature().v == params.inputs[0].Feature().v)
+        {
+            jit.AddConstant(MakeJitConstant("MEAN_PER_FEATURE", 1));
+        }
+        //
         jit.AddConstant(MakeJitConstant("MEAN_SUBTRACT", params.reorderParams.mean));
         jit.AddConstant(MakeJitConstant("TO_MEAN_TYPE", "convert_" + toCLType(params.reorderParams.mean.GetDType())));
     }

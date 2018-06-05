@@ -87,9 +87,14 @@ KERNEL (reorder_data)(
     float res = TO_MEAN_TYPE(input[input_idx]);
     res = MEAN_OP(res, VALUE_TO_SUBTRACT[f % VALUE_TO_SUBTRACT_SIZE]);
 #elif defined MEAN_SUBTRACT_IN_BUFFER
+#if defined MEAN_PER_FEATURE
+    MEAN_SUBTRACT_TYPE res = TO_MEAN_TYPE(input[input_idx]);
+    res = MEAN_OP(res, mean_subtract[f]);
+#else
     MEAN_SUBTRACT_TYPE res = TO_MEAN_TYPE(input[input_idx]);
     uint4 msv = FUNC_CALL(reshape_dims)(b,f,y,x, INPUT0_SIZE_Y, INPUT0_SIZE_X, MEAN_SUBTRACT_SIZE_Y, MEAN_SUBTRACT_SIZE_X, INPUT0_DIMS, MEAN_SUBTRACT_DIMS);
     res = MEAN_OP(res, mean_subtract[GET_DATA_INDEX_SAFE(MEAN_SUBTRACT, msv[0], msv[1], msv[2], msv[3])]);
+#endif
 #else
     CALC_TYPE res = TO_CALC_TYPE(input[input_idx]);
 #endif

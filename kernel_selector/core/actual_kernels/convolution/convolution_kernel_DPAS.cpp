@@ -80,7 +80,7 @@ namespace KernelSelector {
     KernelsData ConvolutionKernel_DPAS::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         KernelsData kd = GetCommonKernelsData(params, options);
-        kd[0].estimatedTime = FORCE_PRIORITY_1;
+        kd[0].estimatedTime = FORCE_PRIORITY_2;
         return kd;//return GetCommonKernelsData(params, options);
     }
 }
