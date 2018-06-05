@@ -118,8 +118,10 @@ cldnn::memory read_file(std::ifstream &rfile, file_header &file_head, const cldn
     // load header, verify 32-bit crc
     // TODO!!!! create CRC for files with version 2 and then compare it here!
     //if (read_crc() != crc32(&file_head, sizeof(file_head), CRC_INIT)) throw std::runtime_error("nn_data_t header crc mismatch");
-    if ((file_head.data_sizeof != sizeof(float) || file_head.data_type != 'F') &&
-        (file_head.data_sizeof != sizeof(half_t) || file_head.data_type != 'H')) throw std::runtime_error("nn_data_t has invalid type");
+    if ((file_head.data_sizeof != sizeof(float)         || file_head.data_type != 'F') &&
+        (file_head.data_sizeof != sizeof(half_t)        || file_head.data_type != 'H') &&
+        (file_head.data_sizeof != sizeof(signed char)   || file_head.data_type != 'c') &&
+        (file_head.data_sizeof != sizeof(unsigned char) || file_head.data_type != 'C')) throw std::runtime_error("nn_data_t has invalid type");
     // load size array, verify 32-bit crc
     auto array = std::vector<uint64_t>(file_head.dimension);
     //std::unique_ptr<uint64_t>(new uint64_t[file_head.dimension]);

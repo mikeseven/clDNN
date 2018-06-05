@@ -201,10 +201,10 @@ begin
         {
             'FP32'  { $_nndDataType = 'F'; $_elemSize = 4; }
             'FP16'  { $_nndDataType = 'H'; $_elemSize = 2; }
-            'I16'   { $_nndDataType = 'S'; $_elemSize = 2; } # ?
-            'U16'   { $_nndDataType = 's'; $_elemSize = 2; } # ?
-            'I8'    { $_nndDataType = 'C'; $_elemSize = 1; } # ?
-            'U8'    { $_nndDataType = 'c'; $_elemSize = 1; } # ?
+            'I16'   { $_nndDataType = 's'; $_elemSize = 2; } # ?
+            'U16'   { $_nndDataType = 'S'; $_elemSize = 2; } # ?
+            'I8'    { $_nndDataType = 'b'; $_elemSize = 1; } # ?
+            'U8'    { $_nndDataType = 'B'; $_elemSize = 1; } # ?
             default { Write-Error ('Unknown data format ({0}).' -f $_); return; }
         }
         $_nndLayout = Get-NndLayout $BlobMetadata.Type $BlobMetadata.Kind;
@@ -497,6 +497,16 @@ process
         }
         else
         {
+            $_groupCount   = @(Select-Xml '*[contains(name(), ''_data'')]/@group' -Xml $_.ParentNode);
+            if ($_groupCount.Count -gt 0)
+            {
+                $_groupCount = [long] $_groupCount[0].Node.value;
+            }
+            else
+            {
+                $_groupCount = [long] 1;
+            }
+
             $_outFeatCount = @(Select-Xml '*[contains(name(), ''_data'')]/@out-size' -Xml $_.ParentNode);
             if ($_outFeatCount.Count -gt 0)
             {
@@ -557,9 +567,19 @@ process
             default { Write-Error ('Unknown data format ({0}).' -f $_); return; }
         }
 
+        # Input group count for biases is always one.
+        if ($_.Kind -ceq 'biases')
+        {
+            $_inputGroupCount = 1;
+        }
+        else
+        {
+            $_inputGroupCount = $_.GroupCount;
+        }
+
         # Verify sizes and constrains of each primitive data (weights, biases, etc.).
         $_calcMod = [long] 0;
-        $_calcDataSize = [Math]::DivRem($_.OutputFeaturesCount * $_.InputFeaturesCount * $_.Width * $_.Height * $_dataSize, $_.GroupCount, [ref] $_calcMod);
+        $_calcDataSize = [Math]::DivRem($_.OutputFeaturesCount * $_.InputFeaturesCount * $_.Width * $_.Height * $_dataSize, $_inputGroupCount, [ref] $_calcMod);
         if (($_calcDataSize -ne $_.DataSize) -and (($_.Kind -ne 'biases') -or ($_.DataSize -ne 0)))
         {
             Write-Warning ('"{2}": Calculated size of weights/biases is different than stored size ({0}B != {1}B).' -f $_calcDataSize, $_.DataSize, $_.DumpFileName);
@@ -591,7 +611,12 @@ process
             return;
         }
 
-        $_inputFeaturesCount  = [Math]::DivRem($_.InputFeaturesCount, $_.GroupCount, [ref] $_calcMod);
+        $_inputFeaturesCount  = [Math]::DivRem($_.InputFeaturesCount, $_inputGroupCount, [ref] $_calcMod);
+        if ($_inputFeaturesCount -le 0)
+        {
+            Write-Error ('"{0}": Calculated number of input features per group ({1}) is zero or less than zero.' -f $_.DumpFileName, $_inputFeaturesCount);
+            return;
+        }
         if ($_inputFeaturesCount -le 0)
         {
             Write-Error ('"{0}": Calculated number of input features per group ({1}) is zero or less than zero.' -f $_.DumpFileName, $_inputFeaturesCount);
