@@ -42,6 +42,22 @@ namespace KernelSelector {
         return k;
     }
 
+    static void shrink_blocks_to_output_size(size_t output_x, size_t output_y, size_t &block_x, size_t &block_y)
+    {
+        // how many elements we will compute in each dimension
+        size_t computed_x = Align(output_x, block_x);
+        size_t computed_y = Align(output_y, block_y);
+        // how many simds we need in each dimension
+        size_t simds_x = computed_x / block_x;
+        size_t simds_y = computed_y / block_y;
+        // how many unused values we have in each dimension
+        size_t unused_x = computed_x - output_x;
+        size_t unused_y = computed_y - output_y;
+
+        block_x -= unused_x / simds_x;
+        block_y -= unused_y / simds_y;
+    }
+
     ConvolutionKernel_DPAS_blocks::BlockSizes ConvolutionKernel_DPAS_blocks::getOutputBlockSizes(const Params& p) const
     {
         BlockSizes bs = { 0, 0, 0 };
@@ -95,6 +111,12 @@ namespace KernelSelector {
         }
 /*        bs.blockWidth = 2;
         bs.blockHeight = 1;*/
+        // if this is not 1x1 batch1 case then shrink filters, other way we're memory bound and it's best to use 16x1 block sizes
+        if (params.convParams.filterSize.x != 1 || params.convParams.filterSize.y != 1 || params.output.Batch().v != 1)
+        {
+            shrink_blocks_to_output_size(params.output.X().v, params.output.Y().v,
+                bs.blockWidth, bs.blockHeight);
+        }
         return bs;
     }
 

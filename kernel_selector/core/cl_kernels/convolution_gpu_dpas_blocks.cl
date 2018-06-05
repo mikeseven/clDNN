@@ -50,7 +50,7 @@ __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
 KERNEL(convolution_DPAS_blocks)(
     __global INPUT0_TYPE* input, 
     __global OUTPUT_TYPE* output, 
-    __global int* weights, 
+    __global FILTER_TYPE* weights, 
 #if BIAS_TERM
     __global BIAS_TYPE* biases,
 #endif
@@ -104,14 +104,12 @@ KERNEL(convolution_DPAS_blocks)(
    	__attribute__((opencl_unroll_hint(1)))
     for (uint k = 0; k < filter_ifm_dpas_num; ++k)
     {
-        uint tmp_in_addr = in_addr;
-
         // preload input data
         for(uint in_block_pos = 0; in_block_pos < IN_BLOCK_ARRAY_SIZE; in_block_pos++)
         {
             uint block_x = in_block_pos % IN_BLOCK_WIDTH;
             uint block_y = in_block_pos / IN_BLOCK_WIDTH;
-            uint input_idx = tmp_in_addr + block_x * INPUT0_X_PITCH + block_y * INPUT0_Y_PITCH;
+            uint input_idx = in_addr + block_x * INPUT0_X_PITCH + block_y * INPUT0_Y_PITCH;
             in[in_block_pos] = as_int(intel_sub_group_block_read((const __global uint*)(input + input_idx)));
         }    
         // end of preloading input data
@@ -122,21 +120,15 @@ KERNEL(convolution_DPAS_blocks)(
 		    __attribute__((opencl_unroll_hint(FILTER_SIZE_X)))
             for (uint i = 0; i < FILTER_SIZE_X ; ++i)
             {
-                // divide filter_idx by 4 because we load 4x char as an int
-                int8 weights_data = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + (filter_idx/4) )));
+                int8 weights_data = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx )));
 
 			    __attribute__((opencl_unroll_hint(OUTPUT_BLOCK_HEIGHT)))
                 for(uint br = 0; br < OUTPUT_BLOCK_HEIGHT; br++)
                 {
-                    const int input_offset_y = input_y + br * STRIDE_SIZE_Y + j * DILATION_SIZE_Y;
-
 				    __attribute__((opencl_unroll_hint(OUTPUT_BLOCK_WIDTH)))
                     for(uint bc = 0; bc < OUTPUT_BLOCK_WIDTH; bc++)
                     {
-                        const int input_offset_x = input_x + bc*STRIDE_SIZE_X + i * DILATION_SIZE_X;
-                        uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH + k*32;//8 not 32 because we load ints that store 4x char
-
-                        int input_data = in[(br*STRIDE_SIZE_Y+j)*IN_BLOCK_WIDTH + bc*STRIDE_SIZE_X+i];//as_int(intel_sub_group_block_read((const __global uint*)(input + input_idx)));
+                        int input_data = in[(br*STRIDE_SIZE_Y+j)*IN_BLOCK_WIDTH + bc*STRIDE_SIZE_X+i];
                         int8 activations;  //activations of all lanes
                         activations.s0 = sub_group_broadcast(input_data, 0); 
                         activations.s1 = sub_group_broadcast(input_data, 1); 
