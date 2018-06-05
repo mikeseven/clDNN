@@ -32,6 +32,7 @@
 #include "convolution_kernel_winograd_2x3_s1_fused.h"
 #include "convolution_kernel_winograd_6x3_s1_fused.h"
 #include "convolution_kernel_DPAS.h"
+#include "convolution_kernel_DPAS_blocks.h"
 #include <iostream>
  
 namespace KernelSelector 
@@ -54,6 +55,7 @@ namespace KernelSelector
         Attach<ConvolutionKernel_bfyx_1x1>();
         Attach<ConvolutionKernel_bfyx_1x1_gemm_buf>();
         Attach<ConvolutionKernel_DPAS>();
+        Attach<ConvolutionKernel_DPAS_blocks>();
         //Attach<ConvolutionKernel_Tutorial>(); //In order to use this implementation for tutorial purposes please uncomment this line
     }
 
