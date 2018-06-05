@@ -82,8 +82,8 @@ namespace KernelSelector {
         }
         else if (cp.stride.x == 2 && cp.stride.y == 2)
         {
-            bs.blockWidth = 5;
-            bs.blockHeight = 4;
+            bs.blockWidth = 3;
+            bs.blockHeight = 2;
             bs.prefetch = 4;
         }
         else
@@ -122,6 +122,8 @@ namespace KernelSelector {
         // Number of sub-group-sized vectors of unit type needed to store input block.
         size_t input_block_array_size = CeilDiv(input_block_req_height * input_block_read_width, sub_group_size);
 
+        // size of our array per workitem
+        input_block_array_size = input_block_req_height * input_block_read_width;
         return std::make_pair(input_block_array_size, input_block_read_width);
     }
 
