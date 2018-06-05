@@ -367,6 +367,54 @@ TYPED_TEST(prior_box_test, test_forward_no_max_size)
     }
 }
 
+TYPED_TEST(prior_box_test, test_forward_no_max_size_scale_only_first)
+{
+    engine engine;
+
+    auto input_prim = memory::allocate(engine, { type_to_data_type<TypeParam>::value, format::bfyx,{ 10, 10, 10, 10 } });
+
+    topology topology;
+    topology.add(input_layout("input_prim", input_prim.get_layout()));
+
+    std::vector<float> min_sizes = { 4 };
+
+    topology.add(prior_box("prior_box", "input_prim", { 1,1,100,100 }, min_sizes, {}, {2}, true, false, {}, 0.0f, 0.0f, 0.5f, false));
+    network network(engine, topology);
+    network.set_input_data("input_prim", input_prim);
+
+    auto outputs = network.execute();
+
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "prior_box");
+
+    auto output_prim = outputs.begin()->second.get_memory();
+
+    auto output_ptr = output_prim.pointer<TypeParam>();
+
+    int dim = output_prim.get_layout().size.spatial[0] * output_prim.get_layout().size.spatial[1];
+
+    // pick a few generated priors and compare against the expected number.
+    // first prior
+    EXPECT_TRUE(floating_point_equal(output_ptr[0], (TypeParam)0.03f));
+    EXPECT_TRUE(floating_point_equal(output_ptr[1], (TypeParam)0.03f));
+    EXPECT_TRUE(floating_point_equal(output_ptr[2], (TypeParam)0.07f));
+    EXPECT_TRUE(floating_point_equal(output_ptr[3], (TypeParam)0.07f));
+
+    int num_priors = 3;
+
+    // Check the 1st prior in in last row/col
+    EXPECT_TRUE(floating_point_equal(output_ptr[9 * 10 * num_priors * 4 + 9 * num_priors * 4 + 0], (TypeParam)0.93f));
+    EXPECT_TRUE(floating_point_equal(output_ptr[9 * 10 * num_priors * 4 + 9 * num_priors * 4 + 1], (TypeParam)0.93f));
+    EXPECT_TRUE(floating_point_equal(output_ptr[9 * 10 * num_priors * 4 + 9 * num_priors * 4 + 2], (TypeParam)0.97f));
+    EXPECT_TRUE(floating_point_equal(output_ptr[9 * 10 * num_priors * 4 + 9 * num_priors * 4 + 3], (TypeParam)0.97f));
+
+    //check variance
+    for (int d = 0; d < dim; ++d)
+    {
+        EXPECT_TRUE(floating_point_equal(output_ptr[dim + d], (TypeParam)0.1f));
+    }
+}
+
 TYPED_TEST(prior_box_test, test_forward_variance_one) 
 {
     engine engine;
