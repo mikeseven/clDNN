@@ -16,6 +16,7 @@
 #include "include/reshape_dims.cl"
 #include "include/fetch.cl"
 #include "include/activation_functions.cl"
+#include "include/data_types.cl"
 
 ///////////////////////// Input Index /////////////////////////
 inline uint FUNC(get_input_index)(uint b, uint f, uint y, uint x)

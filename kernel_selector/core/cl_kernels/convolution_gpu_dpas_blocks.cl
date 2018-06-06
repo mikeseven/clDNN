@@ -46,11 +46,16 @@ inline int FUNC(dp4a_s8)(int8 A_scalars, int8 B_vectors, int acc)
 #define DPAS(A, B, C) FUNC_CALL(dp4a_s8)(A, B, C)
 #endif
 
+#define FILTER_IFM_DPAS_NUM ((FILTER_IFM_NUM + 31) / 32)
+#define FILTER_OFM_DPAS_NUM ((FILTER_OFM_NUM + 7) / 8)
+#define FILTER_IFM_ALIGNED (FILTER_IFM_DPAS_NUM * 32)
+#define FILTER_OFM_ALIGNED (FILTER_OFM_DPAS_NUM * 8)
+
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
 KERNEL(convolution_DPAS_blocks)(
     __global INPUT0_TYPE* input, 
     __global OUTPUT_TYPE* output, 
-    __global FILTER_TYPE* weights, 
+    __global FILTER_TYPE* weights,
 #if BIAS_TERM
     __global BIAS_TYPE* biases,
 #endif
@@ -60,23 +65,15 @@ KERNEL(convolution_DPAS_blocks)(
 #endif
     uint split_idx)
 {
-	const uint filter_ifm_dpas_num = ((FILTER_IFM_NUM + 31) / 32);
-	const uint filter_ifm_aligned = ((FILTER_IFM_NUM + 31) / 32) * 32;
-
-    const uint filter_ofm_dpas_num = ((FILTER_OFM_NUM + 7) / 8);
-    const uint filter_ofm_aligned = ((FILTER_OFM_NUM + 7) / 8) * 8;
-
     const uint x = get_global_id(0) * OUTPUT_BLOCK_WIDTH;
     const uint y = get_global_id(1) * OUTPUT_BLOCK_HEIGHT;
 #if OUTPUT_BATCH_NUM == 1
     const uint f = get_global_id(2);
     const uint b = 0;
 #else
-    const uint f = get_global_id(2) % filter_ofm_aligned;
-    const uint b = get_global_id(2) / filter_ofm_aligned;
+    const uint f = get_global_id(2) % FILTER_OFM_ALIGNED;
+    const uint b = get_global_id(2) / FILTER_OFM_ALIGNED;
 #endif
-
-
     
     // our output values
     int out[OUTPUT_BLOCK_WIDTH * OUTPUT_BLOCK_HEIGHT] = { 0 };
@@ -85,24 +82,16 @@ KERNEL(convolution_DPAS_blocks)(
     const int input_x = x * STRIDE_SIZE_X - PADDING_SIZE_X;
     const int input_y = y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
 
-#if DEPTHWISE_SEPARABLE_OPT
-    const uint in_split_offset = (f / FILTER_OFM_NUM) * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
-#else
     const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
-#endif
-// calculate alignment of input features
-    const uint f32_aligned = ((FILTER_IFM_NUM + 31)/32) * 32;
-    const uint filter_ofm_pitch = (f32_aligned/32) * FILTER_SIZE_X * FILTER_SIZE_Y * 4 * 8 * 8;
-// end of calculations
 
-    const uint filter_offset = (get_group_id(2) % filter_ofm_dpas_num) * filter_ofm_pitch;
+    const uint filter_offset = (get_group_id(2) % FILTER_OFM_DPAS_NUM) * FILTER_OFM_BLOCK_PITCH;
     const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
 
     uint in_addr = input_offset + input_x * INPUT0_X_PITCH + input_y * INPUT0_Y_PITCH;
     uint filter_idx = filter_offset;
 
    	__attribute__((opencl_unroll_hint(1)))
-    for (uint k = 0; k < filter_ifm_dpas_num; ++k)
+    for (uint k = 0; k < FILTER_IFM_DPAS_NUM; ++k)
     {
         // preload input data
         for(uint in_block_pos = 0; in_block_pos < IN_BLOCK_ARRAY_SIZE; in_block_pos++)
@@ -120,7 +109,7 @@ KERNEL(convolution_DPAS_blocks)(
 		    __attribute__((opencl_unroll_hint(FILTER_SIZE_X)))
             for (uint i = 0; i < FILTER_SIZE_X ; ++i)
             {
-                int8 weights_data = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx )));
+                int8 weights_data = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
 
 			    __attribute__((opencl_unroll_hint(OUTPUT_BLOCK_HEIGHT)))
                 for(uint br = 0; br < OUTPUT_BLOCK_HEIGHT; br++)
@@ -128,7 +117,7 @@ KERNEL(convolution_DPAS_blocks)(
 				    __attribute__((opencl_unroll_hint(OUTPUT_BLOCK_WIDTH)))
                     for(uint bc = 0; bc < OUTPUT_BLOCK_WIDTH; bc++)
                     {
-                        int input_data = in[(br*STRIDE_SIZE_Y+j)*IN_BLOCK_WIDTH + bc*STRIDE_SIZE_X+i];
+                        int input_data = in[(br * STRIDE_SIZE_Y + j) * IN_BLOCK_WIDTH + bc * STRIDE_SIZE_X + i];
                         int8 activations;  //activations of all lanes
                         activations.s0 = sub_group_broadcast(input_data, 0); 
                         activations.s1 = sub_group_broadcast(input_data, 1); 
@@ -145,7 +134,7 @@ KERNEL(convolution_DPAS_blocks)(
                 filter_idx += 32*8; // 32 features per channel * 8 output features per SIMD channel
             }
         }
-        in_addr += 32;
+        in_addr += 32; // 4 features per channel * 8 SIMD channels
     }
 
 #if BIAS_TERM
@@ -154,13 +143,6 @@ KERNEL(convolution_DPAS_blocks)(
 #elif BIAS_PER_OFM
     const uint bias_index = f;
 #endif
-
-/*#if FILTER_IFM_NUM == 48 && FILTER_OFM_NUM == 192 && FILTER_SIZE_X == 3 && INPUT0_SIZE_X ==14
-if(x==0 && y==0 && f==0)
-{
-	printf("Quant F: %f IQF: %f bias: %f calibrations: %f dotProd: %d\n", quantizations[f], (float)I_QF, (float)biases[bias_index], calibrations[f], dotProd);
-}
-#endif*/
 
     for(uint br = 0; br < OUTPUT_BLOCK_HEIGHT; br++)
     {
@@ -191,3 +173,8 @@ if(x==0 && y==0 && f==0)
         }
     }
 }
+
+#undef FILTER_IFM_DPAS_NUM
+#undef FILTER_OFM_DPAS_NUM
+#undef FILTER_IFM_ALIGNED
+#undef FILTER_OFM_ALIGNED

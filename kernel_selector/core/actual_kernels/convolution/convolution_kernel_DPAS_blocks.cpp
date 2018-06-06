@@ -35,7 +35,6 @@ namespace KernelSelector {
         k.EnableNonBiasTerm();
         k.EnableBatching();
         k.EnableSplitSupport();
-        k.EnableDepthwiseSeparableOpt();
         k.EnableInt8Quantization();
         k.EnableOutputCalibration();
         k.DisableTuning();
@@ -204,6 +203,10 @@ namespace KernelSelector {
         jit.AddConstant(MakeJitConstant("IN_BLOCK_WIDTH", runInfo.cldnnStyle.inputBlockWidth));
         jit.AddConstant(MakeJitConstant("PREFETCH", runInfo.cldnnStyle.prefetch));
 
+        // pitch for special block format used in this kernel
+        const size_t ifm_32_aligned = Align(params.weights.IFM().v, 32);
+        const size_t filter_ofm_block_pitch = (ifm_32_aligned / 32) * params.weights.X().v * params.weights.Y().v * 4 * 8 * 8;
+        jit.AddConstant(MakeJitConstant("FILTER_OFM_BLOCK_PITCH", filter_ofm_block_pitch));
         return jit;
     }
 
