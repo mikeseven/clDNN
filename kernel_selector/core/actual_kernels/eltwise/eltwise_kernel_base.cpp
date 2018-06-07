@@ -169,6 +169,11 @@ namespace KernelSelector
                 cast_type = "(MAKE_VECTOR_TYPE(UNIT_TYPE, 8))";
                 op = "const MAKE_VECTOR_TYPE(UNIT_TYPE, 8) tmp" + op_num_str + " = ";
             }
+            else if(params.eltwiseParams.int8_quantization)
+            {
+                cast_type = "(int)";
+                op = "const int tmp" + op_num_str + " = ";
+            }
             else
             {
                 cast_type = "(UNIT_TYPE)";

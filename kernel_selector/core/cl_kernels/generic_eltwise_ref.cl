@@ -42,7 +42,14 @@
 
 KERNEL(eltwise)(
     INPUTS_DECLS
-    __global UNIT_TYPE* output)
+    __global UNIT_TYPE* output,
+#if QUANTIZATION_TERM
+    __global float* quantizations,
+#endif
+#if CALIBRATION_TERM
+    __global float* calibrations
+#endif
+    )
 {
 #if ELTWISE_LAYOUT_BASED
     const uint d1 = get_global_id(GWS_YX) % INPUT0_SIZE_X;   // X
@@ -71,9 +78,25 @@ KERNEL(eltwise)(
                          d4*OUTPUT_PITCHES[3];
 #endif
 
+#if QUANTIZATION_TERM
+    int res;
+#else
     UNIT_TYPE res;
+#endif
     
     DO_ELTWISE;
-    
+
+#if QUANTIZATION_TERM
+#if CALIBRATION_TERM
+    res = (int)round(((float)res) * calibrations[d3]);
+#else  // CALIBRATION_TERM
+    res = (int)round(((float)res) * O_QF);
+#endif // CALIBRATION_TERM
+#endif // QUANTIZATION_TERM
+
+#if QUANTIZATION_TERM
+    output[output_offset] = ACTIVATION(convert_char(res), NL_M, NL_N);
+#else
     output[output_offset] = ACTIVATION(res, NL_M, NL_N);
+#endif
 }
