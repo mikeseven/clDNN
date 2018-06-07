@@ -67,6 +67,8 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
         const padding& output_padding = padding()
     )
         :primitive_base(id, { input, input2 }, output_padding)
+        , output_calibration_factors("")
+        , output_quantization_factor(1.0f)
         , mode(mode)
         , with_activation(with_activation)
         , activation_negative_slope(activation_slp)
@@ -88,6 +90,112 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
         const padding& output_padding = padding()
     )
         :primitive_base(id, inputs, output_padding)
+        , output_calibration_factors("")
+        , output_quantization_factor(1.0f)
+        , mode(mode)
+        , with_activation(with_activation)
+        , activation_negative_slope(activation_slp)
+    {
+    }
+
+    /// @brief Constructs eltwise primitive.
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param input2 Second input primitive id with values needed for eltwise computation.
+    /// @param output_calibration_factors Primitive id containing output calibration factors per output feature map.
+    /// @param mode Eltwise mode.
+    /// @param with_activation Enables Relu activation.
+    /// @param activation_slp Relu activation slope.
+    eltwise(
+        const primitive_id& id,
+        const primitive_id& input,
+        const primitive_id& input2,
+        const primitive_id& output_calibration_factors,
+        eltwise_mode mode,
+        bool with_activation = false,
+        float activation_slp = 0.0f,
+        const padding& output_padding = padding()
+    )
+        :primitive_base(id, { input, input2 }, output_padding)
+        , output_calibration_factors(output_calibration_factors)
+        , output_quantization_factor(1.0f)
+        , mode(mode)
+        , with_activation(with_activation)
+        , activation_negative_slope(activation_slp)
+    {
+    }
+
+    /// @brief Constructs eltwise primitive.
+    /// @param id This primitive id.
+    /// @param inputs Input primitives ids.
+    /// @param output_calibration_factors Primitive id containing output calibration factors per output feature map.
+    /// @param mode Eltwise mode.
+    /// @param with_activation Enables Relu activation.
+    /// @param activation_slp Relu activation slope.
+    eltwise(
+        const primitive_id& id,
+        const std::vector<primitive_id>& inputs,
+        const primitive_id& output_calibration_factors,
+        eltwise_mode mode,
+        bool with_activation = false,
+        float activation_slp = 0.0f,
+        const padding& output_padding = padding()
+    )
+        :primitive_base(id, inputs, output_padding)
+        , output_calibration_factors(output_calibration_factors)
+        , output_quantization_factor(1.0f)
+        , mode(mode)
+        , with_activation(with_activation)
+        , activation_negative_slope(activation_slp)
+    {
+    }
+
+    /// @brief Constructs eltwise primitive.
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param input2 Second input primitive id with values needed for eltwise computation.
+    /// @param o_quantization_factor Output quantization factor
+    /// @param mode Eltwise mode.
+    /// @param with_activation Enables Relu activation.
+    /// @param activation_slp Relu activation slope.
+    eltwise(
+        const primitive_id& id,
+        const primitive_id& input,
+        const primitive_id& input2,
+        const float o_quantization_factor,
+        eltwise_mode mode,
+        bool with_activation = false,
+        float activation_slp = 0.0f,
+        const padding& output_padding = padding()
+    )
+        :primitive_base(id, { input, input2 }, output_padding)
+        , output_calibration_factors("")
+        , output_quantization_factor(o_quantization_factor)
+        , mode(mode)
+        , with_activation(with_activation)
+        , activation_negative_slope(activation_slp)
+    {
+    }
+
+    /// @brief Constructs eltwise primitive.
+    /// @param id This primitive id.
+    /// @param inputs Input primitives ids.
+    /// @param o_quantization_factor Output quantization factor
+    /// @param mode Eltwise mode.
+    /// @param with_activation Enables Relu activation.
+    /// @param activation_slp Relu activation slope.
+    eltwise(
+        const primitive_id& id,
+        const std::vector<primitive_id>& inputs,
+        const float o_quantization_factor,
+        eltwise_mode mode,
+        bool with_activation = false,
+        float activation_slp = 0.0f,
+        const padding& output_padding = padding()
+    )
+        :primitive_base(id, inputs, output_padding)
+        , output_calibration_factors("")
+        , output_quantization_factor(o_quantization_factor)
         , mode(mode)
         , with_activation(with_activation)
         , activation_negative_slope(activation_slp)
@@ -97,6 +205,8 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
     /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{eltwise}
     eltwise(const dto* dto)
         :primitive_base(dto)
+        , output_calibration_factors(dto->output_calibration_factors)
+        , output_quantization_factor(dto->output_quantization_factor)
         , mode(static_cast<eltwise_mode>(dto->mode))
         , with_activation(dto->with_activation != 0)
         , activation_negative_slope(dto->activation_negative_slope)
@@ -105,6 +215,10 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
             throw std::invalid_argument("eltiwise dto should containt at least two inputs");
     }
 
+    /// @brief Primitive id containing output quanitization factors per output feature map.
+    primitive_id output_calibration_factors;
+    /// @brief Output quantization factor
+    float output_quantization_factor;
     /// @param mode Eltwise mode.
     eltwise_mode mode;
     /// @brief Enables Relu activation.
@@ -115,6 +229,8 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
 protected:
     void update_dto(dto& dto) const override
     {
+        dto.output_calibration_factors = output_calibration_factors.c_str();
+        dto.output_quantization_factor = output_quantization_factor;
         dto.mode = static_cast<cldnn_eltwise_mode>(mode);
         dto.with_activation = with_activation;
         dto.activation_negative_slope = activation_negative_slope;

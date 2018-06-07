@@ -122,8 +122,8 @@ struct fully_connected : public primitive_base<fully_connected, CLDNN_PRIMITIVE_
     /// @param weights Primitive id containing weights data.
     /// @param bias Primitive id containing bias data. Provide empty string if using Relu without bias.
     /// @param w_quantization_factor Primitive id containing weights quanitization factors per output feature map.
+    /// @param output_calibration_factors Primitive id containing output calibration factors per output feature map.
     /// @param i_quantization_factor Input quantization factor
-    /// @param o_quantization_factor Output quantization factor
     /// @param with_activation Enable Relu activation.
     /// @param activation_slp Relu activation slope.
     fully_connected(
@@ -155,6 +155,10 @@ struct fully_connected : public primitive_base<fully_connected, CLDNN_PRIMITIVE_
         :primitive_base(dto)
         , weights(dto->weights)
         , bias(dto->bias)
+        , weights_quantization_factors(dto->weights_quantization_factors)
+        , output_calibration_factors(dto->output_calibration_factors)
+        , input_quantization_factor(dto->input_quantization_factor)
+        , output_quantization_factor(dto->output_quantization_factor)
         , with_activation(dto->with_activation != 0)
         , activation_negative_slope(dto->activation_negative_slope)
     {

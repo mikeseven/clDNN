@@ -1428,13 +1428,28 @@ namespace KernelSelector
             std::vector<EltwiseParams::Node> operations;
             std::vector<UpdateInputData> updateInputIds;
             bool layoutBased = false;
+            bool     int8_quantization = false;
+            bool     output_calibration = false;
+            float    output_quantization_factor = 1.0f;
         };
 
         DedicatedParams eltwiseParams;
+        MultiDataTensor output_calibration_factors;
 
         virtual ParamsKey GetParamsKey() const
         {
-            return BaseParams::GetParamsKey();
+            ParamsKey k = BaseParams::GetParamsKey();
+            if (eltwiseParams.int8_quantization)
+            {
+                k.EnableInt8Quantization();
+            }
+
+            if (eltwiseParams.output_calibration)
+            {
+                k.EnableOutputCalibration();
+            }
+
+            return k;
         }
     };
 

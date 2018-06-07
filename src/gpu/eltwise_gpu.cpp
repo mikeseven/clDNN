@@ -74,6 +74,19 @@ struct eltwise_gpu : typed_primitive_gpu_impl<eltwise>
                 ew_params.eltwiseParams.layoutBased = true;
         }
 
+        if (primitive->output_calibration_factors.size() > 0 || primitive->output_quantization_factor != 1.0f)
+        {
+            ew_params.eltwiseParams.int8_quantization = true;
+
+            if (primitive->output_calibration_factors.size() > 0)
+            {
+                ew_params.eltwiseParams.output_calibration = true;
+                ew_params.output_calibration_factors.push_back(convert_data_tensor(arg.output_calibration_factors().get_output_layout()).FlattenFeatureAndSpatials());
+            }
+            else
+                ew_params.eltwiseParams.output_quantization_factor = arg.get_output_qf();
+        }
+
         auto& kernel_selector = kernel_selector::eltwise_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(ew_params, ew_optional_params);
 

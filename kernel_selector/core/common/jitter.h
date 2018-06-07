@@ -782,6 +782,17 @@ inline JitConstants MakeEltwiseJitConstants(const EltwiseParams& params)
         MakeJitConstant("ELTWISE_LAYOUT_BASED", params.eltwiseParams.layoutBased),
     });
 
+    if (params.eltwiseParams.int8_quantization)
+    {
+        if (params.eltwiseParams.output_calibration)
+        {
+            jit.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.eltwiseParams.output_calibration));
+            jit.AddConstant(MakeJitConstant("O_QF", params.output_calibration_factors[0]));
+
+        }
+        else
+            jit.AddConstants({ MakeJitConstant("O_QF",       params.eltwiseParams.output_quantization_factor) });
+    }
     return jit;
 }
 
