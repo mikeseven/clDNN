@@ -40,6 +40,8 @@ namespace KernelSelector
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableBatching();
+        k.EnableInt8Quantization();
+        k.EnableOutputCalibration();
         return k;
     }
 
