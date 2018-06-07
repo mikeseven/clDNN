@@ -1234,9 +1234,33 @@ namespace KernelSelector
     {
         FullyConnectedParams() : WeightBiasParams(KernelType::FULLY_CONNECTED) {}
 
+        struct DedicatedParams
+        {
+            bool     int8_quantization = false;
+            bool     output_calibration = false;
+            float    input_quantization_factor = 1.0f;
+            float    output_quantization_factor = 1.0f;
+        };
+
+        DedicatedParams fcParams;
+        MultiDataTensor weights_quantization_factors;
+        MultiDataTensor output_calibration_factors;
+
         virtual ParamsKey GetParamsKey() const
         {
-            return WeightBiasParams::GetParamsKey();
+            ParamsKey k = WeightBiasParams::GetParamsKey();
+
+            if (fcParams.int8_quantization)
+            {
+                k.EnableInt8Quantization();
+            }
+
+            if (fcParams.output_calibration)
+            {
+                k.EnableOutputCalibration();
+            }
+
+            return k;
         }
     };
 

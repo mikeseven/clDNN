@@ -548,6 +548,21 @@ inline JitConstants MakeFullyConnectedJitConstants(const FullyConnectedParams& p
 
     jit.AddConstant(MakeJitConstant("INPUT0_ELEMENTS_COUNT", x_size));
 
+    if (params.fcParams.int8_quantization)
+    {
+        jit.AddConstants({ MakeJitConstant("W_QF", params.weights_quantization_factors[0]) });
+        jit.AddConstants({ MakeJitConstant("I_QF",params.fcParams.input_quantization_factor) });
+
+        if (params.fcParams.output_calibration)
+        {
+            jit.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.fcParams.output_calibration));
+            jit.AddConstant(MakeJitConstant("O_QF", params.output_calibration_factors[0]));
+
+        }
+        else
+            jit.AddConstants({ MakeJitConstant("O_QF",       params.fcParams.output_quantization_factor) });
+    }
+
     return jit;
 }
 

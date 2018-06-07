@@ -100,6 +100,21 @@ public:
 
         CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 
+        if (primitive->weights_quantization_factors.size() > 0)
+        {
+            fc_params.fcParams.int8_quantization = true;
+            fc_params.weights_quantization_factors.push_back(convert_data_tensor(arg.weights_quantization_factors().get_output_layout()).FlattenFeatureAndSpatials());
+            fc_params.fcParams.input_quantization_factor = arg.get_input_qf();
+
+            if (primitive->output_calibration_factors.size() > 0)
+            {
+                fc_params.fcParams.output_calibration = true;
+                fc_params.output_calibration_factors.push_back(convert_data_tensor(arg.output_calibration_factors().get_output_layout()).FlattenFeatureAndSpatials());
+            }
+            else
+                fc_params.fcParams.output_quantization_factor = arg.get_output_qf();
+        }
+
         const auto& new_fc_params = *static_cast<kernel_selector::fully_connected_params*>(best_kernels[0].params.get());
         std::vector<network_impl::ptr> reorders; 
         if (fc_params.inputs[0].GetLayout() != new_fc_params.inputs[0].GetLayout())
