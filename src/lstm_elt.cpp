@@ -33,9 +33,11 @@ layout lstm_elt_inst::calc_output_layout(lstm_elt_node const& node)
     auto desc = node.get_primitive();
     auto input_layout = node.input().get_output_layout();
 
-    // tempGEMM  = [        1, direction,     batch, 4 * hidden_size ] input
-    // cell      = [        1, direction,     batch,     hidden_size ] optional
-    // output    = [ sequence, direction,     batch,     hidden_size ] output
+    // tempGEMM  = [ 1, direction,     batch, 4 * hidden_size ] input
+    // cell      = [ 1, direction,     batch,     hidden_size ] optional
+    // output    = [ 2, direction,     batch,     hidden_size ] output
+    // The output of the lstm_elt node is the concatenation of the intermediate [hidden, cell] tensors.
+    // A crop/split node is needed to extract each individual tensors
     auto result = layout(input_layout.data_type, format::bfyx,
                     tensor(2, input_layout.size.feature[0], input_layout.size.spatial[0] / 4, input_layout.size.spatial[1]));
     return result;

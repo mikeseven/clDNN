@@ -394,7 +394,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
 
     if (!ep.dump_layer_name.empty())
     {
-        if (ep.topology_name == "microbench")
+        if (ep.topology_name == "microbench_conv")
         {
             for (auto prim_id : topology.get_primitive_ids())
             {
@@ -412,7 +412,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
 
     options.set_option(cldnn::build_option::outputs(outputs));
 
-    try 
+    try
     {
         cldnn::program program(engine, topology, options);
         auto compile_time = timer_compilation.uptime();
@@ -426,7 +426,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
         cldnn::network network(program);
 
         auto allocation_time = timer_compilation.uptime() - compile_time;
-        
+
         if (ep.print_type == Verbose)
         {
             std::cout << "Network allocation finished in " << instrumentation::to_string(allocation_time) << std::endl;
@@ -437,7 +437,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
             std::cout << "All primitives information: " << std::endl;
             std::vector<std::string> primitives_id = topology.get_primitive_ids();
             std::string primitive_info = "";
-            for (auto& prim : primitives_id) //loop through primitives_id vector, so we print information about all primitives 
+            for (auto& prim : primitives_id) //loop through primitives_id vector, so we print information about all primitives
             {
                 primitive_info = network.get_primitive_info(prim);
                 std::cout << primitive_info << std::endl;
@@ -533,12 +533,12 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     auto scheduling_time(timer_execution.uptime());
 
     //OCL buffers mapping blocks until all primitives are completed
-    if (ep.topology_name != "microbench")
+    if (ep.topology_name != "microbench_conv" && ep.topology_name != "microbench_lstm")
     {
         std::string output_primitve_id = ep.run_until_primitive_name.empty() ? "output" : ep.run_until_primitive_name;
         output = outputs.at(output_primitve_id).get_memory();
     }
-    
+
     auto execution_time(timer_execution.uptime());
 
     if (log_energy)
@@ -580,8 +580,8 @@ std::chrono::nanoseconds execute_topology(cldnn::network network,
     }
     else
     {
-        // We do not log results for microbench.
-        if (ep.topology_name != "microbench")
+        // We do not log results for microbench_conv.
+        if (ep.topology_name != "microbench_conv" && ep.topology_name != "microbench_lstm")
         {
             instrumentation::logger::log_memory_to_file(output, "final_result");
         }
@@ -673,8 +673,9 @@ void run_topology(const execution_params &ep)
     }
     cldnn::instrumentation::timer<> timer_build;
     cldnn::layout input_layout = { ep.use_half ? cldnn::data_types::f16 : cldnn::data_types::f32, cldnn::format::byxf, {} };
-    std::map<cldnn::primitive_id, cldnn::layout> microbench_inputs;
-    microbench_inputs.insert({ "input_layout", input_layout }); //add dummy input so we pass data format to mcirobench topology
+    std::map<cldnn::primitive_id, cldnn::layout> microbench_conv_inputs;
+    std::map<cldnn::primitive_id, cldnn::layout> microbench_lstm_inputs;
+    microbench_conv_inputs.insert({ "input_layout", input_layout }); //add dummy input so we pass data format to mcirobench_conv topology
     if (ep.topology_name == "alexnet")
         primitives = build_alexnet(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "vgg16" || ep.topology_name == "vgg16_face")
@@ -683,8 +684,8 @@ void run_topology(const execution_params &ep)
         primitives = build_googlenetv1(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "gender")
         primitives = build_gender(ep.weights_dir, engine, input_layout, gpu_batch_size);
-    else if (ep.topology_name == "microbench")
-        primitives = build_microbench(ep.weights_dir, engine, microbench_inputs, gpu_batch_size);
+    else if (ep.topology_name == "microbench_conv")
+        primitives = build_microbench_conv(ep.weights_dir, engine, microbench_conv_inputs, gpu_batch_size);
     else if (ep.topology_name == "squeezenet")
     {
         if (ep.calibration)
@@ -696,9 +697,12 @@ void run_topology(const execution_params &ep)
             primitives = build_squeezenet(ep.weights_dir, engine, input_layout, gpu_batch_size);
         }
     }
+    else if (ep.topology_name == "microbench_lstm") {
+        primitives = build_microbench_lstm(ep.weights_dir, engine, ep.lstm_ep, microbench_lstm_inputs);
+    }
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
-    microbench_inputs.erase("input_layout");
+    microbench_conv_inputs.erase("input_layout");
 
     auto build_time = timer_build.uptime();
 
@@ -720,7 +724,7 @@ void run_topology(const execution_params &ep)
     cldnn::layout zero_layout( cldnn::data_types::f32, cldnn::format::bfyx, {1,1,1,1} );
     auto output = cldnn::memory::attach(zero_layout, &zero, 1);
 
-    if (ep.topology_name != "microbench")
+    if (ep.topology_name != "microbench_conv" && ep.topology_name != "microbench_lstm")
     {
         auto input = cldnn::memory::allocate(engine, input_layout);
         auto neurons_list_filename = "names.txt";
@@ -759,7 +763,7 @@ void run_topology(const execution_params &ep)
             auto time = execute_topology(network, ep, energyLib, output);
 
             auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-           
+
             if (ep.run_until_primitive_name.empty() && ep.run_single_kernel_name.empty())
             {
                 output_file.batch(output, join_path(get_executable_info()->dir(), neurons_list_filename), images_in_batch, ep.print_type);
@@ -788,9 +792,9 @@ void run_topology(const execution_params &ep)
             }
         }
     }
-    else {
+    else if (ep.topology_name == "microbench_conv") {
         auto fill_with = memory_filler::filler_type::zero;
-        for (const auto& inp_data : microbench_inputs)
+        for (const auto& inp_data : microbench_conv_inputs)
         {
             auto mem = cldnn::memory::allocate(engine, inp_data.second);
             if (!ep.use_half)
@@ -801,7 +805,32 @@ void run_topology(const execution_params &ep)
             {
                 memory_filler::fill_memory<half_t>(mem, fill_with);
             }
-            
+
+            network.set_input_data(inp_data.first, mem);
+        }
+
+        auto time = execute_topology(network, ep, energyLib, output);
+        auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
+        if (time_in_sec != 0.0)
+        {
+            if (ep.print_type != ExtendedTesting)
+            {
+                std::cout << "Frames per second:" << (double)(ep.loop * batch_size) / time_in_sec << std::endl;
+
+                if (ep.perf_per_watt)
+                {
+                    if (!energyLib.print_power_results((double)(ep.loop * batch_size) / time_in_sec))
+                        std::cout << "WARNING: power file parsing failed." << std::endl;
+                }
+            }
+        }
+    }
+    else if (ep.topology_name == "microbench_lstm") {
+        auto fill_with = memory_filler::filler_type::zero;
+        for (const auto& inp_data : microbench_lstm_inputs)
+        {
+            auto mem = cldnn::memory::allocate(engine, inp_data.second);
+            memory_filler::fill_memory<float>(mem, fill_with);
             network.set_input_data(inp_data.first, mem);
         }
 
