@@ -16,15 +16,39 @@
 
 #pragma once
 
-#include "common_kernel_base.h"
+#include "weight_bias_kernel_base.h"
 #include "kernel_selector_params.h"
 
 namespace KernelSelector 
 {
-    class FullyConnectedGradInputKernelBase : public CommonKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // FullyConnectedGradInputParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct FullyConnectedGradInputParams : public WeightBiasParams
+    {
+        FullyConnectedGradInputParams() : WeightBiasParams(KernelType::FULLY_CONNECTED_GRAD_INPUT) {}
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            return WeightBiasParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // FullyConnectedGradInputOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct FullyConnectedGradInputOptionalParams : WeightsBiasOptionalParams
+    {
+        FullyConnectedGradInputOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED_GRAD_INPUT) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // FullyConnectedGradInputKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    class FullyConnectedGradInputKernelBase : public WeightBiasKernelBase
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using WeightBiasKernelBase::WeightBiasKernelBase;
         virtual ~FullyConnectedGradInputKernelBase() {}
 
         using DispatchData = CommonDispatchData;

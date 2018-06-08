@@ -21,7 +21,7 @@ namespace KernelSelector
 {
     JitConstants FullyConnectedGradWeightsKernelBase::GetJitConstants(const FullyConnectedGradWeightsParams& params) const
     {
-        return MakeFullyConnectedGradWeightsJitConstants(params);
+        return WeightBiasKernelBase::GetJitConstants(params);
     }
 
     FullyConnectedGradWeightsKernelBase::DispatchData FullyConnectedGradWeightsKernelBase::SetDefault(const FullyConnectedGradWeightsParams& params) const
