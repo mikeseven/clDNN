@@ -904,160 +904,6 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutionParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct WeightBiasParams : public BaseParams
-    {
-        WeightBiasParams(KernelType kt) : BaseParams(kt) {}
-
-        WeightsTensor weights;
-        MultiDataTensor bias;
-
-        virtual ParamsKey GetParamsKey() const override
-        {
-            ParamsKey k = BaseParams::GetParamsKey();
-
-            k.EnableInputWeightsType(weights.GetDType());
-            
-            // not needed - can be changed by reorder params
-            //k.EnableWeightsLayout(weights.layout);
-
-            assert(bias.size() <= 1);
-
-            if (bias.empty())
-            {
-                k.EnableNonBiasTerm();
-            }
-            else if (bias[0].GetLayout() == DataLayout::bf ||
-                     bias[0].GetLayout() == DataLayout::fb)
-            {
-                k.EnableBiasPerFeature();
-            }
-            else if (bias[0].GetLayout() == output.GetLayout())
-            {
-                k.EnableBiasPerOutput();
-            }
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutionParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutionParams : public WeightBiasParams
-    {
-        ConvolutionParams() : WeightBiasParams(KernelType::CONVOLUTION), convParams() {}
-    
-        struct DedicatedParams
-        {
-            uSize    filterSize;
-            uSize    stride;
-            uSize    dilation;
-            uSize    padding;
-            uint32_t winograd_tile_n;
-            uint32_t winograd_tile_m;
-            uint32_t winograd_input_tile_width;
-            uint32_t winograd_input_tile_height;
-            uint32_t split = 1;
-            bool     depthwiseSeparableOpt = false;
-            bool     transposed = false;
-            bool     int8_quantization = false;
-            bool     output_calibration = false;
-            float    input_quantization_factor = 1.0f;
-            float    output_quantization_factor = 1.0f;
-        };
-
-        DedicatedParams convParams;
-        MultiDataTensor weights_quantization_factors;
-        MultiDataTensor output_calibration_factors;
-        virtual std::string to_string() const override;
-
-        virtual ParamsKey GetParamsKey() const override
-        {
-            ParamsKey k = WeightBiasParams::GetParamsKey();
-
-            if (convParams.split > 1)
-            {
-                k.EnableSplitSupport();
-            }
-
-            if (convParams.dilation.x != 1 ||
-                convParams.dilation.y != 1)
-            {
-                k.EnableDilation();
-            }
-
-            if (convParams.depthwiseSeparableOpt)
-            {
-                k.EnableDepthwiseSeparableOpt();
-            }
-
-            if (convParams.transposed)
-            {
-                k.EnableTranspose();
-            }
-
-            if (convParams.int8_quantization)
-            {
-                k.EnableInt8Quantization();
-            }
-
-            if (convParams.output_calibration)
-            {
-                k.EnableOutputCalibration();
-            }
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // DeconvolutionParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct DeconvolutionParams : public WeightBiasParams
-    {
-        DeconvolutionParams() : WeightBiasParams(KernelType::DECONVOLUTION), deconvParams() {}
-
-        struct DedicatedParams
-        {
-            uSize    filterSize;
-            uSize    stride;
-            uSize    dilation;
-            uSize    padding;
-            uint32_t split = 1;
-            bool     depthwiseSeparableOpt = false;
-        };
-
-        DedicatedParams deconvParams;
-
-        virtual std::string to_string() const override;
-
-        virtual ParamsKey GetParamsKey() const override
-        {
-            ParamsKey k = WeightBiasParams::GetParamsKey();
-
-            if (deconvParams.split > 1)
-            {
-                k.EnableSplitSupport();
-            }
-
-            if (deconvParams.dilation.x != 1 ||
-                deconvParams.dilation.y != 1)
-            {
-                k.EnableDilation();
-            }
-
-            if (deconvParams.depthwiseSeparableOpt)
-            {
-                k.EnableDepthwiseSeparableOpt();
-            }
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // LRNParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct LRNParams : public BaseParams
@@ -1244,19 +1090,6 @@ namespace KernelSelector
         virtual ParamsKey GetParamsKey() const
         {
             return BaseParams::GetParamsKey();
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // FullyConnectedParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedParams : public WeightBiasParams
-    {
-        FullyConnectedParams() : WeightBiasParams(KernelType::FULLY_CONNECTED) {}
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            return WeightBiasParams::GetParamsKey();
         }
     };
 
@@ -1605,50 +1438,6 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutionGradWeightsParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutionGradWeightsParams : public WeightBiasParams
-    {
-        ConvolutionGradWeightsParams() : WeightBiasParams(KernelType::CONVOLUTION_GRAD_WEIGHTS), convGradWeightsParams() {}
-
-        struct DedicatedParams
-        {
-            uSize    filterSize;
-            uSize    stride;
-            uSize    dilation;
-            uSize    padding;
-            uint32_t split = 1;
-            bool     depthwiseSeparableOpt = false;
-        };
-
-        DedicatedParams convGradWeightsParams;
-
-        virtual std::string to_string() const override;
-
-        virtual ParamsKey GetParamsKey() const override
-        {
-            ParamsKey k = WeightBiasParams::GetParamsKey();
-
-            if (convGradWeightsParams.split > 1)
-            {
-                k.EnableSplitSupport();
-            }
-
-            if (convGradWeightsParams.dilation.x != 1 ||
-                convGradWeightsParams.dilation.y != 1)
-            {
-                k.EnableDilation();
-            }
-
-            if (convGradWeightsParams.depthwiseSeparableOpt)
-            {
-                k.EnableDepthwiseSeparableOpt();
-            }
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // LSTMGemmParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct LSTMGemmParams : public BaseParams
@@ -1717,32 +1506,6 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // FullyConnectedGradInputParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedGradInputParams : public WeightBiasParams
-    {
-        FullyConnectedGradInputParams() : WeightBiasParams(KernelType::FULLY_CONNECTED_GRAD_INPUT) {}
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            return WeightBiasParams::GetParamsKey();
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // FullyConnectedGradWeightsParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedGradWeightsParams : public WeightBiasParams
-    {
-        FullyConnectedGradWeightsParams() : WeightBiasParams(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            return WeightBiasParams::GetParamsKey();
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Auto tuner parameters
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class KernelRunnerInterface;
@@ -1794,31 +1557,6 @@ namespace KernelSelector
     protected:
         OptionalParams(KernelType kt) : kType(kt) {}
         KernelType kType;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // WeightsBiasOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct WeightsBiasOptionalParams : OptionalParams
-    {
-    protected:
-        WeightsBiasOptionalParams(KernelType kt) : OptionalParams(kt) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutionOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutionOptionalParams : WeightsBiasOptionalParams
-    {
-        ConvolutionOptionalParams() : WeightsBiasOptionalParams(KernelType::CONVOLUTION) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // DeconvolutionOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct DeconvolutionOptionalParams : WeightsBiasOptionalParams
-    {
-        DeconvolutionOptionalParams() : WeightsBiasOptionalParams(KernelType::DECONVOLUTION) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1875,14 +1613,6 @@ namespace KernelSelector
     struct ROIPoolingOptionalParams : OptionalParams
     {
         ROIPoolingOptionalParams() : OptionalParams(KernelType::ROI_POOLING) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // FullyConnectedOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedOptionalParams : WeightsBiasOptionalParams
-    {
-        FullyConnectedOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1980,30 +1710,6 @@ namespace KernelSelector
     struct MaxUnpoolingOptionalParams : OptionalParams
     {
         MaxUnpoolingOptionalParams() : OptionalParams(KernelType::MAX_UNPOOLING) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutiongradWeightsOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutiongradWeightsOptionalParams : WeightsBiasOptionalParams
-    {
-        ConvolutiongradWeightsOptionalParams() : WeightsBiasOptionalParams(KernelType::CONVOLUTION_GRAD_WEIGHTS) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutiongradWeightsOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedGradInputOptionalParams : WeightsBiasOptionalParams
-    {
-        FullyConnectedGradInputOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED_GRAD_INPUT) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutiongradWeightsOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedGradWeightsOptionalParams : WeightsBiasOptionalParams
-    {
-        FullyConnectedGradWeightsOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

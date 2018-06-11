@@ -20,6 +20,28 @@
 
 namespace KernelSelector 
 {
+    std::string ConvolutionParams::to_string() const
+    {
+        std::stringstream s;
+
+        s << BaseParams::to_string() << "_";
+        if (bias.empty())
+        {
+            s << "no_bias" << "_";
+        }
+        else
+        {
+            s << "bias_" << bias[0].PhysicalSize() << "_";
+        }
+        s << convParams.filterSize.x << "_" << convParams.filterSize.y << "_";
+        s << convParams.stride.x << "_" << convParams.stride.y << "_";
+        s << convParams.dilation.x << "_" << convParams.dilation.y << "_";
+        s << convParams.padding.x << "_" << convParams.padding.y << "_";
+        s << convParams.split;
+
+        return s.str();
+    }
+
     bool ConvolutionKernelBase::Validate(const Params& p, const OptionalParams& o) const
     {
         if (p.GetType() != KernelType::CONVOLUTION ||
@@ -50,6 +72,38 @@ namespace KernelSelector
 
     JitConstants ConvolutionKernelBase::GetJitConstants(const ConvolutionParams& params, ConvolutionKernelBase::DispatchData kd) const
     {
+        JitConstants mem_consts = WeightBiasKernelBase::GetJitConstants(params);
+        const auto& padding = params.convParams.padding;
+        const auto& input = params.inputs[0];
+
+        int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - padding.x*input.X().pitch - input.Y().pitch*padding.y;
+        input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);
+
+        mem_consts.AddConstants({
+            MakeJitConstant("STRIDE",                       params.convParams.stride),
+            MakeJitConstant("PADDING",                      params.convParams.padding),
+            MakeJitConstant("DILATION",                     params.convParams.dilation),
+            MakeJitConstant("FILTER_ARRAY_NUM",             params.convParams.split),
+            MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
+            MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      params.convParams.depthwiseSeparableOpt),
+            MakeJitConstant("QUANTIZATION_TERM",            params.convParams.int8_quantization),
+        });
+
+        if (params.convParams.int8_quantization)
+        {
+            mem_consts.AddConstants({ MakeJitConstant("W_QF", params.weights_quantization_factors[0]) });
+            mem_consts.AddConstants({ MakeJitConstant("I_QF",params.convParams.input_quantization_factor) });
+
+            if (params.convParams.output_calibration)
+            {
+                mem_consts.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.convParams.output_calibration));
+                mem_consts.AddConstant(MakeJitConstant("O_QF", params.output_calibration_factors[0]));
+
+            }
+            else
+                mem_consts.AddConstants({ MakeJitConstant("O_QF",       params.convParams.output_quantization_factor) });
+        }
+
         std::vector<uint32_t> unrollLoopParams{
             params.convParams.filterSize.x,
             params.convParams.filterSize.y,
@@ -63,7 +117,6 @@ namespace KernelSelector
 
         auto loopCount = *std::max_element(unrollLoopParams.begin(), unrollLoopParams.end());
 
-        JitConstants mem_consts = MakeConvolutionParamsJitConstants(params);
         JitConstants mem_consts_loop = MakeLoopUnrollParamsJitConstants(loopCount);
         mem_consts.Merge(mem_consts_loop);
 

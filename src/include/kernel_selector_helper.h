@@ -22,7 +22,11 @@
 #include "tensor_type.h"
 #include "kernel_selector_params.h"
 #include "convolution/convolution_kernel_selector.h"
+#include "convolution/convolution_kernel_base.h"
+
 #include "deconvolution/deconvolution_kernel_selector.h"
+#include "deconvolution/deconvolution_kernel_base.h"
+
 #include "lrn/lrn_kernel_selector.h"
 #include "normalize/normalize_kernel_selector.h"
 #include "mvn/mvn_kernel_selector.h"
@@ -30,7 +34,10 @@
 #include "max_unpooling/max_unpooling_kernel_selector.h"
 #include "arg_max_min/arg_max_min_kernel_selector.h"
 #include "roi_pooling/roi_pooling_kernel_selector.h"
+
 #include "fully_connected/fully_connected_kernel_selector.h"
+#include "fully_connected/fully_connected_kernel_base.h"
+
 #include "lookup_table/lookup_table_kernel_selector.h"
 #include "activation/activation_kernel_selector.h"
 #include "softmax/softmax_kernel_selector.h"
@@ -42,9 +49,16 @@
 #include "reshape/reshape_kernel_selector.h"
 #include "concatenation/concatenation_kernel_selector.h"
 #include "upsampling/upsampling_kernel_selector.h"
+
 #include "convolution_grad_weights/convolution_grad_weights_kernel_selector.h"
+#include "convolution_grad_weights/convolution_grad_weights_kernel_base.h"
+
 #include "fully_connected_grad_input/fully_connected_grad_input_kernel_selector.h"
+#include "fully_connected_grad_input/fully_connected_grad_input_kernel_base.h"
+
 #include "fully_connected_grad_weights/fully_connected_grad_weights_kernel_selector.h"
+#include "fully_connected_grad_weights/fully_connected_grad_weights_kernel_base.h"
+
 #include "lstm/lstm_gemm_kernel_selector.h"
 #include "lstm/lstm_elt_kernel_selector.h"
 #include "jitter.h"

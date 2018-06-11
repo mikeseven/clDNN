@@ -19,9 +19,48 @@
 
 namespace KernelSelector 
 {
+    std::string DeconvolutionParams::to_string() const
+    {
+        std::stringstream s;
+
+        s << BaseParams::to_string() << "_";
+        if (bias.empty())
+        {
+            s << "no_bias" << "_";
+        }
+        else
+        {
+            s << "bias_size:" << bias[0].PhysicalSize() << "_";
+        }
+        s << deconvParams.filterSize.x << "_" << deconvParams.filterSize.y << "_";
+        s << deconvParams.stride.x << "_" << deconvParams.stride.y << "_";
+        s << deconvParams.dilation.x << "_" << deconvParams.dilation.y << "_";
+        s << deconvParams.padding.x << "_" << deconvParams.padding.y << "_";
+        s << deconvParams.split;
+
+        return s.str();
+    }
+
     JitConstants DeconvolutionKernelBase::GetJitConstants(const DeconvolutionParams& params) const
     {
-        return MakeDeconvolutionJitConstants(params);
+        JitConstants jit = WeightBiasKernelBase::GetJitConstants(params);
+        const auto& dp = params.deconvParams;
+        const auto& padding = dp.padding;
+        const auto& input = params.inputs[0];
+
+        int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - (dp.filterSize.x - 1 + padding.x)*input.X().pitch - (dp.filterSize.y - 1 + padding.y)*input.Y().pitch;
+        input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);
+
+        jit.AddConstants({
+            MakeJitConstant("STRIDE",                       dp.stride),
+            MakeJitConstant("PADDING",                      dp.padding),
+            MakeJitConstant("DILATION",                     dp.dilation),
+            MakeJitConstant("FILTER_ARRAY_NUM",             dp.split),
+            MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
+            MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      dp.depthwiseSeparableOpt),
+        });
+
+        return jit;
     }
 
     DeconvolutionKernelBase::DispatchData DeconvolutionKernelBase::SetDefault(const DeconvolutionParams& params) const

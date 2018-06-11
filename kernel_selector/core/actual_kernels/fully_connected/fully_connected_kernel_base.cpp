@@ -22,7 +22,13 @@ namespace KernelSelector
 {
     JitConstants FullyConnectedKernelBase::GetJitConstants(const FullyConnectedParams& params, const FullyConnectedKernelBase::DispatchData&) const
     {
-        return MakeFullyConnectedJitConstants(params);
+        JitConstants jit = WeightBiasKernelBase::GetJitConstants(params);
+        const auto& input = params.inputs[0];
+        const auto x_size = input.LogicalSize() / input.Batch().v;
+
+        jit.AddConstant(MakeJitConstant("INPUT0_ELEMENTS_COUNT", x_size));
+
+        return jit;
     }
 
     std::unique_ptr<FullyConnectedKernelBase::DispatchData> FullyConnectedKernelBase::SetDefault(const FullyConnectedParams& params) const
