@@ -16,7 +16,7 @@
 
 #include "softmax_kernel_bf.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey SoftmaxKernel_bf::GetSupportedKey() const
     {

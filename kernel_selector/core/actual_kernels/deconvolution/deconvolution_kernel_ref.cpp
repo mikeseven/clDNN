@@ -16,7 +16,7 @@
 
 #include "deconvolution_kernel_ref.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
 
     ParamsKey DeconvolutionKernelRef::GetSupportedKey() const

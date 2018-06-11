@@ -16,7 +16,7 @@
 
 #include "pooling_kernel_gpu_bfyx_block_opt.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey PoolingKernelGPUBfyxBlockOpt::GetSupportedKey() const
     {

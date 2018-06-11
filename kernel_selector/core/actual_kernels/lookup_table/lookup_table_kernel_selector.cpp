@@ -18,7 +18,7 @@
 #include "lookup_table_kernel_ref.h"
 #include "lookup_table_kernel_axis.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     LookUpTableKernelSelctor::LookUpTableKernelSelctor()
     {

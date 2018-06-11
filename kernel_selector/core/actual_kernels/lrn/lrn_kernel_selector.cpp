@@ -23,7 +23,7 @@
 #include "lrn_kernel_across_channel_multiple_features.h"
 #include "lrn_kernel_within_channel_byxf_opt.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     LRNKernelSelctor::LRNKernelSelctor()
     {

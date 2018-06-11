@@ -16,7 +16,7 @@
 
 #include "lookup_table_kernel_ref.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     ParamsKey LookUpTableKernelRef::GetSupportedKey() const
     {

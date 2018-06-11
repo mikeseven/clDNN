@@ -17,7 +17,7 @@
 #include "concatenation_kernel_depth_bfyx_no_pitch.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
 
     ParamsKey ConcatenationKernel_depth_bfyx_no_pitch::GetSupportedKey() const

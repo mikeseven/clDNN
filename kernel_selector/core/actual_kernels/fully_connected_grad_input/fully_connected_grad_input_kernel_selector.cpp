@@ -17,7 +17,7 @@
 #include "fully_connected_grad_input_kernel_selector.h"
 #include "fully_connected_grad_input_kernel_ref.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     FullyConnectedGradInputKernelSelctor::FullyConnectedGradInputKernelSelctor()
     {

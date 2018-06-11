@@ -16,7 +16,7 @@
 
 #include "roi_pooling_kernel_ref.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     ParamsKey ROIPoolingKernelRef::GetSupportedKey() const
     {

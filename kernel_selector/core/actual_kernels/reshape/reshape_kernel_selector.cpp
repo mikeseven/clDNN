@@ -17,7 +17,7 @@
 #include "reshape_kernel_selector.h"
 #include "reshape_kernel_ref.h"
  
-namespace KernelSelector {
+namespace kernel_selector {
 
     ReshapeKernelSelctor::ReshapeKernelSelctor()
     {

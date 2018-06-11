@@ -18,7 +18,7 @@
 
 #include "fully_connected_kernel_base.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     class FullyConnected_bf_io_ref : public FullyConnectedKernelBase
     {

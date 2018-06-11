@@ -17,7 +17,7 @@
 #include "activation_kernel_opt.h"
 #include "kernel_selector_utils.h" 
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     ParamsKey ActivationKernelOpt::GetSupportedKey() const
     {

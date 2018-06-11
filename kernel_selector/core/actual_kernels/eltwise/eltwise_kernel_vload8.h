@@ -18,7 +18,7 @@
 
 #include "eltwise_kernel_base.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     class EltwiseKernel_vload8 : public EltwiseKernelBase
     {

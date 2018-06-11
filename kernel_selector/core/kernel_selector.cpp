@@ -32,7 +32,7 @@
 
 #define ENABLE_OFFLINE_TUNING_CACHE 1
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     AutoTuner KernelSelctorBase::autoTuner;
 

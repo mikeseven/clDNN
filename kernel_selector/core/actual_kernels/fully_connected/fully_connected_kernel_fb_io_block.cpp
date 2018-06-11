@@ -17,7 +17,7 @@
 #include "fully_connected_kernel_fb_io_block.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey FullyConnected_fb_io_block::GetSupportedKey() const
     {
@@ -35,7 +35,7 @@ namespace KernelSelector
         return k;
     }
 
-    std::unique_ptr<FullyConnected_fb_io_block::FullyConnectedKernelBase::DispatchData> FullyConnected_fb_io_block::SetDefault(const FullyConnectedParams& arg) const
+    std::unique_ptr<FullyConnected_fb_io_block::FullyConnectedKernelBase::DispatchData> FullyConnected_fb_io_block::SetDefault(const fully_connected_params& arg) const
     {
         auto kd = std::make_unique<DispatchData>(*FullyConnectedKernelBase::SetDefault(arg).get());
         const auto& output = arg.output;
@@ -72,7 +72,7 @@ namespace KernelSelector
         return std::move(kd);
     }
 
-    JitConstants FullyConnected_fb_io_block::GetJitConstants(const FullyConnectedParams& params, const FullyConnectedKernelBase::DispatchData& run_info) const
+    JitConstants FullyConnected_fb_io_block::GetJitConstants(const fully_connected_params& params, const FullyConnectedKernelBase::DispatchData& run_info) const
     {
         auto &d = static_cast<const DispatchData&>(run_info);
         auto cldnn_jit = FullyConnectedKernelBase::GetJitConstants(params, run_info);
@@ -98,7 +98,7 @@ namespace KernelSelector
             return false;
         }
 
-        const auto& params = static_cast<const FullyConnectedParams&>(p);
+        const auto& params = static_cast<const fully_connected_params&>(p);
 
         const auto& output = params.output;
         const auto responseSize = output.Feature().v;
@@ -134,7 +134,7 @@ namespace KernelSelector
     {
         assert(params.GetType() == KernelType::FULLY_CONNECTED);
 
-        const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
+        const auto& orgParams = static_cast<const fully_connected_params&>(params);
 
         float estimated_time =
             orgParams.inputs[0].GetDType() == Datatype::F16 && orgParams.output.Batch().v >= 16 ?

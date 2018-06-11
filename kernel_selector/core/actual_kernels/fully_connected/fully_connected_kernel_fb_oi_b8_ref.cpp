@@ -17,7 +17,7 @@
 #include "fully_connected_kernel_fb_oi_b8_ref.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey FullyConnected_fb_oi_b8_ref::GetSupportedKey() const
     {
@@ -35,7 +35,7 @@ namespace KernelSelector
         return k;
     }
 
-    std::unique_ptr<FullyConnected_fb_oi_b8_ref::DispatchData> FullyConnected_fb_oi_b8_ref::SetDefault(const FullyConnectedParams& arg) const
+    std::unique_ptr<FullyConnected_fb_oi_b8_ref::DispatchData> FullyConnected_fb_oi_b8_ref::SetDefault(const fully_connected_params& arg) const
     {
         auto kd = FullyConnectedKernelBase::SetDefault(arg);
 
@@ -55,7 +55,7 @@ namespace KernelSelector
             return false;
         }
 
-        const auto& params = static_cast<const FullyConnectedParams&>(p);
+        const auto& params = static_cast<const fully_connected_params&>(p);
 
         if (params.inputs[0].Batch().v != 8)
         {

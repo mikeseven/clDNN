@@ -17,7 +17,7 @@
 #include "lrn_kernel_ref.h"
 #include "kernel_selector_utils.h" 
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey LRNKernelRef::GetSupportedKey() const
     {

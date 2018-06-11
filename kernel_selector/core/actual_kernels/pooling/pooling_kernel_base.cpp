@@ -16,7 +16,7 @@
 
 #include "pooling_kernel_base.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     bool PoolingKernelBase::Validate(const Params& p, const OptionalParams& o) const
     {

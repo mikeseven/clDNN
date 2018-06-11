@@ -17,7 +17,7 @@
 #include "fully_connected_grad_input_kernel_base.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     JitConstants FullyConnectedGradInputKernelBase::GetJitConstants(const FullyConnectedGradInputParams& params) const
     {

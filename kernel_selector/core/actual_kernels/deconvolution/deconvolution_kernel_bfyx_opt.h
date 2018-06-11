@@ -18,7 +18,7 @@
 
 #include "deconvolution_kernel_base.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     class DeconvolutionKernel_bfyx_opt : public DeconvolutionKernelBase
     {

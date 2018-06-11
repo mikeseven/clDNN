@@ -17,7 +17,7 @@
 #include "fully_connected_kernel_fb_io_b8_f8.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey FullyConnected_fb_io_b8_f8::GetSupportedKey() const
     {
@@ -37,7 +37,7 @@ namespace KernelSelector
         return k;
     }
 
-    std::unique_ptr<FullyConnected_fb_io_b8_f8::DispatchData> FullyConnected_fb_io_b8_f8::SetDefault(const FullyConnectedParams& arg) const
+    std::unique_ptr<FullyConnected_fb_io_b8_f8::DispatchData> FullyConnected_fb_io_b8_f8::SetDefault(const fully_connected_params& arg) const
     {
         auto kd = FullyConnectedBlockKernelBase::SetDefault(arg);
 
@@ -59,7 +59,7 @@ namespace KernelSelector
             return false;
         }
 
-        const auto& params = static_cast<const FullyConnectedParams&>(p);
+        const auto& params = static_cast<const fully_connected_params&>(p);
 
         const auto& output = params.output;
         const auto batches = output.Batch().v;
@@ -81,7 +81,7 @@ namespace KernelSelector
     {
         assert(params.GetType() == KernelType::FULLY_CONNECTED);
 
-        const auto& orgParams = static_cast<const FullyConnectedParams&>(params);
+        const auto& orgParams = static_cast<const fully_connected_params&>(params);
 
         float estimated_time =
             orgParams.inputs[0].GetDType() == Datatype::F16 && orgParams.output.Batch().v >= 16 ?

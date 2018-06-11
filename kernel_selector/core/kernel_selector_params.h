@@ -23,7 +23,7 @@
 #include "common_tools.h"
 #include "tensor_type.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     using DataTensor = Tensor::DataTensor;
     using WeightsTensor = Tensor::WeightsTensor;
@@ -454,19 +454,19 @@ namespace KernelSelector
         {
             switch (m)
             {
-            case KernelSelector::LookUpTableAxis::BATCH:
+            case kernel_selector::LookUpTableAxis::BATCH:
                 key.restrict.val.dedicated.lookt.axisBatch = 1;
                 break;
-            case KernelSelector::LookUpTableAxis::FEATURE:
+            case kernel_selector::LookUpTableAxis::FEATURE:
                 key.restrict.val.dedicated.lookt.axisFeature = 1;
                 break;
-            case KernelSelector::LookUpTableAxis::X:
+            case kernel_selector::LookUpTableAxis::X:
                 key.restrict.val.dedicated.lookt.axisX = 1;
                 break;
-            case KernelSelector::LookUpTableAxis::Y:
+            case kernel_selector::LookUpTableAxis::Y:
                 key.restrict.val.dedicated.lookt.axisY = 1;
                 break;
-            case KernelSelector::LookUpTableAxis::XYF:
+            case kernel_selector::LookUpTableAxis::XYF:
                 key.restrict.val.dedicated.lookt.axisXYF = 1;
                 break;
             default:

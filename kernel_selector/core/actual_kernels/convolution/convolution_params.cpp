@@ -17,9 +17,9 @@
 #include "convolution_params.h"
 #include <sstream>
 
-namespace KernelSelector
+namespace kernel_selector
 {
-    std::string ConvolutionParams::to_string() const
+    std::string convolution_params::to_string() const
     {
         std::stringstream s;
 
@@ -41,7 +41,7 @@ namespace KernelSelector
         return s.str();
     }
 
-    ParamsKey ConvolutionParams::GetParamsKey() const
+    ParamsKey convolution_params::GetParamsKey() const
     {
         ParamsKey k = WeightBiasParams::GetParamsKey();
 

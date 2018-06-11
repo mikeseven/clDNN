@@ -16,7 +16,7 @@
 
 #include "lrn_kernel_across_channel_ref.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey LRNKernelAcrossChannelRef::GetSupportedKey() const
     {

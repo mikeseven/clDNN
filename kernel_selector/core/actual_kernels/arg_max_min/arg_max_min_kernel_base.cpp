@@ -16,7 +16,7 @@
 
 #include "arg_max_min_kernel_base.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
 	bool ArgMaxMinKernelBase::Validate(const Params& p, const OptionalParams& o) const
 	{

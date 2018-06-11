@@ -23,7 +23,7 @@
 #include <sstream>
 #include <cmath>
 
-namespace KernelSelector {
+namespace kernel_selector {
 
 using JitDefinitions = std::vector<std::pair<std::string, std::string>>;
 

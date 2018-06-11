@@ -16,7 +16,7 @@
 
 #include "softmax_items_class_kernel_base.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey SoftmaxItemsClassKernelBase::GetDefaultSupportedKey()
     {

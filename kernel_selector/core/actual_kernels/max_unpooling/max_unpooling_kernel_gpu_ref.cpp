@@ -16,7 +16,7 @@
 
 #include "max_unpooling_kernel_gpu_ref.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey MaxUnpoolingKernelGPURef::GetSupportedKey() const
     {

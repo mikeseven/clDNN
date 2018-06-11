@@ -19,7 +19,7 @@
 #include "kernel_selector_utils.h"
 #include "common_tools.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     
     ParamsKey ConvolutionKernel_bfyx_GEMMLike::GetSupportedKey() const
@@ -44,7 +44,7 @@ namespace KernelSelector
         return k;
     }
 
-    std::string ConvolutionKernel_bfyx_GEMMLike::GetKernelName(const ConvolutionParams& params) const
+    std::string ConvolutionKernel_bfyx_GEMMLike::GetKernelName(const convolution_params& params) const
     {
         if (params.inputs[0].GetDType() == Datatype::F32)
         {
@@ -56,7 +56,7 @@ namespace KernelSelector
         }
     }
 
-    JitConstants ConvolutionKernel_bfyx_GEMMLike::GetJitConstants(const ConvolutionParams& params, Parent::DispatchData runInfo) const
+    JitConstants ConvolutionKernel_bfyx_GEMMLike::GetJitConstants(const convolution_params& params, Parent::DispatchData runInfo) const
     {
         JitConstants jit = Parent::GetJitConstants(params, runInfo);
         
@@ -75,7 +75,7 @@ namespace KernelSelector
         return jit;
     }
 
-    ConvolutionKernel_bfyx_GEMMLike::Parent::DispatchData ConvolutionKernel_bfyx_GEMMLike::SetDefault(const ConvolutionParams& arg, int autoTuneIndex) const
+    ConvolutionKernel_bfyx_GEMMLike::Parent::DispatchData ConvolutionKernel_bfyx_GEMMLike::SetDefault(const convolution_params& arg, int autoTuneIndex) const
     {
         DispatchData runInfo = Parent::SetDefault(arg, autoTuneIndex);
 
@@ -115,7 +115,7 @@ namespace KernelSelector
             return false;
         }
 
-        const auto& params = static_cast<const ConvolutionParams&>(p);
+        const auto& params = static_cast<const convolution_params&>(p);
 
         if (!params.engineInfo.bSubGroupShortSupport && params.inputs[0].GetDType() == Datatype::F16)
         {
@@ -125,7 +125,7 @@ namespace KernelSelector
         return true;
     }
 
-    std::vector<WeightsLayout> ConvolutionKernel_bfyx_GEMMLike::GetSupportedWeightLayouts(const ConvolutionParams& params) const
+    std::vector<WeightsLayout> ConvolutionKernel_bfyx_GEMMLike::GetSupportedWeightLayouts(const convolution_params& params) const
     {
         if (params.inputs[0].GetDType() == Datatype::F16)
         {

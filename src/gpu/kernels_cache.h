@@ -27,14 +27,14 @@ namespace cl {
 class Kernel;
 }
 
-namespace KernelSelector
+namespace kernel_selector
 {
     struct KernelString;
 }
 
 namespace kernel_selector
 {
-    using kernel_string = KernelSelector::KernelString;
+    using kernel_string = kernel_selector::KernelString;
 }
 
 namespace cldnn { namespace gpu {

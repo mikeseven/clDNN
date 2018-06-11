@@ -18,7 +18,7 @@
 
 #include "convolution_kernel_base.h"
  
-namespace KernelSelector {
+namespace kernel_selector {
     
     class ConvolutionKernel_bfyx_Direct_10_10_12 : public ConvolutionKernelBase
     {
@@ -31,11 +31,11 @@ namespace KernelSelector {
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
-        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const ConvolutionParams&) const override { return{ WeightsLayout::i_yxs_os_yxsv2_osv16 }; }
+        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&) const override { return{ WeightsLayout::i_yxs_os_yxsv2_osv16 }; }
 
-        JitConstants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const override;
+        JitConstants GetJitConstants(const convolution_params& params, DispatchData kd) const override;
         bool Validate(const Params& p, const OptionalParams& o) const override;
         bool NeedPaddedInput() const override { return true; }
-        DispatchData SetDefault(const ConvolutionParams& arg, int autoTuneIndex = -1) const override;
+        DispatchData SetDefault(const convolution_params& arg, int autoTuneIndex = -1) const override;
     };
 }

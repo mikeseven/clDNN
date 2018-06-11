@@ -19,7 +19,7 @@
 #include "common_kernel_base.h"
 #include "kernel_selector_params.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     class LRNKernelBase : public CommonKernelBase
     {

@@ -16,7 +16,7 @@
 
 #include "lrn_kernel_base.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     bool LRNKernelBase::Validate(const Params& p, const OptionalParams& o) const
     {

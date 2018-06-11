@@ -16,7 +16,7 @@
 
 #include "lookup_table_kernel_base.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     bool LookUpTableKernelBase::Validate(const Params& p, const OptionalParams& o) const
     {

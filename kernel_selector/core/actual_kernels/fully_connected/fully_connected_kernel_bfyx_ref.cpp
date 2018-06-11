@@ -17,7 +17,7 @@
 #include "fully_connected_kernel_bfyx_ref.h"
 #include "kernel_selector_utils.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey FullyConnected_bfyx_Ref::GetSupportedKey() const
     {
@@ -43,7 +43,7 @@ namespace KernelSelector
         return k;
     }
 
-    std::unique_ptr<FullyConnected_bfyx_Ref::Parent::DispatchData> FullyConnected_bfyx_Ref::SetDefault(const FullyConnectedParams& params) const
+    std::unique_ptr<FullyConnected_bfyx_Ref::Parent::DispatchData> FullyConnected_bfyx_Ref::SetDefault(const fully_connected_params& params) const
     {
         auto runInfo = Parent::SetDefault(params);
         

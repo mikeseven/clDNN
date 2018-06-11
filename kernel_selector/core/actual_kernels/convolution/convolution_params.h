@@ -18,15 +18,15 @@
 
 #include "weight_bias_params.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutionParams
+    // convolution_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutionParams : public WeightBiasParams
+    struct convolution_params : public WeightBiasParams
     {
-        ConvolutionParams() : WeightBiasParams(KernelType::CONVOLUTION), convParams() {}
+        convolution_params() : WeightBiasParams(KernelType::CONVOLUTION), convParams() {}
 
         struct DedicatedParams
         {
@@ -55,11 +55,11 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutionOptionalParams
+    // convolution_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutionOptionalParams : WeightsBiasOptionalParams
+    struct convolution_optional_params : WeightsBiasOptionalParams
     {
-        ConvolutionOptionalParams() : WeightsBiasOptionalParams(KernelType::CONVOLUTION) {}
+        convolution_optional_params() : WeightsBiasOptionalParams(KernelType::CONVOLUTION) {}
     };
 
 }

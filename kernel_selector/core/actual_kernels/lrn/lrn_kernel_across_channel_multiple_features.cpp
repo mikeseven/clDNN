@@ -16,7 +16,7 @@
 
 #include "lrn_kernel_across_channel_multiple_features.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     ParamsKey LRNKernelAcrossChannelMultipleFeatures::GetSupportedKey() const
     {

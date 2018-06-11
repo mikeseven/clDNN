@@ -17,7 +17,7 @@
 #include "deconvolution_kernel_base.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     std::string DeconvolutionParams::to_string() const
     {

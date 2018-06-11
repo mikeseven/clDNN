@@ -17,7 +17,7 @@
 #include "tensor_type.h"
 #include "concatenation_kernel_base.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     static int32_t GetConcatChannelIndex(const ConcatenationParams& params)
     {

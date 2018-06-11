@@ -18,7 +18,7 @@
 #include "tensor_type.h"
 #include "common_tools.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     namespace Tensor
     {

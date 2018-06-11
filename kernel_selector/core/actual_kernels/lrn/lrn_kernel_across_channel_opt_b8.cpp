@@ -16,7 +16,7 @@
 
 #include "lrn_kernel_across_channel_opt_b8.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey LRNKernelAcrossChannel_b8::GetSupportedKey() const
     {

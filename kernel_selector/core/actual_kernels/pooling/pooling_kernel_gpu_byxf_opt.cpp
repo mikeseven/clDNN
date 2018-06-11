@@ -16,7 +16,7 @@
 
 #include "pooling_kernel_gpu_byxf_opt.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     ParamsKey PoolingKernelGPUByxfOpt::GetSupportedKey() const
     {

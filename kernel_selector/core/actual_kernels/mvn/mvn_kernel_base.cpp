@@ -17,7 +17,7 @@
 #include "mvn_kernel_base.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     JitConstants MVNKernelBase::GetJitConstants(const MVNParams& params, MVNKernelBase::DispatchData) const
     {

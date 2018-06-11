@@ -16,7 +16,7 @@
 
 #include "convolution_grad_weights_kernel_ref.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
 
     ParamsKey ConvolutionGradWeightsKernelRef::GetSupportedKey() const

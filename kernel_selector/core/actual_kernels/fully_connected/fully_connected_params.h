@@ -18,15 +18,15 @@
 
 #include "weight_bias_params.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // FullyConnectedParams
+    // fully_connected_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedParams : public WeightBiasParams
+    struct fully_connected_params : public WeightBiasParams
     {
-        FullyConnectedParams() : WeightBiasParams(KernelType::FULLY_CONNECTED) {}
+        fully_connected_params() : WeightBiasParams(KernelType::FULLY_CONNECTED) {}
 
         virtual ParamsKey GetParamsKey() const
         {
@@ -35,10 +35,10 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // FullyConnectedOptionalParams
+    // fully_connected_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedOptionalParams : WeightsBiasOptionalParams
+    struct fully_connected_optional_params : WeightsBiasOptionalParams
     {
-        FullyConnectedOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED) {}
+        fully_connected_optional_params() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED) {}
     };
 }

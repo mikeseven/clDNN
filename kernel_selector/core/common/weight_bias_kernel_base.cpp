@@ -16,7 +16,7 @@
 
 #include "weight_bias_kernel_base.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     JitConstants WeightBiasKernelBase::GetJitConstants(const WeightBiasParams& params) const
     {

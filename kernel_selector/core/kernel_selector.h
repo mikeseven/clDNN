@@ -22,7 +22,7 @@
 #include "kernel_runner_interface.h"
 #include "auto_tuner.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     using KernelList = std::vector<std::shared_ptr<KernelBase>>;
     using ForceList = std::map<std::string, bool>;

@@ -18,7 +18,7 @@
 
 #include "reorder_kernel_base.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {    
     class ReorderWeightsImage_fyx_b_Kernel : public ReorderKernelBase
     {

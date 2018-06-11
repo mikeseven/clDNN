@@ -16,7 +16,7 @@
 
 #include "fully_connected_grad_input_kernel_ref.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
 
     ParamsKey FullyConnectedGradInputKernelRef::GetSupportedKey() const

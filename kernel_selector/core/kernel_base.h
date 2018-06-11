@@ -19,7 +19,7 @@
 #include "kernel_selector_common.h"
 #include "kernel_selector_params.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     class KernelBase
     {

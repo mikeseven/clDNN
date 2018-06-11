@@ -20,7 +20,7 @@
 #include "softmax_kernel_fb.h"
 #include "softmax_kernel_items_class_optimized.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     SoftmaxKernelSelctor::SoftmaxKernelSelctor()
     {

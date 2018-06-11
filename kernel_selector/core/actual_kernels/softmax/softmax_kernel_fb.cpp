@@ -16,7 +16,7 @@
 
 #include "softmax_kernel_fb.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey SoftmaxKernel_fb::GetSupportedKey() const
     {
@@ -69,7 +69,7 @@ namespace KernelSelector
         return kd;
     }
 
-    bool KernelSelector::SoftmaxKernel_fb::Validate(const Params& params, const OptionalParams& o) const
+    bool kernel_selector::SoftmaxKernel_fb::Validate(const Params& params, const OptionalParams& o) const
     {
         if (!SoftmaxKernelBase::Validate(params, o))
         {

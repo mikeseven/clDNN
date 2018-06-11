@@ -17,7 +17,7 @@
 #include "normalize_kernel_base.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     JitConstants NormalizeKernelBase::GetJitConstants(const NormalizeParams& params) const
     {

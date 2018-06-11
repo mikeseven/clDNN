@@ -17,7 +17,7 @@
 #include "eltwise_kernel_vload8.h"
 #include "kernel_selector_utils.h" 
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     ParamsKey EltwiseKernel_vload8::GetSupportedKey() const
     {

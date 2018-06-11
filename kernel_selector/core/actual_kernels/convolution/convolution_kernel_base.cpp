@@ -18,7 +18,7 @@
 #include "kernel_selector_utils.h"
 #include "common_tools.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     bool ConvolutionKernelBase::Validate(const Params& p, const OptionalParams& o) const
     {
@@ -28,8 +28,8 @@ namespace KernelSelector
             return false;
         }
 
-        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
-        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(o);
+        const convolution_params& params = static_cast<const convolution_params&>(p);
+        const convolution_optional_params& optParams = static_cast<const convolution_optional_params&>(o);
 
         bool bSupportedWeightsLayout = false;
 
@@ -48,7 +48,7 @@ namespace KernelSelector
         return true;
     }
 
-    JitConstants ConvolutionKernelBase::GetJitConstants(const ConvolutionParams& params, ConvolutionKernelBase::DispatchData kd) const
+    JitConstants ConvolutionKernelBase::GetJitConstants(const convolution_params& params, ConvolutionKernelBase::DispatchData kd) const
     {
         JitConstants mem_consts = WeightBiasKernelBase::GetJitConstants(params);
         const auto& padding = params.convParams.padding;
@@ -169,13 +169,13 @@ namespace KernelSelector
         }
     }
 
-    bool ConvolutionKernelBase::CheckPitchForSplitOnly(const ConvolutionParams& params) const
+    bool ConvolutionKernelBase::CheckPitchForSplitOnly(const convolution_params& params) const
     {
         // TODO: it's better to add pitch+offset support than handle this case
         return CheckTensorForSplit(params.inputs[0], params.convParams.split);
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernelBase::SetDefault(const ConvolutionParams& params, int) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernelBase::SetDefault(const convolution_params& params, int) const
     {
         DispatchData kd;
 
@@ -221,8 +221,8 @@ namespace KernelSelector
             return{};
         }
 
-        KernelData kd = KernelData::Default<ConvolutionParams>(params);
-        ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
+        KernelData kd = KernelData::Default<convolution_params>(params);
+        convolution_params& newParams = *static_cast<convolution_params*>(kd.params.get());
 
         if (NeedPaddedInput())
         {

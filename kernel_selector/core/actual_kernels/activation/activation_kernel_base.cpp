@@ -17,7 +17,7 @@
 #include "activation_kernel_base.h"
 #include "kernel_selector_utils.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
 
     ActivationKernelBase::DispatchData ActivationKernelBase::SetDefault(const ActivationParams& arg) const

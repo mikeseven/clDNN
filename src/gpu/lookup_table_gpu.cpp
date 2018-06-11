@@ -92,7 +92,7 @@ namespace cldnn {
                 
                 auto& kernel_selector = kernel_selector::lookup_table_kernel_selector::Instance();
                 
-                KernelSelector::KernelsData best_kernels = kernel_selector.GetBestKernels(lookt_params, lookt_optional_params);
+                kernel_selector::KernelsData best_kernels = kernel_selector.GetBestKernels(lookt_params, lookt_optional_params);
 
                 CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 

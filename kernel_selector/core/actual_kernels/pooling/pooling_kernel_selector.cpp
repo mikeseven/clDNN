@@ -21,7 +21,7 @@
 #include "pooling_kernel_gpu_bfyx_block_opt.h"
 #include "pooling_kernel_gpu_byxf_padding_opt.h"
  
-namespace KernelSelector {
+namespace kernel_selector {
 
     PoolingKernelSelctor::PoolingKernelSelctor()
     {

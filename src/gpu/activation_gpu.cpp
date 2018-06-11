@@ -53,7 +53,7 @@ struct activation_gpu : typed_primitive_gpu_impl<activation>
             const auto& slope_layout = arg.slope_input().get_output_layout();
             const auto& output_layout = arg.get_output_layout();
 
-            const auto params_num = KernelSelector::GetActivationAdditionalParamsNumber(activation_params.activationFunc);
+            const auto params_num = kernel_selector::GetActivationAdditionalParamsNumber(activation_params.activationFunc);
 
             CLDNN_ERROR_LESS_THAN(arg.id(), "Slope layout size count", slope_layout.size.count(), "output_layout.size.feature[0] * params_num", static_cast<size_t>(output_layout.size.feature[0] * params_num), "Error - not enough data inside additional params buffer");
             

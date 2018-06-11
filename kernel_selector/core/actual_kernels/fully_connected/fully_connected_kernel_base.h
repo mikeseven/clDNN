@@ -19,7 +19,7 @@
 #include "weight_bias_kernel_base.h"
 #include "fully_connected_params.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // FullyConnectedKernelBase
@@ -34,8 +34,8 @@ namespace KernelSelector
         {};
     
     protected:
-        virtual JitConstants GetJitConstants(const FullyConnectedParams& params, const DispatchData& kd) const;
-        virtual std::unique_ptr<DispatchData> SetDefault(const FullyConnectedParams& params) const;
+        virtual JitConstants GetJitConstants(const fully_connected_params& params, const DispatchData& kd) const;
+        virtual std::unique_ptr<DispatchData> SetDefault(const fully_connected_params& params) const;
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& optParams, DataLayout dl, std::vector<WeightsLayout> wl, float estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE) const;
 
         bool Validate(const Params& p, const OptionalParams&) const override

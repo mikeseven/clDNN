@@ -19,7 +19,7 @@
 #include "common_tools.h"
 #include "kernel_selector_utils.h" 
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     inline uint32_t SubGroupSize(WeightsLayout l)
     {

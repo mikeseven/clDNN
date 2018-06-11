@@ -16,7 +16,7 @@
 
 #include "lrn_kernel_within_channel_ref_opt.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey LRNKernelWithinChannelOpt::GetSupportedKey() const
     {

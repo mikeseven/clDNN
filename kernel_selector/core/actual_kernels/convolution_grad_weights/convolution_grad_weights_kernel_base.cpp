@@ -17,7 +17,7 @@
 #include "convolution_grad_weights_kernel_base.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     std::string ConvolutionGradWeightsParams::to_string() const
     {

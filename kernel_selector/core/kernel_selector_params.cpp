@@ -18,7 +18,7 @@
 #include "kernel_selector_common.h"
 #include <sstream>
  
-namespace KernelSelector {
+namespace kernel_selector {
 
     std::string Params::to_string() const
     {

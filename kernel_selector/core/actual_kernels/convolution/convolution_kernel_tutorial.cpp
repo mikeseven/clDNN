@@ -17,7 +17,7 @@
 #include "convolution_kernel_tutorial.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
         // Step 0: 
         //
@@ -137,7 +137,7 @@ namespace KernelSelector {
 
 #else
 
-    ConvolutionKernel_Tutorial::Parent::DispatchData ConvolutionKernel_Tutorial::SetDefault(const ConvolutionParams& params, int autoTuneIndex) const
+    ConvolutionKernel_Tutorial::Parent::DispatchData ConvolutionKernel_Tutorial::SetDefault(const convolution_params& params, int autoTuneIndex) const
     {
         DispatchData runInfo = Parent::SetDefault(params, autoTuneIndex);
 
@@ -165,7 +165,7 @@ namespace KernelSelector {
         return true;
     }
 
-    JitConstants ConvolutionKernel_Tutorial::GetJitConstants(const ConvolutionParams& params, DispatchData kd) const
+    JitConstants ConvolutionKernel_Tutorial::GetJitConstants(const convolution_params& params, DispatchData kd) const
     {
         auto jit = Parent::GetJitConstants(params, kd);
         jit.AddConstant(MakeJitConstant("ADVANCED_TUTORIAL", ""));

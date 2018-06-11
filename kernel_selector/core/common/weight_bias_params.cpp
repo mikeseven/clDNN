@@ -16,7 +16,7 @@
 
 #include "weight_bias_params.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     ParamsKey WeightBiasParams::GetParamsKey() const
     {

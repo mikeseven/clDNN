@@ -16,7 +16,7 @@
 
 #include "softmax_kernel_base.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     JitConstants SoftmaxKernelBase::GetJitConstants(const SoftmaxParams& params, SoftmaxKernelBase::DispatchData kd) const
     {

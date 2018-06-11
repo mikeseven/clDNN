@@ -19,7 +19,7 @@
 #include "arg_max_min_kernel_opt.h"
 #include "arg_max_min_kernel_axis.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
 	ArgMaxMinKernelSelctor::ArgMaxMinKernelSelctor()
 	{

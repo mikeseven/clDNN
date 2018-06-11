@@ -18,7 +18,7 @@
 
 #include "lstm_gemm_kernel_base.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     class LSTMGemmKernelRef : public LSTMGemmKernelBase
     {

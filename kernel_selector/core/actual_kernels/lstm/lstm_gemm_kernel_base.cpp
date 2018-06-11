@@ -18,7 +18,7 @@
 #include "kernel_selector_utils.h"
 #include "common_tools.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     JitConstants LSTMGemmKernelBase::GetJitConstants(const LSTMGemmParams& params) const
     {

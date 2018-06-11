@@ -17,7 +17,7 @@
 #include "convolution_grad_weights_kernel_selector.h"
 #include "convolution_grad_weights_kernel_ref.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ConvolutionGradWeightsKernelSelctor::ConvolutionGradWeightsKernelSelctor()
     {

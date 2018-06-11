@@ -17,7 +17,7 @@
 #include "lstm_elt_kernel_selector.h"
 #include "lstm_elt_kernel_ref.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     LSTMEltKernelSelector::LSTMEltKernelSelector()
     {

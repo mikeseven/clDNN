@@ -17,7 +17,7 @@
 #include "softmax_kernel_items_class_optimized.h"
 #include "kernel_selector_utils.h" 
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     // how many workitems we use to calculate item classes for one output, only 16 supported right now
     static const auto workitems_per_classes = 16;

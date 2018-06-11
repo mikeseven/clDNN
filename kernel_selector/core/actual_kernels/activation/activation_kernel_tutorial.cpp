@@ -17,7 +17,7 @@
 #include "activation_kernel_tutorial.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
         // Step 0: 
         //

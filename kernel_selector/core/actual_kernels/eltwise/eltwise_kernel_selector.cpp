@@ -18,7 +18,7 @@
 #include "eltwise_kernel_ref.h"
 #include "eltwise_kernel_vload8.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     EltwiseKernelSelctor::EltwiseKernelSelctor()
     {

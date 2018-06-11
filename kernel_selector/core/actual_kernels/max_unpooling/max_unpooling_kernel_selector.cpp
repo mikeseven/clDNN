@@ -17,7 +17,7 @@
 #include "max_unpooling_kernel_selector.h"
 #include "max_unpooling_kernel_gpu_ref.h"
  
-namespace KernelSelector {
+namespace kernel_selector {
 
     MaxUnpoolingKernelSelctor::MaxUnpoolingKernelSelctor()
     {

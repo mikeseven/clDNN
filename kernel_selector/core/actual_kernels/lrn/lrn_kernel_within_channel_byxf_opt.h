@@ -18,7 +18,7 @@
 
 #include "lrn_kernel_base.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     class LRNKernelWithinChannelByxfOpt : public LRNKernelBase
     {

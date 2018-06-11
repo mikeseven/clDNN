@@ -17,7 +17,7 @@
 #include "mvn_kernel_bfyx_opt.h"
 #include "kernel_selector_utils.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey MVNKernelBfyxOpt::GetSupportedKey() const
     {

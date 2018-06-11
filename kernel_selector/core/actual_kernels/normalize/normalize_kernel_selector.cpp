@@ -18,7 +18,7 @@
 #include "normalize_kernel_within_spatial_ref.h"
 #include "normalize_kernel_across_spatial_ref.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     NormalizeKernelSelctor::NormalizeKernelSelctor()
     {

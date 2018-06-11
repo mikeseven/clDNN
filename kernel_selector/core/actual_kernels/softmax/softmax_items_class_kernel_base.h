@@ -18,7 +18,7 @@
 
 #include "softmax_kernel_base.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     class SoftmaxItemsClassKernelBase : public SoftmaxKernelBase
     {

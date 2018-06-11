@@ -16,7 +16,7 @@
 
 #include "kernel_selector_common.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     std::string GetStringEnv(const char* varName)
     {

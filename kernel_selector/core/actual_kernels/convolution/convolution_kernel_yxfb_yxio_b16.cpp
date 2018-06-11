@@ -17,7 +17,7 @@
 #include "convolution_kernel_yxfb_yxio_b16.h"
 #include "convolution_params.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
 
     ParamsKey ConvolutionKernel_yxfb_yxio_b16::GetSupportedKey() const
@@ -42,7 +42,7 @@ namespace KernelSelector
         return k;
     }
 
-    std::string ConvolutionKernel_yxfb_yxio_b16::GetKernelName(const ConvolutionParams& params) const
+    std::string ConvolutionKernel_yxfb_yxio_b16::GetKernelName(const convolution_params& params) const
     {
         if (params.inputs[0].GetDType() == Datatype::F32)
         {
@@ -54,7 +54,7 @@ namespace KernelSelector
         }
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b16::SetDefault(const ConvolutionParams& arg, int) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b16::SetDefault(const convolution_params& arg, int) const
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
@@ -102,7 +102,7 @@ namespace KernelSelector
         {
             return false;
         }
-        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
+        const convolution_params& params = static_cast<const convolution_params&>(p);
 
         const auto filter_ofm_num = params.weights.OFM().v;
         const auto batch_size = params.output.Batch().v;
@@ -143,7 +143,7 @@ namespace KernelSelector
         return true;
     }
 
-    JitConstants ConvolutionKernel_yxfb_yxio_b16::GetJitConstants(const ConvolutionParams& params, DispatchData kd) const
+    JitConstants ConvolutionKernel_yxfb_yxio_b16::GetJitConstants(const convolution_params& params, DispatchData kd) const
     {
         auto jit = Parent::GetJitConstants(params, kd);
 

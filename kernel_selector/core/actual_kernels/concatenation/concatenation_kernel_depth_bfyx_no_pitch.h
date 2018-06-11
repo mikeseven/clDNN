@@ -18,7 +18,7 @@
 
 #include "concatenation_kernel_base.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     class ConcatenationKernel_depth_bfyx_no_pitch : public ConcatenationKernelBase
     {

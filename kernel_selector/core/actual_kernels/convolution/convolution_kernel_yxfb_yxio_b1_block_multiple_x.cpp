@@ -18,7 +18,7 @@
 #include "kernel_selector_utils.h"
 #include "common_tools.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
 
     ParamsKey ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::GetSupportedKey() const
@@ -41,7 +41,7 @@ namespace KernelSelector
         return k;
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::SetDefault(const ConvolutionParams& arg, int autoTuneIndex) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::SetDefault(const convolution_params& arg, int autoTuneIndex) const
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg, autoTuneIndex);
 
@@ -81,7 +81,7 @@ namespace KernelSelector
         return runInfo;
     }
 
-    JitConstants ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::GetJitConstants(const ConvolutionParams& params, DispatchData kd) const
+    JitConstants ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::GetJitConstants(const convolution_params& params, DispatchData kd) const
     {
         auto cldnn_jit = ConvolutionKernelBase::GetJitConstants(params, kd);
 
@@ -109,7 +109,7 @@ namespace KernelSelector
             return false;
         }
 
-        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
+        const convolution_params& params = static_cast<const convolution_params&>(p);
 
         if (!CheckPitchForSplitOnly(params))
         {

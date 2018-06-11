@@ -17,7 +17,7 @@
 #include "upsampling_kernel_base.h"
 #include "kernel_selector_utils.h" 
 
-namespace KernelSelector
+namespace kernel_selector
 {
     bool UpSamplingKernelBase::Validate(const Params& p, const OptionalParams& o) const
     {

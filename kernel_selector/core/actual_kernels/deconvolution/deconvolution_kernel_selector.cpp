@@ -18,7 +18,7 @@
 #include "deconvolution_kernel_ref.h"
 #include "deconvolution_kernel_bfyx_opt.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     DeconvolutionKernelSelctor::DeconvolutionKernelSelctor()
     {

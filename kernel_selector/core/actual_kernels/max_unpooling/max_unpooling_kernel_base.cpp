@@ -16,7 +16,7 @@
 
 #include "max_unpooling_kernel_base.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     bool MaxUnpoolingKernelBase::Validate(const Params& p, const OptionalParams& o) const
     {

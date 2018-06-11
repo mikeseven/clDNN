@@ -17,7 +17,7 @@
 #include "deconvolution_kernel_bfyx_opt.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
 
     ParamsKey DeconvolutionKernel_bfyx_opt::GetSupportedKey() const

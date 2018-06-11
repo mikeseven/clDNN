@@ -17,7 +17,7 @@
 #include "lstm_gemm_kernel_selector.h"
 #include "lstm_gemm_kernel_ref.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     LSTMGemmKernelSelector::LSTMGemmKernelSelector()
     {

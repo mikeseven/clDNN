@@ -18,7 +18,7 @@
 #include "mvn_kernel_ref.h"
 #include "mvn_kernel_bfyx_opt.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     MVNKernelSelctor::MVNKernelSelctor()
     {

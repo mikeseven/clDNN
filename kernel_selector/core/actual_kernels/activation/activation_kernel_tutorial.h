@@ -28,7 +28,7 @@
 #define BASIC_TUTORIAL          // Skeleton to add a new kernel
 #endif
 
-namespace KernelSelector {
+namespace kernel_selector {
     
     class ActivationKernel_Tutorial : public ActivationKernelBase
     {

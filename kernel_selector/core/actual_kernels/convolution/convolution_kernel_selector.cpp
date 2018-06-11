@@ -33,9 +33,9 @@
 #include "convolution_kernel_winograd_6x3_s1_fused.h"
 #include <iostream>
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
-    ConvolutionKernelSelctor::ConvolutionKernelSelctor()
+    convolution_kernel_selector::convolution_kernel_selector()
     {
         Attach<ConvolutionKernel_bfyx_Ref>();
         Attach<ConvolutionKernel_bfyx_GEMMLike>();
@@ -55,7 +55,7 @@ namespace KernelSelector
         //Attach<ConvolutionKernel_Tutorial>(); //In order to use this implementation for tutorial purposes please uncomment this line
     }
 
-    KernelsData ConvolutionKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData convolution_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         //const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
         //std::cout << orgParams.to_string() << std::endl;

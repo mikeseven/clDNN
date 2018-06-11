@@ -17,7 +17,7 @@
 #include "fully_connected_grad_weights_kernel_base.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     JitConstants FullyConnectedGradWeightsKernelBase::GetJitConstants(const FullyConnectedGradWeightsParams& params) const
     {
