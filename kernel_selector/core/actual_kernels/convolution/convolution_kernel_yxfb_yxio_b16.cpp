@@ -15,6 +15,7 @@
 */
 
 #include "convolution_kernel_yxfb_yxio_b16.h"
+#include "convolution_params.h"
 
 namespace KernelSelector 
 {

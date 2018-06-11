@@ -20,28 +20,6 @@
 
 namespace KernelSelector 
 {
-    std::string ConvolutionParams::to_string() const
-    {
-        std::stringstream s;
-
-        s << BaseParams::to_string() << "_";
-        if (bias.empty())
-        {
-            s << "no_bias" << "_";
-        }
-        else
-        {
-            s << "bias_" << bias[0].PhysicalSize() << "_";
-        }
-        s << convParams.filterSize.x << "_" << convParams.filterSize.y << "_";
-        s << convParams.stride.x << "_" << convParams.stride.y << "_";
-        s << convParams.dilation.x << "_" << convParams.dilation.y << "_";
-        s << convParams.padding.x << "_" << convParams.padding.y << "_";
-        s << convParams.split;
-
-        return s.str();
-    }
-
     bool ConvolutionKernelBase::Validate(const Params& p, const OptionalParams& o) const
     {
         if (p.GetType() != KernelType::CONVOLUTION ||

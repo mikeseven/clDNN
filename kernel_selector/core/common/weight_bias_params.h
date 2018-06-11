@@ -16,20 +16,31 @@
 
 #pragma once
 
-#include "common_kernel_base.h"
-#include "weight_bias_params.h"
+#include "kernel_selector_params.h"
 
 namespace KernelSelector
 {
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // WeightsBiasKernelBase
+    // ConvolutionParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class WeightBiasKernelBase : public CommonKernelBase
+    struct WeightBiasParams : public BaseParams
     {
-    public:
-        using CommonKernelBase::CommonKernelBase;
-        virtual ~WeightBiasKernelBase() {}
-    protected:
-        virtual JitConstants GetJitConstants(const WeightBiasParams& params) const;
+        WeightBiasParams(KernelType kt) : BaseParams(kt) {}
+
+        WeightsTensor weights;
+        MultiDataTensor bias;
+
+        virtual ParamsKey GetParamsKey() const override;
     };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // WeightsBiasOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct WeightsBiasOptionalParams : OptionalParams
+    {
+    protected:
+        WeightsBiasOptionalParams(KernelType kt) : OptionalParams(kt) {}
+    };
+
 }

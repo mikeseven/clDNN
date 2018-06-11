@@ -16,20 +16,29 @@
 
 #pragma once
 
-#include "common_kernel_base.h"
 #include "weight_bias_params.h"
 
 namespace KernelSelector
 {
+
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // WeightsBiasKernelBase
+    // FullyConnectedParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class WeightBiasKernelBase : public CommonKernelBase
+    struct FullyConnectedParams : public WeightBiasParams
     {
-    public:
-        using CommonKernelBase::CommonKernelBase;
-        virtual ~WeightBiasKernelBase() {}
-    protected:
-        virtual JitConstants GetJitConstants(const WeightBiasParams& params) const;
+        FullyConnectedParams() : WeightBiasParams(KernelType::FULLY_CONNECTED) {}
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            return WeightBiasParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // FullyConnectedOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct FullyConnectedOptionalParams : WeightsBiasOptionalParams
+    {
+        FullyConnectedOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED) {}
     };
 }

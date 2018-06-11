@@ -17,88 +17,10 @@
 #pragma once
 
 #include "weight_bias_kernel_base.h"
-#include "kernel_selector_params.h"
+#include "convolution_params.h"
 
 namespace KernelSelector 
 {
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutionParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutionParams : public WeightBiasParams
-    {
-        ConvolutionParams() : WeightBiasParams(KernelType::CONVOLUTION), convParams() {}
-
-        struct DedicatedParams
-        {
-            uSize    filterSize;
-            uSize    stride;
-            uSize    dilation;
-            uSize    padding;
-            uint32_t winograd_tile_n;
-            uint32_t winograd_tile_m;
-            uint32_t winograd_input_tile_width;
-            uint32_t winograd_input_tile_height;
-            uint32_t split = 1;
-            bool     depthwiseSeparableOpt = false;
-            bool     transposed = false;
-            bool     int8_quantization = false;
-            bool     output_calibration = false;
-            float    input_quantization_factor = 1.0f;
-            float    output_quantization_factor = 1.0f;
-        };
-
-        DedicatedParams convParams;
-        MultiDataTensor weights_quantization_factors;
-        MultiDataTensor output_calibration_factors;
-        virtual std::string to_string() const override;
-
-        virtual ParamsKey GetParamsKey() const override
-        {
-            ParamsKey k = WeightBiasParams::GetParamsKey();
-
-            if (convParams.split > 1)
-            {
-                k.EnableSplitSupport();
-            }
-
-            if (convParams.dilation.x != 1 ||
-                convParams.dilation.y != 1)
-            {
-                k.EnableDilation();
-            }
-
-            if (convParams.depthwiseSeparableOpt)
-            {
-                k.EnableDepthwiseSeparableOpt();
-            }
-
-            if (convParams.transposed)
-            {
-                k.EnableTranspose();
-            }
-
-            if (convParams.int8_quantization)
-            {
-                k.EnableInt8Quantization();
-            }
-
-            if (convParams.output_calibration)
-            {
-                k.EnableOutputCalibration();
-            }
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutionOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutionOptionalParams : WeightsBiasOptionalParams
-    {
-        ConvolutionOptionalParams() : WeightsBiasOptionalParams(KernelType::CONVOLUTION) {}
-    };
-
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ConvolutionKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

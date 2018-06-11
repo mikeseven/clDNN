@@ -20,7 +20,7 @@
 #include "tensor_type.h"
 #include "kernel_selector_common.h"
 #include "reorder/reorder_weights_kernel_selector.h"
-#include "convolution/convolution_kernel_base.h"
+#include "convolution/convolution_params.h"
 
 namespace KernelSelector { namespace
 {

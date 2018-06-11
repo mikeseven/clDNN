@@ -22,7 +22,7 @@
 #include "tensor_type.h"
 #include "kernel_selector_params.h"
 #include "convolution/convolution_kernel_selector.h"
-#include "convolution/convolution_kernel_base.h"
+#include "convolution/convolution_params.h"
 
 #include "deconvolution/deconvolution_kernel_selector.h"
 #include "deconvolution/deconvolution_kernel_base.h"
@@ -36,7 +36,7 @@
 #include "roi_pooling/roi_pooling_kernel_selector.h"
 
 #include "fully_connected/fully_connected_kernel_selector.h"
-#include "fully_connected/fully_connected_kernel_base.h"
+#include "fully_connected/fully_connected_params.h"
 
 #include "lookup_table/lookup_table_kernel_selector.h"
 #include "activation/activation_kernel_selector.h"
