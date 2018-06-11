@@ -18,9 +18,15 @@
 
 namespace kernel_selector 
 {
-    JitConstants SoftmaxKernelBase::GetJitConstants(const SoftmaxParams& params, SoftmaxKernelBase::DispatchData kd) const
+    JitConstants SoftmaxKernelBase::GetJitConstants(const softmax_params& params, SoftmaxKernelBase::DispatchData kd) const
     {
-        JitConstants mem_consts = MakeSoftmaxJitConstants(params);
+        JitConstants mem_consts = MakeBaseParamsJitConstants(params);
+
+        const auto& sm = params.smParams;
+
+        mem_consts.AddConstants({
+            MakeJitConstant("ALONG_" + toString(sm.dim), "")
+        });
 
         mem_consts.AddConstants({
             MakeJitConstant("ITEMS_NUM",      kd.itemsNum),
@@ -34,7 +40,7 @@ namespace kernel_selector
         return mem_consts;
     }
 
-    SoftmaxKernelBase::DispatchData SoftmaxKernelBase::SetDefault(const SoftmaxParams& params, const OptionalParams&) const
+    SoftmaxKernelBase::DispatchData SoftmaxKernelBase::SetDefault(const softmax_params& params, const OptionalParams&) const
     {
         DispatchData runInfo;
 
@@ -75,8 +81,8 @@ namespace kernel_selector
             return{};
         }
 
-        const SoftmaxParams& orgParams = static_cast<const SoftmaxParams&>(params);
-        KernelData kd = KernelData::Default<SoftmaxParams>(params);
+        const softmax_params& orgParams = static_cast<const softmax_params&>(params);
+        KernelData kd = KernelData::Default<softmax_params>(params);
 
         auto runInfo = SetDefault(orgParams, options);
         auto cldnn_jit = GetJitConstants(orgParams, runInfo);
@@ -98,7 +104,7 @@ namespace kernel_selector
             return false;
         }
 
-        const SoftmaxParams& params = static_cast<const SoftmaxParams&>(p);
+        const softmax_params& params = static_cast<const softmax_params&>(p);
         const auto& input = params.inputs[0];
 
         if (params.activationFunc != ActivationFunction::NONE)
@@ -121,7 +127,7 @@ namespace kernel_selector
         }
     }
 
-    SoftmaxKernelBase::DispatchData SoftmaxKernelBaseBF::SetDefault(const SoftmaxParams& params, const OptionalParams& options) const
+    SoftmaxKernelBase::DispatchData SoftmaxKernelBaseBF::SetDefault(const softmax_params& params, const OptionalParams& options) const
     {
         const auto& input = params.inputs[0];
 

@@ -30,6 +30,6 @@ namespace kernel_selector
         virtual ParamsKey GetSupportedKey() const override;
 
     private:
-        CommonDispatchData SetDefault(const LRNParams& params) const override;
+        CommonDispatchData SetDefault(const lrn_params& params) const override;
     };
 }

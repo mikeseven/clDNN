@@ -28,7 +28,7 @@ namespace kernel_selector {
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
-        virtual DispatchData SetDefault(const ConcatenationParams& params) const override;
+        virtual DispatchData SetDefault(const concatenation_params& params) const override;
         virtual bool Validate(const Params& p, const OptionalParams& o) const override;
     };
 }

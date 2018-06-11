@@ -29,6 +29,6 @@ namespace kernel_selector {
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
-        CommonDispatchData SetDefault(const DeconvolutionParams& params) const override;
+        CommonDispatchData SetDefault(const deconvolution_params& params) const override;
     };
 }

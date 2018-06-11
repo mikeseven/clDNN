@@ -19,7 +19,7 @@
 
 namespace kernel_selector 
 {
-    std::string ConvolutionGradWeightsParams::to_string() const
+    std::string convolution_grad_weights_params::to_string() const
     {
         std::stringstream s;
 
@@ -41,7 +41,7 @@ namespace kernel_selector
         return s.str();
     }
 
-    JitConstants ConvolutionGradWeightsKernelBase::GetJitConstants(const ConvolutionGradWeightsParams& params) const
+    JitConstants ConvolutionGradWeightsKernelBase::GetJitConstants(const convolution_grad_weights_params& params) const
     {
         JitConstants jit = WeightBiasKernelBase::GetJitConstants(params);
         const auto& dp = params.convGradWeightsParams;
@@ -63,7 +63,7 @@ namespace kernel_selector
         return jit;
     }
 
-    ConvolutionGradWeightsKernelBase::DispatchData ConvolutionGradWeightsKernelBase::SetDefault(const ConvolutionGradWeightsParams& params) const
+    ConvolutionGradWeightsKernelBase::DispatchData ConvolutionGradWeightsKernelBase::SetDefault(const convolution_grad_weights_params& params) const
     {
         auto input_features = params.weights.IFM().v;
         auto output_features = params.weights.OFM().v;
@@ -91,7 +91,7 @@ namespace kernel_selector
     {
         assert(params.GetType() == KernelType::CONVOLUTION_GRAD_WEIGHTS);
 
-        const ConvolutionGradWeightsParams& orgParams = static_cast<const ConvolutionGradWeightsParams&>(params);
+        const convolution_grad_weights_params& orgParams = static_cast<const convolution_grad_weights_params&>(params);
 
         const std::vector<WeightsLayout> weightsLayouts = {
             WeightsLayout::oiyx,
@@ -101,8 +101,8 @@ namespace kernel_selector
         };
 
         DispatchData runInfo = SetDefault(orgParams);
-        KernelData kd = KernelData::Default<ConvolutionGradWeightsParams>(params);
-        ConvolutionGradWeightsParams& newParams = *static_cast<ConvolutionGradWeightsParams*>(kd.params.get());
+        KernelData kd = KernelData::Default<convolution_grad_weights_params>(params);
+        convolution_grad_weights_params& newParams = *static_cast<convolution_grad_weights_params*>(kd.params.get());
 
         bool succeed = UpdateWeightsParams(
             newParams,

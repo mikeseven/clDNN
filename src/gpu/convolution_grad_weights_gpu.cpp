@@ -19,6 +19,8 @@
 #include "implementation_map.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
+#include "convolution_grad_weights/convolution_grad_weights_kernel_selector.h"
+#include "convolution_grad_weights/convolution_grad_weights_kernel_base.h"
 
 namespace cldnn { namespace gpu {
 

@@ -39,7 +39,7 @@ namespace kernel_selector
             return false;
         }
 
-        const PoolingParams& params = static_cast<const PoolingParams&>(p);
+        const pooling_params& params = static_cast<const pooling_params&>(p);
 
         if (params.activationFunc != ActivationFunction::NONE)
         {
@@ -69,7 +69,7 @@ namespace kernel_selector
         return{ simdSize - 2, 7 };
     }
 
-    PoolingKernelBase::DispatchData PoolingKernelGPUAverageOpt::SetDefault(const PoolingParams& params) const
+    PoolingKernelBase::DispatchData PoolingKernelGPUAverageOpt::SetDefault(const pooling_params& params) const
     {
         constexpr int simdSize = 16;
 
@@ -90,7 +90,7 @@ namespace kernel_selector
         return runInfo;
     }
 
-    JitConstants PoolingKernelGPUAverageOpt::GetJitConstants(const PoolingParams& params, DispatchData kd) const
+    JitConstants PoolingKernelGPUAverageOpt::GetJitConstants(const pooling_params& params, DispatchData kd) const
     {
         auto tileDims = GetTileDimentions();
         auto mem_consts = PoolingKernelBase::GetJitConstants(params, kd);

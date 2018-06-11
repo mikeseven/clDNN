@@ -42,7 +42,7 @@ namespace kernel_selector
         return k;
     }
 
-    CommonDispatchData DeconvolutionKernel_bfyx_opt::SetDefault(const DeconvolutionParams& params) const
+    CommonDispatchData DeconvolutionKernel_bfyx_opt::SetDefault(const deconvolution_params& params) const
     {
         DispatchData kd;
 

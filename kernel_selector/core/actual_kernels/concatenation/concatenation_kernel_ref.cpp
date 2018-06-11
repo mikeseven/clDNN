@@ -42,10 +42,10 @@ namespace kernel_selector
         return k;
     }
 
-    JitConstants ConcatenationKernelRef::GetJitConstants(const ConcatenationParams& params) const
+    JitConstants ConcatenationKernelRef::GetJitConstants(const concatenation_params& params) const
     {
         auto cldnnJit = ConcatenationKernelBase::GetJitConstants(params);
-        const ConcatenationParams& orgParams = static_cast<const ConcatenationParams&>(params);
+        const concatenation_params& orgParams = static_cast<const concatenation_params&>(params);
         if (orgParams.inputs[0].Feature().v != 1)
         {
             cldnnJit.AddConstant(MakeJitConstant("CHECK_FEATURES", 1));

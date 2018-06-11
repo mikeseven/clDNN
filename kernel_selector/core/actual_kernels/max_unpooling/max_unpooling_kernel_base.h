@@ -21,6 +21,30 @@
 
 namespace kernel_selector 
 {
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // max_unpooling_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct max_unpooling_params : public BaseParams
+    {
+        max_unpooling_params() : BaseParams(KernelType::MAX_UNPOOLING) {}
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            return BaseParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // max_unpooling_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct max_unpooling_optional_params : OptionalParams
+    {
+        max_unpooling_optional_params() : OptionalParams(KernelType::MAX_UNPOOLING) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // MaxUnpoolingKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class MaxUnpoolingKernelBase : public CommonKernelBase
     {
     public:
@@ -34,8 +58,8 @@ namespace kernel_selector
 
     protected:
         virtual bool Validate(const Params&, const OptionalParams&) const override;
-        virtual JitConstants GetJitConstants(const MaxUnpoolingParams& params) const;
-        virtual DispatchData SetDefault(const MaxUnpoolingParams& params) const;
+        virtual JitConstants GetJitConstants(const max_unpooling_params& params) const;
+        virtual DispatchData SetDefault(const max_unpooling_params& params) const;
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimatedTime) const;
     };
 }

@@ -20,6 +20,99 @@
 
 namespace kernel_selector
 {
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // eltwise_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct eltwise_params : public BaseParams
+    {
+        eltwise_params() : BaseParams(KernelType::ELTWISE), eltwiseParams() {}
+
+        struct InputType
+        {
+            EltwiseInputMode mode = EltwiseInputMode::INPUT_BUFFER;
+            uint32_t         index = 0;    // for inputs results;
+            uint32_t         tmpIndex = 0;    // for temp results;
+            float            scalar = 0.f;
+
+            static InputType Buffer(uint32_t index)
+            {
+                eltwise_params::InputType input;
+                input.mode = EltwiseInputMode::INPUT_BUFFER;
+                input.index = index;
+                return input;
+            }
+
+            static InputType UnorderedAccessBuffer(uint32_t index, uint32_t tmpIndex)
+            {
+                eltwise_params::InputType input;
+                input.mode = EltwiseInputMode::UNORDERED_ACCESS_INPUT_BUFFER;
+                input.index = index;
+                input.tmpIndex = tmpIndex;
+                return input;
+            }
+
+            static InputType Intermediate(uint32_t tmpIndex)
+            {
+                eltwise_params::InputType input;
+                input.mode = EltwiseInputMode::INTERMEDIATE_RESULTS_INDEX;
+                input.tmpIndex = tmpIndex;
+                return input;
+            }
+
+            static InputType Scalar(float s)
+            {
+                eltwise_params::InputType input;
+                input.mode = EltwiseInputMode::SCALAR;
+                input.scalar = s;
+                return input;
+            }
+
+            static InputType OutBuffer()
+            {
+                eltwise_params::InputType output;
+                output.mode = EltwiseInputMode::OUTPUT_BUFFER;
+                return output;
+            }
+        };
+
+        struct Node
+        {
+            std::vector<InputType> inputs;
+            EltwiseMode mode;
+        };
+
+        struct UpdateInputData
+        {
+            uint32_t inputId;
+            uint32_t tmpId;
+        };
+
+        struct DedicatedParams
+        {
+            std::vector<eltwise_params::Node> operations;
+            std::vector<UpdateInputData> updateInputIds;
+            bool layoutBased = false;
+        };
+
+        DedicatedParams eltwiseParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            return BaseParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // eltwise_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct eltwise_optional_params : OptionalParams
+    {
+        eltwise_optional_params() : OptionalParams(KernelType::ELTWISE) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // EltwiseKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class EltwiseKernelBase : public CommonKernelBase
     {
     public:
@@ -27,11 +120,11 @@ namespace kernel_selector
         virtual ~EltwiseKernelBase() {}
 
         using DispatchData = CommonDispatchData;
-        JitConstants GetJitConstantsCommon(const EltwiseParams& params, bool useVload8) const;
+        JitConstants GetJitConstantsCommon(const eltwise_params& params, bool useVload8) const;
 
     protected:
         virtual bool Validate(const Params& p, const OptionalParams& o) const override;
-        virtual JitConstants GetJitConstants(const EltwiseParams& params) const;
+        virtual JitConstants GetJitConstants(const eltwise_params& params) const;
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& options) const;
     };
 }

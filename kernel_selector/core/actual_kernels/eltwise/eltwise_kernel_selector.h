@@ -18,19 +18,19 @@
 
 #include "kernel_selector.h"
  
-namespace kernel_selector 
+namespace kernel_selector
 {
-    class EltwiseKernelSelctor : public KernelSelctorBase
+    class eltwise_kernel_selector : public KernelSelctorBase
     {
     public:
-        static EltwiseKernelSelctor &Instance() {
-            static EltwiseKernelSelctor instance_;
+        static eltwise_kernel_selector &Instance() {
+            static eltwise_kernel_selector instance_;
             return instance_;
         }
 
-        EltwiseKernelSelctor();
+        eltwise_kernel_selector();
 
-        virtual ~EltwiseKernelSelctor() {}
+        virtual ~eltwise_kernel_selector() {}
 
         virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
     };

@@ -25,7 +25,7 @@
 
 namespace kernel_selector 
 {
-    LRNKernelSelctor::LRNKernelSelctor()
+    lrn_kernel_selector::lrn_kernel_selector()
     {
         Attach<LRNKernelRef>();
         Attach<LRNKernelWithinChannel>();
@@ -36,7 +36,7 @@ namespace kernel_selector
         Attach<LRNKernelAcrossChannelMultipleFeatures>();
     }
 
-    KernelsData LRNKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData lrn_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::LRN);
     }

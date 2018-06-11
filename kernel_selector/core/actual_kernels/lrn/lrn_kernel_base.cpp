@@ -29,11 +29,47 @@ namespace kernel_selector
         return true;
     }
 
-    JitConstants LRNKernelBase::GetJitConstants(const LRNParams& params, LRNKernelBase::DispatchData kd) const
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // MakeLRNJitConstants
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    inline JitConstants MakeLRNJitConstants(const lrn_params& params)
     {
-        JitConstants mem_consts = MakeLRNJitConstants(params);
+        JitConstants jit = MakeBaseParamsJitConstants(params);
 
         const auto& np = params.lrnParams;
+
+        const auto padding = (np.localSize - 1) / 2;
+
+        jit.AddConstants({
+            MakeJitConstant("LOCAL_SIZE",   np.localSize),
+            MakeJitConstant("PADDING",      padding),
+            MakeJitConstant("ALPHA",        np.alpha),
+            MakeJitConstant("BETA",         np.beta),
+            MakeJitConstant("K",            np.k),
+            MakeJitConstant(toString(np.divMode) + "_KERNEL_DIVIDER", ""),
+            MakeJitConstant(toString(np.normMode), ""),
+        });
+
+        return jit;
+    }
+
+    JitConstants LRNKernelBase::GetJitConstants(const lrn_params& params, LRNKernelBase::DispatchData kd) const
+    {
+        JitConstants mem_consts = MakeBaseParamsJitConstants(params);
+
+        const auto& np = params.lrnParams;
+
+        const auto padding = (np.localSize - 1) / 2;
+
+        mem_consts.AddConstants({
+            MakeJitConstant("LOCAL_SIZE",   np.localSize),
+            MakeJitConstant("PADDING",      padding),
+            MakeJitConstant("ALPHA",        np.alpha),
+            MakeJitConstant("BETA",         np.beta),
+            MakeJitConstant("K",            np.k),
+            MakeJitConstant(toString(np.divMode) + "_KERNEL_DIVIDER", ""),
+            MakeJitConstant(toString(np.normMode), ""),
+        });
 
         //auto pad = (np.localSize) / 2;
         auto alpha = np.alpha;
@@ -53,7 +89,7 @@ namespace kernel_selector
         return mem_consts;
     }
 
-    LRNKernelBase::DispatchData LRNKernelBase::SetDefault(const LRNParams& params) const
+    LRNKernelBase::DispatchData LRNKernelBase::SetDefault(const lrn_params& params) const
     {
         const auto& output = params.output;
 
@@ -83,10 +119,10 @@ namespace kernel_selector
             return{};
         }
 
-        const LRNParams& orgParams = static_cast<const LRNParams&>(params);
+        const lrn_params& orgParams = static_cast<const lrn_params&>(params);
 
         DispatchData runInfo = SetDefault(orgParams);
-        KernelData kd = KernelData::Default<LRNParams>(params);
+        KernelData kd = KernelData::Default<lrn_params>(params);
 
         auto cldnnJit = GetJitConstants(orgParams, runInfo);
         auto entryPoint = GetEntryPoint(kernelName, orgParams.layerID, options);

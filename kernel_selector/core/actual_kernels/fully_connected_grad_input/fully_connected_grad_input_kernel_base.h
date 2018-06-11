@@ -22,11 +22,11 @@
 namespace kernel_selector 
 {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // FullyConnectedGradInputParams
+    // fully_connected_grad_input_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedGradInputParams : public WeightBiasParams
+    struct fully_connected_grad_input_params : public WeightBiasParams
     {
-        FullyConnectedGradInputParams() : WeightBiasParams(KernelType::FULLY_CONNECTED_GRAD_INPUT) {}
+        fully_connected_grad_input_params() : WeightBiasParams(KernelType::FULLY_CONNECTED_GRAD_INPUT) {}
 
         virtual ParamsKey GetParamsKey() const
         {
@@ -35,11 +35,11 @@ namespace kernel_selector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // FullyConnectedGradInputOptionalParams
+    // fully_connected_grad_input_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedGradInputOptionalParams : WeightsBiasOptionalParams
+    struct fully_connected_grad_input_optional_params : WeightsBiasOptionalParams
     {
-        FullyConnectedGradInputOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED_GRAD_INPUT) {}
+        fully_connected_grad_input_optional_params() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED_GRAD_INPUT) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -55,7 +55,7 @@ namespace kernel_selector
     
     protected:
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const;
-        virtual JitConstants GetJitConstants(const FullyConnectedGradInputParams& params) const;
-        virtual DispatchData SetDefault(const FullyConnectedGradInputParams& params) const;
+        virtual JitConstants GetJitConstants(const fully_connected_grad_input_params& params) const;
+        virtual DispatchData SetDefault(const fully_connected_grad_input_params& params) const;
     };
 }

@@ -19,12 +19,12 @@
 
 namespace kernel_selector 
 {
-    JitConstants FullyConnectedGradInputKernelBase::GetJitConstants(const FullyConnectedGradInputParams& params) const
+    JitConstants FullyConnectedGradInputKernelBase::GetJitConstants(const fully_connected_grad_input_params& params) const
     {
         return WeightBiasKernelBase::GetJitConstants(params);
     }
 
-    FullyConnectedGradInputKernelBase::DispatchData FullyConnectedGradInputKernelBase::SetDefault(const FullyConnectedGradInputParams& params) const
+    FullyConnectedGradInputKernelBase::DispatchData FullyConnectedGradInputKernelBase::SetDefault(const fully_connected_grad_input_params& params) const
     {
         DispatchData kd;
 
@@ -49,7 +49,7 @@ namespace kernel_selector
     {
         assert(params.GetType() == KernelType::FULLY_CONNECTED_GRAD_INPUT);
 
-        const FullyConnectedGradInputParams& orgParams = static_cast<const FullyConnectedGradInputParams&>(params);
+        const fully_connected_grad_input_params& orgParams = static_cast<const fully_connected_grad_input_params&>(params);
 
         const std::vector<WeightsLayout> weightsLayouts = {
             WeightsLayout::oi,
@@ -61,8 +61,8 @@ namespace kernel_selector
         };
 
         DispatchData runInfo = SetDefault(orgParams);
-        KernelData kd = KernelData::Default<FullyConnectedGradInputParams>(params);
-        FullyConnectedGradInputParams& newParams = *static_cast<FullyConnectedGradInputParams*>(kd.params.get());
+        KernelData kd = KernelData::Default<fully_connected_grad_input_params>(params);
+        fully_connected_grad_input_params& newParams = *static_cast<fully_connected_grad_input_params*>(kd.params.get());
 
         bool succeed = UpdateWeightsParams(
             newParams,

@@ -21,6 +21,48 @@
 
 namespace kernel_selector 
 {
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // pooling_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct pooling_params : public BaseParams
+    {
+        pooling_params() : BaseParams(KernelType::POOLING), poolParams() {}
+
+        struct DedicatedParams
+        {
+            PoolType            poolType = PoolType::MAX;
+            PoolRemainder       remainderAction = PoolRemainder::FLOOR;
+            KernelDividerMode   divMode = KernelDividerMode::DONT_CARE;
+            uSize               poolSize;
+            uSize               poolStride;
+            uSize               poolPad;
+        };
+
+        DedicatedParams poolParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            ParamsKey k = BaseParams::GetParamsKey();
+
+            k.EnablePoolType(poolParams.poolType);
+            k.EnablePoolRemainder(poolParams.remainderAction);
+            k.EnablePoolKernelDividerMode(poolParams.divMode);
+
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // pooling_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct pooling_optional_params : OptionalParams
+    {
+        pooling_optional_params() : OptionalParams(KernelType::POOLING) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // PoolingKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class PoolingKernelBase : public CommonKernelBase
     {
     public:
@@ -34,10 +76,10 @@ namespace kernel_selector
 
     protected:
         virtual bool Validate(const Params&, const OptionalParams&) const override;
-        virtual JitConstants GetJitConstants(const PoolingParams& params, DispatchData kd) const;
-        virtual DispatchData SetDefault(const PoolingParams& params) const;
+        virtual JitConstants GetJitConstants(const pooling_params& params, DispatchData kd) const;
+        virtual DispatchData SetDefault(const pooling_params& params) const;
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimatedTime) const;
 
-        bool NeedsBoundaryCheck(const PoolingParams& params) const;
+        bool NeedsBoundaryCheck(const pooling_params& params) const;
     };
 }

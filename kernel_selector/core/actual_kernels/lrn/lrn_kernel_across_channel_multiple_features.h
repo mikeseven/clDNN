@@ -30,7 +30,7 @@ namespace kernel_selector
 
     private:
         bool Validate(const Params& p, const OptionalParams& o) const override;
-        JitConstants GetJitConstants(const LRNParams& params, DispatchData kd) const override;
-        CommonDispatchData SetDefault(const LRNParams& params) const override;
+        JitConstants GetJitConstants(const lrn_params& params, DispatchData kd) const override;
+        CommonDispatchData SetDefault(const lrn_params& params) const override;
     };
 }

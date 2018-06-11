@@ -36,7 +36,7 @@ namespace kernel_selector
         return k;
     }
 
-    SoftmaxKernel_fb::Parent::DispatchData SoftmaxKernel_fb::SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const
+    SoftmaxKernel_fb::Parent::DispatchData SoftmaxKernel_fb::SetDefault(const softmax_params& params, const OptionalParams& optParams) const
     {
         auto kd = Parent::SetDefault(params, optParams);
         //start with 1 thread per data set
@@ -76,7 +76,7 @@ namespace kernel_selector
             return false;
         }
 
-        const auto& softmax_params = static_cast<const SoftmaxParams&>(params);
+        const auto& softmax_params = static_cast<const kernel_selector::softmax_params&>(params);
 
         auto kd = Parent::SetDefault(softmax_params, o);
         auto local_mem_per_wi = 2 * (kd.fp16UnitUsed ? sizeof(short) : sizeof(float));

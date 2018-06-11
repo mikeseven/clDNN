@@ -23,7 +23,7 @@
  
 namespace kernel_selector {
 
-    PoolingKernelSelctor::PoolingKernelSelctor()
+    pooling_kernel_selector::pooling_kernel_selector()
     {
         Attach<PoolingKernelGPURef>();
         //Attach<PoolingKernelGPUAverageOpt>(); TODO: fix the kernel as it reads out of bounds now
@@ -32,7 +32,7 @@ namespace kernel_selector {
         Attach<PoolingKernelGPUByxfPaddingOpt>();
     }
 
-    KernelsData PoolingKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData pooling_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::POOLING);
     }

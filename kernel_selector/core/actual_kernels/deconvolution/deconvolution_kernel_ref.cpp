@@ -45,7 +45,7 @@ namespace kernel_selector
         return k;
     }
 
-    CommonDispatchData DeconvolutionKernelRef::SetDefault(const DeconvolutionParams& params) const
+    CommonDispatchData DeconvolutionKernelRef::SetDefault(const deconvolution_params& params) const
     {
         CommonDispatchData runInfo = DeconvolutionKernelBase::SetDefault(params);
 
@@ -64,7 +64,7 @@ namespace kernel_selector
         return runInfo;
     }
 
-    JitConstants DeconvolutionKernelRef::GetJitConstants(const DeconvolutionParams& params) const
+    JitConstants DeconvolutionKernelRef::GetJitConstants(const deconvolution_params& params) const
     {
         auto jit = DeconvolutionKernelBase::GetJitConstants(params);
 

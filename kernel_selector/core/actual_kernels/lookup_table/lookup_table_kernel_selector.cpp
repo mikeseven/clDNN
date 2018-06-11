@@ -20,13 +20,13 @@
 
 namespace kernel_selector {
 
-    LookUpTableKernelSelctor::LookUpTableKernelSelctor()
+    lookup_table_kernel_selector::lookup_table_kernel_selector()
     {
         Attach<LookUpTableKernelRef>();
         Attach<LookUpTableKernelAxis>();
     }
 
-    KernelsData LookUpTableKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData lookup_table_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::LOOKUP_TABLE);
     }

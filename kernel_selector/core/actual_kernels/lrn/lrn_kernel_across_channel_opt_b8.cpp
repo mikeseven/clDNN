@@ -34,7 +34,7 @@ namespace kernel_selector
         return k;
     }
 
-    CommonDispatchData LRNKernelAcrossChannel_b8::SetDefault(const LRNParams& params) const
+    CommonDispatchData LRNKernelAcrossChannel_b8::SetDefault(const lrn_params& params) const
     {
         CommonDispatchData run_info = LRNKernelBase::SetDefault(params);
 
@@ -51,7 +51,7 @@ namespace kernel_selector
             return false;
         }
 
-        const LRNParams& params = static_cast<const LRNParams&>(p);
+        const lrn_params& params = static_cast<const lrn_params&>(p);
         const auto& out = params.output;
 
         const bool bSupportedPitch =
@@ -69,7 +69,7 @@ namespace kernel_selector
         return true;
     }
 
-    JitConstants LRNKernelAcrossChannel_b8::GetJitConstants(const LRNParams& params, DispatchData kd) const
+    JitConstants LRNKernelAcrossChannel_b8::GetJitConstants(const lrn_params& params, DispatchData kd) const
     {
         auto cldnnJit = LRNKernelBase::GetJitConstants(params, kd);
         cldnnJit.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", 8));

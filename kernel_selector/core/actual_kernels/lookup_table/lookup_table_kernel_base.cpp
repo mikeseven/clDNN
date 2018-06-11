@@ -29,13 +29,21 @@ namespace kernel_selector
         return true;
     }
 
-    JitConstants LookUpTableKernelBase::GetJitConstants(const LookUpTableParams& params) const
+    JitConstants LookUpTableKernelBase::GetJitConstants(const lookup_table_params& params) const
     {
-        JitConstants mem_consts = MakeLookUpTableJitConstants(params);
-        return mem_consts;
+        JitConstants jit = MakeBaseParamsJitConstants(params);
+
+        const auto& pp = params.lookUpTableParams;
+
+        jit.AddConstants({
+            MakeJitConstant("VAL_NUM", pp.numberOfValues),
+            MakeJitConstant(toString(pp.lookUpTableAxis) + "_AXIS", 1),
+        });
+
+        return jit;
     }
 
-    LookUpTableKernelBase::DispatchData LookUpTableKernelBase::SetDefault(const LookUpTableParams& params) const
+    LookUpTableKernelBase::DispatchData LookUpTableKernelBase::SetDefault(const lookup_table_params& params) const
     {
         DispatchData kd;
 
@@ -64,11 +72,11 @@ namespace kernel_selector
             return{};
         }
 
-        const LookUpTableParams& orgParams = static_cast<const LookUpTableParams&>(params);
+        const lookup_table_params& orgParams = static_cast<const lookup_table_params&>(params);
 
         DispatchData runInfo = SetDefault(orgParams);
 
-        KernelData kd = KernelData::Default<LookUpTableParams>(params);
+        KernelData kd = KernelData::Default<lookup_table_params>(params);
 
         auto cldnn_jit = GetJitConstants(orgParams);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);

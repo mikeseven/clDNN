@@ -20,17 +20,17 @@
 
 namespace kernel_selector
 {
-    class LookUpTableKernelSelctor : public KernelSelctorBase
+    class lookup_table_kernel_selector : public KernelSelctorBase
     {
     public:
-        static LookUpTableKernelSelctor &Instance() {
-            static LookUpTableKernelSelctor instance_;
+        static lookup_table_kernel_selector &Instance() {
+            static lookup_table_kernel_selector instance_;
             return instance_;
         }
 
-        LookUpTableKernelSelctor();
+        lookup_table_kernel_selector();
 
-        virtual ~LookUpTableKernelSelctor() {}
+        virtual ~lookup_table_kernel_selector() {}
 
         virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
     };

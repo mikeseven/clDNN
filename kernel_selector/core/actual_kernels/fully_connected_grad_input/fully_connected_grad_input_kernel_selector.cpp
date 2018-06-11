@@ -19,12 +19,12 @@
  
 namespace kernel_selector 
 {
-    FullyConnectedGradInputKernelSelctor::FullyConnectedGradInputKernelSelctor()
+    fully_connected_grad_input_kernel_selector::fully_connected_grad_input_kernel_selector()
     {
         Attach<FullyConnectedGradInputKernelRef>();
     }
 
-    KernelsData FullyConnectedGradInputKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData fully_connected_grad_input_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::FULLY_CONNECTED_GRAD_INPUT);
     }

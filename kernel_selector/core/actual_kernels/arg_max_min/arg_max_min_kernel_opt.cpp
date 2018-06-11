@@ -38,7 +38,7 @@ namespace kernel_selector
             return{};
         }
       
-        const ArgMaxMinParams& orgParams = static_cast<const ArgMaxMinParams&>(params);
+        const arg_max_min_params& orgParams = static_cast<const arg_max_min_params&>(params);
 
         int topK = orgParams.argMaxParams.topK;
         long size = (long)(orgParams.inputs[0].X().v * orgParams.inputs[0].Y().v * orgParams.inputs[0].Feature().v) / 8;
@@ -48,7 +48,7 @@ namespace kernel_selector
         {
             kernelAmount++;
         }
-        KernelData kd = KernelData::Default<ArgMaxMinParams>(params, kernelAmount);
+        KernelData kd = KernelData::Default<arg_max_min_params>(params, kernelAmount);
         for (int i = 0; i < kernelAmount; i++)
         {
             DataTensor input;

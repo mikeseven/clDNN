@@ -20,17 +20,17 @@
  
 namespace kernel_selector 
 {
-    class SoftmaxKernelSelctor : public KernelSelctorBase
+    class softmax_kernel_selector : public KernelSelctorBase
     {
     public:
-        static SoftmaxKernelSelctor &Instance() {
-            static SoftmaxKernelSelctor instance_;
+        static softmax_kernel_selector &Instance() {
+            static softmax_kernel_selector instance_;
             return instance_;
         }
 
-        SoftmaxKernelSelctor();
+        softmax_kernel_selector();
 
-        virtual ~SoftmaxKernelSelctor() {}
+        virtual ~softmax_kernel_selector() {}
 
         virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
     };

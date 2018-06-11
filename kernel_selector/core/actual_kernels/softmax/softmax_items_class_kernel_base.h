@@ -27,7 +27,7 @@ namespace kernel_selector
         virtual ~SoftmaxItemsClassKernelBase() {}
 
     protected:
-        JitConstants GetJitConstants(const SoftmaxParams& params, DispatchData kd) const override;
+        JitConstants GetJitConstants(const softmax_params& params, DispatchData kd) const override;
         static ParamsKey GetDefaultSupportedKey();
         static std::vector<size_t> GetSoftmaxDimGlobalSizes(SoftmaxDim dim, const DataTensor& output);
     };

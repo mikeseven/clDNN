@@ -20,13 +20,13 @@
  
 namespace kernel_selector 
 {
-    EltwiseKernelSelctor::EltwiseKernelSelctor()
+    eltwise_kernel_selector::eltwise_kernel_selector()
     {
         Attach<EltwiseKernelRef>();
         Attach<EltwiseKernel_vload8>();
     }
 
-    KernelsData EltwiseKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData eltwise_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::ELTWISE);
     }

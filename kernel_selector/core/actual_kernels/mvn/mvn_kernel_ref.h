@@ -30,6 +30,6 @@ namespace kernel_selector
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
-        std::string GetKernelName(const MVNParams&) const override;
+        std::string GetKernelName(const mvn_params&) const override;
     };
 }

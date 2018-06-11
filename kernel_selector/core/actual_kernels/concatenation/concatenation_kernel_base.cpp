@@ -19,7 +19,7 @@
 
 namespace kernel_selector 
 {
-    static int32_t GetConcatChannelIndex(const ConcatenationParams& params)
+    static int32_t GetConcatChannelIndex(const concatenation_params& params)
     {
         Tensor::DataChannelName name = Tensor::DataChannelName::X;
         switch (params.concatParams.axis)
@@ -41,7 +41,7 @@ namespace kernel_selector
             return false;
         }
 
-        const ConcatenationParams& params = static_cast<const ConcatenationParams&>(p);
+        const concatenation_params& params = static_cast<const concatenation_params&>(p);
 
         if (GetConcatChannelIndex(params) == -1)
         {
@@ -51,14 +51,19 @@ namespace kernel_selector
         return true; 
     }
 
-    JitConstants ConcatenationKernelBase::GetJitConstants(const ConcatenationParams& params) const
+    JitConstants ConcatenationKernelBase::GetJitConstants(const concatenation_params& params) const
     {
-        auto jit = MakeConcatenationJitConstants(params);
+        JitConstants jit = MakeBaseParamsJitConstants(params);
+
+        jit.AddConstants({
+            MakeJitConstant("CONCAT_" + toString(params.concatParams.axis), 1),
+        });
+
         jit.AddConstant(MakeJitConstant("CONCAT_AXIS_INDEX", GetConcatChannelIndex(params)));
         return jit;
     }
 
-    ConcatenationKernelBase::DispatchData ConcatenationKernelBase::SetDefault(const ConcatenationParams& params) const
+    ConcatenationKernelBase::DispatchData ConcatenationKernelBase::SetDefault(const concatenation_params& params) const
     {
         DispatchData kd;
 
@@ -96,9 +101,9 @@ namespace kernel_selector
             return{};
         }
 
-        const ConcatenationParams& orgParams = static_cast<const ConcatenationParams&>(params);
+        const concatenation_params& orgParams = static_cast<const concatenation_params&>(params);
 
-        KernelData kd = KernelData::Default<ConcatenationParams>(params, orgParams.inputs.size());
+        KernelData kd = KernelData::Default<concatenation_params>(params, orgParams.inputs.size());
 
         uint32_t lastOffset = 0;
         const auto concatChannelIndex = GetConcatChannelIndex(orgParams);

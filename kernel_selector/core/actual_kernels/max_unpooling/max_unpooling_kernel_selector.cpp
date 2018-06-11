@@ -19,12 +19,12 @@
  
 namespace kernel_selector {
 
-    MaxUnpoolingKernelSelctor::MaxUnpoolingKernelSelctor()
+    max_unpooling_kernel_selector::max_unpooling_kernel_selector()
     {
         Attach<MaxUnpoolingKernelGPURef>();
     }
 
-    KernelsData MaxUnpoolingKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData max_unpooling_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::MAX_UNPOOLING);
     }

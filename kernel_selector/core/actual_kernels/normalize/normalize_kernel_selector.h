@@ -20,17 +20,17 @@
  
 namespace kernel_selector 
 {
-    class NormalizeKernelSelctor : public KernelSelctorBase
+    class normalize_kernel_selector : public KernelSelctorBase
     {
     public:
-        static NormalizeKernelSelctor &Instance() {
-            static NormalizeKernelSelctor instance_;
+        static normalize_kernel_selector &Instance() {
+            static normalize_kernel_selector instance_;
             return instance_;
         }
 
-        NormalizeKernelSelctor();
+        normalize_kernel_selector();
 
-        virtual ~NormalizeKernelSelctor() {}
+        virtual ~normalize_kernel_selector() {}
 
         virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
     };

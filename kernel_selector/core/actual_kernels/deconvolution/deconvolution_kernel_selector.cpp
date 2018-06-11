@@ -20,13 +20,13 @@
  
 namespace kernel_selector 
 {
-    DeconvolutionKernelSelctor::DeconvolutionKernelSelctor()
+    deconvolution_kernel_selector::deconvolution_kernel_selector()
     {
         Attach<DeconvolutionKernelRef>();
         Attach<DeconvolutionKernel_bfyx_opt>();
     }
 
-    KernelsData DeconvolutionKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData deconvolution_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::DECONVOLUTION);
     }

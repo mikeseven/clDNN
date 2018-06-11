@@ -36,7 +36,7 @@ namespace kernel_selector
         return k;
     }
 
-    SoftmaxKernel_bf::Parent::DispatchData SoftmaxKernel_bf::SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const
+    SoftmaxKernel_bf::Parent::DispatchData SoftmaxKernel_bf::SetDefault(const softmax_params& params, const OptionalParams& optParams) const
     {
         auto kd = Parent::SetDefault(params, optParams);
 

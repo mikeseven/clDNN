@@ -19,6 +19,8 @@
 #include "implementation_map.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
+#include "lookup_table/lookup_table_kernel_selector.h"
+#include "lookup_table/lookup_table_kernel_base.h"
 #include "kernel_runner.h"
 
 namespace cldnn {

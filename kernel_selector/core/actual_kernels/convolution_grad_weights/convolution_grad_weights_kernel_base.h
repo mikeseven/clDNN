@@ -22,11 +22,11 @@
 namespace kernel_selector 
 {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutionGradWeightsParams
+    // convolution_grad_weights_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutionGradWeightsParams : public WeightBiasParams
+    struct convolution_grad_weights_params : public WeightBiasParams
     {
-        ConvolutionGradWeightsParams() : WeightBiasParams(KernelType::CONVOLUTION_GRAD_WEIGHTS), convGradWeightsParams() {}
+        convolution_grad_weights_params() : WeightBiasParams(KernelType::CONVOLUTION_GRAD_WEIGHTS), convGradWeightsParams() {}
 
         struct DedicatedParams
         {
@@ -66,11 +66,11 @@ namespace kernel_selector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutiongradWeightsOptionalParams
+    // convolution_grad_weights_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutiongradWeightsOptionalParams : WeightsBiasOptionalParams
+    struct convolution_grad_weights_optional_params : WeightsBiasOptionalParams
     {
-        ConvolutiongradWeightsOptionalParams() : WeightsBiasOptionalParams(KernelType::CONVOLUTION_GRAD_WEIGHTS) {}
+        convolution_grad_weights_optional_params() : WeightsBiasOptionalParams(KernelType::CONVOLUTION_GRAD_WEIGHTS) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -86,7 +86,7 @@ namespace kernel_selector
     
     protected:
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const;
-        virtual JitConstants GetJitConstants(const ConvolutionGradWeightsParams& params) const;
-        virtual DispatchData SetDefault(const ConvolutionGradWeightsParams& params) const;
+        virtual JitConstants GetJitConstants(const convolution_grad_weights_params& params) const;
+        virtual DispatchData SetDefault(const convolution_grad_weights_params& params) const;
     };
 }

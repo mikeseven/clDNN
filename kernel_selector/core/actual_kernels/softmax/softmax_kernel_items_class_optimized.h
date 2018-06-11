@@ -31,7 +31,7 @@ namespace kernel_selector
         ParamsKey GetSupportedKey() const override;
 
     protected:
-        JitConstants GetJitConstants(const SoftmaxParams& params, DispatchData kd) const override;
-        DispatchData SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const override;
+        JitConstants GetJitConstants(const softmax_params& params, DispatchData kd) const override;
+        DispatchData SetDefault(const softmax_params& params, const OptionalParams& optParams) const override;
     };
 }

@@ -39,7 +39,7 @@ namespace kernel_selector
         return k;
     }
 
-    CommonDispatchData LRNKernelAcrossChannelRef::SetDefault(const LRNParams& params) const
+    CommonDispatchData LRNKernelAcrossChannelRef::SetDefault(const lrn_params& params) const
     {
         CommonDispatchData runInfo = LRNKernelBase::SetDefault(params);
 

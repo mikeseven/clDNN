@@ -27,7 +27,7 @@ namespace kernel_selector
         return GetDefaultSupportedKey();
     }
 
-    SoftmaxKerneItemsClassOptimized::Parent::DispatchData SoftmaxKerneItemsClassOptimized::SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const
+    SoftmaxKerneItemsClassOptimized::Parent::DispatchData SoftmaxKerneItemsClassOptimized::SetDefault(const softmax_params& params, const OptionalParams& optParams) const
     {
         auto runInfo = Parent::SetDefault(params, optParams);
 
@@ -76,7 +76,7 @@ namespace kernel_selector
         return runInfo;
     }
 
-    JitConstants SoftmaxKerneItemsClassOptimized::GetJitConstants(const SoftmaxParams& params, DispatchData kd) const
+    JitConstants SoftmaxKerneItemsClassOptimized::GetJitConstants(const softmax_params& params, DispatchData kd) const
     {
         auto jit = SoftmaxItemsClassKernelBase::GetJitConstants(params, kd);
 

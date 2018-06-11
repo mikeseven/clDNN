@@ -904,172 +904,6 @@ namespace kernel_selector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // LRNParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LRNParams : public BaseParams
-    {
-        LRNParams() : BaseParams(KernelType::LRN), lrnParams() {}
-
-        struct DedicatedParams
-        {
-            LRNMode             normMode    = LRNMode::ACROSS_CHANNEL;
-            KernelDividerMode   divMode     = KernelDividerMode::DONT_CARE;
-            float               alpha       = 0.f;
-            float               beta        = 0.f;
-            float               k           = 0.f;
-            uint32_t            localSize   = 0;
-        };
-
-        DedicatedParams lrnParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            ParamsKey k = BaseParams::GetParamsKey();
-
-            k.EnableLRNMode(lrnParams.normMode);
-            k.EnableLRNKernelDividerMode(lrnParams.divMode);
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // NormalizeParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct NormalizeParams : public BaseParams
-    {
-        NormalizeParams() : BaseParams(KernelType::NORMALIZE), normParams() {}
-
-        struct DedicatedParams
-        {
-            NormalizeMode normMode = NormalizeMode::ACROSS_SPATIAL;
-            float         epsilon  = 1e-10f;
-            DataTensor    scaleTable;
-        };
-
-        DedicatedParams normParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            ParamsKey k = BaseParams::GetParamsKey();
-
-            k.EnableNormalizeMode(normParams.normMode);
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // MVNParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct MVNParams : public BaseParams
-    {
-        MVNParams() : BaseParams(KernelType::MVN), mvnParams() {}
-
-        struct DedicatedParams
-        {
-            MVNMode mvnMode = MVNMode::WITHIN_CHANNELS;
-            bool mvnNormalizeVariance = true;
-            float         epsilon = 1e-10f;
-        };
-
-        DedicatedParams mvnParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            ParamsKey k = BaseParams::GetParamsKey();
-
-            k.EnableMVNMode(mvnParams.mvnMode);
-
-            if (mvnParams.mvnNormalizeVariance)
-                k.EnableMVNNormalizeVariance();
-
-            return k;
-        }
-    };
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// ArgMaxMinParams
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	struct ArgMaxMinParams : public BaseParams
-	{
-		ArgMaxMinParams() : BaseParams(KernelType::ARG_MAX_MIN), argMaxParams() {}
-
-		struct DedicatedParams
-		{
-			ArgMaxMinAxis	argMaxMinAxis	= ArgMaxMinAxis::XYF;
-			ArgMaxMinOut	argMaxMinOut	= ArgMaxMinOut::MAX;
-			uint32_t		topK			= 1;
-		};
-
-		DedicatedParams argMaxParams;
-
-		virtual ParamsKey GetParamsKey() const
-		{
-			ParamsKey k = BaseParams::GetParamsKey();
-			k.EnableArgMaxMinAxis(argMaxParams.argMaxMinAxis);
-
-			return k;
-		}
-	};
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // LookUpTableParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LookUpTableParams : public BaseParams
-    {
-        LookUpTableParams() : BaseParams(KernelType::LOOKUP_TABLE), lookUpTableParams() {}
-
-        struct DedicatedParams
-        {
-            LookUpTableAxis	lookUpTableAxis = LookUpTableAxis::XYF;
-            uint32_t		numberOfValues;
-            DataTensor      inputIndices;
-        };
-
-        DedicatedParams lookUpTableParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            ParamsKey k = BaseParams::GetParamsKey();
-            k.EnableLookUpTableAxis(lookUpTableParams.lookUpTableAxis);
-            k.EnableLookUpTableIndicesFormat(lookUpTableParams.inputIndices.GetDType());
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // PoolingParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct PoolingParams : public BaseParams
-    {
-        PoolingParams() : BaseParams(KernelType::POOLING), poolParams() {}
-
-        struct DedicatedParams
-        {
-            PoolType            poolType        = PoolType::MAX;
-            PoolRemainder       remainderAction = PoolRemainder::FLOOR;
-            KernelDividerMode   divMode         = KernelDividerMode::DONT_CARE;
-            uSize               poolSize;
-            uSize               poolStride;
-            uSize               poolPad;
-        };
-
-        DedicatedParams poolParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            ParamsKey k = BaseParams::GetParamsKey();
-
-            k.EnablePoolType(poolParams.poolType);
-            k.EnablePoolRemainder(poolParams.remainderAction);
-            k.EnablePoolKernelDividerMode(poolParams.divMode);
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ROIPoolingParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct ROIPoolingParams : public BaseParams
@@ -1090,53 +924,6 @@ namespace kernel_selector
         virtual ParamsKey GetParamsKey() const
         {
             return BaseParams::GetParamsKey();
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ActivationParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ActivationParams : public BaseParams
-    {
-        ActivationParams() : BaseParams(KernelType::ACTIVATION), actParams() {}
-
-        struct DedicatedParams
-        {
-            MultiDataTensor inputActivationParams;
-        };
-
-        DedicatedParams actParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            auto k = BaseParams::GetParamsKey();
-            if (!actParams.inputActivationParams.empty())
-            {
-                k.EnableActivationAdditionalParamsAsInput();
-            }
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // SoftMaxParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct SoftmaxParams : public BaseParams
-    {
-        SoftmaxParams() : BaseParams(KernelType::SOFT_MAX) {}
-
-        struct DedicatedParams
-        {
-            SoftmaxDim dim = SoftmaxDim::FEATURE;
-        };
-
-        DedicatedParams smParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            auto k = BaseParams::GetParamsKey();
-            k.EnableSoftmaxDim(smParams.dim);
-            return k;
         }
     };
 
@@ -1183,87 +970,6 @@ namespace kernel_selector
         {
             auto k = BaseParams::GetParamsKey();
             return k;
-        }
-    };
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // EltwiseParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct EltwiseParams : public BaseParams
-    {
-        EltwiseParams() : BaseParams(KernelType::ELTWISE), eltwiseParams() {}
-
-        struct InputType
-        {
-            EltwiseInputMode mode       = EltwiseInputMode::INPUT_BUFFER;
-            uint32_t         index      = 0;    // for inputs results;
-            uint32_t         tmpIndex   = 0;    // for temp results;
-            float            scalar     = 0.f;
-
-            static InputType Buffer(uint32_t index) 
-            {
-                EltwiseParams::InputType input;
-                input.mode = EltwiseInputMode::INPUT_BUFFER;
-                input.index = index;
-                return input;
-            }
-
-            static InputType UnorderedAccessBuffer(uint32_t index, uint32_t tmpIndex)
-            {
-                EltwiseParams::InputType input;
-                input.mode = EltwiseInputMode::UNORDERED_ACCESS_INPUT_BUFFER;
-                input.index = index;
-                input.tmpIndex = tmpIndex;
-                return input;
-            }
-
-            static InputType Intermediate(uint32_t tmpIndex)
-            {
-                EltwiseParams::InputType input;
-                input.mode = EltwiseInputMode::INTERMEDIATE_RESULTS_INDEX;
-                input.tmpIndex = tmpIndex;
-                return input;
-            }
-
-            static InputType Scalar(float s)
-            {
-                EltwiseParams::InputType input;
-                input.mode = EltwiseInputMode::SCALAR;
-                input.scalar = s;
-                return input;
-            }
-
-            static InputType OutBuffer()
-            {
-                EltwiseParams::InputType output;
-                output.mode = EltwiseInputMode::OUTPUT_BUFFER;
-                return output;
-            }
-        };
-
-        struct Node
-        {
-            std::vector<InputType> inputs;
-            EltwiseMode mode;
-        };
-
-        struct UpdateInputData
-        {
-            uint32_t inputId;
-            uint32_t tmpId;
-        };
-
-        struct DedicatedParams
-        {
-            std::vector<EltwiseParams::Node> operations;
-            std::vector<UpdateInputData> updateInputIds;
-            bool layoutBased = false;
-        };
-
-        DedicatedParams eltwiseParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            return BaseParams::GetParamsKey();
         }
     };
 
@@ -1379,28 +1085,6 @@ namespace kernel_selector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConcatenationParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConcatenationParams : public BaseParams
-    {
-        ConcatenationParams() : BaseParams(KernelType::CONCATENATION), concatParams() {}
-
-        struct DedicatedParams
-        {
-            ConcatAxis axis = ConcatAxis::FEATURE;
-        };
-
-        DedicatedParams concatParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            auto k =  BaseParams::GetParamsKey();
-            k.EnableConcatAxis(concatParams.axis);
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // UpSamplingParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct UpSamplingParams : public BaseParams
@@ -1421,19 +1105,6 @@ namespace kernel_selector
             auto k = BaseParams::GetParamsKey();
             k.EnableUpSamplingSampleType(usParams.sampleType);
             return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // MaxUnpoolingParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct MaxUnpoolingParams : public BaseParams
-    {
-        MaxUnpoolingParams() : BaseParams(KernelType::MAX_UNPOOLING) {}
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            return BaseParams::GetParamsKey();
         }
     };
 
@@ -1560,75 +1231,11 @@ namespace kernel_selector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // LRNOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LRNOptionalParams : OptionalParams
-    {
-        LRNOptionalParams() : OptionalParams(KernelType::LRN) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // NormalizeOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct NormalizeOptionalParams : OptionalParams
-    {
-        NormalizeOptionalParams() : OptionalParams(KernelType::NORMALIZE) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // MVNOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct MVNOptionalParams : OptionalParams
-    {
-        MVNOptionalParams() : OptionalParams(KernelType::MVN) {}
-    };
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// ArgMaxMinOptionalParams
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	struct ArgMaxMinOptionalParams : OptionalParams
-	{
-		ArgMaxMinOptionalParams() : OptionalParams(KernelType::ARG_MAX_MIN) {}
-	};
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // LookUpTableOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LookUpTableOptionalParams : OptionalParams
-    {
-        LookUpTableOptionalParams() : OptionalParams(KernelType::LOOKUP_TABLE) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // PoolingOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct PoolingOptionalParams : OptionalParams
-    {
-        PoolingOptionalParams() : OptionalParams(KernelType::POOLING) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ROIPoolingOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct ROIPoolingOptionalParams : OptionalParams
     {
         ROIPoolingOptionalParams() : OptionalParams(KernelType::ROI_POOLING) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ActivationOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ActivationOptionalParams : OptionalParams
-    {
-        ActivationOptionalParams() : OptionalParams(KernelType::ACTIVATION) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // SoftmaxOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct SoftmaxOptionalParams : OptionalParams
-    {
-        SoftmaxOptionalParams() : OptionalParams(KernelType::SOFT_MAX) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1648,14 +1255,6 @@ namespace kernel_selector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // EltwiseOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct EltwiseOptionalParams : OptionalParams
-    {
-        EltwiseOptionalParams() : OptionalParams(KernelType::ELTWISE) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ReorderVxOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct ReorderVxOptionalParams : OptionalParams
@@ -1672,44 +1271,11 @@ namespace kernel_selector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConcatenationOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConcatenationOptionalParams : OptionalParams
-    {
-        ConcatenationOptionalParams() : OptionalParams(KernelType::CONCATENATION) {}
-        bool kernelPerInput = true;
-
-        virtual ParamsKey GetSupportedKey() const
-        {
-            ParamsKey k = OptionalParams::GetSupportedKey();
-
-            if (kernelPerInput)
-            {
-                k.EnableConcatKernelPerInput();
-            }
-            else
-            {
-                k.EnableConcatOneKernel();
-            }
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // UpSamplingOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct UpSamplingOptionalParams : OptionalParams
     {
         UpSamplingOptionalParams() : OptionalParams(KernelType::UPSAMPLING) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // MaxUnpoolingOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct MaxUnpoolingOptionalParams : OptionalParams
-    {
-        MaxUnpoolingOptionalParams() : OptionalParams(KernelType::MAX_UNPOOLING) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

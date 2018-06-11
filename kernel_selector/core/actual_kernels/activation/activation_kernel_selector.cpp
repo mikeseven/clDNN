@@ -21,14 +21,14 @@
  
 namespace kernel_selector 
 {
-    ActivationKernelSelctor::ActivationKernelSelctor()
+    activation_kernel_selector::activation_kernel_selector()
     {
         Attach<ActivationKernelRef>();
         Attach<ActivationKernelOpt>();
         Attach<ActivationKernel_Tutorial>();
     }
 
-    KernelsData ActivationKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData activation_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::ACTIVATION);
     }

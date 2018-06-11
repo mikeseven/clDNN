@@ -474,100 +474,6 @@ inline JitConstants MakeLoopUnrollParamsJitConstants(uint32_t loopCount)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeLRNJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeLRNJitConstants(const LRNParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    const auto& np = params.lrnParams;
-
-    const auto padding = (np.localSize - 1) / 2;
-
-    jit.AddConstants({
-        MakeJitConstant("LOCAL_SIZE",   np.localSize),
-        MakeJitConstant("PADDING",      padding),
-        MakeJitConstant("ALPHA",        np.alpha),
-        MakeJitConstant("BETA",         np.beta),
-        MakeJitConstant("K",            np.k),
-        MakeJitConstant(toString(np.divMode) + "_KERNEL_DIVIDER", ""),
-        MakeJitConstant(toString(np.normMode), ""),
-    });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeArgMaxJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeArgMaxJitConstants(const ArgMaxMinParams& params) {
-	JitConstants jit = MakeBaseParamsJitConstants(params);
-
-	const auto& pp = params.argMaxParams;
-
-	jit.AddConstants({
-		MakeJitConstant("TOP_K", pp.topK),
-		MakeJitConstant(toString(pp.argMaxMinAxis) + "_AXIS", 1),
-		pp.argMaxMinOut == ArgMaxMinOut::MAX ? MakeJitConstant("MAX_OUT", 1) : MakeJitConstant("MIN_OUT", 1)
-	});
-
-	return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeLookUpTableJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-inline JitConstants MakeLookUpTableJitConstants(const LookUpTableParams& params) {
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    const auto& pp = params.lookUpTableParams;
-
-    jit.AddConstants({
-        MakeJitConstant("VAL_NUM", pp.numberOfValues),
-        MakeJitConstant(toString(pp.lookUpTableAxis) + "_AXIS", 1),
-    });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakePoolingJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakePoolingJitConstants(const PoolingParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    const auto& pp = params.poolParams;
-
-    jit.AddConstants({
-        MakeJitConstant("POOL",     pp.poolSize),
-        MakeJitConstant("STRIDE",   pp.poolStride),
-        MakeJitConstant("PADDING",  pp.poolPad),
-        MakeJitConstant(toString(pp.poolType) + "_POOLING", 1),
-        MakeJitConstant(toString(pp.divMode) + "_KERNEL_DIVIDER", 1),
-    });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeSoftmaxJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeSoftmaxJitConstants(const SoftmaxParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    const auto& sm = params.smParams;
-
-    jit.AddConstants({
-        MakeJitConstant("ALONG_" + toString(sm.dim), "")
-    });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MakeRegionYoloJitConstants
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 inline JitConstants MakeRegionYoloJitConstants(const RegionYoloParams& params)
@@ -602,42 +508,6 @@ inline JitConstants MakeReorgYoloJitConstants(const ReorgYoloParams& params)
 
     return jit;
 }
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeNormalizeJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeNormalizeJitConstants(const NormalizeParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    const auto& np = params.normParams;
-
-    jit.AddConstants({
-        MakeJitConstant("SCALE_TABLE",          np.scaleTable),
-        MakeJitConstant("EPSILON",              np.epsilon),
-        MakeJitConstant(toString(np.normMode),  ""),
-        MakeJitConstant("THRESHOLD",            0.0001f),
-    });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeMVNJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeMVNJitConstants(const MVNParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    const auto& mvnp = params.mvnParams;
-
-    jit.AddConstants({
-        MakeJitConstant("EPSILON",              mvnp.epsilon),
-        MakeJitConstant(toString(mvnp.mvnMode), ""),
-        MakeJitConstant("NORMALIZE_VARIANCE",   mvnp.mvnNormalizeVariance),
-    });
-
-    return jit;
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MakePermuteJitConstants
@@ -648,20 +518,6 @@ inline JitConstants MakePermuteJitConstants(const PermuteParams& params)
 
     jit.AddConstants({
         MakeJitConstant("PERMUTE_ORDER", params.permuteParams.order)
-    });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeEltwiseJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeEltwiseJitConstants(const EltwiseParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    jit.AddConstants({
-        MakeJitConstant("ELTWISE_LAYOUT_BASED", params.eltwiseParams.layoutBased),
     });
 
     return jit;
@@ -748,44 +604,6 @@ inline JitConstants MakeROIPoolingV1JitConstants(const ROIPoolingParams& params)
         MakeJitConstant("GORUP_SIZE",        rp.groupSize),
         MakeJitConstant(toString(rp.mode) + "_POOLING", 1),
     });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeConcatenationJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeConcatenationJitConstants(const ConcatenationParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    jit.AddConstants({
-        MakeJitConstant("CONCAT_" + toString(params.concatParams.axis), 1),
-    });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeActivationJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeActivationJitConstants(const ActivationParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-    
-    const auto& inputNlParams = params.actParams.inputActivationParams;
-
-    jit.AddConstants({
-        MakeJitConstant("PARAMS_NUM", GetActivationAdditionalParamsNumber(params.activationFunc)),
-    });
-
-    if (!inputNlParams.empty())
-    {
-        jit.AddConstants({
-            MakeJitConstant("ADDITIONAL_PARAMS", inputNlParams[0]),
-            MakeJitConstant("PARAMETERIZED", ""),
-        });
-    }
 
     return jit;
 }

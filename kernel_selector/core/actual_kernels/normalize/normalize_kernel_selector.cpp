@@ -20,13 +20,13 @@
  
 namespace kernel_selector 
 {
-    NormalizeKernelSelctor::NormalizeKernelSelctor()
+    normalize_kernel_selector::normalize_kernel_selector()
     {
         Attach<NormalizeKernelWithinSpatialRef>();
         Attach<NormalizeKernelAcrossSpatialRef>();
     }
 
-    KernelsData NormalizeKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData normalize_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::NORMALIZE);
     }

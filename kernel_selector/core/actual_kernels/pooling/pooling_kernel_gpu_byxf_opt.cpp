@@ -38,7 +38,7 @@ namespace kernel_selector
         return k;
     }
 
-    PoolingKernelBase::DispatchData PoolingKernelGPUByxfOpt::SetDefault(const PoolingParams& params) const
+    PoolingKernelBase::DispatchData PoolingKernelGPUByxfOpt::SetDefault(const pooling_params& params) const
     {
         const auto& output = params.output;
 
@@ -49,7 +49,7 @@ namespace kernel_selector
         return runInfo;
     }
 
-    JitConstants PoolingKernelGPUByxfOpt::GetJitConstants(const PoolingParams& params, DispatchData kd) const
+    JitConstants PoolingKernelGPUByxfOpt::GetJitConstants(const pooling_params& params, DispatchData kd) const
     {
         auto mem_consts = PoolingKernelBase::GetJitConstants(params, kd);
 
@@ -63,7 +63,7 @@ namespace kernel_selector
             return false;
         }
 
-        const PoolingParams& params = static_cast<const PoolingParams&>(p);
+        const pooling_params& params = static_cast<const pooling_params&>(p);
         if (params.inputs[0].Feature().v % 8 != 0)
         {
             return false;

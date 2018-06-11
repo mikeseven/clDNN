@@ -63,9 +63,9 @@ namespace kernel_selector {
         // assert(params.GetType() == KernelType::ACTIVATION && options.GetType() == KernelType::ACTIVATION);
         //
         // const uint32_t numOfkernels = 1;
-        // KernelData kd = KernelData::Default<ActivationParams>(params, numOfkernels);
-        // ActivationParams& newParams = *static_cast<ActivationParams*>(kd.params.get());
-        // const ActivationOptionalParams& optParams = static_cast<const ActivationOptionalParams&>(options);
+        // KernelData kd = KernelData::Default<activation_params>(params, numOfkernels);
+        // activation_params& newParams = *static_cast<activation_params*>(kd.params.get());
+        // const activation_optional_params& optParams = static_cast<const activation_optional_params&>(options);
         // auto& kernel = kd.kernels[0];
 
         // Step 3:
@@ -102,7 +102,7 @@ namespace kernel_selector {
 
 #else
 
-    ActivationKernel_Tutorial::Parent::DispatchData ActivationKernel_Tutorial::SetDefault(const ActivationParams& params) const
+    ActivationKernel_Tutorial::Parent::DispatchData ActivationKernel_Tutorial::SetDefault(const activation_params& params) const
     {
         auto runInfo = Parent::SetDefault(params);
 
@@ -124,13 +124,13 @@ namespace kernel_selector {
         // Step 3:
         // 
         // Validate this kernel support params and optional params. use:
-        // const ActivationParams& params = static_cast<const ActivationParams&>(p);
-        // const ActivationOptionalParams& options = static_cast<const ActivationOptionalParams&>(o);
+        // const activation_params& params = static_cast<const activation_params&>(p);
+        // const activation_optional_params& options = static_cast<const activation_optional_params&>(o);
 
         return true;
     }
 
-    JitConstants ActivationKernel_Tutorial::GetJitConstants(const ActivationParams& params, DispatchData runInfo) const
+    JitConstants ActivationKernel_Tutorial::GetJitConstants(const activation_params& params, DispatchData runInfo) const
     {
         auto jit = Parent::GetJitConstants(params, runInfo);
         jit.AddConstant(MakeJitConstant("ADVANCED_TUTORIAL", ""));

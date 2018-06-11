@@ -20,7 +20,7 @@
 namespace kernel_selector 
 {
 
-    ActivationKernelBase::DispatchData ActivationKernelBase::SetDefault(const ActivationParams& arg) const
+    ActivationKernelBase::DispatchData ActivationKernelBase::SetDefault(const activation_params& arg) const
     {
         const auto& out = arg.output;
 
@@ -46,9 +46,25 @@ namespace kernel_selector
         return runInfo;
     }
 
-    JitConstants ActivationKernelBase::GetJitConstants(const ActivationParams& params, DispatchData) const
+    JitConstants ActivationKernelBase::GetJitConstants(const activation_params& params, DispatchData) const
     {
-        return MakeActivationJitConstants(params);
+        JitConstants jit = MakeBaseParamsJitConstants(params);
+
+        const auto& inputNlParams = params.actParams.inputActivationParams;
+
+        jit.AddConstants({
+            MakeJitConstant("PARAMS_NUM", GetActivationAdditionalParamsNumber(params.activationFunc)),
+        });
+
+        if (!inputNlParams.empty())
+        {
+            jit.AddConstants({
+                MakeJitConstant("ADDITIONAL_PARAMS", inputNlParams[0]),
+                MakeJitConstant("PARAMETERIZED", ""),
+            });
+        }
+
+        return jit;
     }
 
     bool ActivationKernelBase::Validate(const Params& p, const OptionalParams& o) const
@@ -69,9 +85,9 @@ namespace kernel_selector
             return{};
         }
 
-        KernelData kd = KernelData::Default<ActivationParams>(params);
+        KernelData kd = KernelData::Default<activation_params>(params);
 
-        ActivationParams& newParams = *static_cast<ActivationParams*>(kd.params.get());
+        activation_params& newParams = *static_cast<activation_params*>(kd.params.get());
         const std::string kernel_id = GetEntryPoint(kernelName, params.layerID, options);
 
         auto runInfo = SetDefault(newParams);

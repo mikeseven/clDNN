@@ -57,7 +57,7 @@ namespace kernel_selector
         }
     }
 
-    JitConstants SoftmaxItemsClassKernelBase::GetJitConstants(const SoftmaxParams& params, DispatchData kd) const
+    JitConstants SoftmaxItemsClassKernelBase::GetJitConstants(const softmax_params& params, DispatchData kd) const
     {
         auto jit = SoftmaxKernelBase::GetJitConstants(params, kd);
 

@@ -21,6 +21,56 @@
 
 namespace kernel_selector 
 {
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // concatenation_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct concatenation_params : public BaseParams
+    {
+        concatenation_params() : BaseParams(KernelType::CONCATENATION), concatParams() {}
+
+        struct DedicatedParams
+        {
+            ConcatAxis axis = ConcatAxis::FEATURE;
+        };
+
+        DedicatedParams concatParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            auto k = BaseParams::GetParamsKey();
+            k.EnableConcatAxis(concatParams.axis);
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // concatenation_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct concatenation_optional_params : OptionalParams
+    {
+        concatenation_optional_params() : OptionalParams(KernelType::CONCATENATION) {}
+        bool kernelPerInput = true;
+
+        virtual ParamsKey GetSupportedKey() const
+        {
+            ParamsKey k = OptionalParams::GetSupportedKey();
+
+            if (kernelPerInput)
+            {
+                k.EnableConcatKernelPerInput();
+            }
+            else
+            {
+                k.EnableConcatOneKernel();
+            }
+
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ConcatenationKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class ConcatenationKernelBase : public CommonKernelBase
     {
     public:
@@ -31,8 +81,8 @@ namespace kernel_selector
     
     protected:
         virtual bool Validate(const Params&, const OptionalParams&) const override;
-        virtual JitConstants GetJitConstants(const ConcatenationParams& params) const;
-        virtual DispatchData SetDefault(const ConcatenationParams& params) const;
+        virtual JitConstants GetJitConstants(const concatenation_params& params) const;
+        virtual DispatchData SetDefault(const concatenation_params& params) const;
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&) const;
     };
 }

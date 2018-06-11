@@ -21,6 +21,43 @@
 
 namespace kernel_selector 
 {
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // normalize_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct normalize_params : public BaseParams
+    {
+        normalize_params() : BaseParams(KernelType::NORMALIZE), normParams() {}
+
+        struct DedicatedParams
+        {
+            NormalizeMode normMode = NormalizeMode::ACROSS_SPATIAL;
+            float         epsilon = 1e-10f;
+            DataTensor    scaleTable;
+        };
+
+        DedicatedParams normParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            ParamsKey k = BaseParams::GetParamsKey();
+
+            k.EnableNormalizeMode(normParams.normMode);
+
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // normalize_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct normalize_optional_params : OptionalParams
+    {
+        normalize_optional_params() : OptionalParams(KernelType::NORMALIZE) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // NormalizeKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class NormalizeKernelBase : public CommonKernelBase
     {
     public:
@@ -30,8 +67,8 @@ namespace kernel_selector
         using DispatchData = CommonDispatchData;
 
     protected:
-        JitConstants GetJitConstants(const NormalizeParams& params) const;
-        DispatchData SetDefault(const NormalizeParams& params) const;
+        JitConstants GetJitConstants(const normalize_params& params) const;
+        DispatchData SetDefault(const normalize_params& params) const;
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimated_time) const;
     };
 }

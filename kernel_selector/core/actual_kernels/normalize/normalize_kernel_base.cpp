@@ -19,12 +19,23 @@
 
 namespace kernel_selector 
 {
-    JitConstants NormalizeKernelBase::GetJitConstants(const NormalizeParams& params) const
+    JitConstants NormalizeKernelBase::GetJitConstants(const normalize_params& params) const
     {
-        return MakeNormalizeJitConstants(params);
+        JitConstants jit = MakeBaseParamsJitConstants(params);
+
+        const auto& np = params.normParams;
+
+        jit.AddConstants({
+            MakeJitConstant("SCALE_TABLE",          np.scaleTable),
+            MakeJitConstant("EPSILON",              np.epsilon),
+            MakeJitConstant(toString(np.normMode),  ""),
+            MakeJitConstant("THRESHOLD",            0.0001f),
+        });
+
+        return jit;
     }
 
-    NormalizeKernelBase::DispatchData NormalizeKernelBase::SetDefault(const NormalizeParams& params) const
+    NormalizeKernelBase::DispatchData NormalizeKernelBase::SetDefault(const normalize_params& params) const
     {
         const auto& output = params.output;
 
@@ -60,13 +71,13 @@ namespace kernel_selector
     {
         assert(params.GetType() == KernelType::NORMALIZE);
 
-        const NormalizeParams& orgParams = static_cast<const NormalizeParams&>(params);
+        const normalize_params& orgParams = static_cast<const normalize_params&>(params);
 
         DispatchData runInfo;
 
         runInfo = SetDefault(orgParams);
 
-        KernelData kd = KernelData::Default<NormalizeParams>(params);
+        KernelData kd = KernelData::Default<normalize_params>(params);
 
         auto cldnn_jit = GetJitConstants(orgParams);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);

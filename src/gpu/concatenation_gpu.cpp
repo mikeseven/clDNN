@@ -20,6 +20,8 @@
 #include "events_waiter.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
+#include "concatenation/concatenation_kernel_selector.h"
+#include "concatenation/concatenation_kernel_base.h"
 
 #include <initializer_list>
 

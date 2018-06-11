@@ -32,7 +32,7 @@ namespace kernel_selector {
         return k;
     }
 
-    JitConstants EltwiseKernel_vload8::GetJitConstants(const EltwiseParams& params) const
+    JitConstants EltwiseKernel_vload8::GetJitConstants(const eltwise_params& params) const
     {
         return GetJitConstantsCommon(params, true);
     }
@@ -44,7 +44,7 @@ namespace kernel_selector {
             return false;
         }
 
-        const auto& ewParams = static_cast<const EltwiseParams&>(params);
+        const auto& ewParams = static_cast<const eltwise_params&>(params);
         const auto& output = ewParams.output;
         const auto count = output.PhysicalSize();
 
@@ -94,8 +94,8 @@ namespace kernel_selector {
             return{};
         }
 
-        KernelData kd = KernelData::Default<EltwiseParams>(params);
-        EltwiseParams& newParams = *static_cast<EltwiseParams*>(kd.params.get());
+        KernelData kd = KernelData::Default<eltwise_params>(params);
+        eltwise_params& newParams = *static_cast<eltwise_params*>(kd.params.get());
 
         std::string jit;
 

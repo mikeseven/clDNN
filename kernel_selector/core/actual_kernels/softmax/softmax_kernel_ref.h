@@ -31,6 +31,6 @@ namespace kernel_selector
         ParamsKey GetSupportedKey() const override;
 
     protected:
-        DispatchData SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const override;
+        DispatchData SetDefault(const softmax_params& params, const OptionalParams& optParams) const override;
     };
 }

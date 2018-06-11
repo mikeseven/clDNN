@@ -42,7 +42,7 @@ namespace kernel_selector
         return k;
     }
 
-    JitConstants LRNKernelRef::GetJitConstants(const LRNParams& params, LRNKernelRef::Parent::DispatchData kd) const
+    JitConstants LRNKernelRef::GetJitConstants(const lrn_params& params, LRNKernelRef::Parent::DispatchData kd) const
     {
         const uint32_t round_norm_size = (params.lrnParams.localSize / 2) * 2 + 1;
         uint32_t numElement = round_norm_size * round_norm_size;
@@ -65,7 +65,7 @@ namespace kernel_selector
         return jit;
     }
 
-    LRNKernelRef::Parent::DispatchData LRNKernelRef::SetDefault(const LRNParams& params) const
+    LRNKernelRef::Parent::DispatchData LRNKernelRef::SetDefault(const lrn_params& params) const
     {
         DispatchData kd = Parent::SetDefault(params);
 

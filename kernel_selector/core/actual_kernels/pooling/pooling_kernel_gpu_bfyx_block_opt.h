@@ -30,7 +30,7 @@ namespace kernel_selector
         virtual ParamsKey GetSupportedKey() const override;
     protected:
         bool Validate(const Params&, const OptionalParams&) const override;
-        JitConstants GetJitConstants(const PoolingParams& params, DispatchData kd) const override;
-        DispatchData SetDefault(const PoolingParams& params) const override;
+        JitConstants GetJitConstants(const pooling_params& params, DispatchData kd) const override;
+        DispatchData SetDefault(const pooling_params& params) const override;
     };
 }

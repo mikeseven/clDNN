@@ -29,9 +29,19 @@ namespace kernel_selector
         return true;
     }
 
-    JitConstants PoolingKernelBase::GetJitConstants(const PoolingParams& params, PoolingKernelBase::DispatchData kd) const
+    JitConstants PoolingKernelBase::GetJitConstants(const pooling_params& params, PoolingKernelBase::DispatchData kd) const
     {
-        JitConstants mem_consts = MakePoolingJitConstants(params);
+        JitConstants mem_consts = MakeBaseParamsJitConstants(params);
+
+        const auto& pp = params.poolParams;
+
+        mem_consts.AddConstants({
+            MakeJitConstant("POOL",     pp.poolSize),
+            MakeJitConstant("STRIDE",   pp.poolStride),
+            MakeJitConstant("PADDING",  pp.poolPad),
+            MakeJitConstant(toString(pp.poolType) + "_POOLING", 1),
+            MakeJitConstant(toString(pp.divMode) + "_KERNEL_DIVIDER", 1),
+        });
 
         if (kd.needsBoundary)
         {
@@ -42,7 +52,7 @@ namespace kernel_selector
     }
 
     // Checks if we need boundary checking in kernel.
-    bool PoolingKernelBase::NeedsBoundaryCheck(const PoolingParams& params) const
+    bool PoolingKernelBase::NeedsBoundaryCheck(const pooling_params& params) const
     {
         const auto& pp = params.poolParams;
 
@@ -64,7 +74,7 @@ namespace kernel_selector
         return mod_x || mod_y;
     }
 
-    PoolingKernelBase::DispatchData PoolingKernelBase::SetDefault(const PoolingParams& params) const
+    PoolingKernelBase::DispatchData PoolingKernelBase::SetDefault(const pooling_params& params) const
     {
         const auto& output = params.output;
 
@@ -112,11 +122,11 @@ namespace kernel_selector
             return{};
         }
 
-        const PoolingParams& orgParams = static_cast<const PoolingParams&>(params);
+        const pooling_params& orgParams = static_cast<const pooling_params&>(params);
 
         DispatchData runInfo = SetDefault(orgParams);
 
-        KernelData kd = KernelData::Default<PoolingParams>(params);
+        KernelData kd = KernelData::Default<pooling_params>(params);
 
         auto cldnn_jit = GetJitConstants(orgParams, runInfo);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);

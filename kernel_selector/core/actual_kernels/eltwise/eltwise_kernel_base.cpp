@@ -49,7 +49,7 @@ namespace kernel_selector
             return false;
         }
 
-        const EltwiseParams& params = static_cast<const EltwiseParams&>(p);
+        const eltwise_params& params = static_cast<const eltwise_params&>(p);
 
         if (params.inputs.size() == 0)
         {
@@ -86,9 +86,13 @@ namespace kernel_selector
         return true;
     }
 
-    JitConstants EltwiseKernelBase::GetJitConstantsCommon(const EltwiseParams& params, bool useVload8) const
+    JitConstants EltwiseKernelBase::GetJitConstantsCommon(const eltwise_params& params, bool useVload8) const
     {
-        auto jit = MakeEltwiseJitConstants(params);
+        JitConstants jit = MakeBaseParamsJitConstants(params);
+
+        jit.AddConstants({
+            MakeJitConstant("ELTWISE_LAYOUT_BASED", params.eltwiseParams.layoutBased),
+        });
 
         std::string inputs_decls, vload_decls;
         auto& updateInputs = params.eltwiseParams.updateInputIds;
@@ -217,7 +221,7 @@ namespace kernel_selector
         return jit;
     }
 
-    JitConstants EltwiseKernelBase::GetJitConstants(const EltwiseParams& params) const
+    JitConstants EltwiseKernelBase::GetJitConstants(const eltwise_params& params) const
     {
         return GetJitConstantsCommon(params, false);
     }
@@ -229,8 +233,8 @@ namespace kernel_selector
             return{};
         }
 
-        KernelData kd = KernelData::Default<EltwiseParams>(params);
-        EltwiseParams& newParams = *static_cast<EltwiseParams*>(kd.params.get());
+        KernelData kd = KernelData::Default<eltwise_params>(params);
+        eltwise_params& newParams = *static_cast<eltwise_params*>(kd.params.get());
 
         auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
         auto cldnn_jit = GetJitConstants(newParams);

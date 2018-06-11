@@ -19,7 +19,7 @@
 
 namespace kernel_selector 
 {
-    std::string DeconvolutionParams::to_string() const
+    std::string deconvolution_params::to_string() const
     {
         std::stringstream s;
 
@@ -41,7 +41,7 @@ namespace kernel_selector
         return s.str();
     }
 
-    JitConstants DeconvolutionKernelBase::GetJitConstants(const DeconvolutionParams& params) const
+    JitConstants DeconvolutionKernelBase::GetJitConstants(const deconvolution_params& params) const
     {
         JitConstants jit = WeightBiasKernelBase::GetJitConstants(params);
         const auto& dp = params.deconvParams;
@@ -63,7 +63,7 @@ namespace kernel_selector
         return jit;
     }
 
-    DeconvolutionKernelBase::DispatchData DeconvolutionKernelBase::SetDefault(const DeconvolutionParams& params) const
+    DeconvolutionKernelBase::DispatchData DeconvolutionKernelBase::SetDefault(const deconvolution_params& params) const
     {
         auto batch_size = params.output.Batch().v;
         auto output_features = params.output.Feature().v;
@@ -91,7 +91,7 @@ namespace kernel_selector
     {
         assert(params.GetType() == KernelType::DECONVOLUTION);
 
-        const DeconvolutionParams& orgParams = static_cast<const DeconvolutionParams&>(params);
+        const deconvolution_params& orgParams = static_cast<const deconvolution_params&>(params);
 
         const std::vector<WeightsLayout> weightsLayouts = {
             WeightsLayout::oiyx,
@@ -101,8 +101,8 @@ namespace kernel_selector
         };
 
         DispatchData runInfo = SetDefault(orgParams);
-        KernelData kd = KernelData::Default<DeconvolutionParams>(params);
-        DeconvolutionParams& newParams = *static_cast<DeconvolutionParams*>(kd.params.get());
+        KernelData kd = KernelData::Default<deconvolution_params>(params);
+        deconvolution_params& newParams = *static_cast<deconvolution_params*>(kd.params.get());
 
         bool succeed = UpdateWeightsParams(
             newParams,

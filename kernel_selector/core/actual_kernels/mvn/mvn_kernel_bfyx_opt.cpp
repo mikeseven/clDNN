@@ -35,7 +35,7 @@ namespace kernel_selector
         return k;
     }
 
-    MVNKernelBfyxOpt::Parent::DispatchData MVNKernelBfyxOpt::SetDefault(const MVNParams& params) const
+    MVNKernelBfyxOpt::Parent::DispatchData MVNKernelBfyxOpt::SetDefault(const mvn_params& params) const
     {
         DispatchData kd;
 
@@ -81,9 +81,9 @@ namespace kernel_selector
         return kd;
     }
 
-    JitConstants MVNKernelBfyxOpt::GetJitConstants(const MVNParams& params, MVNKernelBase::DispatchData kd) const
+    JitConstants MVNKernelBfyxOpt::GetJitConstants(const mvn_params& params, MVNKernelBase::DispatchData kd) const
     {
-        auto jit = MakeMVNJitConstants(params);
+        auto jit = MVNKernelBase::GetJitConstants(params, kd);
 
         jit.AddConstants({
             MakeJitConstant("ITEMS_NUM",      kd.itemsNum),

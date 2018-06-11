@@ -29,13 +29,22 @@ namespace kernel_selector
 		return true;
 	}
 
-	JitConstants ArgMaxMinKernelBase::GetJitConstants(const ArgMaxMinParams& params) const
+	JitConstants ArgMaxMinKernelBase::GetJitConstants(const arg_max_min_params& params) const
 	{
-		JitConstants mem_consts = MakeArgMaxJitConstants(params);
-		return mem_consts;
+        JitConstants jit = MakeBaseParamsJitConstants(params);
+
+        const auto& pp = params.argMaxParams;
+
+        jit.AddConstants({
+            MakeJitConstant("TOP_K", pp.topK),
+            MakeJitConstant(toString(pp.argMaxMinAxis) + "_AXIS", 1),
+            pp.argMaxMinOut == ArgMaxMinOut::MAX ? MakeJitConstant("MAX_OUT", 1) : MakeJitConstant("MIN_OUT", 1)
+        });
+
+        return jit;
 	}
 
-	ArgMaxMinKernelBase::DispatchData ArgMaxMinKernelBase::SetDefault(const ArgMaxMinParams& params) const
+	ArgMaxMinKernelBase::DispatchData ArgMaxMinKernelBase::SetDefault(const arg_max_min_params& params) const
 	{
 		DispatchData kd;
 
@@ -60,11 +69,11 @@ namespace kernel_selector
 			return{};
 		}
 
-		const ArgMaxMinParams& orgParams = static_cast<const ArgMaxMinParams&>(params);
+		const arg_max_min_params& orgParams = static_cast<const arg_max_min_params&>(params);
 
 		DispatchData runInfo = SetDefault(orgParams);
 
-		KernelData kd = KernelData::Default<ArgMaxMinParams>(params);
+		KernelData kd = KernelData::Default<arg_max_min_params>(params);
 
 		auto cldnn_jit = GetJitConstants(orgParams);
 		auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);

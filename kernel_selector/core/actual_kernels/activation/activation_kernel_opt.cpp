@@ -34,7 +34,7 @@ namespace kernel_selector {
         return k;
     }
 
-    ActivationKernelOpt::Parent::DispatchData ActivationKernelOpt::SetDefault(const ActivationParams& params) const
+    ActivationKernelOpt::Parent::DispatchData ActivationKernelOpt::SetDefault(const activation_params& params) const
     {
         auto runInfo = Parent::SetDefault(params);
 
@@ -64,7 +64,7 @@ namespace kernel_selector {
             return false;
         }
 
-        const ActivationParams& params = static_cast<const ActivationParams&>(p);
+        const activation_params& params = static_cast<const activation_params&>(p);
 
         const auto totalSize = params.inputs[0].LogicalSize();
         if ((totalSize % NUM_COLS_WI) != 0 ||
@@ -83,9 +83,9 @@ namespace kernel_selector {
         return true;
     }
 
-    JitConstants ActivationKernelOpt::GetJitConstants(const ActivationParams& params, DispatchData) const
+    JitConstants ActivationKernelOpt::GetJitConstants(const activation_params& params, DispatchData kd) const
     {
-        auto jit = MakeActivationJitConstants(params);
+        auto jit = ActivationKernelBase::GetJitConstants(params, kd);
 
         jit.AddConstant(MakeJitConstant("NUM_COLS_WI", NUM_COLS_WI));
 

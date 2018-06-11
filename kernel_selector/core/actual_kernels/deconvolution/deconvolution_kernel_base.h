@@ -22,11 +22,11 @@
 namespace kernel_selector 
 {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // DeconvolutionParams
+    // deconvolution_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct DeconvolutionParams : public WeightBiasParams
+    struct deconvolution_params : public WeightBiasParams
     {
-        DeconvolutionParams() : WeightBiasParams(KernelType::DECONVOLUTION), deconvParams() {}
+        deconvolution_params() : WeightBiasParams(KernelType::DECONVOLUTION), deconvParams() {}
 
         struct DedicatedParams
         {
@@ -67,11 +67,11 @@ namespace kernel_selector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // DeconvolutionOptionalParams
+    // deconvolution_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct DeconvolutionOptionalParams : WeightsBiasOptionalParams
+    struct deconvolution_optional_params : WeightsBiasOptionalParams
     {
-        DeconvolutionOptionalParams() : WeightsBiasOptionalParams(KernelType::DECONVOLUTION) {}
+        deconvolution_optional_params() : WeightsBiasOptionalParams(KernelType::DECONVOLUTION) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -87,7 +87,7 @@ namespace kernel_selector
     
     protected:
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const;
-        virtual JitConstants GetJitConstants(const DeconvolutionParams& params) const;
-        virtual DispatchData SetDefault(const DeconvolutionParams& params) const;
+        virtual JitConstants GetJitConstants(const deconvolution_params& params) const;
+        virtual DispatchData SetDefault(const deconvolution_params& params) const;
     };
 }
