@@ -171,13 +171,15 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
     standard_cmdline_options.add_options()
         ("input", bpo::value<std::string>()->value_name("<input-dir>"),
             "Path to input directory containing images to classify (mandatory when running classification).")
+		("serialization", bpo::value<std::string>()->value_name("<network name>")->default_value(""),
+			"Name for serialization process.")
         ("batch", bpo::value<std::uint32_t>()->value_name("<batch-size>")->default_value(8),
             "Size of a group of images that are classified together (large batch sizes have better performance).")
         ("loop", bpo::value<std::uint32_t>()->value_name("<loop-count>")->default_value(1),
             "Number of iterations to run each execution. Can be used for robust benchmarking. (default 1)")
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
-            "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, resnet, microbench.")
+            "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, resnet, microbench_conv, microbench_lstm.")
         ("run_until_primitive", bpo::value<std::string>()->value_name("<primitive_name>"),
             "Runs topology until specified primitive.")
         ("run_single_layer", bpo::value<std::string>()->value_name("<primitive_name>"),
@@ -196,7 +198,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Dump informations about stages of graph compilation to files in .graph format.\n"
             "Dump informations about primitives in graph to .info format.\n"
             "GraphViz is needed for converting .graph files to pdf format. (example command line in cldnn_dumps folder: dot -Tpdf cldnn_program_1_0_init.graph -o outfile.pdf\n")
-        ("log_engine", bpo::bool_switch(),
+		("log_engine", bpo::bool_switch(),
             "Log engine actions during execution of a network.")
         ("dump_sources", bpo::bool_switch(),
             "Dump ocl source code per compilation.")
@@ -226,6 +228,20 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Disables memory reuse within primitves.")
         ("perf_per_watt", bpo::bool_switch(),
             "Triggers power consumption measuring and outputing frames per second per watt.")
+        ("lstm_input_size", bpo::value<std::uint32_t>()->value_name("<input_size>")->default_value(10),
+            "LSTM microbench input size.")
+        ("lstm_hidden_size", bpo::value<std::uint32_t>()->value_name("<hidden_size>")->default_value(7),
+            "LSTM microbench hidden size.")
+        ("lstm_sequence_len", bpo::value<std::uint32_t>()->value_name("<seq_len>")->default_value(1),
+            "LSTM sequence length.")
+        ("lstm_batch_size", bpo::value<std::uint32_t>()->value_name("<batch_size>")->default_value(1),
+            "LSTM batch size.")
+        ("lstm_no_biases", bpo::bool_switch(),
+            "LSTM disable use of biases.")
+        ("lstm_initial_hidden", bpo::bool_switch(),
+            "LSTM use initial hidden tensor.")
+        ("lstm_initial_cell", bpo::bool_switch(),
+            "LSTM use initial cell tensor.")
         ("version", "Show version of the application.")
         ("help", "Show help message and available command-line options.");
 
@@ -298,7 +314,8 @@ int main(int argc, char* argv[])
 {
     namespace bpo = boost::program_options;
     namespace bfs = boost::filesystem;
-    bool microbench = false;
+    bool microbench_conv = false;
+    bool microbench_lstm = false;
     // TODO: create header file for all examples
     extern void alexnet(const execution_params &ep);
     extern void vgg16(const execution_params &ep);
@@ -315,7 +332,8 @@ int main(int argc, char* argv[])
     try
     {
         parsed_args = parse_cmdline_options(options, argc, argv);
-        microbench = parsed_args["model"].as<std::string>() == "microbench";
+        microbench_conv = parsed_args["model"].as<std::string>() == "microbench_conv";
+        microbench_lstm = parsed_args["model"].as<std::string>() == "microbench_lstm";
         if (parsed_args.count("help"))
         {
             std::cerr << options.version_message() << "\n\n";
@@ -327,9 +345,9 @@ int main(int argc, char* argv[])
             std::cerr << options.version_message() << std::endl;
             return 0;
         }
-        if (!parsed_args.count("input") && !parsed_args.count("convert") && !microbench)
+        if (!parsed_args.count("input") && !parsed_args.count("convert") && !microbench_conv && !microbench_lstm)
         {
-            std::cerr << "ERROR: none of required options was specified (either --input or microbench\n";
+            std::cerr << "ERROR: none of required options was specified (either --input or microbench_conv or microbench_lstm\n";
             std::cerr << "       --convert is needed)!!!\n\n";
             std::cerr << options.help_message() << std::endl;
             return 1;
@@ -386,7 +404,7 @@ int main(int argc, char* argv[])
             // relative to current working directory or absolute - if specified).
             auto weights_dir = std::string(); 
             
-            if (!microbench) // don't need weights for microbench.
+            if (!microbench_conv && !microbench_lstm) // don't need weights for microbench_conv or microbench_lstm.
             {
                 if (parsed_args.count("weights"))
                     weights_dir = bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string();
@@ -418,7 +436,7 @@ int main(int argc, char* argv[])
             ep.input_dir = input_dir;
             ep.weights_dir = weights_dir;
         }
-        else if (microbench)
+        else if (microbench_conv || microbench_lstm)
         {
             ep.input_dir = "NA";
             ep.weights_dir = "NA";
@@ -447,6 +465,7 @@ int main(int argc, char* argv[])
         }
 
         ep.topology_name = parsed_args["model"].as<std::string>();
+		ep.serialization = parsed_args["serialization"].as<std::string>();
         ep.batch = parsed_args["batch"].as<std::uint32_t>();
         ep.meaningful_kernels_names = parsed_args["meaningful_names"].as<bool>();
         ep.profiling = parsed_args["profiling"].as<bool>();
@@ -472,6 +491,16 @@ int main(int argc, char* argv[])
         std::uint32_t print = parsed_args["print_type"].as<std::uint32_t>();
         ep.print_type = (PrintType)((print >= (std::uint32_t)PrintType::PrintType_count) ? 0 : print);
 
+        if (microbench_lstm) {
+            ep.lstm_ep.lstm_input_size = parsed_args["lstm_input_size"].as<std::uint32_t>();
+            ep.lstm_ep.lstm_hidden_size = parsed_args["lstm_hidden_size"].as<std::uint32_t>();
+            ep.lstm_ep.lstm_sequence_len = parsed_args["lstm_sequence_len"].as<std::uint32_t>();
+            ep.lstm_ep.lstm_batch_size = parsed_args["lstm_batch_size"].as<std::uint32_t>();
+            ep.lstm_ep.lstm_initial_cell = parsed_args["lstm_initial_cell"].as<bool>();
+            ep.lstm_ep.lstm_initial_hidden = parsed_args["lstm_initial_hidden"].as<bool>();
+            ep.lstm_ep.lstm_no_biases = parsed_args["lstm_no_biases"].as<bool>();
+        }
+
         if (!ep.run_single_kernel_name.empty())
             ep.meaningful_kernels_names = true;
 
@@ -481,8 +510,9 @@ int main(int argc, char* argv[])
             ep.topology_name == "googlenet" ||
             ep.topology_name == "gender" ||
             ep.topology_name == "squeezenet" ||
-            ep.topology_name == "microbench" ||
-            ep.topology_name == "resnet50")
+            ep.topology_name == "resnet50" ||
+            ep.topology_name == "microbench_conv" ||
+            ep.topology_name == "microbench_lstm")
         {
             run_topology(ep);
             return 0;

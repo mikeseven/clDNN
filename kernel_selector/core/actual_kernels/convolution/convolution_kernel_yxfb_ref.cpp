@@ -16,7 +16,7 @@
 
 #include "convolution_kernel_yxfb_ref.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
 
     ParamsKey ConvolutionKernel_yxfb_Ref::GetSupportedKey() const

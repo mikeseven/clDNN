@@ -18,7 +18,7 @@
 
 #include "max_unpooling_kernel_base.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {    
     class MaxUnpoolingKernelGPURef : public MaxUnpoolingKernelBase
     {

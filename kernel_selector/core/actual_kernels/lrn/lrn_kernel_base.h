@@ -19,8 +19,49 @@
 #include "common_kernel_base.h"
 #include "kernel_selector_params.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // lrn_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct lrn_params : public BaseParams
+    {
+        lrn_params() : BaseParams(KernelType::LRN), lrnParams() {}
+
+        struct DedicatedParams
+        {
+            LRNMode             normMode = LRNMode::ACROSS_CHANNEL;
+            KernelDividerMode   divMode = KernelDividerMode::DONT_CARE;
+            float               alpha = 0.f;
+            float               beta = 0.f;
+            float               k = 0.f;
+            uint32_t            localSize = 0;
+        };
+
+        DedicatedParams lrnParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            ParamsKey k = BaseParams::GetParamsKey();
+
+            k.EnableLRNMode(lrnParams.normMode);
+            k.EnableLRNKernelDividerMode(lrnParams.divMode);
+
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // lrn_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct lrn_optional_params : OptionalParams
+    {
+        lrn_optional_params() : OptionalParams(KernelType::LRN) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // lrn_kernel_base
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class LRNKernelBase : public CommonKernelBase
     {
     public:
@@ -31,8 +72,8 @@ namespace KernelSelector
 
     protected:
         virtual bool Validate(const Params& p, const OptionalParams& o) const override;
-        virtual JitConstants GetJitConstants(const LRNParams& params, DispatchData kd) const;
-        virtual DispatchData SetDefault(const LRNParams& params) const;
+        virtual JitConstants GetJitConstants(const lrn_params& params, DispatchData kd) const;
+        virtual DispatchData SetDefault(const lrn_params& params) const;
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimatedTime) const;
     };
 }

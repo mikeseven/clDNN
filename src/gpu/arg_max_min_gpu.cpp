@@ -19,6 +19,8 @@
 #include "implementation_map.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
+#include "arg_max_min/arg_max_min_kernel_selector.h"
+#include "arg_max_min/arg_max_min_kernel_base.h"
 #include "kernel_runner.h"
 
 namespace cldnn {
@@ -86,7 +88,7 @@ namespace cldnn {
 					argm_params.argMaxParams.argMaxMinOut = kernel_selector::argm_output::MIN;
 				auto& kernel_selector = kernel_selector::arg_max_min_kernel_selector::Instance();
 
-				KernelSelector::KernelsData best_kernels = kernel_selector.GetBestKernels(argm_params, argm_optional_params);
+				kernel_selector::KernelsData best_kernels = kernel_selector.GetBestKernels(argm_params, argm_optional_params);
 
 				CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 

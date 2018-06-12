@@ -17,7 +17,7 @@
 #include "fully_connected_kernel_bf_io_gemm.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     ParamsKey FullyConnected_bf_io_GEMM::GetSupportedKey() const
     {
@@ -39,7 +39,7 @@ namespace KernelSelector {
         return k;
     }
 
-    std::unique_ptr<FullyConnected_bf_io_GEMM::Parent::DispatchData> FullyConnected_bf_io_GEMM::SetDefault(const FullyConnectedParams& params) const
+    std::unique_ptr<FullyConnected_bf_io_GEMM::Parent::DispatchData> FullyConnected_bf_io_GEMM::SetDefault(const fully_connected_params& params) const
     {
         auto runInfo = Parent::SetDefault(params);
 
@@ -62,7 +62,7 @@ namespace KernelSelector {
         return std::move(runInfo);
     }
 
-    JitConstants FullyConnected_bf_io_GEMM::GetJitConstants(const FullyConnectedParams& params, const DispatchData& kd) const
+    JitConstants FullyConnected_bf_io_GEMM::GetJitConstants(const fully_connected_params& params, const DispatchData& kd) const
     {
         auto jit = Parent::GetJitConstants(params, kd);
 

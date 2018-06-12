@@ -17,7 +17,7 @@
 #include "reorg_yolo_kernel_selector.h"
 #include "reorg_yolo_kernel_ref.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     ReorgYoloKernelSelctor::ReorgYoloKernelSelctor()
     {

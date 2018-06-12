@@ -14,7 +14,7 @@
 
 #include "arg_max_min_kernel_axis.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     ParamsKey ArgMaxMinKernelAxis::GetSupportedKey() const
     {
@@ -40,7 +40,7 @@ namespace KernelSelector
             return{};
         }
 
-        const ArgMaxMinParams& orgParams = static_cast<const ArgMaxMinParams&>(params);
+        const arg_max_min_params& orgParams = static_cast<const arg_max_min_params&>(params);
 
         DispatchData runInfo;
         runInfo.fp16UnitUsed = orgParams.inputs[0].GetDType() == Datatype::F16;
@@ -67,7 +67,7 @@ namespace KernelSelector
         runInfo.lws1 = 1;
         runInfo.lws2 = 1;
 
-        KernelData kd = KernelData::Default<ArgMaxMinParams>(params);
+        KernelData kd = KernelData::Default<arg_max_min_params>(params);
 
         auto cldnn_jit = GetJitConstants(orgParams);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);

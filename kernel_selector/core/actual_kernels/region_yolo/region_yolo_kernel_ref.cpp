@@ -17,7 +17,7 @@
 #include "region_yolo_kernel_ref.h"
 #include "kernel_selector_utils.h" 
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     
     ParamsKey RegionYoloKernelRef::GetSupportedKey() const

@@ -17,14 +17,53 @@
 #include "convolution_grad_weights_kernel_base.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
-    JitConstants ConvolutionGradWeightsKernelBase::GetJitConstants(const ConvolutionGradWeightsParams& params) const
+    std::string convolution_grad_weights_params::to_string() const
     {
-        return MakeConvolutionGradWeightsJitConstants(params);
+        std::stringstream s;
+
+        s << BaseParams::to_string() << "_";
+        if (bias.empty())
+        {
+            s << "no_bias" << "_";
+        }
+        else
+        {
+            s << "bias_" << bias[0].PhysicalSize() << "_";
+        }
+        s << convGradWeightsParams.filterSize.x << "_" << convGradWeightsParams.filterSize.y << "_";
+        s << convGradWeightsParams.stride.x << "_" << convGradWeightsParams.stride.y << "_";
+        s << convGradWeightsParams.dilation.x << "_" << convGradWeightsParams.dilation.y << "_";
+        s << convGradWeightsParams.padding.x << "_" << convGradWeightsParams.padding.y << "_";
+        s << convGradWeightsParams.split;
+
+        return s.str();
     }
 
-    ConvolutionGradWeightsKernelBase::DispatchData ConvolutionGradWeightsKernelBase::SetDefault(const ConvolutionGradWeightsParams& params) const
+    JitConstants ConvolutionGradWeightsKernelBase::GetJitConstants(const convolution_grad_weights_params& params) const
+    {
+        JitConstants jit = WeightBiasKernelBase::GetJitConstants(params);
+        const auto& dp = params.convGradWeightsParams;
+        const auto& padding = dp.padding;
+        const auto& input = params.inputs[0];
+
+        int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - (dp.filterSize.x - 1 + padding.x)*input.X().pitch - (dp.filterSize.y - 1 + padding.y)*input.Y().pitch;
+        input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);
+
+        jit.AddConstants({
+            MakeJitConstant("STRIDE",                       dp.stride),
+            MakeJitConstant("PADDING",                      dp.padding),
+            MakeJitConstant("DILATION",                     dp.dilation),
+            MakeJitConstant("FILTER_ARRAY_NUM",             dp.split),
+            MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
+            MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      dp.depthwiseSeparableOpt),
+        });
+
+        return jit;
+    }
+
+    ConvolutionGradWeightsKernelBase::DispatchData ConvolutionGradWeightsKernelBase::SetDefault(const convolution_grad_weights_params& params) const
     {
         auto input_features = params.weights.IFM().v;
         auto output_features = params.weights.OFM().v;
@@ -52,7 +91,7 @@ namespace KernelSelector
     {
         assert(params.GetType() == KernelType::CONVOLUTION_GRAD_WEIGHTS);
 
-        const ConvolutionGradWeightsParams& orgParams = static_cast<const ConvolutionGradWeightsParams&>(params);
+        const convolution_grad_weights_params& orgParams = static_cast<const convolution_grad_weights_params&>(params);
 
         const std::vector<WeightsLayout> weightsLayouts = {
             WeightsLayout::oiyx,
@@ -62,8 +101,8 @@ namespace KernelSelector
         };
 
         DispatchData runInfo = SetDefault(orgParams);
-        KernelData kd = KernelData::Default<ConvolutionGradWeightsParams>(params);
-        ConvolutionGradWeightsParams& newParams = *static_cast<ConvolutionGradWeightsParams*>(kd.params.get());
+        KernelData kd = KernelData::Default<convolution_grad_weights_params>(params);
+        convolution_grad_weights_params& newParams = *static_cast<convolution_grad_weights_params*>(kd.params.get());
 
         bool succeed = UpdateWeightsParams(
             newParams,

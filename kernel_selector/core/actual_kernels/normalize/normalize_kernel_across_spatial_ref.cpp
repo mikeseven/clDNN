@@ -16,7 +16,7 @@
 
 #include "normalize_kernel_across_spatial_ref.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey NormalizeKernelAcrossSpatialRef::GetSupportedKey() const
     {

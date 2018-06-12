@@ -17,7 +17,7 @@
 #include "convolution_kernel_DPAS_blocks.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
     
     ParamsKey ConvolutionKernel_DPAS_blocks::GetSupportedKey() const
     {
@@ -63,7 +63,7 @@ namespace KernelSelector {
 
         constexpr size_t sub_group_size = 8;
 
-        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
+        const convolution_params& params = static_cast<const convolution_params&>(p);
         const auto cp = params.convParams;
 
         if (cp.stride.x == 1 && cp.stride.y == 1)
@@ -148,7 +148,7 @@ namespace KernelSelector {
         return std::make_pair(input_block_array_size, input_block_read_width);
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_DPAS_blocks::SetDefault(const ConvolutionParams& arg, int) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_DPAS_blocks::SetDefault(const convolution_params& arg, int) const
     {
         // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
         constexpr size_t sub_group_size = 8;
@@ -192,7 +192,7 @@ namespace KernelSelector {
         return runInfo;
     }
 
-    JitConstants ConvolutionKernel_DPAS_blocks::GetJitConstants(const ConvolutionParams& params, DispatchData runInfo) const
+    JitConstants ConvolutionKernel_DPAS_blocks::GetJitConstants(const convolution_params& params, DispatchData runInfo) const
     {
         auto jit = Parent::GetJitConstants(params, runInfo);
 

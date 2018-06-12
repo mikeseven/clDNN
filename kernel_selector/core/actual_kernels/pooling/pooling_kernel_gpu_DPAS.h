@@ -18,7 +18,7 @@
 
 #include "pooling_kernel_base.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {    
     class PoolingKerneGPU_DPAS : public PoolingKernelBase
     {
@@ -28,6 +28,6 @@ namespace KernelSelector
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
-        DispatchData SetDefault(const PoolingParams& params) const override;
+        DispatchData SetDefault(const pooling_params& params) const override;
     };
 }

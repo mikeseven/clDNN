@@ -22,9 +22,9 @@
 #include "pooling_kernel_gpu_byxf_padding_opt.h"
 #include "pooling_kernel_gpu_DPAS.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
-    PoolingKernelSelctor::PoolingKernelSelctor()
+    pooling_kernel_selector::pooling_kernel_selector()
     {
         Attach<PoolingKernelGPURef>();
         //Attach<PoolingKernelGPUAverageOpt>(); TODO: fix the kernel as it reads out of bounds now
@@ -34,7 +34,7 @@ namespace KernelSelector {
         Attach<PoolingKerneGPU_DPAS>();
     }
 
-    KernelsData PoolingKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData pooling_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::POOLING);
     }

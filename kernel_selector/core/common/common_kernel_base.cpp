@@ -20,7 +20,7 @@
 #pragma warning disable: 177
 #endif
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     namespace {
 

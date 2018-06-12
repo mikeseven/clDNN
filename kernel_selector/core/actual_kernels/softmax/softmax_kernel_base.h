@@ -19,8 +19,41 @@
 #include "common_kernel_base.h"
 #include "kernel_selector_params.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // SoftMaxParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct softmax_params : public BaseParams
+    {
+        softmax_params() : BaseParams(KernelType::SOFT_MAX) {}
+
+        struct DedicatedParams
+        {
+            SoftmaxDim dim = SoftmaxDim::FEATURE;
+        };
+
+        DedicatedParams smParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            auto k = BaseParams::GetParamsKey();
+            k.EnableSoftmaxDim(smParams.dim);
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // softmax_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct softmax_optional_params : OptionalParams
+    {
+        softmax_optional_params() : OptionalParams(KernelType::SOFT_MAX) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // SoftmaxKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class SoftmaxKernelBase : public CommonKernelBase
     {
     public:
@@ -38,8 +71,8 @@ namespace KernelSelector
 
     protected:
         virtual bool Validate(const Params&, const OptionalParams&) const;
-        virtual JitConstants GetJitConstants(const SoftmaxParams& params, DispatchData kd) const;
-        virtual DispatchData SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const;
+        virtual JitConstants GetJitConstants(const softmax_params& params, DispatchData kd) const;
+        virtual DispatchData SetDefault(const softmax_params& params, const OptionalParams& optParams) const;
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& optParams) const;
     };
 
@@ -52,6 +85,6 @@ namespace KernelSelector
 
     protected:
         virtual bool Validate(const Params&, const OptionalParams&) const override;
-        virtual DispatchData SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const override;
+        virtual DispatchData SetDefault(const softmax_params& params, const OptionalParams& optParams) const override;
     };
 }

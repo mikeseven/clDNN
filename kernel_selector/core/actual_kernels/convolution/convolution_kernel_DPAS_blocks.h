@@ -18,7 +18,7 @@
 
 #include "convolution_kernel_base.h"
  
-namespace KernelSelector {
+namespace kernel_selector {
     
     class ConvolutionKernel_DPAS_blocks : public ConvolutionKernelBase
     {
@@ -31,9 +31,9 @@ namespace KernelSelector {
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
-        JitConstants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const override;
-        DispatchData SetDefault(const ConvolutionParams& arg, int autoTuneIndex = -1) const override;
-        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const ConvolutionParams&) const override
+        JitConstants GetJitConstants(const convolution_params& params, DispatchData kd) const override;
+        DispatchData SetDefault(const convolution_params& arg, int autoTuneIndex = -1) const override;
+        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&) const override
         {
             return{
                 WeightsLayout::os_is_yx_isa8_osv8_isv4,

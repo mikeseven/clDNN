@@ -18,7 +18,7 @@
 #include "kernel_selector_utils.h"
 #include "common_tools.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     bool ConvolutionKernelBase::Validate(const Params& p, const OptionalParams& o) const
     {
@@ -28,8 +28,8 @@ namespace KernelSelector
             return false;
         }
 
-        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
-        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(o);
+        const convolution_params& params = static_cast<const convolution_params&>(p);
+        const convolution_optional_params& optParams = static_cast<const convolution_optional_params&>(o);
 
         bool bSupportedWeightsLayout = false;
 
@@ -48,8 +48,40 @@ namespace KernelSelector
         return true;
     }
 
-    JitConstants ConvolutionKernelBase::GetJitConstants(const ConvolutionParams& params, ConvolutionKernelBase::DispatchData kd) const
+    JitConstants ConvolutionKernelBase::GetJitConstants(const convolution_params& params, ConvolutionKernelBase::DispatchData kd) const
     {
+        JitConstants mem_consts = WeightBiasKernelBase::GetJitConstants(params);
+        const auto& padding = params.convParams.padding;
+        const auto& input = params.inputs[0];
+
+        int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - padding.x*input.X().pitch - input.Y().pitch*padding.y;
+        input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);
+
+        mem_consts.AddConstants({
+            MakeJitConstant("STRIDE",                       params.convParams.stride),
+            MakeJitConstant("PADDING",                      params.convParams.padding),
+            MakeJitConstant("DILATION",                     params.convParams.dilation),
+            MakeJitConstant("FILTER_ARRAY_NUM",             params.convParams.split),
+            MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
+            MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      params.convParams.depthwiseSeparableOpt),
+            MakeJitConstant("QUANTIZATION_TERM",            params.convParams.int8_quantization),
+        });
+
+        if (params.convParams.int8_quantization)
+        {
+            mem_consts.AddConstants({ MakeJitConstant("W_QF", params.weights_quantization_factors[0]) });
+            mem_consts.AddConstants({ MakeJitConstant("I_QF",params.convParams.input_quantization_factor) });
+
+            if (params.convParams.output_calibration)
+            {
+                mem_consts.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.convParams.output_calibration));
+                mem_consts.AddConstant(MakeJitConstant("O_QF", params.output_calibration_factors[0]));
+
+            }
+            else
+                mem_consts.AddConstants({ MakeJitConstant("O_QF",       params.convParams.output_quantization_factor) });
+        }
+
         std::vector<uint32_t> unrollLoopParams{
             params.convParams.filterSize.x,
             params.convParams.filterSize.y,
@@ -63,7 +95,6 @@ namespace KernelSelector
 
         auto loopCount = *std::max_element(unrollLoopParams.begin(), unrollLoopParams.end());
 
-        JitConstants mem_consts = MakeConvolutionParamsJitConstants(params);
         JitConstants mem_consts_loop = MakeLoopUnrollParamsJitConstants(loopCount);
         mem_consts.Merge(mem_consts_loop);
 
@@ -138,13 +169,13 @@ namespace KernelSelector
         }
     }
 
-    bool ConvolutionKernelBase::CheckPitchForSplitOnly(const ConvolutionParams& params) const
+    bool ConvolutionKernelBase::CheckPitchForSplitOnly(const convolution_params& params) const
     {
         // TODO: it's better to add pitch+offset support than handle this case
         return CheckTensorForSplit(params.inputs[0], params.convParams.split);
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernelBase::SetDefault(const ConvolutionParams& params, int) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernelBase::SetDefault(const convolution_params& params, int) const
     {
         DispatchData kd;
 
@@ -190,8 +221,8 @@ namespace KernelSelector
             return{};
         }
 
-        KernelData kd = KernelData::Default<ConvolutionParams>(params);
-        ConvolutionParams& newParams = *static_cast<ConvolutionParams*>(kd.params.get());
+        KernelData kd = KernelData::Default<convolution_params>(params);
+        convolution_params& newParams = *static_cast<convolution_params*>(kd.params.get());
 
         if (NeedPaddedInput())
         {

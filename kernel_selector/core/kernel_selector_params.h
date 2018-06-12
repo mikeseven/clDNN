@@ -23,7 +23,7 @@
 #include "common_tools.h"
 #include "tensor_type.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     using DataTensor = Tensor::DataTensor;
     using WeightsTensor = Tensor::WeightsTensor;
@@ -162,6 +162,13 @@ namespace KernelSelector
                         {
                             uint32_t winograd : 1;
                         } reorder;
+                        struct lstm_gemm_t {
+                            uint32_t bias : 1;
+                            uint32_t hidden : 1;
+                        } lstm_gemm;
+                        struct lstm_elt_t {
+                            uint32_t cell : 1;
+                        } lstm_elt;
                     } dedicated;
                 } val;
                 uint64_t raw;
@@ -447,19 +454,19 @@ namespace KernelSelector
         {
             switch (m)
             {
-            case KernelSelector::LookUpTableAxis::BATCH:
+            case kernel_selector::LookUpTableAxis::BATCH:
                 key.restrict.val.dedicated.lookt.axisBatch = 1;
                 break;
-            case KernelSelector::LookUpTableAxis::FEATURE:
+            case kernel_selector::LookUpTableAxis::FEATURE:
                 key.restrict.val.dedicated.lookt.axisFeature = 1;
                 break;
-            case KernelSelector::LookUpTableAxis::X:
+            case kernel_selector::LookUpTableAxis::X:
                 key.restrict.val.dedicated.lookt.axisX = 1;
                 break;
-            case KernelSelector::LookUpTableAxis::Y:
+            case kernel_selector::LookUpTableAxis::Y:
                 key.restrict.val.dedicated.lookt.axisY = 1;
                 break;
-            case KernelSelector::LookUpTableAxis::XYF:
+            case kernel_selector::LookUpTableAxis::XYF:
                 key.restrict.val.dedicated.lookt.axisXYF = 1;
                 break;
             default:
@@ -656,6 +663,19 @@ namespace KernelSelector
                 break;
             }
         }
+
+        void EnableLSTMGEMMBias() {
+            key.restrict.val.dedicated.lstm_gemm.bias = 1;
+        }
+
+        void EnableLSTMGEMMHidden() {
+            key.restrict.val.dedicated.lstm_gemm.hidden = 1;
+        }
+
+        void EnableLSTMEltCell() {
+            key.restrict.val.dedicated.lstm_elt.cell = 1;
+        }
+
 
         void EnableConcatKernelPerInput()
         {
@@ -884,326 +904,6 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutionParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct WeightBiasParams : public BaseParams
-    {
-        WeightBiasParams(KernelType kt) : BaseParams(kt) {}
-
-        WeightsTensor weights;
-        MultiDataTensor bias;
-
-        virtual ParamsKey GetParamsKey() const override
-        {
-            ParamsKey k = BaseParams::GetParamsKey();
-
-            k.EnableInputWeightsType(weights.GetDType());
-            
-            // not needed - can be changed by reorder params
-            //k.EnableWeightsLayout(weights.layout);
-
-            assert(bias.size() <= 1);
-
-            if (bias.empty())
-            {
-                k.EnableNonBiasTerm();
-            }
-            else if (bias[0].GetLayout() == DataLayout::bf ||
-                     bias[0].GetLayout() == DataLayout::fb)
-            {
-                k.EnableBiasPerFeature();
-            }
-            else if (bias[0].GetLayout() == output.GetLayout())
-            {
-                k.EnableBiasPerOutput();
-            }
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutionParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutionParams : public WeightBiasParams
-    {
-        ConvolutionParams() : WeightBiasParams(KernelType::CONVOLUTION), convParams() {}
-    
-        struct DedicatedParams
-        {
-            uSize    filterSize;
-            uSize    stride;
-            uSize    dilation;
-            uSize    padding;
-            uint32_t winograd_tile_n;
-            uint32_t winograd_tile_m;
-            uint32_t winograd_input_tile_width;
-            uint32_t winograd_input_tile_height;
-            uint32_t split = 1;
-            bool     depthwiseSeparableOpt = false;
-            bool     transposed = false;
-            bool     int8_quantization = false;
-            bool     output_calibration = false;
-            float    input_quantization_factor = 1.0f;
-            float    output_quantization_factor = 1.0f;
-        };
-
-        DedicatedParams convParams;
-        MultiDataTensor weights_quantization_factors;
-        MultiDataTensor output_calibration_factors;
-        virtual std::string to_string() const override;
-
-        virtual ParamsKey GetParamsKey() const override
-        {
-            ParamsKey k = WeightBiasParams::GetParamsKey();
-
-            if (convParams.split > 1)
-            {
-                k.EnableSplitSupport();
-            }
-
-            if (convParams.dilation.x != 1 ||
-                convParams.dilation.y != 1)
-            {
-                k.EnableDilation();
-            }
-
-            if (convParams.depthwiseSeparableOpt)
-            {
-                k.EnableDepthwiseSeparableOpt();
-            }
-
-            if (convParams.transposed)
-            {
-                k.EnableTranspose();
-            }
-
-            if (convParams.int8_quantization)
-            {
-                k.EnableInt8Quantization();
-            }
-
-            if (convParams.output_calibration)
-            {
-                k.EnableOutputCalibration();
-            }
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // DeconvolutionParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct DeconvolutionParams : public WeightBiasParams
-    {
-        DeconvolutionParams() : WeightBiasParams(KernelType::DECONVOLUTION), deconvParams() {}
-
-        struct DedicatedParams
-        {
-            uSize    filterSize;
-            uSize    stride;
-            uSize    dilation;
-            uSize    padding;
-            uint32_t split = 1;
-            bool     depthwiseSeparableOpt = false;
-        };
-
-        DedicatedParams deconvParams;
-
-        virtual std::string to_string() const override;
-
-        virtual ParamsKey GetParamsKey() const override
-        {
-            ParamsKey k = WeightBiasParams::GetParamsKey();
-
-            if (deconvParams.split > 1)
-            {
-                k.EnableSplitSupport();
-            }
-
-            if (deconvParams.dilation.x != 1 ||
-                deconvParams.dilation.y != 1)
-            {
-                k.EnableDilation();
-            }
-
-            if (deconvParams.depthwiseSeparableOpt)
-            {
-                k.EnableDepthwiseSeparableOpt();
-            }
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // LRNParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LRNParams : public BaseParams
-    {
-        LRNParams() : BaseParams(KernelType::LRN), lrnParams() {}
-
-        struct DedicatedParams
-        {
-            LRNMode             normMode    = LRNMode::ACROSS_CHANNEL;
-            KernelDividerMode   divMode     = KernelDividerMode::DONT_CARE;
-            float               alpha       = 0.f;
-            float               beta        = 0.f;
-            float               k           = 0.f;
-            uint32_t            localSize   = 0;
-        };
-
-        DedicatedParams lrnParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            ParamsKey k = BaseParams::GetParamsKey();
-
-            k.EnableLRNMode(lrnParams.normMode);
-            k.EnableLRNKernelDividerMode(lrnParams.divMode);
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // NormalizeParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct NormalizeParams : public BaseParams
-    {
-        NormalizeParams() : BaseParams(KernelType::NORMALIZE), normParams() {}
-
-        struct DedicatedParams
-        {
-            NormalizeMode normMode = NormalizeMode::ACROSS_SPATIAL;
-            float         epsilon  = 1e-10f;
-            DataTensor    scaleTable;
-        };
-
-        DedicatedParams normParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            ParamsKey k = BaseParams::GetParamsKey();
-
-            k.EnableNormalizeMode(normParams.normMode);
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // MVNParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct MVNParams : public BaseParams
-    {
-        MVNParams() : BaseParams(KernelType::MVN), mvnParams() {}
-
-        struct DedicatedParams
-        {
-            MVNMode mvnMode = MVNMode::WITHIN_CHANNELS;
-            bool mvnNormalizeVariance = true;
-            float         epsilon = 1e-10f;
-        };
-
-        DedicatedParams mvnParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            ParamsKey k = BaseParams::GetParamsKey();
-
-            k.EnableMVNMode(mvnParams.mvnMode);
-
-            if (mvnParams.mvnNormalizeVariance)
-                k.EnableMVNNormalizeVariance();
-
-            return k;
-        }
-    };
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// ArgMaxMinParams
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	struct ArgMaxMinParams : public BaseParams
-	{
-		ArgMaxMinParams() : BaseParams(KernelType::ARG_MAX_MIN), argMaxParams() {}
-
-		struct DedicatedParams
-		{
-			ArgMaxMinAxis	argMaxMinAxis	= ArgMaxMinAxis::XYF;
-			ArgMaxMinOut	argMaxMinOut	= ArgMaxMinOut::MAX;
-			uint32_t		topK			= 1;
-		};
-
-		DedicatedParams argMaxParams;
-
-		virtual ParamsKey GetParamsKey() const
-		{
-			ParamsKey k = BaseParams::GetParamsKey();
-			k.EnableArgMaxMinAxis(argMaxParams.argMaxMinAxis);
-
-			return k;
-		}
-	};
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // LookUpTableParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LookUpTableParams : public BaseParams
-    {
-        LookUpTableParams() : BaseParams(KernelType::LOOKUP_TABLE), lookUpTableParams() {}
-
-        struct DedicatedParams
-        {
-            LookUpTableAxis	lookUpTableAxis = LookUpTableAxis::XYF;
-            uint32_t		numberOfValues;
-            DataTensor      inputIndices;
-        };
-
-        DedicatedParams lookUpTableParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            ParamsKey k = BaseParams::GetParamsKey();
-            k.EnableLookUpTableAxis(lookUpTableParams.lookUpTableAxis);
-            k.EnableLookUpTableIndicesFormat(lookUpTableParams.inputIndices.GetDType());
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // PoolingParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct PoolingParams : public BaseParams
-    {
-        PoolingParams() : BaseParams(KernelType::POOLING), poolParams() {}
-
-        struct DedicatedParams
-        {
-            PoolType            poolType        = PoolType::MAX;
-            PoolRemainder       remainderAction = PoolRemainder::FLOOR;
-            KernelDividerMode   divMode         = KernelDividerMode::DONT_CARE;
-            uSize               poolSize;
-            uSize               poolStride;
-            uSize               poolPad;
-        };
-
-        DedicatedParams poolParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            ParamsKey k = BaseParams::GetParamsKey();
-
-            k.EnablePoolType(poolParams.poolType);
-            k.EnablePoolRemainder(poolParams.remainderAction);
-            k.EnablePoolKernelDividerMode(poolParams.divMode);
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ROIPoolingParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct ROIPoolingParams : public BaseParams
@@ -1224,90 +924,6 @@ namespace KernelSelector
         virtual ParamsKey GetParamsKey() const
         {
             return BaseParams::GetParamsKey();
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // FullyConnectedParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedParams : public WeightBiasParams
-    {
-        FullyConnectedParams() : WeightBiasParams(KernelType::FULLY_CONNECTED) {}
-
-        struct DedicatedParams
-        {
-            bool     int8_quantization = false;
-            bool     output_calibration = false;
-            float    input_quantization_factor = 1.0f;
-            float    output_quantization_factor = 1.0f;
-        };
-
-        DedicatedParams fcParams;
-        MultiDataTensor weights_quantization_factors;
-        MultiDataTensor output_calibration_factors;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            ParamsKey k = WeightBiasParams::GetParamsKey();
-
-            if (fcParams.int8_quantization)
-            {
-                k.EnableInt8Quantization();
-            }
-
-            if (fcParams.output_calibration)
-            {
-                k.EnableOutputCalibration();
-            }
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ActivationParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ActivationParams : public BaseParams
-    {
-        ActivationParams() : BaseParams(KernelType::ACTIVATION), actParams() {}
-
-        struct DedicatedParams
-        {
-            MultiDataTensor inputActivationParams;
-        };
-
-        DedicatedParams actParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            auto k = BaseParams::GetParamsKey();
-            if (!actParams.inputActivationParams.empty())
-            {
-                k.EnableActivationAdditionalParamsAsInput();
-            }
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // SoftMaxParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct SoftmaxParams : public BaseParams
-    {
-        SoftmaxParams() : BaseParams(KernelType::SOFT_MAX) {}
-
-        struct DedicatedParams
-        {
-            SoftmaxDim dim = SoftmaxDim::FEATURE;
-        };
-
-        DedicatedParams smParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            auto k = BaseParams::GetParamsKey();
-            k.EnableSoftmaxDim(smParams.dim);
-            return k;
         }
     };
 
@@ -1353,102 +969,6 @@ namespace KernelSelector
         virtual ParamsKey GetParamsKey() const
         {
             auto k = BaseParams::GetParamsKey();
-            return k;
-        }
-    };
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // EltwiseParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct EltwiseParams : public BaseParams
-    {
-        EltwiseParams() : BaseParams(KernelType::ELTWISE), eltwiseParams() {}
-
-        struct InputType
-        {
-            EltwiseInputMode mode       = EltwiseInputMode::INPUT_BUFFER;
-            uint32_t         index      = 0;    // for inputs results;
-            uint32_t         tmpIndex   = 0;    // for temp results;
-            float            scalar     = 0.f;
-
-            static InputType Buffer(uint32_t index) 
-            {
-                EltwiseParams::InputType input;
-                input.mode = EltwiseInputMode::INPUT_BUFFER;
-                input.index = index;
-                return input;
-            }
-
-            static InputType UnorderedAccessBuffer(uint32_t index, uint32_t tmpIndex)
-            {
-                EltwiseParams::InputType input;
-                input.mode = EltwiseInputMode::UNORDERED_ACCESS_INPUT_BUFFER;
-                input.index = index;
-                input.tmpIndex = tmpIndex;
-                return input;
-            }
-
-            static InputType Intermediate(uint32_t tmpIndex)
-            {
-                EltwiseParams::InputType input;
-                input.mode = EltwiseInputMode::INTERMEDIATE_RESULTS_INDEX;
-                input.tmpIndex = tmpIndex;
-                return input;
-            }
-
-            static InputType Scalar(float s)
-            {
-                EltwiseParams::InputType input;
-                input.mode = EltwiseInputMode::SCALAR;
-                input.scalar = s;
-                return input;
-            }
-
-            static InputType OutBuffer()
-            {
-                EltwiseParams::InputType output;
-                output.mode = EltwiseInputMode::OUTPUT_BUFFER;
-                return output;
-            }
-        };
-
-        struct Node
-        {
-            std::vector<InputType> inputs;
-            EltwiseMode mode;
-        };
-
-        struct UpdateInputData
-        {
-            uint32_t inputId;
-            uint32_t tmpId;
-        };
-
-        struct DedicatedParams
-        {
-            std::vector<EltwiseParams::Node> operations;
-            std::vector<UpdateInputData> updateInputIds;
-            bool layoutBased = false;
-            bool     int8_quantization = false;
-            bool     output_calibration = false;
-            float    output_quantization_factor = 1.0f;
-        };
-
-        DedicatedParams eltwiseParams;
-        MultiDataTensor output_calibration_factors;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            ParamsKey k = BaseParams::GetParamsKey();
-            if (eltwiseParams.int8_quantization)
-            {
-                k.EnableInt8Quantization();
-            }
-
-            if (eltwiseParams.output_calibration)
-            {
-                k.EnableOutputCalibration();
-            }
-
             return k;
         }
     };
@@ -1565,28 +1085,6 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConcatenationParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConcatenationParams : public BaseParams
-    {
-        ConcatenationParams() : BaseParams(KernelType::CONCATENATION), concatParams() {}
-
-        struct DedicatedParams
-        {
-            ConcatAxis axis = ConcatAxis::FEATURE;
-        };
-
-        DedicatedParams concatParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            auto k =  BaseParams::GetParamsKey();
-            k.EnableConcatAxis(concatParams.axis);
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // UpSamplingParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct UpSamplingParams : public BaseParams
@@ -1611,57 +1109,41 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // MaxUnpoolingParams
+    // LSTMGemmParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct MaxUnpoolingParams : public BaseParams
+    struct LSTMGemmParams : public BaseParams
     {
-        MaxUnpoolingParams() : BaseParams(KernelType::MAX_UNPOOLING) {}
+        LSTMGemmParams() : BaseParams(KernelType::LSTM_GEMM) {}
 
-        virtual ParamsKey GetParamsKey() const
-        {
-            return BaseParams::GetParamsKey();
+        DataTensor weights;
+        DataTensor recurrent;
+        DataTensor bias;
+        DataTensor hidden;
+        bool hasBias = false;
+        bool hasHidden = false;
+
+        void SetBias(const DataTensor& v) {
+            bias = v;
+            hasBias = true;
         }
-    };
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutionGradWeightsParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutionGradWeightsParams : public WeightBiasParams
-    {
-        ConvolutionGradWeightsParams() : WeightBiasParams(KernelType::CONVOLUTION_GRAD_WEIGHTS), convGradWeightsParams() {}
-
-        struct DedicatedParams
-        {
-            uSize    filterSize;
-            uSize    stride;
-            uSize    dilation;
-            uSize    padding;
-            uint32_t split = 1;
-            bool     depthwiseSeparableOpt = false;
-        };
-
-        DedicatedParams convGradWeightsParams;
-
-        virtual std::string to_string() const override;
+        void SetHidden(const DataTensor& v) {
+            hidden = v;
+            hasHidden = true;
+        }
 
         virtual ParamsKey GetParamsKey() const override
         {
-            ParamsKey k = WeightBiasParams::GetParamsKey();
+            ParamsKey k = BaseParams::GetParamsKey();
 
-            if (convGradWeightsParams.split > 1)
+            if (hasBias)
             {
-                k.EnableSplitSupport();
+                k.EnableLSTMGEMMBias();
             }
 
-            if (convGradWeightsParams.dilation.x != 1 ||
-                convGradWeightsParams.dilation.y != 1)
+            if (hasHidden)
             {
-                k.EnableDilation();
-            }
-
-            if (convGradWeightsParams.depthwiseSeparableOpt)
-            {
-                k.EnableDepthwiseSeparableOpt();
+                k.EnableLSTMGEMMHidden();
             }
 
             return k;
@@ -1669,28 +1151,28 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // FullyConnectedGradInputParams
+    // LSTMEltParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedGradInputParams : public WeightBiasParams
+    struct LSTMEltParams : public BaseParams
     {
-        FullyConnectedGradInputParams() : WeightBiasParams(KernelType::FULLY_CONNECTED_GRAD_INPUT) {}
+        LSTMEltParams() : BaseParams(KernelType::LSTM_ELT) {}
 
-        virtual ParamsKey GetParamsKey() const
-        {
-            return WeightBiasParams::GetParamsKey();
+        DataTensor cell;
+        bool hasCell = false;
+
+        void SetCell(const DataTensor& v) {
+            cell = v;
+            hasCell = true;
         }
-    };
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // FullyConnectedGradWeightsParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedGradWeightsParams : public WeightBiasParams
-    {
-        FullyConnectedGradWeightsParams() : WeightBiasParams(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
-
-        virtual ParamsKey GetParamsKey() const
+        virtual ParamsKey GetParamsKey() const override
         {
-            return WeightBiasParams::GetParamsKey();
+            ParamsKey k = BaseParams::GetParamsKey();
+            if (hasCell)
+            {
+                k.EnableLSTMEltCell();
+            }
+            return k;
         }
     };
 
@@ -1749,108 +1231,11 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // WeightsBiasOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct WeightsBiasOptionalParams : OptionalParams
-    {
-    protected:
-        WeightsBiasOptionalParams(KernelType kt) : OptionalParams(kt) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutionOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutionOptionalParams : WeightsBiasOptionalParams
-    {
-        ConvolutionOptionalParams() : WeightsBiasOptionalParams(KernelType::CONVOLUTION) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // DeconvolutionOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct DeconvolutionOptionalParams : WeightsBiasOptionalParams
-    {
-        DeconvolutionOptionalParams() : WeightsBiasOptionalParams(KernelType::DECONVOLUTION) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // LRNOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LRNOptionalParams : OptionalParams
-    {
-        LRNOptionalParams() : OptionalParams(KernelType::LRN) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // NormalizeOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct NormalizeOptionalParams : OptionalParams
-    {
-        NormalizeOptionalParams() : OptionalParams(KernelType::NORMALIZE) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // MVNOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct MVNOptionalParams : OptionalParams
-    {
-        MVNOptionalParams() : OptionalParams(KernelType::MVN) {}
-    };
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// ArgMaxMinOptionalParams
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	struct ArgMaxMinOptionalParams : OptionalParams
-	{
-		ArgMaxMinOptionalParams() : OptionalParams(KernelType::ARG_MAX_MIN) {}
-	};
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // LookUpTableOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LookUpTableOptionalParams : OptionalParams
-    {
-        LookUpTableOptionalParams() : OptionalParams(KernelType::LOOKUP_TABLE) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // PoolingOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct PoolingOptionalParams : OptionalParams
-    {
-        PoolingOptionalParams() : OptionalParams(KernelType::POOLING) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ROIPoolingOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct ROIPoolingOptionalParams : OptionalParams
     {
         ROIPoolingOptionalParams() : OptionalParams(KernelType::ROI_POOLING) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // FullyConnectedOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedOptionalParams : WeightsBiasOptionalParams
-    {
-        FullyConnectedOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ActivationOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ActivationOptionalParams : OptionalParams
-    {
-        ActivationOptionalParams() : OptionalParams(KernelType::ACTIVATION) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // SoftmaxOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct SoftmaxOptionalParams : OptionalParams
-    {
-        SoftmaxOptionalParams() : OptionalParams(KernelType::SOFT_MAX) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1870,14 +1255,6 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // EltwiseOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct EltwiseOptionalParams : OptionalParams
-    {
-        EltwiseOptionalParams() : OptionalParams(KernelType::ELTWISE) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ReorderVxOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct ReorderVxOptionalParams : OptionalParams
@@ -1894,31 +1271,6 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConcatenationOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConcatenationOptionalParams : OptionalParams
-    {
-        ConcatenationOptionalParams() : OptionalParams(KernelType::CONCATENATION) {}
-        bool kernelPerInput = true;
-
-        virtual ParamsKey GetSupportedKey() const
-        {
-            ParamsKey k = OptionalParams::GetSupportedKey();
-
-            if (kernelPerInput)
-            {
-                k.EnableConcatKernelPerInput();
-            }
-            else
-            {
-                k.EnableConcatOneKernel();
-            }
-
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // UpSamplingOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct UpSamplingOptionalParams : OptionalParams
@@ -1927,34 +1279,19 @@ namespace KernelSelector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // MaxUnpoolingOptionalParams
+    // LSTMGemmOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct MaxUnpoolingOptionalParams : OptionalParams
+    struct LSTMGemmOptionalParams : OptionalParams
     {
-        MaxUnpoolingOptionalParams() : OptionalParams(KernelType::MAX_UNPOOLING) {}
+        LSTMGemmOptionalParams() : OptionalParams(KernelType::LSTM_GEMM) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutiongradWeightsOptionalParams
+    // LSTMEltOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ConvolutiongradWeightsOptionalParams : WeightsBiasOptionalParams
+    struct LSTMEltOptionalParams : OptionalParams
     {
-        ConvolutiongradWeightsOptionalParams() : WeightsBiasOptionalParams(KernelType::CONVOLUTION_GRAD_WEIGHTS) {}
+        LSTMEltOptionalParams() : OptionalParams(KernelType::LSTM_ELT) {}
     };
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutiongradWeightsOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedGradInputOptionalParams : WeightsBiasOptionalParams
-    {
-        FullyConnectedGradInputOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED_GRAD_INPUT) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ConvolutiongradWeightsOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct FullyConnectedGradWeightsOptionalParams : WeightsBiasOptionalParams
-    {
-        FullyConnectedGradWeightsOptionalParams() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
-    };
 }

@@ -18,7 +18,7 @@
 
 #include "softmax_kernel_base.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {    
     class SoftmaxKernel_bf : public SoftmaxKernelBaseBF
     {
@@ -29,6 +29,6 @@ namespace KernelSelector
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
-        DispatchData SetDefault(const SoftmaxParams& params, const OptionalParams& optParams) const override;
+        DispatchData SetDefault(const softmax_params& params, const OptionalParams& optParams) const override;
     };
 }

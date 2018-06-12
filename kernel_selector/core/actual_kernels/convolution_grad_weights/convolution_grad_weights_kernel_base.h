@@ -16,22 +16,77 @@
 
 #pragma once
 
-#include "common_kernel_base.h"
+#include "weight_bias_kernel_base.h"
 #include "kernel_selector_params.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
-    class ConvolutionGradWeightsKernelBase : public CommonKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // convolution_grad_weights_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct convolution_grad_weights_params : public WeightBiasParams
+    {
+        convolution_grad_weights_params() : WeightBiasParams(KernelType::CONVOLUTION_GRAD_WEIGHTS), convGradWeightsParams() {}
+
+        struct DedicatedParams
+        {
+            uSize    filterSize;
+            uSize    stride;
+            uSize    dilation;
+            uSize    padding;
+            uint32_t split = 1;
+            bool     depthwiseSeparableOpt = false;
+        };
+
+        DedicatedParams convGradWeightsParams;
+
+        virtual std::string to_string() const override;
+
+        virtual ParamsKey GetParamsKey() const override
+        {
+            ParamsKey k = WeightBiasParams::GetParamsKey();
+
+            if (convGradWeightsParams.split > 1)
+            {
+                k.EnableSplitSupport();
+            }
+
+            if (convGradWeightsParams.dilation.x != 1 ||
+                convGradWeightsParams.dilation.y != 1)
+            {
+                k.EnableDilation();
+            }
+
+            if (convGradWeightsParams.depthwiseSeparableOpt)
+            {
+                k.EnableDepthwiseSeparableOpt();
+            }
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // convolution_grad_weights_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct convolution_grad_weights_optional_params : WeightsBiasOptionalParams
+    {
+        convolution_grad_weights_optional_params() : WeightsBiasOptionalParams(KernelType::CONVOLUTION_GRAD_WEIGHTS) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ConvolutionGradWeightsKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    class ConvolutionGradWeightsKernelBase : public WeightBiasKernelBase
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using WeightBiasKernelBase::WeightBiasKernelBase;
         virtual ~ConvolutionGradWeightsKernelBase() {}
 
         using DispatchData = CommonDispatchData;
     
     protected:
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const;
-        virtual JitConstants GetJitConstants(const ConvolutionGradWeightsParams& params) const;
-        virtual DispatchData SetDefault(const ConvolutionGradWeightsParams& params) const;
+        virtual JitConstants GetJitConstants(const convolution_grad_weights_params& params) const;
+        virtual DispatchData SetDefault(const convolution_grad_weights_params& params) const;
     };
 }

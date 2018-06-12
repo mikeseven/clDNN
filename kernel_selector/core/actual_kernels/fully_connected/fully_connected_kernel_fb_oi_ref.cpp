@@ -17,7 +17,7 @@
 #include "fully_connected_kernel_fb_oi_ref.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey FullyConnected_fb_oi_ref::GetSupportedKey() const
     {

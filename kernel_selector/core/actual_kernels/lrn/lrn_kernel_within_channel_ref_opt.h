@@ -18,7 +18,7 @@
 
 #include "lrn_kernel_base.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {    
     class LRNKernelWithinChannelOpt : public LRNKernelBase
     {
@@ -30,6 +30,6 @@ namespace KernelSelector
         virtual ParamsKey GetSupportedKey() const override;
 
     private:
-        CommonDispatchData SetDefault(const LRNParams& params) const override;
+        CommonDispatchData SetDefault(const lrn_params& params) const override;
     };
 }

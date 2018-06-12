@@ -18,8 +18,44 @@
 
 #include "common_kernel_base.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // activation_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct activation_params : public BaseParams
+    {
+        activation_params() : BaseParams(KernelType::ACTIVATION), actParams() {}
+
+        struct DedicatedParams
+        {
+            MultiDataTensor inputActivationParams;
+        };
+
+        DedicatedParams actParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            auto k = BaseParams::GetParamsKey();
+            if (!actParams.inputActivationParams.empty())
+            {
+                k.EnableActivationAdditionalParamsAsInput();
+            }
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // activation_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct activation_optional_params : OptionalParams
+    {
+        activation_optional_params() : OptionalParams(KernelType::ACTIVATION) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ActivationKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class ActivationKernelBase : public CommonKernelBase
     {
     public:
@@ -30,8 +66,8 @@ namespace KernelSelector
 
     protected:
         virtual bool Validate(const Params& p, const OptionalParams& o) const override;
-        virtual JitConstants GetJitConstants(const ActivationParams& params, DispatchData kd) const;
-        virtual DispatchData SetDefault(const ActivationParams& arg) const;
+        virtual JitConstants GetJitConstants(const activation_params& params, DispatchData kd) const;
+        virtual DispatchData SetDefault(const activation_params& arg) const;
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& options) const;
     };
 }

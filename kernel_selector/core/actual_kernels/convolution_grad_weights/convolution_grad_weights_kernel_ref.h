@@ -18,7 +18,7 @@
 
 #include "convolution_grad_weights_kernel_base.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     class ConvolutionGradWeightsKernelRef : public ConvolutionGradWeightsKernelBase
     {

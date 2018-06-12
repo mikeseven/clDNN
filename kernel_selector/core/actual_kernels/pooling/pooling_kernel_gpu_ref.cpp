@@ -16,7 +16,7 @@
 
 #include "pooling_kernel_gpu_ref.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey PoolingKernelGPURef::GetSupportedKey() const
     {

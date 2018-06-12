@@ -17,7 +17,7 @@
 #include "upsampling_kernel_selector.h"
 #include "upsampling_kernel_ref.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     UpSamplingKernelSelector::UpSamplingKernelSelector()
     {

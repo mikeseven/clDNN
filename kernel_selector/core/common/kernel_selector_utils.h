@@ -20,10 +20,11 @@
 #include "tensor_type.h"
 #include "kernel_selector_common.h"
 #include "reorder/reorder_weights_kernel_selector.h"
+#include "convolution/convolution_params.h"
 
-namespace KernelSelector { namespace
+namespace kernel_selector { namespace
 {
-    inline bool CheckConvolutionPaddedInputDesc(const ConvolutionParams& params, const DataTensor& reqDesc)
+    inline bool CheckConvolutionPaddedInputDesc(const convolution_params& params, const DataTensor& reqDesc)
     {
         assert(params.inputs.size() == 1);
 
@@ -45,7 +46,7 @@ namespace KernelSelector { namespace
         return properPadding;
     }
 
-    inline DataTensor GetConvolutionBFYXPaddedTensor(const ConvolutionParams& params)
+    inline DataTensor GetConvolutionBFYXPaddedTensor(const convolution_params& params)
     {
         assert(params.inputs.size() == 1);
         assert(params.inputs[0].GetDims().size() == 4U);
@@ -80,8 +81,8 @@ namespace KernelSelector { namespace
 
     inline bool CovolutionCheckInput(const Params& p, const OptionalParams& o)
     {
-        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
-        const ConvolutionOptionalParams& optParams = static_cast<const ConvolutionOptionalParams&>(o);
+        const convolution_params& params = static_cast<const convolution_params&>(p);
+        const convolution_optional_params& optParams = static_cast<const convolution_optional_params&>(o);
 
         const auto req_input = GetConvolutionBFYXPaddedTensor(params);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(params, req_input);
@@ -95,7 +96,7 @@ namespace KernelSelector { namespace
         return true;
     }
 
-    inline bool CovolutionUpdateInputParams(ConvolutionParams& params)
+    inline bool CovolutionUpdateInputParams(convolution_params& params)
     {
         const auto req_input = GetConvolutionBFYXPaddedTensor(params);
         const bool bProperInputDesc = CheckConvolutionPaddedInputDesc(params, req_input);
@@ -139,7 +140,7 @@ namespace KernelSelector { namespace
         return bProperWeightsLayout;
     }
 
-    inline std::vector<size_t> GetImageSizes(const KernelSelector::WeightsTensor& dimensions, const WeightsLayout layout)
+    inline std::vector<size_t> GetImageSizes(const kernel_selector::WeightsTensor& dimensions, const WeightsLayout layout)
     {
         auto ofm = dimensions.OFM().v;
         auto ifm = dimensions.IFM().v;

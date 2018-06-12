@@ -19,8 +19,44 @@
 #include "common_kernel_base.h"
 #include "kernel_selector_params.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // lookup_table_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct lookup_table_params : public BaseParams
+    {
+        lookup_table_params() : BaseParams(KernelType::LOOKUP_TABLE), lookUpTableParams() {}
+
+        struct DedicatedParams
+        {
+            LookUpTableAxis	lookUpTableAxis = LookUpTableAxis::XYF;
+            uint32_t		numberOfValues;
+            DataTensor      inputIndices;
+        };
+
+        DedicatedParams lookUpTableParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            ParamsKey k = BaseParams::GetParamsKey();
+            k.EnableLookUpTableAxis(lookUpTableParams.lookUpTableAxis);
+            k.EnableLookUpTableIndicesFormat(lookUpTableParams.inputIndices.GetDType());
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // lookup_table_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct lookup_table_optional_params : OptionalParams
+    {
+        lookup_table_optional_params() : OptionalParams(KernelType::LOOKUP_TABLE) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // lookup_table_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class LookUpTableKernelBase : public CommonKernelBase
     {
     public:
@@ -33,8 +69,8 @@ namespace KernelSelector
 
     protected:
         virtual bool Validate(const Params&, const OptionalParams&) const override;
-        virtual JitConstants GetJitConstants(const LookUpTableParams& params) const;
-        virtual DispatchData SetDefault(const LookUpTableParams& params) const;
+        virtual JitConstants GetJitConstants(const lookup_table_params& params) const;
+        virtual DispatchData SetDefault(const lookup_table_params& params) const;
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimatedTime) const;
     };
 }

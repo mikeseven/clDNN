@@ -18,7 +18,7 @@
 
 #include "fully_connected_kernel_base.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     class FullyConnected_bf_io_input_spatial : public FullyConnectedKernelBase
     {
@@ -30,6 +30,6 @@ namespace KernelSelector {
 
     protected:
         bool Validate(const Params& p, const OptionalParams& o) const override;
-        std::unique_ptr<DispatchData> SetDefault(const FullyConnectedParams& arg) const override;
+        std::unique_ptr<DispatchData> SetDefault(const fully_connected_params& arg) const override;
     };
 }

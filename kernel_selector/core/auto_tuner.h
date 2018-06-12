@@ -20,7 +20,7 @@
 #include <mutex>
 #include "kernel_selector_common.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     struct tuning_data // this could be replaced with 
     {

@@ -16,7 +16,7 @@
 
 #include "lrn_kernel_within_channel_ref.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey LRNKernelWithinChannel::GetSupportedKey() const
     {
@@ -37,7 +37,7 @@ namespace KernelSelector
         return k;
     }
 
-    CommonDispatchData LRNKernelWithinChannel::SetDefault(const LRNParams& params) const
+    CommonDispatchData LRNKernelWithinChannel::SetDefault(const lrn_params& params) const
     {
         CommonDispatchData runInfo = LRNKernelBase::SetDefault(params);
 

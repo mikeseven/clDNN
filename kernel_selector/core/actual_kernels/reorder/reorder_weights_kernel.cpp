@@ -18,7 +18,7 @@
 #include "reorder_weights_kernel.h"
 #include "kernel_selector_utils.h" 
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey ReorderWeightsKernel::GetSupportedKey() const
     {

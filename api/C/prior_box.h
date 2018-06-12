@@ -55,6 +55,8 @@ float step_width;
 float step_height;
 /// @brief Offset to the top left corner of each cell.
 float offset;
+/// @broef If false, only first min_size is scaled by aspect_ratios
+uint32_t scale_all_sizes;
 CLDNN_END_PRIMITIVE_DESC(prior_box)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(prior_box);

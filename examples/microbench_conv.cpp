@@ -75,7 +75,8 @@ void test_conv(
 
     topology.add(input_layout(input_id, input_lay), input_layout(weights_id, weights_lay), input_layout(bias_id, bias_lay), conv);
 }
-cldnn::topology build_microbench(const std::string&, const cldnn::engine& engine, std::map<primitive_id, cldnn::layout>& inputs, int32_t batch_size)
+
+cldnn::topology build_microbench_conv(const std::string&, const cldnn::engine& engine, std::map<primitive_id, cldnn::layout>& inputs, int32_t batch_size)
 {
     topology topology;
     bool use_half = inputs.at("input_layout").data_type == data_types::f16 ? true : false;

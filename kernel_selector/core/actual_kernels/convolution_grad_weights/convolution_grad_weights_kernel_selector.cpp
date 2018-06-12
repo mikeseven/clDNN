@@ -17,14 +17,14 @@
 #include "convolution_grad_weights_kernel_selector.h"
 #include "convolution_grad_weights_kernel_ref.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
-    ConvolutionGradWeightsKernelSelctor::ConvolutionGradWeightsKernelSelctor()
+    convolution_grad_weights_kernel_selector::convolution_grad_weights_kernel_selector()
     {
         Attach<ConvolutionGradWeightsKernelRef>();
     }
 
-    KernelsData ConvolutionGradWeightsKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData convolution_grad_weights_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::CONVOLUTION_GRAD_WEIGHTS);
     }

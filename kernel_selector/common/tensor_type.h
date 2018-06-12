@@ -24,7 +24,7 @@
 #include <algorithm>
 #include <array>
 
-namespace KernelSelector
+namespace kernel_selector
 {
 #define KERNEL_SELECTOR_TENSOR_DIM_MAX 8
 

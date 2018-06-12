@@ -18,7 +18,7 @@
 
 #include "eltwise_kernel_base.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     class EltwiseKernel_vload8 : public EltwiseKernelBase
     {
@@ -31,6 +31,6 @@ namespace KernelSelector
 
     protected:
         virtual bool Validate(const Params& p, const OptionalParams& o) const override;
-        virtual JitConstants GetJitConstants(const EltwiseParams& params) const override;
+        virtual JitConstants GetJitConstants(const eltwise_params& params) const override;
     };
 }

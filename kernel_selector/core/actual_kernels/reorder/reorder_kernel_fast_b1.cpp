@@ -17,7 +17,7 @@
 #include "reorder_kernel_fast_b1.h"
 #include "kernel_selector_utils.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey ReorderKernelFastBatch1::GetSupportedKey() const
     {

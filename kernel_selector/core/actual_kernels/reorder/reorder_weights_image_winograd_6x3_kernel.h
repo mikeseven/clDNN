@@ -18,7 +18,7 @@
 
 #include "reorder_kernel_base.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     class ReorderWeightsImageWinograd6x3Kernel : public ReorderKernelBase
     {

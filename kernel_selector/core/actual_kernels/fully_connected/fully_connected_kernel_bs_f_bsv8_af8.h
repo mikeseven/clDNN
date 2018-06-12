@@ -18,7 +18,7 @@
 
 #include "fully_connected_block_kernel_base.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     class FullyConnected_bs_f_bsv8_af8 : public FullyConnectedBlockKernelBase
     {
@@ -30,6 +30,6 @@ namespace KernelSelector {
     
     protected:
         bool Validate(const Params& p, const OptionalParams& o) const override;
-        std::unique_ptr<DispatchData> SetDefault(const FullyConnectedParams& arg) const override;
+        std::unique_ptr<DispatchData> SetDefault(const fully_connected_params& arg) const override;
     };
 }

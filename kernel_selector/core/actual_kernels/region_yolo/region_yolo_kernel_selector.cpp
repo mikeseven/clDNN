@@ -17,7 +17,7 @@
 #include "region_yolo_kernel_selector.h"
 #include "region_yolo_kernel_ref.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     RegionYoloKernelSelctor::RegionYoloKernelSelctor()
     {

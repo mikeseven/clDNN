@@ -20,6 +20,8 @@
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
 #include "kernel_runner.h"
+#include "convolution/convolution_kernel_selector.h"
+#include "convolution/convolution_params.h"
 
 namespace cldnn { namespace gpu {
 
@@ -147,7 +149,7 @@ public:
             conv_optional_params.tuningParams.runner = std::make_shared<gpu::kernel_runner>(arg.get_program().get_engine(), true);
         }
 
-        KernelSelector::KernelsData best_kernels = kernel_selector.GetBestKernels(conv_params, conv_optional_params);
+        kernel_selector::KernelsData best_kernels = kernel_selector.GetBestKernels(conv_params, conv_optional_params);
 		
         CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 

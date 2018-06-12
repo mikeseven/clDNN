@@ -16,7 +16,7 @@
 
 #include "pooling_kernel_gpu_DPAS.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey PoolingKerneGPU_DPAS::GetSupportedKey() const
     {
@@ -39,7 +39,7 @@ namespace KernelSelector
         return k;
     }
 
-    PoolingKernelBase::DispatchData PoolingKerneGPU_DPAS::SetDefault(const PoolingParams& params) const
+    PoolingKernelBase::DispatchData PoolingKerneGPU_DPAS::SetDefault(const pooling_params& params) const
     {
         constexpr int simdSize = 8;
 

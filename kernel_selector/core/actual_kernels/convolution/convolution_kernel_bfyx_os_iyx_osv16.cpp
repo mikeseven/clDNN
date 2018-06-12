@@ -18,7 +18,7 @@
 #include "kernel_selector_utils.h"
 #include "common_tools.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
 
     ConvolutionKernel_bfyx_os_iyx_osv16::ConvolutionKernel_bfyx_os_iyx_osv16() : ConvolutionKernelBase("convolution_gpu_bfyx_os_iyx_osv16")
@@ -127,7 +127,7 @@ namespace KernelSelector
 
         AutoTuneOption option = { 0, 0, 0, ROUND_ROBIN };
 
-        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
+        const convolution_params& params = static_cast<const convolution_params&>(p);
         const auto cp = params.convParams;
 
         if (cp.stride.x == 1 && cp.stride.y == 1)
@@ -183,7 +183,7 @@ namespace KernelSelector
         return option;
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_os_iyx_osv16::SetDefault(const ConvolutionParams& arg, int autoTuneIndex) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_os_iyx_osv16::SetDefault(const convolution_params& arg, int autoTuneIndex) const
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
@@ -237,7 +237,7 @@ namespace KernelSelector
         return true;
     }
 
-    JitConstants ConvolutionKernel_bfyx_os_iyx_osv16::GetJitConstants(const ConvolutionParams& params, DispatchData runInfo) const
+    JitConstants ConvolutionKernel_bfyx_os_iyx_osv16::GetJitConstants(const convolution_params& params, DispatchData runInfo) const
     {
         auto jit = Parent::GetJitConstants(params, runInfo);
 
@@ -261,7 +261,7 @@ namespace KernelSelector
         return GetCommonKernelsData(params, options, GetAutoTuneOptions(params, autoTuneIndex).exeMode, autoTuneIndex);
     }
 
-    std::vector<WeightsLayout> ConvolutionKernel_bfyx_os_iyx_osv16::GetSupportedWeightLayouts(const ConvolutionParams& params) const
+    std::vector<WeightsLayout> ConvolutionKernel_bfyx_os_iyx_osv16::GetSupportedWeightLayouts(const convolution_params& params) const
     {
         if (!params.convParams.transposed)
         {

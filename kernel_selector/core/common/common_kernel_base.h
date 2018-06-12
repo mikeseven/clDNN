@@ -21,7 +21,7 @@
 #include <sstream>
 #include <assert.h>
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     struct CommonDispatchData
     {

@@ -184,6 +184,13 @@ private:
         next.dependencies.erase(std::remove(next.dependencies.begin(), next.dependencies.end(), &prev), next.dependencies.end());
     }
 
+    void remove_all_connections(program_node& node) {
+        for(auto &e : node.dependencies) {
+            e->users.remove(&node);
+        }
+        node.dependencies.clear();
+    }
+
     void rename(program_node & node, primitive_id const & new_id);
     void swap_names(program_node& node1, program_node& node2);
     void replace_all_usages(program_node& old_node, program_node& new_node);
@@ -207,6 +214,8 @@ private:
     void backward_bfs(std::function<void(program_node&)> const& mark_func = nullptr, std::function<void(program_node&)> const& unmark_func = nullptr) const;
 
     void dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter = nullptr) const;
+	void dump_serialization(const char* stage, std::string network_name, std::function<bool(program_node const&)> const& filter = nullptr) const;
+
 };
 }
 

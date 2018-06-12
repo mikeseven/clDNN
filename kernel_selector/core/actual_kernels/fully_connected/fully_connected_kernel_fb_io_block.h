@@ -18,7 +18,7 @@
 
 #include "fully_connected_kernel_base.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     class FullyConnected_fb_io_block : public FullyConnectedKernelBase
     {
@@ -48,7 +48,7 @@ namespace KernelSelector {
         };
 
         bool Validate(const Params& p, const OptionalParams& o) const override;
-        JitConstants GetJitConstants(const FullyConnectedParams& params, const FullyConnectedKernelBase::DispatchData& kd) const override;
-        std::unique_ptr<FullyConnectedKernelBase::DispatchData> SetDefault(const FullyConnectedParams& arg) const override;
+        JitConstants GetJitConstants(const fully_connected_params& params, const FullyConnectedKernelBase::DispatchData& kd) const override;
+        std::unique_ptr<FullyConnectedKernelBase::DispatchData> SetDefault(const fully_connected_params& arg) const override;
     };
 }

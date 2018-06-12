@@ -16,7 +16,7 @@
 
 #include "lookup_table_kernel_axis.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     ParamsKey LookUpTableKernelAxis::GetSupportedKey() const
     {
@@ -45,7 +45,7 @@ namespace KernelSelector
             return{};
         }
 
-        const LookUpTableParams& orgParams = static_cast<const LookUpTableParams&>(params);
+        const lookup_table_params& orgParams = static_cast<const lookup_table_params&>(params);
 
         DispatchData runInfo;
         runInfo.fp16UnitUsed = orgParams.inputs[0].GetDType() == Datatype::F16;
@@ -79,7 +79,7 @@ namespace KernelSelector
         runInfo.lws1 = 1;
         runInfo.lws2 = 1;
 
-        KernelData kd = KernelData::Default<LookUpTableParams>(params);
+        KernelData kd = KernelData::Default<lookup_table_params>(params);
 
         auto cldnn_jit = GetJitConstants(orgParams);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);

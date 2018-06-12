@@ -16,7 +16,7 @@
 
 #include "arg_max_min_kernel_gpu_ref.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
 	ParamsKey ArgMaxMinKernelGPURef::GetSupportedKey() const
 	{

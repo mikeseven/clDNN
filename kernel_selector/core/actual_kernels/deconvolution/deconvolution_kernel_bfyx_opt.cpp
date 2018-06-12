@@ -17,7 +17,7 @@
 #include "deconvolution_kernel_bfyx_opt.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
 
     ParamsKey DeconvolutionKernel_bfyx_opt::GetSupportedKey() const
@@ -42,7 +42,7 @@ namespace KernelSelector
         return k;
     }
 
-    CommonDispatchData DeconvolutionKernel_bfyx_opt::SetDefault(const DeconvolutionParams& params) const
+    CommonDispatchData DeconvolutionKernel_bfyx_opt::SetDefault(const deconvolution_params& params) const
     {
         DispatchData kd;
 

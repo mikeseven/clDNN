@@ -21,7 +21,7 @@
 #include "reorder_weights_image_fyx_b_kernel.h"
 #include "reorder_weights_image_winograd_6x3_kernel.h"
  
-namespace KernelSelector {
+namespace kernel_selector {
 
     ReorderWeightsKernelSelctor::ReorderWeightsKernelSelctor()
     {

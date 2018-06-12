@@ -16,7 +16,7 @@
 
 #include "mvn_kernel_ref.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey MVNKernelRef::GetSupportedKey() const
     {
@@ -40,7 +40,7 @@ namespace KernelSelector
         return k;
     }
 
-    std::string MVNKernelRef::GetKernelName(const MVNParams& params) const
+    std::string MVNKernelRef::GetKernelName(const mvn_params& params) const
     {
         if (params.mvnParams.mvnMode == MVNMode::ACROSS_CHANNELS)
             return kernelName + "_accross_channels";

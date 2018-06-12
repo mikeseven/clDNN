@@ -17,7 +17,7 @@
 #include "mvn_kernel_bfyx_opt.h"
 #include "kernel_selector_utils.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey MVNKernelBfyxOpt::GetSupportedKey() const
     {
@@ -35,7 +35,7 @@ namespace KernelSelector
         return k;
     }
 
-    MVNKernelBfyxOpt::Parent::DispatchData MVNKernelBfyxOpt::SetDefault(const MVNParams& params) const
+    MVNKernelBfyxOpt::Parent::DispatchData MVNKernelBfyxOpt::SetDefault(const mvn_params& params) const
     {
         DispatchData kd;
 
@@ -81,9 +81,9 @@ namespace KernelSelector
         return kd;
     }
 
-    JitConstants MVNKernelBfyxOpt::GetJitConstants(const MVNParams& params, MVNKernelBase::DispatchData kd) const
+    JitConstants MVNKernelBfyxOpt::GetJitConstants(const mvn_params& params, MVNKernelBase::DispatchData kd) const
     {
-        auto jit = MakeMVNJitConstants(params);
+        auto jit = MVNKernelBase::GetJitConstants(params, kd);
 
         jit.AddConstants({
             MakeJitConstant("ITEMS_NUM",      kd.itemsNum),

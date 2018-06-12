@@ -17,7 +17,7 @@
 #include "reorder_weights_image_fyx_b_kernel.h"
 #include "kernel_selector_utils.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey ReorderWeightsImage_fyx_b_Kernel::GetSupportedKey() const
     {

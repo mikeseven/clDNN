@@ -119,6 +119,17 @@ std::shared_ptr<const executable_info> get_executable_info();
 /// @return Joined path.
 std::string join_path(const std::string& parent, const std::string& child);
 
+/// LSTM execution params
+struct lstm_execution_params {
+    uint32_t lstm_input_size;
+    uint32_t lstm_hidden_size;
+    uint32_t lstm_sequence_len;
+    uint32_t lstm_batch_size;
+    bool     lstm_no_biases;
+    bool     lstm_initial_hidden;
+    bool     lstm_initial_cell;
+};
+
 /// Information about executed topology
 struct execution_params {
     std::string input_dir;
@@ -145,6 +156,7 @@ struct execution_params {
     bool        dump_graphs;
     bool        log_engine;
     bool        dump_sources;
+	std::string	serialization;
 
     PrintType print_type = PrintType::Verbose; // printing modes - to support Verbose, vs Perf ony, vs ImageNet testing prints
     size_t loop = 1; // running the same input in a loop for smoothing perf results
@@ -152,6 +164,8 @@ struct execution_params {
     bool perf_per_watt; // power instrumentation
     bool disable_mem_pool; // memory 
     bool calibration; // int8 precission
+
+    lstm_execution_params lstm_ep; // LSTM microbench parameters
 };
 
 struct memory_filler

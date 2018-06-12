@@ -16,7 +16,7 @@
 
 #include "lrn_kernel_across_channel_multiple_features.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     ParamsKey LRNKernelAcrossChannelMultipleFeatures::GetSupportedKey() const
     {
@@ -37,7 +37,7 @@ namespace KernelSelector
         return k;
     }
 
-    static unsigned int GetOfmPerSimd(const LRNParams& params)
+    static unsigned int GetOfmPerSimd(const lrn_params& params)
     {
         const auto &output = params.output;
         const auto local_size = params.lrnParams.localSize;
@@ -58,7 +58,7 @@ namespace KernelSelector
         return 1;
     }
 
-    CommonDispatchData LRNKernelAcrossChannelMultipleFeatures::SetDefault(const LRNParams& params) const
+    CommonDispatchData LRNKernelAcrossChannelMultipleFeatures::SetDefault(const lrn_params& params) const
     {
         CommonDispatchData runInfo = LRNKernelBase::SetDefault(params);
         const auto &input = params.inputs[0];
@@ -100,7 +100,7 @@ namespace KernelSelector
             return false;
         }
 
-        const LRNParams& params = static_cast<const LRNParams&>(p);
+        const lrn_params& params = static_cast<const lrn_params&>(p);
         if (params.lrnParams.localSize > 32)
         {
             return false;
@@ -109,7 +109,7 @@ namespace KernelSelector
         return true;
     }
 
-    JitConstants LRNKernelAcrossChannelMultipleFeatures::GetJitConstants(const LRNParams& params, DispatchData kd) const
+    JitConstants LRNKernelAcrossChannelMultipleFeatures::GetJitConstants(const lrn_params& params, DispatchData kd) const
     {
         auto cldnnJit = LRNKernelBase::GetJitConstants(params, kd);
         const auto& input = params.inputs[0];

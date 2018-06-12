@@ -17,7 +17,7 @@
 #include "convolution_kernel_DPAS.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
     
     ParamsKey ConvolutionKernel_DPAS::GetSupportedKey() const
     {
@@ -41,7 +41,7 @@ namespace KernelSelector {
         return k;
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_DPAS::SetDefault(const ConvolutionParams& arg, int) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_DPAS::SetDefault(const convolution_params& arg, int) const
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
@@ -67,7 +67,7 @@ namespace KernelSelector {
         return runInfo;
     }
 
-    JitConstants ConvolutionKernel_DPAS::GetJitConstants(const ConvolutionParams& params, DispatchData runInfo) const
+    JitConstants ConvolutionKernel_DPAS::GetJitConstants(const convolution_params& params, DispatchData runInfo) const
     {
         auto jit = Parent::GetJitConstants(params, runInfo);
 

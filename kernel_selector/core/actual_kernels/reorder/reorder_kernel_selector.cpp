@@ -20,7 +20,7 @@
 #include "reorder_from_winograd_2x3_kernel.h"
 #include "reorder_to_winograd_2x3_kernel.h"
  
-namespace KernelSelector {
+namespace kernel_selector {
 
     ReorderKernelSelctor::ReorderKernelSelctor()
     {

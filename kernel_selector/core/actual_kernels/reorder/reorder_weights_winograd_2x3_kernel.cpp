@@ -17,7 +17,7 @@
 #include "reorder_weights_winograd_2x3_kernel.h"
 #include "kernel_selector_utils.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey ReorderWeightsWinograd2x3Kernel::GetSupportedKey() const
     {

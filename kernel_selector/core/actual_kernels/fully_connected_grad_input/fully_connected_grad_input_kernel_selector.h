@@ -18,19 +18,19 @@
 
 #include "kernel_selector.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
-    class FullyConnectedGradInputKernelSelctor : public KernelSelctorBase
+    class fully_connected_grad_input_kernel_selector : public KernelSelctorBase
     {
     public:
-        static FullyConnectedGradInputKernelSelctor &Instance() {
-            static FullyConnectedGradInputKernelSelctor instance_;
+        static fully_connected_grad_input_kernel_selector &Instance() {
+            static fully_connected_grad_input_kernel_selector instance_;
             return instance_;
         }
 
-        FullyConnectedGradInputKernelSelctor();
+        fully_connected_grad_input_kernel_selector();
 
-        virtual ~FullyConnectedGradInputKernelSelctor() {}
+        virtual ~fully_connected_grad_input_kernel_selector() {}
 
         virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
     };

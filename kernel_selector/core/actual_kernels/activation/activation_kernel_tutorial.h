@@ -28,7 +28,7 @@
 #define BASIC_TUTORIAL          // Skeleton to add a new kernel
 #endif
 
-namespace KernelSelector {
+namespace kernel_selector {
     
     class ActivationKernel_Tutorial : public ActivationKernelBase
     {
@@ -42,9 +42,9 @@ namespace KernelSelector {
 
     protected:
 #ifdef ADVANCED_TUTORIAL
-        virtual DispatchData SetDefault(const ActivationParams& arg) const override;
+        virtual DispatchData SetDefault(const activation_params& arg) const override;
         virtual bool Validate(const Params& p, const OptionalParams& o) const override;
-        virtual JitConstants GetJitConstants(const ActivationParams& params, DispatchData) const override;
+        virtual JitConstants GetJitConstants(const activation_params& params, DispatchData) const override;
 #endif
     };
 }

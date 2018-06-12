@@ -17,7 +17,7 @@
 #include "permute_kernel_selector.h"
 #include "permute_kernel_ref.h"
  
-namespace KernelSelector {
+namespace kernel_selector {
 
     PermuteKernelSelctor::PermuteKernelSelctor()
     {

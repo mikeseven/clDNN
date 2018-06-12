@@ -20,6 +20,9 @@
 #include "primitive_gpu_base.h"
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
+#include "fully_connected/fully_connected_kernel_selector.h"
+#include "fully_connected/fully_connected_params.h"
+
 #include "network_impl.h"
 #include "error_handler.h"
 #include "kernel_runner.h"

@@ -17,7 +17,7 @@
 #include "concatenation_kernel_depth_bfyx_no_pitch.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
 
     ParamsKey ConcatenationKernel_depth_bfyx_no_pitch::GetSupportedKey() const
@@ -45,7 +45,7 @@ namespace KernelSelector
             return false;
         }
 
-        const ConcatenationParams& params = static_cast<const ConcatenationParams&>(p);
+        const concatenation_params& params = static_cast<const concatenation_params&>(p);
 
         //kernel uses intel_sub_group_block_read that has 4-byte alignment requirement
         if (params.output.GetDType() == Datatype::F16)
@@ -66,7 +66,7 @@ namespace KernelSelector
         return true;
     }
 
-    ConcatenationKernelBase::DispatchData ConcatenationKernel_depth_bfyx_no_pitch::SetDefault(const ConcatenationParams& params) const
+    ConcatenationKernelBase::DispatchData ConcatenationKernel_depth_bfyx_no_pitch::SetDefault(const concatenation_params& params) const
     {
         DispatchData runInfo = ConcatenationKernelBase::SetDefault(params);
         const auto& input = params.inputs[0];

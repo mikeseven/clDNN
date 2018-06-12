@@ -23,7 +23,7 @@
 #include <sstream>
 #include <cmath>
 
-namespace KernelSelector {
+namespace kernel_selector {
 
 using JitDefinitions = std::vector<std::pair<std::string, std::string>>;
 
@@ -450,70 +450,6 @@ inline JitConstants MakeBaseParamsJitConstants(const BaseParams& params)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeWeightBiasParamsJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeWeightBiasParamsJitConstants(const WeightBiasParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-    jit.AddConstants({
-        MakeJitConstant("FILTER",       params.weights),
-        MakeJitConstant("BIAS_TERM",    !params.bias.empty()),
-    });
-
-    if (params.bias.empty() == false)
-    {
-        const bool sameDims = params.bias[0].SameDims(params.output);
-        jit.AddConstants({
-            MakeJitConstant("BIAS",             params.bias[0]),
-            MakeJitConstant("BIAS_PER_OUTPUT",  sameDims),
-            MakeJitConstant("BIAS_PER_OFM",     !sameDims),
-        });
-    }
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeConvolutionJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeConvolutionParamsJitConstants(const ConvolutionParams& params)
-{
-    JitConstants jit = MakeWeightBiasParamsJitConstants(params);
-    const auto& padding = params.convParams.padding;
-    const auto& input = params.inputs[0];
-    
-    int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - padding.x*input.X().pitch - input.Y().pitch*padding.y;
-    input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);
-
-    jit.AddConstants({
-        MakeJitConstant("STRIDE",                       params.convParams.stride),
-        MakeJitConstant("PADDING",                      params.convParams.padding),
-        MakeJitConstant("DILATION",                     params.convParams.dilation),
-        MakeJitConstant("FILTER_ARRAY_NUM",             params.convParams.split),
-        MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
-        MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      params.convParams.depthwiseSeparableOpt),
-        MakeJitConstant("QUANTIZATION_TERM",            params.convParams.int8_quantization),
-    });
-
-    if (params.convParams.int8_quantization)
-    {
-        jit.AddConstants({MakeJitConstant("W_QF", params.weights_quantization_factors[0])});
-        jit.AddConstants({ MakeJitConstant("I_QF",params.convParams.input_quantization_factor) });
-
-        if (params.convParams.output_calibration)
-        {
-            jit.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.convParams.output_calibration));
-            jit.AddConstant(MakeJitConstant("O_QF", params.output_calibration_factors[0]));
-
-        }
-        else
-            jit.AddConstants({ MakeJitConstant("O_QF",       params.convParams.output_quantization_factor) });
-    }
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MakeLoopUnrollParamsJitConstants
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 inline JitConstants MakeLoopUnrollParamsJitConstants(uint32_t loopCount)
@@ -532,129 +468,6 @@ inline JitConstants MakeLoopUnrollParamsJitConstants(uint32_t loopCount)
 
     jit.AddConstant({
         MakeJitConstant("LOOP(N, VAR, STMT)", "CAT(LOOP, N)((VAR), (STMT))"),
-    });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeFullyConnectedJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeFullyConnectedJitConstants(const FullyConnectedParams& params)
-{
-    JitConstants jit = MakeWeightBiasParamsJitConstants(params);
-    const auto& input = params.inputs[0];
-    const auto x_size = input.LogicalSize() / input.Batch().v;
-
-    jit.AddConstant(MakeJitConstant("INPUT0_ELEMENTS_COUNT", x_size));
-
-    if (params.fcParams.int8_quantization)
-    {
-        jit.AddConstants({ MakeJitConstant("W_QF", params.weights_quantization_factors[0]) });
-        jit.AddConstants({ MakeJitConstant("I_QF",params.fcParams.input_quantization_factor) });
-
-        if (params.fcParams.output_calibration)
-        {
-            jit.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.fcParams.output_calibration));
-            jit.AddConstant(MakeJitConstant("O_QF", params.output_calibration_factors[0]));
-
-        }
-        else
-            jit.AddConstants({ MakeJitConstant("O_QF",       params.fcParams.output_quantization_factor) });
-    }
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeLRNJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeLRNJitConstants(const LRNParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    const auto& np = params.lrnParams;
-
-    const auto padding = (np.localSize - 1) / 2;
-
-    jit.AddConstants({
-        MakeJitConstant("LOCAL_SIZE",   np.localSize),
-        MakeJitConstant("PADDING",      padding),
-        MakeJitConstant("ALPHA",        np.alpha),
-        MakeJitConstant("BETA",         np.beta),
-        MakeJitConstant("K",            np.k),
-        MakeJitConstant(toString(np.divMode) + "_KERNEL_DIVIDER", ""),
-        MakeJitConstant(toString(np.normMode), ""),
-    });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeArgMaxJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeArgMaxJitConstants(const ArgMaxMinParams& params) {
-	JitConstants jit = MakeBaseParamsJitConstants(params);
-
-	const auto& pp = params.argMaxParams;
-
-	jit.AddConstants({
-		MakeJitConstant("TOP_K", pp.topK),
-		MakeJitConstant(toString(pp.argMaxMinAxis) + "_AXIS", 1),
-		pp.argMaxMinOut == ArgMaxMinOut::MAX ? MakeJitConstant("MAX_OUT", 1) : MakeJitConstant("MIN_OUT", 1)
-	});
-
-	return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeLookUpTableJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-
-inline JitConstants MakeLookUpTableJitConstants(const LookUpTableParams& params) {
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    const auto& pp = params.lookUpTableParams;
-
-    jit.AddConstants({
-        MakeJitConstant("VAL_NUM", pp.numberOfValues),
-        MakeJitConstant(toString(pp.lookUpTableAxis) + "_AXIS", 1),
-    });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakePoolingJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakePoolingJitConstants(const PoolingParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    const auto& pp = params.poolParams;
-
-    jit.AddConstants({
-        MakeJitConstant("POOL",     pp.poolSize),
-        MakeJitConstant("STRIDE",   pp.poolStride),
-        MakeJitConstant("PADDING",  pp.poolPad),
-        MakeJitConstant(toString(pp.poolType) + "_POOLING", 1),
-        MakeJitConstant(toString(pp.divMode) + "_KERNEL_DIVIDER", 1),
-    });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeSoftmaxJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeSoftmaxJitConstants(const SoftmaxParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    const auto& sm = params.smParams;
-
-    jit.AddConstants({
-        MakeJitConstant("ALONG_" + toString(sm.dim), "")
     });
 
     return jit;
@@ -695,42 +508,6 @@ inline JitConstants MakeReorgYoloJitConstants(const ReorgYoloParams& params)
 
     return jit;
 }
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeNormalizeJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeNormalizeJitConstants(const NormalizeParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    const auto& np = params.normParams;
-
-    jit.AddConstants({
-        MakeJitConstant("SCALE_TABLE",          np.scaleTable),
-        MakeJitConstant("EPSILON",              np.epsilon),
-        MakeJitConstant(toString(np.normMode),  ""),
-        MakeJitConstant("THRESHOLD",            0.0001f),
-    });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeMVNJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeMVNJitConstants(const MVNParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    const auto& mvnp = params.mvnParams;
-
-    jit.AddConstants({
-        MakeJitConstant("EPSILON",              mvnp.epsilon),
-        MakeJitConstant(toString(mvnp.mvnMode), ""),
-        MakeJitConstant("NORMALIZE_VARIANCE",   mvnp.mvnNormalizeVariance),
-    });
-
-    return jit;
-}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MakePermuteJitConstants
@@ -743,56 +520,6 @@ inline JitConstants MakePermuteJitConstants(const PermuteParams& params)
         MakeJitConstant("PERMUTE_ORDER", params.permuteParams.order)
     });
 
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeDeconvolutionJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeDeconvolutionJitConstants(const DeconvolutionParams& params)
-{
-    JitConstants jit = MakeWeightBiasParamsJitConstants(params);
-    const auto& dp = params.deconvParams;
-    const auto& padding = dp.padding;
-    const auto& input = params.inputs[0];
-
-    int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - (dp.filterSize.x - 1 + padding.x)*input.X().pitch - (dp.filterSize.y - 1 + padding.y)*input.Y().pitch;
-    input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);
-
-    jit.AddConstants({
-        MakeJitConstant("STRIDE",                       dp.stride),
-        MakeJitConstant("PADDING",                      dp.padding),
-        MakeJitConstant("DILATION",                     dp.dilation),
-        MakeJitConstant("FILTER_ARRAY_NUM",             dp.split),
-        MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
-        MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      dp.depthwiseSeparableOpt),
-    });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeEltwiseJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeEltwiseJitConstants(const EltwiseParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    jit.AddConstants({
-        MakeJitConstant("ELTWISE_LAYOUT_BASED", params.eltwiseParams.layoutBased),
-    });
-
-    if (params.eltwiseParams.int8_quantization)
-    {
-        if (params.eltwiseParams.output_calibration)
-        {
-            jit.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.eltwiseParams.output_calibration));
-            jit.AddConstant(MakeJitConstant("O_QF", params.output_calibration_factors[0]));
-
-        }
-        else
-            jit.AddConstants({ MakeJitConstant("O_QF",       params.eltwiseParams.output_quantization_factor) });
-    }
     return jit;
 }
 
@@ -889,44 +616,6 @@ inline JitConstants MakeROIPoolingV1JitConstants(const ROIPoolingParams& params)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeConcatenationJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeConcatenationJitConstants(const ConcatenationParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    jit.AddConstants({
-        MakeJitConstant("CONCAT_" + toString(params.concatParams.axis), 1),
-    });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeActivationJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeActivationJitConstants(const ActivationParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-    
-    const auto& inputNlParams = params.actParams.inputActivationParams;
-
-    jit.AddConstants({
-        MakeJitConstant("PARAMS_NUM", GetActivationAdditionalParamsNumber(params.activationFunc)),
-    });
-
-    if (!inputNlParams.empty())
-    {
-        jit.AddConstants({
-            MakeJitConstant("ADDITIONAL_PARAMS", inputNlParams[0]),
-            MakeJitConstant("PARAMETERIZED", ""),
-        });
-    }
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // MakeUpSamplingJitConstants
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 inline JitConstants MakeUpSamplingJitConstants(const UpSamplingParams& params)
@@ -950,47 +639,45 @@ inline JitConstants MakeUpSamplingJitConstants(const UpSamplingParams& params)
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeConvolutionGradWeightsJitConstants
+// MakeLSTMGemmJitConstants
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeConvolutionGradWeightsJitConstants(const ConvolutionGradWeightsParams& params)
+inline JitConstants MakeLSTMGemmJitConstants(const LSTMGemmParams& params)
 {
-    JitConstants jit = MakeWeightBiasParamsJitConstants(params);
-    const auto& dp = params.convGradWeightsParams;
-    const auto& padding = dp.padding;
-    const auto& input = params.inputs[0];
+    JitConstants jit = MakeBaseParamsJitConstants(params);
+    const auto& weights = params.weights;
+    const auto& recurrent = params.recurrent;
+    const auto& hidden = params.hidden;
+    const auto& bias = params.bias;
+    if (params.hasBias) {
+        jit.AddConstants({ MakeJitConstant("BIAS", bias), MakeJitConstant("BIAS_TERM", true) });
+    }
+    if (params.hasHidden) {
+        jit.AddConstants({ MakeJitConstant("HIDDEN", hidden), MakeJitConstant("HIDDEN_TERM", true) , MakeJitConstant("RECURRENT", recurrent) });
+    }
 
-    int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - (dp.filterSize.x - 1 + padding.x)*input.X().pitch - (dp.filterSize.y - 1 + padding.y)*input.Y().pitch;
-    input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);
+    jit.AddConstants({ MakeJitConstant("WEIGHTS", weights)});
 
+    return jit;
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// MakeLSTMEltJitConstants
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+inline JitConstants MakeLSTMEltJitConstants(const LSTMEltParams& params)
+{
+    JitConstants jit = MakeBaseParamsJitConstants(params);
+
+    if (params.hasCell) {
+        const auto& cell = params.cell;
+        jit.AddConstants({ MakeJitConstant("CELL_TERM", true), MakeJitConstant("CELL", cell) });
+    }
+
+    const auto& GEMMInput = params.inputs[0];
     jit.AddConstants({
-        MakeJitConstant("STRIDE",                       dp.stride),
-        MakeJitConstant("PADDING",                      dp.padding),
-        MakeJitConstant("DILATION",                     dp.dilation),
-        MakeJitConstant("FILTER_ARRAY_NUM",             dp.split),
-        MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
-        MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      dp.depthwiseSeparableOpt),
+        MakeJitConstant("GEMM_OFFSET1", GEMMInput.X().v / 4),
+        MakeJitConstant("GEMM_OFFSET2", GEMMInput.X().v / 2),
+        MakeJitConstant("GEMM_OFFSET3", 3 * GEMMInput.X().v / 4),
     });
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeFullyConnectedGradInputJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeFullyConnectedGradInputJitConstants(const FullyConnectedGradInputParams& params)
-{
-    JitConstants jit = MakeWeightBiasParamsJitConstants(params);
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeFullyConnectedGradWeightsJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeFullyConnectedGradWeightsJitConstants(const FullyConnectedGradWeightsParams& params)
-{
-    JitConstants jit = MakeWeightBiasParamsJitConstants(params);
-
     return jit;
 }
 

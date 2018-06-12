@@ -17,7 +17,7 @@
 #include "convolution_kernel_bfyx_3x3_dw_opt.h"
 #include "kernel_selector_utils.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ConvolutionKernel_bfyx_3x3_dw_opt::ConvolutionKernel_bfyx_3x3_dw_opt() : ConvolutionKernelBase("convolution_gpu_bfyx_3x3_dw_opt")
     {
@@ -69,7 +69,7 @@ namespace KernelSelector
             return false;
         }
 
-        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
+        const convolution_params& params = static_cast<const convolution_params&>(p);
 
         if ((params.convParams.filterSize.x != 3) ||
             (params.convParams.filterSize.y != 3) ||
@@ -98,7 +98,7 @@ namespace KernelSelector
         return AutoTuneOption{ { simdSize - 2, 7 }, ROUND_ROBIN };
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_3x3_dw_opt::SetDefault(const ConvolutionParams& params, int autoTuneIndex) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_3x3_dw_opt::SetDefault(const convolution_params& params, int autoTuneIndex) const
     {
         constexpr int simdSize = 16;
 
@@ -123,7 +123,7 @@ namespace KernelSelector
         return runInfo;
     }
 
-    JitConstants ConvolutionKernel_bfyx_3x3_dw_opt::GetJitConstants(const ConvolutionParams& params, DispatchData kd) const
+    JitConstants ConvolutionKernel_bfyx_3x3_dw_opt::GetJitConstants(const convolution_params& params, DispatchData kd) const
     {
         stSize tileDims = { kd.cldnnStyle.blockWidth, kd.cldnnStyle.blockHeight };
         auto mem_consts = ConvolutionKernelBase::GetJitConstants(params, kd);

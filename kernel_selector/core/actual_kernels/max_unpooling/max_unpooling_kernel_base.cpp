@@ -16,7 +16,7 @@
 
 #include "max_unpooling_kernel_base.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     bool MaxUnpoolingKernelBase::Validate(const Params& p, const OptionalParams& o) const
     {
@@ -29,7 +29,7 @@ namespace KernelSelector
         return true;
     }
 
-    JitConstants MaxUnpoolingKernelBase::GetJitConstants(const MaxUnpoolingParams& params) const
+    JitConstants MaxUnpoolingKernelBase::GetJitConstants(const max_unpooling_params& params) const
     {
         JitConstants jit = MakeBaseParamsJitConstants(params);
         if(params.output.PitchesDifferFromLogicalDims())
@@ -37,7 +37,7 @@ namespace KernelSelector
         return jit;
     }
 
-    MaxUnpoolingKernelBase::DispatchData MaxUnpoolingKernelBase::SetDefault(const MaxUnpoolingParams& params) const
+    MaxUnpoolingKernelBase::DispatchData MaxUnpoolingKernelBase::SetDefault(const max_unpooling_params& params) const
     {
         const auto& input = params.inputs[0];
 
@@ -80,11 +80,11 @@ namespace KernelSelector
             return{};
         }
 
-        const MaxUnpoolingParams& orgParams = static_cast<const MaxUnpoolingParams&>(params);
+        const max_unpooling_params& orgParams = static_cast<const max_unpooling_params&>(params);
 
         DispatchData runInfo = SetDefault(orgParams);
 
-        KernelData kd = KernelData::Default<MaxUnpoolingParams>(params);
+        KernelData kd = KernelData::Default<max_unpooling_params>(params);
 
         auto cldnn_jit = GetJitConstants(orgParams);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);

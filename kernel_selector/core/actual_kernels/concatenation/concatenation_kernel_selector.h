@@ -18,19 +18,19 @@
 
 #include "kernel_selector.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
-    class ConcatenationKernelSelctor : public KernelSelctorBase
+    class concatenation_kernel_selector : public KernelSelctorBase
     {
     public:
-        static ConcatenationKernelSelctor &Instance() {
-            static ConcatenationKernelSelctor instance_;
+        static concatenation_kernel_selector &Instance() {
+            static concatenation_kernel_selector instance_;
             return instance_;
         }
 
-        ConcatenationKernelSelctor();
+        concatenation_kernel_selector();
 
-        virtual ~ConcatenationKernelSelctor() {}
+        virtual ~concatenation_kernel_selector() {}
 
         virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
     };

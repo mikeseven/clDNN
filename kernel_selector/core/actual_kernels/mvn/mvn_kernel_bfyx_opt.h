@@ -18,7 +18,7 @@
 
 #include "mvn_kernel_base.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {    
     class MVNKernelBfyxOpt : public MVNKernelBase
     {
@@ -31,7 +31,7 @@ namespace KernelSelector
         using Parent = MVNKernelBase;
 
     private:
-        DispatchData SetDefault(const MVNParams& params) const override;
-        JitConstants GetJitConstants(const MVNParams& params, MVNKernelBase::DispatchData kd) const override;
+        DispatchData SetDefault(const mvn_params& params) const override;
+        JitConstants GetJitConstants(const mvn_params& params, MVNKernelBase::DispatchData kd) const override;
     };
 }

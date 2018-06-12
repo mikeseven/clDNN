@@ -17,7 +17,7 @@
 #include "eltwise_kernel_base.h"
 #include "kernel_selector_utils.h" 
 
-namespace KernelSelector
+namespace kernel_selector
 {
     static uint32_t GetNumberOfInputs(EltwiseMode m)
     {
@@ -49,7 +49,7 @@ namespace KernelSelector
             return false;
         }
 
-        const EltwiseParams& params = static_cast<const EltwiseParams&>(p);
+        const eltwise_params& params = static_cast<const eltwise_params&>(p);
 
         if (params.inputs.size() == 0)
         {
@@ -86,9 +86,25 @@ namespace KernelSelector
         return true;
     }
 
-    JitConstants EltwiseKernelBase::GetJitConstantsCommon(const EltwiseParams& params, bool useVload8) const
+    JitConstants EltwiseKernelBase::GetJitConstantsCommon(const eltwise_params& params, bool useVload8) const
     {
-        auto jit = MakeEltwiseJitConstants(params);
+        JitConstants jit = MakeBaseParamsJitConstants(params);
+
+        jit.AddConstants({
+            MakeJitConstant("ELTWISE_LAYOUT_BASED", params.eltwiseParams.layoutBased),
+        });
+
+        if (params.eltwiseParams.int8_quantization)
+        {
+            if (params.eltwiseParams.output_calibration)
+            {
+                jit.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.eltwiseParams.output_calibration));
+                jit.AddConstant(MakeJitConstant("O_QF", params.output_calibration_factors[0]));
+
+            }
+            else
+                jit.AddConstants({ MakeJitConstant("O_QF",       params.eltwiseParams.output_quantization_factor) });
+        }
 
         std::string inputs_decls, vload_decls;
         auto& updateInputs = params.eltwiseParams.updateInputIds;
@@ -222,7 +238,7 @@ namespace KernelSelector
         return jit;
     }
 
-    JitConstants EltwiseKernelBase::GetJitConstants(const EltwiseParams& params) const
+    JitConstants EltwiseKernelBase::GetJitConstants(const eltwise_params& params) const
     {
         return GetJitConstantsCommon(params, false);
     }
@@ -234,8 +250,8 @@ namespace KernelSelector
             return{};
         }
 
-        KernelData kd = KernelData::Default<EltwiseParams>(params);
-        EltwiseParams& newParams = *static_cast<EltwiseParams*>(kd.params.get());
+        KernelData kd = KernelData::Default<eltwise_params>(params);
+        eltwise_params& newParams = *static_cast<eltwise_params*>(kd.params.get());
 
         auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
         auto cldnn_jit = GetJitConstants(newParams);

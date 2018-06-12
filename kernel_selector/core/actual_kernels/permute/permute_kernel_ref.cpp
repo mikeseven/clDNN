@@ -17,7 +17,7 @@
 #include "permute_kernel_ref.h"
 #include "kernel_selector_utils.h" 
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey PermuteKernelRef::GetSupportedKey() const
     {

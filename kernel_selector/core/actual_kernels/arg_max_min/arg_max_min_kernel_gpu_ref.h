@@ -18,7 +18,7 @@
 
 #include "arg_max_min_kernel_base.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
 	class ArgMaxMinKernelGPURef : public ArgMaxMinKernelBase
 	{

@@ -16,7 +16,7 @@
 
 #include "fully_connected_grad_weights_kernel_ref.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
 
     ParamsKey FullyConnectedGradWeightsKernelRef::GetSupportedKey() const

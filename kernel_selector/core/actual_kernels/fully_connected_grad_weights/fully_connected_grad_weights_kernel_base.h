@@ -16,22 +16,46 @@
 
 #pragma once
 
-#include "common_kernel_base.h"
+#include "weight_bias_kernel_base.h"
 #include "kernel_selector_params.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
-    class FullyConnectedGradWeightsKernelBase : public CommonKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // fully_connected_grad_weights_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct fully_connected_grad_weights_params : public WeightBiasParams
+    {
+        fully_connected_grad_weights_params() : WeightBiasParams(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            return WeightBiasParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // fully_connected_grad_weights_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct fully_connected_grad_weights_optional_params : WeightsBiasOptionalParams
+    {
+        fully_connected_grad_weights_optional_params() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // FullyConnectedGradWeightsKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    class FullyConnectedGradWeightsKernelBase : public WeightBiasKernelBase
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using WeightBiasKernelBase::WeightBiasKernelBase;
         virtual ~FullyConnectedGradWeightsKernelBase() {}
 
         using DispatchData = CommonDispatchData;
     
     protected:
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const;
-        virtual JitConstants GetJitConstants(const FullyConnectedGradWeightsParams& params) const;
-        virtual DispatchData SetDefault(const FullyConnectedGradWeightsParams& params) const;
+        virtual JitConstants GetJitConstants(const fully_connected_grad_weights_params& params) const;
+        virtual DispatchData SetDefault(const fully_connected_grad_weights_params& params) const;
     };
 }

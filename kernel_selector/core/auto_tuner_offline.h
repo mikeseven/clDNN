@@ -21,7 +21,7 @@
 #include "auto_tuner.h"
 #include "kernel_selector_common.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     // SKL GT4e
     void tuning_cache_193B(tuning_data&);

@@ -19,6 +19,8 @@
 #include "implementation_map.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
+#include "max_unpooling/max_unpooling_kernel_selector.h"
+#include "max_unpooling/max_unpooling_kernel_base.h"
 
 namespace cldnn { namespace gpu {
 

@@ -18,7 +18,7 @@
 
 #include "convolution_kernel_base.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     class ConvolutionKernel_Winograd_2x3_s1_fused : public ConvolutionKernelBase
     {
@@ -31,10 +31,10 @@ namespace KernelSelector {
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
-        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const ConvolutionParams&) const override { return{ WeightsLayout::winograd_2x3_s1_fused_weights }; }
+        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&) const override { return{ WeightsLayout::winograd_2x3_s1_fused_weights }; }
 
-        JitConstants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const override;
+        JitConstants GetJitConstants(const convolution_params& params, DispatchData kd) const override;
         bool Validate(const Params& p, const OptionalParams& o) const override;
-        DispatchData SetDefault(const ConvolutionParams& arg, int autoTuneIndex = -1) const override;
+        DispatchData SetDefault(const convolution_params& arg, int autoTuneIndex = -1) const override;
     };
 }

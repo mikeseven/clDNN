@@ -17,7 +17,7 @@
 #include "upsampling_kernel_ref.h"
 #include "kernel_selector_utils.h" 
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     ParamsKey UpSamplingKernelRef::GetSupportedKey() const
     {

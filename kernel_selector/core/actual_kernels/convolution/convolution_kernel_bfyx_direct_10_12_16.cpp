@@ -18,7 +18,7 @@
 #include "kernel_selector_utils.h"
 #include "common_tools.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     ParamsKey ConvolutionKernel_bfyx_Direct_10_10_12::GetSupportedKey() const
     {
@@ -41,7 +41,7 @@ namespace KernelSelector {
         return k;
     }
 
-    JitConstants ConvolutionKernel_bfyx_Direct_10_10_12::GetJitConstants(const ConvolutionParams& params, Parent::DispatchData runInfo) const
+    JitConstants ConvolutionKernel_bfyx_Direct_10_10_12::GetJitConstants(const convolution_params& params, Parent::DispatchData runInfo) const
     {
         JitConstants jit = Parent::GetJitConstants(params, runInfo);
         const auto& cp = params.convParams;
@@ -59,7 +59,7 @@ namespace KernelSelector {
         return jit;
     }
 
-    ConvolutionKernel_bfyx_Direct_10_10_12::Parent::DispatchData ConvolutionKernel_bfyx_Direct_10_10_12::SetDefault(const ConvolutionParams& arg, int) const
+    ConvolutionKernel_bfyx_Direct_10_10_12::Parent::DispatchData ConvolutionKernel_bfyx_Direct_10_10_12::SetDefault(const convolution_params& arg, int) const
     {
         Parent::DispatchData runInfo = Parent::SetDefault(arg);
 
@@ -96,7 +96,7 @@ namespace KernelSelector {
             return false;
         }
 
-        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
+        const convolution_params& params = static_cast<const convolution_params&>(p);
 
         const auto& cp = params.convParams;
 

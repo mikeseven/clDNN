@@ -19,6 +19,8 @@
 #include "implementation_map.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
+#include "normalize/normalize_kernel_selector.h"
+#include "normalize/normalize_kernel_base.h"
 
 #include <algorithm>
 

@@ -18,7 +18,7 @@
 #include "kernel_selector_utils.h"
 #include "common_tools.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
     ParamsKey ConvolutionKernel_Winograd_2x3_s1::GetSupportedKey() const
     {
@@ -42,7 +42,7 @@ namespace KernelSelector {
         return k;
     }
 
-    JitConstants ConvolutionKernel_Winograd_2x3_s1::GetJitConstants(const ConvolutionParams& params, Parent::DispatchData runInfo) const
+    JitConstants ConvolutionKernel_Winograd_2x3_s1::GetJitConstants(const convolution_params& params, Parent::DispatchData runInfo) const
     {
         JitConstants jit = Parent::GetJitConstants(params, runInfo);
 
@@ -65,7 +65,7 @@ namespace KernelSelector {
         return jit;
     }
 
-    ConvolutionKernel_Winograd_2x3_s1::Parent::DispatchData ConvolutionKernel_Winograd_2x3_s1::SetDefault(const ConvolutionParams& arg, int) const
+    ConvolutionKernel_Winograd_2x3_s1::Parent::DispatchData ConvolutionKernel_Winograd_2x3_s1::SetDefault(const convolution_params& arg, int) const
     {
         Parent::DispatchData runInfo = Parent::SetDefault(arg);
 
@@ -98,7 +98,7 @@ namespace KernelSelector {
             return false;
         }
 
-        const ConvolutionParams& params = static_cast<const ConvolutionParams&>(p);
+        const convolution_params& params = static_cast<const convolution_params&>(p);
 
         const auto& cp = params.convParams;
 

@@ -18,7 +18,7 @@
 
 #include "activation_kernel_base.h"
 
-namespace KernelSelector
+namespace kernel_selector
 {
     class ActivationKernelOpt : public ActivationKernelBase
     {
@@ -32,8 +32,8 @@ namespace KernelSelector
 
     protected:
         static const int NUM_COLS_WI = 4;
-        virtual DispatchData SetDefault(const ActivationParams& arg) const override;
+        virtual DispatchData SetDefault(const activation_params& arg) const override;
         virtual bool Validate(const Params& p, const OptionalParams& o) const override;
-        virtual JitConstants GetJitConstants(const ActivationParams& params, DispatchData) const override;
+        virtual JitConstants GetJitConstants(const activation_params& params, DispatchData kd) const override;
     };
 }

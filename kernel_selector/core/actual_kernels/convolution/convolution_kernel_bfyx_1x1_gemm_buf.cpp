@@ -17,7 +17,7 @@
 #include "convolution_kernel_bfyx_1x1_gemm_buf.h"
 #include "kernel_selector_utils.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
     
     ParamsKey ConvolutionKernel_bfyx_1x1_gemm_buf::GetSupportedKey() const
     {
@@ -34,7 +34,7 @@ namespace KernelSelector {
         return k;
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_1x1_gemm_buf::SetDefault(const ConvolutionParams& params, int) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_1x1_gemm_buf::SetDefault(const convolution_params& params, int) const
     {
         DispatchData kd = ConvolutionKernelBase::SetDefault(params);
 
@@ -65,7 +65,7 @@ namespace KernelSelector {
             return false;
         }
 
-        const auto& params = static_cast<const ConvolutionParams&>(p);
+        const auto& params = static_cast<const convolution_params&>(p);
 
         const auto &input = params.inputs[0];
 
@@ -81,7 +81,7 @@ namespace KernelSelector {
         return true;
     }
 
-    JitConstants ConvolutionKernel_bfyx_1x1_gemm_buf::GetJitConstants(const ConvolutionParams& params, DispatchData runInfo) const
+    JitConstants ConvolutionKernel_bfyx_1x1_gemm_buf::GetJitConstants(const convolution_params& params, DispatchData runInfo) const
     {
         auto jit = Parent::GetJitConstants(params, runInfo);
 

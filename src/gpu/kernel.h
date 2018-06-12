@@ -63,7 +63,11 @@ public:
         std::vector<memory_impl::cptr> intermediates;
         memory_impl::cptr output;
         memory_impl::cptr weights;
+        memory_impl::cptr recurrent;
+        memory_impl::cptr hidden;
+        memory_impl::cptr cell;
         memory_impl::cptr bias;
+        memory_impl::cptr lstm_packed;
         memory_impl::cptr weights_quantization_factors;
         memory_impl::cptr output_calibration_factors;
         memory_impl::cptr lookup_table;

@@ -18,7 +18,7 @@
 
 #include "convolution_kernel_base.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {    
     class ConvolutionKernel_bfyx_3x3_dw_opt : public ConvolutionKernelBase
     {
@@ -34,9 +34,9 @@ namespace KernelSelector
     
     protected:
         bool Validate(const Params&, const OptionalParams&) const override;
-        std::vector<WeightsLayout> GetSupportedWeightLayouts(const ConvolutionParams&)  const override { return{ WeightsLayout::oiyx }; }
-        JitConstants GetJitConstants(const ConvolutionParams& params, DispatchData kd) const override;
-        DispatchData SetDefault(const ConvolutionParams& params, int autoTuneIndex = -1) const override;
+        std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&)  const override { return{ WeightsLayout::oiyx }; }
+        JitConstants GetJitConstants(const convolution_params& params, DispatchData kd) const override;
+        DispatchData SetDefault(const convolution_params& params, int autoTuneIndex = -1) const override;
 
         struct AutoTuneOption
         {

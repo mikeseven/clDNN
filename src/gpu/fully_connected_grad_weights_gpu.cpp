@@ -19,6 +19,8 @@
 #include "implementation_map.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
+#include "fully_connected_grad_weights/fully_connected_grad_weights_kernel_selector.h"
+#include "fully_connected_grad_weights/fully_connected_grad_weights_kernel_base.h"
 #include "api/CPP/fully_connected_grad_weights.hpp"
 
 namespace cldnn { namespace gpu {
