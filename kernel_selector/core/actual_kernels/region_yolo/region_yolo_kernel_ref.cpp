@@ -35,12 +35,24 @@ namespace kernel_selector
         return k;
     }
 
-    JitConstants RegionYoloKernelRef::GetJitConstants(const RegionYoloParams& params) const
+    JitConstants RegionYoloKernelRef::GetJitConstants(const region_yolo_params& params) const
     {
-        return MakeRegionYoloJitConstants(params);
+        JitConstants jit = MakeBaseParamsJitConstants(params);
+
+        const auto& ry = params.ryParams;
+
+        jit.AddConstants({
+            MakeJitConstant("COORDS",  ry.coords),
+            MakeJitConstant("CLASSES",  ry.classes),
+            MakeJitConstant("NUM", ry.num),
+            MakeJitConstant("DO_SOFTMAX", ry.do_softmax),
+            MakeJitConstant("MASK_SIZE", ry.mask_size)
+        });
+
+        return jit;
     }
 
-    RegionYoloKernelRef::DispatchData SetDefault(const RegionYoloParams& params)
+    RegionYoloKernelRef::DispatchData SetDefault(const region_yolo_params& params)
     {
         RegionYoloKernelRef::DispatchData kd;
 
@@ -72,10 +84,10 @@ namespace kernel_selector
     KernelsData RegionYoloKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::REGION_YOLO);
-        const RegionYoloParams& orgParams = static_cast<const RegionYoloParams&>(params);
+        const region_yolo_params& orgParams = static_cast<const region_yolo_params&>(params);
 
         DispatchData runInfo = SetDefault(orgParams);
-        KernelData kd = KernelData::Default<RegionYoloParams>(params);
+        KernelData kd = KernelData::Default<region_yolo_params>(params);
 
         auto cldnn_jit = GetJitConstants(orgParams);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);

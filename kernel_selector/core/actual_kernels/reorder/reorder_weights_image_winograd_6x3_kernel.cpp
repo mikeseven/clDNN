@@ -36,7 +36,7 @@ namespace kernel_selector
         return k;
     }
 
-    ReorderWeightsImageWinograd6x3Kernel::DispatchData ReorderWeightsImageWinograd6x3Kernel::SetDefault(const ReorderWeightsParams& params) const
+    ReorderWeightsImageWinograd6x3Kernel::DispatchData ReorderWeightsImageWinograd6x3Kernel::SetDefault(const reorder_weights_params& params) const
     {
         DispatchData kd;
 
@@ -55,7 +55,7 @@ namespace kernel_selector
 
     KernelsData ReorderWeightsImageWinograd6x3Kernel::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        const ReorderWeightsParams& orgParams = static_cast<const ReorderWeightsParams&>(params);
+        const reorder_weights_params& orgParams = static_cast<const reorder_weights_params&>(params);
         return GetCommonKernelsData(orgParams, options, FORCE_PRIORITY_4);
     }
 }

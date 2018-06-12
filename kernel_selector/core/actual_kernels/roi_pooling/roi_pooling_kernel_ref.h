@@ -20,6 +20,41 @@
 
 namespace kernel_selector
 {
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // roi_pooling_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct roi_pooling_params : public BaseParams
+    {
+        roi_pooling_params() : BaseParams(KernelType::ROI_POOLING) {}
+
+        struct DedicatedParams
+        {
+            PoolType    mode = PoolType::MAX;
+            size_t      pooledWidth = 0;
+            size_t      pooledHeight = 0;
+            size_t      groupSize = 0;
+            float       spatialScale = 1.f;
+        };
+
+        DedicatedParams roiParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            return BaseParams::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // roi_pooling_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct roi_pooling_optional_params : OptionalParams
+    {
+        roi_pooling_optional_params() : OptionalParams(KernelType::ROI_POOLING) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // ROIPoolingKernelRef
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class ROIPoolingKernelRef : public CommonKernelBase
     {
     public:
@@ -32,6 +67,6 @@ namespace kernel_selector
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
-        JitConstants GetJitConstants(const ROIPoolingParams& params) const;
+        JitConstants GetJitConstants(const roi_pooling_params& params) const;
     };
 }

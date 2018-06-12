@@ -22,7 +22,7 @@
  
 namespace kernel_selector {
 
-    ReorderKernelSelctor::ReorderKernelSelctor()
+    reorder_kernel_selector::reorder_kernel_selector()
     {
         Attach<ReorderKernelRef>();
         Attach<ReorderKernelFastBatch1>();
@@ -30,7 +30,7 @@ namespace kernel_selector {
         Attach<ReorderToWinograd2x3Kernel>();
     }
 
-    KernelsData ReorderKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData reorder_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::REORDER);
     }

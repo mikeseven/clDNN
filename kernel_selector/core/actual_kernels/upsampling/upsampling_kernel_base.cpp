@@ -27,7 +27,7 @@ namespace kernel_selector
             return false;
         }
 
-        const UpSamplingParams& params = static_cast<const UpSamplingParams&>(p);
+        const upsampling_params& params = static_cast<const upsampling_params&>(p);
 
         if (params.inputs.size() == 0)
         {
@@ -37,9 +37,24 @@ namespace kernel_selector
         return true;
     }
 
-    JitConstants UpSamplingKernelBase::GetJitConstants(const UpSamplingParams& params) const
+    JitConstants UpSamplingKernelBase::GetJitConstants(const upsampling_params& params) const
     {
-        return MakeUpSamplingJitConstants(params);
+        JitConstants jit = MakeBaseParamsJitConstants(params);
+
+        const auto& us = params.usParams;
+        const auto& input = params.inputs[0];
+        const auto& output = params.output;
+
+        auto x_ratio = (float)input.X().v / (float)output.X().v;
+        auto y_ratio = (float)input.Y().v / (float)output.Y().v;
+
+        jit.AddConstants({
+            MakeJitConstant(toString(us.sampleType), ""),
+            MakeJitConstant("X_RATIO", x_ratio),
+            MakeJitConstant("Y_RATIO", y_ratio),
+        });
+
+        return jit;
     }
 
     KernelsData UpSamplingKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options) const
@@ -49,8 +64,8 @@ namespace kernel_selector
             return{};
         }
 
-        KernelData kd = KernelData::Default<UpSamplingParams>(params);
-        UpSamplingParams& newParams = *static_cast<UpSamplingParams*>(kd.params.get());
+        KernelData kd = KernelData::Default<upsampling_params>(params);
+        upsampling_params& newParams = *static_cast<upsampling_params*>(kd.params.get());
 
         auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
         auto cldnn_jit = GetJitConstants(newParams);

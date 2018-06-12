@@ -27,6 +27,6 @@ namespace kernel_selector
 
         virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
-        virtual DispatchData SetDefault(const ReorderWeightsParams& arg) const override;
+        virtual DispatchData SetDefault(const reorder_weights_params& arg) const override;
     };
 }

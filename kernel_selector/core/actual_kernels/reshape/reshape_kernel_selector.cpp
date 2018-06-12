@@ -19,12 +19,12 @@
  
 namespace kernel_selector {
 
-    ReshapeKernelSelctor::ReshapeKernelSelctor()
+    reshape_kernel_selector::reshape_kernel_selector()
     {
         Attach<ReshapeKernelRef>();
     }
 
-    KernelsData ReshapeKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData reshape_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::REORDER);
     }

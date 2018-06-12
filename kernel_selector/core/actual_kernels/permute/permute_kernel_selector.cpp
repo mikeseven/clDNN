@@ -19,12 +19,12 @@
  
 namespace kernel_selector {
 
-    PermuteKernelSelctor::PermuteKernelSelctor()
+    permute_kernel_selector::permute_kernel_selector()
     {
         Attach<PermuteKernelRef>();
     }
 
-    KernelsData PermuteKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData permute_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::REORDER);
     }

@@ -19,6 +19,8 @@
 #include "implementation_map.h"
 #include "error_handler.h"
 #include "kernel_selector_helper.h"
+#include "upsampling/upsampling_kernel_selector.h"
+#include "upsampling/upsampling_kernel_base.h"
 
 namespace cldnn { namespace gpu {
 

@@ -33,7 +33,7 @@ namespace kernel_selector {
         return k;
     }
 
-    static ROIPoolingKernelRef::DispatchData SetDefault(const ROIPoolingParams& params)
+    static ROIPoolingKernelRef::DispatchData SetDefault(const roi_pooling_params& params)
     {
         ROIPoolingKernelRef::DispatchData kd;
 
@@ -56,9 +56,19 @@ namespace kernel_selector {
         return kd;
     }
 
-    JitConstants ROIPoolingKernelRef::GetJitConstants(const ROIPoolingParams& params) const
+    JitConstants ROIPoolingKernelRef::GetJitConstants(const roi_pooling_params& params) const
     {
-        auto jit = MakeROIPoolingV1JitConstants(params);
+        JitConstants jit = MakeBaseParamsJitConstants(params);
+
+        const auto& rp = params.roiParams;
+
+        jit.AddConstants({
+            MakeJitConstant("POOLED_HEIGHT",     rp.pooledHeight),
+            MakeJitConstant("POOLED_WIDTH",      rp.pooledWidth),
+            MakeJitConstant("SPATIAL_SCALE",     rp.spatialScale),
+            MakeJitConstant("GROUP_SIZE",        rp.groupSize),
+            MakeJitConstant(toString(rp.mode) + "_POOLING", 1),
+        });
 
         jit.AddConstants({
             MakeJitConstant("MAX_POOL",                     params.roiParams.mode == PoolType::MAX),
@@ -71,7 +81,7 @@ namespace kernel_selector {
     KernelsData ROIPoolingKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
         assert(params.GetType() == KernelType::ROI_POOLING);
-        const ROIPoolingParams& orgParams = static_cast<const ROIPoolingParams&>(params);
+        const roi_pooling_params& orgParams = static_cast<const roi_pooling_params&>(params);
 
         if (orgParams.activationFunc != ActivationFunction::NONE)
         {
@@ -79,7 +89,7 @@ namespace kernel_selector {
         }
 
         DispatchData runInfo = SetDefault(orgParams);
-        KernelData kd = KernelData::Default<ROIPoolingParams>(params);
+        KernelData kd = KernelData::Default<roi_pooling_params>(params);
 
         auto cldnn_jit = GetJitConstants(orgParams);
         auto entry_point = GetEntryPoint(kernelName, orgParams.layerID, options);

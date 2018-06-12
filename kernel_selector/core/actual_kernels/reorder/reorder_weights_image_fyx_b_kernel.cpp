@@ -35,7 +35,7 @@ namespace kernel_selector
         return k;
     }
 
-    ReorderWeightsImage_fyx_b_Kernel::DispatchData ReorderWeightsImage_fyx_b_Kernel::SetDefault(const ReorderWeightsParams& params) const
+    ReorderWeightsImage_fyx_b_Kernel::DispatchData ReorderWeightsImage_fyx_b_Kernel::SetDefault(const reorder_weights_params& params) const
     {
         const auto& out = params.reorderParams.output;
 
@@ -59,7 +59,7 @@ namespace kernel_selector
 
     KernelsData ReorderWeightsImage_fyx_b_Kernel::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        const ReorderWeightsParams& orgParams = static_cast<const ReorderWeightsParams&>(params);
+        const reorder_weights_params& orgParams = static_cast<const reorder_weights_params&>(params);
         return GetCommonKernelsData(orgParams, options, FORCE_PRIORITY_4);
     }
 }

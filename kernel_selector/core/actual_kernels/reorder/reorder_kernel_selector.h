@@ -20,17 +20,17 @@
  
 namespace kernel_selector 
 {
-    class ReorderKernelSelctor : public KernelSelctorBase
+    class reorder_kernel_selector : public KernelSelctorBase
     {
     public:
-        static ReorderKernelSelctor &Instance() {
-            static ReorderKernelSelctor instance_;
+        static reorder_kernel_selector &Instance() {
+            static reorder_kernel_selector instance_;
             return instance_;
         }
 
-        ReorderKernelSelctor();
+        reorder_kernel_selector();
 
-        virtual ~ReorderKernelSelctor() {}
+        virtual ~reorder_kernel_selector() {}
 
         virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
     };

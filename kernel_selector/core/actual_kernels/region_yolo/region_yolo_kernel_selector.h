@@ -20,17 +20,17 @@
  
 namespace kernel_selector 
 {
-    class RegionYoloKernelSelctor : public KernelSelctorBase
+    class region_yolo_kernel_selector : public KernelSelctorBase
     {
     public:
-        static RegionYoloKernelSelctor &Instance() {
-            static RegionYoloKernelSelctor instance_;
+        static region_yolo_kernel_selector &Instance() {
+            static region_yolo_kernel_selector instance_;
             return instance_;
         }
 
-        RegionYoloKernelSelctor();
+        region_yolo_kernel_selector();
 
-        virtual ~RegionYoloKernelSelctor() {}
+        virtual ~region_yolo_kernel_selector() {}
 
         virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
     };

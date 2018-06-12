@@ -20,6 +20,7 @@
 #include "tensor_type.h"
 #include "kernel_selector_common.h"
 #include "reorder/reorder_weights_kernel_selector.h"
+#include "reorder/reorder_kernel_base.h"
 #include "convolution/convolution_params.h"
 
 namespace kernel_selector { namespace
@@ -200,13 +201,13 @@ namespace kernel_selector { namespace
             }
 
             auto& reorderKS = ReorderWeightsKernelSelctor::Instance();
-            ReorderWeightsParams r_params;
+            reorder_weights_params r_params;
 
             r_params.layerID = newParams.layerID + "_reorder_";
             r_params.reorderParams.input = newParams.weights;
             r_params.reorderParams.output = newParams.weights.TransformIgnorePadding(layouts[0], dtype);
 
-            ReorderOptionalParams op;
+            reorder_optional_params op;
             KernelsData kernels_data = reorderKS.GetBestKernels(r_params, op);
 
             if (kernels_data.empty())

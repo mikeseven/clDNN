@@ -19,12 +19,12 @@
 
 namespace kernel_selector {
 
-    RegionYoloKernelSelctor::RegionYoloKernelSelctor()
+    region_yolo_kernel_selector::region_yolo_kernel_selector()
     {
         Attach<RegionYoloKernelRef>();
     }
 
-    KernelsData RegionYoloKernelSelctor::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData region_yolo_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::REGION_YOLO);
     }

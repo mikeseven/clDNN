@@ -20,17 +20,17 @@
  
 namespace kernel_selector 
 {
-    class PermuteKernelSelctor : public KernelSelctorBase
+    class permute_kernel_selector : public KernelSelctorBase
     {
     public:
-        static PermuteKernelSelctor &Instance() {
-            static PermuteKernelSelctor instance_;
+        static permute_kernel_selector &Instance() {
+            static permute_kernel_selector instance_;
             return instance_;
         }
 
-        PermuteKernelSelctor();
+        permute_kernel_selector();
 
-        virtual ~PermuteKernelSelctor() {}
+        virtual ~permute_kernel_selector() {}
 
         virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
     };

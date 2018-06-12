@@ -21,6 +21,42 @@
  
 namespace kernel_selector 
 {    
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // region_yolo_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct region_yolo_params : public BaseParams
+    {
+        region_yolo_params() : BaseParams(KernelType::REGION_YOLO) {}
+
+        struct DedicatedParams
+        {
+            uint32_t coords;
+            uint32_t classes;
+            uint32_t num;
+            uint32_t mask_size;
+            bool do_softmax;
+        };
+
+        struct DedicatedParams ryParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            auto k = BaseParams::GetParamsKey();
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // region_yolo_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct region_yolo_optional_params : OptionalParams
+    {
+        region_yolo_optional_params() : OptionalParams(KernelType::REGION_YOLO) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // RegionYoloKernelRef
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class RegionYoloKernelRef : public CommonKernelBase
     {
     public:
@@ -33,6 +69,6 @@ namespace kernel_selector
 
 
     protected:
-        virtual JitConstants GetJitConstants(const RegionYoloParams& params) const;
+        virtual JitConstants GetJitConstants(const region_yolo_params& params) const;
     };
 }

@@ -20,6 +20,41 @@
 
 namespace kernel_selector
 {
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // upsampling_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct upsampling_params : public BaseParams
+    {
+        upsampling_params() : BaseParams(KernelType::UPSAMPLING) {}
+
+        struct DedicatedParams
+        {
+            uint32_t scale = 1;
+            uint32_t num_filter = 0;
+            SampleType sampleType = SampleType::NEAREST;
+        };
+
+        DedicatedParams usParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            auto k = BaseParams::GetParamsKey();
+            k.EnableUpSamplingSampleType(usParams.sampleType);
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // upsampling_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct upsampling_optional_params : OptionalParams
+    {
+        upsampling_optional_params() : OptionalParams(KernelType::UPSAMPLING) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // UpSamplingKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class UpSamplingKernelBase : public CommonKernelBase
     {
     public:
@@ -30,7 +65,7 @@ namespace kernel_selector
 
     protected:
         virtual bool Validate(const Params& p, const OptionalParams& o) const override;
-        virtual JitConstants GetJitConstants(const UpSamplingParams& params) const;
+        virtual JitConstants GetJitConstants(const upsampling_params& params) const;
         KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& options) const;
     };
 }
