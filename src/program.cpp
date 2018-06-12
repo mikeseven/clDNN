@@ -596,7 +596,7 @@ void program_impl::replace_nodes_pre()
                 output_ids_offsets.push_back(hidden_id);
             }
             primitive_id concatenation_id = node->id() + ":concatenation";
-            auto concatenation_node = std::make_shared<concatenation>(concatenation_id, output_ids_offsets, concatenation::along_b);
+            auto concatenation_node = std::make_shared<concatenation>(concatenation_id, output_ids_offsets, concatenation::along_f);
             auto &n5 = get_or_create(concatenation_node);
             inputs.push_back(&n5);
         }

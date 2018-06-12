@@ -143,15 +143,18 @@ void lstm_reference(VVVVF<T> &input, VVVVF<T> &hidden, VVVVF<T> &cell, VVVVF<T> 
                          bool hasBias = true, bool hasInitialHidden = true, bool hasInitialCell = true) {
 
     size_t sequence_len = input[0].size();
-    for (size_t seq = 0; seq < sequence_len; ++seq) {
-        VVVVF<T> splitInput = lstm_split_reference(input, 1, seq);
-        VVVVF<T> tempGEMM = lstm_gemm_reference(splitInput, weights, recurrent, bias, hidden, hasBias, hasInitialHidden);
-        VVVVF<T> tempOutput = lstm_elt_reference(tempGEMM, cell, hasInitialCell);
-        output[seq] = tempOutput[0]; // hidden
-        hidden = lstm_split_reference(tempOutput, 0, 0);
-        cell = lstm_split_reference(tempOutput, 0, 1);
-        hasInitialHidden = true;
-        hasInitialCell = true;
+    size_t dir_len = weights[0].size();
+    for (size_t dir = 0; dir < dir_len; ++dir) {
+        for (size_t seq = 0; seq < sequence_len; ++seq) {
+            VVVVF<T> splitInput = lstm_split_reference(input, 1, seq);
+            VVVVF<T> tempGEMM = lstm_gemm_reference(splitInput, weights, recurrent, bias, hidden, hasBias, hasInitialHidden);
+            VVVVF<T> tempOutput = lstm_elt_reference(tempGEMM, cell, hasInitialCell);
+            output[dir][seq] = tempOutput[0][dir]; // hidden, output[dir,seq] = tempOutput[0,dir,batch,hidden]
+            hidden = lstm_split_reference(tempOutput, 0, 0);
+            cell = lstm_split_reference(tempOutput, 0, 1);
+            hasInitialHidden = true;
+            hasInitialCell = true;
+        }
     }
 
     last_hidden = hidden;
@@ -326,7 +329,7 @@ void generate_lstm_topology(topology& t, memory& input, memory& hidden, memory& 
         }
         output_ids_offsets.push_back(hiddenStr);
     }
-    t.add(concatenation("concatenation", output_ids_offsets, concatenation::along_b));
+    t.add(concatenation("concatenation", output_ids_offsets, concatenation::along_f));
 }
 
 
@@ -341,7 +344,7 @@ void generic_lstm_custom_gpu_test(int sequence_len, int direction, int batch_siz
     VVVVF<T> ref_bias       = generate_random_4d<T>(1,            1,       direction, 4 * hidden_size, min_random, max_random);
     VVVVF<T> ref_hidden     = generate_random_4d<T>(1,    direction,      batch_size,     hidden_size, min_random, max_random);
     VVVVF<T> ref_cell       = generate_random_4d<T>(1,    direction,      batch_size,     hidden_size, min_random, max_random);
-    VVVVF<T> ref_output(sequence_len, VVVF<T>(direction, VVF<T>(batch_size, VF<T>(hidden_size))));
+    VVVVF<T> ref_output(direction, VVVF<T>(sequence_len, VVF<T>(batch_size, VF<T>(hidden_size))));
     VVVVF<T> last_hidden(1, VVVF<T>(direction, VVF<T>(batch_size, VF<T>(hidden_size))));
     VVVVF<T> last_cell(1, VVVF<T>(direction, VVF<T>(batch_size, VF<T>(hidden_size))));
 
@@ -385,10 +388,12 @@ void generic_lstm_custom_gpu_test(int sequence_len, int direction, int batch_siz
     auto output = outputs.begin()->second.get_memory();
     auto output_ptr = output.pointer<T>();
     int i = 0;
-    for (int j = 0; j < sequence_len; ++j) {
-        for (int b = 0; b < batch_size; ++b) {
-            for (int x = 0; x <  hidden_size; ++x) {
-                ASSERT_NEAR(ref_output[j][0][b][x], output_ptr[i++], FERROR);
+    for (int d = 0; d < direction; ++d) {
+        for (int s = 0; s < sequence_len; ++s) {
+            for (int b = 0; b < batch_size; ++b) {
+                for (int x = 0; x <  hidden_size; ++x) {
+                    ASSERT_NEAR(ref_output[d][s][b][x], output_ptr[i++], FERROR);
+                }
             }
         }
     }
@@ -407,7 +412,7 @@ void generic_lstm_gpu_test(int sequence_len, int direction, int batch_size, int 
     VVVVF<T> ref_bias       = generate_random_4d<T>(1,            1,       direction, 4 * hidden_size, min_random, max_random);
     VVVVF<T> ref_hidden     = generate_random_4d<T>(1,    direction,      batch_size,     hidden_size, min_random, max_random);
     VVVVF<T> ref_cell       = generate_random_4d<T>(1,    direction,      batch_size,     hidden_size, min_random, max_random);
-    VVVVF<T> ref_output(sequence_len, VVVF<T>(direction, VVF<T>(batch_size, VF<T>(hidden_size))));
+    VVVVF<T> ref_output(direction, VVVF<T>(sequence_len, VVF<T>(batch_size, VF<T>(hidden_size))));
     VVVVF<T> last_hidden(1, VVVF<T>(direction, VVF<T>(batch_size, VF<T>(hidden_size))));
     VVVVF<T> last_cell(1, VVVF<T>(direction, VVF<T>(batch_size, VF<T>(hidden_size))));
 
@@ -455,6 +460,7 @@ void generic_lstm_gpu_test(int sequence_len, int direction, int batch_size, int 
     topology.add(lstm("lstm", lstm_inputs, "weights", "recurrent",
                         hasBias ? "biases" : "", hasInitialHidden ? "hidden" : "", hasInitialCell ? "cell" : ""));
 
+    cldnn::build_options options;
     network network(engine, topology);
     network.set_input_data("input", input);
     if (hasInitialHidden) network.set_input_data("hidden", hidden);
@@ -468,10 +474,12 @@ void generic_lstm_gpu_test(int sequence_len, int direction, int batch_size, int 
     auto output = outputs.begin()->second.get_memory();
     auto output_ptr = output.pointer<T>();
     int i = 0;
-    for (int j = 0; j < sequence_len; ++j) {
-        for (int b = 0; b < batch_size; ++b) {
-            for (int x = 0; x <  hidden_size; ++x) {
-                ASSERT_NEAR(ref_output[j][0][b][x], output_ptr[i++], FERROR);
+    for (int d = 0; d < direction; ++d) {
+        for (int s = 0; s < sequence_len; ++s) {
+            for (int b = 0; b < batch_size; ++b) {
+                for (int x = 0; x <  hidden_size; ++x) {
+                    ASSERT_NEAR(ref_output[d][s][b][x], output_ptr[i++], FERROR);
+                }
             }
         }
     }
