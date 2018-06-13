@@ -36,7 +36,7 @@ namespace kernel_selector
         return k;
     }
 
-    KernelsData FullyConnected_fb_io_ref::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData FullyConnected_fb_io_ref::GetKernelsData(const Params& params, const optional_params& optParams) const
     {
         // TODO: it should be fb_io. but the original code use this kernel with yxfb and yxio 
         //       (fb == fyxb flatten fyx, not yxfb flatten yxf).

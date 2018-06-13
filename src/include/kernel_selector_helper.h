@@ -21,7 +21,6 @@
 #include "gpu/ocl_toolkit.h"
 #include "tensor_type.h"
 #include "kernel_selector_params.h"
-#include "weight_bias_params.h"
 #include "lstm/lstm_gemm_kernel_selector.h"
 #include "lstm/lstm_elt_kernel_selector.h"
 #include "jitter.h"
@@ -70,15 +69,11 @@ namespace kernel_selector
     using multi_data_tensor                 = kernel_selector::MultiDataTensor;
 
     using params                            = kernel_selector::Params;
-    using base_params                       = kernel_selector::BaseParams;
-    using weight_bias_params                = kernel_selector::WeightBiasParams;
     using weights_reorder_params            = kernel_selector::WeightsReorderParams;
     using generic_kernel_params             = kernel_selector::GenericKernelParams;
     using lstm_gemm_params                  = kernel_selector::LSTMGemmParams;
     using lstm_elt_params                   = kernel_selector::LSTMEltParams;
 
-    using optional_params                   = kernel_selector::OptionalParams;
-    using weights_bias_optional_params      = kernel_selector::WeightsBiasOptionalParams;
     using lstm_gemm_optional_params         = kernel_selector::LSTMGemmOptionalParams;
     using lstm_elt_optional_params          = kernel_selector::LSTMEltOptionalParams;
 

@@ -26,7 +26,7 @@ namespace kernel_selector
         UpSamplingKernelRef() : UpSamplingKernelBase("upsampling_ref") {}
         virtual ~UpSamplingKernelRef() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     };
 }

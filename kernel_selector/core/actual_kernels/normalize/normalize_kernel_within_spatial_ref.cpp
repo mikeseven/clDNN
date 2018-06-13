@@ -38,7 +38,7 @@ namespace kernel_selector
         return k;
     }
 
-    KernelsData NormalizeKernelWithinSpatialRef::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData NormalizeKernelWithinSpatialRef::GetKernelsData(const Params& params, const optional_params& optParams) const
     {
         return GetCommonKernelsData(params, optParams, FORCE_PRIORITY_9);
     }

@@ -23,9 +23,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // permute_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct permute_params : public BaseParams
+    struct permute_params : public base_params
     {
-        permute_params(): BaseParams(KernelType::PERMUTE) {}
+        permute_params(): base_params(KernelType::PERMUTE) {}
 
         struct DedicatedParams
         {
@@ -36,28 +36,28 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            return BaseParams::GetParamsKey();
+            return base_params::GetParamsKey();
         }
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // permute_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct permute_optional_params : OptionalParams
+    struct permute_optional_params : optional_params
     {
-        permute_optional_params() : OptionalParams(KernelType::PERMUTE) {}
+        permute_optional_params() : optional_params(KernelType::PERMUTE) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // PermuteKernelRef
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class PermuteKernelRef : public CommonKernelBase
+    class PermuteKernelRef : public common_kernel_base
     {
     public:
-        PermuteKernelRef() : CommonKernelBase("permute_ref") {}
+        PermuteKernelRef() : common_kernel_base("permute_ref") {}
         virtual ~PermuteKernelRef() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     };
 }

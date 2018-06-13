@@ -77,7 +77,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData ReorderKernelFastBatch1::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ReorderKernelFastBatch1::GetKernelsData(const Params& params, const optional_params& options) const
     {
         assert(params.GetType() == KernelType::REORDER);
 

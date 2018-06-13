@@ -35,7 +35,7 @@ namespace kernel_selector
         return k;
     }
 
-    KernelsData ReorderWeightsKernel::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ReorderWeightsKernel::GetKernelsData(const Params& params, const optional_params& options) const
     {
         const reorder_weights_params& orgParams = static_cast<const reorder_weights_params&>(params);
         return GetCommonKernelsData(orgParams, options, DONT_USE_IF_HAVE_SOMETHING_ELSE);

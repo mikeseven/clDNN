@@ -26,7 +26,7 @@ namespace kernel_selector {
         using Parent = FullyConnectedKernelBase;
         FullyConnected_bf_io_GEMM() : Parent("fully_connected_gpu_bf_io_gemm") {}
 
-        KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         ParamsKey GetSupportedKey() const override;
 
     protected:

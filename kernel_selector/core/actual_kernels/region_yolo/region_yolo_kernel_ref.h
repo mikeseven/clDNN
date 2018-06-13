@@ -24,9 +24,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // region_yolo_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct region_yolo_params : public BaseParams
+    struct region_yolo_params : public base_params
     {
-        region_yolo_params() : BaseParams(KernelType::REGION_YOLO) {}
+        region_yolo_params() : base_params(KernelType::REGION_YOLO) {}
 
         struct DedicatedParams
         {
@@ -41,7 +41,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            auto k = BaseParams::GetParamsKey();
+            auto k = base_params::GetParamsKey();
             return k;
         }
     };
@@ -49,22 +49,22 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // region_yolo_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct region_yolo_optional_params : OptionalParams
+    struct region_yolo_optional_params : optional_params
     {
-        region_yolo_optional_params() : OptionalParams(KernelType::REGION_YOLO) {}
+        region_yolo_optional_params() : optional_params(KernelType::REGION_YOLO) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // RegionYoloKernelRef
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class RegionYoloKernelRef : public CommonKernelBase
+    class RegionYoloKernelRef : public common_kernel_base
     {
     public:
-        RegionYoloKernelRef() : CommonKernelBase("region_yolo_gpu_ref") {}
+        RegionYoloKernelRef() : common_kernel_base("region_yolo_gpu_ref") {}
         virtual ~RegionYoloKernelRef() {}
 
         using DispatchData = CommonDispatchData;        
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
 
 

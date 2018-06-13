@@ -23,31 +23,31 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // reshape_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct reshape_params : public BaseParams
+    struct reshape_params : public base_params
     {
-        reshape_params() : BaseParams(KernelType::RESHAPE) {}
+        reshape_params() : base_params(KernelType::RESHAPE) {}
 
         virtual ParamsKey GetParamsKey() const
         {
-            return BaseParams::GetParamsKey();
+            return base_params::GetParamsKey();
         }
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // reshape_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct reshape_optional_params : OptionalParams
+    struct reshape_optional_params : optional_params
     {
-        reshape_optional_params() : OptionalParams(KernelType::RESHAPE) {}
+        reshape_optional_params() : optional_params(KernelType::RESHAPE) {}
     };
 
-    class ReshapeKernelRef : public CommonKernelBase
+    class ReshapeKernelRef : public common_kernel_base
     {
     public:
-        ReshapeKernelRef() : CommonKernelBase("reshape_ref") {}
+        ReshapeKernelRef() : common_kernel_base("reshape_ref") {}
         virtual ~ReshapeKernelRef() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     };
 }

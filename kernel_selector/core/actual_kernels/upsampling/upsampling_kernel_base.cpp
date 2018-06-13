@@ -19,7 +19,7 @@
 
 namespace kernel_selector
 {
-    bool UpSamplingKernelBase::Validate(const Params& p, const OptionalParams& o) const
+    bool UpSamplingKernelBase::Validate(const Params& p, const optional_params& o) const
     {
         if (p.GetType() != KernelType::UPSAMPLING ||
             o.GetType() != KernelType::UPSAMPLING)
@@ -57,7 +57,7 @@ namespace kernel_selector
         return jit;
     }
 
-    KernelsData UpSamplingKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData UpSamplingKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options) const
     {
         if (!Validate(params, options))
         {

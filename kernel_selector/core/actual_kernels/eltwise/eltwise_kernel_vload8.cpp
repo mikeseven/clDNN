@@ -37,7 +37,7 @@ namespace kernel_selector {
         return GetJitConstantsCommon(params, true);
     }
 
-    bool EltwiseKernel_vload8::Validate(const Params& params, const OptionalParams& o) const
+    bool EltwiseKernel_vload8::Validate(const Params& params, const optional_params& o) const
     {
         if (!EltwiseKernelBase::Validate(params, o))
         {
@@ -87,7 +87,7 @@ namespace kernel_selector {
         return true;
     }
 
-    KernelsData EltwiseKernel_vload8::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData EltwiseKernel_vload8::GetKernelsData(const Params& params, const optional_params& options) const
     {
         if (!Validate(params, options))
         {

@@ -24,9 +24,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // reorder_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct reorder_params : public BaseParams
+    struct reorder_params : public base_params
     {
-        reorder_params() : BaseParams(KernelType::REORDER) {}
+        reorder_params() : base_params(KernelType::REORDER) {}
 
         struct DedicatedParams
         {
@@ -44,7 +44,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            auto k = BaseParams::GetParamsKey();
+            auto k = base_params::GetParamsKey();
 
             if (reorderParams.winograd)
             {
@@ -57,9 +57,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // reorder_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct reorder_optional_params : OptionalParams
+    struct reorder_optional_params : optional_params
     {
-        reorder_optional_params() : OptionalParams(KernelType::REORDER) {}
+        reorder_optional_params() : optional_params(KernelType::REORDER) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -110,10 +110,10 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ReorderKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ReorderKernelBase : public CommonKernelBase
+    class ReorderKernelBase : public common_kernel_base
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         virtual ~ReorderKernelBase() {}
 
         using DispatchData = CommonDispatchData;
@@ -123,7 +123,7 @@ namespace kernel_selector
         virtual JitConstants GetJitConstants(const reorder_params& params) const;
         virtual DispatchData SetDefault(const reorder_weights_params& params) const;
         virtual DispatchData SetDefault(const reorder_params& params) const;
-        KernelsData GetCommonKernelsData(const reorder_weights_params& params, const OptionalParams&, float estimated_time) const;
-        KernelsData GetCommonKernelsData(const reorder_params& params, const OptionalParams&, float estimated_time) const;
+        KernelsData GetCommonKernelsData(const reorder_weights_params& params, const optional_params&, float estimated_time) const;
+        KernelsData GetCommonKernelsData(const reorder_params& params, const optional_params&, float estimated_time) const;
     };
 }

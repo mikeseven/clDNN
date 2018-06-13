@@ -24,9 +24,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // convolution_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct convolution_params : public WeightBiasParams
+    struct convolution_params : public weight_bias_params
     {
-        convolution_params() : WeightBiasParams(KernelType::CONVOLUTION), convParams() {}
+        convolution_params() : weight_bias_params(KernelType::CONVOLUTION), convParams() {}
 
         struct DedicatedParams
         {
@@ -53,9 +53,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // convolution_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct convolution_optional_params : WeightsBiasOptionalParams
+    struct convolution_optional_params : weight_bias_optional_params
     {
-        convolution_optional_params() : WeightsBiasOptionalParams(KernelType::CONVOLUTION) {}
+        convolution_optional_params() : weight_bias_optional_params(KernelType::CONVOLUTION) {}
     };
 
 }

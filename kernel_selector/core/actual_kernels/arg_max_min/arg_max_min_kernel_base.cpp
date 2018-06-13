@@ -18,7 +18,7 @@
 
 namespace kernel_selector
 {
-	bool ArgMaxMinKernelBase::Validate(const Params& p, const OptionalParams& o) const
+	bool ArgMaxMinKernelBase::Validate(const Params& p, const optional_params& o) const
 	{
 		if (p.GetType() != KernelType::ARG_MAX_MIN ||
 			o.GetType() != KernelType::ARG_MAX_MIN)
@@ -62,7 +62,7 @@ namespace kernel_selector
 		return kd;
 	}
 
-	KernelsData ArgMaxMinKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, float estimatedTime) const
+	KernelsData ArgMaxMinKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options, float estimatedTime) const
 	{
 		if (!Validate(params, options))
 		{

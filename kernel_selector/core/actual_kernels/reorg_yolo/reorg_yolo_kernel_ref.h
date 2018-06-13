@@ -24,9 +24,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // reorg_yolo_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct reorg_yolo_params : public BaseParams
+    struct reorg_yolo_params : public base_params
     {
-        reorg_yolo_params() : BaseParams(KernelType::REORG_YOLO) {}
+        reorg_yolo_params() : base_params(KernelType::REORG_YOLO) {}
 
         struct DedicatedParams
         {
@@ -37,7 +37,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            auto k = BaseParams::GetParamsKey();
+            auto k = base_params::GetParamsKey();
             return k;
         }
     };
@@ -45,22 +45,22 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // reorg_yolo_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct reorg_yolo_optional_params : OptionalParams
+    struct reorg_yolo_optional_params : optional_params
     {
-        reorg_yolo_optional_params() : OptionalParams(KernelType::REORG_YOLO) {}
+        reorg_yolo_optional_params() : optional_params(KernelType::REORG_YOLO) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ReorgYoloKernelRef
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ReorgYoloKernelRef : public CommonKernelBase
+    class ReorgYoloKernelRef : public common_kernel_base
     {
     public:
-        ReorgYoloKernelRef() : CommonKernelBase("reorg_yolo_gpu_ref") {}
+        ReorgYoloKernelRef() : common_kernel_base("reorg_yolo_gpu_ref") {}
         virtual ~ReorgYoloKernelRef() {}
 
         using DispatchData = CommonDispatchData;        
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
 
 

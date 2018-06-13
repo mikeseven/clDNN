@@ -26,7 +26,7 @@ namespace kernel_selector
         Attach<NormalizeKernelAcrossSpatialRef>();
     }
 
-    KernelsData normalize_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData normalize_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::NORMALIZE);
     }

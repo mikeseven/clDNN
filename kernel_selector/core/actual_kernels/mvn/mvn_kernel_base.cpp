@@ -66,7 +66,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData MVNKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, float estimated_time) const
+    KernelsData MVNKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options, float estimated_time) const
     {
         assert(params.GetType() == KernelType::MVN);
 

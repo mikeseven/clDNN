@@ -32,7 +32,7 @@ namespace kernel_selector {
         Attach<PoolingKernelGPUByxfPaddingOpt>();
     }
 
-    KernelsData pooling_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData pooling_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::POOLING);
     }

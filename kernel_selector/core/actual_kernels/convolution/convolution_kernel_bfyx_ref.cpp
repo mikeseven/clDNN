@@ -50,7 +50,7 @@ namespace kernel_selector {
         return k;
     }
 
-    KernelsData ConvolutionKernel_bfyx_Ref::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ConvolutionKernel_bfyx_Ref::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options);
     }

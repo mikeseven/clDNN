@@ -24,9 +24,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // lookup_table_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct lookup_table_params : public BaseParams
+    struct lookup_table_params : public base_params
     {
-        lookup_table_params() : BaseParams(KernelType::LOOKUP_TABLE), lookUpTableParams() {}
+        lookup_table_params() : base_params(KernelType::LOOKUP_TABLE), lookUpTableParams() {}
 
         struct DedicatedParams
         {
@@ -39,7 +39,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            ParamsKey k = BaseParams::GetParamsKey();
+            ParamsKey k = base_params::GetParamsKey();
             k.EnableLookUpTableAxis(lookUpTableParams.lookUpTableAxis);
             k.EnableLookUpTableIndicesFormat(lookUpTableParams.inputIndices.GetDType());
             return k;
@@ -49,18 +49,18 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // lookup_table_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct lookup_table_optional_params : OptionalParams
+    struct lookup_table_optional_params : optional_params
     {
-        lookup_table_optional_params() : OptionalParams(KernelType::LOOKUP_TABLE) {}
+        lookup_table_optional_params() : optional_params(KernelType::LOOKUP_TABLE) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // lookup_table_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class LookUpTableKernelBase : public CommonKernelBase
+    class LookUpTableKernelBase : public common_kernel_base
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         virtual ~LookUpTableKernelBase() {}
 
         struct DispatchData : public CommonDispatchData
@@ -68,9 +68,9 @@ namespace kernel_selector
         };
 
     protected:
-        virtual bool Validate(const Params&, const OptionalParams&) const override;
+        virtual bool Validate(const Params&, const optional_params&) const override;
         virtual JitConstants GetJitConstants(const lookup_table_params& params) const;
         virtual DispatchData SetDefault(const lookup_table_params& params) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimatedTime) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params&, float estimatedTime) const;
     };
 }

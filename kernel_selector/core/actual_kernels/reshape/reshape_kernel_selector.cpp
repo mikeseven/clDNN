@@ -24,7 +24,7 @@ namespace kernel_selector {
         Attach<ReshapeKernelRef>();
     }
 
-    KernelsData reshape_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData reshape_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::REORDER);
     }

@@ -36,7 +36,7 @@ namespace kernel_selector
         return k;
     }
 
-    KernelsData FullyConnected_fb_oi_ref::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData FullyConnected_fb_oi_ref::GetKernelsData(const Params& params, const optional_params& optParams) const
     {
         return GetCommonKernelsData(params, optParams, DataLayout::fb, { WeightsLayout::oi });
     }

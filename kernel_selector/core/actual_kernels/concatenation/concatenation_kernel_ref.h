@@ -26,7 +26,7 @@ namespace kernel_selector {
         ConcatenationKernelRef() : ConcatenationKernelBase("concatenation_gpu_ref") {}
         virtual ~ConcatenationKernelRef() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     protected:
         JitConstants GetJitConstants(const concatenation_params& params) const override;

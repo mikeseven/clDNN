@@ -25,7 +25,7 @@ namespace kernel_selector
     public:
         ReorderWeightsWinograd2x3Kernel() : ReorderKernelBase("reorder_weights_winograd_2x3_s1") {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
         virtual DispatchData SetDefault(const reorder_weights_params& arg) const override;
     };

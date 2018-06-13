@@ -36,7 +36,7 @@ namespace kernel_selector
         return k;
     }
 
-    SoftmaxKernel_fb::Parent::DispatchData SoftmaxKernel_fb::SetDefault(const softmax_params& params, const OptionalParams& optParams) const
+    SoftmaxKernel_fb::Parent::DispatchData SoftmaxKernel_fb::SetDefault(const softmax_params& params, const optional_params& optParams) const
     {
         auto kd = Parent::SetDefault(params, optParams);
         //start with 1 thread per data set
@@ -69,7 +69,7 @@ namespace kernel_selector
         return kd;
     }
 
-    bool kernel_selector::SoftmaxKernel_fb::Validate(const Params& params, const OptionalParams& o) const
+    bool kernel_selector::SoftmaxKernel_fb::Validate(const Params& params, const optional_params& o) const
     {
         if (!SoftmaxKernelBase::Validate(params, o))
         {
@@ -100,7 +100,7 @@ namespace kernel_selector
     }
 
 
-    KernelsData SoftmaxKernel_fb::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData SoftmaxKernel_fb::GetKernelsData(const Params& params, const optional_params& optParams) const
     {
         if (!Validate(params, optParams))
         {

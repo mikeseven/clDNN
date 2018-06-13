@@ -24,9 +24,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // pooling_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct pooling_params : public BaseParams
+    struct pooling_params : public base_params
     {
-        pooling_params() : BaseParams(KernelType::POOLING), poolParams() {}
+        pooling_params() : base_params(KernelType::POOLING), poolParams() {}
 
         struct DedicatedParams
         {
@@ -42,7 +42,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            ParamsKey k = BaseParams::GetParamsKey();
+            ParamsKey k = base_params::GetParamsKey();
 
             k.EnablePoolType(poolParams.poolType);
             k.EnablePoolRemainder(poolParams.remainderAction);
@@ -55,18 +55,18 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // pooling_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct pooling_optional_params : OptionalParams
+    struct pooling_optional_params : optional_params
     {
-        pooling_optional_params() : OptionalParams(KernelType::POOLING) {}
+        pooling_optional_params() : optional_params(KernelType::POOLING) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // PoolingKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class PoolingKernelBase : public CommonKernelBase
+    class PoolingKernelBase : public common_kernel_base
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         virtual ~PoolingKernelBase() {}
 
         struct DispatchData : public CommonDispatchData
@@ -75,10 +75,10 @@ namespace kernel_selector
         };
 
     protected:
-        virtual bool Validate(const Params&, const OptionalParams&) const override;
+        virtual bool Validate(const Params&, const optional_params&) const override;
         virtual JitConstants GetJitConstants(const pooling_params& params, DispatchData kd) const;
         virtual DispatchData SetDefault(const pooling_params& params) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimatedTime) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params&, float estimatedTime) const;
 
         bool NeedsBoundaryCheck(const pooling_params& params) const;
     };

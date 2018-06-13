@@ -24,7 +24,7 @@ namespace kernel_selector {
         Attach<RegionYoloKernelRef>();
     }
 
-    KernelsData region_yolo_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData region_yolo_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::REGION_YOLO);
     }

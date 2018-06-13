@@ -53,7 +53,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData ReorderWeightsWinograd2x3Kernel::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ReorderWeightsWinograd2x3Kernel::GetKernelsData(const Params& params, const optional_params& options) const
     {
         const reorder_weights_params& orgParams = static_cast<const reorder_weights_params&>(params);
         return GetCommonKernelsData(orgParams, options, FORCE_PRIORITY_4);

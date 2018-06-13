@@ -48,7 +48,7 @@ namespace kernel_selector
             return kernelName + "_within_channels";
     }
 
-    KernelsData MVNKernelRef::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData MVNKernelRef::GetKernelsData(const Params& params, const optional_params& optParams) const
     {
         return GetCommonKernelsData(params, optParams, FORCE_PRIORITY_9);
     }

@@ -96,7 +96,7 @@ namespace kernel_selector
         return std::move(run_info);
     }
 
-    KernelsData FullyConnected_bs_f_bsv16_b1::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData FullyConnected_bs_f_bsv16_b1::GetKernelsData(const Params& params, const optional_params& optParams) const
     {
         return GetCommonKernelsData(params, optParams, DataLayout::bf, {WeightsLayout::os_i_osv16}, FORCE_PRIORITY_5);
     }

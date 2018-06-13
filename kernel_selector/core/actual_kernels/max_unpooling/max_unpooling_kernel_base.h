@@ -24,31 +24,31 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // max_unpooling_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct max_unpooling_params : public BaseParams
+    struct max_unpooling_params : public base_params
     {
-        max_unpooling_params() : BaseParams(KernelType::MAX_UNPOOLING) {}
+        max_unpooling_params() : base_params(KernelType::MAX_UNPOOLING) {}
 
         virtual ParamsKey GetParamsKey() const
         {
-            return BaseParams::GetParamsKey();
+            return base_params::GetParamsKey();
         }
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // max_unpooling_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct max_unpooling_optional_params : OptionalParams
+    struct max_unpooling_optional_params : optional_params
     {
-        max_unpooling_optional_params() : OptionalParams(KernelType::MAX_UNPOOLING) {}
+        max_unpooling_optional_params() : optional_params(KernelType::MAX_UNPOOLING) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // MaxUnpoolingKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class MaxUnpoolingKernelBase : public CommonKernelBase
+    class MaxUnpoolingKernelBase : public common_kernel_base
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         virtual ~MaxUnpoolingKernelBase() {}
 
         struct DispatchData : public CommonDispatchData
@@ -57,9 +57,9 @@ namespace kernel_selector
         };
 
     protected:
-        virtual bool Validate(const Params&, const OptionalParams&) const override;
+        virtual bool Validate(const Params&, const optional_params&) const override;
         virtual JitConstants GetJitConstants(const max_unpooling_params& params) const;
         virtual DispatchData SetDefault(const max_unpooling_params& params) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimatedTime) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params&, float estimatedTime) const;
     };
 }

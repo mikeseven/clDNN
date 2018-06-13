@@ -24,9 +24,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // concatenation_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct concatenation_params : public BaseParams
+    struct concatenation_params : public base_params
     {
-        concatenation_params() : BaseParams(KernelType::CONCATENATION), concatParams() {}
+        concatenation_params() : base_params(KernelType::CONCATENATION), concatParams() {}
 
         struct DedicatedParams
         {
@@ -37,7 +37,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            auto k = BaseParams::GetParamsKey();
+            auto k = base_params::GetParamsKey();
             k.EnableConcatAxis(concatParams.axis);
             return k;
         }
@@ -46,14 +46,14 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // concatenation_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct concatenation_optional_params : OptionalParams
+    struct concatenation_optional_params : optional_params
     {
-        concatenation_optional_params() : OptionalParams(KernelType::CONCATENATION) {}
+        concatenation_optional_params() : optional_params(KernelType::CONCATENATION) {}
         bool kernelPerInput = true;
 
         virtual ParamsKey GetSupportedKey() const
         {
-            ParamsKey k = OptionalParams::GetSupportedKey();
+            ParamsKey k = optional_params::GetSupportedKey();
 
             if (kernelPerInput)
             {
@@ -71,18 +71,18 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ConcatenationKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ConcatenationKernelBase : public CommonKernelBase
+    class ConcatenationKernelBase : public common_kernel_base
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         virtual ~ConcatenationKernelBase() {}
 
         using DispatchData = CommonDispatchData;
     
     protected:
-        virtual bool Validate(const Params&, const OptionalParams&) const override;
+        virtual bool Validate(const Params&, const optional_params&) const override;
         virtual JitConstants GetJitConstants(const concatenation_params& params) const;
         virtual DispatchData SetDefault(const concatenation_params& params) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params&) const;
     };
 }

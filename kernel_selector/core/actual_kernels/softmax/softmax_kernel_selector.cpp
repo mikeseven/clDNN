@@ -30,7 +30,7 @@ namespace kernel_selector {
         Attach<SoftmaxKerneItemsClassOptimized>();
     }
 
-    KernelsData softmax_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData softmax_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::SOFT_MAX);
     }

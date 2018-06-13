@@ -46,7 +46,7 @@ namespace kernel_selector
         return jit;
     }
 
-    KernelsData ReorderKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ReorderKernelRef::GetKernelsData(const Params& params, const optional_params& options) const
     {
         const reorder_params& orgParams = static_cast<const reorder_params&>(params);
         return GetCommonKernelsData(orgParams, options, DONT_USE_IF_HAVE_SOMETHING_ELSE);

@@ -76,7 +76,7 @@ namespace kernel_selector
 
         return kd;
     }
-    KernelsData ReorgYoloKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ReorgYoloKernelRef::GetKernelsData(const Params& params, const optional_params& options) const
     {
         assert(params.GetType() == KernelType::REORG_YOLO);
         const reorg_yolo_params& orgParams = static_cast<const reorg_yolo_params&>(params);

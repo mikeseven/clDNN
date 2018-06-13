@@ -88,7 +88,7 @@ namespace kernel_selector {
         return runInfo;
     }
 
-    bool ConvolutionKernel_bfyx_Direct_10_10_12::Validate(const Params& p, const OptionalParams& o) const
+    bool ConvolutionKernel_bfyx_Direct_10_10_12::Validate(const Params& p, const optional_params& o) const
     {
         if (!Parent::Validate(p, o) || 
             !CovolutionCheckInput(p, o))
@@ -113,7 +113,7 @@ namespace kernel_selector {
         return true;
     }
 
-    KernelsData ConvolutionKernel_bfyx_Direct_10_10_12::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ConvolutionKernel_bfyx_Direct_10_10_12::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, AGE_BASED);
     }

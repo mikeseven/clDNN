@@ -26,7 +26,7 @@ namespace kernel_selector {
         Attach<LookUpTableKernelAxis>();
     }
 
-    KernelsData lookup_table_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData lookup_table_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::LOOKUP_TABLE);
     }

@@ -56,7 +56,7 @@ namespace kernel_selector {
         return runInfo;
     }
 
-    bool ActivationKernelOpt::Validate(const Params& p, const OptionalParams& o) const
+    bool ActivationKernelOpt::Validate(const Params& p, const optional_params& o) const
     {
         if (p.GetType() != KernelType::ACTIVATION ||
             o.GetType() != KernelType::ACTIVATION)
@@ -92,7 +92,7 @@ namespace kernel_selector {
         return jit;
     }
 
-    KernelsData ActivationKernelOpt::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ActivationKernelOpt::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options);
     }

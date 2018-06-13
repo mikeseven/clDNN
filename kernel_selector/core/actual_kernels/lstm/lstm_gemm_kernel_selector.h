@@ -20,7 +20,7 @@
 
 namespace kernel_selector
 {
-    class LSTMGemmKernelSelector : public KernelSelctorBase
+    class LSTMGemmKernelSelector : public kernel_selector_base
     {
     public:
         static LSTMGemmKernelSelector &Instance() {
@@ -32,6 +32,6 @@ namespace kernel_selector
 
         virtual ~LSTMGemmKernelSelector() {}
 
-        virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetBestKernels(const Params& params, const optional_params& options) const override;
     };
 }

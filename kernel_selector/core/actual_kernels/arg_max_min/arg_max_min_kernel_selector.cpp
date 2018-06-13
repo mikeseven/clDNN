@@ -28,7 +28,7 @@ namespace kernel_selector {
         Attach<ArgMaxMinKernelAxis>();
     }
 
-	KernelsData arg_max_min_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+	KernelsData arg_max_min_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
 	{
 		return GetNaiveBestKernel(params, options, KernelType::ARG_MAX_MIN);
 	}

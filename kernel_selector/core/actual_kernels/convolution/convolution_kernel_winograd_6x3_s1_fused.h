@@ -27,12 +27,12 @@ namespace kernel_selector {
         ConvolutionKernel_Winograd_6x3_s1_fused() : ConvolutionKernelBase("convolution_gpu_winograd_6x3_s1_fused") {}
         virtual ~ConvolutionKernel_Winograd_6x3_s1_fused() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
         JitConstants GetJitConstants(const convolution_params& params, DispatchData kd) const override;
-        bool Validate(const Params& p, const OptionalParams& o) const override;
+        bool Validate(const Params& p, const optional_params& o) const override;
         DispatchData SetDefault(const convolution_params& arg, int autoTuneIndex = -1) const override;
         std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&) const override;
     };

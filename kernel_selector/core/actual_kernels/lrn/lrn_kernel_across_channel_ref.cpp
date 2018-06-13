@@ -58,7 +58,7 @@ namespace kernel_selector
         return runInfo;
     }
 
-    KernelsData LRNKernelAcrossChannelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData LRNKernelAcrossChannelRef::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, FORCE_PRIORITY_9);
     }

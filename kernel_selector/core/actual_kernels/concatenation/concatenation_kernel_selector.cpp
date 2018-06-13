@@ -26,7 +26,7 @@ namespace kernel_selector
         Attach<ConcatenationKernel_depth_bfyx_no_pitch>();
     }
 
-    KernelsData concatenation_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData concatenation_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::CONCATENATION);
     }

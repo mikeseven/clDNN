@@ -74,7 +74,7 @@ namespace kernel_selector
         return cldnnJit;
     }
 
-    KernelsData ConcatenationKernelRef::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData ConcatenationKernelRef::GetKernelsData(const Params& params, const optional_params& optParams) const
     {
         KernelsData kd = GetCommonKernelsData(params, optParams);
 

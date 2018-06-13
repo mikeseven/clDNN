@@ -24,9 +24,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // mvn_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct mvn_params : public BaseParams
+    struct mvn_params : public base_params
     {
-        mvn_params() : BaseParams(KernelType::MVN), mvnParams() {}
+        mvn_params() : base_params(KernelType::MVN), mvnParams() {}
 
         struct DedicatedParams
         {
@@ -39,7 +39,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            ParamsKey k = BaseParams::GetParamsKey();
+            ParamsKey k = base_params::GetParamsKey();
 
             k.EnableMVNMode(mvnParams.mvnMode);
 
@@ -53,18 +53,18 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // mvn_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct mvn_optional_params : OptionalParams
+    struct mvn_optional_params : optional_params
     {
-        mvn_optional_params() : OptionalParams(KernelType::MVN) {}
+        mvn_optional_params() : optional_params(KernelType::MVN) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // MVNKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class MVNKernelBase : public CommonKernelBase
+    class MVNKernelBase : public common_kernel_base
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         virtual ~MVNKernelBase() {}
 
         struct DispatchData : public CommonDispatchData
@@ -86,6 +86,6 @@ namespace kernel_selector
         virtual JitConstants GetJitConstants(const mvn_params& params, DispatchData kd) const;
         virtual DispatchData SetDefault(const mvn_params& params) const;
         virtual std::string GetKernelName(const mvn_params&) const { return kernelName; }
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimated_time) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params&, float estimated_time) const;
     };
 }

@@ -40,7 +40,7 @@ namespace kernel_selector
         return mem_consts;
     }
 
-    SoftmaxKernelBase::DispatchData SoftmaxKernelBase::SetDefault(const softmax_params& params, const OptionalParams&) const
+    SoftmaxKernelBase::DispatchData SoftmaxKernelBase::SetDefault(const softmax_params& params, const optional_params&) const
     {
         DispatchData runInfo;
 
@@ -63,7 +63,7 @@ namespace kernel_selector
         return runInfo;
     }
 
-    bool SoftmaxKernelBase::Validate(const Params& p, const OptionalParams& o) const
+    bool SoftmaxKernelBase::Validate(const Params& p, const optional_params& o) const
     {
         if (p.GetType() != KernelType::SOFT_MAX ||
             o.GetType() != KernelType::SOFT_MAX)
@@ -74,7 +74,7 @@ namespace kernel_selector
         return true;
     }
 
-    KernelsData SoftmaxKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData SoftmaxKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options) const
     {
         if (!Validate(params, options))
         {
@@ -97,7 +97,7 @@ namespace kernel_selector
         return{ kd };
     }
 
-    bool SoftmaxKernelBaseBF::Validate(const Params& p, const OptionalParams& o) const
+    bool SoftmaxKernelBaseBF::Validate(const Params& p, const optional_params& o) const
     {
         if (!Parent::Validate(p, o))
         {
@@ -127,7 +127,7 @@ namespace kernel_selector
         }
     }
 
-    SoftmaxKernelBase::DispatchData SoftmaxKernelBaseBF::SetDefault(const softmax_params& params, const OptionalParams& options) const
+    SoftmaxKernelBase::DispatchData SoftmaxKernelBaseBF::SetDefault(const softmax_params& params, const optional_params& options) const
     {
         const auto& input = params.inputs[0];
 

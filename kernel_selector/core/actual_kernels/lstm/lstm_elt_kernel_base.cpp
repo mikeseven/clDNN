@@ -25,7 +25,7 @@ namespace kernel_selector
         return MakeLSTMEltJitConstants(params);
     }
 
-    KernelsData LSTMEltKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData LSTMEltKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options) const
     {
         if (!Validate(params,  options))
         {

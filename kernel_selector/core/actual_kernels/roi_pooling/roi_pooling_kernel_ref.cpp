@@ -78,7 +78,7 @@ namespace kernel_selector {
         return jit;
     }
 
-    KernelsData ROIPoolingKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ROIPoolingKernelRef::GetKernelsData(const Params& params, const optional_params& options) const
     {
         assert(params.GetType() == KernelType::ROI_POOLING);
         const roi_pooling_params& orgParams = static_cast<const roi_pooling_params&>(params);

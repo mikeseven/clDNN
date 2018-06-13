@@ -55,7 +55,7 @@ namespace kernel_selector
         //Attach<ConvolutionKernel_Tutorial>(); //In order to use this implementation for tutorial purposes please uncomment this line
     }
 
-    KernelsData convolution_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData convolution_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         //const ConvolutionParams& orgParams = static_cast<const ConvolutionParams&>(params);
         //std::cout << orgParams.to_string() << std::endl;

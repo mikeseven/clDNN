@@ -91,7 +91,7 @@ namespace kernel_selector
         return cldnn_jit;
     }
 
-    bool FullyConnected_fb_io_block::Validate(const Params& p, const OptionalParams& o) const
+    bool FullyConnected_fb_io_block::Validate(const Params& p, const optional_params& o) const
     {
         if (!FullyConnectedKernelBase::Validate(p, o))
         {
@@ -130,7 +130,7 @@ namespace kernel_selector
         return true;
     }
 
-    KernelsData FullyConnected_fb_io_block::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData FullyConnected_fb_io_block::GetKernelsData(const Params& params, const optional_params& optParams) const
     {
         assert(params.GetType() == KernelType::FULLY_CONNECTED);
 

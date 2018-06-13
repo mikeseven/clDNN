@@ -67,7 +67,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData ReorderFromWinograd2x3Kernel::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ReorderFromWinograd2x3Kernel::GetKernelsData(const Params& params, const optional_params& options) const
     {
         const reorder_params& orgParams = static_cast<const reorder_params&>(params);
         return GetCommonKernelsData(orgParams, options, FORCE_PRIORITY_6);

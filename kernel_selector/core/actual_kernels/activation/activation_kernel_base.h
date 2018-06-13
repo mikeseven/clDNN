@@ -23,9 +23,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // activation_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct activation_params : public BaseParams
+    struct activation_params : public base_params
     {
-        activation_params() : BaseParams(KernelType::ACTIVATION), actParams() {}
+        activation_params() : base_params(KernelType::ACTIVATION), actParams() {}
 
         struct DedicatedParams
         {
@@ -36,7 +36,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            auto k = BaseParams::GetParamsKey();
+            auto k = base_params::GetParamsKey();
             if (!actParams.inputActivationParams.empty())
             {
                 k.EnableActivationAdditionalParamsAsInput();
@@ -48,26 +48,26 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // activation_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct activation_optional_params : OptionalParams
+    struct activation_optional_params : optional_params
     {
-        activation_optional_params() : OptionalParams(KernelType::ACTIVATION) {}
+        activation_optional_params() : optional_params(KernelType::ACTIVATION) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ActivationKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ActivationKernelBase : public CommonKernelBase
+    class ActivationKernelBase : public common_kernel_base
     {
     public:
         using DispatchData = CommonDispatchData;
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         
         virtual ~ActivationKernelBase() {}
 
     protected:
-        virtual bool Validate(const Params& p, const OptionalParams& o) const override;
+        virtual bool Validate(const Params& p, const optional_params& o) const override;
         virtual JitConstants GetJitConstants(const activation_params& params, DispatchData kd) const;
         virtual DispatchData SetDefault(const activation_params& arg) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& options) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params& options) const;
     };
 }

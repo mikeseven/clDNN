@@ -822,11 +822,11 @@ namespace kernel_selector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // BaseParams
+    // base_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct BaseParams : public Params
+    struct base_params : public Params
     {
-        virtual ~BaseParams() {}
+        virtual ~base_params() {}
 
         ActivationFunction  activationFunc = ActivationFunction::NONE;
         NonLinearParams     activationParams;
@@ -900,15 +900,15 @@ namespace kernel_selector
 
     protected:
 
-        BaseParams(KernelType kt) : Params(kt, ""), inputs(1){}
+        base_params(KernelType kt) : Params(kt, ""), inputs(1){}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // LSTMGemmParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LSTMGemmParams : public BaseParams
+    struct LSTMGemmParams : public base_params
     {
-        LSTMGemmParams() : BaseParams(KernelType::LSTM_GEMM) {}
+        LSTMGemmParams() : base_params(KernelType::LSTM_GEMM) {}
 
         DataTensor weights;
         DataTensor recurrent;
@@ -929,7 +929,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const override
         {
-            ParamsKey k = BaseParams::GetParamsKey();
+            ParamsKey k = base_params::GetParamsKey();
 
             if (hasBias)
             {
@@ -948,9 +948,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // LSTMEltParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LSTMEltParams : public BaseParams
+    struct LSTMEltParams : public base_params
     {
-        LSTMEltParams() : BaseParams(KernelType::LSTM_ELT) {}
+        LSTMEltParams() : base_params(KernelType::LSTM_ELT) {}
 
         DataTensor cell;
         bool hasCell = false;
@@ -962,7 +962,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const override
         {
-            ParamsKey k = BaseParams::GetParamsKey();
+            ParamsKey k = base_params::GetParamsKey();
             if (hasCell)
             {
                 k.EnableLSTMEltCell();
@@ -985,11 +985,11 @@ namespace kernel_selector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // OptionalParams
+    // optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct OptionalParams
+    struct optional_params
     {
-        virtual ~OptionalParams() {}
+        virtual ~optional_params() {}
 
         KernelType GetType() const { return kType; }
 
@@ -1021,24 +1021,24 @@ namespace kernel_selector
         }
 
     protected:
-        OptionalParams(KernelType kt) : kType(kt) {}
+        optional_params(KernelType kt) : kType(kt) {}
         KernelType kType;
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // LSTMGemmOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LSTMGemmOptionalParams : OptionalParams
+    struct LSTMGemmOptionalParams : optional_params
     {
-        LSTMGemmOptionalParams() : OptionalParams(KernelType::LSTM_GEMM) {}
+        LSTMGemmOptionalParams() : optional_params(KernelType::LSTM_GEMM) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // LSTMEltOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LSTMEltOptionalParams : OptionalParams
+    struct LSTMEltOptionalParams : optional_params
     {
-        LSTMEltOptionalParams() : OptionalParams(KernelType::LSTM_ELT) {}
+        LSTMEltOptionalParams() : optional_params(KernelType::LSTM_ELT) {}
     };
 
 }

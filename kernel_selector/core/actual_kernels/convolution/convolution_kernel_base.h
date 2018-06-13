@@ -64,11 +64,11 @@ namespace kernel_selector
         virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&) const = 0;
         virtual std::string GetKernelName(const convolution_params&) const { return kernelName; }
         virtual bool NeedPaddedInput() const { return false; }
-        virtual bool Validate(const Params& p, const OptionalParams& o) const override;
+        virtual bool Validate(const Params& p, const optional_params& o) const override;
         virtual JitConstants GetJitConstants(const convolution_params& params, DispatchData kd) const;
         virtual DispatchData SetDefault(const convolution_params& params, int autoTuneIndex = -1) const;
         bool CheckWorkGroups(const DispatchData&) const;
         bool CheckPitchForSplitOnly(const convolution_params& params) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& options, const std::string exeMode = ROUND_ROBIN, int autoTuneIndex = -1) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params& options, const std::string exeMode = ROUND_ROBIN, int autoTuneIndex = -1) const;
     };
 }

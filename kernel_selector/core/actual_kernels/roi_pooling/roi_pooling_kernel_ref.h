@@ -23,9 +23,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // roi_pooling_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct roi_pooling_params : public BaseParams
+    struct roi_pooling_params : public base_params
     {
-        roi_pooling_params() : BaseParams(KernelType::ROI_POOLING) {}
+        roi_pooling_params() : base_params(KernelType::ROI_POOLING) {}
 
         struct DedicatedParams
         {
@@ -40,30 +40,30 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            return BaseParams::GetParamsKey();
+            return base_params::GetParamsKey();
         }
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // roi_pooling_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct roi_pooling_optional_params : OptionalParams
+    struct roi_pooling_optional_params : optional_params
     {
-        roi_pooling_optional_params() : OptionalParams(KernelType::ROI_POOLING) {}
+        roi_pooling_optional_params() : optional_params(KernelType::ROI_POOLING) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ROIPoolingKernelRef
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ROIPoolingKernelRef : public CommonKernelBase
+    class ROIPoolingKernelRef : public common_kernel_base
     {
     public:
-        ROIPoolingKernelRef() : CommonKernelBase("roi_pooling_ref") {}
+        ROIPoolingKernelRef() : common_kernel_base("roi_pooling_ref") {}
         virtual ~ROIPoolingKernelRef() {}
 
         using DispatchData = CommonDispatchData;
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:

@@ -61,7 +61,7 @@ namespace kernel_selector
         return k;
     }
 
-    bool ConvolutionKernel_bfyx_3x3_dw_opt::Validate(const Params& p, const OptionalParams& o) const
+    bool ConvolutionKernel_bfyx_3x3_dw_opt::Validate(const Params& p, const optional_params& o) const
     {
         if (!ConvolutionKernelBase::Validate(p, o) ||
             !CovolutionCheckInput(p, o))
@@ -139,17 +139,17 @@ namespace kernel_selector
         return mem_consts;
     }
 
-    KernelsData ConvolutionKernel_bfyx_3x3_dw_opt::GetTunedKernelsDataByIndex(const Params& params, const OptionalParams& options, const int autoTuneIndex) const
+    KernelsData ConvolutionKernel_bfyx_3x3_dw_opt::GetTunedKernelsDataByIndex(const Params& params, const optional_params& options, const int autoTuneIndex) const
     {
         return GetCommonKernelsData(params, options, GetAutoTuneOptions(params, autoTuneIndex).exeMode, autoTuneIndex);
     }
 
-    KernelsData ConvolutionKernel_bfyx_3x3_dw_opt::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ConvolutionKernel_bfyx_3x3_dw_opt::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetTunedKernelsDataByIndex(params, options, -1);
     }
 
-    KernelsData ConvolutionKernel_bfyx_3x3_dw_opt::GetKernelsDataForAutoTune(const Params& params, const OptionalParams& options) const
+    KernelsData ConvolutionKernel_bfyx_3x3_dw_opt::GetKernelsDataForAutoTune(const Params& params, const optional_params& options) const
     {
         if (!Validate(params, options))
         {

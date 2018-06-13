@@ -34,7 +34,7 @@
 
 namespace kernel_selector {
 
-    AutoTuner KernelSelctorBase::autoTuner;
+    AutoTuner kernel_selector_base::autoTuner;
 
 #ifdef ENABLE_ENV
     std::string strip(const std::string str)
@@ -69,7 +69,7 @@ namespace kernel_selector {
     }
 #endif
 
-    KernelSelctorBase::KernelSelctorBase()
+    kernel_selector_base::kernel_selector_base()
     {
 #ifdef ENABLE_ENV
         AddToForceMap(forceKernels, true, "CL_DNN_FORCE_KERNELS");
@@ -77,7 +77,7 @@ namespace kernel_selector {
 #endif
     }
 
-    KernelsData KernelSelctorBase::GetNaiveBestKernel(const Params& params, const OptionalParams& options, KernelType kType) const
+    KernelsData kernel_selector_base::GetNaiveBestKernel(const Params& params, const optional_params& options, KernelType kType) const
     {
         KernelsData kernelsData;
         std::string kernelName;
@@ -142,7 +142,7 @@ namespace kernel_selector {
         return kernelsData;
     }
 
-    KernelsData KernelSelctorBase::GetAutoTuneBestKernel(const Params& params, const OptionalParams& options, KernelType kType) const
+    KernelsData kernel_selector_base::GetAutoTuneBestKernel(const Params& params, const optional_params& options, KernelType kType) const
     {
         KernelsData kernelsData;
         std::string kernelName;

@@ -49,7 +49,7 @@ namespace kernel_selector {
         Attach<FullyConnected_bf_io_input_spatial>();
     }
 
-    KernelsData fully_connected_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData fully_connected_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetAutoTuneBestKernel(params, options, KernelType::FULLY_CONNECTED);
     }

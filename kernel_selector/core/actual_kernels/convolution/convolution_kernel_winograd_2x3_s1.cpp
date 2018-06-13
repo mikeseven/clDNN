@@ -96,7 +96,7 @@ namespace kernel_selector {
         return runInfo;
     }
 
-    bool ConvolutionKernel_Winograd_2x3_s1::Validate(const Params& p, const OptionalParams& o) const
+    bool ConvolutionKernel_Winograd_2x3_s1::Validate(const Params& p, const optional_params& o) const
     {
         if (!Parent::Validate(p, o))
         {
@@ -120,7 +120,7 @@ namespace kernel_selector {
         return true;
     }
 
-    KernelsData ConvolutionKernel_Winograd_2x3_s1::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ConvolutionKernel_Winograd_2x3_s1::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options);
     }

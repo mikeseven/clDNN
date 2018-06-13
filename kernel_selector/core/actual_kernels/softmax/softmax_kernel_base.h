@@ -24,9 +24,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // SoftMaxParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct softmax_params : public BaseParams
+    struct softmax_params : public base_params
     {
-        softmax_params() : BaseParams(KernelType::SOFT_MAX) {}
+        softmax_params() : base_params(KernelType::SOFT_MAX) {}
 
         struct DedicatedParams
         {
@@ -37,7 +37,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            auto k = BaseParams::GetParamsKey();
+            auto k = base_params::GetParamsKey();
             k.EnableSoftmaxDim(smParams.dim);
             return k;
         }
@@ -46,18 +46,18 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // softmax_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct softmax_optional_params : OptionalParams
+    struct softmax_optional_params : optional_params
     {
-        softmax_optional_params() : OptionalParams(KernelType::SOFT_MAX) {}
+        softmax_optional_params() : optional_params(KernelType::SOFT_MAX) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // SoftmaxKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class SoftmaxKernelBase : public CommonKernelBase
+    class SoftmaxKernelBase : public common_kernel_base
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         virtual ~SoftmaxKernelBase() {}
 
         struct DispatchData : public CommonDispatchData
@@ -70,10 +70,10 @@ namespace kernel_selector
         };
 
     protected:
-        virtual bool Validate(const Params&, const OptionalParams&) const;
+        virtual bool Validate(const Params&, const optional_params&) const;
         virtual JitConstants GetJitConstants(const softmax_params& params, DispatchData kd) const;
-        virtual DispatchData SetDefault(const softmax_params& params, const OptionalParams& optParams) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& optParams) const;
+        virtual DispatchData SetDefault(const softmax_params& params, const optional_params& optParams) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params& optParams) const;
     };
 
     class SoftmaxKernelBaseBF : public SoftmaxKernelBase
@@ -84,7 +84,7 @@ namespace kernel_selector
         virtual ~SoftmaxKernelBaseBF() {}
 
     protected:
-        virtual bool Validate(const Params&, const OptionalParams&) const override;
-        virtual DispatchData SetDefault(const softmax_params& params, const OptionalParams& optParams) const override;
+        virtual bool Validate(const Params&, const optional_params&) const override;
+        virtual DispatchData SetDefault(const softmax_params& params, const optional_params& optParams) const override;
     };
 }

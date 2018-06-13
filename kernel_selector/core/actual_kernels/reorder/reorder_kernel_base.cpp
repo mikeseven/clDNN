@@ -168,7 +168,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData ReorderKernelBase::GetCommonKernelsData(const reorder_weights_params& params, const OptionalParams& options, float estimated_time) const
+    KernelsData ReorderKernelBase::GetCommonKernelsData(const reorder_weights_params& params, const optional_params& options, float estimated_time) const
     {
         assert(params.GetType() == KernelType::REORDER);
 
@@ -194,7 +194,7 @@ namespace kernel_selector
         return{ kd };
     }
 
-    KernelsData ReorderKernelBase::GetCommonKernelsData(const reorder_params& params, const OptionalParams& options, float estimated_time) const
+    KernelsData ReorderKernelBase::GetCommonKernelsData(const reorder_params& params, const optional_params& options, float estimated_time) const
     {
         if (!Validate(params, options))
         {

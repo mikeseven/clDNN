@@ -81,7 +81,7 @@ namespace kernel_selector
 
         return kd;
     }
-    KernelsData RegionYoloKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData RegionYoloKernelRef::GetKernelsData(const Params& params, const optional_params& options) const
     {
         assert(params.GetType() == KernelType::REGION_YOLO);
         const region_yolo_params& orgParams = static_cast<const region_yolo_params&>(params);

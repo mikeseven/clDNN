@@ -18,7 +18,7 @@
 
 namespace kernel_selector 
 {
-    bool LRNKernelBase::Validate(const Params& p, const OptionalParams& o) const
+    bool LRNKernelBase::Validate(const Params& p, const optional_params& o) const
     {
         if (p.GetType() != KernelType::LRN ||
             o.GetType() != KernelType::LRN)
@@ -112,7 +112,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData LRNKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, float estimatedTime) const
+    KernelsData LRNKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options, float estimatedTime) const
     {
         if (!Validate(params, options))
         {

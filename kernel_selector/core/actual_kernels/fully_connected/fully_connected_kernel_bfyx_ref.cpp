@@ -61,7 +61,7 @@ namespace kernel_selector
         return std::move(runInfo);
     }
 
-    KernelsData FullyConnected_bfyx_Ref::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData FullyConnected_bfyx_Ref::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, DataLayout::bfyx,
         { WeightsLayout::oiyx, WeightsLayout::oyxi, WeightsLayout::iyxo, WeightsLayout::yxio }

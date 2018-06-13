@@ -85,7 +85,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData LRNKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData LRNKernelRef::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, DONT_USE_IF_HAVE_SOMETHING_ELSE);
     }

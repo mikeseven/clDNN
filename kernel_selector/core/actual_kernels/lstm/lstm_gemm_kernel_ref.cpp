@@ -35,7 +35,7 @@ namespace kernel_selector {
         return k;
     }
 
-    KernelsData LSTMGemmKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData LSTMGemmKernelRef::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options);
     }

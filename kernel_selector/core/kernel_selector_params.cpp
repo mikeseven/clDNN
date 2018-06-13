@@ -27,7 +27,7 @@ namespace kernel_selector {
         return s.str();
     }
 
-    std::string BaseParams::to_string() const
+    std::string base_params::to_string() const
     {
         std::stringstream s;
         s << Params::to_string() << "_";

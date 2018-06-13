@@ -24,7 +24,7 @@ namespace kernel_selector
         Attach<ConvolutionGradWeightsKernelRef>();
     }
 
-    KernelsData convolution_grad_weights_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData convolution_grad_weights_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::CONVOLUTION_GRAD_WEIGHTS);
     }

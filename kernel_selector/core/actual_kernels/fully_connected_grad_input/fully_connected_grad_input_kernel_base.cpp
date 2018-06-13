@@ -45,7 +45,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData FullyConnectedGradInputKernelBase::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData FullyConnectedGradInputKernelBase::GetKernelsData(const Params& params, const optional_params& options) const
     {
         assert(params.GetType() == KernelType::FULLY_CONNECTED_GRAD_INPUT);
 

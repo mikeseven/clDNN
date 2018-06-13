@@ -24,7 +24,7 @@ namespace kernel_selector
         Attach<ROIPoolingKernelRef>();
     }
 
-    KernelsData roi_pooling_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData roi_pooling_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::ROI_POOLING);
     }

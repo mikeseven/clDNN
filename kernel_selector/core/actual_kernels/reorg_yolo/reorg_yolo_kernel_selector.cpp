@@ -24,7 +24,7 @@ namespace kernel_selector {
         Attach<ReorgYoloKernelRef>();
     }
 
-    KernelsData reorg_yolo_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData reorg_yolo_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::REORG_YOLO);
     }

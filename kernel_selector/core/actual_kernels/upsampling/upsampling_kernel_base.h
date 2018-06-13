@@ -23,9 +23,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // upsampling_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct upsampling_params : public BaseParams
+    struct upsampling_params : public base_params
     {
-        upsampling_params() : BaseParams(KernelType::UPSAMPLING) {}
+        upsampling_params() : base_params(KernelType::UPSAMPLING) {}
 
         struct DedicatedParams
         {
@@ -38,7 +38,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            auto k = BaseParams::GetParamsKey();
+            auto k = base_params::GetParamsKey();
             k.EnableUpSamplingSampleType(usParams.sampleType);
             return k;
         }
@@ -47,25 +47,25 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // upsampling_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct upsampling_optional_params : OptionalParams
+    struct upsampling_optional_params : optional_params
     {
-        upsampling_optional_params() : OptionalParams(KernelType::UPSAMPLING) {}
+        upsampling_optional_params() : optional_params(KernelType::UPSAMPLING) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // UpSamplingKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class UpSamplingKernelBase : public CommonKernelBase
+    class UpSamplingKernelBase : public common_kernel_base
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         virtual ~UpSamplingKernelBase() {}
 
         using DispatchData = CommonDispatchData;
 
     protected:
-        virtual bool Validate(const Params& p, const OptionalParams& o) const override;
+        virtual bool Validate(const Params& p, const optional_params& o) const override;
         virtual JitConstants GetJitConstants(const upsampling_params& params) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& options) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params& options) const;
     };
 }

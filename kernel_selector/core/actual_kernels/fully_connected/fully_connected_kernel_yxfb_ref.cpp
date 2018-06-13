@@ -38,7 +38,7 @@ namespace kernel_selector
         return k;
     }
 
-    KernelsData FullyConnected_yxfb_ref::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData FullyConnected_yxfb_ref::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, DataLayout::yxfb,
             { WeightsLayout::io, WeightsLayout::oi, WeightsLayout::oiyx, WeightsLayout::oyxi, WeightsLayout::iyxo, WeightsLayout::yxio }

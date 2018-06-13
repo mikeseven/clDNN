@@ -18,7 +18,7 @@
 
 namespace kernel_selector 
 {
-    bool MaxUnpoolingKernelBase::Validate(const Params& p, const OptionalParams& o) const
+    bool MaxUnpoolingKernelBase::Validate(const Params& p, const optional_params& o) const
     {
         if (p.GetType() != KernelType::MAX_UNPOOLING ||
             o.GetType() != KernelType::MAX_UNPOOLING)
@@ -73,7 +73,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData MaxUnpoolingKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, float estimatedTime) const
+    KernelsData MaxUnpoolingKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options, float estimatedTime) const
     {
         if (!Validate(params, options))
         {
