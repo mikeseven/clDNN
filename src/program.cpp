@@ -595,7 +595,10 @@ void program_impl::replace_nodes_pre()
                 }
                 output_ids_offsets.push_back(hidden_id);
             }
-            primitive_id concatenation_id = node->id() + ":concatenation";
+            // rename the lstm node so the concatenation node can have the same id as the lstm node
+            primitive_id original_id = node->id();
+            rename(*node, original_id + ":cldnn_tmp_lstm");
+            primitive_id concatenation_id = original_id;
             auto concatenation_node = std::make_shared<concatenation>(concatenation_id, output_ids_offsets, concatenation::along_f);
             auto &n5 = get_or_create(concatenation_node);
             inputs.push_back(&n5);
