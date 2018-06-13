@@ -162,11 +162,11 @@ namespace kernel_selector
     }
 
    void common_kernel_base::FillCLKernelData(clKernelData& kernel, const CommonDispatchData& runInfo,
-        const std::string& kernelMapName, const std::string& jit, const std::string& entryPoint, const std::string& exeMode, bool weights, bool bias, int number_of_imputs, bool quantization, bool calibration) const
+        const std::string& kernelMapName, const std::string& jit, const std::string& entryPoint, const std::string& exeMode, bool weights, bool bias, int number_of_inputs, bool quantization, bool calibration) const
     {
         kernel.workGroups.global = { runInfo.gws0, runInfo.gws1, runInfo.gws2 };
         kernel.workGroups.local = { runInfo.lws0, runInfo.lws1, runInfo.lws2 };
         kernel.kernelString = GetKernelString(kernelMapName, jit, entryPoint, exeMode);
-        kernel.arguments = GetArgsDesc(number_of_imputs, weights, bias, quantization, calibration);
+        kernel.arguments = GetArgsDesc(number_of_inputs, weights, bias, quantization, calibration);
     }
 }
