@@ -72,7 +72,6 @@ namespace kernel_selector
     using params                            = kernel_selector::Params;
     using base_params                       = kernel_selector::BaseParams;
     using weight_bias_params                = kernel_selector::WeightBiasParams;
-    using reorder_base_params               = kernel_selector::ReorderBaseParams;
     using weights_reorder_params            = kernel_selector::WeightsReorderParams;
     using generic_kernel_params             = kernel_selector::GenericKernelParams;
     using lstm_gemm_params                  = kernel_selector::LSTMGemmParams;

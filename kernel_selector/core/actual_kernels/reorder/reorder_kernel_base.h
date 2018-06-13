@@ -24,9 +24,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // reorder_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct reorder_params : public ReorderBaseParams
+    struct reorder_params : public BaseParams
     {
-        reorder_params() : reorderParams() {}
+        reorder_params() : BaseParams(KernelType::REORDER) {}
 
         struct DedicatedParams
         {
@@ -44,7 +44,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            auto k = ReorderBaseParams::GetParamsKey();
+            auto k = BaseParams::GetParamsKey();
 
             if (reorderParams.winograd)
             {

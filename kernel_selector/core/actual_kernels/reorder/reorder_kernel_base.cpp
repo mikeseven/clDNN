@@ -86,7 +86,7 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     inline JitConstants MakeReorderJitConstants(const reorder_params& params)
     {
-        JitConstants jit = MakeReorderBaseJitConstants(params);
+        JitConstants jit = MakeBaseParamsJitConstants(params);
 
         jit.AddConstant(MakeJitConstant("MEAN_SUBTRACT_" + toString(params.reorderParams.mode), 1));
 

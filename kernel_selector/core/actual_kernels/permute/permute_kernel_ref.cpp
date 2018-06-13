@@ -47,7 +47,7 @@ namespace kernel_selector
 
     KernelsData PermuteKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        assert(params.GetType() == KernelType::REORDER);
+        assert(params.GetType() == KernelType::PERMUTE);
 
         KernelData kd = KernelData::Default<permute_params>(params);
         permute_params& newParams = *static_cast<permute_params*>(kd.params.get());

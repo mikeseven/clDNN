@@ -34,10 +34,6 @@ namespace kernel_selector
             uSize    stride;
             uSize    dilation;
             uSize    padding;
-            uint32_t winograd_tile_n;
-            uint32_t winograd_tile_m;
-            uint32_t winograd_input_tile_width;
-            uint32_t winograd_input_tile_height;
             uint32_t split = 1;
             bool     depthwiseSeparableOpt = false;
             bool     transposed = false;

@@ -48,9 +48,9 @@ struct permute_gpu : typed_primitive_gpu_impl<permute>
 
         CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 
-        auto reorder = new permute_gpu(arg, best_kernels[0]);
+        auto permute = new permute_gpu(arg, best_kernels[0]);
 
-        return reorder;
+        return permute;
     }
 };
 

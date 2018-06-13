@@ -36,13 +36,13 @@ namespace kernel_selector
 
     KernelsData ReshapeKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
     {
-        assert(params.GetType() == KernelType::REORDER);
+        assert(params.GetType() == KernelType::RESHAPE);
 
-        KernelData kd = KernelData::Default<ReorderBaseParams>(params);
-        ReorderBaseParams& newParams = *static_cast<ReorderBaseParams*>(kd.params.get());
+        KernelData kd = KernelData::Default<reshape_params>(params);
+        reshape_params& newParams = *static_cast<reshape_params*>(kd.params.get());
 
         auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);
-        auto cldnn_jit = MakeReorderBaseJitConstants(newParams);
+        auto cldnn_jit = MakeBaseParamsJitConstants(newParams);
         std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         const auto& in = newParams.inputs[0];
