@@ -36,9 +36,9 @@ namespace kernel_selector
     protected:
         virtual JitConstants GetJitConstants(const fully_connected_params& params, const DispatchData& kd) const;
         virtual std::unique_ptr<DispatchData> SetDefault(const fully_connected_params& params) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& optParams, DataLayout dl, std::vector<WeightsLayout> wl, float estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params& optParams, DataLayout dl, std::vector<WeightsLayout> wl, float estimated_time = DONT_USE_IF_HAVE_SOMETHING_ELSE) const;
 
-        bool Validate(const Params& p, const OptionalParams&) const override
+        bool Validate(const Params& p, const optional_params&) const override
         {
             if (p.GetType() != KernelType::FULLY_CONNECTED)
             {

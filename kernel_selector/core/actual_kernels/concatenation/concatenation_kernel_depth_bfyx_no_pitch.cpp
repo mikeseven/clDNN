@@ -38,7 +38,7 @@ namespace kernel_selector
         return k;
     }
 
-    bool ConcatenationKernel_depth_bfyx_no_pitch::Validate(const Params& p, const OptionalParams& o) const
+    bool ConcatenationKernel_depth_bfyx_no_pitch::Validate(const Params& p, const optional_params& o) const
     {
         if (!ConcatenationKernelBase::Validate(p, o))
         {
@@ -84,7 +84,7 @@ namespace kernel_selector
         return runInfo;
     }
 
-    KernelsData ConcatenationKernel_depth_bfyx_no_pitch::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData ConcatenationKernel_depth_bfyx_no_pitch::GetKernelsData(const Params& params, const optional_params& optParams) const
     {
         return GetCommonKernelsData(params, optParams);
     }

@@ -52,7 +52,7 @@ namespace kernel_selector
         return std::move(kd);
     }
 
-    bool FullyConnected_fb_io_b8_f8::Validate(const Params& p, const OptionalParams& o) const
+    bool FullyConnected_fb_io_b8_f8::Validate(const Params& p, const optional_params& o) const
     {
         if (!FullyConnectedBlockKernelBase::Validate(p, o))
         {
@@ -77,7 +77,7 @@ namespace kernel_selector
         return true;
     }
 
-    KernelsData FullyConnected_fb_io_b8_f8::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData FullyConnected_fb_io_b8_f8::GetKernelsData(const Params& params, const optional_params& optParams) const
     {
         assert(params.GetType() == KernelType::FULLY_CONNECTED);
 

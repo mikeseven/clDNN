@@ -18,7 +18,7 @@
 
 namespace kernel_selector 
 {
-    bool PoolingKernelBase::Validate(const Params& p, const OptionalParams& o) const
+    bool PoolingKernelBase::Validate(const Params& p, const optional_params& o) const
     {
         if (p.GetType() != KernelType::POOLING ||
             o.GetType() != KernelType::POOLING)
@@ -115,7 +115,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData PoolingKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, float estimatedTime) const
+    KernelsData PoolingKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options, float estimatedTime) const
     {
         if (!Validate(params, options))
         {

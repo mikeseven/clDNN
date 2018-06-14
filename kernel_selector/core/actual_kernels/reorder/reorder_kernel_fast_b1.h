@@ -25,9 +25,9 @@ namespace kernel_selector
     public:
         ReorderKernelFastBatch1() : ReorderKernelBase("reorder_data_fast_b1") {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
-        virtual JitConstants GetJitConstants(const ReorderParams& params) const override;
-        virtual DispatchData SetDefault(const ReorderParams& arg) const override;
+        virtual JitConstants GetJitConstants(const reorder_params& params) const override;
+        virtual DispatchData SetDefault(const reorder_params& arg) const override;
     };
 }

@@ -26,7 +26,7 @@ namespace kernel_selector {
         ConvolutionKernel_yxfb_yxio_b1_block() : ConvolutionKernelBase("convolution_gpu_yxfb_yxio_b1_block_fp32") {}
         virtual ~ConvolutionKernel_yxfb_yxio_b1_block() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     
     protected:

@@ -26,7 +26,7 @@ namespace kernel_selector
         EltwiseKernelRef() : EltwiseKernelBase("generic_eltwise_ref") {}
         virtual ~EltwiseKernelRef() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     };
 }

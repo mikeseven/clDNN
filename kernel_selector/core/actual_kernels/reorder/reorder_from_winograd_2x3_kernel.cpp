@@ -36,7 +36,7 @@ namespace kernel_selector
         return k;
     }
 
-    JitConstants ReorderFromWinograd2x3Kernel::GetJitConstants(const ReorderParams& params) const
+    JitConstants ReorderFromWinograd2x3Kernel::GetJitConstants(const reorder_params& params) const
     {
         auto jit = ReorderKernelBase::GetJitConstants(params);
 
@@ -48,7 +48,7 @@ namespace kernel_selector
         return jit;
     }
 
-    ReorderFromWinograd2x3Kernel::DispatchData ReorderFromWinograd2x3Kernel::SetDefault(const ReorderParams& params) const
+    ReorderFromWinograd2x3Kernel::DispatchData ReorderFromWinograd2x3Kernel::SetDefault(const reorder_params& params) const
     {
         DispatchData kd;
 
@@ -67,9 +67,9 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData ReorderFromWinograd2x3Kernel::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ReorderFromWinograd2x3Kernel::GetKernelsData(const Params& params, const optional_params& options) const
     {
-        const ReorderParams& orgParams = static_cast<const ReorderParams&>(params);
+        const reorder_params& orgParams = static_cast<const reorder_params&>(params);
         return GetCommonKernelsData(orgParams, options, FORCE_PRIORITY_6);
     }
 }

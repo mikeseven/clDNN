@@ -23,7 +23,7 @@ namespace kernel_selector
     {
         std::stringstream s;
 
-        s << BaseParams::to_string() << "_";
+        s << base_params::to_string() << "_";
         if (bias.empty())
         {
             s << "no_bias" << "_";
@@ -87,7 +87,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData ConvolutionGradWeightsKernelBase::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ConvolutionGradWeightsKernelBase::GetKernelsData(const Params& params, const optional_params& options) const
     {
         assert(params.GetType() == KernelType::CONVOLUTION_GRAD_WEIGHTS);
 

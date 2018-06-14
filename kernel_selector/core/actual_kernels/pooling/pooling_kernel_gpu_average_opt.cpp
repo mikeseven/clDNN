@@ -32,7 +32,7 @@ namespace kernel_selector
         return k;
     }
 
-    bool PoolingKernelGPUAverageOpt::Validate(const Params& p, const OptionalParams& o) const
+    bool PoolingKernelGPUAverageOpt::Validate(const Params& p, const optional_params& o) const
     {
         if (!PoolingKernelBase::Validate(p, o))
         {
@@ -106,7 +106,7 @@ namespace kernel_selector
         return mem_consts;
     }
 
-    KernelsData PoolingKernelGPUAverageOpt::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData PoolingKernelGPUAverageOpt::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, FORCE_PRIORITY_7);
     }

@@ -21,10 +21,10 @@
 
 namespace kernel_selector
 {
-    class LSTMGemmKernelBase : public CommonKernelBase
+    class LSTMGemmKernelBase : public common_kernel_base
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         virtual ~LSTMGemmKernelBase() {}
 
         struct DispatchData : public CommonDispatchData
@@ -32,9 +32,9 @@ namespace kernel_selector
 
     protected:
         virtual JitConstants GetJitConstants(const LSTMGemmParams& params) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& optParams) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params& optParams) const;
 
-        bool Validate(const Params& p, const OptionalParams&) const override
+        bool Validate(const Params& p, const optional_params&) const override
         {
             if (p.GetType() != KernelType::LSTM_GEMM)
             {

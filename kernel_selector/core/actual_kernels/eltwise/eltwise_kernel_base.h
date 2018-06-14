@@ -23,9 +23,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // eltwise_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct eltwise_params : public BaseParams
+    struct eltwise_params : public base_params
     {
-        eltwise_params() : BaseParams(KernelType::ELTWISE), eltwiseParams() {}
+        eltwise_params() : base_params(KernelType::ELTWISE), eltwiseParams() {}
 
         struct InputType
         {
@@ -102,7 +102,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            ParamsKey k = BaseParams::GetParamsKey();
+            ParamsKey k = base_params::GetParamsKey();
             if (eltwiseParams.int8_quantization)
             {
                 k.EnableInt8Quantization();
@@ -120,26 +120,26 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // eltwise_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct eltwise_optional_params : OptionalParams
+    struct eltwise_optional_params : optional_params
     {
-        eltwise_optional_params() : OptionalParams(KernelType::ELTWISE) {}
+        eltwise_optional_params() : optional_params(KernelType::ELTWISE) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // EltwiseKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class EltwiseKernelBase : public CommonKernelBase
+    class EltwiseKernelBase : public common_kernel_base
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         virtual ~EltwiseKernelBase() {}
 
         using DispatchData = CommonDispatchData;
         JitConstants GetJitConstantsCommon(const eltwise_params& params, bool useVload8) const;
 
     protected:
-        virtual bool Validate(const Params& p, const OptionalParams& o) const override;
+        virtual bool Validate(const Params& p, const optional_params& o) const override;
         virtual JitConstants GetJitConstants(const eltwise_params& params) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& options) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params& options) const;
     };
 }

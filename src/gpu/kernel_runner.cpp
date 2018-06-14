@@ -18,6 +18,7 @@
 
 #include "kernel_runner.h"
 #include "kernel.h"
+#include "weight_bias_params.h"
 #include <chrono>
 
 namespace cldnn { namespace gpu {
@@ -30,7 +31,7 @@ kernel_runner::kernel_runner(engine_impl& engine_ref, bool weights_and_bias_exis
 
 void kernel_runner::prepare_kernel_args(const kernel_selector::KernelsData& kernels_data, gpu::kernel::kernel_arguments_data& args)
 {
-    const auto& base_params = *static_cast<kernel_selector::BaseParams*>(kernels_data[0].params.get());
+    const auto& base_params = *static_cast<kernel_selector::base_params*>(kernels_data[0].params.get());
     // Prepare input buffers
     if (input_buffers.empty())
     {
@@ -57,7 +58,7 @@ void kernel_runner::prepare_kernel_args(const kernel_selector::KernelsData& kern
     if (weights_and_bias_exist)
     {
         // Prepare weight buffer
-        const auto& weights_bias_params = *static_cast<kernel_selector::WeightBiasParams*>(kernels_data[0].params.get());
+        const auto& weights_bias_params = *static_cast<kernel_selector::weight_bias_params*>(kernels_data[0].params.get());
         int num_of_weight_elements_ifm = static_cast<int>(weights_bias_params.weights.IFM().v);
         int num_of_weight_elements_spatial_y = static_cast<int>(weights_bias_params.weights.Y().v);
         int num_of_weight_elements_spatial_x = static_cast<int>(weights_bias_params.weights.X().v);

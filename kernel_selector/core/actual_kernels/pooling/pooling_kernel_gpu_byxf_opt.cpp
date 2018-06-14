@@ -56,7 +56,7 @@ namespace kernel_selector
         return mem_consts;
     }
 
-    bool PoolingKernelGPUByxfOpt::Validate(const Params& p, const OptionalParams& o) const
+    bool PoolingKernelGPUByxfOpt::Validate(const Params& p, const optional_params& o) const
     {
         if (!PoolingKernelBase::Validate(p, o))
         {
@@ -77,7 +77,7 @@ namespace kernel_selector
         return true;
     }
 
-    KernelsData PoolingKernelGPUByxfOpt::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData PoolingKernelGPUByxfOpt::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, FORCE_PRIORITY_7);
     }

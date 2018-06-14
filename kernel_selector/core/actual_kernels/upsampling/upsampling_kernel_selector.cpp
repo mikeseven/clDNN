@@ -19,12 +19,12 @@
  
 namespace kernel_selector 
 {
-    UpSamplingKernelSelector::UpSamplingKernelSelector()
+    upsampling_kernel_selector::upsampling_kernel_selector()
     {
         Attach<UpSamplingKernelRef>();
     }
 
-    KernelsData UpSamplingKernelSelector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData upsampling_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::UPSAMPLING);
     }

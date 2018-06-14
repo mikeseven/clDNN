@@ -26,7 +26,7 @@ namespace kernel_selector
         PoolingKerneGPU_DPAS() : PoolingKernelBase("pooling_gpu_dpas") {}
         virtual ~PoolingKerneGPU_DPAS() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
         DispatchData SetDefault(const pooling_params& params) const override;
     };

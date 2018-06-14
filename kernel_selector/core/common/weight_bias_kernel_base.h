@@ -24,12 +24,12 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // WeightsBiasKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class WeightBiasKernelBase : public CommonKernelBase
+    class WeightBiasKernelBase : public common_kernel_base
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         virtual ~WeightBiasKernelBase() {}
     protected:
-        virtual JitConstants GetJitConstants(const WeightBiasParams& params) const;
+        virtual JitConstants GetJitConstants(const weight_bias_params& params) const;
     };
 }

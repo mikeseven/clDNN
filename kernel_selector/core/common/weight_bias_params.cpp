@@ -18,9 +18,9 @@
 
 namespace kernel_selector
 {
-    ParamsKey WeightBiasParams::GetParamsKey() const
+    ParamsKey weight_bias_params::GetParamsKey() const
     {
-        ParamsKey k = BaseParams::GetParamsKey();
+        ParamsKey k = base_params::GetParamsKey();
 
         k.EnableInputWeightsType(weights.GetDType());
 

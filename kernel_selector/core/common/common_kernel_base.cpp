@@ -73,7 +73,7 @@ namespace kernel_selector
         };
     }
 
-    std::string CommonKernelBase::GetEntryPoint(const std::string& templateName, const std::string& layerID, const OptionalParams& options) const
+    std::string common_kernel_base::GetEntryPoint(const std::string& templateName, const std::string& layerID, const optional_params& options) const
     {
         std::string kernelID = layerID;
 
@@ -89,7 +89,7 @@ namespace kernel_selector
         return kernelID;
     }
 
-    std::string CommonKernelBase::CreateJit(const std::string& template_name, const JitConstants& constants, const std::string& kernel_id) const
+    std::string common_kernel_base::CreateJit(const std::string& template_name, const JitConstants& constants, const std::string& kernel_id) const
     {
         class CodeBuilder code;
         code.add_line("\n//====================================================")
@@ -109,7 +109,7 @@ namespace kernel_selector
         return jit;
     }
 
-    Arguments CommonKernelBase::GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias, bool use_quantization, bool use_output_calibration) const
+    Arguments common_kernel_base::GetArgsDesc(uint32_t num_of_input, bool use_weights, bool use_bias, bool use_quantization, bool use_output_calibration) const
     {
         Arguments args;
 
@@ -143,7 +143,7 @@ namespace kernel_selector
         return args;
     }
 
-    std::shared_ptr<KernelString> CommonKernelBase::GetKernelString(const std::string& name, const std::string& jit, const std::string& entry_point, const std::string& exe_mode) const
+    std::shared_ptr<KernelString> common_kernel_base::GetKernelString(const std::string& name, const std::string& jit, const std::string& entry_point, const std::string& exe_mode) const
     {
         std::shared_ptr<KernelString> kernel_string = std::make_shared<KernelString>();
 
@@ -161,12 +161,12 @@ namespace kernel_selector
         return kernel_string;
     }
 
-   void CommonKernelBase::FillCLKernelData(clKernelData& kernel, const CommonDispatchData& runInfo,
-        const std::string& kernelMapName, const std::string& jit, const std::string& entryPoint, const std::string& exeMode, bool weights, bool bias, int number_of_imputs, bool quantization, bool calibration) const
+   void common_kernel_base::FillCLKernelData(clKernelData& kernel, const CommonDispatchData& runInfo,
+        const std::string& kernelMapName, const std::string& jit, const std::string& entryPoint, const std::string& exeMode, bool weights, bool bias, int number_of_inputs, bool quantization, bool calibration) const
     {
         kernel.workGroups.global = { runInfo.gws0, runInfo.gws1, runInfo.gws2 };
         kernel.workGroups.local = { runInfo.lws0, runInfo.lws1, runInfo.lws2 };
         kernel.kernelString = GetKernelString(kernelMapName, jit, entryPoint, exeMode);
-        kernel.arguments = GetArgsDesc(number_of_imputs, weights, bias, quantization, calibration);
+        kernel.arguments = GetArgsDesc(number_of_inputs, weights, bias, quantization, calibration);
     }
 }

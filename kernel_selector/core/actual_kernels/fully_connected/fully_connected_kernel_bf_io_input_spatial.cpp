@@ -63,7 +63,7 @@ namespace kernel_selector
         return std::move(kd);
     }
 
-    bool FullyConnected_bf_io_input_spatial::Validate(const Params& p, const OptionalParams& o) const
+    bool FullyConnected_bf_io_input_spatial::Validate(const Params& p, const optional_params& o) const
     {
         if (!FullyConnectedKernelBase::Validate(p, o))
         {
@@ -83,7 +83,7 @@ namespace kernel_selector
         return true;
     }
 
-    KernelsData FullyConnected_bf_io_input_spatial::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData FullyConnected_bf_io_input_spatial::GetKernelsData(const Params& params, const optional_params& optParams) const
     {
         const auto& orgParams = static_cast<const fully_connected_params&>(params);
 

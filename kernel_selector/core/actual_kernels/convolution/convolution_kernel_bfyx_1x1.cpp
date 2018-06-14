@@ -69,7 +69,7 @@ namespace kernel_selector {
         return kd;
     }
 
-    bool ConvolutionKernel_bfyx_1x1::Validate(const Params& p, const OptionalParams& o) const
+    bool ConvolutionKernel_bfyx_1x1::Validate(const Params& p, const optional_params& o) const
     {
         if (!ConvolutionKernelBase::Validate(p, o))
         {
@@ -105,7 +105,7 @@ namespace kernel_selector {
         return jit;
     }
 
-    KernelsData ConvolutionKernel_bfyx_1x1::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ConvolutionKernel_bfyx_1x1::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options);
     }

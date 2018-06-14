@@ -20,6 +20,7 @@
 #include "tensor_type.h"
 #include "kernel_selector_common.h"
 #include "reorder/reorder_weights_kernel_selector.h"
+#include "reorder/reorder_kernel_base.h"
 #include "convolution/convolution_params.h"
 
 namespace kernel_selector { namespace
@@ -79,7 +80,7 @@ namespace kernel_selector { namespace
         return{dims, t.GetDType(), t.GetLayout()};
     }
 
-    inline bool CovolutionCheckInput(const Params& p, const OptionalParams& o)
+    inline bool CovolutionCheckInput(const Params& p, const optional_params& o)
     {
         const convolution_params& params = static_cast<const convolution_params&>(p);
         const convolution_optional_params& optParams = static_cast<const convolution_optional_params&>(o);
@@ -161,7 +162,7 @@ namespace kernel_selector { namespace
         }
     }
 
-    inline bool CheckImageSize(const WeightBiasParams& newParams, const WeightsLayout layout)
+    inline bool CheckImageSize(const weight_bias_params& newParams, const WeightsLayout layout)
     {
         if (!newParams.engineInfo.bImageSupport)
             return false;
@@ -176,7 +177,7 @@ namespace kernel_selector { namespace
         return true;
     }
 
-    inline bool UpdateWeightsParams(WeightBiasParams& newParams, const OptionalParams& options, std::vector<WeightsLayout> layouts, WeightsReorderParams& weightsReorderParams)
+    inline bool UpdateWeightsParams(weight_bias_params& newParams, const optional_params& options, std::vector<WeightsLayout> layouts, WeightsReorderParams& weightsReorderParams)
     {
         //validate if weights type is image and if device supports requested sizes
         for (auto& requested_layout : layouts)
@@ -187,7 +188,7 @@ namespace kernel_selector { namespace
                     return false;
             }
         }
-        const WeightsBiasOptionalParams& optParams = static_cast<const WeightsBiasOptionalParams&>(options);
+        const weight_bias_optional_params& optParams = static_cast<const weight_bias_optional_params&>(options);
 
         const auto dtype = DataTypeToWeightsType(newParams.inputs[0].GetDType());
         bool bProperWeights = CheckWeights(newParams.weights, dtype, layouts);
@@ -200,13 +201,13 @@ namespace kernel_selector { namespace
             }
 
             auto& reorderKS = ReorderWeightsKernelSelctor::Instance();
-            ReorderWeightsParams r_params;
+            reorder_weights_params r_params;
 
             r_params.layerID = newParams.layerID + "_reorder_";
             r_params.reorderParams.input = newParams.weights;
             r_params.reorderParams.output = newParams.weights.TransformIgnorePadding(layouts[0], dtype);
 
-            ReorderOptionalParams op;
+            reorder_optional_params op;
             KernelsData kernels_data = reorderKS.GetBestKernels(r_params, op);
 
             if (kernels_data.empty())
@@ -298,7 +299,7 @@ namespace kernel_selector { namespace
         return lws;
     }
 
-    inline bool CheckInputsOutputNoPitchSameDims(const BaseParams& params)
+    inline bool CheckInputsOutputNoPitchSameDims(const base_params& params)
     {
         bool no_pitch_same_dims = true;
 

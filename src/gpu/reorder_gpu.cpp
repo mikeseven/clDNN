@@ -18,6 +18,8 @@
 #include "primitive_gpu_base.h"
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
+#include "reorder/reorder_kernel_selector.h"
+#include "reorder/reorder_kernel_base.h"
 #include "error_handler.h"
 
 namespace cldnn { namespace gpu {

@@ -26,7 +26,7 @@ namespace kernel_selector {
         ConvolutionKernel_yxfb_Ref() : ConvolutionKernelBase("convolution_gpu_yxfb_ref") {}
         virtual ~ConvolutionKernel_yxfb_Ref() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     
     protected:

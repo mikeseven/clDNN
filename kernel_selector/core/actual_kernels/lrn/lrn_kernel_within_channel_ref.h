@@ -26,7 +26,7 @@ namespace kernel_selector
         LRNKernelWithinChannel() : LRNKernelBase("lrn_gpu_within_channel") {}
         virtual ~LRNKernelWithinChannel() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
 
     private:

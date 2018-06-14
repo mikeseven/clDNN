@@ -48,7 +48,7 @@ namespace kernel_selector
         return std::move(kd);
     }
 
-    bool FullyConnected_fb_oi_b8_ref::Validate(const Params& p, const OptionalParams& o) const
+    bool FullyConnected_fb_oi_b8_ref::Validate(const Params& p, const optional_params& o) const
     {
         if (!FullyConnectedKernelBase::Validate(p, o))
         {
@@ -65,7 +65,7 @@ namespace kernel_selector
         return true;
     }
 
-    KernelsData FullyConnected_fb_oi_b8_ref::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData FullyConnected_fb_oi_b8_ref::GetKernelsData(const Params& params, const optional_params& optParams) const
     {
         return GetCommonKernelsData(params, optParams, DataLayout::fb, { WeightsLayout::oi }, FORCE_PRIORITY_6);
     }

@@ -27,7 +27,7 @@ namespace kernel_selector {
 
         FullyConnected_bfyx_Ref() : Parent("fully_connected_gpu_bfyx_ref") {}
 
-        KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         ParamsKey GetSupportedKey() const override;
         
     protected:

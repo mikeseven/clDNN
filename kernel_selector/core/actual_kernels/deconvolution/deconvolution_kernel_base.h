@@ -24,9 +24,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // deconvolution_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct deconvolution_params : public WeightBiasParams
+    struct deconvolution_params : public weight_bias_params
     {
-        deconvolution_params() : WeightBiasParams(KernelType::DECONVOLUTION), deconvParams() {}
+        deconvolution_params() : weight_bias_params(KernelType::DECONVOLUTION), deconvParams() {}
 
         struct DedicatedParams
         {
@@ -44,7 +44,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const override
         {
-            ParamsKey k = WeightBiasParams::GetParamsKey();
+            ParamsKey k = weight_bias_params::GetParamsKey();
 
             if (deconvParams.split > 1)
             {
@@ -69,9 +69,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // deconvolution_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct deconvolution_optional_params : WeightsBiasOptionalParams
+    struct deconvolution_optional_params : weight_bias_optional_params
     {
-        deconvolution_optional_params() : WeightsBiasOptionalParams(KernelType::DECONVOLUTION) {}
+        deconvolution_optional_params() : weight_bias_optional_params(KernelType::DECONVOLUTION) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -86,7 +86,7 @@ namespace kernel_selector
         using DispatchData = CommonDispatchData;
     
     protected:
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const;
         virtual JitConstants GetJitConstants(const deconvolution_params& params) const;
         virtual DispatchData SetDefault(const deconvolution_params& params) const;
     };

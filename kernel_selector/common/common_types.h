@@ -40,6 +40,8 @@ namespace kernel_selector
         ELTWISE,
         TABLE_LOOKUP,
         REORDER,
+        RESHAPE,
+        PERMUTE,
         CONCATENATION,
         UPSAMPLING,
         REGION_YOLO,

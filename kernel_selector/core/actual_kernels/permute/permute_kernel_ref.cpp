@@ -34,12 +34,23 @@ namespace kernel_selector
         return k;
     }
 
-    KernelsData PermuteKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    inline JitConstants MakePermuteJitConstants(const permute_params& params)
     {
-        assert(params.GetType() == KernelType::REORDER);
+        JitConstants jit = MakeBaseParamsJitConstants(params);
 
-        KernelData kd = KernelData::Default<PermuteParams>(params);
-        PermuteParams& newParams = *static_cast<PermuteParams*>(kd.params.get());
+        jit.AddConstants({
+            MakeJitConstant("PERMUTE_ORDER", params.permuteParams.order)
+        });
+
+        return jit;
+    }
+
+    KernelsData PermuteKernelRef::GetKernelsData(const Params& params, const optional_params& options) const
+    {
+        assert(params.GetType() == KernelType::PERMUTE);
+
+        KernelData kd = KernelData::Default<permute_params>(params);
+        permute_params& newParams = *static_cast<permute_params*>(kd.params.get());
 
 
         auto entry_point = GetEntryPoint(kernelName, newParams.layerID, options);

@@ -24,7 +24,7 @@ namespace kernel_selector
         return GetDefaultSupportedKey();
     }
 
-    SoftmaxKernelRef::Parent::DispatchData SoftmaxKernelRef::SetDefault(const softmax_params& params, const OptionalParams& optParams) const
+    SoftmaxKernelRef::Parent::DispatchData SoftmaxKernelRef::SetDefault(const softmax_params& params, const optional_params& optParams) const
     {
         auto runInfo = Parent::SetDefault(params, optParams);
 
@@ -47,7 +47,7 @@ namespace kernel_selector
         return runInfo;
     }
 
-    KernelsData SoftmaxKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData SoftmaxKernelRef::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options);
     }

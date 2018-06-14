@@ -28,7 +28,7 @@ namespace kernel_selector
         Attach<ActivationKernel_Tutorial>();
     }
 
-    KernelsData activation_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData activation_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::ACTIVATION);
     }

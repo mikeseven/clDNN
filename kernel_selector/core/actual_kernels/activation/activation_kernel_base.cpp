@@ -67,7 +67,7 @@ namespace kernel_selector
         return jit;
     }
 
-    bool ActivationKernelBase::Validate(const Params& p, const OptionalParams& o) const
+    bool ActivationKernelBase::Validate(const Params& p, const optional_params& o) const
     {
         if (p.GetType() != KernelType::ACTIVATION ||
             o.GetType() != KernelType::ACTIVATION)
@@ -78,7 +78,7 @@ namespace kernel_selector
         return true;
     }
 
-    KernelsData ActivationKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ActivationKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options) const
     {
         if (!Validate(params, options))
         {

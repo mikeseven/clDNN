@@ -60,7 +60,7 @@ namespace kernel_selector
         return std::move(runInfo);
     }
 
-    KernelsData FullyConnected_image_tutorial::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData FullyConnected_image_tutorial::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, DataLayout::bfyx,
         { WeightsLayout::image_2d_weights_c4_fyx_b }

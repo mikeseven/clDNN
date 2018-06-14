@@ -67,7 +67,7 @@ namespace kernel_selector
         return b16_layout;
     }
 
-    bool FullyConnected_bs_f_bsv8_af8::Validate(const Params& p, const OptionalParams& o) const
+    bool FullyConnected_bs_f_bsv8_af8::Validate(const Params& p, const optional_params& o) const
     {
         if (!FullyConnectedBlockKernelBase::Validate(p, o))
         {
@@ -97,7 +97,7 @@ namespace kernel_selector
         return true;
     }
 
-    KernelsData FullyConnected_bs_f_bsv8_af8::GetKernelsData(const Params& params, const OptionalParams& optParams) const
+    KernelsData FullyConnected_bs_f_bsv8_af8::GetKernelsData(const Params& params, const optional_params& optParams) const
     {
         return GetCommonKernelsData(params, optParams, DataLayout::bs_f_bsv8__af8, { WeightsLayout::os_i_osv8__ai8 }, FORCE_PRIORITY_4);
     }

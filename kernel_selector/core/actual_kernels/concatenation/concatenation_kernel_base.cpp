@@ -34,7 +34,7 @@ namespace kernel_selector
         return DataTensor::Channelndex(params.output.GetLayout(), name);
     }
 
-    bool ConcatenationKernelBase::Validate(const Params& p, const OptionalParams&) const
+    bool ConcatenationKernelBase::Validate(const Params& p, const optional_params&) const
     {
         if (p.GetType() != KernelType::CONCATENATION)
         {
@@ -94,7 +94,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData ConcatenationKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ConcatenationKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options) const
     {
         if (!Validate(params,  options))
         {

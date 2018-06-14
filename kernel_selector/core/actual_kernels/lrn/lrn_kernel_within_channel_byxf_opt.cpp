@@ -80,7 +80,7 @@ namespace kernel_selector
         return kd;
     }
 
-    bool LRNKernelWithinChannelByxfOpt::Validate(const Params& p, const OptionalParams& o) const
+    bool LRNKernelWithinChannelByxfOpt::Validate(const Params& p, const optional_params& o) const
     {
         if (!LRNKernelBase::Validate(p, o)) 
         {
@@ -94,7 +94,7 @@ namespace kernel_selector
         return true;
     }
 
-    KernelsData LRNKernelWithinChannelByxfOpt::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData LRNKernelWithinChannelByxfOpt::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, FORCE_PRIORITY_7);
     }

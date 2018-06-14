@@ -27,11 +27,11 @@ namespace kernel_selector
         SoftmaxKerneItemsClassOptimized() : Parent("softmax_gpu_items_class_optimized") {}
         virtual ~SoftmaxKerneItemsClassOptimized() {}
 
-        KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         ParamsKey GetSupportedKey() const override;
 
     protected:
         JitConstants GetJitConstants(const softmax_params& params, DispatchData kd) const override;
-        DispatchData SetDefault(const softmax_params& params, const OptionalParams& optParams) const override;
+        DispatchData SetDefault(const softmax_params& params, const optional_params& optParams) const override;
     };
 }

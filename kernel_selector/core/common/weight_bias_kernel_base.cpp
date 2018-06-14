@@ -18,7 +18,7 @@
 
 namespace kernel_selector
 {
-    JitConstants WeightBiasKernelBase::GetJitConstants(const WeightBiasParams& params) const
+    JitConstants WeightBiasKernelBase::GetJitConstants(const weight_bias_params& params) const
     {
         JitConstants jit = MakeBaseParamsJitConstants(params);
         jit.AddConstants({

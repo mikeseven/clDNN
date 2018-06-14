@@ -20,7 +20,7 @@
 
 namespace kernel_selector 
 {
-    bool ConvolutionKernelBase::Validate(const Params& p, const OptionalParams& o) const
+    bool ConvolutionKernelBase::Validate(const Params& p, const optional_params& o) const
     {
         if (p.GetType() != KernelType::CONVOLUTION ||
             o.GetType() != KernelType::CONVOLUTION)
@@ -214,7 +214,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData ConvolutionKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, const std::string exeMode, int autoTuneIndex) const
+    KernelsData ConvolutionKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options, const std::string exeMode, int autoTuneIndex) const
     {
         if (!Validate(params, options))
         {

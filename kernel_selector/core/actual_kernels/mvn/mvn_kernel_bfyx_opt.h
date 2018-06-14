@@ -26,7 +26,7 @@ namespace kernel_selector
         MVNKernelBfyxOpt() : MVNKernelBase("mvn_gpu_bfyx_opt") {}
         virtual ~MVNKernelBfyxOpt() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
         using Parent = MVNKernelBase;
 

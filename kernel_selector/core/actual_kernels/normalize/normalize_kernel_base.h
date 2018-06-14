@@ -24,9 +24,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // normalize_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct normalize_params : public BaseParams
+    struct normalize_params : public base_params
     {
-        normalize_params() : BaseParams(KernelType::NORMALIZE), normParams() {}
+        normalize_params() : base_params(KernelType::NORMALIZE), normParams() {}
 
         struct DedicatedParams
         {
@@ -39,7 +39,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            ParamsKey k = BaseParams::GetParamsKey();
+            ParamsKey k = base_params::GetParamsKey();
 
             k.EnableNormalizeMode(normParams.normMode);
 
@@ -50,18 +50,18 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // normalize_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct normalize_optional_params : OptionalParams
+    struct normalize_optional_params : optional_params
     {
-        normalize_optional_params() : OptionalParams(KernelType::NORMALIZE) {}
+        normalize_optional_params() : optional_params(KernelType::NORMALIZE) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // NormalizeKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class NormalizeKernelBase : public CommonKernelBase
+    class NormalizeKernelBase : public common_kernel_base
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         virtual ~NormalizeKernelBase() {}
 
         using DispatchData = CommonDispatchData;
@@ -69,6 +69,6 @@ namespace kernel_selector
     protected:
         JitConstants GetJitConstants(const normalize_params& params) const;
         DispatchData SetDefault(const normalize_params& params) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams&, float estimated_time) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params&, float estimated_time) const;
     };
 }

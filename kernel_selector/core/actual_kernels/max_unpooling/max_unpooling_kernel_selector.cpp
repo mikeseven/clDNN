@@ -24,7 +24,7 @@ namespace kernel_selector {
         Attach<MaxUnpoolingKernelGPURef>();
     }
 
-    KernelsData max_unpooling_kernel_selector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData max_unpooling_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::MAX_UNPOOLING);
     }

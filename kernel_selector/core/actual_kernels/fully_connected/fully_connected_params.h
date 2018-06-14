@@ -24,9 +24,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // fully_connected_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct fully_connected_params : public WeightBiasParams
+    struct fully_connected_params : public weight_bias_params
     {
-        fully_connected_params() : WeightBiasParams(KernelType::FULLY_CONNECTED) {}
+        fully_connected_params() : weight_bias_params(KernelType::FULLY_CONNECTED) {}
 
         struct DedicatedParams
         {
@@ -42,7 +42,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const
         {
-            ParamsKey k = WeightBiasParams::GetParamsKey();
+            ParamsKey k = weight_bias_params::GetParamsKey();
 
             if (fcParams.int8_quantization)
             {
@@ -61,8 +61,8 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // fully_connected_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct fully_connected_optional_params : WeightsBiasOptionalParams
+    struct fully_connected_optional_params : weight_bias_optional_params
     {
-        fully_connected_optional_params() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED) {}
+        fully_connected_optional_params() : weight_bias_optional_params(KernelType::FULLY_CONNECTED) {}
     };
 }

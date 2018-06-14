@@ -66,7 +66,7 @@ namespace kernel_selector
         return std::move(dispatchData);
     }
 
-    KernelsData FullyConnectedKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, DataLayout dl, std::vector<WeightsLayout> wl, float estimated_time) const
+    KernelsData FullyConnectedKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options, DataLayout dl, std::vector<WeightsLayout> wl, float estimated_time) const
     {
         if (!Validate(params, options) ||
             wl.empty())

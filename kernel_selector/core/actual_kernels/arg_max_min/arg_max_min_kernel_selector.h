@@ -20,7 +20,7 @@
 
 namespace kernel_selector
 {
-	class arg_max_min_kernel_selector : public KernelSelctorBase
+	class arg_max_min_kernel_selector : public kernel_selector_base
 	{
 	public:
 		static arg_max_min_kernel_selector &Instance() {
@@ -32,6 +32,6 @@ namespace kernel_selector
 
 		virtual ~arg_max_min_kernel_selector() {}
 
-		virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
+		virtual KernelsData GetBestKernels(const Params& params, const optional_params& options) const override;
 	};
 }

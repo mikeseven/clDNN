@@ -23,7 +23,7 @@ namespace kernel_selector
     {
         std::stringstream s;
 
-        s << BaseParams::to_string() << "_";
+        s << base_params::to_string() << "_";
         if (bias.empty())
         {
             s << "no_bias" << "_";
@@ -43,7 +43,7 @@ namespace kernel_selector
 
     ParamsKey convolution_params::GetParamsKey() const
     {
-        ParamsKey k = WeightBiasParams::GetParamsKey();
+        ParamsKey k = weight_bias_params::GetParamsKey();
 
         if (convParams.split > 1)
         {

@@ -44,7 +44,7 @@ namespace kernel_selector
         return run_info;
     }
 
-    bool LRNKernelAcrossChannel_b8::Validate(const Params& p, const OptionalParams& o) const
+    bool LRNKernelAcrossChannel_b8::Validate(const Params& p, const optional_params& o) const
     {
         if (!LRNKernelBase::Validate(p, o))
         {
@@ -76,7 +76,7 @@ namespace kernel_selector
         return cldnnJit;
     }
 
-    KernelsData LRNKernelAcrossChannel_b8::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData LRNKernelAcrossChannel_b8::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, FORCE_PRIORITY_8);
     }

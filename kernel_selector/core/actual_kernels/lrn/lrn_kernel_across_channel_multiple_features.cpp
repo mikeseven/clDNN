@@ -93,7 +93,7 @@ namespace kernel_selector
         return runInfo;
     }
 
-    bool LRNKernelAcrossChannelMultipleFeatures::Validate(const Params& p, const OptionalParams& o) const
+    bool LRNKernelAcrossChannelMultipleFeatures::Validate(const Params& p, const optional_params& o) const
     {
         if (!LRNKernelBase::Validate(p, o))
         {
@@ -126,7 +126,7 @@ namespace kernel_selector
         return cldnnJit;
     }
 
-    KernelsData LRNKernelAcrossChannelMultipleFeatures::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData LRNKernelAcrossChannelMultipleFeatures::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, FORCE_PRIORITY_6);
     }

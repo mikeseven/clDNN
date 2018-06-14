@@ -35,13 +35,13 @@ namespace kernel_selector
         return k;
     }
 
-    JitConstants ReorderKernelFastBatch1::GetJitConstants(const ReorderParams& params) const
+    JitConstants ReorderKernelFastBatch1::GetJitConstants(const reorder_params& params) const
     {
         auto jit = ReorderKernelBase::GetJitConstants(params);
         jit.Merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
 
-        KernelData kd = KernelData::Default<ReorderParams>(params);
-        ReorderParams& newParams = *static_cast<ReorderParams*>(kd.params.get());
+        KernelData kd = KernelData::Default<reorder_params>(params);
+        reorder_params& newParams = *static_cast<reorder_params*>(kd.params.get());
 
         const auto& input = newParams.inputs[0];
         jit.AddConstant(MakeJitConstant("ELEMENTS_COUNT", input.LogicalSize()));
@@ -58,7 +58,7 @@ namespace kernel_selector
         return jit;
     }
 
-    ReorderKernelFastBatch1::DispatchData ReorderKernelFastBatch1::SetDefault(const ReorderParams& params) const
+    ReorderKernelFastBatch1::DispatchData ReorderKernelFastBatch1::SetDefault(const reorder_params& params) const
     {
         DispatchData kd;
 
@@ -77,11 +77,11 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData ReorderKernelFastBatch1::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ReorderKernelFastBatch1::GetKernelsData(const Params& params, const optional_params& options) const
     {
         assert(params.GetType() == KernelType::REORDER);
 
-        const ReorderParams& orgParams = static_cast<const ReorderParams&>(params);
+        const reorder_params& orgParams = static_cast<const reorder_params&>(params);
 
         const auto& input = orgParams.inputs[0];
         const auto& output = orgParams.output;

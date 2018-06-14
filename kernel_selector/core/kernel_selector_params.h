@@ -822,11 +822,11 @@ namespace kernel_selector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // BaseParams
+    // base_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct BaseParams : public Params
+    struct base_params : public Params
     {
-        virtual ~BaseParams() {}
+        virtual ~base_params() {}
 
         ActivationFunction  activationFunc = ActivationFunction::NONE;
         NonLinearParams     activationParams;
@@ -900,220 +900,15 @@ namespace kernel_selector
 
     protected:
 
-        BaseParams(KernelType kt) : Params(kt, ""), inputs(1){}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ROIPoolingParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ROIPoolingParams : public BaseParams
-    {
-        ROIPoolingParams() : BaseParams(KernelType::ROI_POOLING) {}
-
-        struct DedicatedParams
-        {
-            PoolType    mode         = PoolType::MAX;
-            size_t      pooledWidth  = 0;
-            size_t      pooledHeight = 0;
-            size_t      groupSize    = 0;
-            float       spatialScale = 1.f;
-        };
-
-        DedicatedParams roiParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            return BaseParams::GetParamsKey();
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // RegionYoloParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct RegionYoloParams : public BaseParams
-    {
-        RegionYoloParams() : BaseParams(KernelType::REGION_YOLO) {}
-
-        struct DedicatedParams
-        {
-            uint32_t coords;
-            uint32_t classes;
-            uint32_t num;
-            uint32_t mask_size;
-            bool do_softmax;
-        };
-
-        struct DedicatedParams ryParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            auto k = BaseParams::GetParamsKey();
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ReorgYoloParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ReorgYoloParams : public BaseParams
-    {
-        ReorgYoloParams() : BaseParams(KernelType::REORG_YOLO) {}
-
-        struct DedicatedParams
-        {
-            uint32_t stride;
-        };
-
-        struct DedicatedParams ryParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            auto k = BaseParams::GetParamsKey();
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ReorderParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ReorderBaseParams : public BaseParams
-    {
-        ReorderBaseParams() : BaseParams(KernelType::REORDER) {}
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            return BaseParams::GetParamsKey();
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // PermuteParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct PermuteParams : public ReorderBaseParams
-    {
-        PermuteParams() {}
-        
-        struct DedicatedParams
-        {
-            std::vector<uint16_t> order;
-        };
-
-        DedicatedParams permuteParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            return BaseParams::GetParamsKey();
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ReorderParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ReorderParams : public ReorderBaseParams
-    {
-        ReorderParams() : reorderParams() {}
-
-        struct DedicatedParams
-        {
-            MeanSubtractMode    mode = MeanSubtractMode::NONE;
-            MeanOp              mean_op = MeanOp::SUB;
-            std::vector<float>  meanValues;
-            DataTensor          mean;
-            uint32_t            winograd_input_offset_x;
-            uint32_t            winograd_input_offset_y;
-            uint32_t            winograd_nr_tiles_x;
-            bool                winograd = false;
-        };
-
-        DedicatedParams reorderParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            auto k = ReorderBaseParams::GetParamsKey();
-
-            if (reorderParams.winograd)
-            {
-                k.EnableWinogradReorder();
-            }
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ReorderWeightsParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ReorderWeightsParams : public Params
-    {
-        ReorderWeightsParams() : Params(KernelType::REORDER, ""), reorderParams() {}
-
-        struct DedicatedParams
-        {
-            WeightsTensor input;
-            WeightsTensor output;
-            bool winograd = false;
-        };
-
-        DedicatedParams reorderParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            ParamsKey k;
-            const auto& input = reorderParams.input;
-            const auto& output = reorderParams.output;
-            k.EnableInputWeightsType(input.GetDType());
-            k.EnableOutputWeightsType(output.GetDType());
-            k.EnableInputWeightsLayout(input.GetLayout());
-            k.EnableOutputWeightsLayout(output.GetLayout());
-
-            if (input.PitchesDifferFromLogicalDims() ||
-                output.PitchesDifferFromLogicalDims())
-            {
-                k.EnableTensorPitches();
-            }
-
-            if (input.GetFirstElementOffset() != 0 || output.GetFirstElementOffset() != 0)
-            {
-                k.EnableTensorOffset();
-            }
-
-            if (reorderParams.winograd)
-            {
-                k.EnableWinogradReorder();
-            }
-            return k;
-        }
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // UpSamplingParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct UpSamplingParams : public BaseParams
-    {
-        UpSamplingParams() : BaseParams(KernelType::UPSAMPLING) {}
-
-        struct DedicatedParams
-        {
-            uint32_t scale = 1;
-            uint32_t num_filter = 0;
-            SampleType sampleType = SampleType::NEAREST;
-        };
-
-        DedicatedParams usParams;
-
-        virtual ParamsKey GetParamsKey() const
-        {
-            auto k = BaseParams::GetParamsKey();
-            k.EnableUpSamplingSampleType(usParams.sampleType);
-            return k;
-        }
+        base_params(KernelType kt) : Params(kt, ""), inputs(1){}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // LSTMGemmParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LSTMGemmParams : public BaseParams
+    struct LSTMGemmParams : public base_params
     {
-        LSTMGemmParams() : BaseParams(KernelType::LSTM_GEMM) {}
+        LSTMGemmParams() : base_params(KernelType::LSTM_GEMM) {}
 
         DataTensor weights;
         DataTensor recurrent;
@@ -1134,7 +929,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const override
         {
-            ParamsKey k = BaseParams::GetParamsKey();
+            ParamsKey k = base_params::GetParamsKey();
 
             if (hasBias)
             {
@@ -1153,9 +948,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // LSTMEltParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LSTMEltParams : public BaseParams
+    struct LSTMEltParams : public base_params
     {
-        LSTMEltParams() : BaseParams(KernelType::LSTM_ELT) {}
+        LSTMEltParams() : base_params(KernelType::LSTM_ELT) {}
 
         DataTensor cell;
         bool hasCell = false;
@@ -1167,7 +962,7 @@ namespace kernel_selector
 
         virtual ParamsKey GetParamsKey() const override
         {
-            ParamsKey k = BaseParams::GetParamsKey();
+            ParamsKey k = base_params::GetParamsKey();
             if (hasCell)
             {
                 k.EnableLSTMEltCell();
@@ -1190,11 +985,11 @@ namespace kernel_selector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // OptionalParams
+    // optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct OptionalParams
+    struct optional_params
     {
-        virtual ~OptionalParams() {}
+        virtual ~optional_params() {}
 
         KernelType GetType() const { return kType; }
 
@@ -1226,72 +1021,24 @@ namespace kernel_selector
         }
 
     protected:
-        OptionalParams(KernelType kt) : kType(kt) {}
+        optional_params(KernelType kt) : kType(kt) {}
         KernelType kType;
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ROIPoolingOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ROIPoolingOptionalParams : OptionalParams
-    {
-        ROIPoolingOptionalParams() : OptionalParams(KernelType::ROI_POOLING) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // RegionYoloOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct RegionYoloOptionalParams : OptionalParams
-    {
-        RegionYoloOptionalParams() : OptionalParams(KernelType::REGION_YOLO) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ReorgYoloOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ReorgYoloOptionalParams : OptionalParams
-    {
-        ReorgYoloOptionalParams() : OptionalParams(KernelType::REORG_YOLO) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ReorderVxOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ReorderVxOptionalParams : OptionalParams
-    {
-        ReorderVxOptionalParams() : OptionalParams(KernelType::REORDER) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // ReorderVxOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct ReorderOptionalParams : OptionalParams
-    {
-        ReorderOptionalParams() : OptionalParams(KernelType::REORDER) {}
-    };
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // UpSamplingOptionalParams
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct UpSamplingOptionalParams : OptionalParams
-    {
-        UpSamplingOptionalParams() : OptionalParams(KernelType::UPSAMPLING) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // LSTMGemmOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LSTMGemmOptionalParams : OptionalParams
+    struct LSTMGemmOptionalParams : optional_params
     {
-        LSTMGemmOptionalParams() : OptionalParams(KernelType::LSTM_GEMM) {}
+        LSTMGemmOptionalParams() : optional_params(KernelType::LSTM_GEMM) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // LSTMEltOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct LSTMEltOptionalParams : OptionalParams
+    struct LSTMEltOptionalParams : optional_params
     {
-        LSTMEltOptionalParams() : OptionalParams(KernelType::LSTM_ELT) {}
+        LSTMEltOptionalParams() : optional_params(KernelType::LSTM_ELT) {}
     };
 
 }

@@ -88,7 +88,7 @@ namespace kernel_selector {
         return jit;
     }
 
-    KernelsData FullyConnected_bf_io_GEMM::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData FullyConnected_bf_io_GEMM::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, DataLayout::bf, { WeightsLayout::oiyx }, FORCE_PRIORITY_6);
     }

@@ -24,7 +24,7 @@ namespace kernel_selector
         Attach<LSTMEltKernelRef>();
     }
 
-    KernelsData LSTMEltKernelSelector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData LSTMEltKernelSelector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::LSTM_ELT);
     }

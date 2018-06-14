@@ -18,7 +18,7 @@
 
 namespace kernel_selector
 {
-    bool LookUpTableKernelBase::Validate(const Params& p, const OptionalParams& o) const
+    bool LookUpTableKernelBase::Validate(const Params& p, const optional_params& o) const
     {
         if (p.GetType() != KernelType::LOOKUP_TABLE ||
             o.GetType() != KernelType::LOOKUP_TABLE)
@@ -65,7 +65,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData LookUpTableKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options, float estimatedTime) const
+    KernelsData LookUpTableKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options, float estimatedTime) const
     {
         if (!Validate(params, options))
         {

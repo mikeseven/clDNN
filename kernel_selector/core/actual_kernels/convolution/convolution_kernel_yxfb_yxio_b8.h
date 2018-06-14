@@ -26,12 +26,12 @@ namespace kernel_selector {
         ConvolutionKernel_yxfb_yxio_b8() : ConvolutionKernelBase("convolution_gpu_yxfb_yxio_b8_fp32") {}
         virtual ~ConvolutionKernel_yxfb_yxio_b8() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     
     protected:
         virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&) const override { return{ WeightsLayout::yxio }; }
-        bool Validate(const Params& p, const OptionalParams& o) const override;
+        bool Validate(const Params& p, const optional_params& o) const override;
         DispatchData SetDefault(const convolution_params& arg, int autoTuneIndex = -1) const override;
     };
 }

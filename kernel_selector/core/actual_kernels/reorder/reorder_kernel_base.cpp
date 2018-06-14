@@ -53,7 +53,26 @@ namespace kernel_selector
         }
     }
 
-    JitConstants ReorderKernelBase::GetJitConstants(const ReorderWeightsParams& params) const
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // MakeReorderWeightsJitConstants
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    inline JitConstants MakeReorderWeightsJitConstants(const reorder_weights_params& params)
+    {
+        const auto& input = params.reorderParams.input;
+        const auto& output = params.reorderParams.output;
+        const bool fp16Supported = output.GetDType() == WeightsType::F16 || input.GetDType() == WeightsType::F16;
+
+        JitConstants jit{
+            MakeJitConstant("FP16_SUPPORTED",   fp16Supported),                      // TODO: use engine
+            MakeJitConstant("FP16_UNIT_USED",   fp16Supported),
+            MakeJitConstant("INPUT0",           input),
+            MakeJitConstant("OUTPUT",           output),
+        };
+
+        return jit;
+    }
+
+    JitConstants ReorderKernelBase::GetJitConstants(const reorder_weights_params& params) const
     {
         JitConstants mem_consts = MakeReorderWeightsJitConstants(params);
        
@@ -62,7 +81,45 @@ namespace kernel_selector
         return mem_consts;
     }
 
-    JitConstants ReorderKernelBase::GetJitConstants(const ReorderParams& params) const
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // MakeReorderJitConstants
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    inline JitConstants MakeReorderJitConstants(const reorder_params& params)
+    {
+        JitConstants jit = MakeBaseParamsJitConstants(params);
+
+        jit.AddConstant(MakeJitConstant("MEAN_SUBTRACT_" + toString(params.reorderParams.mode), 1));
+
+        if (params.reorderParams.mode == MeanSubtractMode::INSIDE_PARAMS)
+        {
+            jit.AddConstant(MakeJitConstant("VALUE_TO_SUBTRACT", params.reorderParams.meanValues));
+            jit.AddConstant(MakeJitConstant("TO_MEAN_TYPE", "convert_float"));
+        }
+        else if (params.reorderParams.mode == MeanSubtractMode::IN_BUFFER)
+        {
+            jit.AddConstant(MakeJitConstant("MEAN_SUBTRACT", params.reorderParams.mean));
+            jit.AddConstant(MakeJitConstant("TO_MEAN_TYPE", "convert_" + toCLType(params.reorderParams.mean.GetDType())));
+        }
+
+        //half->half without subtraction (so plain reorder) can be done on shorts without explicit fp16 support
+        bool useUshort = (params.inputs[0].GetDType() == Datatype::F16 && params.output.GetDType() == Datatype::F16 &&
+            params.reorderParams.mode == MeanSubtractMode::NONE);
+
+        Datatype calc_type = useUshort ? Datatype::UINT16 : params.inputs[0].GetDType();
+
+        jit.AddConstants({
+            MakeJitConstant("CALC_TYPE",                      toCLType(calc_type)),
+            MakeJitConstant("TO_CALC_TYPE",      "convert_" + toCLType(calc_type)),
+            MakeJitConstant("INPUT_REORDER_TYPE",             useUshort ? toCLType(Datatype::UINT16) : "INPUT0_TYPE"),
+            MakeJitConstant("OUTPUT_REORDER_TYPE",            useUshort ? toCLType(Datatype::UINT16) : "OUTPUT_TYPE"),
+            MakeJitConstant("TO_OUTPUT_REORDER_TYPE",         useUshort ? "" : "TO_OUTPUT_TYPE"),
+            MakeJitConstant("MEAN_OP(val,mean_val)",          getMeanOpString(params.reorderParams.mean_op))
+        });
+
+        return jit;
+    }
+
+    JitConstants ReorderKernelBase::GetJitConstants(const reorder_params& params) const
     {
         JitConstants mem_consts = MakeReorderJitConstants(params);
 
@@ -71,7 +128,7 @@ namespace kernel_selector
         return mem_consts;
     }
 
-    ReorderKernelBase::DispatchData ReorderKernelBase::SetDefault(const ReorderWeightsParams& params) const
+    ReorderKernelBase::DispatchData ReorderKernelBase::SetDefault(const reorder_weights_params& params) const
     {
         const auto& out = params.reorderParams.output;
 
@@ -93,7 +150,7 @@ namespace kernel_selector
         return kd;
     }
 
-    ReorderKernelBase::DispatchData ReorderKernelBase::SetDefault(const ReorderParams& params) const
+    ReorderKernelBase::DispatchData ReorderKernelBase::SetDefault(const reorder_params& params) const
     {
         DispatchData kd;
 
@@ -111,12 +168,12 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData ReorderKernelBase::GetCommonKernelsData(const ReorderWeightsParams& params, const OptionalParams& options, float estimated_time) const
+    KernelsData ReorderKernelBase::GetCommonKernelsData(const reorder_weights_params& params, const optional_params& options, float estimated_time) const
     {
         assert(params.GetType() == KernelType::REORDER);
 
-        KernelData kd = KernelData::Default<ReorderWeightsParams>(params);
-        ReorderWeightsParams& newParams = *static_cast<ReorderWeightsParams*>(kd.params.get());
+        KernelData kd = KernelData::Default<reorder_weights_params>(params);
+        reorder_weights_params& newParams = *static_cast<reorder_weights_params*>(kd.params.get());
 
         DispatchData runInfo;
 
@@ -137,7 +194,7 @@ namespace kernel_selector
         return{ kd };
     }
 
-    KernelsData ReorderKernelBase::GetCommonKernelsData(const ReorderParams& params, const OptionalParams& options, float estimated_time) const
+    KernelsData ReorderKernelBase::GetCommonKernelsData(const reorder_params& params, const optional_params& options, float estimated_time) const
     {
         if (!Validate(params, options))
         {
@@ -145,8 +202,8 @@ namespace kernel_selector
         }
         assert(params.GetType() == KernelType::REORDER);
 
-        KernelData kd = KernelData::Default<ReorderParams>(params);
-        ReorderParams& newParams = *static_cast<ReorderParams*>(kd.params.get());
+        KernelData kd = KernelData::Default<reorder_params>(params);
+        reorder_params& newParams = *static_cast<reorder_params*>(kd.params.get());
 
         DispatchData runInfo;
 

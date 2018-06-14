@@ -26,7 +26,7 @@ namespace kernel_selector
         LSTMGemmKernelRef() : LSTMGemmKernelBase("lstm_gemm_gpu_bfyx_ref") {}
         virtual ~LSTMGemmKernelRef() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     };
 }

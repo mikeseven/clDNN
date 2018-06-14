@@ -27,13 +27,13 @@ namespace kernel_selector
         ConvolutionKernel_bfyx_3x3_dw_opt();
         virtual ~ConvolutionKernel_bfyx_3x3_dw_opt() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
-        virtual KernelsData GetKernelsDataForAutoTune(const Params& params, const OptionalParams& options) const override;
-        virtual KernelsData GetTunedKernelsDataByIndex(const Params& params, const OptionalParams& options, int autoTuneIndex) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
+        virtual KernelsData GetKernelsDataForAutoTune(const Params& params, const optional_params& options) const override;
+        virtual KernelsData GetTunedKernelsDataByIndex(const Params& params, const optional_params& options, int autoTuneIndex) const override;
         virtual ParamsKey GetSupportedKey() const override;
     
     protected:
-        bool Validate(const Params&, const OptionalParams&) const override;
+        bool Validate(const Params&, const optional_params&) const override;
         std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&)  const override { return{ WeightsLayout::oiyx }; }
         JitConstants GetJitConstants(const convolution_params& params, DispatchData kd) const override;
         DispatchData SetDefault(const convolution_params& params, int autoTuneIndex = -1) const override;

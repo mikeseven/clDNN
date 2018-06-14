@@ -24,22 +24,22 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // fully_connected_grad_weights_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct fully_connected_grad_weights_params : public WeightBiasParams
+    struct fully_connected_grad_weights_params : public weight_bias_params
     {
-        fully_connected_grad_weights_params() : WeightBiasParams(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
+        fully_connected_grad_weights_params() : weight_bias_params(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
 
         virtual ParamsKey GetParamsKey() const
         {
-            return WeightBiasParams::GetParamsKey();
+            return weight_bias_params::GetParamsKey();
         }
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // fully_connected_grad_weights_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct fully_connected_grad_weights_optional_params : WeightsBiasOptionalParams
+    struct fully_connected_grad_weights_optional_params : weight_bias_optional_params
     {
-        fully_connected_grad_weights_optional_params() : WeightsBiasOptionalParams(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
+        fully_connected_grad_weights_optional_params() : weight_bias_optional_params(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -54,7 +54,7 @@ namespace kernel_selector
         using DispatchData = CommonDispatchData;
     
     protected:
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const;
         virtual JitConstants GetJitConstants(const fully_connected_grad_weights_params& params) const;
         virtual DispatchData SetDefault(const fully_connected_grad_weights_params& params) const;
     };

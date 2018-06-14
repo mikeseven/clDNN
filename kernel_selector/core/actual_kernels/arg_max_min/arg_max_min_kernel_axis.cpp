@@ -33,7 +33,7 @@ namespace kernel_selector
         return k;
     }
 
-    KernelsData ArgMaxMinKernelAxis::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ArgMaxMinKernelAxis::GetKernelsData(const Params& params, const optional_params& options) const
     {
         if (!Validate(params, options))
         {

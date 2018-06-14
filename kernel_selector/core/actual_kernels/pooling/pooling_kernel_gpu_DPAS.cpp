@@ -57,7 +57,7 @@ namespace kernel_selector
         return runInfo;
     }
     
-    KernelsData PoolingKerneGPU_DPAS::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData PoolingKerneGPU_DPAS::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, FORCE_PRIORITY_1);
     }

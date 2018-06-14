@@ -27,7 +27,7 @@ namespace kernel_selector {
         ConvolutionKernel_DPAS_blocks() : ConvolutionKernelBase("convolution_gpu_dpas_blocks") {}
         virtual ~ConvolutionKernel_DPAS_blocks() {}
 
-        virtual KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:

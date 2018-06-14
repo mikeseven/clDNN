@@ -34,7 +34,7 @@ namespace kernel_selector {
         return k;
     }
 
-    KernelsData UpSamplingKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData UpSamplingKernelRef::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options);
     }

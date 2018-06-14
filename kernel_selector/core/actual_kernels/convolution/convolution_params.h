@@ -24,9 +24,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // convolution_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct convolution_params : public WeightBiasParams
+    struct convolution_params : public weight_bias_params
     {
-        convolution_params() : WeightBiasParams(KernelType::CONVOLUTION), convParams() {}
+        convolution_params() : weight_bias_params(KernelType::CONVOLUTION), convParams() {}
 
         struct DedicatedParams
         {
@@ -34,10 +34,6 @@ namespace kernel_selector
             uSize    stride;
             uSize    dilation;
             uSize    padding;
-            uint32_t winograd_tile_n;
-            uint32_t winograd_tile_m;
-            uint32_t winograd_input_tile_width;
-            uint32_t winograd_input_tile_height;
             uint32_t split = 1;
             bool     depthwiseSeparableOpt = false;
             bool     transposed = false;
@@ -57,9 +53,9 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // convolution_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct convolution_optional_params : WeightsBiasOptionalParams
+    struct convolution_optional_params : weight_bias_optional_params
     {
-        convolution_optional_params() : WeightsBiasOptionalParams(KernelType::CONVOLUTION) {}
+        convolution_optional_params() : weight_bias_optional_params(KernelType::CONVOLUTION) {}
     };
 
 }

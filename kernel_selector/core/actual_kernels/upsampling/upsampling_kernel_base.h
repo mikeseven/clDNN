@@ -20,17 +20,52 @@
 
 namespace kernel_selector
 {
-    class UpSamplingKernelBase : public CommonKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // upsampling_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct upsampling_params : public base_params
+    {
+        upsampling_params() : base_params(KernelType::UPSAMPLING) {}
+
+        struct DedicatedParams
+        {
+            uint32_t scale = 1;
+            uint32_t num_filter = 0;
+            SampleType sampleType = SampleType::NEAREST;
+        };
+
+        DedicatedParams usParams;
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            auto k = base_params::GetParamsKey();
+            k.EnableUpSamplingSampleType(usParams.sampleType);
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // upsampling_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct upsampling_optional_params : optional_params
+    {
+        upsampling_optional_params() : optional_params(KernelType::UPSAMPLING) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // UpSamplingKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    class UpSamplingKernelBase : public common_kernel_base
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         virtual ~UpSamplingKernelBase() {}
 
         using DispatchData = CommonDispatchData;
 
     protected:
-        virtual bool Validate(const Params& p, const OptionalParams& o) const override;
-        virtual JitConstants GetJitConstants(const UpSamplingParams& params) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& options) const;
+        virtual bool Validate(const Params& p, const optional_params& o) const override;
+        virtual JitConstants GetJitConstants(const upsampling_params& params) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params& options) const;
     };
 }

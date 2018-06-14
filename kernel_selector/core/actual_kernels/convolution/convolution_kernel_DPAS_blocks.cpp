@@ -210,7 +210,7 @@ namespace kernel_selector {
         return jit;
     }
 
-    KernelsData ConvolutionKernel_DPAS_blocks::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ConvolutionKernel_DPAS_blocks::GetKernelsData(const Params& params, const optional_params& options) const
     {
         KernelsData kd = GetCommonKernelsData(params, options);
         kd[0].estimatedTime = FORCE_PRIORITY_1;

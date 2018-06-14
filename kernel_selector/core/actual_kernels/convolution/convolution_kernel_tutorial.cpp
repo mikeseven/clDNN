@@ -66,7 +66,7 @@ namespace kernel_selector {
 
 #ifdef BASIC_TUTORIAL
 
-    KernelsData ConvolutionKernel_Tutorial::GetKernelsData(const Params& /*params*/, const OptionalParams& /*options*/) const
+    KernelsData ConvolutionKernel_Tutorial::GetKernelsData(const Params& /*params*/, const optional_params& /*options*/) const
     {
         return{};
 
@@ -149,7 +149,7 @@ namespace kernel_selector {
         return runInfo;
     }
 
-    bool ConvolutionKernel_Tutorial::Validate(const Params& p, const OptionalParams& o) const
+    bool ConvolutionKernel_Tutorial::Validate(const Params& p, const optional_params& o) const
     {
         if (!Parent::Validate(p, o))
         {
@@ -179,7 +179,7 @@ namespace kernel_selector {
         return jit;
     }
 
-    KernelsData ConvolutionKernel_Tutorial::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData ConvolutionKernel_Tutorial::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options);
     }

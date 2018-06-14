@@ -22,11 +22,11 @@ namespace kernel_selector
 {
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // WeightBiasParams
+    // weight_bias_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct WeightBiasParams : public BaseParams
+    struct weight_bias_params : public base_params
     {
-        WeightBiasParams(KernelType kt) : BaseParams(kt) {}
+        weight_bias_params(KernelType kt) : base_params(kt) {}
 
         WeightsTensor weights;
         MultiDataTensor bias;
@@ -35,12 +35,12 @@ namespace kernel_selector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // WeightsBiasOptionalParams
+    // weight_bias_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct WeightsBiasOptionalParams : OptionalParams
+    struct weight_bias_optional_params : optional_params
     {
     protected:
-        WeightsBiasOptionalParams(KernelType kt) : OptionalParams(kt) {}
+        weight_bias_optional_params(KernelType kt) : optional_params(kt) {}
     };
 
 }

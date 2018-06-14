@@ -25,7 +25,7 @@ namespace kernel_selector {
     public:
         FullyConnected_yxfb_ref() : FullyConnectedKernelBase("fully_connected_gpu_yxfb_ref") {}
 
-        KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         ParamsKey GetSupportedKey() const override;
     };
 }
