@@ -1974,7 +1974,7 @@ class CalibCalculator(object):
                         assert len(distinct_decalib_idxs) > 0
                         decalib_nnd_file_name, decalib_nnd_file = frontier_nnd_files[distinct_decalib_idxs.pop()]
                         _logger.info('    Decalibrating calibration factors for "{0}" primitive with "{1}"...'
-                                     .format(prim_name, decalib_nnd_file))
+                                     .format(prim_name, decalib_nnd_file_name))
                         tmp_nnd_file.decalibrate(decalib_nnd_file)
                     elif prim_decalib_mode == '*':
                         all_decalib_idxs = [prim_dep[0]
@@ -1984,7 +1984,7 @@ class CalibCalculator(object):
                         for decalib_idx in all_decalib_idxs:
                             decalib_nnd_file_name, decalib_nnd_file = frontier_nnd_files[decalib_idx][1]
                             _logger.info('    Decalibrating calibration factors for "{0}" primitive with "{1}"...'
-                                         .format(prim_name, decalib_nnd_file))
+                                         .format(prim_name, decalib_nnd_file_name))
                             tmp_nnd_file.decalibrate(decalib_nnd_file)
 
                 # Support splitting of factors.
