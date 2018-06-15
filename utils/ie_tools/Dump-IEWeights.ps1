@@ -1,5 +1,5 @@
 # INTEL CONFIDENTIAL
-# Copyright 2017 Intel Corporation
+# Copyright 2017-2018 Intel Corporation
 #
 # The source code contained or described herein and all documents related to the source code ("Material") are owned by
 # Intel Corporation or its suppliers or licensors. Title to the Material remains with Intel Corporation or its
@@ -612,11 +612,6 @@ process
         }
 
         $_inputFeaturesCount  = [Math]::DivRem($_.InputFeaturesCount, $_inputGroupCount, [ref] $_calcMod);
-        if ($_inputFeaturesCount -le 0)
-        {
-            Write-Error ('"{0}": Calculated number of input features per group ({1}) is zero or less than zero.' -f $_.DumpFileName, $_inputFeaturesCount);
-            return;
-        }
         if ($_inputFeaturesCount -le 0)
         {
             Write-Error ('"{0}": Calculated number of input features per group ({1}) is zero or less than zero.' -f $_.DumpFileName, $_inputFeaturesCount);
