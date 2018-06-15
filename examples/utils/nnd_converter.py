@@ -318,8 +318,18 @@ class NndFile(object):
             NndFile.LAYOUT_BFYX:  8,
             NndFile.LAYOUT_YXFB: 11,
         }
+        layout_shift_m_map = {
+            NndFile.DT_FP32:   0,
+            NndFile.DT_FP16:   1,
+            NndFile.DT_INT16:  4,
+            NndFile.DT_UINT16: 5,
+            NndFile.DT_INT8:   2,
+            NndFile.DT_UINT8:  3,
+        }
+
         return layout_map[layout] + \
-            (NndFile.__hdr_layout_fp16_base if emit_old_format and data_type == NndFile.DT_FP16 else 0)
+            (NndFile.__hdr_layout_fp16_base * layout_shift_m_map[data_type]
+             if emit_old_format and data_type is not None else 0)
 
     # ------------------------------------------------------------------------------------------------------------------
 
