@@ -55,6 +55,8 @@ protected:
         args.output     = &instance.output_memory();
         args.weights    = &instance.weights_memory();
         args.bias       = instance.bias_term() ? &instance.bias_memory() : nullptr;
+        args.weights_quantization_factors = instance.weights_quantization_factors_term() ? &instance.weights_quantization_factors_memory() : nullptr;
+        args.output_calibration_factors = instance.output_calibration_factors_term() ? &instance.output_calibration_factors_memory() : nullptr;
 
         return args;
     }

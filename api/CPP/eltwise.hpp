@@ -227,6 +227,15 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
     float activation_negative_slope;
 
 protected:
+    std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override
+    {
+        std::vector<std::reference_wrapper<const primitive_id>> ret;
+        if(!output_calibration_factors.empty())
+            ret.push_back(output_calibration_factors);
+
+        return ret;
+    }
+
     void update_dto(dto& dto) const override
     {
         dto.output_calibration_factors = output_calibration_factors.c_str();

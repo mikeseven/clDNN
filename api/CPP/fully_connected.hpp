@@ -184,10 +184,19 @@ struct fully_connected : public primitive_base<fully_connected, CLDNN_PRIMITIVE_
 protected:
     std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override 
     {
-        if (bias.empty())
-            return{ weights };
-        else
-            return{ weights, bias }; 
+        std::vector<std::reference_wrapper<const primitive_id>> ret;
+        ret.push_back(weights);
+
+        if (!bias.empty())
+            ret.push_back(bias);
+
+        if (!weights_quantization_factors.empty())
+            ret.push_back(weights_quantization_factors);
+
+        if (!output_calibration_factors.empty())
+            ret.push_back(output_calibration_factors);
+
+        return ret;
     }
 
     void update_dto(dto& dto) const override
