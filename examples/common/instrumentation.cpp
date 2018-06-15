@@ -1,5 +1,4 @@
-/*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2016, 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-*/
+
 
 #include "instrumentation.h"
 #include "neural_memory.h"
@@ -24,8 +23,9 @@
 #include <iostream>
 #include <boost/filesystem.hpp>
 
-using cldnn::backward_comp::neural_memory;
-using cldnn::backward_comp::argument;
+
+using memory_traits = cldnn::backward_comp::neural_memory::memory_traits;
+
 
 namespace instrumentation {
     // initalize dumping directory for whole run
@@ -93,13 +93,23 @@ namespace instrumentation {
 
     float convert_element(char c)
     {
-        return (float)c;
+        return static_cast<float>(c);
+    }
+
+    float convert_element(signed char c)
+    {
+        return static_cast<float>(c);
+    }
+
+    float convert_element(unsigned char c)
+    {
+        return static_cast<float>(c);
     }
 
     template<typename elemType>
     void dump_byxf(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = argument(mem);
+        auto mem_arg = memory_traits(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -129,7 +139,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_bfyx(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = argument(mem);
+        auto mem_arg = memory_traits(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -159,7 +169,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_yxfb(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = argument(mem);
+        auto mem_arg = memory_traits(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -189,7 +199,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_xb(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = argument(mem);
+        auto mem_arg = memory_traits(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -209,7 +219,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_bx(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, std::vector<std::vector<std::stringstream>> & streams)
     {
-        auto mem_arg = argument(mem);
+        auto mem_arg = memory_traits(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         unsigned int input_it = 0;
@@ -229,7 +239,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_yxio(const cldnn::memory& mem, std::stringstream & stream)
     {
-        auto mem_arg = argument(mem);
+        auto mem_arg = memory_traits(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         auto i_size = mem_arg.size.batch[0];
@@ -257,7 +267,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_oiyx(const cldnn::memory& mem, std::stringstream & stream)
     {
-        auto mem_arg = argument(mem);
+        auto mem_arg = memory_traits(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         auto i_size = mem_arg.size.batch[0];
@@ -285,7 +295,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_os_iyx_osv16(const cldnn::memory& mem, std::stringstream & stream)
     {
-        auto mem_arg = argument(mem);
+        auto mem_arg = memory_traits(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         auto i_size = mem_arg.size.batch[0];
@@ -307,7 +317,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_bs_xs_xsv8_bsv8(const cldnn::memory& mem, std::stringstream & stream)
     {
-        auto mem_arg = argument(mem);
+        auto mem_arg = memory_traits(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         auto i_size = mem_arg.size.batch[0]; //batch = input feature map
@@ -335,7 +345,7 @@ namespace instrumentation {
     template<typename elemType>
     void dump_bs_x_bsv16(const cldnn::memory& mem, std::stringstream & stream)
     {
-        auto mem_arg = argument(mem);
+        auto mem_arg = memory_traits(mem);
         auto mem_ptr = mem.pointer<elemType>();
 
         auto i_size = mem_arg.size.batch[0]; //batch = input feature map

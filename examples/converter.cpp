@@ -1,5 +1,4 @@
-/*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2016, 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,29 +11,47 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-*/
 
-#include "api/CPP/memory.hpp"
-#include "api/CPP/network.hpp"
-#include "file.h"
-#include "common/common_tools.h"
+
 #include <api/CPP/data.hpp>
+#include <api/CPP/memory.hpp>
+#include <api/CPP/network.hpp>
 #include <api/CPP/reorder.hpp>
 
-// memory->memory convolution
-void convert_weights(cldnn::data_types dt, cldnn::format::type format, std::string convertion_path)
+#include "common/common_tools.h"
+#include "file.h"
+
+
+/// @brief Converts weights to new data type and layout. Weights are assumed to be
+///        in "weights" directory.
+///
+/// @details Converter does not provide quantization support for integral data types.
+///          Weights are converted in-place.
+///
+/// @param data_type        Data type to which weights will be converted.
+/// @param format_type      Layout format to which weights will be converted.
+/// @param conv_path_filter Weights path include filter (the string must match part of
+///                         weights file path to be considered for conversion).
+///                         If empty string is specified, all weights are converted.
+/// @param validate_magic   Indicates that magic identifier of .nnd file should be checked
+///                         for validity.
+void convert_weights(cldnn::data_types data_type, cldnn::format::type format_type,
+                     const std::string& conv_path_filter = "", bool validate_magic = false)
 {
     using namespace cldnn;
-    if (format >= format::format_num) throw std::runtime_error("format is out of range");
+
+    if (format_type >= format::format_num)
+        throw std::runtime_error("Specified layout format is not supported in converter.");
+
+    engine engine;
     std::vector<std::string> weights = get_directory_weights("weights");
-    cldnn::engine engine;
     for (const auto& w : weights)
     {
-        if (w.find(convertion_path) != std::string::npos)
+        if (w.find(conv_path_filter) != std::string::npos)
         {
-            auto mem = file::read({ engine, w.c_str() });
+            auto mem = file::read({engine, w}, validate_magic);
             layout output_layout{
-                dt,
+                data_type,
                 mem.get_layout().format,
                 mem.get_layout().size
             };
@@ -46,5 +63,4 @@ void convert_weights(cldnn::data_types dt, cldnn::format::type format, std::stri
             file::serialize(output, w);
         }
     }
-
 }
