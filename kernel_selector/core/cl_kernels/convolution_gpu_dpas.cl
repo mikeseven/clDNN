@@ -16,35 +16,7 @@
 #include "include/activation_functions.cl"
 #include "include/data_types.cl"
 #include "include/fetch.cl"
-
-inline int FUNC(dp4a_SW)(char4 input, char4 weight, int acc)
-{
-	acc += (input[0] * weight[0]);
-	acc += (input[1] * weight[1]);
-	acc += (input[2] * weight[2]);
-	acc += (input[3] * weight[3]);
-	return acc;
-}
-
-inline int FUNC(dp4a_s8)(int8 A_scalars, int8 B_vectors, int acc)
-{
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[0]), as_char4(B_vectors[0]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[1]), as_char4(B_vectors[1]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[2]), as_char4(B_vectors[2]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[3]), as_char4(B_vectors[3]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[4]), as_char4(B_vectors[4]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[5]), as_char4(B_vectors[5]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[6]), as_char4(B_vectors[6]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[7]), as_char4(B_vectors[7]), acc);
-
-	return acc;
-}
-
-#if DPAS_SUPPORTED == 1
-// here declare compiler DPAS intrinsic
-#else
-#define DPAS(A, B, C) FUNC_CALL(dp4a_s8)(A, B, C)
-#endif
+#include "include/dpas.cl"
 
 #define FILTER_IFM_DPAS_NUM ((FILTER_IFM_NUM + 31) / 32)
 #define FILTER_OFM_DPAS_NUM ((FILTER_OFM_NUM + 7) / 8)
@@ -119,7 +91,7 @@ KERNEL(convolution_DPAS)(
 
 						int8 weights_data = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
 
-						dotProd = DPAS(activations, weights_data, dotProd);
+						dotProd = DPAS_8(activations, weights_data, dotProd);
                     }
                 }
             }

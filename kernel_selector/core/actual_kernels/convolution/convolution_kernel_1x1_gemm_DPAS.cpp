@@ -14,16 +14,22 @@
 // limitations under the License.
 */
 
-#include "convolution_kernel_DPAS.h"
+#include "convolution_kernel_1x1_gemm_dpas.h"
 #include "kernel_selector_utils.h"
 
 namespace kernel_selector {
     
-    ParamsKey ConvolutionKernel_DPAS::GetSupportedKey() const
+    ParamsKey ConvolutionKernel_1x1_gemm_dpas::GetSupportedKey() const
     {
         ParamsKey k;
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
         k.EnableInputDataType(Datatype::INT8);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
         k.EnableOutputDataType(Datatype::INT8);
+        k.EnableInputWeightsType(WeightsType::F16);
+        k.EnableInputWeightsType(WeightsType::F32);
         k.EnableInputWeightsType(WeightsType::INT8);
         k.EnableInputLayout(DataLayout::byxf_af32);
         k.EnableOutputLayout(DataLayout::byxf_af32);
@@ -35,13 +41,29 @@ namespace kernel_selector {
         k.EnableNonBiasTerm();
         k.EnableBatching();
         k.EnableSplitSupport();
+        k.EnableDepthwiseSeparableOpt();
         k.EnableInt8Quantization();
         k.EnableOutputCalibration();
         k.DisableTuning();
         return k;
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_DPAS::SetDefault(const convolution_params& arg, int) const
+    bool ConvolutionKernel_1x1_gemm_dpas::Validate(const Params& p, const optional_params& o) const
+    {
+        if (!ConvolutionKernelBase::Validate(p, o))
+        {
+            return false;
+        }
+
+        const auto& params = static_cast<const convolution_params&>(p);
+
+        if (params.weights.X().v != 1 || params.weights.Y().v != 1)
+            return false;
+
+        return true;
+    }
+
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_1x1_gemm_dpas::SetDefault(const convolution_params& arg, int) const
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
@@ -54,7 +76,7 @@ namespace kernel_selector {
 
         const auto cp = arg.convParams;
 
-        runInfo.effiency = FORCE_PRIORITY_3;
+        runInfo.effiency = FORCE_PRIORITY_1;
 
         runInfo.gws0 = arg.output.X().v;
         runInfo.gws1 = arg.output.Y().v;
@@ -67,24 +89,8 @@ namespace kernel_selector {
         return runInfo;
     }
 
-    JitConstants ConvolutionKernel_DPAS::GetJitConstants(const convolution_params& params, DispatchData runInfo) const
+    KernelsData ConvolutionKernel_1x1_gemm_dpas::GetKernelsData(const Params& params, const optional_params& options) const
     {
-        auto jit = Parent::GetJitConstants(params, runInfo);
-
-        jit.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", runInfo.lws2));
-
-        // pitch for special block format used in this kernel
-        const size_t ifm_32_aligned = Align(params.weights.IFM().v, 32);
-        const size_t filter_ofm_block_pitch = (ifm_32_aligned / 32) * params.weights.X().v * params.weights.Y().v * 4 * 8 * 8;
-        jit.AddConstant(MakeJitConstant("FILTER_OFM_BLOCK_PITCH", filter_ofm_block_pitch));
-
-        return jit;
-    }
-
-    KernelsData ConvolutionKernel_DPAS::GetKernelsData(const Params& params, const optional_params& options) const
-    {
-        KernelsData kd = GetCommonKernelsData(params, options);
-        kd[0].estimatedTime = FORCE_PRIORITY_3;
-        return kd;//return GetCommonKernelsData(params, options);
+        return GetCommonKernelsData(params, options);
     }
 }
