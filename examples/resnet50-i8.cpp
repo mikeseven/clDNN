@@ -21,10 +21,10 @@
 #include <api/CPP/softmax.hpp>
 #include <api/CPP/eltwise.hpp>
 
-#include <string>
-
 #include "common/common_tools.h"
 #include "file.h"
+
+#include <string>
 
 
 using namespace cldnn;
@@ -38,18 +38,23 @@ static primitive_id add_conv_layer(const std::string& weights_dir, const engine&
 {
     auto weights_data = file::create({engine, join_path(weights_dir, layer_name + "_weights.nnd")});
     auto bias_data    = file::create({engine, join_path(weights_dir, layer_name + "_bias.nnd")});
+    auto cf_data      = file::create({engine, join_path(weights_dir, layer_name + "_cf.nnd")});
+    auto qf_data      = file::create({engine, join_path(weights_dir, layer_name + "_qf.nnd")});
 
     auto conv_layer = convolution(
         layer_name,
         input,
         {weights_data},
         {bias_data},
+        {qf_data},
+        {cf_data},
+        1.0f,
         stride,
         padding,
         {1, 1, 1, 1},
         add_relu);
 
-    topology_inst.add(weights_data, bias_data, conv_layer);
+    topology_inst.add(weights_data, bias_data, cf_data, qf_data, conv_layer);
 
     return conv_layer;
 }
@@ -77,15 +82,16 @@ static primitive_id add_residual_layers(const std::string& weights_dir, const en
         conv_branch1 = add_conv_layer_no_relu(weights_dir, engine, topology_inst, res_name + "_branch1",
                                               input, {0, 0, 0, 0}, res_stride);
 
-    auto res_sum = eltwise(res_name, conv_branch1, conv_branch2c, eltwise_mode::sum, true);
-    topology_inst.add(res_sum);
+    auto res_cf_data = file::create({engine, join_path(weights_dir, res_name + "_cf.nnd")});
+    auto res_sum     = eltwise(res_name, conv_branch1, conv_branch2c, res_cf_data, eltwise_mode::sum, true);
+    topology_inst.add(res_cf_data, res_sum);
 
     return res_sum;
 }
 
 
-cldnn::topology build_resnet50(const std::string& weights_dir, const cldnn::engine& engine,
-                               cldnn::layout& input_layout, int32_t batch_size, const bool mean_subtract)
+cldnn::topology build_resnet50_i8(const std::string& weights_dir, const cldnn::engine& engine,
+                                  cldnn::layout& input_layout, int32_t batch_size, const bool mean_subtract)
 {
     // [224x224x3xF] input->convolution(conv1)->relu(conv1_relu)->pooling[max](pool1) [56x56x64xF].
     input_layout.size = { batch_size, 3, 224, 224 };
@@ -104,9 +110,18 @@ cldnn::topology build_resnet50(const std::string& weights_dir, const cldnn::engi
             reorder_mean);
         topology_inst.add(reorder_mean, reordered_input);
         corrected_input = reordered_input;
+
+        // TODO: Generate factors/weights for example dumps with mean shift.
+        //       Switch to different weights directory if mean_subtract is needed
+        throw std::logic_error("Mean subtraction is not supported yet for resnet-50 INT8.");
     }
 
-    auto conv1 = add_conv_layer(weights_dir, engine, topology_inst, "conv1", corrected_input,
+    auto input_cf_data    = file::create({engine, join_path(weights_dir, "input_cf.nnd")});
+    auto calibrated_input = reorder("calib_input", corrected_input,
+        format::bfyx, data_types::i8, input_cf_data, cldnn_reorder_mean_mode::mean_mul);
+    topology_inst.add(input_cf_data, calibrated_input);
+
+    auto conv1 = add_conv_layer(weights_dir, engine, topology_inst, "conv1", calibrated_input,
                                 {0,0,-3,-3}, {1, 1, 2, 2});
 
     auto pool1 = pooling(
@@ -151,18 +166,27 @@ cldnn::topology build_resnet50(const std::string& weights_dir, const cldnn::engi
 
     auto fc1000_weights_data = file::create({engine, join_path(weights_dir, "fc1000_weights.nnd")});
     auto fc1000_bias_data    = file::create({engine, join_path(weights_dir, "fc1000_bias.nnd")});
+    auto fc1000_cf_data      = file::create({engine, join_path(weights_dir, "fc1000_cf.nnd")});
+    auto fc1000_qf_data      = file::create({engine, join_path(weights_dir, "fc1000_qf.nnd")});
     auto fc1000 = fully_connected(
         "fc1000",
         pool5,
         fc1000_weights_data,
-        fc1000_bias_data);
+        fc1000_bias_data,
+        fc1000_qf_data,
+        fc1000_cf_data,
+        1.0f);
+
+    auto decalibrated_fc1000 = reorder("decalib_fc1000", fc1000,
+        format::bfyx, data_types::f32, fc1000_cf_data, cldnn_reorder_mean_mode::mean_div);
 
     auto softmax = cldnn::softmax(
         "output",
-        fc1000);
+        decalibrated_fc1000);
 
     topology_inst.add(pool5,
-                      fc1000_weights_data, fc1000_bias_data, fc1000,
+                      fc1000_weights_data, fc1000_bias_data, fc1000_cf_data, fc1000_qf_data, fc1000,
+                      decalibrated_fc1000,
                       softmax);
     return topology_inst;
 }

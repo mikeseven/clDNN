@@ -18,6 +18,7 @@
 #include "api/CPP/memory.hpp"
 
 #include <memory>
+#include <stdexcept>
 
 
 namespace cldnn

@@ -688,6 +688,8 @@ void run_topology(const execution_params &ep)
         primitives = build_microbench_conv(ep.weights_dir, engine, microbench_conv_inputs, gpu_batch_size);
     else if (ep.topology_name == "resnet50")
         primitives = build_resnet50(ep.weights_dir, engine, input_layout, gpu_batch_size);
+    else if (ep.topology_name == "resnet50-i8")
+        primitives = build_resnet50_i8(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "squeezenet")
     {
         if (ep.calibration)

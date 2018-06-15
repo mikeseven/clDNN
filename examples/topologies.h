@@ -40,3 +40,5 @@ cldnn::topology build_squeezenet(const std::string& weights_dir, const cldnn::en
 cldnn::topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size);
 
 cldnn::topology build_resnet50(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size, bool mean_subtract = false);
+
+cldnn::topology build_resnet50_i8(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size, bool mean_subtract = false);
