@@ -2951,7 +2951,7 @@ def create_cmd_parser():
                        description='Converts dump files for primitive into .nnd (or other formats).',
                        add_help=False,
                        help='Converts dump files for primitive into .nnd (or other formats).')
-    subcmds.add_parser('dump_convert',
+    subcmds.add_parser('dump-convert',
                        parents=[cmd_dcvrt_parser, gen_parser],
                        description='Converts dump files for primitive into .nnd (or other formats).',
                        add_help=False,
