@@ -120,9 +120,9 @@ KERNEL(pooling_gpu_int8_ref)(
 
 #if defined AVG_POOLING
     #if defined(DYNAMIC_KERNEL_DIVIDER) || defined(DYNAMIC_WITH_PADDING_KERNEL_DIVIDER)
-        result = convert_int((float)result / max(num_elementes, (uint)1));
+        result = convert_int(round(((float)result / max(num_elementes, (uint)1)));
     #else
-        result = convert_int((float)result / (int)(POOL_SIZE_Y * POOL_SIZE_X));
+        result = convert_int(round((float)result / (int)(POOL_SIZE_Y * POOL_SIZE_X)));
     #endif
 #endif
 
