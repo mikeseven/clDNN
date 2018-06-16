@@ -27,6 +27,7 @@ namespace kernel_selector
         const auto x_size = input.LogicalSize() / input.Batch().v;
 
         jit.AddConstant(MakeJitConstant("INPUT0_ELEMENTS_COUNT", x_size));
+        jit.AddConstant(MakeJitConstant("QUANTIZATION_TERM", params.fcParams.int8_quantization));
 
         if (params.fcParams.int8_quantization)
         {

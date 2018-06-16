@@ -92,6 +92,7 @@ namespace kernel_selector
 
         jit.AddConstants({
             MakeJitConstant("ELTWISE_LAYOUT_BASED", params.eltwiseParams.layoutBased),
+            MakeJitConstant("QUANTIZATION_TERM",    params.eltwiseParams.int8_quantization),
         });
 
         if (params.eltwiseParams.int8_quantization)
@@ -230,7 +231,7 @@ namespace kernel_selector
 
         jit.AddConstant(MakeJitConstant("DO_ELTWISE", do_eltwise));
 
-        if (params.eltwiseParams.layoutBased)
+        if (params.eltwiseParams.layoutBased || params.eltwiseParams.int8_quantization)
         {
             jit.Merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
         }
@@ -259,7 +260,7 @@ namespace kernel_selector
 
         const auto& out = newParams.output;
         auto& kernel = kd.kernels[0];
-        if (newParams.eltwiseParams.layoutBased)
+        if (newParams.eltwiseParams.layoutBased || newParams.eltwiseParams.int8_quantization)
         {
             kernel.workGroups.global = GetTensorFriendlyWorkGroups(newParams.inputs[0]);
         }
@@ -284,7 +285,7 @@ namespace kernel_selector
         }
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
-        kernel.arguments = GetArgsDesc((uint32_t)newParams.inputs.size(), false, false, false, newParams.eltwiseParams.output_calibration);
+        kernel.arguments = GetArgsDesc((uint32_t)newParams.inputs.size(), false, false, newParams.eltwiseParams.int8_quantization, newParams.eltwiseParams.output_calibration);
 
         kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 

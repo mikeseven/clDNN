@@ -130,7 +130,7 @@ namespace kernel_selector
             args.push_back({ ArgumentDescriptor::Types::BIAS, 0 });
         }
 
-        if (use_quantization)
+        if (use_quantization && use_weights)
         {
             args.push_back({ ArgumentDescriptor::Types::WEIGHTS_QUANTIZATION_FACTORS, 0 });
         }

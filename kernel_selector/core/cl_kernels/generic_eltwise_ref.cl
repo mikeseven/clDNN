@@ -16,7 +16,7 @@
 
 #include "include/include_all.cl"
 
-#if ELTWISE_LAYOUT_BASED
+#if ELTWISE_LAYOUT_BASED || QUANTIZATION_TERM
 
 #define GET_INDEX(prefix, num)                                                          \
     CAT(CAT(prefix, num), _OFFSET) +                                                    \
@@ -43,15 +43,12 @@
 KERNEL(eltwise)(
     INPUTS_DECLS
     __global UNIT_TYPE* output,
-#if QUANTIZATION_TERM
-    __global float* quantizations,
-#endif
 #if CALIBRATION_TERM
     __global float* calibrations
 #endif
     )
 {
-#if ELTWISE_LAYOUT_BASED
+#if ELTWISE_LAYOUT_BASED || QUANTIZATION_TERM
     const uint d1 = get_global_id(GWS_YX) % INPUT0_SIZE_X;   // X
     const uint d2 = get_global_id(GWS_YX) / INPUT0_SIZE_X;   // Y
     const uint d3 = get_global_id(GWS_FEATURE);             // Feature
