@@ -167,6 +167,9 @@ cldnn::topology build_resnet50_i8(const std::string& weights_dir, const cldnn::e
     auto fc1000_weights_data = file::create({engine, join_path(weights_dir, "fc1000_weights.nnd")});
     auto fc1000_bias_data    = file::create({engine, join_path(weights_dir, "fc1000_bias.nnd")});
     auto fc1000_cf_data      = file::create({engine, join_path(weights_dir, "fc1000_cf.nnd")});
+    // TODO: because we cannot use the same data twice in network we have to do this workaround, fix it!
+    auto fc1000_decalibf_data = cldnn::data("fc1000_decalibf", fc1000_cf_data.mem);
+
     auto fc1000_qf_data      = file::create({engine, join_path(weights_dir, "fc1000_qf.nnd")});
     auto fc1000 = fully_connected(
         "fc1000",
@@ -178,7 +181,7 @@ cldnn::topology build_resnet50_i8(const std::string& weights_dir, const cldnn::e
         1.0f);
 
     auto decalibrated_fc1000 = reorder("decalib_fc1000", fc1000,
-        format::bfyx, data_types::f32, fc1000_cf_data, cldnn_reorder_mean_mode::mean_div);
+        format::bfyx, data_types::f32, fc1000_decalibf_data, cldnn_reorder_mean_mode::mean_div);
 
     auto softmax = cldnn::softmax(
         "output",
@@ -186,7 +189,7 @@ cldnn::topology build_resnet50_i8(const std::string& weights_dir, const cldnn::e
 
     topology_inst.add(pool5,
                       fc1000_weights_data, fc1000_bias_data, fc1000_cf_data, fc1000_qf_data, fc1000,
-                      decalibrated_fc1000,
+                      fc1000_decalibf_data, decalibrated_fc1000,
                       softmax);
     return topology_inst;
 }

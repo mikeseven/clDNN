@@ -121,7 +121,7 @@ namespace kernel_selector
         std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, *runInfo.get(), kernelName, jit, entry_point, ROUND_ROBIN, true, !orgParams.bias.empty());
+        FillCLKernelData(kernel, *runInfo.get(), kernelName, jit, entry_point, ROUND_ROBIN, true, !orgParams.bias.empty(), 1, newParams.fcParams.int8_quantization, newParams.fcParams.output_calibration);
 
         kd.estimatedTime = estimated_time;
         kd.autoTuneIndex = -1;

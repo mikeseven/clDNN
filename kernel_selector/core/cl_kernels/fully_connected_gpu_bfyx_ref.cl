@@ -59,6 +59,10 @@ KERNEL(fc)(
     const uint output_idx = GET_DATA_INDEX(OUTPUT, b, ofm, 0, 0);
 
 #if BIAS_TERM
+    const uint bias_index = ofm;
+#endif
+
+#if BIAS_TERM
 #if QUANTIZATION_TERM
 #if CALIBRATION_TERM
     dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
