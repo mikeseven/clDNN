@@ -23,10 +23,10 @@ KERNEL(fc)(
     , const __global BIAS_TYPE* biases
 #endif
 #if QUANTIZATION_TERM
-    __global float* quantizations,
+    ,__global float* quantizations
 #endif
 #if CALIBRATION_TERM
-    __global float* calibrations
+    ,__global float* calibrations
 #endif
     )
 {
@@ -65,9 +65,9 @@ KERNEL(fc)(
 #if BIAS_TERM
 #if QUANTIZATION_TERM
 #if CALIBRATION_TERM
-    dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
+    dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[ofm] * I_QF + biases[bias_index]) * calibrations[ofm]);
 #else  // CALIBRATION_TERM
-    dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * O_QF);
+    dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[ofm] * I_QF + biases[bias_index]) * O_QF);
 #endif // CALIBRATION_TERM
 #else  // QUANTIZATION_TERM
     dotProd += (ACCUMULATOR_TYPE)biases[bias_index];

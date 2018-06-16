@@ -98,13 +98,6 @@ public:
 
         const auto primitive = arg.get_primitive();
 
-        fc_optional_params.tuningParams.runner = std::make_shared<gpu::kernel_runner>(arg.get_program().get_engine(), true);
-
-        auto& kernel_selector = kernel_selector::fully_connected_kernel_selector::Instance();
-        auto best_kernels = kernel_selector.GetBestKernels(fc_params, fc_optional_params);
-
-        CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
-
         if (primitive->weights_quantization_factors.size() > 0)
         {
             fc_params.fcParams.int8_quantization = true;
@@ -119,6 +112,13 @@ public:
             else
                 fc_params.fcParams.output_quantization_factor = arg.get_output_qf();
         }
+
+        fc_optional_params.tuningParams.runner = std::make_shared<gpu::kernel_runner>(arg.get_program().get_engine(), true);
+
+        auto& kernel_selector = kernel_selector::fully_connected_kernel_selector::Instance();
+        auto best_kernels = kernel_selector.GetBestKernels(fc_params, fc_optional_params);
+
+        CLDNN_ERROR_BOOL(arg.id(), "Best_kernel.empty()", best_kernels.empty(), "Cannot find a proper kernel with this arguments");
 
         const auto& new_fc_params = *static_cast<kernel_selector::fully_connected_params*>(best_kernels[0].params.get());
         std::vector<network_impl::ptr> reorders; 
