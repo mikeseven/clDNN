@@ -21,6 +21,7 @@
 #include "pooling_kernel_gpu_bfyx_block_opt.h"
 #include "pooling_kernel_gpu_byxf_padding_opt.h"
 #include "pooling_kernel_gpu_DPAS.h"
+#include "pooling_kernel_gpu_int8_ref.h"
 
 namespace kernel_selector {
 
@@ -31,6 +32,7 @@ namespace kernel_selector {
         Attach<PoolingKernelGPUByxfOpt>();
         Attach<PoolingKernelGPUBfyxBlockOpt>();
         Attach<PoolingKernelGPUByxfPaddingOpt>();
+        Attach<PoolingKernelGPUInt8Ref>();
         Attach<PoolingKerneGPU_DPAS>();
     }
 
