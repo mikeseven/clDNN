@@ -439,6 +439,10 @@ namespace instrumentation {
             dump<float>(mem, streams);
         else if (mem.get_layout().data_type == cldnn::data_types::f16)
             dump<half_t>(mem, streams);
+        else if (mem.get_layout().data_type == cldnn::data_types::i8)
+            dump<signed char>(mem, streams);
+        else if (mem.get_layout().data_type == cldnn::data_types::u8)
+            dump<unsigned char>(mem, streams);
         else
             dump<char>(mem, streams);
 
@@ -462,8 +466,14 @@ namespace instrumentation {
 
         if (mem.get_layout().data_type == cldnn::data_types::f32)
             dump<float>(mem, stream);
-        else
+        else if (mem.get_layout().data_type == cldnn::data_types::f16)
             dump<half_t>(mem, stream);
+        else if (mem.get_layout().data_type == cldnn::data_types::i8)
+            dump<signed char>(mem, stream);
+        else if (mem.get_layout().data_type == cldnn::data_types::u8)
+            dump<unsigned char>(mem, stream);
+        else
+            dump<char>(mem, stream);
 
         std::string filename((dump_dir + "/" + prefix + ".txt"));
         std::ofstream file_stream = std::ofstream(filename, std::ios::out);
