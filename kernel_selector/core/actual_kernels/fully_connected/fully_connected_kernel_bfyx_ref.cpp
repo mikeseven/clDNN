@@ -34,6 +34,7 @@ namespace kernel_selector
         k.EnableAllInputLayout();
         k.EnableInputLayout(DataLayout::bf);
         k.EnableOutputLayout(DataLayout::bf);
+        k.EnableOutputLayout(DataLayout::fb);
         k.EnableBiasPerOutput();
         k.EnableBiasPerFeature();
         k.EnableNonBiasTerm();
