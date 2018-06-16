@@ -23,10 +23,10 @@ KERNEL(fc)(
     , const __global BIAS_TYPE* biases
 #endif
 #if QUANTIZATION_TERM
-    ,__global float* quantizations
+    ,const __global float* quantizations
 #endif
 #if CALIBRATION_TERM
-    ,__global float* calibrations
+    ,const __global float* calibrations
 #endif
     )
 {

@@ -1868,7 +1868,8 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
         }
         else if (prim.type() == fully_connected::type_id())
         {
-            prep_opt(prim.as<fully_connected>());
+            if (!prim.as<fully_connected>().weights_quantization_term())
+                prep_opt(prim.as<fully_connected>());
         }
     }
 }
