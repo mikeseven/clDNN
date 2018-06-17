@@ -55,11 +55,11 @@ inline uint FUNC(get_bf8_xy16_index)(uint b, uint f, uint y, uint x, uint x_size
     return idx;
 }
 
-inline uint FUNC(get_byxf_af32_index)(uint b, uint f, uint y, uint x, uint x_size, uint y_size, uint f_size, uint offset)
+inline uint FUNC(get_byxf_af32_index)(uint b, uint f, uint y, uint x, uint y_pitch, uint b_pitch, uint f_size, uint offset)
 {
 	const uint f_aligned_to_32 = ((f_size + 31) / 32) * 32;
-	const uint b_offset = b * x_size * y_size * f_aligned_to_32;
-	const uint xy_offset = f_aligned_to_32 * (x + y * x_size);
+	const uint b_offset = b * b_pitch;
+	const uint xy_offset = f_aligned_to_32 * x + y_pitch * y;
 	const uint f_offset = f;
 	const size_t idx = offset + xy_offset + b_offset + f_offset;
 	return idx;
@@ -67,8 +67,8 @@ inline uint FUNC(get_byxf_af32_index)(uint b, uint f, uint y, uint x, uint x_siz
 
 #define GET_DATA_BYXF_AF32_INDEX(prefix, b, f, y, x)\
 	FUNC_CALL(get_byxf_af32_index)(                 \
-		b, f, y, x, CAT(prefix, _SIZE_X),          \
-		CAT(prefix, _SIZE_Y),                      \
+		b, f, y, x, CAT(prefix, _Y_PITCH),          \
+		CAT(prefix, _BATCH_PITCH),                      \
 		CAT(prefix, _FEATURE_NUM),                 \
 		CAT(prefix, _OFFSET))
 

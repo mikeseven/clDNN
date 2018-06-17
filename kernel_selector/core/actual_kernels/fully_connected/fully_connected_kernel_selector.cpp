@@ -29,6 +29,7 @@
 #include "fully_connected_kernel_fb_io_block.h"
 #include "fully_connected_kernel_bf_io_input_spatial.h"
 #include "fully_connected_kernel_image_tutorial.h"
+#include "fully_connected_kernel_DPAS.h"
 
 namespace kernel_selector {
 
@@ -47,6 +48,7 @@ namespace kernel_selector {
         Attach<FullyConnected_fb_io_block>();
         Attach<FullyConnected_fb_io_b8_f8>();
         Attach<FullyConnected_bf_io_input_spatial>();
+        Attach<FullyConnectedKernelDPAS>();
     }
 
     KernelsData fully_connected_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const

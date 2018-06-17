@@ -15,29 +15,27 @@
 
 #include "include/include_all.cl"
 
-#if MAX_POOLING || MAX_WITH_ARGMAX_POOLING
-    #define UNIT_INIT_VAL UNIT_VAL_MIN
+#if MAX_POOLING
+    #define INIT_VAL CHAR_MIN
 #elif AVG_POOLING
-    #define UNIT_INIT_VAL UNIT_VAL_ZERO
+    #define INIT_VAL 0
 #else
 #error
 #endif
 
 
-inline UNIT_TYPE FUNC(apply_pooling)(int tmp, int in)
+inline int FUNC(apply_pooling)(int tmp, int in)
 {
-#if MAX_POOLING || MAX_WITH_ARGMAX_POOLING
+#if MAX_POOLING
     return max(tmp, in);
 #elif AVG_POOLING
     return tmp + in;
 #endif
 }
 
-KERNEL(pooling_gpu_DPAS)(const __global int* input, __global UNIT_TYPE* output
-#if MAX_WITH_ARGMAX_POOLING
-, __global float* arg_max
-#endif
-)
+KERNEL(pooling_gpu_DPAS)(
+    const __global int* input,
+    __global UNIT_TYPE* output)
 {
     const uint x    = (uint)get_global_id(0);
     const uint y    = (uint)get_global_id(1);
@@ -55,7 +53,7 @@ KERNEL(pooling_gpu_DPAS)(const __global int* input, __global UNIT_TYPE* output
     const int offset_x = (int)x*STRIDE_SIZE_X - PADDING_SIZE_X;
     const int offset_y = (int)y*STRIDE_SIZE_Y - PADDING_SIZE_Y;
     
-    int4 result = UNIT_INIT_VAL;
+    int4 result = INIT_VAL;
 
 #ifdef CHECK_BOUNDRY
     if (offset_x + POOL_SIZE_X < 0 || offset_x >= INPUT0_SIZE_X ||
@@ -84,10 +82,10 @@ KERNEL(pooling_gpu_DPAS)(const __global int* input, __global UNIT_TYPE* output
                     const uint input_idx = batch_and_feature_offset + input_offset_y*INPUT0_Y_PITCH + input_offset_x*INPUT0_X_PITCH;
                     
                     char4 input_data = as_char4(input[input_idx/4]);
-                    result[0] = FUNC_CALL(apply_pooling)(result[0], input_data[0]);
-                    result[1] = FUNC_CALL(apply_pooling)(result[1], input_data[1]);
-                    result[2] = FUNC_CALL(apply_pooling)(result[2], input_data[2]);
-                    result[3] = FUNC_CALL(apply_pooling)(result[3], input_data[3]);
+                    result[0] = FUNC_CALL(apply_pooling)(result[0], (int)input_data[0]);
+                    result[1] = FUNC_CALL(apply_pooling)(result[1], (int)input_data[1]);
+                    result[2] = FUNC_CALL(apply_pooling)(result[2], (int)input_data[2]);
+                    result[3] = FUNC_CALL(apply_pooling)(result[3], (int)input_data[3]);
                     
 #ifdef DYNAMIC_KERNEL_DIVIDER
                     num_elementes++;
@@ -109,10 +107,10 @@ KERNEL(pooling_gpu_DPAS)(const __global int* input, __global UNIT_TYPE* output
         for(uint i = 0; i < POOL_SIZE_X; i++)
         {
             char4 input_data = as_char4(input[input_idx/4]);
-            result[0] = FUNC_CALL(apply_pooling)(result[0], input_data[0]);
-            result[1] = FUNC_CALL(apply_pooling)(result[1], input_data[1]);
-            result[2] = FUNC_CALL(apply_pooling)(result[2], input_data[2]);
-            result[3] = FUNC_CALL(apply_pooling)(result[3], input_data[3]);
+            result[0] = FUNC_CALL(apply_pooling)(result[0], (int)input_data[0]);
+            result[1] = FUNC_CALL(apply_pooling)(result[1], (int)input_data[1]);
+            result[2] = FUNC_CALL(apply_pooling)(result[2], (int)input_data[2]);
+            result[3] = FUNC_CALL(apply_pooling)(result[3], (int)input_data[3]);
 
             input_idx += INPUT0_X_PITCH;
         }
@@ -126,18 +124,24 @@ KERNEL(pooling_gpu_DPAS)(const __global int* input, __global UNIT_TYPE* output
 
 #if defined AVG_POOLING
     #if defined(DYNAMIC_KERNEL_DIVIDER) || defined(DYNAMIC_WITH_PADDING_KERNEL_DIVIDER)
-        result /= (UNIT_TYPE)max(num_elementes, (uint)1);
+        for(uint i = 0; i < 4; i++)
+        {
+            result[i] = convert_int(round(((float)result[i] / max(num_elementes, (uint)1)));
+        }
     #else
-        result /= (UNIT_TYPE)(POOL_SIZE_Y * POOL_SIZE_X);
+        for(uint i = 0; i < 4; i++)
+        {
+            result[i] = convert_int(round((float)result[i] / (int)(POOL_SIZE_Y * POOL_SIZE_X)));
+        }
     #endif
 #endif
 
 for(uint op = 0; op < 4; op++)
 {
     const uint output_pos = GET_DATA_INDEX(OUTPUT, b, f+op, y, x);
-    output[output_pos] = ACTIVATION(result[op], NL_M ,NL_N);
+    output[output_pos] = ACTIVATION(convert_char(result[op]), NL_M ,NL_N);
 }
 
 }
 
-#undef UNIT_INIT_VAL
+#undef INIT_VAL

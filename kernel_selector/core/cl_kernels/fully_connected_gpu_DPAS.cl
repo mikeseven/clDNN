@@ -12,35 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+
 #include "include/common.cl"
 #include "include/activation_functions.cl"
 #include "include/data_types.cl"
 #include "include/fetch.cl"
 #include "include/dpas.cl"
 
-#define FILTER_IFM_DPAS_NUM ((FILTER_IFM_NUM + 31) / 32)
-#define FILTER_OFM_DPAS_NUM ((FILTER_OFM_NUM + 7) / 8)
-#define FILTER_IFM_ALIGNED (FILTER_IFM_DPAS_NUM * 32)
-#define FILTER_OFM_ALIGNED (FILTER_OFM_DPAS_NUM * 8)
-
-__attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
-KERNEL(convolution_DPAS)(
-    __global INPUT0_TYPE* input, 
-    __global OUTPUT_TYPE* output, 
-    __global FILTER_TYPE* weights, 
+KERNEL(fully_connected_gpu_DPAS)(
+    const __global INPUT0_TYPE* input,
+    __global OUTPUT_TYPE* output,
+    const __global FILTER_TYPE* weights
 #if BIAS_TERM
-    __global BIAS_TYPE* biases,
+    , const __global BIAS_TYPE* biases
 #endif
 #if QUANTIZATION_TERM
-    const __global float* quantizations,
+    ,const __global float* quantizations
 #endif
 #if CALIBRATION_TERM
-    const __global float* calibrations,
+    ,const __global float* calibrations
 #endif
-    uint split_idx)
+    )
 {
-    const uint x = get_global_id(0);
-    const uint y = get_global_id(1);
+    const uint x = 0;
+    const uint y = 0;
 #if OUTPUT_BATCH_NUM == 1
     const uint f = get_global_id(2);
     const uint b = 0;
