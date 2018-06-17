@@ -17,12 +17,13 @@
 #
 #
 # For details about script please contact following people:
-#  * [Version: 1.0] Walkowiak, Marcin <marcin.walkowiak@intel.com>
+#  * [Version: 1.1] Walkowiak, Marcin <marcin.walkowiak@intel.com>
 
 
 import argparse
 import array
 import collections
+from copy import deepcopy
 import fnmatch
 import functools
 import glob as my_glob
@@ -350,6 +351,28 @@ class NndFile(object):
         return layout_map[layout] + \
             (NndFile.__hdr_layout_fp16_base * layout_shift_m_map[data_type]
              if emit_old_format and data_type is not None else 0)
+
+    # ------------------------------------------------------------------------------------------------------------------
+
+    @property
+    def file_path(self):
+        # type: () -> typing.AnyStr
+        return self.__file_path
+
+    @property
+    def data_type(self):
+        # type: () -> str
+        return self.__data_type
+
+    @property
+    def layout(self):
+        # type: () -> str
+        return self.__layout
+
+    @property
+    def sizes(self):
+        # type: () -> typing.List[int]
+        return list(self.__sizes)
 
     # ------------------------------------------------------------------------------------------------------------------
 
@@ -713,6 +736,136 @@ class NndFile(object):
         nnd_file.__data      = array.array(self.__data.typecode, self.__data)
         return nnd_file
 
+    @staticmethod
+    def from_primitive_dump_raw_vals(proposed_file_path, raw_dump_data):
+        # type: (typing.AnyStr, typing.List[typing.List[typing.List[array.array]]]) -> NndFile
+        """
+        Creates NND file from primitive raw dump values.
+
+        :param proposed_file_path: Suggested file path.
+        :param raw_dump_data:      Dump data. Multidimensional array with following nesting order:
+                                   [batch/IF idx] -> [feature_idx] -> [Y idx] -> [X idx] -> float val.
+        :return:                   Four-dimensional NND file with (converted) content of iterable.
+        :raise ValueError          Proposed file path is invalid.
+        :raise ValueError          Raw dump data is malformed (does not contain correct number of values).
+        """
+        if proposed_file_path is None or proposed_file_path.strip() == '':
+            raise ValueError('Suggested file path for NND file may not be empty.')
+
+        nnd_storage_type = NndFile.__parse_hdr_data_type(NndFile.__encode_hdr_data_type(NndFile.DT_FP32)[0])[2]
+        nnd_data = array.array(nnd_storage_type)
+
+        nnd_size_b = len(raw_dump_data)
+        nnd_size_f = len(raw_dump_data[0]) if nnd_size_b > 0 else 0
+        nnd_size_y = len(raw_dump_data[0][0]) if nnd_size_f > 0 else 0
+        nnd_size_x = len(raw_dump_data[0][0][0]) if nnd_size_y > 0 else 0
+        nnd_sizes = [nnd_size_b, nnd_size_f, nnd_size_y, nnd_size_x]
+
+        for batch_data in raw_dump_data:
+            for feature_data in batch_data:
+                for row_data in feature_data:
+                    nnd_data.extend(row_data)
+
+        nnd_flat_size = reduce(lambda x, y: x * y, nnd_sizes)
+        if nnd_flat_size <= 0:
+            raise ValueError('Provided raw data is invalid (calculated size is 0): "{0}" file.'
+                             .format(proposed_file_path))
+        if len(nnd_data) != nnd_flat_size:
+            raise ValueError('Provided raw data is invalid (calculated size and actual size differ): "{0}" file.'
+                             .format(proposed_file_path))
+
+        nnd_file = NndFile()
+        nnd_file.__file_path = proposed_file_path
+        nnd_file.__data_type = NndFile.DT_FP32
+        nnd_file.__sizes = nnd_sizes
+        nnd_file.__layout = NndFile.LAYOUT_BFYX
+        nnd_file.__data = nnd_data
+        return nnd_file
+
+    def to_dump_files(self, dump_dir, dump_mode='normal'):
+        # type: (typing.AnyStr, str) -> typing.List[typing.AnyStr]
+        """
+        Dumps current .nnd file in human-readable format.
+
+        :param dump_dir:  Directory where dump files should be written.
+        :param dump_mode: Mode in which primitive was dumped. One of:
+                           * 'normal'        - fall-back mode in which each output feature is dumped to different
+                                               file.
+                           * 'expand_single' - mode (for fully-connected layers) where all output features are
+                                               dumped to single file.
+        :return: List of dumped files (file names).
+        :raise NotImplementedError Layout or data type is not supported for dumping yet.
+        """
+        # Tuple positions in dump: (as b<idx> in dump file, as f<idx> in dump file>, row separated, space separated)
+        dump_layout_to_bfyx_map = {
+            NndFile.LAYOUT_F:    (0, 0, 0, 1),
+            NndFile.LAYOUT_BF:   (0, 2, 0, 1),
+            NndFile.LAYOUT_FB:   (0, 1, 0, 2),
+            NndFile.LAYOUT_BFYX: (4, 3, 2, 1),
+            NndFile.LAYOUT_YXFB: (1, 2, 4, 3),
+        }
+
+        if dump_mode not in ['expand_single', 'normal']:
+            dump_mode = 'normal'
+
+        if self.__layout not in dump_layout_to_bfyx_map:
+            raise NotImplementedError('The .nnd format ({0}) is not supported by this operation (dump): "{1}" file.'
+                                      .format(self.__layout, self.__file_path))
+        if self.__data_type == NndFile.DT_FP16:
+            raise NotImplementedError('The .nnd data type ({0}) is not supported by this operation (dump): "{1}" file.'
+                                      .format(self.__data_type, self.__file_path))
+
+        if not os.path.exists(dump_dir):
+            os.makedirs(dump_dir)
+
+        dump_reorder = dump_layout_to_bfyx_map[self.__layout]
+        assert max(dump_reorder) <= len(self.__sizes)
+        dump_sizes = [self.__sizes[-bfyx_pos] if bfyx_pos > 0 else 1
+                      for bfyx_pos in dump_reorder]
+        dump_steps = [reduce(lambda x, y: x * y, self.__sizes[1 - bfyx_pos:] if bfyx_pos > 1 else [], 1)
+                      for bfyx_cmp_idx, bfyx_pos in enumerate(dump_reorder)]
+
+        dump_files = []
+        nnd_file_name_root = os.path.splitext(os.path.basename(self.__file_path))[0]
+        dump_b_size, dump_f_size, dump_y_size, dump_x_size = dump_sizes
+        dump_b_step, dump_f_step, dump_y_step, dump_x_step = dump_steps
+
+        if dump_mode == 'expand_single':
+            for dump_b_idx in xrange(dump_b_size):
+                dump_suffix = '_b{0}_f{1}.txt'.format(dump_b_idx, 0)
+                dump_file_name = nnd_file_name_root + dump_suffix
+                dump_file_path = os.path.join(dump_dir, dump_file_name)
+
+                with open(dump_file_path, 'wb') as dump_file:
+                    dump_b_base = dump_b_idx * dump_b_step
+                    dump_b_stop = dump_b_base + dump_f_size * dump_f_step
+                    dump_file.writelines([' '.join(
+                        ['{0:.6g}'.format(self.__data[dump_off])
+                         for dump_bf_base in xrange(dump_b_base, dump_b_stop, dump_f_step)
+                         for dump_bfy_base in xrange(dump_bf_base, dump_bf_base + dump_y_size * dump_y_step, dump_y_step)
+                         for dump_off in xrange(dump_bfy_base, dump_bfy_base + dump_x_size * dump_x_step, dump_x_step)]
+                    )])
+                dump_files.append(dump_file_name)
+            return dump_files
+
+        for dump_b_idx in xrange(dump_b_size):
+            for dump_f_idx in xrange(dump_f_size):
+                dump_suffix    = '_b{0}_f{1}.txt'.format(dump_b_idx, dump_f_idx)
+                dump_file_name = nnd_file_name_root + dump_suffix
+                dump_file_path = os.path.join(dump_dir, dump_file_name)
+
+                with open(dump_file_path, 'wb') as dump_file:
+                    dump_bf_base = dump_b_idx * dump_b_step + dump_f_idx * dump_f_step
+                    dump_bf_stop = dump_bf_base + dump_y_size * dump_y_step
+                    dump_file.writelines([' '.join(['{0:.6g}'.format(self.__data[dump_off])
+                                                    for dump_off in xrange(dump_bfy_base,
+                                                                           dump_bfy_base + dump_x_size * dump_x_step,
+                                                                           dump_x_step)]) + '\n'
+                                          for dump_bfy_base in xrange(dump_bf_base, dump_bf_stop, dump_y_step)])
+
+                dump_files.append(dump_file_name)
+        return dump_files
+
     # ------------------------------------------------------------------------------------------------------------------
 
     def decalibrate(self, calib_nnd_file):
@@ -983,6 +1136,7 @@ class CalibCalculator(object):
     """
     __dump_file_value_matcher = re.compile(r'[+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?',
                                            re.M | re.S)  # type: typing.Pattern[str]
+    __dump_file_values_splitter = re.compile(r'[\n\r]+', re.M | re.S)  # type: typing.Pattern[str]
     # Pattern groups: 1 - primitive name, 2 - batch index, 3 - feature index
     __dump_file_name_matcher = re.compile(r'(.*)_gpu_b([0-9]+)_f([0-9]+)\.txt$',
                                           re.M | re.S)  # type: typing.Pattern[str]
@@ -1014,8 +1168,11 @@ class CalibCalculator(object):
     __WT_QF = 2  # type: int # File is (weights) quantization factors file.
     __WT_M  = 3  # type: int # File is (weights) mean values file.
     __WT_CF = 4  # type: int # File is calibration factors file.
+    # Only for printing / name generation:
+    __WTP_F = 5  # type: int # File is generic factors .nnd file.
+    __WTP_D = 6  # type: int # File is dumped layer .nnd file.
 
-    __file_type_quals = ['weights', 'bias', 'qf', 'mean', 'cf']  # type: typing.List[typing.AnyStr]
+    __file_type_quals = ['weights', 'bias', 'qf', 'mean', 'cf', 'f', 'dump']  # type: typing.List[typing.AnyStr]
 
     CCO_RET_CALIB_FILES      = 0x00000001  # type: int # Return information about calibration factors files.
     CCO_RET_FRONTIER_FILES   = 0x00000002  # type: int # Return information about frontier calibration factors files.
@@ -1433,7 +1590,7 @@ class CalibCalculator(object):
         :param groups_count: Number of feature groups in primitive (split size).
         :param group_idx:    Index (`0`-based) of feature group. Ignored, if `groups_count` is one (or less).
         :param attrib:       Attribute string that allows to generate different name depending on attributes.
-        :param name_type:    Type of .nnd file (one of `__WT_`-prefixed enum values). Default: `__WT_CF`.
+        :param name_type:    Type of .nnd file (one of `__WT_`-/`__WTP_`-prefixed enum values). Default: `__WT_CF`.
         :return:             Proposed name of .nnd file.
         """
         attrib_str = attrib + '_' if attrib is not None else ''
@@ -1476,6 +1633,54 @@ class CalibCalculator(object):
             dump_abs_vals = map(lambda val: abs(float(val)),
                                 CalibCalculator.__dump_file_value_matcher.findall(dump_contents))
             return array.array('f', dump_abs_vals)
+
+    @staticmethod
+    def __raw_vals_from_dump_file(file_path):
+        # type: (typing.AnyStr) -> typing.Tuple[int, int, typing.List[array.array]]
+        """
+        Returns flattened two-dimensional table of values parsed from dump file.
+
+        :param file_path: Path (absolute or relative) to file which contains data dumped in format of clDNN `examples`
+                          application.
+        :return:          Values from file. They contain the following elements:
+                           * size in x dimension
+                           * size in y dimension
+                           * list (length: y-size) of arrays (length: x-size) of floats; each array containing
+                             numbers from one row.
+        """
+        with open(file_path, u'rb') as dump_file:
+            dump_contents = dump_file.read()
+
+            dump_contents_parts = CalibCalculator.__dump_file_values_splitter.split(dump_contents)
+            dump_vals_parts     = [CalibCalculator.__dump_file_value_matcher.findall(dump_contents_part)
+                                   for dump_contents_part in dump_contents_parts]
+            dump_vals_parts     = [array.array('f', map(float, dump_vals_part))
+                                   for dump_vals_part in dump_vals_parts
+                                   if dump_vals_part is not None and len(dump_vals_part) > 0]
+
+            vals_size_x = 0
+            vals_size_y = len(dump_vals_parts)
+            for dump_vals_part in dump_vals_parts:
+                vals_row_size = len(dump_vals_part)
+
+                if vals_size_x == 0:
+                    vals_size_x = vals_row_size
+                elif vals_size_x != vals_row_size:
+                    _logger.warning('Dump file seems to be malformed. Number of values in some rows is different '
+                                    '({0} vs. {1}). Clipping / filling elements to match number from first row: '
+                                    '"{2}" file.'
+                                    .format(vals_size_x, vals_row_size, file_path))
+
+                    if vals_size_x > vals_row_size:
+                        dump_vals_part.extend([0.0] * (vals_size_x - vals_row_size))
+                    else:
+                        dump_vals_part[:] = dump_vals_part[:vals_size_x]
+
+            if vals_size_y <= 0:
+                _logger.warning('Dump file seems to be empty (contains no values): "{0}" file.'
+                                .format(file_path))
+
+            return vals_size_x, vals_size_y, dump_vals_parts
 
     @staticmethod
     def __extract_props_from_dump_file_name((dump_file_name, dump_file_dir)):
@@ -1588,6 +1793,8 @@ class CalibCalculator(object):
         :param groups_count:    Number of feature groups (split size) in primitive.
         :param group_idx:       Index (`0`-based) of feature group to select. Specify `None`, if all groups should be
                                 selected (split primitive output is treated as single concatenated entity).
+                                Specify special value `-1` to avoid treating primitve output as concatenated entity and
+                                selecting all groups.
                                 Ignored when there is only one group.
         :param dump_mode:       Mode in which primitive was dumped. One of:
                                  * 'normal'        - fall-back mode in which each output feature is dumped to different
@@ -1612,7 +1819,7 @@ class CalibCalculator(object):
             dump_mode = 'normal'
 
         _logger.info('Gathering dump information about primitive: "{0}" primitive (group: {1}, dump mode: "{2}")...'
-                     .format(prim_name, group_idx if group_idx is not None else 'all', dump_mode))
+                     .format(prim_name, group_idx if group_idx is not None and group_idx >= 0 else 'all', dump_mode))
 
         prim_file_infos = [file_info for file_info in dump_file_infos if file_info[0].lower() == prim_name.lower()]
         if len(prim_file_infos) <= 0:
@@ -1687,9 +1894,151 @@ class CalibCalculator(object):
 
         file_infos = [(batch_idx, feature_idx % features_count, feature_idx / features_count, file_name, file_dir)
                       for _, batch_idx, feature_idx, file_name, file_dir in prim_file_infos]
-        if groups_count > 1 and group_idx is not None:
+        if groups_count > 1 and group_idx is not None and group_idx >= 0:
             file_infos = [file_info for file_info in file_infos if file_info[2] == group_idx]
         return prim_name, batch_size, features_count, groups_count, file_infos
+
+    @staticmethod
+    def get_dump_raw_vals_for_primitive(dump_dir_path, prim_name, groups_count=1, group_idx=None,
+                                        dump_mode='normal', recursive=False, as_nnd=False, nnd_out_dir=None):
+        # type: (typing.AnyStr, typing.AnyStr, int, typing.Optional[int], str, bool, bool, typing.Optional[typing.AnyStr]) -> typing.Union[typing.List[typing.List[typing.List[typing.List[array.array]]]], typing.List[typing.Tuple[typing.AnyStr, NndFile]]]
+        """
+        Get all dump values connected to specified primitive or specified feature group (split) of primitive.
+
+        :param dump_dir_path: Directory root where dump files reside.
+        :param prim_name:     Name of primitive.
+        :param groups_count:  Number of feature groups (split size) in primitive.
+        :param group_idx:     Index (`0`-based) of feature group to select. Specify `None`, if all groups should be
+                              selected.
+                              Ignored when there is only one group.
+        :param dump_mode:     Mode in which primitive was dumped. One of:
+                               * 'normal'        - fall-back mode in which each output feature is dumped to different
+                                                   file.
+                               * 'expand_single' - mode (for fully-connected layers) where all output features are
+                                                   dumped to single file.
+        :param recursive:     Indicates that dump subdirectories should be also scanned recursively for candidate files.
+        :param as_nnd         Indicates that raw values should be returned as `NndFile` objects.
+        :param nnd_out_dir    Output directory that should be incorporated into generated .nnd files
+                              (default: current directory). Ignored when `as_nnd` is `False`.
+        :return:              Multidimensional array of values. Order of nesting:
+                              [group / split idx] -> [batch idx] -> [feature_idx] -> [Y idx] -> [X idx] -> float val.
+        :raise RuntimeError: Calculated cumulative number of features is not dividable by count of feature groups.
+        """
+        search_group_idx = max(group_idx, 0) if group_idx is not None else -1
+
+        dump_file_infos = CalibCalculator.__list_dump_files(dump_dir_path, recursive)
+        prim_file_info = CalibCalculator.__get_dump_files_for_primitive(dump_dir_path, dump_file_infos, prim_name,
+                                                                        groups_count, search_group_idx, dump_mode)
+
+        dump_size_g = prim_file_info[3] if group_idx is None else 1
+        dump_size_b = prim_file_info[1]
+        dump_size_f = prim_file_info[2]
+        # noinspection PyUnusedLocal
+        prim_dump_vals = [[[[]
+                            for sel_feature_idx in xrange(dump_size_f)]
+                           for sel_batch_idx in xrange(dump_size_b)]
+                          for sel_group_idx in xrange(dump_size_g)]  # type: typing.List[typing.List[typing.List[typing.List[array.array]]]]
+
+        added_elems = set()  # type: typing.Set[typing.Tuple[int, int, int]]
+        dump_size_x = 0
+        dump_size_y = 0
+        for sel_batch_idx, sel_feature_idx, sel_group_idx, sel_file_name_or_val, sel_file_dir in prim_file_info[4]:
+            sel_group_idx = sel_group_idx if group_idx is None else 0
+            sel_xy_array = prim_dump_vals[sel_group_idx][sel_batch_idx][sel_feature_idx]  # type: typing.List[array.array]
+
+            if len(sel_xy_array) != 0:
+                _logger.warning('There seem to be multiple dump files for specific batch (idx: {0}), '
+                                'group (no.: {1}), feature (idx: {2}). Only first will be used: "{3}" primitive.'
+                                .format(sel_batch_idx, sel_group_idx + 1, sel_feature_idx, prim_name))
+                continue
+
+            added_xy_array = []  # type: typing.List[array.array]
+            if sel_file_dir is None and isinstance(sel_file_name_or_val, (float, int)):
+                added_xy_array.append(array.array('f', [sel_file_name_or_val]))
+                sel_size_x = 1
+                sel_size_y = 1
+            else:
+                sel_file_path = os.path.join(dump_dir_path, sel_file_dir, sel_file_name_or_val)
+                sel_size_x, sel_size_y, added_xy_array = CalibCalculator.__raw_vals_from_dump_file(sel_file_path)
+
+            if dump_size_x == 0:
+                dump_size_x = sel_size_x
+            elif dump_size_x != sel_size_x:
+                _logger.warning('Mismatch between dimension sizes in dump files of primitive ({0} vs. {1} on X). '
+                                'Clipping / filling elements to match number from first dump file: "{2}" primitive.'
+                                .format(dump_size_x, sel_size_x, prim_name))
+
+                if dump_size_x > sel_size_x:
+                    for added_xy_array_row in added_xy_array:
+                        added_xy_array_row.extend([0.0] * (dump_size_x - sel_size_x))
+                else:
+                    for added_xy_array_row in added_xy_array:
+                        added_xy_array_row[:] = added_xy_array_row[:dump_size_x]
+
+            if dump_size_y == 0:
+                dump_size_y = sel_size_y
+            elif dump_size_y != sel_size_y:
+                _logger.warning('Mismatch between dimension sizes in dump files of primitive ({0} vs. {1} on Y). '
+                                'Clipping / filling elements to match number from first dump file: "{2}" primitive.'
+                                .format(dump_size_y, sel_size_y, prim_name))
+
+                if dump_size_y > sel_size_y:
+                    added_xy_array.extend([array.array('f', [0.0] * dump_size_x)
+                                           for _ in xrange(dump_size_y - sel_size_y)])
+                else:
+                    added_xy_array = added_xy_array[:dump_size_y]
+
+            sel_xy_array[:] = added_xy_array
+            added_elems.add((sel_group_idx, sel_batch_idx, sel_feature_idx))
+
+        if dump_size_x <= 0 or dump_size_y <= 0:
+            _logger.warning('Dump files do not exist or seem to be empty (contains no values) for primitive: '
+                            '"{0}" primitive.'
+                            .format(prim_name))
+
+        dump_size_gbf = dump_size_g * dump_size_b * dump_size_f
+        if len(added_elems) < dump_size_gbf:
+            _logger.warning('Missing some dump files for primitive (expected: {0}, found: {1}). '
+                            'Filling elements of missing files to match needed sizes: "{2}" primitive.'
+                            .format(dump_size_gbf, len(added_elems), prim_name))
+
+            missing_elems = set(itertools.product(xrange(dump_size_g),
+                                                  xrange(dump_size_b),
+                                                  xrange(dump_size_f))) - added_elems
+            fill_xy_array = [array.array('f', [0.0] * dump_size_x)
+                             for _ in xrange(dump_size_y)]
+            for sel_group_idx, sel_batch_idx, sel_feature_idx in missing_elems:
+                prim_dump_vals[sel_group_idx][sel_batch_idx][sel_feature_idx] = deepcopy(fill_xy_array)
+
+        # Write results if we need to return results as python structures.
+        if not as_nnd:
+            return prim_dump_vals
+
+        # Convert to .nnd files.
+        _logger.info('    Converting raw dump values into .nnd files...')
+
+        nnd_files = []
+
+        nnd_file_out_dir = nnd_out_dir if nnd_out_dir is not None else os.getcwd()
+
+        nnd_name_gen = CalibCalculator(dump_dir_path)
+        if groups_count > 1 and group_idx is None:
+            nnd_file_names = [nnd_name_gen.__gen_nnd_name(prim_name, groups_count, nnd_group_idx,
+                                                          name_type=CalibCalculator.__WTP_D)
+                              for nnd_group_idx in xrange(groups_count)]
+        else:
+            nnd_file_names = [nnd_name_gen.__gen_nnd_name(prim_name, groups_count, group_idx,
+                                                          name_type=CalibCalculator.__WTP_D)]
+
+        assert len(prim_dump_vals) <= groups_count
+        for dump_group_idx, dump_group_vals in enumerate(prim_dump_vals):
+            nnd_file_name = nnd_file_names[dump_group_idx]
+            nnd_file_path = os.path.join(nnd_file_out_dir, nnd_file_name)
+            _logger.info('     -- "{0}"'.format(nnd_file_name))
+            nnd_file = NndFile.from_primitive_dump_raw_vals(nnd_file_path, dump_group_vals)
+            nnd_files.append((nnd_file_name, nnd_file))
+
+        return nnd_files
 
     @staticmethod
     def __get_dump_files_for_frontier(dump_dir_path, dump_file_infos, norm_calib_opts, frontier_idx, frontier):
@@ -2252,7 +2601,7 @@ class CalibCalculator(object):
 # Command-line Parser
 # ----------------------------------------------------------------------------------------------------------------------
 
-_script_version = '%(prog)s    1.0.0 (RC1)'  # type: str
+_script_version = '%(prog)s    1.1.0 (RC2)'  # type: str
 
 _data_type_map = {
     'i8':     NndFile.DT_INT8,
@@ -2263,6 +2612,13 @@ _data_type_map = {
     'uint8':  NndFile.DT_UINT8,
     'int16':  NndFile.DT_INT16,
     'uint16': NndFile.DT_UINT16,
+}  # type: typing.Dict[str, str]
+
+_dump_mode_map = {
+    'normal':        'normal',
+    'n':             'normal',
+    'expand-single': 'expand_single',
+    'es':            'expand_single',
 }  # type: typing.Dict[str, str]
 
 
@@ -2473,6 +2829,82 @@ def create_cmd_parser():
                                   help='Disables quantization phase for weights. Weights will be using original data '
                                        'type.')
 
+    # Command "dump_convert" arguments:
+    cmd_dcvrt_parser = argparse.ArgumentParser(add_help=False)
+    cmd_dcvrt_parser.add_argument('dump_dir',
+                                  metavar='<ex-dump-dir>',
+                                  help='Path to dump directory containing all .txt files dumped for specified network '
+                                       'using "examples" application (option "--dump_hidden_layers").')
+    cmd_dcvrt_parser.add_argument('prim_name',
+                                  metavar='<layer-name>',
+                                  type=str.lower,
+                                  help='Name of the primitive / layer which dump files will be converted into .nnd or '
+                                       'other formats (case-insensitive).')
+    cmd_dcvrt_parser.add_argument('-s', '--split', '--groups-count',
+                                  dest='groups_count',
+                                  type=lambda x: max(int(x), 1),
+                                  metavar='<split-size>',
+                                  default=1,
+                                  help='Number of feature groups (split size) for primitive. Default: %(default)s.')
+    cmd_dcvrt_parser.add_argument('-gi', '--split-index', '--group-index',
+                                  dest='group_idx',
+                                  type=lambda x: max(int(x) - 1, 0),
+                                  metavar='<group-index>',
+                                  help='Index (1-based) of feature group (split group) which will be converted. If not '
+                                       'specified, all groups are converted.')
+    cmd_dcvrt_parser.add_argument('-o', '--output-dir',
+                                  dest='output_dir',
+                                  metavar='<output-dir>',
+                                  default='.',
+                                  help='Path to output directory for conversion results. If it does not exist, '
+                                       'it will be created. Defaults to: "%(default)s" (current working directory).')
+    dcvrt_out_types = ['nnd', 'txt']
+    cmd_dcvrt_parser.add_argument('-t', '--type', '--out-type',
+                                  dest='out_type',
+                                  type=str.lower,
+                                  metavar='<out-file-type>',
+                                  default='nnd',
+                                  choices=dcvrt_out_types,
+                                  help='Data type to which dump files will be converted to. Must be one of: {0}. '
+                                       'Default: %(default)s.'.format(', '.join(dcvrt_out_types)))
+    cmd_dcvrt_parser.add_argument('-dm', '--dump-mode',
+                                  dest='dump_mode',
+                                  type=str.lower,
+                                  metavar='<dump-mode>',
+                                  default='normal',
+                                  choices=_dump_mode_map.keys(),
+                                  help='Dump mode used to create dump files. See "about-opts-file" to get description '
+                                       'of dumping modes. Must be one of: {0}. '
+                                       'Default: %(default)s.'.format(', '.join(sorted(_dump_mode_map.keys()))))
+    dcvrt_out_dump_modes = ['input'] + sorted(_dump_mode_map.keys())
+    cmd_dcvrt_parser.add_argument('-odm', '--out-dump-mode',
+                                  dest='out_dump_mode',
+                                  type=str.lower,
+                                  metavar='<dump-mode>',
+                                  default='input',
+                                  choices=dcvrt_out_dump_modes,
+                                  help='Dump mode in which conversion output will be dumped. Ignored if dump type is '
+                                       'not set to "txt". See "about-opts-file" to get description of dumping modes. '
+                                       'Must be one of: {0}. '
+                                       'Default: %(default)s (the same as specified in -dm / --dump-mode '
+                                       'parameter).'.format(', '.join(dcvrt_out_dump_modes)))
+    cmd_dcvrt_parser.add_argument('-ids', '--incl-dump-sub-dirs',
+                                  dest='recurse_dump',
+                                  action='store_true',
+                                  help='Additionally scans <ex-dump-dir> sub-directories for dump files (recursively).')
+    cmd_dcvrt_parser.add_argument('-d', '--decalibrate',
+                                  dest='decalib_cf_files',
+                                  metavar='<cf-file-name>',
+                                  action='append',
+                                  default=[],
+                                  nargs='+',
+                                  help='Decalibrate output .nnd by specified calibration factors file.')
+    cmd_dcvrt_parser.add_argument('-ulo', '--use-old-nnd-layout',
+                                  dest='use_old_layout',
+                                  action='store_true',
+                                  help='If possible, uses old layout format (with encoded data type) when saving '
+                                       '.nnd files. Ignored when different dump type is used.')
+
     # Parsing arguments:
     cmd_parser = argparse.ArgumentParser(
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -2512,6 +2944,18 @@ def create_cmd_parser():
                        description='Calibrates and quantizes .nnd files into one of integral data formats.',
                        add_help=False,
                        help='Calibrates and quantizes .nnd files into one of integral data formats.')
+
+    # - dc/dump_convert (dump files conversion)
+    subcmds.add_parser('dc',
+                       parents=[cmd_dcvrt_parser, gen_parser],
+                       description='Converts dump files for primitive into .nnd (or other formats).',
+                       add_help=False,
+                       help='Converts dump files for primitive into .nnd (or other formats).')
+    subcmds.add_parser('dump-convert',
+                       parents=[cmd_dcvrt_parser, gen_parser],
+                       description='Converts dump files for primitive into .nnd (or other formats).',
+                       add_help=False,
+                       help='Converts dump files for primitive into .nnd (or other formats).')
 
     # - about-opts-file (information about options file):
     subcmds.add_parser('about-opts-file',
@@ -2574,6 +3018,8 @@ def main(parsed_args):
 
     if parsed_args.subcmd_name in ['q', 'quant', 'quantize']:
         return main_quantize(parsed_args)
+    if parsed_args.subcmd_name in ['dc', 'dump_convert']:
+        return main_dump_convert(parsed_args)
 
     return 0
 
@@ -2588,7 +3034,7 @@ def main_quantize(parsed_args):
     """
 
     _logger.info('Starting quantization...')
-    _logger.info('    Using options file (data type: {0})     : "{1}"'
+    _logger.info('    Using options file   (data type: {0:>6}): "{1}"'
                  .format(parsed_args.data_type, parsed_args.opts_file))
     _logger.info('    Using dump directory    (recursive: {0}): "{1}"'
                  .format('yes' if parsed_args.recurse_dump else ' no', parsed_args.dump_dir))
@@ -2632,11 +3078,79 @@ def main_quantize(parsed_args):
     return 0
 
 
+def main_dump_convert(parsed_args):
+    # type: (argparse.Namespace) -> int
+    """
+    "dump_convert" handler function. Performs conversion of dump files into .nnd or other types of files.
+
+    :param parsed_args: Parsed arguments.
+    :return:            Exit code.
+    """
+    group_idx = parsed_args.group_idx if 'group_idx' in parsed_args else None
+    group_idx = group_idx if parsed_args.groups_count > 1 else None
+
+    dump_mode = _dump_mode_map[parsed_args.dump_mode]
+    out_dump_mode = dump_mode if parsed_args.out_dump_mode == 'input' else _dump_mode_map[parsed_args.out_dump_mode]
+
+    _logger.info('Starting dump conversion...')
+    _logger.info('    Using dump directory               (recursive: {0}): "{1}"'
+                 .format('yes' if parsed_args.recurse_dump else ' no', parsed_args.dump_dir))
+    _logger.info('    Using dump mode                                    :  "{0}"'
+                 .format(dump_mode.replace('_', ' ')))
+    _logger.info('    Using primitive (split size: {0:>6}, group: {1:>6}): "{2}"'
+                 .format(parsed_args.groups_count, group_idx + 1 if group_idx is not None else 'all',
+                         parsed_args.prim_name))
+    _logger.info('    Using output directory                             : "{0}"'
+                 .format(parsed_args.output_dir))
+
+    if not os.path.exists(parsed_args.output_dir):
+        os.makedirs(parsed_args.output_dir)
+
+    nnd_files = CalibCalculator.get_dump_raw_vals_for_primitive(
+        dump_dir_path=parsed_args.dump_dir,
+        prim_name=parsed_args.prim_name,
+        groups_count=parsed_args.groups_count,
+        group_idx=group_idx,
+        dump_mode=dump_mode,
+        recursive=parsed_args.recurse_dump,
+        as_nnd=True,
+        nnd_out_dir=parsed_args.output_dir)  # type: typing.List[typing.Tuple[typing.AnyStr, NndFile]]
+
+    # Decalibration (optional).
+    cf_file_paths = list(itertools.chain.from_iterable(parsed_args.decalib_cf_files))
+    cf_nnd_files  = [(os.path.basename(cf_file_path), NndFile.from_file(cf_file_path))
+                     for cf_file_path in cf_file_paths]
+
+    if len(nnd_files) > 0 and len(cf_nnd_files) > 0:
+        _logger.info('Decalibrating .nnd files using specified calibration factors...')
+        for nnd_file_name, nnd_file in nnd_files:
+            _logger.info(' -- "{0}" with:'.format(nnd_file_name))
+            for cf_nnd_file_name, cf_nnd_file in cf_nnd_files:
+                _logger.info('     ** "{0}" factors'.format(cf_nnd_file_name))
+                nnd_file.decalibrate(cf_nnd_file)
+
+    if parsed_args.out_type == 'nnd':
+        _logger.info('Saving .nnd files...')
+        for nnd_file_name, nnd_file in nnd_files:
+            _logger.info(' -- "{0}"'.format(nnd_file_name))
+            nnd_file.to_file(use_old_layout_format=parsed_args.use_old_layout)
+    elif parsed_args.out_type == 'txt':
+        _logger.info('Dumping .nnd into text files...')
+        for nnd_file_name, nnd_file in nnd_files:
+            _logger.info(' -- "{0}"'.format(nnd_file_name))
+            nnd_file.to_dump_files(parsed_args.output_dir, out_dump_mode)
+
+    return 0
+
+
 if __name__ == '__main__':
     prepare_main()
 
     # ------------------------------------------------------------------------------------------------------------------
     # Tests:
+    # a = NndFile.from_iterable('.\sample_1.0-21.1_192f_cf.nnd', NndFile.DT_FP32, [1.0+0.1*x for x in range(192)])
+    # a.to_file()
+    #
     # print repr(parsed_args)
     # print repr(collect_files(parsed_args, 'input', 'include_filter'))
     # nnd_file = NndFile.from_file(r"C:\Users\mwalkowi\Desktop\alexnet\resnet50\fc1000_weights.nnd")
