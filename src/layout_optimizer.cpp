@@ -202,11 +202,11 @@ layout layout_optimizer::get_expected_layout(layout const& current_layout, data_
             expected_format = cldnn::format::byxf;
         }
         // DPAS case
-        else if (current_layout.data_type == data_types::i8)
+/*        else if (current_layout.data_type == data_types::i8)
         {
             expected_tensor = current_layout.size;
             expected_format = cldnn::format::byxf_af32;
-        }
+        }*/
         else if (layout_optimizer::convolution_bfyx_opt(current_layout, output_or_weights_layout, prim)
             || (_output_size_handling_enabled && prim->with_output_size) ||
             node.get_transposed())

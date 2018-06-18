@@ -65,15 +65,10 @@ KERNEL(convolution_1x1_gemm_DPAS)(
         tileC[i] = 0;
     }
 
-if(x == 0 && y == 0 && f == 0)
-{
-//    printf("gid: %d %d %d, in_addr: %d\n", (int)get_global_id(0), (int)get_global_id(1), (int)get_global_id(2), in_addr);
-}
    	__attribute__((opencl_unroll_hint(1)))
     for (uint k = 0; k < FILTER_IFM_DPAS_NUM; ++k)
     {
         // load A tile ( input )
-//        tileA = vload8(0, (const __global int*)(input + in_addr));
         for(uint i = 0; i < 8; i++)
         {
             uint tmp_addr = in_addr + i * INPUT0_X_PITCH;
@@ -82,17 +77,6 @@ if(x == 0 && y == 0 && f == 0)
 
         // load B tile ( weights )
         tileB = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
-
-if(x == 0 && y == 0 && f == 0)
-{
-    for(uint i = 0; i < 8; i++)
-    {
-//        char4 td0 = as_char4(sub_group_broadcast(tileA[0], i));
-//        printf("tileA[%d]: %d %d %d %d \n", i, (int)td0[0], (int)td0[1], (int)td0[2], (int)td0[3]);
-//        char4 td0 = as_char4(tileB[i]);
-//        printf("tileB[%d]: %d %d %d %d \n", i, (int)td0[0], (int)td0[1], (int)td0[2], (int)td0[3]);        
-    }
-}
     
         // compute C tile ( output )
         tileC = DPAS_8x8(tileA, tileB, tileC);
@@ -101,10 +85,6 @@ if(x == 0 && y == 0 && f == 0)
         filter_idx += 32*8; // 32 features per channel * 8 output features per SIMD channel
     }
 
-if(x == 0 && y == 0 && f == 0)
-{
-//    printf("tileC[0]: %d %d %d %d \n", (int)tileC[0], (int)tileC[1], (int)tileC[2], (int)tileC[3]);
-}
 #if BIAS_TERM
 #if   BIAS_PER_OUTPUT
     const uint bias_index = GET_DATA_INDEX(BIAS, b, f, y, x);
