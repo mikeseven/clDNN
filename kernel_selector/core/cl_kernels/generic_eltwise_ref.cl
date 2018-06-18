@@ -42,9 +42,9 @@
 
 KERNEL(eltwise)(
     INPUTS_DECLS
-    __global UNIT_TYPE* output,
+    __global UNIT_TYPE* output
 #if CALIBRATION_TERM
-    __global float* calibrations
+    , const __global float* calibrations
 #endif
     )
 {
