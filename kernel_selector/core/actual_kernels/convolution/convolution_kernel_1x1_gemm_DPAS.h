@@ -23,22 +23,21 @@ namespace kernel_selector {
     class ConvolutionKernel_1x1_gemm_dpas : public ConvolutionKernelBase
     {
     public:
-        ConvolutionKernel_1x1_gemm_dpas() : ConvolutionKernelBase("ConvolutionKernel_1x1_gemm_dpas") {}
+        using Parent = ConvolutionKernelBase;
+        ConvolutionKernel_1x1_gemm_dpas() : ConvolutionKernelBase("convolution_gpu_1x1_gemm_DPAS") {}
         virtual ~ConvolutionKernel_1x1_gemm_dpas() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
+        JitConstants GetJitConstants(const convolution_params& params, DispatchData kd) const override;
         DispatchData SetDefault(const convolution_params& arg, int autoTuneIndex = -1) const override;
         bool Validate(const Params& p, const optional_params& o) const override;
         virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&) const override
         {
             return{
-                WeightsLayout::oiyx,
-                WeightsLayout::yxio,
-                WeightsLayout::iyxo,
-                WeightsLayout::oyxi,
+                WeightsLayout::os_is_yx_isa8_osv8_isv4,
             };
         }
     };

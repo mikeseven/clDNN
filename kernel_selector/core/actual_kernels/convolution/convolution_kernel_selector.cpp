@@ -57,7 +57,7 @@ namespace kernel_selector
         Attach<ConvolutionKernel_bfyx_1x1_gemm_buf>();
         Attach<ConvolutionKernel_DPAS>();
         Attach<ConvolutionKernel_DPAS_blocks>();
-//        Attach<ConvolutionKernel_1x1_gemm_dpas>();
+        Attach<ConvolutionKernel_1x1_gemm_dpas>();
         //Attach<ConvolutionKernel_Tutorial>(); //In order to use this implementation for tutorial purposes please uncomment this line
     }
 

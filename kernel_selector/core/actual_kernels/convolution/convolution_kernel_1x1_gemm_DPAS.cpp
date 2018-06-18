@@ -60,6 +60,15 @@ namespace kernel_selector {
         if (params.weights.X().v != 1 || params.weights.Y().v != 1)
             return false;
 
+        if (params.convParams.stride.x != 1 || params.convParams.stride.y != 1)
+            return false;
+
+        if (params.convParams.padding.x != 0 || params.convParams.padding.y != 0)
+            return false;
+
+        if (params.convParams.split != 1)
+            return false;
+
         return true;
     }
 
@@ -67,7 +76,7 @@ namespace kernel_selector {
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
-        // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
+        // Sub-group size used by "convolution_1x1_gemm_DPAS" kernel.
         constexpr size_t sub_group_size = 8;
 
         const auto of_maps = arg.output.Feature().v;
@@ -78,15 +87,29 @@ namespace kernel_selector {
 
         runInfo.effiency = FORCE_PRIORITY_1;
 
-        runInfo.gws0 = arg.output.X().v;
-        runInfo.gws1 = arg.output.Y().v;
-        runInfo.gws2 = of_threads_per_batch * arg.output.Batch().v;
+        runInfo.gws0 = RoundUp(arg.output.X().v * arg.output.Y().v, 8) / 8;
+        runInfo.gws1 = of_threads_per_batch * arg.output.Batch().v;
+        runInfo.gws2 = 1;
 
         runInfo.lws0 = 1;
-        runInfo.lws1 = 1;
-        runInfo.lws2 = sub_group_size;
+        runInfo.lws1 = sub_group_size;
+        runInfo.lws2 = 1;
 
         return runInfo;
+    }
+
+    JitConstants ConvolutionKernel_1x1_gemm_dpas::GetJitConstants(const convolution_params& params, DispatchData runInfo) const
+    {
+        auto jit = Parent::GetJitConstants(params, runInfo);
+
+        jit.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", runInfo.lws1));
+
+        // pitch for special block format used in this kernel
+        const size_t ifm_32_aligned = Align(params.weights.IFM().v, 32);
+        const size_t filter_ofm_block_pitch = (ifm_32_aligned / 32) * params.weights.X().v * params.weights.Y().v * 4 * 8 * 8;
+        jit.AddConstant(MakeJitConstant("FILTER_OFM_BLOCK_PITCH", filter_ofm_block_pitch));
+
+        return jit;
     }
 
     KernelsData ConvolutionKernel_1x1_gemm_dpas::GetKernelsData(const Params& params, const optional_params& options) const
