@@ -83,8 +83,6 @@ namespace kernel_selector {
         const size_t of_threads_per_batch = RoundUp(of_maps, sub_group_size);
         runInfo.cldnnStyle.leftovers = of_threads_per_batch - of_maps;
 
-        const auto cp = arg.convParams;
-
         runInfo.effiency = FORCE_PRIORITY_1;
 
         runInfo.gws0 = RoundUp(arg.output.X().v * arg.output.Y().v, 8) / 8;
