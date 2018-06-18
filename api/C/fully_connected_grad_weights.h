@@ -36,6 +36,8 @@ CLDNN_BEGIN_PRIMITIVE_DESC(fully_connected_grad_weights)
 cldnn_primitive_id weights;
 /// @brief Primitive id containing bias data.
 cldnn_primitive_id bias;
+/// @brief Primitive id containing fully connected gradient data.
+cldnn_primitive_id fc_grad;
 CLDNN_END_PRIMITIVE_DESC(fully_connected_grad_weights)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(fully_connected_grad_weights);

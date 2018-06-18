@@ -82,6 +82,8 @@ public:
         }
     }
 
+    mutable_data create_filled_weights(std::string id, layout& layout);
+
 private:
     uint32_t prog_id = 0;
 

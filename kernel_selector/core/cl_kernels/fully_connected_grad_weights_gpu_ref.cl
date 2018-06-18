@@ -15,7 +15,8 @@
 
 #include "include/include_all.cl"
 
-#define LR_RATE 0.01f
+#define LR_RATE 0.00001f
+#define DECAY_RATE 0.0005f
 
 KERNEL(fully_connected_grad_weights_gpu_ref)(
     const __global INPUT0_TYPE* input_grad,
@@ -33,19 +34,32 @@ KERNEL(fully_connected_grad_weights_gpu_ref)(
     const uint ifm           = ofm_ifm % FILTER_IFM_NUM;
     const uint ofm           = ofm_ifm / FILTER_IFM_NUM;
 
-    ACCUMULATOR_TYPE dotProd = 0;
+    ACCUMULATOR_TYPE grad_w = 0;
+    ACCUMULATOR_TYPE grad_b = 0;
 
     const uint filter_idx = GET_FILTER_INDEX(FILTER, ofm, ifm, id_y, id_x);
-    const uint input_grad_idx = GET_DATA_INDEX(INPUT0, 0, 0, 0, ofm);
-    const uint input_idx = GET_DATA_INDEX(INPUT1, 0, ifm, id_y, id_x);
+    for (uint i = 0; i < INPUT0_BATCH_NUM; i++)
+    {
+        const uint input_grad_idx = GET_DATA_INDEX(INPUT0, i, 0, 0, ofm);
+        const uint input_idx = GET_DATA_INDEX(INPUT1, i, ifm, id_y, id_x);
+        UNIT_TYPE grad = input_grad[input_grad_idx];
+        grad_w += input[input_idx] * grad;
+#if BIAS_TERM
+        if(ifm == 0 && id_x == 0 && id_y == 0)
+        {
+            grad_b += grad;
+        }
+#endif
+    }
 
-    UNIT_TYPE grad = input_grad[input_grad_idx];
-    weights[filter_idx] += LR_RATE * input[input_idx] * grad;
+    weights[filter_idx] -= LR_RATE * grad_w  + DECAY_RATE * LR_RATE * weights[filter_idx];
 
 #if BIAS_TERM
     if(ifm == 0 && id_x == 0 && id_y == 0)
     {
-        bias[ofm] += LR_RATE * grad;
+            bias[ofm] -= LR_RATE * grad_b;
     }
 #endif
+    
+
 }

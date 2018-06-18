@@ -262,7 +262,8 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         softmax_loss_grad,
         ip1_relu,
         ip2_w,
-        ip2_b
+        ip2_b,
+        ip2_grad_input
     );
 
     auto ip1_relu_grad = activation_grad("ip1_relu_grad",
@@ -281,7 +282,8 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         ip1_relu_grad,
         pool2,
         ip1_w,
-        ip1_b
+        ip1_b,
+        ip1_grad_input
     );
 
     auto pool2_grad = max_unpooling("pool2_grad",
@@ -302,6 +304,7 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         pool1,
         { conv2_w },
         { conv2_b },
+        conv2_grad_input,
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
         { 1, 1, 1, 1 });
@@ -318,6 +321,7 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         scale_input,
         { conv1_w },
         { conv1_b },
+        "",
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
         { 1, 1, 1, 1 });

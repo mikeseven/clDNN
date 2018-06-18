@@ -48,6 +48,8 @@ uint32_t split;
 cldnn_primitive_id_arr weights;
 /// @brief Array of primitive ids containing bias data. Size of array should be equivalent to @p split or should be empty (if not using bias).
 cldnn_primitive_id_arr bias;
+/// @brief Primitive id containing convolution gradient data.
+cldnn_primitive_id conv_grad;
 CLDNN_END_PRIMITIVE_DESC(convolution_grad_weights)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(convolution_grad_weights);

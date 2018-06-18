@@ -61,6 +61,8 @@ namespace kernel_selector
         runInfo->lws1 = local[1];
         runInfo->lws2 = 1;
 
+        runInfo->effiency = FORCE_PRIORITY_1;
+
         return std::move(runInfo);
     }
 
@@ -68,6 +70,6 @@ namespace kernel_selector
     {
         return GetCommonKernelsData(params, options, DataLayout::bfyx,
         { WeightsLayout::oiyx, WeightsLayout::oyxi, WeightsLayout::iyxo, WeightsLayout::yxio }
-        );
+        , FORCE_PRIORITY_1);
     }
 }

@@ -50,6 +50,7 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
         const primitive_id& input,
         const std::vector<primitive_id>& weights,
         const std::vector<primitive_id>& bias,
+        const primitive_id& conv_grad = "",
         tensor stride = { 1, 1, 1, 1 },
         tensor input_offset = { 0, 0, 0, 0 },
         tensor dilation = { 1, 1, 1, 1 },
@@ -63,6 +64,7 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
         , stride(stride)
         , _weights(weights)
         , _bias(bias)
+        , conv_grad(conv_grad)
     {
     }
 
@@ -79,6 +81,7 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
         const primitive_id& input_grad,
         const primitive_id& input,
         const std::vector<primitive_id>& weights,
+        const primitive_id& conv_grad = "",
         tensor stride = { 1, 1, 1, 1 },
         tensor input_offset = { 0, 0, 0, 0 },
         tensor dilation = { 1, 1, 1, 1 },
@@ -92,6 +95,7 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
         , stride(stride)
         , _weights(weights)
         , _bias(std::vector<primitive_id>(0))
+        , conv_grad(conv_grad)
     {
     }
 
@@ -105,6 +109,7 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
         , stride(dto->stride)
         , _weights(dto->weights)
         , _bias(dto->bias)
+        , conv_grad(dto->conv_grad)
     {
         if (!dto->split || (weights.size() != bias.size() && bias.size() != 0) || dto->split != weights.size())
             throw std::invalid_argument("Invalid convolution_grad_weights dto: bad split value");
@@ -114,6 +119,8 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
     fixed_size_vector_ref weights;
     /// @brief List of primitive ids containing bias data.
     fixed_size_vector_ref bias;
+    /// @brief Primitive id containing convolution gradient data.
+    primitive_id conv_grad;
     /// @brief Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution_grad_weights window should start calculations.
     tensor input_offset;
     /// @brief Defines gaps in the input - dilation rate k=1 is normal convolution, k=2 means skipping one pixel per input, k=4 means skipping 3 pixels.
@@ -133,11 +140,14 @@ protected:
     std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override
     {
         std::vector<std::reference_wrapper<const primitive_id>> ret;
-        ret.reserve(weights.size() + bias.size());
+        ret.reserve(weights.size() + bias.size() + conv_grad.empty() ? 0 : 1);
         for (auto& w : weights)
             ret.push_back(w);
         for (auto& b : bias)
             ret.push_back(b);
+
+        if (!conv_grad.empty())
+            ret.push_back(conv_grad);
 
         return ret;
     }
@@ -150,6 +160,7 @@ protected:
         dto.dilation = dilation;
         dto.split = split();
         dto.stride = stride;
+        dto.conv_grad = conv_grad.c_str();
     }
 };
 /// @}

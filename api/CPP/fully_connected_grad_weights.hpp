@@ -46,11 +46,13 @@ struct fully_connected_grad_weights : public primitive_base<fully_connected_grad
         const primitive_id& input,
         const primitive_id& weights,
         const primitive_id& bias = "",
+        const primitive_id& fc_grad = "",
         const padding& output_padding = padding()
         )
         : primitive_base(id, { input_grad, input }, output_padding)
         , weights(weights)
         , bias(bias)
+        , fc_grad(fc_grad)
     {
     }
 
@@ -59,6 +61,7 @@ struct fully_connected_grad_weights : public primitive_base<fully_connected_grad
         :primitive_base(dto)
         , weights(dto->weights)
         , bias(dto->bias)
+        , fc_grad(dto->fc_grad)
     {
     }
 
@@ -66,20 +69,27 @@ struct fully_connected_grad_weights : public primitive_base<fully_connected_grad
     primitive_id weights;
     /// @brief Primitive id containing bias data.
     primitive_id bias;
+    /// @brief Primitive id containing fully connected gradient data.
+    primitive_id fc_grad;
 
 protected:
     std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override 
     {
-        if (bias.empty())
+        if (bias.empty() && fc_grad.empty())
             return{ weights };
+        else if (fc_grad.empty())
+            return{ weights, bias };
+        else if (bias.empty())
+            return{ weights, fc_grad };
         else
-            return{ weights, bias }; 
+            return{ weights, bias, fc_grad };
     }
 
     void update_dto(dto& dto) const override
     {
         dto.weights = weights.c_str();
         dto.bias = bias.c_str();
+        dto.fc_grad = fc_grad.c_str();
     }
 };
 /// @}

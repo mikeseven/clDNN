@@ -304,12 +304,13 @@ void load_data_from_file_list_lenet(
 
     auto memory_layout = memory.get_layout();
     auto dim = memory_layout.size.spatial;
-
+    int count = 0;
     if (!cldnn::data_type_match<MemElemTy>(memory_layout.data_type))
         throw std::runtime_error("Memory format expects different type of elements than specified");
-
     for (auto img : images_list)
     {
+        if (count == 1)
+            break;
         std::ifstream rfile(img, std::ios::binary);
 
         if (rfile)
@@ -332,13 +333,13 @@ void load_data_from_file_list_lenet(
             cols = swap_endian(cols);
             auto img_size = rows * cols;
 
-            std::vector<unsigned char> tmpBuffer(img_size);
+            std::vector<unsigned char> tmpBuffer(img_size * images_number);
 
             rfile.seekg(images_offset * img_size, rfile.cur);
-            rfile.read(reinterpret_cast<char *>(&tmpBuffer[0]), img_size);
+            rfile.read(reinterpret_cast<char *>(&tmpBuffer[0]), img_size * images_number);
             rfile.close();
 
-            for (uint32_t i = 0; i < img_size; ++i) {
+            for (uint32_t i = 0; i < img_size * images_number; ++i) {
                 *it = static_cast<MemElemTy>(tmpBuffer[i]);
                 it++;
             }
@@ -366,14 +367,14 @@ void load_data_from_file_list_lenet(
                     rfile_labels.read(reinterpret_cast<char*>(&num_items), 4);
                     num_items = swap_endian(num_items);
 
-                    std::vector<unsigned char> tmpBuffer(sizeof(char));
+                    std::vector<unsigned char> tmpBuffer(sizeof(char)*images_number);
 
                     rfile_labels.seekg(images_offset, rfile_labels.cur);
-                    rfile_labels.read(reinterpret_cast<char *>(&tmpBuffer[0]), 1);
+                    rfile_labels.read(reinterpret_cast<char *>(&tmpBuffer[0]), images_number);
                     rfile_labels.close();
 
-                    for (uint32_t i = 0; i < 1; ++i) {
-                        *labels_it = static_cast<MemElemTy>(tmpBuffer[0]);
+                    for (uint32_t i = 0; i < images_number; ++i) {
+                        *labels_it = static_cast<MemElemTy>(tmpBuffer[i]);
                         labels_it++;
                     }
                 }
@@ -381,6 +382,7 @@ void load_data_from_file_list_lenet(
         }
         else
             throw std::runtime_error("Cannot read image for lenet topology.");
+        count++;
     }
 }
 
@@ -488,7 +490,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
 
     if (!ep.run_until_primitive_name.empty())
     {
-        outputs.push_back(ep.run_until_primitive_name); //set the user custom primitive as output (works only while not in debug moge, because in debug mode every primitive is an output)
+        outputs.push_back(ep.run_until_primitive_name); //set the user custom primitive as output (works only while not in debug mode, because in debug mode every primitive is an output)
         if(ep.dump_hidden_layers)
             throw std::runtime_error("ERROR: Can't dump hidden layers when custom output is set.");
     }
@@ -522,7 +524,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
         outputs.push_back("ip1_weights.nnd");
         outputs.push_back("ip2_bias.nnd");
         outputs.push_back("ip2_weights.nnd");
-
+        outputs.push_back("softmax");
         outputs.push_back("ip2_grad_weights");
         outputs.push_back("ip1_grad_weights");
         outputs.push_back("conv2_grad_weights");
@@ -638,7 +640,7 @@ bool do_log_energy(const execution_params &ep, CIntelPowerGadgetLib& energyLib)
 std::chrono::nanoseconds execute_cnn_topology(cldnn::network network,
                                                 const execution_params &ep,
                                                 CIntelPowerGadgetLib& energyLib,
-                                                cldnn::memory& output)
+                                                cldnn::memory& output, cldnn::memory* labels = nullptr)
 {
     bool log_energy = do_log_energy(ep, energyLib);
 
@@ -737,6 +739,7 @@ std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& tim
         {
             file::serialize(p.second.get_memory(), join_path(ep.weights_dir, p.first));
         }
+        output = outputs.at("softmax").get_memory();
     }
 
     auto execution_time(timer_execution.uptime());
@@ -987,34 +990,63 @@ void run_topology(const execution_params &ep)
                 }
 
             }
-			else if(ep.topology_name == "lenet")
+            //for lenet use byte read to read images
+            /*else
             {
                 if (ep.use_half)
                     load_data_from_file_list_lenet<half_t>(images_in_batch, input, 0, 1, ep.topology_name == "lenet_train", labels);
                 else
                     load_data_from_file_list_lenet(images_in_batch, input, 0, 1, ep.topology_name == "lenet_train", labels);
-            }
+            }*/
 
             double time_in_sec = 0.0;
             if (ep.topology_name != "lenet_train")
             {
-                network.set_input_data("input", input);
-                auto time = execute_topology(network, ep, energyLib, output);
-                time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
+                float acc = 0;
+                for (int i = 0; i < 10000; i++)
+                {
+                    load_data_from_file_list_lenet(images_in_batch, input, i, batch_size, true, labels);
+                    network.set_input_data("input", input);
+                    auto outputs = network.execute();
+                    auto o = outputs.at("output").get_memory().pointer<float>();
+                    auto l = labels.pointer<float>();
+                    for (int j = 0; j < o.size(); j++)
+                    {
+                        if (j == l[0])
+                        {
+                            if (o[j] > 0.6)
+                                acc++;
+                        }
+                        std::cout << i << std::endl;
+                    }
+                }
+                std::cout << acc/10000 << std::endl;
+                //auto time = execute_topology(network, ep, energyLib, output, &labels);
+                //time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
             }
             else if(ep.topology_name == "lenet")
             {
-                for (uint32_t learn_it = 0; learn_it < ep.image_number; ++learn_it)
+                double loss = 0;
+                for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
                 {
                     if (ep.use_half)
-                        load_data_from_file_list_lenet<half_t>(images_in_batch, input, learn_it, ep.image_offset, true, labels);
+                        load_data_from_file_list_lenet<half_t>(images_in_batch, input, learn_it, batch_size, true, labels);
                     else
-                        load_data_from_file_list_lenet(images_in_batch, input, learn_it, ep.image_offset, true, labels);
+                        load_data_from_file_list_lenet(images_in_batch, input, learn_it, batch_size, true, labels);
 
                     network.set_input_data("input", input);
                     network.set_input_data("labels", labels);
-                    auto time = execute_topology(network, ep, energyLib, output);
+                    auto time = execute_topology(network, ep, energyLib, output, nullptr);
                     time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
+                    auto expected = labels.pointer<float>();
+                    auto vals = output.pointer<float>();
+                    for (int b = 0; b < batch_size; b++)
+                    {
+                        auto e = expected[b];
+                        loss += -log(vals[b * 10 + e]);
+                    }
+                    double average = loss / (learn_it - ep.image_offset + batch_size);
+                    std::cout << "Iter: " << learn_it - ep.image_offset << " " << "Loss = " << average << std::endl;
                 }
 
             }
@@ -1115,7 +1147,7 @@ void run_topology(const execution_params &ep)
             network.set_input_data(inp_data.first, mem);
         }
 		
-        auto time = execute_cnn_topology(network, ep, energyLib, output);
+        auto time = execute_cnn_topology(network, ep, energyLib, output, nullptr);
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
         if (time_in_sec != 0.0)
         {
