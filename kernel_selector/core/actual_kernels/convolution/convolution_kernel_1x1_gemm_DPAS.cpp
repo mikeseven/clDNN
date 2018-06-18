@@ -22,14 +22,8 @@ namespace kernel_selector {
     ParamsKey ConvolutionKernel_1x1_gemm_dpas::GetSupportedKey() const
     {
         ParamsKey k;
-        k.EnableInputDataType(Datatype::F16);
-        k.EnableInputDataType(Datatype::F32);
         k.EnableInputDataType(Datatype::INT8);
-        k.EnableOutputDataType(Datatype::F16);
-        k.EnableOutputDataType(Datatype::F32);
         k.EnableOutputDataType(Datatype::INT8);
-        k.EnableInputWeightsType(WeightsType::F16);
-        k.EnableInputWeightsType(WeightsType::F32);
         k.EnableInputWeightsType(WeightsType::INT8);
         k.EnableInputLayout(DataLayout::byxf_af32);
         k.EnableOutputLayout(DataLayout::byxf_af32);
@@ -57,13 +51,19 @@ namespace kernel_selector {
 
         const auto& params = static_cast<const convolution_params&>(p);
 
-        if (params.weights.X().v != 1 || params.weights.Y().v != 1)
+        if (params.convParams.filterSize.x != 1 || params.convParams.filterSize.y != 1)
             return false;
 
         if (params.convParams.stride.x != 1 || params.convParams.stride.y != 1)
             return false;
 
         if (params.convParams.padding.x != 0 || params.convParams.padding.y != 0)
+            return false;
+
+        const auto& input = params.inputs[0];
+
+        // we do not support padded input
+        if (input.X().pad.Total() != 0 || input.Y().pad.Total() != 0)
             return false;
 
         if (params.convParams.split != 1)
