@@ -44,8 +44,8 @@ public:
     float get_output_qf() const { return output_qf; }
 
 private:
-    bool output_cf; // to know if we have callibration factors
     float output_qf;
+    bool output_cf; // to know if we have calibration factors
 };
 
 using eltwise_node = typed_program_node<eltwise>;
