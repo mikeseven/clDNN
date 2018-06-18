@@ -52,7 +52,7 @@ namespace kernel_selector
 
         runInfo.lws0 = 1;
         runInfo.lws1 = 1;
-        runInfo.lws2 = 8;
+        runInfo.lws2 = simdSize;
 
         return runInfo;
     }

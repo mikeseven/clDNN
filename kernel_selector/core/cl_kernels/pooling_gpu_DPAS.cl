@@ -34,7 +34,7 @@ inline int FUNC(apply_pooling)(int tmp, int in)
 }
 
 KERNEL(pooling_gpu_DPAS)(
-    const __global int* input,
+    const __global UNIT_TYPE* input,
     __global UNIT_TYPE* output)
 {
     const uint x    = (uint)get_global_id(0);
@@ -80,8 +80,8 @@ KERNEL(pooling_gpu_DPAS)(
                 if(!zero)
                 {
                     const uint input_idx = batch_and_feature_offset + input_offset_y*INPUT0_Y_PITCH + input_offset_x*INPUT0_X_PITCH;
-                    
-                    char4 input_data = as_char4(input[input_idx/4]);
+
+                    char4 input_data = as_char4(intel_sub_group_block_read((const __global uint*)(input + input_idx)));
                     result[0] = FUNC_CALL(apply_pooling)(result[0], (int)input_data[0]);
                     result[1] = FUNC_CALL(apply_pooling)(result[1], (int)input_data[1]);
                     result[2] = FUNC_CALL(apply_pooling)(result[2], (int)input_data[2]);
@@ -106,7 +106,7 @@ KERNEL(pooling_gpu_DPAS)(
     {
         for(uint i = 0; i < POOL_SIZE_X; i++)
         {
-            char4 input_data = as_char4(input[input_idx/4]);
+            char4 input_data = as_char4(intel_sub_group_block_read((const __global uint*)(input + input_idx)));
             result[0] = FUNC_CALL(apply_pooling)(result[0], (int)input_data[0]);
             result[1] = FUNC_CALL(apply_pooling)(result[1], (int)input_data[1]);
             result[2] = FUNC_CALL(apply_pooling)(result[2], (int)input_data[2]);
