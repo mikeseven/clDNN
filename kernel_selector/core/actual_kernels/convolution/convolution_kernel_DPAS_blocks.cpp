@@ -41,6 +41,22 @@ namespace kernel_selector {
         return k;
     }
 
+    bool ConvolutionKernel_DPAS_blocks::Validate(const Params& p, const optional_params& o) const
+    {
+        if (!Parent::Validate(p, o))
+        {
+            return false;
+        }
+
+        const convolution_params& params = static_cast<const convolution_params&>(p);
+
+        // this kernel is designed for quantization use case
+        if (!params.convParams.int8_quantization)
+            return false;
+
+        return true;
+    }
+
     static void shrink_blocks_to_output_size(size_t output_x, size_t output_y, size_t &block_x, size_t &block_y)
     {
         // how many elements we will compute in each dimension
@@ -213,7 +229,9 @@ namespace kernel_selector {
     KernelsData ConvolutionKernel_DPAS_blocks::GetKernelsData(const Params& params, const optional_params& options) const
     {
         KernelsData kd = GetCommonKernelsData(params, options);
-        kd[0].estimatedTime = FORCE_PRIORITY_2;
-        return kd;//return GetCommonKernelsData(params, options);
+        if (!kd.empty())
+            kd[0].estimatedTime = FORCE_PRIORITY_2;
+    
+        return kd;
     }
 }

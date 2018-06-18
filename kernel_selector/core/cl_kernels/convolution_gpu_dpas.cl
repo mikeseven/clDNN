@@ -49,7 +49,11 @@ KERNEL(convolution_DPAS)(
     const uint b = get_global_id(2) / FILTER_OFM_ALIGNED;
 #endif
 
+#if QUANTIZATION_TERM
     int dotProd = 0;
+#else
+    UNIT_TYPE dotProd = UNIT_VAL_ZERO;
+#endif
 
     const int input_x = x * STRIDE_SIZE_X - PADDING_SIZE_X;
     const int input_y = y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
@@ -104,16 +108,24 @@ KERNEL(convolution_DPAS)(
 #elif BIAS_PER_OFM
     const uint bias_index = f;
 #endif
+#if QUANTIZATION_TERM
 #if CALIBRATION_TERM
     dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
 #else  // CALIBRATION_TERM
     dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * O_QF);
 #endif // CALIBRATION_TERM
+#else // QUANTIZATION_TERM
+    dotProd += (UNIT_TYPE)biases[bias_index];
+#endif // QUANTIZATION_TERM
 #endif // BIAS_TERM
 
     const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * OUTPUT_FEATURE_NUM;
     const uint dst_index = GET_DATA_INDEX(OUTPUT, b, f, y, x) + out_split_offset;
+#if QUANTIZATION_TERM
     output[dst_index] = ACTIVATION(convert_char(dotProd), NL_M, NL_N);
+#else
+    output[dst_index] = ACTIVATION(dotProd, NL_M, NL_N);
+#endif  
 }
 
 #undef FILTER_IFM_DPAS_NUM

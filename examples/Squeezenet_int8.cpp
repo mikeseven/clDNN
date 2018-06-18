@@ -240,7 +240,7 @@ topology build_squeezenet_quant(const std::string& weights_dir, const cldnn::eng
 
     add_calibration(engine, weights_dir, "conv1", reorder_calib, conv1_calib, topology);
     auto conv1_calibrator = reorder("conv1_calib", "reorder",
-        format::bfyx, data_types::i8, reorder_calib, cldnn_reorder_mean_mode::mean_mul);
+        format::byxf_af32, data_types::i8, reorder_calib, cldnn_reorder_mean_mode::mean_mul);
     auto conv1_bias = file::create({ engine, join_path(weights_dir, "conv1_bias.nnd")});
     auto conv1 = convolution(
         "conv1",
