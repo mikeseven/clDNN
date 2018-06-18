@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-#include "convolution_kernel_1x1_gemm_dpas.h"
+#include "convolution_kernel_1x1_gemm_DPAS.h"
 #include "kernel_selector_utils.h"
 
 namespace kernel_selector {
