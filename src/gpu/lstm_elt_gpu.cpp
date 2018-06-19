@@ -46,11 +46,6 @@ protected:
     {
         bool res = parent::validate(instance);
 
-        // [ARIEL] TODO: check for types here ??
-        // Check whether all memory elements use the same unit type (FP16 or FP32).
-        //CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory().get_layout().data_type, "output memory", instance.output_memory().get_layout().data_type, "");
-        //CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory().get_layout().data_type, "filter memory", instance.weights_memory(0).get_layout().data_type, "");
-
         return res;
     }
 public:
@@ -65,6 +60,8 @@ public:
             const auto& cell_layout = arg.cell().get_output_layout();
             lstm_elt_params.SetCell(convert_data_tensor(cell_layout));
         }
+
+        lstm_elt_params.SetOffsetOrder(arg.offset_order());
 
         auto& kernel_selector = kernel_selector::lstm_elt_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(lstm_elt_params, lstm_elt_optional_params);

@@ -46,18 +46,35 @@ namespace {
     }
 }
 
+struct offset_order {
+    size_t it, ot, ft, zt;
+    offset_order(size_t scale, const cldnn_lstm_offset_order& t = cldnn_lstm_offset_order_iofz) {
+        static const std::map<cldnn_lstm_offset_order, std::vector<size_t>> offset_map {
+            {cldnn_lstm_offset_order_iofz, {0, 1, 2, 3}},
+            {cldnn_lstm_offset_order_ifoz, {0, 2, 1, 3}}
+        };
+        std::vector<size_t> v = offset_map.at(t);
+        it = v[0] * scale;
+        ot = v[1] * scale;
+        ft = v[2] * scale;
+        zt = v[3] * scale;
+    }
+};
+cldnn_lstm_offset_order default_offset_type = cldnn_lstm_offset_order_iofz;
+
 // [ARIEL] TODO: use move semantics when required
 template <typename T>
-VVVVF<T> lstm_elt_reference(VVVVF<T> &tempGEMM, VVVVF<T> &cell, bool hasCell = true) {
+VVVVF<T> lstm_elt_reference(VVVVF<T>& tempGEMM, VVVVF<T>& cell, bool hasCell = true) {
     size_t hidden_size = tempGEMM[0][0][0].size() /  4;
     size_t batch_size = tempGEMM[0][0].size();
     VVVVF<T> tempOut(2, VVVF<T>(1, VVF<T>(batch_size, VF<T>(hidden_size))));
+    offset_order off(hidden_size, default_offset_type);
 
     for (size_t b = 0; b < batch_size; ++b) {
-        T *ft = &tempGEMM[0][0][b][0];
-        T *it = &tempGEMM[0][0][b][hidden_size];
-        T *ot = &tempGEMM[0][0][b][2 * hidden_size];
-        T *zt = &tempGEMM[0][0][b][3 * hidden_size];
+        T *it = &tempGEMM[0][0][b][off.it];
+        T *ot = &tempGEMM[0][0][b][off.ot];
+        T *ft = &tempGEMM[0][0][b][off.ft];
+        T *zt = &tempGEMM[0][0][b][off.zt];
         for (size_t h = 0; h < hidden_size; ++h) {
             T val = sigmoid(it[h]) * std::tanh((float)zt[h]);
             if (hasCell) {
@@ -71,7 +88,7 @@ VVVVF<T> lstm_elt_reference(VVVVF<T> &tempGEMM, VVVVF<T> &cell, bool hasCell = t
 }
 
 template <typename T>
-VVVVF<T> lstm_gemm_reference(VVVVF<T> &input, VVVVF<T> &weights, VVVVF<T> &recurrent, VVVVF<T> &bias, VVVVF<T> &hidden,
+VVVVF<T> lstm_gemm_reference(VVVVF<T>& input, VVVVF<T>& weights, VVVVF<T>& recurrent, VVVVF<T>& bias, VVVVF<T>& hidden,
                               bool hasBias = true, bool hasHidden = true) {
     size_t input_size = input[0][0][0].size();
     size_t hidden_size = hidden[0][0][0].size();
@@ -101,7 +118,7 @@ VVVVF<T> lstm_gemm_reference(VVVVF<T> &input, VVVVF<T> &weights, VVVVF<T> &recur
 
 
 template<typename T>
-void print(const std::string& s, VVVVF<T> &input) {
+void print(const std::string& s, VVVVF<T>& input) {
     printf("%s -------------\n", s.c_str());
     printf("Size = [%d, %d, %d, %d]\n", (int)input.size(), (int)input[0].size(), (int)input[0][0].size(), (int)input[0][0][0].size());
     for (size_t b = 0; b < input.size(); ++b) {
@@ -118,7 +135,7 @@ void print(const std::string& s, VVVVF<T> &input) {
 }
 
 template<typename T>
-VVVVF<T> lstm_split_reference(VVVVF<T> &input, size_t idx, size_t bufferId) {
+VVVVF<T> lstm_split_reference(VVVVF<T>& input, size_t idx, size_t bufferId) {
     VVVVF<T> tempOut;
     switch (idx) {
         case 0:
@@ -138,8 +155,8 @@ VVVVF<T> lstm_split_reference(VVVVF<T> &input, size_t idx, size_t bufferId) {
 }
 
 template <typename T>
-void lstm_reference(VVVVF<T> &input, VVVVF<T> &hidden, VVVVF<T> &cell, VVVVF<T> &weights, VVVVF<T> &recurrent, VVVVF<T> &bias,
-                         VVVVF<T> &output, VVVVF<T> &last_hidden, VVVVF<T> & last_cell,
+void lstm_reference(VVVVF<T>& input, VVVVF<T>& hidden, VVVVF<T>& cell, VVVVF<T>& weights, VVVVF<T>& recurrent, VVVVF<T>& bias,
+                         VVVVF<T>& output, VVVVF<T>& last_hidden, VVVVF<T>& last_cell,
                          bool hasBias = true, bool hasInitialHidden = true, bool hasInitialCell = true) {
 
     size_t sequence_len = input[0].size();
@@ -458,7 +475,7 @@ void generic_lstm_gpu_test(int sequence_len, int direction, int batch_size, int 
     if (hasInitialHidden) topology.add(input_layout("hidden", hidden.get_layout()));
     if (hasInitialCell) topology.add(input_layout("cell", cell.get_layout()));
     topology.add(lstm("lstm", lstm_inputs, "weights", "recurrent",
-                        hasBias ? "biases" : "", hasInitialHidden ? "hidden" : "", hasInitialCell ? "cell" : ""));
+            hasBias ? "biases" : "", hasInitialHidden ? "hidden" : "", hasInitialCell ? "cell" : "", "", 0, 0, default_offset_type));
 
     cldnn::build_options options;
     network network(engine, topology);
@@ -572,6 +589,13 @@ TEST(lstm_gpu, generic_lstm_no_hidden_cell_f32) {
 TEST(lstm_gpu, generic_lstm_no_bias_hidden_cell_f32) {
     generic_lstm_gpu_test<float>(3, 1, 5, 4, 3, false, false, false);
 }
+
+TEST(lstm_gpu, generic_lstm_offset_order_ifoz_f32) {
+    default_offset_type = cldnn_lstm_offset_order_ifoz;
+    generic_lstm_gpu_test<float>(3, 1, 3, 3, 2, true, true, true);
+    default_offset_type = cldnn_lstm_offset_order_iofz;
+}
+
 
 // TODO: Enable sampling testing once Win64 build is fixed sampling testing
 // template<typename T>
