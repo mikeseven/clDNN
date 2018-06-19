@@ -296,10 +296,12 @@ process
     try
     {
         $_weightNodes    = @(Select-Xml -LiteralPath $_modelTopologyPath '/net/layers/layer/weights' -ErrorAction Stop);
+        $_weightBNodes   = @(Select-Xml -LiteralPath $_modelTopologyPath '/net/layers/layer/blobs/weights' -ErrorAction Stop);
         $_biasNodes      = @(Select-Xml -LiteralPath $_modelTopologyPath '/net/layers/layer/biases' -ErrorAction Stop);
+        $_biasBNodes     = @(Select-Xml -LiteralPath $_modelTopologyPath '/net/layers/layer/blobs/biases' -ErrorAction Stop);
         $_netVersionNode = @(Select-Xml -LiteralPath $_modelTopologyPath '/net/@version' -ErrorAction SilentlyContinue);
     }
-    catch
+    catch [Exception]
     {
         Write-Error ('Selected model topology file ("{0}") is invalid (not XML).' -f $_modelTopologyPath);
         return;
@@ -318,11 +320,13 @@ process
 
     if ($Filter.Count -eq 0)
     {
-        $_filterSB = { $true; }
+        $_filterSB  = { $true; }
+        $_filterBSB = { $true; }
     }
     else
     {
-        $_filterSB = { $_xpMatch = $_; @($Filter | ? { $_xpMatch.ParentNode.name -like $_ }).Count -gt 0 }
+        $_filterSB  = { $_xpMatch = $_;            @($Filter | ? { $_xpMatch.ParentNode.name -like $_ }).Count -gt 0 }
+        $_filterBSB = { $_xpMatch = $_.ParentNode; @($Filter | ? { $_xpMatch.ParentNode.name -like $_ }).Count -gt 0 }
     }
 
     # Formatting placeholders (file names):
@@ -351,8 +355,10 @@ process
     }
 
     Write-Verbose ('Filtering nodes if necessary: "{0}".' -f $_modelTopologyPath);
-    $_weightNodesFiltered = @($_weightNodes.Node | ? { !$BiasesOnly.IsPresent } | ? $_filterSB); 
-    $_biasNodesFiltered   = @($_biasNodes.Node | ? { !$WeightsOnly.IsPresent } | ? $_filterSB);
+    $_weightNodesFiltered  = @($_weightNodes.Node  | ? { ($_ -ne $null) -and !$BiasesOnly.IsPresent }  | ? $_filterSB);
+    $_weightBNodesFiltered = @($_weightBNodes.Node | ? { ($_ -ne $null) -and !$BiasesOnly.IsPresent }  | ? $_filterBSB);
+    $_biasNodesFiltered    = @($_biasNodes.Node    | ? { ($_ -ne $null) -and !$WeightsOnly.IsPresent } | ? $_filterSB);
+    $_biasBNodesFiltered   = @($_biasBNodes.Node   | ? { ($_ -ne $null) -and !$WeightsOnly.IsPresent } | ? $_filterBSB);
 
     # -----------------------------------------------------------------------------------------------------------------
     # GATHERING INFORMATION ABOUT ITEMS TO DUMP (METADATA)
@@ -360,7 +366,13 @@ process
     Write-Verbose ('Gathering primitive/layer information (weights): "{0}".' -f $_modelTopologyPath);
     $_dumpNameCounters = @{};
 
-    $_weightMeta = @($_weightNodesFiltered | % {
+    $_weightMeta = @(@($_weightNodesFiltered; $_weightBNodesFiltered) | % {
+        $_dataNode = $_;
+        if ($_.ParentNode.LocalName -eq 'blobs')
+        {
+            $_ = $_.ParentNode;
+        }
+
         $_primName = $_.ParentNode.name;
         $_primType = $_.ParentNode.type;
 
@@ -393,7 +405,7 @@ process
         }
         else
         {
-            $_width        = @(Select-Xml '*[contains(name(), ''_data'')]/@kernel-x' -Xml $_.ParentNode);        
+            $_width        = @(Select-Xml '*[contains(name(), ''_data'') or name() = ''data'']/@kernel-x' -Xml $_.ParentNode);        
             if ($_width.Count -gt 0)
             {
                 $_width = [long] $_width[0].Node.value;
@@ -403,7 +415,7 @@ process
                 $_width = Extract-Dim $_input0Dims 0 -Version $_netVersionNode -ResetBatchDim -AllowZero;
             }
 
-            $_height       = @(Select-Xml '*[contains(name(), ''_data'')]/@kernel-y' -Xml $_.ParentNode);
+            $_height       = @(Select-Xml '*[contains(name(), ''_data'') or name() = ''data'']/@kernel-y' -Xml $_.ParentNode);
             if ($_height.Count -gt 0)
             {
                 $_height = [long] $_height[0].Node.value;
@@ -415,7 +427,7 @@ process
 
             $_inFeatCount  = Extract-Dim $_input0Dims 2 -Version $_netVersionNode -ResetBatchDim;
 
-            $_groupCount   = @(Select-Xml '*[contains(name(), ''_data'')]/@group' -Xml $_.ParentNode);
+            $_groupCount   = @(Select-Xml '*[contains(name(), ''_data'') or name() = ''data'']/@group' -Xml $_.ParentNode);
             if ($_groupCount.Count -gt 0)
             {
                 $_groupCount = [long] $_groupCount[0].Node.value;
@@ -425,7 +437,7 @@ process
                 $_groupCount = [long] 1;
             }
 
-            $_outFeatCount = @(Select-Xml '*[contains(name(), ''_data'')]/@out-size' -Xml $_.ParentNode);
+            $_outFeatCount = @(Select-Xml '*[contains(name(), ''_data'') or name() = ''data'']/@out-size' -Xml $_.ParentNode);
             if ($_outFeatCount.Count -gt 0)
             {
                 $_outFeatCount = [long] $_outFeatCount[0].Node.value;
@@ -446,11 +458,12 @@ process
         }
         $_dumpLayout = Get-NndLayout $_primType 'weights';
 
+        $_normPrimName = [Uri]::EscapeDataString($_primName)
         return New-Object PSObject -Property @{
-               DumpFileName        = ($_weightFNameTmpl    -f $_primName, $_dumpNameCounters[$_primName], $_optNameCounter, $_dumpLayout);
-               DumpGroupFileName   = ($_weightGrpFNameTmpl -f $_primName, $_dumpNameCounters[$_primName], $_optNameCounter, $_dumpLayout, $_groupPlaceholderMark);
-               DataOffset          = [long] $_.offset;
-               DataSize            = [long] $_.size;
+               DumpFileName        = ($_weightFNameTmpl    -f $_normPrimName, $_dumpNameCounters[$_primName], $_optNameCounter, $_dumpLayout);
+               DumpGroupFileName   = ($_weightGrpFNameTmpl -f $_normPrimName, $_dumpNameCounters[$_primName], $_optNameCounter, $_dumpLayout, $_groupPlaceholderMark);
+               DataOffset          = [long] $_dataNode.offset;
+               DataSize            = [long] $_dataNode.size;
                InputFeaturesCount  = $_inFeatCount;
                OutputFeaturesCount = $_outFeatCount;
                GroupCount          = $_groupCount;
@@ -465,7 +478,13 @@ process
     Write-Verbose ('Gathering primitive/layer information (biases): "{0}".' -f $_modelTopologyPath);
     $_dumpNameCounters = @{};
 
-    $_biasMeta = @($_biasNodesFiltered | % {
+    $_biasMeta = @(@($_biasNodesFiltered; $_biasBNodesFiltered) | % {
+        $_dataNode = $_;
+        if ($_.ParentNode.LocalName -eq 'blobs')
+        {
+            $_ = $_.ParentNode;
+        }
+
         $_primName = $_.ParentNode.name;
         $_primType = $_.ParentNode.type;
 
@@ -497,7 +516,7 @@ process
         }
         else
         {
-            $_groupCount   = @(Select-Xml '*[contains(name(), ''_data'')]/@group' -Xml $_.ParentNode);
+            $_groupCount   = @(Select-Xml '*[contains(name(), ''_data'') or name() = ''data'']/@group' -Xml $_.ParentNode);
             if ($_groupCount.Count -gt 0)
             {
                 $_groupCount = [long] $_groupCount[0].Node.value;
@@ -507,7 +526,7 @@ process
                 $_groupCount = [long] 1;
             }
 
-            $_outFeatCount = @(Select-Xml '*[contains(name(), ''_data'')]/@out-size' -Xml $_.ParentNode);
+            $_outFeatCount = @(Select-Xml '*[contains(name(), ''_data'') or name() = ''data'']/@out-size' -Xml $_.ParentNode);
             if ($_outFeatCount.Count -gt 0)
             {
                 $_outFeatCount = [long] $_outFeatCount[0].Node.value;
@@ -528,11 +547,12 @@ process
         }
         $_dumpLayout = Get-NndLayout $_primType 'biases';
 
+        $_normPrimName = [Uri]::EscapeDataString($_primName)
         return New-Object PSObject -Property @{
-               DumpFileName        = ($_biasFNameTmpl    -f $_primName, $_dumpNameCounters[$_primName], $_optNameCounter, $_dumpLayout);
-               DumpGroupFileName   = ($_biasGrpFNameTmpl -f $_primName, $_dumpNameCounters[$_primName], $_optNameCounter, $_dumpLayout, $_groupPlaceholderMark);
-               DataOffset          = [long] $_.offset;
-               DataSize            = [long] $_.size;
+               DumpFileName        = ($_biasFNameTmpl    -f $_normPrimName, $_dumpNameCounters[$_primName], $_optNameCounter, $_dumpLayout);
+               DumpGroupFileName   = ($_biasGrpFNameTmpl -f $_normPrimName, $_dumpNameCounters[$_primName], $_optNameCounter, $_dumpLayout, $_groupPlaceholderMark);
+               DataOffset          = [long] $_dataNode.offset;
+               DataSize            = [long] $_dataNode.size;
                InputFeaturesCount  = $_inFeatCount;
                OutputFeaturesCount = $_outFeatCount;
                GroupCount          = $_groupCount;
