@@ -24,10 +24,12 @@ namespace kernel_selector {
     {
     public:
         using Parent = ConvolutionKernelBase;
-        ConvolutionKernel_DPAS_blocks() : ConvolutionKernelBase("convolution_gpu_dpas_blocks") {}
+        ConvolutionKernel_DPAS_blocks();
         virtual ~ConvolutionKernel_DPAS_blocks() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
+        virtual KernelsData GetKernelsDataForAutoTune(const Params& params, const optional_params& options) const override;
+        virtual KernelsData GetTunedKernelsDataByIndex(const Params& params, const optional_params& options, int autoTuneIndex) const override;
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
@@ -41,12 +43,15 @@ namespace kernel_selector {
             };
         }
     private:
-        struct BlockSizes
+        struct AutoTuneOption
         {
             size_t blockWidth;
             size_t blockHeight;
             size_t prefetch;
+            std::string exeMode;
         };
-        BlockSizes getOutputBlockSizes(const Params&) const;
+
+        AutoTuneOption GetAutoTuneOptions(const Params& arg, int autoTuneIndex) const;
+        std::vector<AutoTuneOption> autoTuneOptions = {};
     };
 }

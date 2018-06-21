@@ -17,8 +17,35 @@
 #include "convolution_kernel_DPAS_blocks.h"
 #include "kernel_selector_utils.h"
 
-namespace kernel_selector {
-    
+namespace kernel_selector 
+{
+    ConvolutionKernel_DPAS_blocks::ConvolutionKernel_DPAS_blocks() : ConvolutionKernelBase("convolution_gpu_dpas_blocks")
+    {
+        // Generate the dispatch options to the auto-tuner.
+        std::vector<size_t> blockWidthSizes = { 1,2,4,5,6,8,10,12,14,16,18,20,22,24,26,28,30,32 };
+        std::vector<size_t> blockHeightSizes = { 1,2,3,4,5,6,7,8,9,10 };
+        std::vector<size_t> prefetchSizes = { 1,2,3,4,5,6,8,10 };
+        std::vector<std::string> executionModes = { /*AGE_BASED ,*/ ROUND_ROBIN };
+        const size_t maxBlockSize = 240;
+
+        for (auto blockWidth : blockWidthSizes)
+        {
+            for (auto blockHeight : blockHeightSizes)
+            {
+                for (auto prefetch : prefetchSizes)
+                {
+                    for (auto executionMode : executionModes)
+                    {
+                        if (blockWidth * blockHeight <= maxBlockSize)
+                        {
+                            autoTuneOptions.emplace_back(AutoTuneOption{ blockWidth, blockHeight, prefetch, executionMode });
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     ParamsKey ConvolutionKernel_DPAS_blocks::GetSupportedKey() const
     {
         ParamsKey k;
@@ -73,11 +100,17 @@ namespace kernel_selector {
         block_y -= unused_y / simds_y;
     }
 
-    ConvolutionKernel_DPAS_blocks::BlockSizes ConvolutionKernel_DPAS_blocks::getOutputBlockSizes(const Params& p) const
+    ConvolutionKernel_DPAS_blocks::AutoTuneOption ConvolutionKernel_DPAS_blocks::GetAutoTuneOptions(const Params& p, int autoTuneIndex) const
     {
-        BlockSizes bs = { 0, 0, 0 };
+        if ((autoTuneIndex >= 0) && (autoTuneIndex < (int)autoTuneOptions.size()))
+        {
+            return autoTuneOptions[autoTuneIndex];
+        }
 
-        constexpr size_t sub_group_size = 8;
+        // Sub-group size used by "convolution_gpu_dpas_blocks" kernel.
+        constexpr size_t sub_group_size = 16;
+
+        AutoTuneOption option = { 0, 0, 0, ROUND_ROBIN };
 
         const convolution_params& params = static_cast<const convolution_params&>(p);
         const auto cp = params.convParams;
@@ -86,53 +119,53 @@ namespace kernel_selector {
         {
             if (cp.filterSize.x == 1 && cp.filterSize.y == 1)
             {
-                bs.blockWidth = 8;
-                bs.blockHeight = 1;
-                bs.prefetch = 4;
+                option.blockWidth = 16;
+                option.blockHeight = 1;
+                option.prefetch = 4;
             }
-            //if less than 8 values is required to compute one single row of output
+            //if less than 16 values is required to compute one single row of output
             //then each WI shall compute one single row to maximize reuse within SIMD subgroup (this gives very nice performance results)
             else if (params.output.X().v + (cp.filterSize.x - 1)*cp.dilation.x < sub_group_size)
             {
-                bs.blockWidth = params.output.X().v;
-                bs.blockHeight = 1;
-                bs.prefetch = 4;
+                option.blockWidth = params.output.X().v;
+                option.blockHeight = 1;
+                option.prefetch = 4;
             }
             else if (cp.filterSize.x < 5 && cp.filterSize.y < 5)
             {
-                bs.blockWidth = sub_group_size - cp.filterSize.x + 1;
-                bs.blockHeight = 2;
-                bs.prefetch = 4;
+                option.blockWidth = sub_group_size - cp.filterSize.x + 1;
+                option.blockHeight = 2;
+                option.prefetch = 4;
             }
             else
             {
-                bs.blockWidth = 4;
-                bs.blockHeight = 3;
-                bs.prefetch = 4;
+                option.blockWidth = 4;
+                option.blockHeight = 3;
+                option.prefetch = 4;
             }
         }
         else if (cp.stride.x == 2 && cp.stride.y == 2)
         {
-            bs.blockWidth = 3;
-            bs.blockHeight = 2;
-            bs.prefetch = 4;
+            option.blockWidth = 5;
+            option.blockHeight = 4;
+            option.prefetch = 4;
         }
         else
         {
-            bs.blockWidth = 4;
-            bs.blockHeight = 3;
-            bs.prefetch = 5;
+            option.blockWidth = 4;
+            option.blockHeight = 3;
+            option.prefetch = 5;
             //run_info.effiency = FORCE_PRIORITY_7; // GEMM is better
         }
-/*        bs.blockWidth = 2;
-        bs.blockHeight = 1;*/
+
         // if this is not 1x1 batch1 case then shrink filters, other way we're memory bound and it's best to use 16x1 block sizes
         if (params.convParams.filterSize.x != 1 || params.convParams.filterSize.y != 1 || params.output.Batch().v != 1)
         {
             shrink_blocks_to_output_size(params.output.X().v, params.output.Y().v,
-                bs.blockWidth, bs.blockHeight);
+                option.blockWidth, option.blockHeight);
         }
-        return bs;
+
+        return option;
     }
 
     static std::pair<size_t, size_t> get_byxf_af32_req_input_block_dims(
@@ -164,19 +197,19 @@ namespace kernel_selector {
         return std::make_pair(input_block_array_size, input_block_read_width);
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_DPAS_blocks::SetDefault(const convolution_params& arg, int) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_DPAS_blocks::SetDefault(const convolution_params& arg, int autoTuneIndex) const
     {
-        // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
+        // Sub-group size used by "convolution_gpu_dpas_blocks" kernel.
         constexpr size_t sub_group_size = 8;
 
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
         const auto cp = arg.convParams;
 
-        auto blockSizes = getOutputBlockSizes(arg);
-        runInfo.cldnnStyle.blockWidth = blockSizes.blockWidth;
-        runInfo.cldnnStyle.blockHeight = blockSizes.blockHeight;
-        runInfo.cldnnStyle.prefetch = blockSizes.prefetch;
+        auto tuneOptions = GetAutoTuneOptions(arg, autoTuneIndex);
+        runInfo.cldnnStyle.blockWidth = tuneOptions.blockWidth;
+        runInfo.cldnnStyle.blockHeight = tuneOptions.blockHeight;
+        runInfo.cldnnStyle.prefetch = tuneOptions.prefetch;
 
         auto input_block_dims = get_byxf_af32_req_input_block_dims(
             runInfo.cldnnStyle.blockWidth,
@@ -226,6 +259,11 @@ namespace kernel_selector {
         return jit;
     }
 
+    KernelsData ConvolutionKernel_DPAS_blocks::GetTunedKernelsDataByIndex(const Params& params, const optional_params& options, const int autoTuneIndex) const
+    {
+        return GetCommonKernelsData(params, options, GetAutoTuneOptions(params, autoTuneIndex).exeMode, autoTuneIndex);
+    }
+
     KernelsData ConvolutionKernel_DPAS_blocks::GetKernelsData(const Params& params, const optional_params& options) const
     {
         KernelsData kd = GetCommonKernelsData(params, options);
@@ -233,5 +271,29 @@ namespace kernel_selector {
             kd[0].estimatedTime = FORCE_PRIORITY_2;
     
         return kd;
+    }
+
+    KernelsData ConvolutionKernel_DPAS_blocks::GetKernelsDataForAutoTune(const Params& params, const optional_params& options) const
+    {
+        if (!Validate(params, options))
+        {
+            return{};
+        }
+
+        KernelsData res = {};
+
+        for (size_t i = 0; i < autoTuneOptions.size(); i++)
+        {
+            KernelsData kd = GetTunedKernelsDataByIndex(params, options, (int)i);
+            if (!kd.empty())
+            {
+                res.emplace_back(kd[0]);
+            }
+        }
+
+        KernelsData defaultKds = GetKernelsData(params, options);
+        res.insert(res.end(), defaultKds.begin(), defaultKds.end());
+
+        return res;
     }
 }
