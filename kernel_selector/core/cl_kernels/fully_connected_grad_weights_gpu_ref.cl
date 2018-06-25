@@ -15,7 +15,7 @@
 
 #include "include/include_all.cl"
 
-#define LR_RATE 0.00001f
+#define LR_RATE 0.000001f
 #define DECAY_RATE 0.0005f
 
 KERNEL(fully_connected_grad_weights_gpu_ref)(

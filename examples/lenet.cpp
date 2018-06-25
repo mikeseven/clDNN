@@ -25,6 +25,7 @@
 #include <api/CPP/fully_connected.hpp>
 #include <api/CPP/softmax.hpp>
 #include <api/CPP/scale.hpp>
+#include <api/CPP/filler.hpp>
 #include <api/CPP/mutable_data.hpp>
 #include <api/CPP/fully_connected_grad_input.hpp>
 #include <api/CPP/fully_connected_grad_weights.hpp>
@@ -158,8 +159,8 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
 
     //auto conv1_w_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 20, 1, 5, 5 } });
     //auto conv1_b_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 20, 1 } });
-    //auto conv1_w = mutable_data("conv1_weights", conv1_w_mem);
-    //auto conv1_b = mutable_data("conv1_bias", conv1_b_mem);
+    //auto conv1_w = filler("conv1_weights.nnd", conv1_w_mem, filler::xavier);
+    //auto conv1_b = filler("conv1_bias.nnd", conv1_b_mem, filler::xavier);
     auto conv1_w = file::create_mutable({ engine, join_path(weights_dir, "conv1_weights.nnd") });
     auto conv1_b = file::create_mutable({ engine, join_path(weights_dir, "conv1_bias.nnd") });
 
@@ -185,8 +186,8 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
 
     //auto conv2_w_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 50, 20, 5, 5 } });
     //auto conv2_b_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 50, 1 } });
-    //auto conv2_w = mutable_data("conv2_weights", conv2_w_mem);
-    //auto conv2_b = mutable_data("conv2_bias", conv2_b_mem);
+    //auto conv2_w = filler("conv2_weights.nnd", conv2_w_mem, filler::xavier);
+    //auto conv2_b = filler("conv2_bias.nnd", conv2_b_mem, filler::xavier);
     auto conv2_w = file::create_mutable({ engine, join_path(weights_dir, "conv2_weights.nnd") });
     auto conv2_b = file::create_mutable({ engine, join_path(weights_dir, "conv2_bias.nnd") });
 
@@ -212,8 +213,8 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
 
     //auto ip1_w_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 500, 50, 4, 4 } });
     //auto ip1_b_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 500, 1 } });
-    //auto ip1_w = mutable_data("ip1_weights", ip1_w_mem);
-    //auto ip1_b = mutable_data("ip1_bias", ip1_b_mem);
+    //auto ip1_w = filler("ip1_weights.nnd", ip1_w_mem, filler::xavier);
+    //auto ip1_b = filler("ip1_bias.nnd", ip1_b_mem, filler::xavier);
     auto ip1_w = file::create_mutable({ engine, join_path(weights_dir, "ip1_weights.nnd") });
     auto ip1_b = file::create_mutable({ engine, join_path(weights_dir, "ip1_bias.nnd") });
 
@@ -231,8 +232,8 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
 
     //auto ip2_w_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 10, 1, 500, 1 } });
     //auto ip2_b_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 10, 1 } });
-    //auto ip2_w = mutable_data("ip2_weights", ip2_w_mem);
-    //auto ip2_b = mutable_data("ip2_bias", ip2_b_mem);
+    //auto ip2_w = filler("ip2_weights.nnd", ip2_w_mem, filler::xavier);
+    //auto ip2_b = filler("ip2_bias.nnd", ip2_b_mem, filler::xavier);
     auto ip2_w = file::create_mutable({ engine, join_path(weights_dir, "ip2_weights.nnd") });
     auto ip2_b = file::create_mutable({ engine, join_path(weights_dir, "ip2_bias.nnd") });
 

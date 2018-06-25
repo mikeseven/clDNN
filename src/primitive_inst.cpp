@@ -18,6 +18,7 @@
 #include "primitive_inst.h"
 #include "data_inst.h"
 #include "mutable_data_inst.h"
+#include "filler_inst.h"
 #include "generic_layer_inst.h"
 #include "input_layout_inst.h"
 #include "max_unpooling_inst.h"
@@ -65,6 +66,8 @@ primitive_inst::primitive_inst(network_impl& network, program_node const& node, 
     {
         if (node.get_users().size() == 1 && node.get_users().front()->is_type<mutable_data>())
             _output = node.get_users().front()->as<mutable_data>().get_attached_memory_ptr();
+        else if (node.get_users().size() == 1 && node.get_users().front()->is_type<filler>())
+            _output = node.get_users().front()->as<filler>().get_attached_memory_ptr();
         else
             _output = allocate_output();
     }
@@ -83,6 +86,7 @@ memory_impl::ptr primitive_inst::allocate_output()
     else if (_network.is_internal() ||
         _node.is_type<data>() ||
         _node.is_type<mutable_data>() ||
+        _node.is_type<filler>() ||
         _node.is_type<input_layout>() ||
         //for max_unpooling initial zero values are significant
         _node.is_type<max_unpooling>() ||
