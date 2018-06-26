@@ -519,7 +519,8 @@ int main(int argc, char* argv[])
             ep.topology_name == "resnet50" ||
             ep.topology_name == "resnet50-i8" ||
             ep.topology_name == "microbench_conv" ||
-            ep.topology_name == "microbench_lstm")
+            ep.topology_name == "microbench_lstm" ||
+            ep.topology_name == "ssd_mobilenet")
         {
             run_topology(ep);
             return 0;
