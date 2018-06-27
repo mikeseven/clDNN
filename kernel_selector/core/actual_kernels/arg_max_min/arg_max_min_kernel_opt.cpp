@@ -28,6 +28,7 @@ namespace kernel_selector
         k.EnableInputLayout(DataLayout::bfyx);
         k.EnableOutputLayout(DataLayout::bfyx);
         k.EnableArgMaxMinAxis(ArgMaxMinAxis::XYF);
+        k.EnableDifferentTypes();
         return k;
     }
 
