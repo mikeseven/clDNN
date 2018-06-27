@@ -46,6 +46,9 @@ public:
     void reset_execution(bool wait = true);
     void set_input_data(const primitive_id& id, memory_impl& data);
 
+    void set_learning_rate(const float lr);
+    float get_learning_rate();
+
     auto const& get_outputs() { return _outputs; }
 
     const std::vector<std::shared_ptr<const primitive_inst>>& get_outputs() const
@@ -73,6 +76,7 @@ private:
     uint32_t net_id = 0; 
     const program_impl::cptr _program;
     bool _internal;
+    float _learning_rate = float(0.00001);
 
     std::map<primitive_id, std::shared_ptr<primitive_inst>> _primitives;
     std::vector<std::shared_ptr<primitive_inst>> _inputs;

@@ -74,6 +74,7 @@ public:
         memory_impl::cptr scale_table;
         memory_impl::cptr slope;
         int32_t           split          = 0;
+        float             lr;
         const kernel_selector::kernel_scalar_arguments* scalars = nullptr;
     };
 

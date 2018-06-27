@@ -907,13 +907,13 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // SoftmaxLossGradParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct SoftmaxLossGradParams : public BaseParams
+    struct SoftmaxLossGradParams : public base_params
     {
-        SoftmaxLossGradParams() : BaseParams(KernelType::SOFT_MAX_LOSS_GRAD) {}
+        SoftmaxLossGradParams() : base_params(KernelType::SOFT_MAX_LOSS_GRAD) {}
 
         virtual ParamsKey GetParamsKey() const
         {
-            return BaseParams::GetParamsKey();
+            return base_params::GetParamsKey();
         }
     };
 
@@ -974,8 +974,8 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // SoftmaxLossGradOptionalParams
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct SoftmaxLossGradOptionalParams : OptionalParams
+    struct SoftmaxLossGradOptionalParams : optional_params
     {
-        SoftmaxLossGradOptionalParams() : OptionalParams(KernelType::SOFT_MAX_LOSS_GRAD) {}
+        SoftmaxLossGradOptionalParams() : optional_params(KernelType::SOFT_MAX_LOSS_GRAD) {}
     };
 }

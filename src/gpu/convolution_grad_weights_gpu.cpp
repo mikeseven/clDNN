@@ -50,6 +50,7 @@ protected:
 
         args.weights    = &instance.weights_memory(split);
         args.bias       = instance.bias_term() ? &instance.bias_memory(split) : nullptr;
+        args.lr         = instance.get_network().get_learning_rate();
 
         return args;
     }

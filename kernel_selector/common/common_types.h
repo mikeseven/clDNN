@@ -55,7 +55,7 @@ namespace kernel_selector
         FULLY_CONNECTED_GRAD_WEIGHTS,
         LSTM_GEMM,
         LSTM_ELT,
-		EMBED
+		EMBED,
         FULLY_CONNECTED_GRAD_WEIGHTS,
         SOFT_MAX_LOSS_GRAD
     };

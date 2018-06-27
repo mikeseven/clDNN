@@ -16,14 +16,14 @@
 
 #include "softmax_loss_grad_kernel_base.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
     JitConstants SoftmaxLossGradKernelBase::GetJitConstants(const SoftmaxLossGradParams& params) const
     {
         return MakeSoftmaxLossGradJitConstants(params);
     }
 
-    CommonDispatchData SoftmaxLossGradKernelBase::SetDefault(const SoftmaxLossGradParams& params, const OptionalParams&) const
+    CommonDispatchData SoftmaxLossGradKernelBase::SetDefault(const SoftmaxLossGradParams& params, const optional_params&) const
     {
         CommonDispatchData runInfo;
 
@@ -40,7 +40,7 @@ namespace KernelSelector
         return runInfo;
     }
 
-    bool SoftmaxLossGradKernelBase::Validate(const Params& p, const OptionalParams& o) const
+    bool SoftmaxLossGradKernelBase::Validate(const Params& p, const optional_params& o) const
     {
         if (p.GetType() != KernelType::SOFT_MAX_LOSS_GRAD ||
             o.GetType() != KernelType::SOFT_MAX_LOSS_GRAD)
@@ -51,7 +51,7 @@ namespace KernelSelector
         return true;
     }
 
-    KernelsData SoftmaxLossGradKernelBase::GetCommonKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData SoftmaxLossGradKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options) const
     {
         if (!Validate(params, options))
         {

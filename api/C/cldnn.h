@@ -607,6 +607,13 @@ CLDNN_API                 void cldnn_release_network(cldnn_network network, cldn
 /// by calling this function before call to cldnn_execute_network().
 CLDNN_API                 void cldnn_set_network_input(cldnn_network network, cldnn_primitive_id id, cldnn_memory mem, cldnn_status* status);
 
+/// @brief Sets learning rate for training primitives in network.
+/// @param[in] lr Learning rate.
+CLDNN_API void cldnn_set_learning_rate(cldnn_network network, float lr, cldnn_status* status);
+
+/// @brief Returns learning rate value.
+CLDNN_API float cldnn_get_learning_rate(cldnn_network network, cldnn_status* status);
+
 /// @brief Returns information about particular primitive.
 /// @details Function fills user provided buffer by primitive description.
 /// @param[in] id Primitive @p id of @p input_layout primitive defined in @p topology.

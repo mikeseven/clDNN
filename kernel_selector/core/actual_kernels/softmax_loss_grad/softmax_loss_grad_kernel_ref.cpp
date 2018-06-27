@@ -17,7 +17,7 @@
 #include "softmax_loss_grad_kernel_ref.h"
 #include "kernel_selector_utils.h" 
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
     ParamsKey SoftmaxLossGradKernelRef::GetSupportedKey() const
     {
@@ -39,7 +39,7 @@ namespace KernelSelector
         return k;
     }
 
-    CommonDispatchData SoftmaxLossGradKernelRef::SetDefault(const SoftmaxLossGradParams& params, const OptionalParams& optParams) const
+    CommonDispatchData SoftmaxLossGradKernelRef::SetDefault(const SoftmaxLossGradParams& params, const optional_params& optParams) const
     {
         auto runInfo = Parent::SetDefault(params, optParams);
 
@@ -60,7 +60,7 @@ namespace KernelSelector
         return runInfo;
     }
 
-    KernelsData SoftmaxLossGradKernelRef::GetKernelsData(const Params& params, const OptionalParams& options) const
+    KernelsData SoftmaxLossGradKernelRef::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options);
     }

@@ -18,7 +18,7 @@
 
 #include "softmax_loss_grad_kernel_base.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {    
     class SoftmaxLossGradKernelRef : public SoftmaxLossGradKernelBase
     {
@@ -27,10 +27,10 @@ namespace KernelSelector
         SoftmaxLossGradKernelRef() : Parent("softmax_loss_grad_gpu_ref") {}
         virtual ~SoftmaxLossGradKernelRef() {}
 
-        KernelsData GetKernelsData(const Params& params, const OptionalParams& options) const override;
+        KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         ParamsKey GetSupportedKey() const override;
 
     protected:
-        CommonDispatchData SetDefault(const SoftmaxLossGradParams& params, const OptionalParams& optParams) const override;
+        CommonDispatchData SetDefault(const SoftmaxLossGradParams& params, const optional_params& optParams) const override;
     };
 }

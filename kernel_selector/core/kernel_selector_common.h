@@ -146,7 +146,8 @@ namespace kernel_selector {
             RECURRENT, // RNN/LSTM/GRU recurrent weights
             HIDDEN,    // RNN/LSTM/GRU hidden input
             CELL,      // LSTM cell input
-            LSTM_PACK  // LSTM packed output
+            LSTM_PACK, // LSTM packed output
+            LEARNING_RATE
         };
 
         enum class ScalarTypes

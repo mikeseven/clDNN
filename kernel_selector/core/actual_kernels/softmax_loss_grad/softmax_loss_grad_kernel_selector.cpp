@@ -17,14 +17,14 @@
 #include "softmax_loss_grad_kernel_selector.h"
 #include "softmax_loss_grad_kernel_ref.h"
 
-namespace KernelSelector {
+namespace kernel_selector {
 
-    SoftmaxLossGradKernelSelector::SoftmaxLossGradKernelSelector()
+    softmax_loss_grad_kernel_selector::softmax_loss_grad_kernel_selector()
     {
         Attach<SoftmaxLossGradKernelRef>();
     }
 
-    KernelsData SoftmaxLossGradKernelSelector::GetBestKernels(const Params& params, const OptionalParams& options) const
+    KernelsData softmax_loss_grad_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::SOFT_MAX_LOSS_GRAD);
     }

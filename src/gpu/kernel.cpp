@@ -120,6 +120,9 @@ namespace {
             case kernel_selector::kernel_argument_types::SPLIT:
                 status = kernel.setArg(i, data.split);
                 break;
+            case kernel_selector::kernel_argument_types::LEARNING_RATE:
+                status = kernel.setArg(i, data.lr);
+                break;
             case kernel_selector::kernel_argument_types::SCALAR:
                 if (data.scalars && args[i].index < data.scalars->size())
                 {

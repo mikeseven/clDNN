@@ -15,7 +15,6 @@
 
 #include "include/include_all.cl"
 
-#define LR_RATE 0.000001f
 #define DECAY_RATE 0.0005f
 
 KERNEL(fully_connected_grad_weights_gpu_ref)(
@@ -25,7 +24,8 @@ KERNEL(fully_connected_grad_weights_gpu_ref)(
 #if BIAS_TERM
     __global UNIT_TYPE* bias,
 #endif
-    const __global INPUT1_TYPE* input
+    const __global INPUT1_TYPE* input,
+    const float lr
     )
 {
     const uint ofm_ifm       = get_global_id(0);
@@ -52,12 +52,22 @@ KERNEL(fully_connected_grad_weights_gpu_ref)(
 #endif
     }
 
-    weights[filter_idx] -= LR_RATE * grad_w  + DECAY_RATE * LR_RATE * weights[filter_idx];
+#if MOMENTUM
+    weights[filter_idx] -= lr * (grad_w + prev_grad_w[filter_idx]) + DECAY_RATE * lr * weights[filter_idx];
+    prev_grad_w[filter_idx] = grad_w;
+#else
+    weights[filter_idx] -= lr * grad_w + DECAY_RATE * lr * weights[filter_idx];
+#endif
 
 #if BIAS_TERM
     if(ifm == 0 && id_x == 0 && id_y == 0)
     {
-            bias[ofm] -= LR_RATE * grad_b;
+#if MOMENTUM
+        bias[ofm] -= lr * (prev_grad_b[ofm] + grad_b);
+        prev_grad_b[ofm] = grad_b;
+#else
+        bias[ofm] -= lr * grad_b;
+#endif
     }
 #endif
     

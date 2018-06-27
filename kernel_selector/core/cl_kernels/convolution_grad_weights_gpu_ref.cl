@@ -14,7 +14,6 @@
 
 #include "include/include_all.cl"
 
-#define LR_RATE 0.000001f
 #define DECAY_RATE 0.0005f
 
 KERNEL(convolution_grad_weights_gpu_ref)(
@@ -24,8 +23,13 @@ KERNEL(convolution_grad_weights_gpu_ref)(
 #if BIAS_TERM
     __global UNIT_TYPE* bias,
 #endif
+#if MOMENTUM
+    __global UNIT_TYPE* prev_weights_w;
+    __global UNIT_TYPE* prev_weights_b;
+#endif
     const __global UNIT_TYPE* input,
-    uint split_idx)
+    uint split_idx,
+    float lr)
 {
     const uint ofm_ifm       = get_global_id(0);
     const uint id_x          = (uint)get_global_id(1);
@@ -68,10 +72,10 @@ KERNEL(convolution_grad_weights_gpu_ref)(
                 {
                     uint input_idx = in_split_offset + b*INPUT1_BATCH_PITCH + (uint)ifm*INPUT1_FEATURE_PITCH + (uint)input_offset_x*INPUT1_X_PITCH + (uint)input_offset_y*INPUT1_Y_PITCH;
 #if BIAS_TERM
-                    result = fma(LR_RATE * input[input_idx], grad, result);
+                    result = fma(input[input_idx], grad, result);
 #else
                     uint input_grad_idx = grad_split_offset + b*INPUT1_BATCH_PITCH + (uint)ofm*INPUT0_FEATURE_PITCH + j*INPUT0_X_PITCH + i*INPUT0_Y_PITCH;
-                    result = fma(LR_RATE * input[input_idx], input_grad[input_grad_idx], result);
+                    result = fma(input[input_idx], input_grad[input_grad_idx], result);
 #endif
                 }
 #if BIAS_TERM
@@ -90,12 +94,22 @@ KERNEL(convolution_grad_weights_gpu_ref)(
 #endif
     }
 
-    filter[weights_idx] -= grad_w + DECAY_RATE * LR_RATE * filter[weights_idx];
+#if MOMENTUM
+    filter[weights_idx] -= lr * (prev_grad_w[filter_idx] + grad_w) + DECAY_RATE * lr * filter[weights_idx];
+    prev_grad_w[weights_idx] = grad_w;
+#else
+    filter[weights_idx] -= lr * grad_w + DECAY_RATE * lr * filter[weights_idx];
+#endif
 
 #if BIAS_TERM
         if(ifm == 0 && id_x == 0 && id_y == 0)
         {
-            bias[ofm] -= grad_b * LR_RATE;
+#if MOMENTUM
+        bias[ofm] -= lr * (prev_grad_b[ofm] + grad_b);
+        prev_grad_b[ofm] = grad_b;
+#else
+        bias[ofm] -= lr * grad_b;
+#endif
         }
 #endif
 

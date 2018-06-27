@@ -470,6 +470,22 @@ void cldnn_set_network_input(cldnn_network network, cldnn_primitive_id id, cldnn
     });
 }
 
+void cldnn_set_learning_rate(cldnn_network network, float lr, cldnn_status* status)
+{
+    exception_handler(CLDNN_ERROR, status, [&]()
+    {
+        api_cast(network)->set_learning_rate(lr);
+    });
+}
+
+float cldnn_get_learning_rate(cldnn_network network, cldnn_status* status)
+{
+    return exception_handler<float>(CLDNN_ERROR, status, 0, [&]() 
+    {
+        return api_cast(network)->get_learning_rate();
+    });
+}
+
 cldnn_engine cldnn_get_network_engine(cldnn_network network, cldnn_status* status)
 {
     return exception_handler<cldnn_engine>(CLDNN_ERROR, status, nullptr, [&]()

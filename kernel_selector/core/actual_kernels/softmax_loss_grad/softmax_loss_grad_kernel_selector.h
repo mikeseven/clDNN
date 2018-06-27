@@ -18,20 +18,20 @@
 
 #include "kernel_selector.h"
  
-namespace KernelSelector 
+namespace kernel_selector 
 {
-    class SoftmaxLossGradKernelSelector : public KernelSelctorBase
+    class softmax_loss_grad_kernel_selector : public kernel_selector_base
     {
     public:
-        static SoftmaxLossGradKernelSelector &Instance() {
-            static SoftmaxLossGradKernelSelector instance_;
+        static softmax_loss_grad_kernel_selector &Instance() {
+            static softmax_loss_grad_kernel_selector instance_;
             return instance_;
         }
 
-        SoftmaxLossGradKernelSelector();
+        softmax_loss_grad_kernel_selector();
 
-        virtual ~SoftmaxLossGradKernelSelector() {}
+        virtual ~softmax_loss_grad_kernel_selector() {}
 
-        virtual KernelsData GetBestKernels(const Params& params, const OptionalParams& options) const override;
+        virtual KernelsData GetBestKernels(const Params& params, const optional_params& options) const override;
     };
 }

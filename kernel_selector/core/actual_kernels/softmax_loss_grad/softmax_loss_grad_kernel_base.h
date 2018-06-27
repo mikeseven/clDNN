@@ -19,18 +19,18 @@
 #include "common_kernel_base.h"
 #include "kernel_selector_params.h"
 
-namespace KernelSelector 
+namespace kernel_selector 
 {
-    class SoftmaxLossGradKernelBase : public CommonKernelBase
+    class SoftmaxLossGradKernelBase : public common_kernel_base
     {
     public:
-        using CommonKernelBase::CommonKernelBase;
+        using common_kernel_base::common_kernel_base;
         virtual ~SoftmaxLossGradKernelBase() {}
 
     protected:
-        virtual bool Validate(const Params&, const OptionalParams&) const;
+        virtual bool Validate(const Params&, const optional_params&) const;
         virtual JitConstants GetJitConstants(const SoftmaxLossGradParams& params) const;
-        virtual CommonDispatchData SetDefault(const SoftmaxLossGradParams& params, const OptionalParams& optParams) const;
-        KernelsData GetCommonKernelsData(const Params& params, const OptionalParams& optParams) const;
+        virtual CommonDispatchData SetDefault(const SoftmaxLossGradParams& params, const optional_params& optParams) const;
+        KernelsData GetCommonKernelsData(const Params& params, const optional_params& optParams) const;
     };
 }

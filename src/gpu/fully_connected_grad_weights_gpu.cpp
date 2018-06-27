@@ -37,6 +37,7 @@ protected:
         kernel::kernel_arguments_data args = parent::get_arguments(instance, 1);
         args.weights = &instance.weights_memory();
         args.bias = instance.bias_term() ? &instance.bias_memory() : nullptr;
+        args.lr = instance.get_network().get_learning_rate();
 
         return args;
     }

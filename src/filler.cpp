@@ -21,6 +21,7 @@
 #include "memory_impl.h"
 #include <random>
 #include "tests\test_utils\float16.h"
+#include "error_handler.h"
 
 namespace cldnn
 {
@@ -93,6 +94,7 @@ namespace cldnn
                 new_mem[i] = distribution(generator);
             }
             std::copy(new_mem, new_mem + layout.count(), lock.begin());
+            delete[] new_mem;
         }
         else if (layout.data_type == data_types::f32)
         {
@@ -104,17 +106,11 @@ namespace cldnn
                 new_mem[i] = distribution(generator);
             }
             std::copy(new_mem, new_mem + layout.count(), lock.begin());
+            delete[] new_mem;
         }
         else
         {
-            mem_lock<char> lock(mem);
-            std::uniform_real_distribution<float> distribution(-scale, scale);
-            char* new_mem = new char[layout.count()];
-            for (int i = 0; i < layout.count(); i++)
-            {
-                new_mem[i] = char(distribution(generator));
-            }
-            std::copy(new_mem, new_mem + layout.count(), lock.begin());
+            CLDNN_ERROR_MESSAGE(id(), "only f32 and f16 data types can be filled");
         }
     }
 

@@ -469,7 +469,10 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     cldnn::build_options options;
 
     //TODO set proper network build options
-    options.set_option(cldnn::build_option::optimize_data(false));
+    if (ep.topology_name == "lenet_train")
+        options.set_option(cldnn::build_option::optimize_data(false));
+    else
+        options.set_option(cldnn::build_option::optimize_data(true));
     options.set_option(cldnn::build_option::debug(ep.dump_hidden_layers || ep.profiling));
 	options.set_option(cldnn::build_option::serialize_network(ep.serialization));
 
@@ -1000,7 +1003,7 @@ void run_topology(const execution_params &ep)
             }*/
 
             double time_in_sec = 0.0;
-            if (ep.topology_name != "lenet_train")
+            if (ep.topology_name == "lenet")
             {
                 float acc = 0;
                 for (int i = 0; i < 10000; i++)
@@ -1024,8 +1027,9 @@ void run_topology(const execution_params &ep)
                 //auto time = execute_topology(network, ep, energyLib, output, &labels);
                 //time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
             }
-            else if(ep.topology_name == "lenet")
+            else if (ep.topology_name == "lenet_train")
             {
+                network.set_learning_rate(0.000001);
                 double loss = 0;
                 for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
                 {
@@ -1036,14 +1040,14 @@ void run_topology(const execution_params &ep)
 
                     network.set_input_data("input", input);
                     network.set_input_data("labels", labels);
-                    auto time = execute_topology(network, ep, energyLib, output, nullptr);
+                    auto time = execute_topology(network, ep, energyLib, output);
                     time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
                     auto expected = labels.pointer<float>();
                     auto vals = output.pointer<float>();
                     for (int b = 0; b < batch_size; b++)
                     {
                         auto e = expected[b];
-                        loss += -log(vals[b * 10 + e]);
+                        loss += -log(vals[b + e * batch_size]);
                     }
                     double average = loss / (learn_it - ep.image_offset + batch_size);
                     std::cout << "Iter: " << learn_it - ep.image_offset << " " << "Loss = " << average << std::endl;
