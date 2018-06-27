@@ -161,8 +161,7 @@ json_composite program_node::desc_to_json() const
             #pragma clang diagnostic push
             #pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
         #endif
-        //todo: add proper impl dump\n";
-        impls.push_back(typeid(*selected_impl.get()).name());
+        impls.push_back(selected_impl->get_kernel_name());
         #ifdef __clang__
             #pragma clang diagnostic pop
         #endif

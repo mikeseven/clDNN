@@ -62,10 +62,7 @@ std::string lstm_elt_inst::to_string(lstm_elt_node const& node)
 lstm_elt_inst::typed_primitive_inst(network_impl& network, lstm_elt_node const& node)
     :parent(network, node)
 {
-    // [ARIEL] TODO:
     auto input_size = input_memory().get_layout();
-    // auto output_size = output_memory().get_layout();
     CLDNN_ERROR_NOT_PROPER_FORMAT(node.id(), "input format", input_size.format.value, "expected format", format::bfyx);
-    //CLDNN_ERROR_NOT_EQUAL(node.id(), "Input size", input_size.size.raw.size(), "output size", output_size.size.raw.size(), "");
 }
 }

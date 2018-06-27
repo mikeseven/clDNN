@@ -580,7 +580,7 @@ void program_impl::replace_nodes_pre()
                 auto lstm_gemm_node = std::make_shared<lstm_gemm>(lstm_gemm_id, lstm_gemm_input_id, weights_id, recurrent_id, bias_id, hidden_id);
                 auto &n1 = get_or_create(lstm_gemm_node);
                 inputs.push_back(&n1);
-                auto lstm_elt_node = std::make_shared<lstm_elt>(lstm_elt_id, lstm_gemm_id, cell_id);
+                auto lstm_elt_node = std::make_shared<lstm_elt>(lstm_elt_id, lstm_gemm_id, cell_id, lstm_prim->offset_order);
                 auto &n2 = get_or_create(lstm_elt_node);
                 inputs.push_back(&n2);
                 hidden_id = crop_id + ":hidden";

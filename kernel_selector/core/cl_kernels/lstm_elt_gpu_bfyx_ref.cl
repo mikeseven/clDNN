@@ -31,14 +31,14 @@ KERNEL(lstm_elt)(
     const uint x = get_global_id(0);
     const uint b = get_global_id(1);
 
-    ACCUMULATOR_TYPE it = input[GET_DATA_INDEX(INPUT0, 0, 0, b, x + GEMM_OFFSET1)];
-    ACCUMULATOR_TYPE ot = input[GET_DATA_INDEX(INPUT0, 0, 0, b, x + GEMM_OFFSET2)]; // pass constant offsets here
-    ACCUMULATOR_TYPE zt = input[GET_DATA_INDEX(INPUT0, 0, 0, b, x + GEMM_OFFSET3)];
+    ACCUMULATOR_TYPE it = input[GET_DATA_INDEX(INPUT0, 0, 0, b, x + GEMM_OFFSET_I)];
+    ACCUMULATOR_TYPE ot = input[GET_DATA_INDEX(INPUT0, 0, 0, b, x + GEMM_OFFSET_O)]; // pass constant offsets here
+    ACCUMULATOR_TYPE zt = input[GET_DATA_INDEX(INPUT0, 0, 0, b, x + GEMM_OFFSET_Z)];
 
     ACCUMULATOR_TYPE val = ACTIVATION_LOGISTIC(it) * ACTIVATION_HYPERBOLIC_TAN(zt);
 
 #if CELL_TERM
-    ACCUMULATOR_TYPE ft = input[GET_DATA_INDEX(INPUT0, 0, 0, b, x)];
+    ACCUMULATOR_TYPE ft = input[GET_DATA_INDEX(INPUT0, 0, 0, b, x + GEMM_OFFSET_F)];
     val += cell[GET_DATA_INDEX(CELL, 0, 0, b, x)] * ACTIVATION_LOGISTIC(ft);
 #endif
 

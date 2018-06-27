@@ -32,6 +32,7 @@ public:
     decltype(auto) input() const { return get_dependency(0); }
     decltype(auto) cell() const { return get_dependency(1); }
     bool cell_term() const { return !get_primitive()->cell.empty(); }
+    int32_t offset_order() const { return get_primitive()->offset_order; }
 };
 
 using lstm_elt_node = typed_program_node<lstm_elt>;
@@ -50,6 +51,7 @@ public:
 
     decltype(auto) cell_memory() const { return dep_memory(1); }
     bool cell_term() const { return !argument.cell.empty(); }
+    int32_t offset_order() const { return argument.offset_order; }
 };
 
 using lstm_elt_inst = typed_primitive_inst<lstm_elt>;

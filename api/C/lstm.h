@@ -30,6 +30,13 @@
 extern "C" {
 #endif
 
+typedef enum /*:int32_t*/
+{
+    cldnn_lstm_offset_order_iofz = 0, // ONNX
+    cldnn_lstm_offset_order_ifoz  // Caffe
+} cldnn_lstm_offset_order;
+
+
 /// @brief Performs forward Long Short-Term Memory (LSTM) layer.
 /// @details The current implementation of LSTM supports Peepholes.
 ///   it = f(Xt*(Wi^T) + Ht-1*Ri + Pi (.) Ct-1 + Wbi + Rbi)
@@ -59,8 +66,7 @@ float clip;
 /// @brief Couple the input and forget gates if input_forget is 1. Default is 0.
 uint32_t input_forget;
 
-/// [ARIEL] TODO: Fix
-/// @brief The sequence output for the hidden??? This is not clearly specified in the ONNX definition.
+/// @brief The sequence output for the hidden. This is not clearly specified in the ONNX definition.
 uint32_t output_sequence;
 
 /// @brief A list of 3 activation functions for the input, output, forget, cell, and hidden.
@@ -68,13 +74,15 @@ cldnn_activation_func activations[3];
 /// @brief Optional scaling values used by some activation functions. The values are consumed in the order of activation functions.
 cldnn_activation_additional_params activation_params[3];
 
+/// @brief Weights, recurrent weights, and biases order. [iofz] : ONNX, [ifoz] : Caffe
+cldnn_lstm_offset_order offset_order;
+
 CLDNN_END_PRIMITIVE_DESC(lstm)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(lstm);
 
 
 
-// [ARIEL] TODO: purge these structures, should only contain the required fields
 /// @brief LSTM Layer GEMM helper primitive.
 /// @details The current helper primitive performs fused GEMM operations.
 CLDNN_BEGIN_PRIMITIVE_DESC(lstm_gemm)
@@ -108,14 +116,16 @@ cldnn_primitive_id cell;
 /// @brief Number of directions default = 1, bidirectional = 2.
 uint32_t num_directions;
 
-/// [ARIEL] TODO: Fix
-/// @brief The sequence output for the hidden??? This is not clearly specified in the ONNX definition.
+/// @brief The sequence output for the hidden. This is not clearly specified in the ONNX definition.
 uint32_t output_sequence;
 
 /// @brief A list of 3 activation functions for the input, output, forget, cell, and hidden.
 cldnn_activation_func activations[3];
 /// @brief Optional scaling values used by some activation functions. The values are consumed in the order of activation functions.
 cldnn_activation_additional_params activation_params[3];
+
+/// @brief Weights, recurrent weights, and biases order. [iofz] : ONNX, [ifoz] : Caffe
+cldnn_lstm_offset_order offset_order;
 
 CLDNN_END_PRIMITIVE_DESC(lstm_elt)
 
