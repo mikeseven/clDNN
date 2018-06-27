@@ -57,10 +57,19 @@ inline int8 FUNC(dp4a_s8_r8)(int8 A_vectors, int8 B_vectors, int8 acc)
 }
 
 #if DPAS_SUPPORTED == 1
+
 // here declare compiler DPAS intrinsic
+#define PRECISION_U8 3
+#define PRECISION_S8 7
+int __builtin_IB_dpas_8(int c, int8 a, int pa, int8 b, int pb) __attribute__((const));
+int8 __builtin_IB_sub_group_idpas_s8_s8_8_8( int8 acc, int8 a, int8 b ) __attribute__((const));
+
 #define DPAS_8(A, B, C) (__builtin_IB_dpas_8(C, A, PRECISION_S8, B, PRECISION_S8))
 #define DPAS_8x8(A, B, C) (__builtin_IB_sub_group_idpas_s8_s8_8_8(C, A, B))
+
 #else
+
 #define DPAS_8(A, B, C) FUNC_CALL(dp4a_s8)(A, B, C)
 #define DPAS_8x8(A, B, C) FUNC_CALL(dp4a_s8_r8)(A, B, C)
+
 #endif
