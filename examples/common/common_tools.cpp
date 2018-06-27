@@ -772,20 +772,17 @@ void run_topology(const execution_params &ep)
 
             auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
 
-            if (ep.topology_name != "ssd_mobilenet")
+            if (ep.run_until_primitive_name.empty() && ep.run_single_kernel_name.empty())
             {
-                if (ep.run_until_primitive_name.empty() && ep.run_single_kernel_name.empty())
-                {
-                    output_file.batch(output, join_path(get_executable_info()->dir(), neurons_list_filename), images_in_batch, ep.print_type);
-                }
-                else if (!ep.run_until_primitive_name.empty())
-                {
-                    std::cout << "Finished at user custom primtive: " << ep.run_until_primitive_name << std::endl;
-                }
-                else if (!ep.run_single_kernel_name.empty())
-                {
-                    std::cout << "Run_single_layer finished correctly." << std::endl;
-                }
+                output_file.batch(output, join_path(get_executable_info()->dir(), neurons_list_filename), images_in_batch, ep.print_type);
+            }
+            else if (!ep.run_until_primitive_name.empty())
+            {
+                std::cout << "Finished at user custom primtive: " << ep.run_until_primitive_name << std::endl;
+            }
+            else if (!ep.run_single_kernel_name.empty())
+            {
+                std::cout << "Run_single_layer finished correctly." << std::endl;
             }
 
             if (time_in_sec != 0.0)
