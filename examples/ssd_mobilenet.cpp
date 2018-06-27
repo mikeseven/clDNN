@@ -416,7 +416,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv11_mbox_priorbox = prior_box(
         "conv11_mbox_priorbox",
         conv11,
-        { 1,1,300,300 },
+        in_layout.size,
         { 60 },
         {},
         { 2 },
@@ -447,7 +447,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv11_mbox_conf_flat = reshape(
         "conv11_mbox_conf_flat",
         conv11_mbox_conf_perm,
-        { 1,22743,1,1 });
+        { batch_size, 22743,1,1 });
 
     auto conv11_mbox_loc_w = file::create({ engine, join_path(weights_dir, "conv11_mbox_loc_weights.nnd") });
     auto conv11_mbox_loc_b = file::create({ engine, join_path(weights_dir, "conv11_mbox_loc_bias.nnd") });
@@ -469,7 +469,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv11_mbox_loc_flat = reshape(
         "conv11_mbox_loc_flat",
         conv11_mbox_loc_perm,
-        { 1,4332,1,1 });
+        { batch_size,4332,1,1 });
 
     std::vector<cldnn::data> conv12_dw_w_data;
     std::vector<primitive_id> conv12_dw_w_prim_id;
@@ -528,7 +528,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv13_mbox_priorbox = prior_box(
         "conv13_mbox_priorbox",
         conv13,
-        { 1,1,300,300 },
+        in_layout.size,
         { 105 },
         { 150 },
         { 2.0,3.0 },
@@ -559,7 +559,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv13_mbox_conf_flat = reshape(
         "conv13_mbox_conf_flat",
         conv13_mbox_conf_perm,
-        { 1,12600,1,1 });
+        { batch_size,12600,1,1 });
 
     auto conv13_mbox_loc_w = file::create({ engine, join_path(weights_dir, "conv13_mbox_loc_weights.nnd") });
     auto conv13_mbox_loc_b = file::create({ engine, join_path(weights_dir, "conv13_mbox_loc_bias.nnd") });
@@ -581,7 +581,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv13_mbox_loc_flat = reshape(
         "conv13_mbox_loc_flat",
         conv13_mbox_loc_perm,
-        { 1,2400,1,1 });
+        { batch_size,2400,1,1 });
 
     auto conv14_1_w = file::create({ engine, join_path(weights_dir, "conv14_1_weights.nnd") });
     auto conv14_1_b = file::create({ engine, join_path(weights_dir, "conv14_1_bias.nnd") });
@@ -610,7 +610,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv14_2_mbox_priorbox = prior_box(
         "conv14_2_mbox_priorbox",
         conv14_2,
-        { 1,1,300,300 },
+        in_layout.size,
         { 150 },
         { 195 },
         { 2.0,3.0 },
@@ -641,7 +641,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv14_2_mbox_conf_flat = reshape(
         "conv14_2_mbox_conf_flat",
         conv14_2_mbox_conf_perm,
-        { 1,3150,1,1 });
+        { batch_size,3150,1,1 });
 
     auto conv14_2_mbox_loc_w = file::create({ engine, join_path(weights_dir, "conv14_2_mbox_loc_weights.nnd") });
     auto conv14_2_mbox_loc_b = file::create({ engine, join_path(weights_dir, "conv14_2_mbox_loc_bias.nnd") });
@@ -663,7 +663,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv14_2_mbox_loc_flat = reshape(
         "conv14_2_mbox_loc_flat",
         conv14_2_mbox_loc_perm,
-        { 1,600,1,1 });
+        { batch_size,600,1,1 });
 
     auto conv15_1_w = file::create({ engine, join_path(weights_dir, "conv15_1_weights.nnd") });
     auto conv15_1_b = file::create({ engine, join_path(weights_dir, "conv15_1_bias.nnd") });
@@ -692,7 +692,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv15_2_mbox_priorbox = prior_box(
         "conv15_2_mbox_priorbox",
         conv15_2,
-        { 1,1,300,300 },
+        in_layout.size,
         { 195 },
         { 240 },
         { 2.0,3.0 },
@@ -723,7 +723,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv15_2_mbox_conf_flat = reshape(
         "conv15_2_mbox_conf_flat",
         conv15_2_mbox_conf_perm,
-        { 1,1134,1,1 });
+        { batch_size,1134,1,1 });
 
     auto conv15_2_mbox_loc_w = file::create({ engine, join_path(weights_dir, "conv15_2_mbox_loc_weights.nnd") });
     auto conv15_2_mbox_loc_b = file::create({ engine, join_path(weights_dir, "conv15_2_mbox_loc_bias.nnd") });
@@ -745,7 +745,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv15_2_mbox_loc_flat = reshape(
         "conv15_2_mbox_loc_flat",
         conv15_2_mbox_loc_perm,
-        { 1,216,1,1 });
+        { batch_size,216,1,1 });
 
     auto conv16_1_w = file::create({ engine, join_path(weights_dir, "conv16_1_weights.nnd") });
     auto conv16_1_b = file::create({ engine, join_path(weights_dir, "conv16_1_bias.nnd") });
@@ -774,7 +774,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv16_2_mbox_priorbox = prior_box(
         "conv16_2_mbox_priorbox",
         conv16_2,
-        { 1,1,300,300 },
+        in_layout.size,
         { 240 },
         { 285 },
         { 2.0,3.0 },
@@ -805,7 +805,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv16_2_mbox_conf_flat = reshape(
         "conv16_2_mbox_conf_flat",
         conv16_2_mbox_conf_perm,
-        { 1,504,1,1 });
+        { batch_size,504,1,1 });
 
     auto conv16_2_mbox_loc_w = file::create({ engine, join_path(weights_dir, "conv16_2_mbox_loc_weights.nnd") });
     auto conv16_2_mbox_loc_b = file::create({ engine, join_path(weights_dir, "conv16_2_mbox_loc_bias.nnd") });
@@ -827,7 +827,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv16_2_mbox_loc_flat = reshape(
         "conv16_2_mbox_loc_flat",
         conv16_2_mbox_loc_perm,
-        { 1,96,1,1 });
+        { batch_size,96,1,1 });
 
     auto conv17_1_w = file::create({ engine, join_path(weights_dir, "conv17_1_weights.nnd") });
     auto conv17_1_b = file::create({ engine, join_path(weights_dir, "conv17_1_bias.nnd") });
@@ -856,7 +856,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv17_2_mbox_priorbox = prior_box(
         "conv17_2_mbox_priorbox",
         conv17_2,
-        { 1,1,300,300 },
+        in_layout.size,
         { 285 },
         { 300 },
         { 2.0,3.0 },
@@ -887,7 +887,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv17_2_mbox_conf_flat = reshape(
         "conv17_2_mbox_conf_flat",
         conv17_2_mbox_conf_perm,
-        { 1,126,1,1 });
+        { batch_size,126,1,1 });
 
     auto conv17_2_mbox_loc_w = file::create({ engine, join_path(weights_dir, "conv17_2_mbox_loc_weights.nnd") });
     auto conv17_2_mbox_loc_b = file::create({ engine, join_path(weights_dir, "conv17_2_mbox_loc_bias.nnd") });
@@ -909,7 +909,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv17_2_mbox_loc_flat = reshape(
         "conv17_2_mbox_loc_flat",
         conv17_2_mbox_loc_perm,
-        { 1,24,1,1 });
+        { batch_size,24,1,1 });
 
     auto mbox_priorbox = concatenation(
         "mbox_priorbox",
@@ -940,7 +940,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto mbox_conf_reshape = reshape(
         "mbox_conf_reshape",
         mbox_conf,
-        {1,1917,21,1}
+        { batch_size,1917,21,1}
     );
 
     auto mbox_conf_softmax = softmax(
@@ -952,7 +952,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto mbox_conf_flatten = reshape(
         "mbox_conf_flatten",
         mbox_conf_softmax,
-        { 1,40257,1,1 });
+        { batch_size,40257,1,1 });
 
     auto mbox_loc = concatenation(
         "mbox_loc",
