@@ -62,6 +62,7 @@ struct lstm : public primitive_base<lstm, CLDNN_PRIMITIVE_DESC(lstm)>
         const primitive_id& peepholes = "",
         const float clip = 0,
         const uint32_t input_forget = 0,
+        const cldnn_lstm_offset_order offset_order = cldnn_lstm_offset_order_iofz,
         const padding& output_padding = padding()
         )
         : primitive_base(id, input, output_padding)
@@ -73,6 +74,7 @@ struct lstm : public primitive_base<lstm, CLDNN_PRIMITIVE_DESC(lstm)>
         , peepholes(peepholes)
         , clip(clip)
         , input_forget(input_forget)
+        , offset_order(offset_order)
     {
     }
 
@@ -99,6 +101,7 @@ struct lstm : public primitive_base<lstm, CLDNN_PRIMITIVE_DESC(lstm)>
         const primitive_id& peepholes = "",
         const float clip = 0,
         const uint32_t input_forget = 0,
+        const cldnn_lstm_offset_order offset_order = cldnn_lstm_offset_order_iofz,
         const padding& output_padding = padding()
         )
         : primitive_base(id, {input}, output_padding)
@@ -110,6 +113,7 @@ struct lstm : public primitive_base<lstm, CLDNN_PRIMITIVE_DESC(lstm)>
         , peepholes(peepholes)
         , clip(clip)
         , input_forget(input_forget)
+        , offset_order(offset_order)
         , activations(activations)
         , activation_params(activation_params)
     {
@@ -126,6 +130,7 @@ struct lstm : public primitive_base<lstm, CLDNN_PRIMITIVE_DESC(lstm)>
         , peepholes(dto->peepholes)
         , clip(dto->clip)
         , input_forget(dto->input_forget)
+        , offset_order(dto->offset_order)
         // , activations(dto->activations)
         // , activation_params(dto->activation_params)
     {
@@ -149,6 +154,8 @@ struct lstm : public primitive_base<lstm, CLDNN_PRIMITIVE_DESC(lstm)>
     float clip;
     /// @brief Couple the input and forget gates if input_forget is 1. Default is 0.
     uint32_t input_forget;
+    /// @brief Weights, recurrent weights, and biases order. [iofz] : ONNX, [ifoz] : Caffe
+    cldnn_lstm_offset_order offset_order;
     /// @brief The sequence output for the hidden??? This is not clearly specified in the ONNX definition.
     uint32_t output_sequence;
     /// @brief A list of 3 activation functions for the input, output, forget, cell, and hidden.
@@ -189,6 +196,7 @@ protected:
         dto.peepholes = peepholes.c_str();
         dto.initial_hidden = initial_hidden.c_str();
         dto.initial_cell = initial_cell.c_str();
+        dto.offset_order = offset_order;
     }
 };
 
@@ -275,10 +283,12 @@ struct lstm_elt : public primitive_base<lstm_elt, CLDNN_PRIMITIVE_DESC(lstm_elt)
         const primitive_id& id,
         const primitive_id& input,
         const primitive_id& cell = "",
+        const cldnn_lstm_offset_order offset_order = cldnn_lstm_offset_order_iofz,
         const padding& output_padding = padding()
         )
         : primitive_base(id, {input}, output_padding)
         , cell(cell)
+        , offset_order(offset_order)
     {
     }
 
@@ -286,6 +296,7 @@ struct lstm_elt : public primitive_base<lstm_elt, CLDNN_PRIMITIVE_DESC(lstm_elt)
     lstm_elt(const dto* dto)
         : primitive_base(dto)
         , cell(dto->cell)
+        , offset_order(dto->offset_order)
     {
     }
 
@@ -297,7 +308,8 @@ struct lstm_elt : public primitive_base<lstm_elt, CLDNN_PRIMITIVE_DESC(lstm_elt)
     std::vector<cldnn_activation_func> activations;
     /// @brief Optional scaling values used by some activation functions. The values are consumed in the order of activation functions.
     std::vector<cldnn_activation_additional_params> activation_params;
-
+    /// @brief Weights, recurrent weights, and biases order. [iofz] : ONNX, [ifoz] : Caffe
+    cldnn_lstm_offset_order offset_order;
 protected:
     std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override
     {
@@ -310,6 +322,7 @@ protected:
     void update_dto(dto& dto) const override
     {
         dto.cell = cell.c_str();
+        dto.offset_order = offset_order;
     }
 };
 

@@ -19,6 +19,7 @@
 #include <string>
 #include <cstddef>
 #include <memory>
+#include <map>
 #include "common_types.h"
 #include "common_tools.h"
 #include "tensor_type.h"
@@ -950,10 +951,36 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct LSTMEltParams : public base_params
     {
-        LSTMEltParams() : base_params(KernelType::LSTM_ELT) {}
+        enum OrderType : int32_t {
+            offset_iofz, // ONNX default
+            offset_ifoz, // caffe
+        };
+
+        LSTMEltParams()
+        : base_params(KernelType::LSTM_ELT)
+        {}
 
         DataTensor cell;
         bool hasCell = false;
+
+        OrderType order_type = offset_iofz;
+
+        size_t GetOffsetIndex(OrderType type, size_t idx) const {
+            static const std::map<OrderType, std::vector<size_t>> offset_map {
+                {offset_iofz, {0, 1, 2, 3}},
+                {offset_ifoz, {0, 2, 1, 3}}
+            };
+            return offset_map.at(type)[idx];
+        }
+
+        size_t GetOffsetIndexI() const { return GetOffsetIndex(order_type, 0); }
+        size_t GetOffsetIndexO() const { return GetOffsetIndex(order_type, 1); }
+        size_t GetOffsetIndexF() const { return GetOffsetIndex(order_type, 2); }
+        size_t GetOffsetIndexZ() const { return GetOffsetIndex(order_type, 3); }
+
+        void SetOffsetOrder(int32_t t) {
+            order_type = static_cast<OrderType>(t);
+        }
 
         void SetCell(const DataTensor& v) {
             cell = v;
