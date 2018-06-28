@@ -33,6 +33,13 @@ public:
     decltype(auto) cell() const { return get_dependency(1); }
     bool cell_term() const { return !get_primitive()->cell.empty(); }
     int32_t offset_order() const { return get_primitive()->offset_order; }
+    float clip() const {
+        float clip_val = get_primitive()->clip;
+        if (clip_val < 0)
+            throw std::range_error("Clip value < 0");
+        return clip_val; 
+    }
+    bool input_forget() const { return get_primitive()->input_forget; }
 };
 
 using lstm_elt_node = typed_program_node<lstm_elt>;
@@ -52,6 +59,13 @@ public:
     decltype(auto) cell_memory() const { return dep_memory(1); }
     bool cell_term() const { return !argument.cell.empty(); }
     int32_t offset_order() const { return argument.offset_order; }
+    float clip() const {
+        float clip_val = argument.clip;
+        if (clip_val < 0)
+            throw std::range_error("Clip value < 0");
+        return clip_val;
+    }
+    bool input_forget() const { return argument.input_forget; }
 };
 
 using lstm_elt_inst = typed_primitive_inst<lstm_elt>;

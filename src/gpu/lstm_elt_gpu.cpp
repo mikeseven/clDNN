@@ -24,6 +24,9 @@
 #include "lstm/lstm_elt_kernel_base.h"
 #include "network_impl.h"
 #include "error_handler.h"
+#include "lstm/lstm_elt_kernel_selector.h"
+#include "lstm/lstm_elt_kernel_base.h"
+
 
 namespace cldnn { namespace gpu {
 
@@ -64,6 +67,8 @@ public:
         }
 
         lstm_elt_params.SetOffsetOrder(arg.offset_order());
+        lstm_elt_params.clip = arg.clip();
+        lstm_elt_params.input_forget = arg.input_forget();
 
         auto& kernel_selector = kernel_selector::lstm_elt_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(lstm_elt_params, lstm_elt_optional_params);

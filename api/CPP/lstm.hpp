@@ -43,14 +43,17 @@ struct lstm : public primitive_base<lstm, CLDNN_PRIMITIVE_DESC(lstm)>
 
     /// @brief Constructs lstm layer.
     /// @param id This primitive id.
-    /// @param input input primitive id.
-    /// @param input weights Primitive id containing weights data.
-    /// @param input bias Primitive id containing bias data. Provide empty string if using lstm without bias.
-    /// @param input peepholes Primitive id containing peepholes data. Provide empty string if using lstm without peepholes.
-    /// @param input initial_hidden Primitive id containing initial_hidden data. Provide empty string if using lstm without initial_hidden values.
-    /// @param input initial_cell Primitive id containing initial_cell data. Provide empty string if using lstm without initial_cell values.
-    /// @param input clip threshold. Provide 0 if using lstm without cell clip threshold.
-    /// @param input input_forget. Provide 0 if using lstm without coupled input-forget gates.
+    /// @param input Vector of primitive id.
+    /// @param weights Primitive id containing weights data.
+    /// @param bias Primitive id containing bias data. Provide empty string if using lstm without bias.
+    /// @param initial_hidden Primitive id containing initial_hidden data. Provide empty string if using lstm without initial_hidden values.
+    /// @param initial_cell Primitive id containing initial_cell data. Provide empty string if using lstm without initial_cell values.
+    /// @param peepholes Primitive id containing peepholes data. Provide empty string if using lstm without peepholes.
+    /// @param clip Clip threshold. Provide 0 if using lstm without activations clip threshold.
+    /// @param input_forget Provide 0 if using lstm without coupled input-forget gates.
+    /// @param activations Vector of activations. Specify [f, g, h]. Default are [sigmoid, tanh, tanh]
+    /// @param activation_params Vector of ativation params. Specify params for each [f, g, h] activation.
+    /// @param offset_order Order of the concatenated weights, recurrent, and bias. ONNX default is iofz [input, output, forget, block].
     lstm(
         const primitive_id& id,
         const std::vector<primitive_id>& input,
@@ -61,7 +64,9 @@ struct lstm : public primitive_base<lstm, CLDNN_PRIMITIVE_DESC(lstm)>
         const primitive_id& initial_cell = "",
         const primitive_id& peepholes = "",
         const float clip = 0,
-        const uint32_t input_forget = 0,
+        const bool input_forget = 0,
+        const std::vector<cldnn_activation_func>& activations = {},
+        const std::vector<cldnn_activation_additional_params> activation_params = {},
         const cldnn_lstm_offset_order offset_order = cldnn_lstm_offset_order_iofz,
         const padding& output_padding = padding()
         )
@@ -74,48 +79,9 @@ struct lstm : public primitive_base<lstm, CLDNN_PRIMITIVE_DESC(lstm)>
         , peepholes(peepholes)
         , clip(clip)
         , input_forget(input_forget)
-        , offset_order(offset_order)
-    {
-    }
-
-    /// @brief Constructs lstm layer.
-    /// @param id This primitive id.
-    /// @param input input primitive id.
-    /// @param input weights Primitive id containing weights data.
-    /// @param input bias Primitive id containing bias data. Provide empty string if using lstm without bias.
-    /// @param input peepholes Primitive id containing peepholes data. Provide empty string if using lstm without peepholes.
-    /// @param input initial_hidden Primitive id containing initial_hidden data. Provide empty string if using lstm without initial_hidden values.
-    /// @param input initial_cell Primitive id containing initial_cell data. Provide empty string if using lstm without initial_cell values.
-    /// @param input clip threshold. Provide 0 if using lstm without cell clip threshold.
-    /// @param input input_forget. Provide 0 if using lstm without coupled input-forget gates.
-    lstm(
-        const primitive_id& id,
-        const primitive_id& input,
-        const primitive_id& weights,
-        const primitive_id& recurrent,
-        const std::vector<cldnn_activation_func>& activations,
-        const std::vector<cldnn_activation_additional_params>& activation_params,
-        const primitive_id& bias = "",
-        const primitive_id& initial_hidden = "",
-        const primitive_id& initial_cell = "",
-        const primitive_id& peepholes = "",
-        const float clip = 0,
-        const uint32_t input_forget = 0,
-        const cldnn_lstm_offset_order offset_order = cldnn_lstm_offset_order_iofz,
-        const padding& output_padding = padding()
-        )
-        : primitive_base(id, {input}, output_padding)
-        , weights(weights)
-        , recurrent(recurrent)
-        , bias(bias)
-        , initial_hidden(initial_hidden)
-        , initial_cell(initial_cell)
-        , peepholes(peepholes)
-        , clip(clip)
-        , input_forget(input_forget)
-        , offset_order(offset_order)
         , activations(activations)
         , activation_params(activation_params)
+        , offset_order(offset_order)
     {
     }
 
@@ -130,9 +96,9 @@ struct lstm : public primitive_base<lstm, CLDNN_PRIMITIVE_DESC(lstm)>
         , peepholes(dto->peepholes)
         , clip(dto->clip)
         , input_forget(dto->input_forget)
+        , activations(dto->activations, dto->activations + 3 * sizeof(cldnn_activation_func))
+        , activation_params(dto->activation_params, dto->activation_params + 3 * sizeof(cldnn_activation_additional_params))
         , offset_order(dto->offset_order)
-        // , activations(dto->activations)
-        // , activation_params(dto->activation_params)
     {
     }
 
@@ -148,28 +114,28 @@ struct lstm : public primitive_base<lstm, CLDNN_PRIMITIVE_DESC(lstm)>
     primitive_id initial_cell;
     /// @brief Primitive id containing peepholes data.
     primitive_id peepholes;
-    /// @brief Number of directions default = 1, bidirectional = 2.
-    uint32_t num_directions;
     /// @brief Cell clip threshold T. It is applied to the input of activations [-T, T]. No clip is applied if it is not specified.
     float clip;
     /// @brief Couple the input and forget gates if input_forget is 1. Default is 0.
-    uint32_t input_forget;
-    /// @brief Weights, recurrent weights, and biases order. [iofz] : ONNX, [ifoz] : Caffe
-    cldnn_lstm_offset_order offset_order;
-    /// @brief The sequence output for the hidden??? This is not clearly specified in the ONNX definition.
-    uint32_t output_sequence;
+    bool input_forget;
     /// @brief A list of 3 activation functions for the input, output, forget, cell, and hidden.
     std::vector<cldnn_activation_func> activations;
     /// @brief Optional scaling values used by some activation functions. The values are consumed in the order of activation functions.
     std::vector<cldnn_activation_additional_params> activation_params;
+    /// @brief Weights, recurrent weights, and biases order. [iofz] : ONNX, [ifoz] : Caffe
+    cldnn_lstm_offset_order offset_order;
 
-    /// @brief Optional tensor specifying lengths of the sequences in a batch.
-    /// If not specified - assumed all sequences in the batch to have length `seq_length`. It has shape `[batch_size]`.
-    tensor sequence_lens;
+    // NOT SUPPORTED YET
+    // /// @brief Number of directions default = 1, bidirectional = 2.
+    // uint32_t num_directions;
+    // /// @brief Optional tensor specifying lengths of the sequences in a batch.
+    // /// If not specified - assumed all sequences in the batch to have length `seq_length`. It has shape `[batch_size]`.
+    // tensor sequence_lens;
+    // /// @brief The sequence output for the hidden??? This is not clearly specified in the ONNX definition.
+    // uint32_t output_sequence;
 protected:
     std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override
     {
-        // We should use an unordered map to match primitivies to their index value
         std::vector<std::reference_wrapper<const primitive_id>> ret;
         ret.push_back(weights);
         ret.push_back(recurrent);
@@ -197,6 +163,14 @@ protected:
         dto.initial_hidden = initial_hidden.c_str();
         dto.initial_cell = initial_cell.c_str();
         dto.offset_order = offset_order;
+        if (activations.size() == 3) {
+            std::copy_n(activations.begin(), 3, dto.activations);
+        }
+        if (activation_params.size() == 3) {
+            std::copy_n(activation_params.begin(), 3, dto.activation_params);
+        }
+        dto.clip = clip;
+        dto.input_forget = input_forget;
     }
 };
 
@@ -274,20 +248,33 @@ protected:
 struct lstm_elt : public primitive_base<lstm_elt, CLDNN_PRIMITIVE_DESC(lstm_elt)>
 {
     CLDNN_DECLARE_PRIMITIVE(lstm_elt)
+    using vec_activation = std::vector<cldnn_activation_func>;
+    using vec_activation_param = std::vector<cldnn_activation_additional_params>;
 
     /// @brief Constructs lstm layer.
     /// @param id This primitive id.
     /// @param input input primitive id.
     /// @param input cell Primitive id containing cell data. Provide empty string if using lstm without cell values.
+    /// @param clip Clip threshold. Provide 0 if using lstm without activations clip threshold.
+    /// @param input_forget Provide 0 if using lstm without coupled input-forget gates.
+    /// @param offset_order. Order of the concatenated weights, recurrent, and bias. ONNX default is iofz [input, output, forget, block].
     lstm_elt(
         const primitive_id& id,
         const primitive_id& input,
         const primitive_id& cell = "",
+        const float clip = 0,
+        const bool input_forget = 0,
+        const std::vector<cldnn_activation_func> activations = {},
+        const std::vector<cldnn_activation_additional_params> activation_params = {},
         const cldnn_lstm_offset_order offset_order = cldnn_lstm_offset_order_iofz,
         const padding& output_padding = padding()
         )
         : primitive_base(id, {input}, output_padding)
         , cell(cell)
+        , clip(clip)
+        , input_forget(input_forget)
+        , activations(activations)
+        , activation_params(activation_params)
         , offset_order(offset_order)
     {
     }
@@ -296,20 +283,30 @@ struct lstm_elt : public primitive_base<lstm_elt, CLDNN_PRIMITIVE_DESC(lstm_elt)
     lstm_elt(const dto* dto)
         : primitive_base(dto)
         , cell(dto->cell)
+        , clip(dto->clip)
+        , input_forget(dto->input_forget)
+        , activations(dto->activations, dto->activations + 3 * sizeof(cldnn_activation_func))
+        , activation_params(dto->activation_params, dto->activation_params + 3 * sizeof(cldnn_activation_additional_params))
         , offset_order(dto->offset_order)
     {
     }
 
     /// @brief Primitive id containing the initial value of the cell state data.
     primitive_id cell;
-    /// @brief Number of directions default = 1, bidirectional = 2.
-    uint32_t num_directions;
+    /// @brief Cell clip threshold T. It is applied to the input of activations [-T, T]. No clip is applied if it is not specified.
+    float clip;
+    /// @brief Couple the input and forget gates if input_forget is 1. Default is 0.
+    bool input_forget;
     /// @brief A list of 3 activation functions for the input, output, forget, cell, and hidden.
     std::vector<cldnn_activation_func> activations;
     /// @brief Optional scaling values used by some activation functions. The values are consumed in the order of activation functions.
     std::vector<cldnn_activation_additional_params> activation_params;
     /// @brief Weights, recurrent weights, and biases order. [iofz] : ONNX, [ifoz] : Caffe
     cldnn_lstm_offset_order offset_order;
+
+    // NOT SUPPORTED YET
+    // /// @brief Number of directions default = 1, bidirectional = 2.
+    // uint32_t num_directions;
 protected:
     std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override
     {
@@ -323,6 +320,14 @@ protected:
     {
         dto.cell = cell.c_str();
         dto.offset_order = offset_order;
+        dto.clip = clip;
+        dto.input_forget = input_forget;
+        if (activations.size() == 3) {
+            std::copy_n(activations.begin(), 3, dto.activations);
+        }
+        if (activation_params.size() == 3) {
+            std::copy_n(activation_params.begin(), 3, dto.activation_params);
+        }
     }
 };
 

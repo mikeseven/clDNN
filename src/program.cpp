@@ -578,21 +578,19 @@ void program_impl::replace_nodes_pre()
                 primitive_id lstm_elt_id = node->id() + ":lstm_elt" + getIdString(i);
                 primitive_id crop_id = node->id() + ":crop" + getIdString(i);
                 primitive_id lstm_gemm_input_id = lstm_prim->input[i];
-                auto lstm_gemm_node = std::make_shared<lstm_gemm>(lstm_gemm_id, lstm_gemm_input_id, weights_id, recurrent_id, bias_id, hidden_id);
-                auto &n1 = get_or_create(lstm_gemm_node);
-                inputs.push_back(&n1);
-                auto lstm_elt_node = std::make_shared<lstm_elt>(lstm_elt_id, lstm_gemm_id, cell_id, lstm_prim->offset_order);
-                auto &n2 = get_or_create(lstm_elt_node);
-                inputs.push_back(&n2);
+                auto lstm_gemm_node = std::make_shared<lstm_gemm>(lstm_gemm_id, lstm_gemm_input_id,
+                                            weights_id, recurrent_id, bias_id, hidden_id);
+                inputs.push_back(&get_or_create(lstm_gemm_node));
+                auto lstm_elt_node = std::make_shared<lstm_elt>(lstm_elt_id, lstm_gemm_id, cell_id, lstm_prim->clip, lstm_prim->input_forget,
+                                        lstm_prim->activations, lstm_prim->activation_params, lstm_prim->offset_order);
+                inputs.push_back(&get_or_create(lstm_elt_node));
                 hidden_id = crop_id + ":hidden";
                 auto crop_hidden = std::make_shared<crop>(hidden_id, lstm_elt_id, hidden_size, tensor{ 0,0,0,0 });
-                auto &n3 = get_or_create(crop_hidden);
-                inputs.push_back(&n3);
+                inputs.push_back(&get_or_create(crop_hidden));
                 if (i < sequence_len - 1) {
                     cell_id = crop_id + ":cell";
                     auto crop_cell = std::make_shared<crop>(cell_id, lstm_elt_id, hidden_size, tensor{ 1,0,0,0 });
-                    auto &n4 = get_or_create(crop_cell);
-                    inputs.push_back(&n4);
+                    inputs.push_back(&get_or_create(crop_cell));
                 }
                 output_ids_offsets.push_back(hidden_id);
             }
@@ -601,8 +599,7 @@ void program_impl::replace_nodes_pre()
             rename(*node, original_id + ":cldnn_tmp_lstm");
             primitive_id concatenation_id = original_id;
             auto concatenation_node = std::make_shared<concatenation>(concatenation_id, output_ids_offsets, concatenation::along_f);
-            auto &n5 = get_or_create(concatenation_node);
-            inputs.push_back(&n5);
+            inputs.push_back(&get_or_create(concatenation_node));
         }
     }
 }

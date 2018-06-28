@@ -18,6 +18,7 @@
 #ifndef LSTM_H
 #define LSTM_H
 
+#include <stdbool.h>
 #include "cldnn.h"
 /// @addtogroup c_api C API
 /// @{
@@ -59,24 +60,21 @@ cldnn_primitive_id initial_hidden;
 cldnn_primitive_id initial_cell;
 /// @brief Array of primitive ids containing peephole weight vectors for input, output, and forget gates.
 cldnn_primitive_id peepholes;
-/// @brief Number of directions default = 1, bidirectional = 2.
-uint32_t num_directions;
 /// @brief Cell clip threshold T. It is applied to the input of activations [-T, T]. No clip is applied if it is not specified.
 float clip;
 /// @brief Couple the input and forget gates if input_forget is 1. Default is 0.
-uint32_t input_forget;
-
-/// @brief The sequence output for the hidden. This is not clearly specified in the ONNX definition.
-uint32_t output_sequence;
-
+bool input_forget;
 /// @brief A list of 3 activation functions for the input, output, forget, cell, and hidden.
 cldnn_activation_func activations[3];
 /// @brief Optional scaling values used by some activation functions. The values are consumed in the order of activation functions.
 cldnn_activation_additional_params activation_params[3];
-
 /// @brief Weights, recurrent weights, and biases order. [iofz] : ONNX, [ifoz] : Caffe
 cldnn_lstm_offset_order offset_order;
-
+// NOT SUPPORTED YET
+// /// @brief Number of directions default = 1, bidirectional = 2.
+// uint32_t num_directions;
+// /// @brief The sequence output for the hidden. This is not clearly specified in the ONNX definition.
+// uint32_t output_sequence;
 CLDNN_END_PRIMITIVE_DESC(lstm)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(lstm);
@@ -94,14 +92,9 @@ cldnn_primitive_id recurrent;
 cldnn_primitive_id bias;
 /// @brief Array of primitive ids containing the initial value of the hidden data (Ht-1).
 cldnn_primitive_id hidden;
-/// @brief Number of directions default = 1, bidirectional = 2.
-uint32_t num_directions;
-
-/// @brief A list of 3 activation functions for the input, output, forget, cell, and hidden.
-cldnn_activation_func activations[3];
-/// @brief Optional scaling values used by some activation functions. The values are consumed in the order of activation functions.
-cldnn_activation_additional_params activation_params[3];
-
+// NOT SUPPORTED YET
+// /// @brief Number of directions default = 1, bidirectional = 2.
+// uint32_t num_directions;
 CLDNN_END_PRIMITIVE_DESC(lstm_gemm)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(lstm_gemm);
@@ -113,20 +106,21 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(lstm_gemm);
 CLDNN_BEGIN_PRIMITIVE_DESC(lstm_elt)
 /// @brief Array of primitive ids containing the initial value of the cell state data (Ct-1).
 cldnn_primitive_id cell;
-/// @brief Number of directions default = 1, bidirectional = 2.
-uint32_t num_directions;
-
-/// @brief The sequence output for the hidden. This is not clearly specified in the ONNX definition.
-uint32_t output_sequence;
-
+/// @brief Cell clip threshold T. It is applied to the input of activations [-T, T]. No clip is applied if it is not specified.
+float clip;
+/// @brief Couple the input and forget gates if input_forget is 1. Default is 0.
+bool input_forget;
 /// @brief A list of 3 activation functions for the input, output, forget, cell, and hidden.
 cldnn_activation_func activations[3];
 /// @brief Optional scaling values used by some activation functions. The values are consumed in the order of activation functions.
 cldnn_activation_additional_params activation_params[3];
-
 /// @brief Weights, recurrent weights, and biases order. [iofz] : ONNX, [ifoz] : Caffe
 cldnn_lstm_offset_order offset_order;
-
+// NOT SUPPORTED YET
+// /// @brief Number of directions default = 1, bidirectional = 2.
+// uint32_t num_directions;
+// /// @brief The sequence output for the hidden. This is not clearly specified in the ONNX definition.
+// uint32_t output_sequence;
 CLDNN_END_PRIMITIVE_DESC(lstm_elt)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(lstm_elt);

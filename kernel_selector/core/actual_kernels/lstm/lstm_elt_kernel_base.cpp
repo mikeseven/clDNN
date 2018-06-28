@@ -24,9 +24,21 @@ namespace kernel_selector
     {
         JitConstants jit = MakeBaseParamsJitConstants(params);
 
-        if (params.hasCell) {
+        if (params.has_cell) {
             const auto& cell = params.cell;
             jit.AddConstants({ MakeJitConstant("CELL_TERM", true), MakeJitConstant("CELL", cell) });
+        }
+        if (params.clip > 0) {
+            std::string psclip = toCodeString(params.clip);
+            std::string nsclip = toCodeString(-params.clip);
+            jit.AddConstants({ MakeJitConstant("CLIP(x)", "((x > " + psclip +") ? " +
+                psclip + ": (x < " + nsclip + ") ? " + nsclip + " : (x))")});
+        }
+        else {
+            jit.AddConstants({ MakeJitConstant("CLIP(x)", "(x)")});
+        }
+        if (params.input_forget) {
+            jit.AddConstants({ MakeJitConstant("INPUT_FORGET", true)});
         }
 
         const auto& GEMMInput = params.inputs[0];
@@ -68,7 +80,7 @@ namespace kernel_selector
         kernel.kernelString = GetKernelString(kernelName, jit, entryPoint);
         kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 0 });
         kernel.arguments.push_back({ ArgumentDescriptor::Types::OUTPUT, 0 });
-        if (orgParams.hasCell) {
+        if (orgParams.has_cell) {
             kernel.arguments.push_back({ ArgumentDescriptor::Types::CELL, 0 });
         }
 

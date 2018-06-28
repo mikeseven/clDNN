@@ -45,6 +45,8 @@ public:
     bool peepholes_term() const { return !get_primitive()->peepholes.empty(); }
     bool initial_hidden_term() const { return !get_primitive()->initial_hidden.empty(); }
     bool initial_cell_term() const { return !get_primitive()->initial_cell.empty(); }
+    auto activations() const { return get_primitive()->activations; }
+    auto activation_params() const { return get_primitive()->activation_params; }
 };
 
 using lstm_node = typed_program_node<lstm>;
@@ -76,6 +78,8 @@ public:
     bool peepholes_term() const { return !argument.peepholes.empty(); }
     bool initial_hidden_term() const { return !argument.initial_hidden.empty(); }
     bool initial_cell_term() const { return !argument.initial_cell.empty(); }
+    auto activations() const { return argument.activations; }
+    auto activation_params() const { return argument.activation_params; }
 };
 
 using lstm_inst = typed_primitive_inst<lstm>;

@@ -24,6 +24,9 @@
 #include "lstm/lstm_gemm_kernel_base.h"
 #include "network_impl.h"
 #include "error_handler.h"
+#include "lstm/lstm_gemm_kernel_selector.h"
+#include "lstm/lstm_gemm_kernel_base.h"
+
 
 namespace cldnn { namespace gpu {
 
@@ -50,11 +53,6 @@ protected:
     virtual bool validate(typed_primitive_inst<lstm_gemm>& instance) const override
     {
         bool res = parent::validate(instance);
-
-        // [ARIEL] TODO: check for types here ??
-        // Check whether all memory elements use the same unit type (FP16 or FP32).
-        //CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory().get_layout().data_type, "output memory", instance.output_memory().get_layout().data_type, "");
-        //CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory().get_layout().data_type, "filter memory", instance.weights_memory(0).get_layout().data_type, "");
 
         return res;
     }

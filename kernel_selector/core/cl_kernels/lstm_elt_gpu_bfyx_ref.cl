@@ -15,8 +15,6 @@
 
 #include "include/include_all.cl"
 
-
-
 // tempGEMM = [ 1, direction, batch, 4 * hidden_size ]
 // cell     = [ 1, direction, batch,     hidden_size ] optional
 // output   = [ 2, direction, batch,     hidden_size ] output
@@ -35,13 +33,20 @@ KERNEL(lstm_elt)(
     ACCUMULATOR_TYPE ot = input[GET_DATA_INDEX(INPUT0, 0, 0, b, x + GEMM_OFFSET_O)]; // pass constant offsets here
     ACCUMULATOR_TYPE zt = input[GET_DATA_INDEX(INPUT0, 0, 0, b, x + GEMM_OFFSET_Z)];
 
-    ACCUMULATOR_TYPE val = ACTIVATION_LOGISTIC(it) * ACTIVATION_HYPERBOLIC_TAN(zt);
+    ACCUMULATOR_TYPE val = ACTIVATION_LOGISTIC(CLIP(it)) * ACTIVATION_HYPERBOLIC_TAN(CLIP(zt));
 
-#if CELL_TERM
+#if CELL_TERM || INPUT_FORGET
     ACCUMULATOR_TYPE ft = input[GET_DATA_INDEX(INPUT0, 0, 0, b, x + GEMM_OFFSET_F)];
-    val += cell[GET_DATA_INDEX(CELL, 0, 0, b, x)] * ACTIVATION_LOGISTIC(ft);
 #endif
 
-    output[GET_DATA_INDEX(OUTPUT, 0, 0, b, x)] = ACTIVATION_HYPERBOLIC_TAN(val) * ACTIVATION_LOGISTIC(ot);
-    output[GET_DATA_INDEX(OUTPUT, 1, 0, b, x)] = (OUTPUT_TYPE)val;
+#if INPUT_FORGET
+    val *= ((ACCUMULATOR_TYPE)1 - ft);
+#endif
+
+#if CELL_TERM
+    val += cell[GET_DATA_INDEX(CELL, 0, 0, b, x)] * ACTIVATION_LOGISTIC(CLIP(ft));
+#endif
+
+    output[GET_DATA_INDEX(OUTPUT, 0, 0, b, x)] = ACTIVATION_HYPERBOLIC_TAN(val) * ACTIVATION_LOGISTIC(ot); // hidden
+    output[GET_DATA_INDEX(OUTPUT, 1, 0, b, x)] = (OUTPUT_TYPE)val; // cell
 }

@@ -26,46 +26,47 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct lstm_elt_params : public base_params
     {
-        enum OrderType : int32_t {
+        enum order_type : int32_t {
             offset_iofz, // ONNX default
             offset_ifoz, // caffe
         };
 
         lstm_elt_params()
-            : base_params(KernelType::LSTM_ELT)
+        : base_params(KernelType::LSTM_ELT)
         {}
 
         DataTensor cell;
-        bool hasCell = false;
+        bool has_cell = false;
+        order_type gate_order = offset_iofz;
+        float clip = 0;
+        bool input_forget = false;
 
-        OrderType order_type = offset_iofz;
-
-        size_t GetOffsetIndex(OrderType type, size_t idx) const {
-            static const std::map<OrderType, std::vector<size_t>> offset_map{
-                { offset_iofz,{ 0, 1, 2, 3 } },
-                { offset_ifoz,{ 0, 2, 1, 3 } }
+        size_t GetOffsetIndex(order_type type, size_t idx) const {
+            static const std::map<order_type, std::vector<size_t>> offset_map {
+                {offset_iofz, {0, 1, 2, 3}},
+                {offset_ifoz, {0, 2, 1, 3}}
             };
             return offset_map.at(type)[idx];
         }
 
-        size_t GetOffsetIndexI() const { return GetOffsetIndex(order_type, 0); }
-        size_t GetOffsetIndexO() const { return GetOffsetIndex(order_type, 1); }
-        size_t GetOffsetIndexF() const { return GetOffsetIndex(order_type, 2); }
-        size_t GetOffsetIndexZ() const { return GetOffsetIndex(order_type, 3); }
+        size_t GetOffsetIndexI() const { return GetOffsetIndex(gate_order, 0); }
+        size_t GetOffsetIndexO() const { return GetOffsetIndex(gate_order, 1); }
+        size_t GetOffsetIndexF() const { return GetOffsetIndex(gate_order, 2); }
+        size_t GetOffsetIndexZ() const { return GetOffsetIndex(gate_order, 3); }
 
         void SetOffsetOrder(int32_t t) {
-            order_type = static_cast<OrderType>(t);
+            gate_order = static_cast<order_type>(t);
         }
 
         void SetCell(const DataTensor& v) {
             cell = v;
-            hasCell = true;
+            has_cell = true;
         }
 
         virtual ParamsKey GetParamsKey() const override
         {
             ParamsKey k = base_params::GetParamsKey();
-            if (hasCell)
+            if (has_cell)
             {
                 k.EnableLSTMEltCell();
             }

@@ -34,7 +34,7 @@ namespace kernel_selector
             jit.AddConstants({ MakeJitConstant("HIDDEN", hidden), MakeJitConstant("HIDDEN_TERM", true) , MakeJitConstant("RECURRENT", recurrent) });
         }
 
-        jit.AddConstants({ MakeJitConstant("WEIGHTS", weights) });
+        jit.AddConstants({ MakeJitConstant("WEIGHTS", weights)});
 
         return jit;
     }
