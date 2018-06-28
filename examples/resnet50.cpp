@@ -31,7 +31,7 @@ using namespace cldnn;
 using namespace std;
 
 
-static primitive_id add_conv_layer(const std::string& weights_dir, const engine& engine, topology& topology_inst,
+static primitive_id add_conv_layer(const string& weights_dir, const engine& engine, topology& topology_inst,
                                    const string& layer_name, const primitive_id& input,
                                    const tensor& padding = {0, 0, 0, 0}, const tensor& stride = {1, 1, 1, 1},
                                    const bool add_relu = true)
@@ -54,14 +54,14 @@ static primitive_id add_conv_layer(const std::string& weights_dir, const engine&
     return conv_layer;
 }
 
-static primitive_id add_conv_layer_no_relu(const std::string& weights_dir, const engine& engine, topology& topology_inst,
+static primitive_id add_conv_layer_no_relu(const string& weights_dir, const engine& engine, topology& topology_inst,
                                            const string& layer_name, const primitive_id& input,
                                            const tensor& padding = {0, 0, 0, 0}, const tensor& stride = {1, 1, 1, 1})
 {
     return add_conv_layer(weights_dir, engine, topology_inst, layer_name, input, padding, stride, false);
 }
 
-static primitive_id add_residual_layers(const std::string& weights_dir, const engine& engine, topology& topology_inst,
+static primitive_id add_residual_layers(const string& weights_dir, const engine& engine, topology& topology_inst,
                                         const string& res_name, const primitive_id& input,
                                         bool conv_in_branch1, const tensor& res_stride = {1, 1, 1, 1})
 {
@@ -88,8 +88,8 @@ cldnn::topology build_resnet50(const std::string& weights_dir, const cldnn::engi
                                cldnn::layout& input_layout, int32_t batch_size, const bool mean_subtract)
 {
     // [224x224x3xF] input->convolution(conv1)->relu(conv1_relu)->pooling[max](pool1) [56x56x64xF].
-    input_layout.size = { batch_size, 3, 224, 224 };
-    auto input = cldnn::input_layout("input", input_layout);
+    input_layout.size = {batch_size, 3, 224, 224};
+    auto input        = cldnn::input_layout("input", input_layout);
     topology topology_inst{input};
 
     primitive_id corrected_input = input;
@@ -107,7 +107,7 @@ cldnn::topology build_resnet50(const std::string& weights_dir, const cldnn::engi
     }
 
     auto conv1 = add_conv_layer(weights_dir, engine, topology_inst, "conv1", corrected_input,
-                                {0,0,-3,-3}, {1, 1, 2, 2});
+                                {0, 0, -3, -3}, {1, 1, 2, 2});
 
     auto pool1 = pooling(
         "pool1",

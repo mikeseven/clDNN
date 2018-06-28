@@ -14,10 +14,6 @@
 // limitations under the License.
 */
 
-#include "common/common_tools.h"
-#include "file.h"
-
-#include <string>
 #include <api/CPP/input_layout.hpp>
 #include <api/CPP/reorder.hpp>
 #include <api/CPP/eltwise.hpp>
@@ -33,63 +29,87 @@
 #include <api/CPP/reshape.hpp>
 #include <api/CPP/detection_output.hpp>
 
+#include "common/common_tools.h"
+#include "file.h"
+
+#include <string>
+
+
 using namespace cldnn;
+using namespace std;
 
-void generate_wb_vectors(
-    const std::string& weights_dir,
-    const cldnn::engine& engine,
-    const std::string& name,
-    unsigned group_count,
-    std::vector<cldnn::data>& weights_data,
-    std::vector<primitive_id>& weithts_prim_id,
-    std::vector<cldnn::data>& biases_data,
-    std::vector<primitive_id>& biases_prim_id)
+
+static primitive_id add_conv_layer(const string& weights_dir, const engine& engine, topology& topology_inst,
+                                   const string& layer_name, const string& weights_root, const primitive_id& input,
+                                   const tensor& padding = {0, 0, 0, 0}, const tensor& stride = {1, 1, 1, 1},
+                                   const size_t split = 1, const bool add_relu = true)
 {
-    for (unsigned i = 0; i < group_count; i++)
+    vector<primitive_id> weights_data_groups;
+    vector<primitive_id> bias_data_groups;
+
+    if (split <= 1)
     {
-        unsigned group_num = i + 1;
+        auto weights_data = file::create({engine, join_path(weights_dir, weights_root + "_weights.nnd")});
+        auto bias_data    = file::create({engine, join_path(weights_dir, weights_root + "_bias.nnd")});
 
-        auto weight = file::create({ engine, join_path(weights_dir, name + "_g" + std::to_string(group_num) + "_weights.nnd") });
-        weights_data.push_back(weight);
-        weithts_prim_id.push_back(weight);
+        weights_data_groups.push_back(weights_data);
+        bias_data_groups.push_back(bias_data);
 
-        auto bias = file::create({ engine, join_path(weights_dir, name + "_g" + std::to_string(group_num) + "_bias.nnd") });
-        biases_data.push_back(bias);
-        biases_prim_id.push_back(bias);
+        topology_inst.add(weights_data, bias_data);
     }
+    else
+    {
+        for (size_t gi = 1; gi <= split; ++gi)
+        {
+            auto weights_data = file::create({engine, join_path(weights_dir, weights_root + "_g" + std::to_string(gi) + "_weights.nnd")});
+            auto bias_data    = file::create({engine, join_path(weights_dir, weights_root + "_g" + std::to_string(gi) + "_bias.nnd")});
+
+            weights_data_groups.push_back(weights_data);
+            bias_data_groups.push_back(bias_data);
+
+            topology_inst.add(weights_data, bias_data);
+        }
+    }
+
+    auto conv_layer = convolution(
+        layer_name,
+        input,
+        weights_data_groups,
+        bias_data_groups,
+        stride,
+        padding,
+        {1, 1, 1, 1},
+        add_relu);
+
+    topology_inst.add(conv_layer);
+
+    return conv_layer;
 }
 
-template<typename T>
-void set_values(const cldnn::memory& mem, const int count) {
-    auto ptr = mem.pointer<T>();
 
-    auto it = ptr.begin();
-    for (auto x : args)
-        *it++ = x;
-}
 
 // Building SSD MobileNet network with loading weights & biases from file
-cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& in_layout, int32_t batch_size)
+cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)
 {
-    cldnn::topology topology;
     // [300x300x3xB]
-    in_layout.size = { batch_size, 3, 300, 300 };
-    auto input = cldnn::input_layout("input", in_layout);
+    input_layout.size = {batch_size, 3, 300, 300};
+    auto input        = cldnn::input_layout("input", input_layout);
+    cldnn::topology topology_inst{input};
 
     // subtract mean values
     //auto reordered_input = reorder(
     //    "reorder",
     //    input,
-    //    { in_layout.data_type, in_layout.format, in_layout.size },
+    //    { input_layout.data_type, input_layout.format, input_layout.size },
     //    std::vector<float>{ 104.0f, 117.0f, 123.0f });
 
     auto scale_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 1, 1 } });
     auto scale_ptr = scale_mem.pointer<float>();
     //for (int i = 0; i < scale_mem.get_layout().size; i++)
     {
-        scale_ptr[0] = 0.01699986400108799;
+        scale_ptr[0] = 0.01699986400108799f;
     }
-    auto scale_data = data("scale_data", scale_mem);
+    auto scale_data = cldnn::data("scale_data", scale_mem);
 
     ///*auto eltwise0 = eltwise(
     //    "eltwise0",
@@ -104,319 +124,52 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
         scale_data
     );
 
-    auto conv0_w = file::create({ engine, join_path(weights_dir, "conv0_weights.nnd") });
-    auto conv0_b = file::create({ engine, join_path(weights_dir, "conv0_bias.nnd") });
-    auto conv0 = convolution(
-        "conv0",
-        mull_340,
-        { conv0_w },
-        { conv0_b },
-        { 1,1,2,2 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
+    auto conv0 = add_conv_layer(weights_dir, engine, topology_inst, "conv0", "conv0", mull_340, {0, 0, -1, -1}, {1, 1, 2, 2});
 
-    std::vector<cldnn::data> conv1_dw_w_data;
-    std::vector<primitive_id> conv1_dw_w_prim_id;
-    std::vector<cldnn::data> conv1_dw_b_data;
-    std::vector<primitive_id> conv1_dw_b_prim_id;
-    generate_wb_vectors(weights_dir, engine, "conv1%2Fdw", 32, conv1_dw_w_data, conv1_dw_w_prim_id, conv1_dw_b_data, conv1_dw_b_prim_id);
-    auto conv1_dw = convolution(
-        "conv1_dw",
-        conv0,
-        conv1_dw_w_prim_id,
-        conv1_dw_b_prim_id,
-        { 1,1,1,1 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
+    auto conv1_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv1_dw", "conv1%2Fdw", conv0, {0, 0, -1, -1}, {1, 1, 1, 1}, 32);
+    auto conv1    = add_conv_layer(weights_dir, engine, topology_inst, "conv1", "conv1", conv1_dw);
 
-    auto conv1_w = file::create({ engine, join_path(weights_dir, "conv1_weights.nnd") });
-    auto conv1_b = file::create({ engine, join_path(weights_dir, "conv1_bias.nnd") });
-    auto conv1 = convolution(
-        "conv1",
-        conv1_dw,
-        { conv1_w },
-        { conv1_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
+    auto conv2_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv2_dw", "conv2%2Fdw", conv1, {0, 0, -1, -1}, {1, 1, 2, 2}, 64);
+    auto conv2    = add_conv_layer(weights_dir, engine, topology_inst, "conv2", "conv2", conv2_dw);
 
-    std::vector<cldnn::data> conv2_dw_w_data;
-    std::vector<primitive_id> conv2_dw_w_prim_id;
-    std::vector<cldnn::data> conv2_dw_b_data;
-    std::vector<primitive_id> conv2_dw_b_prim_id;
-    generate_wb_vectors(weights_dir, engine, "conv2%2Fdw", 64, conv2_dw_w_data, conv2_dw_w_prim_id, conv2_dw_b_data, conv2_dw_b_prim_id);
-    auto conv2_dw = convolution(
-        "conv2_dw",
-        conv1,
-        conv2_dw_w_prim_id,
-        conv2_dw_b_prim_id,
-        { 1,1,2,2 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
+    auto conv3_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv3_dw", "conv3%2Fdw", conv2, {0, 0, -1, -1}, {1, 1, 1, 1}, 128);
+    auto conv3    = add_conv_layer(weights_dir, engine, topology_inst, "conv3", "conv3", conv3_dw);
 
-    auto conv2_w = file::create({ engine, join_path(weights_dir, "conv2_weights.nnd") });
-    auto conv2_b = file::create({ engine, join_path(weights_dir, "conv2_bias.nnd") });
-    auto conv2 = convolution(
-        "conv2",
-        conv2_dw,
-        { conv2_w },
-        { conv2_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
+    auto conv4_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv4_dw", "conv4%2Fdw", conv3, {0, 0, -1, -1}, {1, 1, 2, 2}, 128);
+    auto conv4    = add_conv_layer(weights_dir, engine, topology_inst, "conv4", "conv4", conv4_dw);
 
-    std::vector<cldnn::data> conv3_dw_w_data;
-    std::vector<primitive_id> conv3_dw_w_prim_id;
-    std::vector<cldnn::data> conv3_dw_b_data;
-    std::vector<primitive_id> conv3_dw_b_prim_id;
-    generate_wb_vectors(weights_dir, engine, "conv3%2Fdw", 128, conv3_dw_w_data, conv3_dw_w_prim_id, conv3_dw_b_data, conv3_dw_b_prim_id);
-    auto conv3_dw = convolution(
-        "conv3_dw",
-        conv2,
-        conv3_dw_w_prim_id,
-        conv3_dw_b_prim_id,
-        { 1,1,1,1 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
+    auto conv5_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv5_dw", "conv5%2Fdw", conv4, {0, 0, -1, -1}, {1, 1, 1, 1}, 256);
+    auto conv5    = add_conv_layer(weights_dir, engine, topology_inst, "conv5", "conv5", conv5_dw);
 
-    auto conv3_w = file::create({ engine, join_path(weights_dir, "conv3_weights.nnd") });
-    auto conv3_b = file::create({ engine, join_path(weights_dir, "conv3_bias.nnd") });
-    auto conv3 = convolution(
-        "conv3",
-        conv3_dw,
-        { conv3_w },
-        { conv3_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
+    auto conv6_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv6_dw", "conv6%2Fdw", conv5, {0, 0, -1, -1}, {1, 1, 2, 2}, 256);
+    auto conv6    = add_conv_layer(weights_dir, engine, topology_inst, "conv6", "conv6", conv6_dw);
 
-    std::vector<cldnn::data> conv4_dw_w_data;
-    std::vector<primitive_id> conv4_dw_w_prim_id;
-    std::vector<cldnn::data> conv4_dw_b_data;
-    std::vector<primitive_id> conv4_dw_b_prim_id;
-    generate_wb_vectors(weights_dir, engine, "conv4%2Fdw", 128, conv4_dw_w_data, conv4_dw_w_prim_id, conv4_dw_b_data, conv4_dw_b_prim_id);
-    auto conv4_dw = convolution(
-        "conv4_dw",
-        conv3,
-        conv4_dw_w_prim_id,
-        conv4_dw_b_prim_id,
-        { 1,1,2,2 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
+    auto conv7_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv7_dw", "conv7%2Fdw", conv6, {0, 0, -1, -1}, {1, 1, 1, 1}, 512);
+    auto conv7    = add_conv_layer(weights_dir, engine, topology_inst, "conv7", "conv7", conv7_dw);
 
-    auto conv4_w = file::create({ engine, join_path(weights_dir, "conv4_weights.nnd") });
-    auto conv4_b = file::create({ engine, join_path(weights_dir, "conv4_bias.nnd") });
-    auto conv4 = convolution(
-        "conv4",
-        conv4_dw,
-        { conv4_w },
-        { conv4_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
+    auto conv8_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv8_dw", "conv8%2Fdw", conv7, {0, 0, -1, -1}, {1, 1, 1, 1}, 512);
+    auto conv8    = add_conv_layer(weights_dir, engine, topology_inst, "conv8", "conv8", conv8_dw);
 
-    std::vector<cldnn::data> conv5_dw_w_data;
-    std::vector<primitive_id> conv5_dw_w_prim_id;
-    std::vector<cldnn::data> conv5_dw_b_data;
-    std::vector<primitive_id> conv5_dw_b_prim_id;
-    generate_wb_vectors(weights_dir, engine, "conv5%2Fdw", 256, conv5_dw_w_data, conv5_dw_w_prim_id, conv5_dw_b_data, conv5_dw_b_prim_id);
-    auto conv5_dw = convolution(
-        "conv5_dw",
-        conv4,
-        conv5_dw_w_prim_id,
-        conv5_dw_b_prim_id,
-        { 1,1,1,1 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
+    auto conv9_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv9_dw", "conv9%2Fdw", conv8, {0, 0, -1, -1}, {1, 1, 1, 1}, 512);
+    auto conv9    = add_conv_layer(weights_dir, engine, topology_inst, "conv9", "conv9", conv9_dw);
 
-    auto conv5_w = file::create({ engine, join_path(weights_dir, "conv5_weights.nnd") });
-    auto conv5_b = file::create({ engine, join_path(weights_dir, "conv5_bias.nnd") });
-    auto conv5 = convolution(
-        "conv5",
-        conv5_dw,
-        { conv5_w },
-        { conv5_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
+    auto conv10_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv10_dw", "conv10%2Fdw", conv9, {0, 0, -1, -1}, {1, 1, 1, 1}, 512);
+    auto conv10    = add_conv_layer(weights_dir, engine, topology_inst, "conv10", "conv10", conv10_dw);
 
-    std::vector<cldnn::data> conv6_dw_w_data;
-    std::vector<primitive_id> conv6_dw_w_prim_id;
-    std::vector<cldnn::data> conv6_dw_b_data;
-    std::vector<primitive_id> conv6_dw_b_prim_id;
-    generate_wb_vectors(weights_dir, engine, "conv6%2Fdw", 256, conv6_dw_w_data, conv6_dw_w_prim_id, conv6_dw_b_data, conv6_dw_b_prim_id);
-    auto conv6_dw = convolution(
-        "conv6_dw",
-        conv5,
-        conv6_dw_w_prim_id,
-        conv6_dw_b_prim_id,
-        { 1,1,2,2 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
+    auto conv11_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv11_dw", "conv11%2Fdw", conv10, {0, 0, -1, -1}, {1, 1, 1, 1}, 512);
+    auto conv11    = add_conv_layer(weights_dir, engine, topology_inst, "conv11", "conv11", conv11_dw);
 
-    auto conv6_w = file::create({ engine, join_path(weights_dir, "conv6_weights.nnd") });
-    auto conv6_b = file::create({ engine, join_path(weights_dir, "conv6_bias.nnd") });
-    auto conv6 = convolution(
-        "conv6",
-        conv6_dw,
-        { conv6_w },
-        { conv6_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
+    auto conv12_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv12_dw", "conv12%2Fdw", conv11, {0, 0, -1, -1}, {1, 1, 2, 2}, 512);
+    auto conv12    = add_conv_layer(weights_dir, engine, topology_inst, "conv12", "conv12", conv12_dw);
 
-    std::vector<cldnn::data> conv7_dw_w_data;
-    std::vector<primitive_id> conv7_dw_w_prim_id;
-    std::vector<cldnn::data> conv7_dw_b_data;
-    std::vector<primitive_id> conv7_dw_b_prim_id;
-    generate_wb_vectors(weights_dir, engine, "conv7%2Fdw", 512, conv7_dw_w_data, conv7_dw_w_prim_id, conv7_dw_b_data, conv7_dw_b_prim_id);
-    auto conv7_dw = convolution(
-        "conv7_dw",
-        conv6,
-        conv7_dw_w_prim_id,
-        conv7_dw_b_prim_id,
-        { 1,1,1,1 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
+    auto conv13_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv13_dw", "conv13%2Fdw", conv12, {0, 0, -1, -1}, {1, 1, 1, 1}, 1024);
+    auto conv13    = add_conv_layer(weights_dir, engine, topology_inst, "conv13", "conv13", conv13_dw);
 
-    auto conv7_w = file::create({ engine, join_path(weights_dir, "conv7_weights.nnd") });
-    auto conv7_b = file::create({ engine, join_path(weights_dir, "conv7_bias.nnd") });
-    auto conv7 = convolution(
-        "conv7",
-        conv7_dw,
-        { conv7_w },
-        { conv7_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
-
-    std::vector<cldnn::data> conv8_dw_w_data;
-    std::vector<primitive_id> conv8_dw_w_prim_id;
-    std::vector<cldnn::data> conv8_dw_b_data;
-    std::vector<primitive_id> conv8_dw_b_prim_id;
-    generate_wb_vectors(weights_dir, engine, "conv8%2Fdw", 512, conv8_dw_w_data, conv8_dw_w_prim_id, conv8_dw_b_data, conv8_dw_b_prim_id);
-    auto conv8_dw = convolution(
-        "conv8_dw",
-        conv7,
-        conv8_dw_w_prim_id,
-        conv8_dw_b_prim_id,
-        { 1,1,1,1 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
-
-    auto conv8_w = file::create({ engine, join_path(weights_dir, "conv8_weights.nnd") });
-    auto conv8_b = file::create({ engine, join_path(weights_dir, "conv8_bias.nnd") });
-    auto conv8 = convolution(
-        "conv8",
-        conv8_dw,
-        { conv8_w },
-        { conv8_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
-
-    std::vector<cldnn::data> conv9_dw_w_data;
-    std::vector<primitive_id> conv9_dw_w_prim_id;
-    std::vector<cldnn::data> conv9_dw_b_data;
-    std::vector<primitive_id> conv9_dw_b_prim_id;
-    generate_wb_vectors(weights_dir, engine, "conv9%2Fdw", 512, conv9_dw_w_data, conv9_dw_w_prim_id, conv9_dw_b_data, conv9_dw_b_prim_id);
-    auto conv9_dw = convolution(
-        "conv9_dw",
-        conv8,
-        conv9_dw_w_prim_id,
-        conv9_dw_b_prim_id,
-        { 1,1,1,1 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
-
-    auto conv9_w = file::create({ engine, join_path(weights_dir, "conv9_weights.nnd") });
-    auto conv9_b = file::create({ engine, join_path(weights_dir, "conv9_bias.nnd") });
-    auto conv9 = convolution(
-        "conv9",
-        conv9_dw,
-        { conv9_w },
-        { conv9_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
-
-    std::vector<cldnn::data> conv10_dw_w_data;
-    std::vector<primitive_id> conv10_dw_w_prim_id;
-    std::vector<cldnn::data> conv10_dw_b_data;
-    std::vector<primitive_id> conv10_dw_b_prim_id;
-    generate_wb_vectors(weights_dir, engine, "conv10%2Fdw", 512, conv10_dw_w_data, conv10_dw_w_prim_id, conv10_dw_b_data, conv10_dw_b_prim_id);
-    auto conv10_dw = convolution(
-        "conv10_dw",
-        conv9,
-        conv10_dw_w_prim_id,
-        conv10_dw_b_prim_id,
-        { 1,1,1,1 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
-
-    auto conv10_w = file::create({ engine, join_path(weights_dir, "conv10_weights.nnd") });
-    auto conv10_b = file::create({ engine, join_path(weights_dir, "conv10_bias.nnd") });
-    auto conv10 = convolution(
-        "conv10",
-        conv10_dw,
-        { conv10_w },
-        { conv10_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
-
-    std::vector<cldnn::data> conv11_dw_w_data;
-    std::vector<primitive_id> conv11_dw_w_prim_id;
-    std::vector<cldnn::data> conv11_dw_b_data;
-    std::vector<primitive_id> conv11_dw_b_prim_id;
-    generate_wb_vectors(weights_dir, engine, "conv11%2Fdw", 512, conv11_dw_w_data, conv11_dw_w_prim_id, conv11_dw_b_data, conv11_dw_b_prim_id);
-    auto conv11_dw = convolution(
-        "conv11_dw",
-        conv10,
-        conv11_dw_w_prim_id,
-        conv11_dw_b_prim_id,
-        { 1,1,1,1 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
-
-    auto conv11_w = file::create({ engine, join_path(weights_dir, "conv11_weights.nnd") });
-    auto conv11_b = file::create({ engine, join_path(weights_dir, "conv11_bias.nnd") });
-    auto conv11 = convolution(
-        "conv11",
-        conv11_dw,
-        { conv11_w },
-        { conv11_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
 
     auto conv11_mbox_priorbox = prior_box(
         "conv11_mbox_priorbox",
         conv11,
-        in_layout.size,
+        input_layout.size,
         { 60 },
         {},
         { 2 },
@@ -471,64 +224,10 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
         conv11_mbox_loc_perm,
         { batch_size,4332,1,1 });
 
-    std::vector<cldnn::data> conv12_dw_w_data;
-    std::vector<primitive_id> conv12_dw_w_prim_id;
-    std::vector<cldnn::data> conv12_dw_b_data;
-    std::vector<primitive_id> conv12_dw_b_prim_id;
-    generate_wb_vectors(weights_dir, engine, "conv12%2Fdw", 512, conv12_dw_w_data, conv12_dw_w_prim_id, conv12_dw_b_data, conv12_dw_b_prim_id);
-    auto conv12_dw = convolution(
-        "conv12_dw",
-        conv11,
-        conv12_dw_w_prim_id,
-        conv12_dw_b_prim_id,
-        { 1,1,2,2 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
-
-    auto conv12_w = file::create({ engine, join_path(weights_dir, "conv12_weights.nnd") });
-    auto conv12_b = file::create({ engine, join_path(weights_dir, "conv12_bias.nnd") });
-    auto conv12 = convolution(
-        "conv12",
-        conv12_dw,
-        { conv12_w },
-        { conv12_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
-
-    std::vector<cldnn::data> conv13_dw_w_data;
-    std::vector<primitive_id> conv13_dw_w_prim_id;
-    std::vector<cldnn::data> conv13_dw_b_data;
-    std::vector<primitive_id> conv13_dw_b_prim_id;
-    generate_wb_vectors(weights_dir, engine, "conv13%2Fdw", 1024, conv13_dw_w_data, conv13_dw_w_prim_id, conv13_dw_b_data, conv13_dw_b_prim_id);
-    auto conv13_dw = convolution(
-        "conv13_dw",
-        conv12,
-        conv13_dw_w_prim_id,
-        conv13_dw_b_prim_id,
-        { 1,1,1,1 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
-
-    auto conv13_w = file::create({ engine, join_path(weights_dir, "conv13_weights.nnd") });
-    auto conv13_b = file::create({ engine, join_path(weights_dir, "conv13_bias.nnd") });
-    auto conv13 = convolution(
-        "conv13",
-        conv13_dw,
-        { conv13_w },
-        { conv13_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
-
     auto conv13_mbox_priorbox = prior_box(
         "conv13_mbox_priorbox",
         conv13,
-        in_layout.size,
+        input_layout.size,
         { 105 },
         { 150 },
         { 2.0,3.0 },
@@ -610,7 +309,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv14_2_mbox_priorbox = prior_box(
         "conv14_2_mbox_priorbox",
         conv14_2,
-        in_layout.size,
+        input_layout.size,
         { 150 },
         { 195 },
         { 2.0,3.0 },
@@ -692,7 +391,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv15_2_mbox_priorbox = prior_box(
         "conv15_2_mbox_priorbox",
         conv15_2,
-        in_layout.size,
+        input_layout.size,
         { 195 },
         { 240 },
         { 2.0,3.0 },
@@ -774,7 +473,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv16_2_mbox_priorbox = prior_box(
         "conv16_2_mbox_priorbox",
         conv16_2,
-        in_layout.size,
+        input_layout.size,
         { 240 },
         { 285 },
         { 2.0,3.0 },
@@ -856,7 +555,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto conv17_2_mbox_priorbox = prior_box(
         "conv17_2_mbox_priorbox",
         conv17_2,
-        in_layout.size,
+        input_layout.size,
         { 285 },
         { 300 },
         { 2.0,3.0 },
@@ -984,234 +683,129 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
         0.25f
     );
 
-    topology.add(
+    topology_inst.add(
         input,
         //reordered_input,
         scale_data,
-        mull_340,
-        conv0, conv0_w, conv0_b);
+        mull_340);
 
-    topology.add(conv1_dw);
-    for (unsigned i = 0; i < conv1_dw_w_data.size(); i++)
-    {
-        topology.add(conv1_dw_w_data.at(i), conv1_dw_b_data.at(i));
-    }
-
-    topology.add(conv1, conv1_w, conv1_b);
-
-    topology.add(conv2_dw);
-    for (unsigned i = 0; i < conv2_dw_w_data.size(); i++)
-    {
-        topology.add(conv2_dw_w_data.at(i), conv2_dw_b_data.at(i));
-    }
-
-    topology.add(conv2, conv2_w, conv2_b);
-
-    topology.add(conv3_dw);
-    for (unsigned i = 0; i < conv3_dw_w_data.size(); i++)
-    {
-        topology.add(conv3_dw_w_data.at(i), conv3_dw_b_data.at(i));
-    }
-
-    topology.add(conv3, conv3_w, conv3_b);
-
-    topology.add(conv4_dw);
-    for (unsigned i = 0; i < conv4_dw_w_data.size(); i++)
-    {
-        topology.add(conv4_dw_w_data.at(i), conv4_dw_b_data.at(i));
-    }
-
-    topology.add(conv4, conv4_w, conv4_b);
-
-    topology.add(conv5_dw); 
-    for (unsigned i = 0; i < conv5_dw_w_data.size(); i++)
-    {
-        topology.add(conv5_dw_w_data.at(i), conv5_dw_b_data.at(i));
-    }
-
-    topology.add(conv5, conv5_w, conv5_b);
-
-    topology.add(conv6_dw);
-    for (unsigned i = 0; i < conv6_dw_w_data.size(); i++)
-    {
-        topology.add(conv6_dw_w_data.at(i), conv6_dw_b_data.at(i));
-    }
-
-    topology.add(conv6, conv6_w, conv6_b);
-
-    topology.add(conv7_dw);
-    for (unsigned i = 0; i < conv7_dw_w_data.size(); i++)
-    {
-        topology.add(conv7_dw_w_data.at(i), conv7_dw_b_data.at(i));
-    }
-
-    topology.add(conv7, conv7_w, conv7_b);
-
-    topology.add(conv8_dw);
-    for (unsigned i = 0; i < conv8_dw_w_data.size(); i++)
-    {
-        topology.add(conv8_dw_w_data.at(i), conv8_dw_b_data.at(i));
-    }
-
-    topology.add(conv8, conv8_w, conv8_b);
-
-    topology.add(conv9_dw);
-    for (unsigned i = 0; i < conv9_dw_w_data.size(); i++)
-    {
-        topology.add(conv9_dw_w_data.at(i), conv9_dw_b_data.at(i));
-    }
-
-    topology.add(conv9, conv9_w, conv9_b);
-
-    topology.add(conv10_dw);
-    for (unsigned i = 0; i < conv10_dw_w_data.size(); i++)
-    {
-        topology.add(conv10_dw_w_data.at(i), conv10_dw_b_data.at(i));
-    }
-
-    topology.add(conv10, conv10_w, conv10_b);
-
-    topology.add(conv11_dw);
-    for (unsigned i = 0; i < conv11_dw_w_data.size(); i++)
-    {
-        topology.add(conv11_dw_w_data.at(i), conv11_dw_b_data.at(i));
-    }
-
-    topology.add(conv11, conv11_w, conv11_b);
-
-    topology.add(
+    topology_inst.add(
         conv11_mbox_priorbox
     );
 
-    topology.add(
+    topology_inst.add(
         conv11_mbox_conf, conv11_mbox_conf_w, conv11_mbox_conf_b,
         conv11_mbox_conf_perm,
         conv11_mbox_conf_flat
     );
 
-    topology.add(
+    topology_inst.add(
         conv11_mbox_loc, conv11_mbox_loc_w, conv11_mbox_loc_b,
         conv11_mbox_loc_perm,
         conv11_mbox_loc_flat
     );
 
-    topology.add(conv12_dw);
-    for (unsigned i = 0; i < conv12_dw_w_data.size(); i++)
-    {
-        topology.add(conv12_dw_w_data.at(i), conv12_dw_b_data.at(i));
-    }
-
-    topology.add(conv12, conv12_w, conv12_b);
-
-    topology.add(conv13_dw);
-    for (unsigned i = 0; i < conv13_dw_w_data.size(); i++)
-    {
-        topology.add(conv13_dw_w_data.at(i), conv13_dw_b_data.at(i));
-    }
-
-    topology.add(conv13, conv13_w, conv13_b);
-
-    topology.add(
+    topology_inst.add(
         conv13_mbox_priorbox
     );
 
-    topology.add(
+    topology_inst.add(
         conv13_mbox_conf, conv13_mbox_conf_w, conv13_mbox_conf_b,
         conv13_mbox_conf_perm,
         conv13_mbox_conf_flat
     );
 
-    topology.add(
+    topology_inst.add(
         conv13_mbox_loc, conv13_mbox_loc_w, conv13_mbox_loc_b,
         conv13_mbox_loc_perm,
         conv13_mbox_loc_flat
     );
 
-    topology.add(
+    topology_inst.add(
         conv14_1, conv14_1_w, conv14_1_b,
         conv14_2, conv14_2_w, conv14_2_b
     );
 
-    topology.add(
+    topology_inst.add(
         conv14_2_mbox_priorbox
     );
 
-    topology.add(
+    topology_inst.add(
         conv14_2_mbox_conf, conv14_2_mbox_conf_w, conv14_2_mbox_conf_b,
         conv14_2_mbox_conf_perm,
         conv14_2_mbox_conf_flat
     );
 
-    topology.add(
+    topology_inst.add(
         conv14_2_mbox_loc, conv14_2_mbox_loc_w, conv14_2_mbox_loc_b,
         conv14_2_mbox_loc_perm,
         conv14_2_mbox_loc_flat
     );
 
-    topology.add(
+    topology_inst.add(
         conv15_1, conv15_1_w, conv15_1_b,
         conv15_2, conv15_2_w, conv15_2_b
     );
 
-    topology.add(
+    topology_inst.add(
         conv15_2_mbox_priorbox
     );
 
-    topology.add(
+    topology_inst.add(
         conv15_2_mbox_conf, conv15_2_mbox_conf_w, conv15_2_mbox_conf_b,
         conv15_2_mbox_conf_perm,
         conv15_2_mbox_conf_flat
     );
 
-    topology.add(
+    topology_inst.add(
         conv15_2_mbox_loc, conv15_2_mbox_loc_w, conv15_2_mbox_loc_b,
         conv15_2_mbox_loc_perm,
         conv15_2_mbox_loc_flat
     );
 
-    topology.add(
+    topology_inst.add(
         conv16_1, conv16_1_w, conv16_1_b,
         conv16_2, conv16_2_w, conv16_2_b
     );
 
-    topology.add(
+    topology_inst.add(
         conv16_2_mbox_priorbox
     );
 
-    topology.add(
+    topology_inst.add(
         conv16_2_mbox_conf, conv16_2_mbox_conf_w, conv16_2_mbox_conf_b,
         conv16_2_mbox_conf_perm,
         conv16_2_mbox_conf_flat
     );
 
-    topology.add(
+    topology_inst.add(
         conv16_2_mbox_loc, conv16_2_mbox_loc_w, conv16_2_mbox_loc_b,
         conv16_2_mbox_loc_perm,
         conv16_2_mbox_loc_flat
     );
 
-    topology.add(
+    topology_inst.add(
         conv17_1, conv17_1_w, conv17_1_b,
         conv17_2, conv17_2_w, conv17_2_b
     );
 
-    topology.add(
+    topology_inst.add(
         conv17_2_mbox_priorbox
     );
 
-    topology.add(
+    topology_inst.add(
         conv17_2_mbox_conf, conv17_2_mbox_conf_w, conv17_2_mbox_conf_b,
         conv17_2_mbox_conf_perm,
         conv17_2_mbox_conf_flat
     );
 
-    topology.add(
+    topology_inst.add(
         conv17_2_mbox_loc, conv17_2_mbox_loc_w, conv17_2_mbox_loc_b,
         conv17_2_mbox_loc_perm,
         conv17_2_mbox_loc_flat
     );
 
-    topology.add(
+    topology_inst.add(
         mbox_priorbox,
         mbox_loc,
         mbox_conf,
@@ -1221,5 +815,5 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
         detection_out
     );
 
-    return topology;
+    return topology_inst;
 }
