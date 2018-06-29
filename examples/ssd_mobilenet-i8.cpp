@@ -45,16 +45,22 @@ static primitive_id add_conv_layer(const string& weights_dir, const engine& engi
 {
     vector<primitive_id> weights_data_groups;
     vector<primitive_id> bias_data_groups;
+    vector<primitive_id> cf_data_groups;
+    vector<primitive_id> qf_data_groups;
 
     if (split <= 1)
     {
         auto weights_data = file::create({engine, join_path(weights_dir, weights_root + "_weights.nnd")});
         auto bias_data    = file::create({engine, join_path(weights_dir, weights_root + "_bias.nnd")});
+        auto cf_data      = file::create({engine, join_path(weights_dir, weights_root + "_cf.nnd")});
+        auto qf_data      = file::create({engine, join_path(weights_dir, weights_root + "_qf.nnd")});
 
         weights_data_groups.push_back(weights_data);
         bias_data_groups.push_back(bias_data);
+        cf_data_groups.push_back(cf_data);
+        qf_data_groups.push_back(qf_data);
 
-        topology_inst.add(weights_data, bias_data);
+        topology_inst.add(weights_data, bias_data, cf_data, qf_data);
     }
     else
     {
@@ -68,11 +74,21 @@ static primitive_id add_conv_layer(const string& weights_dir, const engine& engi
                 engine,
                 join_path(weights_dir, weights_root + "_g" + std::to_string(gi) + "_bias.nnd")
             });
+            auto cf_data      = file::create({
+                engine,
+                join_path(weights_dir, weights_root + "_g" + std::to_string(gi) + "_cf.nnd")
+            });
+            auto qf_data      = file::create({
+                engine,
+                join_path(weights_dir, weights_root + "_g" + std::to_string(gi) + "_qf.nnd")
+            });
 
             weights_data_groups.push_back(weights_data);
             bias_data_groups.push_back(bias_data);
+            cf_data_groups.push_back(cf_data);
+            qf_data_groups.push_back(qf_data);
 
-            topology_inst.add(weights_data, bias_data);
+            topology_inst.add(weights_data, bias_data, cf_data, qf_data);
         }
     }
 
@@ -81,6 +97,9 @@ static primitive_id add_conv_layer(const string& weights_dir, const engine& engi
         input,
         weights_data_groups,
         bias_data_groups,
+        qf_data_groups,
+        cf_data_groups,
+        1.0f,
         stride,
         padding,
         {1, 1, 1, 1},
@@ -228,8 +247,8 @@ static primitive_id add_mbox_priorbox(const layout& input_layout, topology& topo
 
 
 // Building SSD MobileNet network with loading weights & biases from file
-cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn::engine& engine,
-                                    cldnn::layout& input_layout, int32_t batch_size)
+cldnn::topology build_ssd_mobilenet_i8(const std::string& weights_dir, const cldnn::engine& engine,
+                                       cldnn::layout& input_layout, int32_t batch_size)
 {
     // [300x300x3xB]
     input_layout.size = {batch_size, 3, 300, 300};
@@ -238,8 +257,13 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
 
     auto mul1_340 = add_mul_layer(engine, topology_inst, "mul1_340", input, 0.016999864f);
 
+    auto mul1_340_cf_data    = file::create({engine, join_path(weights_dir, "mul1_340_cf.nnd")});
+    auto calibrated_mul1_340 = reorder("calib_mul1_340", mul1_340,
+        format::byxf_af32, data_types::i8, mul1_340_cf_data, cldnn_reorder_mean_mode::mean_mul);
+    topology_inst.add(mul1_340_cf_data, calibrated_mul1_340);
+
     // Initial feature extractor.
-    auto conv0 = add_conv_layer(weights_dir, engine, topology_inst, "conv0", "conv0", mul1_340,
+    auto conv0 = add_conv_layer(weights_dir, engine, topology_inst, "conv0", "conv0", calibrated_mul1_340,
                                 {0, 0, -1, -1}, {1, 1, 2, 2});
 
     // Depthwise-pointwise feature-extraction chain (convolutions).
@@ -277,6 +301,9 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
         {conv16, 96},
         {conv17, 24}
     });
+    auto mbox_loc_cf_data      = file::create({engine, join_path(weights_dir, "mbox_loc_cf.nnd")});
+    auto decalibrated_mbox_loc = reorder("decalib_mbox_loc", mbox_loc,
+        format::bfyx, data_types::f32, mbox_loc_cf_data, cldnn_reorder_mean_mode::mean_div);
 
     // Multi-box classifier.
     auto mbox_conf = add_mbox_processor(weights_dir, engine, batch_size, topology_inst, "mbox_conf", {
@@ -287,6 +314,9 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
         {conv16, 504},
         {conv17, 126}
     });
+    auto mbox_conf_cf_data      = file::create({engine, join_path(weights_dir, "mbox_conf_cf.nnd")});
+    auto decalibrated_mbox_conf = reorder("decalib_mbox_conf", mbox_conf,
+        format::bfyx, data_types::f32, mbox_conf_cf_data, cldnn_reorder_mean_mode::mean_div);
 
     // Multi-box priorbox (prioritetizer / ROI selectors).
     auto mbox_priorbox = add_mbox_priorbox(input_layout, topology_inst, "mbox_priorbox", {
@@ -301,7 +331,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     // Combining multi-box information into detection output.
     auto mbox_conf_reshape = reshape(
         "mbox_conf_reshape",
-        mbox_conf,
+        decalibrated_mbox_conf,
         {batch_size, 1917, 21, 1}
     );
     auto mbox_conf_softmax = softmax(
@@ -317,7 +347,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
 
     auto detection_out = detection_output(
         "output",
-        mbox_loc,
+        decalibrated_mbox_loc,
         mbox_conf_flatten,
         mbox_priorbox,
         21,
@@ -333,6 +363,8 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     );
 
     topology_inst.add(
+        mbox_loc_cf_data, decalibrated_mbox_loc,
+        mbox_conf_cf_data, decalibrated_mbox_conf,
         mbox_conf_reshape, mbox_conf_softmax, mbox_conf_flatten,
         detection_out
     );
