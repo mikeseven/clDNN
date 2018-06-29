@@ -16,12 +16,8 @@
 
 #include <api/CPP/input_layout.hpp>
 #include <api/CPP/reorder.hpp>
-#include <api/CPP/eltwise.hpp>
 #include <api/CPP/scale.hpp>
 #include <api/CPP/convolution.hpp>
-#include <api/CPP/pooling.hpp>
-#include <api/CPP/lrn.hpp>
-#include <api/CPP/fully_connected.hpp>
 #include <api/CPP/concatenation.hpp>
 #include <api/CPP/softmax.hpp>
 #include <api/CPP/prior_box.hpp>
@@ -32,7 +28,11 @@
 #include "common/common_tools.h"
 #include "file.h"
 
+#include <cstddef>
+#include <cstdint>
 #include <string>
+#include <utility>
+#include <vector>
 
 
 using namespace cldnn;
@@ -61,8 +61,14 @@ static primitive_id add_conv_layer(const string& weights_dir, const engine& engi
     {
         for (size_t gi = 1; gi <= split; ++gi)
         {
-            auto weights_data = file::create({engine, join_path(weights_dir, weights_root + "_g" + std::to_string(gi) + "_weights.nnd")});
-            auto bias_data    = file::create({engine, join_path(weights_dir, weights_root + "_g" + std::to_string(gi) + "_bias.nnd")});
+            auto weights_data = file::create({
+                engine,
+                join_path(weights_dir, weights_root + "_g" + std::to_string(gi) + "_weights.nnd")
+            });
+            auto bias_data    = file::create({
+                engine,
+                join_path(weights_dir, weights_root + "_g" + std::to_string(gi) + "_bias.nnd")
+            });
 
             weights_data_groups.push_back(weights_data);
             bias_data_groups.push_back(bias_data);
@@ -79,11 +85,96 @@ static primitive_id add_conv_layer(const string& weights_dir, const engine& engi
         stride,
         padding,
         {1, 1, 1, 1},
-        add_relu);
-
+        add_relu
+    );
     topology_inst.add(conv_layer);
 
     return conv_layer;
+}
+
+
+static primitive_id add_mul_layer(const engine& engine, topology& topology_inst,
+                                  const string& layer_name, const primitive_id& input, const float scale = 1.0f)
+{
+    auto scale_mem = memory::allocate(engine, {data_types::f32, format::bfyx, {1, 1, 1, 1}});
+    {
+        auto scale_ptr = scale_mem.pointer<float>();
+        scale_ptr[0] = scale;
+    }
+    auto scale_data = cldnn::data(layer_name + "_scale_data", scale_mem);
+
+    auto mul_layer = cldnn::scale(
+        layer_name,
+        input,
+        scale_data
+    );
+    topology_inst.add(scale_data, mul_layer);
+
+    return mul_layer;
+}
+
+
+// --------------------------------------------------------------------------------------------------------------------
+// Mobilenet-specific:
+
+static primitive_id add_dw_pw_conv_pair(const string& weights_dir, const engine& engine, topology& topology_inst,
+                                        const string& root_name, const primitive_id& input,
+                                        const tensor& dw_stride = {1, 1, 1, 1}, const size_t dw_split = 1,
+                                        const tensor& dw_padding = {0, 0, -1, -1})
+{
+    auto conv_dw = add_conv_layer(weights_dir, engine, topology_inst, root_name + "_dw", root_name + "%2Fdw", input,
+                                  dw_padding, dw_stride, dw_split);
+    auto conv_pw = add_conv_layer(weights_dir, engine, topology_inst, root_name, root_name, conv_dw);
+    return conv_pw;
+}
+
+static primitive_id add_reduce_pair(const string& weights_dir, const engine& engine, topology& topology_inst,
+                                    const string& root_name, const primitive_id& input,
+                                    const tensor& reduce_stride = {1, 1, 2, 2},
+                                    const tensor& reduce_padding = {0, 0, -1, -1})
+{
+    auto conv_1 = add_conv_layer(weights_dir, engine, topology_inst, root_name + "_1", root_name + "_1", input);
+    auto conv_2 = add_conv_layer(weights_dir, engine, topology_inst, root_name + "_2", root_name + "_2", conv_1,
+                                 reduce_padding, reduce_stride);
+    return conv_2;
+}
+
+static primitive_id add_mbox_processor(const string& weights_dir, const engine& engine, int32_t batch_size,
+                                       topology& topology_inst, const string& root_name,
+                                       const vector<pair<primitive_id, size_t>>& input_and_size_pairs,
+                                       const vector<uint16_t>& input_order = {0, 2, 3, 1})
+{
+    vector<primitive_id> concat_inputs;
+    for (const auto& input_and_size_pair : input_and_size_pairs)
+    {
+        auto input_root = input_and_size_pair.first + "_" + root_name;
+
+        auto input_conv = add_conv_layer(weights_dir, engine, topology_inst, input_root, input_root,
+                                         input_and_size_pair.first);
+        auto input_perm = permute(
+            input_root + "_perm",
+            input_conv,
+            input_order
+        );
+        auto input_flat = reshape(
+            input_root + "_flat",
+            input_perm,
+            {batch_size, static_cast<tensor::value_type>(input_and_size_pair.second), 1, 1}
+        );
+
+        concat_inputs.push_back(input_flat);
+
+        topology_inst.add(input_perm, input_flat);
+    }
+
+    auto mbox_proc = concatenation(
+        root_name,
+        concat_inputs,
+        concatenation::along_f
+    );
+    topology_inst.add(mbox_proc);
+
+    return mbox_proc;
 }
 
 
@@ -96,75 +187,56 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto input        = cldnn::input_layout("input", input_layout);
     cldnn::topology topology_inst{input};
 
-    // subtract mean values
-    //auto reordered_input = reorder(
-    //    "reorder",
-    //    input,
-    //    { input_layout.data_type, input_layout.format, input_layout.size },
-    //    std::vector<float>{ 104.0f, 117.0f, 123.0f });
+    auto mul1_340 = add_mul_layer(engine, topology_inst, "mul1_340", input, 0.017f);
 
-    auto scale_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 1, 1 } });
-    auto scale_ptr = scale_mem.pointer<float>();
-    //for (int i = 0; i < scale_mem.get_layout().size; i++)
-    {
-        scale_ptr[0] = 0.01699986400108799f;
-    }
-    auto scale_data = cldnn::data("scale_data", scale_mem);
+    // Initial feature extractor.
+    auto conv0 = add_conv_layer(weights_dir, engine, topology_inst, "conv0", "conv0", mul1_340, {0, 0, -1, -1}, {1, 1, 2, 2});
 
-    ///*auto eltwise0 = eltwise(
-    //    "eltwise0",
-    //    { input },
-    //    { "scale_data" },
-    //    eltwise_mode::prod
-    //);*/
+    // Depthwise-pointwise feature-extraction chain (convolutions).
+    auto conv1  = add_dw_pw_conv_pair(weights_dir, engine, topology_inst, "conv1",  conv0,  {1, 1, 1, 1}, 32);
 
-    auto mull_340 = scale(
-        "mull_340",
-        input,
-        scale_data
-    );
+    auto conv2  = add_dw_pw_conv_pair(weights_dir, engine, topology_inst, "conv2",  conv1,  {1, 1, 2, 2}, 64);
 
-    auto conv0 = add_conv_layer(weights_dir, engine, topology_inst, "conv0", "conv0", mull_340, {0, 0, -1, -1}, {1, 1, 2, 2});
+    auto conv3  = add_dw_pw_conv_pair(weights_dir, engine, topology_inst, "conv3",  conv2,  {1, 1, 1, 1}, 128);
+    auto conv4  = add_dw_pw_conv_pair(weights_dir, engine, topology_inst, "conv4",  conv3,  {1, 1, 2, 2}, 128);
 
-    auto conv1_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv1_dw", "conv1%2Fdw", conv0, {0, 0, -1, -1}, {1, 1, 1, 1}, 32);
-    auto conv1    = add_conv_layer(weights_dir, engine, topology_inst, "conv1", "conv1", conv1_dw);
+    auto conv5  = add_dw_pw_conv_pair(weights_dir, engine, topology_inst, "conv5",  conv4,  {1, 1, 1, 1}, 256);
+    auto conv6  = add_dw_pw_conv_pair(weights_dir, engine, topology_inst, "conv6",  conv5,  {1, 1, 2, 2}, 256);
 
-    auto conv2_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv2_dw", "conv2%2Fdw", conv1, {0, 0, -1, -1}, {1, 1, 2, 2}, 64);
-    auto conv2    = add_conv_layer(weights_dir, engine, topology_inst, "conv2", "conv2", conv2_dw);
+    auto conv7  = add_dw_pw_conv_pair(weights_dir, engine, topology_inst, "conv7",  conv6,  {1, 1, 1, 1}, 512);
+    auto conv8  = add_dw_pw_conv_pair(weights_dir, engine, topology_inst, "conv8",  conv7,  {1, 1, 1, 1}, 512);
+    auto conv9  = add_dw_pw_conv_pair(weights_dir, engine, topology_inst, "conv9",  conv8,  {1, 1, 1, 1}, 512);
+    auto conv10 = add_dw_pw_conv_pair(weights_dir, engine, topology_inst, "conv10", conv9,  {1, 1, 1, 1}, 512);
+    auto conv11 = add_dw_pw_conv_pair(weights_dir, engine, topology_inst, "conv11", conv10, {1, 1, 1, 1}, 512);
+    auto conv12 = add_dw_pw_conv_pair(weights_dir, engine, topology_inst, "conv12", conv11, {1, 1, 2, 2}, 512);
 
-    auto conv3_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv3_dw", "conv3%2Fdw", conv2, {0, 0, -1, -1}, {1, 1, 1, 1}, 128);
-    auto conv3    = add_conv_layer(weights_dir, engine, topology_inst, "conv3", "conv3", conv3_dw);
+    auto conv13 = add_dw_pw_conv_pair(weights_dir, engine, topology_inst, "conv13", conv12, {1, 1, 1, 1}, 1024);
 
-    auto conv4_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv4_dw", "conv4%2Fdw", conv3, {0, 0, -1, -1}, {1, 1, 2, 2}, 128);
-    auto conv4    = add_conv_layer(weights_dir, engine, topology_inst, "conv4", "conv4", conv4_dw);
+    // Two-stage reductors chain (convolutions) for multi-box localizers/classifiers/prioritetizers.
+    auto conv14 = add_reduce_pair(weights_dir, engine, topology_inst, "conv14", conv13);
+    auto conv15 = add_reduce_pair(weights_dir, engine, topology_inst, "conv15", conv14);
+    auto conv16 = add_reduce_pair(weights_dir, engine, topology_inst, "conv16", conv15);
+    auto conv17 = add_reduce_pair(weights_dir, engine, topology_inst, "conv17", conv16);
 
-    auto conv5_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv5_dw", "conv5%2Fdw", conv4, {0, 0, -1, -1}, {1, 1, 1, 1}, 256);
-    auto conv5    = add_conv_layer(weights_dir, engine, topology_inst, "conv5", "conv5", conv5_dw);
+    // Multi-box locator.
+    auto mbox_loc = add_mbox_processor(weights_dir, engine, batch_size, topology_inst, "mbox_loc", {
+        {conv11, 4332},
+        {conv13, 2400},
+        {conv14, 600},
+        {conv15, 216},
+        {conv16, 96},
+        {conv17, 24}
+    });
 
-    auto conv6_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv6_dw", "conv6%2Fdw", conv5, {0, 0, -1, -1}, {1, 1, 2, 2}, 256);
-    auto conv6    = add_conv_layer(weights_dir, engine, topology_inst, "conv6", "conv6", conv6_dw);
-
-    auto conv7_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv7_dw", "conv7%2Fdw", conv6, {0, 0, -1, -1}, {1, 1, 1, 1}, 512);
-    auto conv7    = add_conv_layer(weights_dir, engine, topology_inst, "conv7", "conv7", conv7_dw);
-
-    auto conv8_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv8_dw", "conv8%2Fdw", conv7, {0, 0, -1, -1}, {1, 1, 1, 1}, 512);
-    auto conv8    = add_conv_layer(weights_dir, engine, topology_inst, "conv8", "conv8", conv8_dw);
-
-    auto conv9_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv9_dw", "conv9%2Fdw", conv8, {0, 0, -1, -1}, {1, 1, 1, 1}, 512);
-    auto conv9    = add_conv_layer(weights_dir, engine, topology_inst, "conv9", "conv9", conv9_dw);
-
-    auto conv10_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv10_dw", "conv10%2Fdw", conv9, {0, 0, -1, -1}, {1, 1, 1, 1}, 512);
-    auto conv10    = add_conv_layer(weights_dir, engine, topology_inst, "conv10", "conv10", conv10_dw);
-
-    auto conv11_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv11_dw", "conv11%2Fdw", conv10, {0, 0, -1, -1}, {1, 1, 1, 1}, 512);
-    auto conv11    = add_conv_layer(weights_dir, engine, topology_inst, "conv11", "conv11", conv11_dw);
-
-    auto conv12_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv12_dw", "conv12%2Fdw", conv11, {0, 0, -1, -1}, {1, 1, 2, 2}, 512);
-    auto conv12    = add_conv_layer(weights_dir, engine, topology_inst, "conv12", "conv12", conv12_dw);
-
-    auto conv13_dw = add_conv_layer(weights_dir, engine, topology_inst, "conv13_dw", "conv13%2Fdw", conv12, {0, 0, -1, -1}, {1, 1, 1, 1}, 1024);
-    auto conv13    = add_conv_layer(weights_dir, engine, topology_inst, "conv13", "conv13", conv13_dw);
-
+    // Multi-box classifier.
+    auto mbox_conf = add_mbox_processor(weights_dir, engine, batch_size, topology_inst, "mbox_conf", {
+        {conv11, 22743},
+        {conv13, 12600},
+        {conv14, 3150},
+        {conv15, 1134},
+        {conv16, 504},
+        {conv17, 126}
+    });
 
     auto conv11_mbox_priorbox = prior_box(
         "conv11_mbox_priorbox",
@@ -180,50 +252,6 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
         0,
         0.5f);
 
-    auto conv11_mbox_conf_w = file::create({ engine, join_path(weights_dir, "conv11_mbox_conf_weights.nnd") });
-    auto conv11_mbox_conf_b = file::create({ engine, join_path(weights_dir, "conv11_mbox_conf_bias.nnd") });
-    auto conv11_mbox_conf = convolution(
-        "conv11_mbox_conf",
-        conv11,
-        { conv11_mbox_conf_w },
-        { conv11_mbox_conf_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        false);
-
-    auto conv11_mbox_conf_perm = permute(
-        "conv11_mbox_conf_perm",
-        conv11_mbox_conf,
-        { 0,2,3,1 });
-
-    auto conv11_mbox_conf_flat = reshape(
-        "conv11_mbox_conf_flat",
-        conv11_mbox_conf_perm,
-        { batch_size, 22743,1,1 });
-
-    auto conv11_mbox_loc_w = file::create({ engine, join_path(weights_dir, "conv11_mbox_loc_weights.nnd") });
-    auto conv11_mbox_loc_b = file::create({ engine, join_path(weights_dir, "conv11_mbox_loc_bias.nnd") });
-    auto conv11_mbox_loc = convolution(
-        "conv11_mbox_loc",
-        conv11,
-        { conv11_mbox_loc_w },
-        { conv11_mbox_loc_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        false);
-
-    auto conv11_mbox_loc_perm = permute(
-        "conv11_mbox_loc_perm",
-        conv11_mbox_loc,
-        { 0,2,3,1 });
-
-    auto conv11_mbox_loc_flat = reshape(
-        "conv11_mbox_loc_flat",
-        conv11_mbox_loc_perm,
-        { batch_size,4332,1,1 });
-
     auto conv13_mbox_priorbox = prior_box(
         "conv13_mbox_priorbox",
         conv13,
@@ -238,77 +266,9 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
         0,
         0.5f);
 
-    auto conv13_mbox_conf_w = file::create({ engine, join_path(weights_dir, "conv13_mbox_conf_weights.nnd") });
-    auto conv13_mbox_conf_b = file::create({ engine, join_path(weights_dir, "conv13_mbox_conf_bias.nnd") });
-    auto conv13_mbox_conf = convolution(
-        "conv13_mbox_conf",
-        conv13,
-        { conv13_mbox_conf_w },
-        { conv13_mbox_conf_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        false);
-
-    auto conv13_mbox_conf_perm = permute(
-        "conv13_mbox_conf_perm",
-        conv13_mbox_conf,
-        { 0,2,3,1 });
-
-    auto conv13_mbox_conf_flat = reshape(
-        "conv13_mbox_conf_flat",
-        conv13_mbox_conf_perm,
-        { batch_size,12600,1,1 });
-
-    auto conv13_mbox_loc_w = file::create({ engine, join_path(weights_dir, "conv13_mbox_loc_weights.nnd") });
-    auto conv13_mbox_loc_b = file::create({ engine, join_path(weights_dir, "conv13_mbox_loc_bias.nnd") });
-    auto conv13_mbox_loc = convolution(
-        "conv13_mbox_loc",
-        conv13,
-        { conv13_mbox_loc_w },
-        { conv13_mbox_loc_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        false);
-
-    auto conv13_mbox_loc_perm = permute(
-        "conv13_mbox_loc_perm",
-        conv13_mbox_loc,
-        { 0,2,3,1 });
-
-    auto conv13_mbox_loc_flat = reshape(
-        "conv13_mbox_loc_flat",
-        conv13_mbox_loc_perm,
-        { batch_size,2400,1,1 });
-
-    auto conv14_1_w = file::create({ engine, join_path(weights_dir, "conv14_1_weights.nnd") });
-    auto conv14_1_b = file::create({ engine, join_path(weights_dir, "conv14_1_bias.nnd") });
-    auto conv14_1 = convolution(
-        "conv14_1",
-        conv13,
-        { conv14_1_w },
-        { conv14_1_b },
-        { 1,1,1,1 },
-        { 0,0,0,-0 },
-        { 1,1,1,1 },
-        true);
-
-    auto conv14_2_w = file::create({ engine, join_path(weights_dir, "conv14_2_weights.nnd") });
-    auto conv14_2_b = file::create({ engine, join_path(weights_dir, "conv14_2_bias.nnd") });
-    auto conv14_2 = convolution(
-        "conv14_2",
-        conv14_1,
-        { conv14_2_w },
-        { conv14_2_b },
-        { 1,1,2,2 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
-
     auto conv14_2_mbox_priorbox = prior_box(
         "conv14_2_mbox_priorbox",
-        conv14_2,
+        conv14,
         input_layout.size,
         { 150 },
         { 195 },
@@ -320,77 +280,9 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
         0,
         0.5f);
 
-    auto conv14_2_mbox_conf_w = file::create({ engine, join_path(weights_dir, "conv14_2_mbox_conf_weights.nnd") });
-    auto conv14_2_mbox_conf_b = file::create({ engine, join_path(weights_dir, "conv14_2_mbox_conf_bias.nnd") });
-    auto conv14_2_mbox_conf = convolution(
-        "conv14_2_mbox_conf",
-        conv14_2,
-        { conv14_2_mbox_conf_w },
-        { conv14_2_mbox_conf_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        false);
-
-    auto conv14_2_mbox_conf_perm = permute(
-        "conv14_2_mbox_conf_perm",
-        conv14_2_mbox_conf,
-        { 0,2,3,1 });
-
-    auto conv14_2_mbox_conf_flat = reshape(
-        "conv14_2_mbox_conf_flat",
-        conv14_2_mbox_conf_perm,
-        { batch_size,3150,1,1 });
-
-    auto conv14_2_mbox_loc_w = file::create({ engine, join_path(weights_dir, "conv14_2_mbox_loc_weights.nnd") });
-    auto conv14_2_mbox_loc_b = file::create({ engine, join_path(weights_dir, "conv14_2_mbox_loc_bias.nnd") });
-    auto conv14_2_mbox_loc = convolution(
-        "conv14_2_mbox_loc",
-        conv14_2,
-        { conv14_2_mbox_loc_w },
-        { conv14_2_mbox_loc_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        false);
-
-    auto conv14_2_mbox_loc_perm = permute(
-        "conv14_2_mbox_loc_perm",
-        conv14_2_mbox_loc,
-        { 0,2,3,1 });
-
-    auto conv14_2_mbox_loc_flat = reshape(
-        "conv14_2_mbox_loc_flat",
-        conv14_2_mbox_loc_perm,
-        { batch_size,600,1,1 });
-
-    auto conv15_1_w = file::create({ engine, join_path(weights_dir, "conv15_1_weights.nnd") });
-    auto conv15_1_b = file::create({ engine, join_path(weights_dir, "conv15_1_bias.nnd") });
-    auto conv15_1 = convolution(
-        "conv15_1",
-        conv14_2,
-        { conv15_1_w },
-        { conv15_1_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
-
-    auto conv15_2_w = file::create({ engine, join_path(weights_dir, "conv15_2_weights.nnd") });
-    auto conv15_2_b = file::create({ engine, join_path(weights_dir, "conv15_2_bias.nnd") });
-    auto conv15_2 = convolution(
-        "conv15_2",
-        conv15_1,
-        { conv15_2_w },
-        { conv15_2_b },
-        { 1,1,2,2 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
-
     auto conv15_2_mbox_priorbox = prior_box(
         "conv15_2_mbox_priorbox",
-        conv15_2,
+        conv15,
         input_layout.size,
         { 195 },
         { 240 },
@@ -402,77 +294,9 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
         0,
         0.5f);
 
-    auto conv15_2_mbox_conf_w = file::create({ engine, join_path(weights_dir, "conv15_2_mbox_conf_weights.nnd") });
-    auto conv15_2_mbox_conf_b = file::create({ engine, join_path(weights_dir, "conv15_2_mbox_conf_bias.nnd") });
-    auto conv15_2_mbox_conf = convolution(
-        "conv15_2_mbox_conf",
-        conv15_2,
-        { conv15_2_mbox_conf_w },
-        { conv15_2_mbox_conf_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        false);
-
-    auto conv15_2_mbox_conf_perm = permute(
-        "conv15_2_mbox_conf_perm",
-        conv15_2_mbox_conf,
-        { 0,2,3,1 });
-
-    auto conv15_2_mbox_conf_flat = reshape(
-        "conv15_2_mbox_conf_flat",
-        conv15_2_mbox_conf_perm,
-        { batch_size,1134,1,1 });
-
-    auto conv15_2_mbox_loc_w = file::create({ engine, join_path(weights_dir, "conv15_2_mbox_loc_weights.nnd") });
-    auto conv15_2_mbox_loc_b = file::create({ engine, join_path(weights_dir, "conv15_2_mbox_loc_bias.nnd") });
-    auto conv15_2_mbox_loc = convolution(
-        "conv15_2_mbox_loc",
-        conv15_2,
-        { conv15_2_mbox_loc_w },
-        { conv15_2_mbox_loc_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        false);
-
-    auto conv15_2_mbox_loc_perm = permute(
-        "conv15_2_mbox_loc_perm",
-        conv15_2_mbox_loc,
-        { 0,2,3,1 });
-
-    auto conv15_2_mbox_loc_flat = reshape(
-        "conv15_2_mbox_loc_flat",
-        conv15_2_mbox_loc_perm,
-        { batch_size,216,1,1 });
-
-    auto conv16_1_w = file::create({ engine, join_path(weights_dir, "conv16_1_weights.nnd") });
-    auto conv16_1_b = file::create({ engine, join_path(weights_dir, "conv16_1_bias.nnd") });
-    auto conv16_1 = convolution(
-        "conv16_1",
-        conv15_2,
-        { conv16_1_w },
-        { conv16_1_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
-
-    auto conv16_2_w = file::create({ engine, join_path(weights_dir, "conv16_2_weights.nnd") });
-    auto conv16_2_b = file::create({ engine, join_path(weights_dir, "conv16_2_bias.nnd") });
-    auto conv16_2 = convolution(
-        "conv16_2",
-        conv16_1,
-        { conv16_2_w },
-        { conv16_2_b },
-        { 1,1,2,2 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
-
     auto conv16_2_mbox_priorbox = prior_box(
         "conv16_2_mbox_priorbox",
-        conv16_2,
+        conv16,
         input_layout.size,
         { 240 },
         { 285 },
@@ -484,77 +308,9 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
         0,
         0.5f);
 
-    auto conv16_2_mbox_conf_w = file::create({ engine, join_path(weights_dir, "conv16_2_mbox_conf_weights.nnd") });
-    auto conv16_2_mbox_conf_b = file::create({ engine, join_path(weights_dir, "conv16_2_mbox_conf_bias.nnd") });
-    auto conv16_2_mbox_conf = convolution(
-        "conv16_2_mbox_conf",
-        conv16_2,
-        { conv16_2_mbox_conf_w },
-        { conv16_2_mbox_conf_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        false);
-
-    auto conv16_2_mbox_conf_perm = permute(
-        "conv16_2_mbox_conf_perm",
-        conv16_2_mbox_conf,
-        { 0,2,3,1 });
-
-    auto conv16_2_mbox_conf_flat = reshape(
-        "conv16_2_mbox_conf_flat",
-        conv16_2_mbox_conf_perm,
-        { batch_size,504,1,1 });
-
-    auto conv16_2_mbox_loc_w = file::create({ engine, join_path(weights_dir, "conv16_2_mbox_loc_weights.nnd") });
-    auto conv16_2_mbox_loc_b = file::create({ engine, join_path(weights_dir, "conv16_2_mbox_loc_bias.nnd") });
-    auto conv16_2_mbox_loc = convolution(
-        "conv16_2_mbox_loc",
-        conv16_2,
-        { conv16_2_mbox_loc_w },
-        { conv16_2_mbox_loc_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        false);
-
-    auto conv16_2_mbox_loc_perm = permute(
-        "conv16_2_mbox_loc_perm",
-        conv16_2_mbox_loc,
-        { 0,2,3,1 });
-
-    auto conv16_2_mbox_loc_flat = reshape(
-        "conv16_2_mbox_loc_flat",
-        conv16_2_mbox_loc_perm,
-        { batch_size,96,1,1 });
-
-    auto conv17_1_w = file::create({ engine, join_path(weights_dir, "conv17_1_weights.nnd") });
-    auto conv17_1_b = file::create({ engine, join_path(weights_dir, "conv17_1_bias.nnd") });
-    auto conv17_1 = convolution(
-        "conv17_1",
-        conv16_2,
-        { conv17_1_w },
-        { conv17_1_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        true);
-
-    auto conv17_2_w = file::create({ engine, join_path(weights_dir, "conv17_2_weights.nnd") });
-    auto conv17_2_b = file::create({ engine, join_path(weights_dir, "conv17_2_bias.nnd") });
-    auto conv17_2 = convolution(
-        "conv17_2",
-        conv17_1,
-        { conv17_2_w },
-        { conv17_2_b },
-        { 1,1,2,2 },
-        { 0,0,-1,-1 },
-        { 1,1,1,1 },
-        true);
-
     auto conv17_2_mbox_priorbox = prior_box(
         "conv17_2_mbox_priorbox",
-        conv17_2,
+        conv17,
         input_layout.size,
         { 285 },
         { 300 },
@@ -565,50 +321,6 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
         0,
         0,
         0.5f);
-
-    auto conv17_2_mbox_conf_w = file::create({ engine, join_path(weights_dir, "conv17_2_mbox_conf_weights.nnd") });
-    auto conv17_2_mbox_conf_b = file::create({ engine, join_path(weights_dir, "conv17_2_mbox_conf_bias.nnd") });
-    auto conv17_2_mbox_conf = convolution(
-        "conv17_2_mbox_conf",
-        conv17_2,
-        { conv17_2_mbox_conf_w },
-        { conv17_2_mbox_conf_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        false);
-
-    auto conv17_2_mbox_conf_perm = permute(
-        "conv17_2_mbox_conf_perm",
-        conv17_2_mbox_conf,
-        { 0,2,3,1 });
-
-    auto conv17_2_mbox_conf_flat = reshape(
-        "conv17_2_mbox_conf_flat",
-        conv17_2_mbox_conf_perm,
-        { batch_size,126,1,1 });
-
-    auto conv17_2_mbox_loc_w = file::create({ engine, join_path(weights_dir, "conv17_2_mbox_loc_weights.nnd") });
-    auto conv17_2_mbox_loc_b = file::create({ engine, join_path(weights_dir, "conv17_2_mbox_loc_bias.nnd") });
-    auto conv17_2_mbox_loc = convolution(
-        "conv17_2_mbox_loc",
-        conv17_2,
-        { conv17_2_mbox_loc_w },
-        { conv17_2_mbox_loc_b },
-        { 1,1,1,1 },
-        { 0,0,0,0 },
-        { 1,1,1,1 },
-        false);
-
-    auto conv17_2_mbox_loc_perm = permute(
-        "conv17_2_mbox_loc_perm",
-        conv17_2_mbox_loc,
-        { 0,2,3,1 });
-
-    auto conv17_2_mbox_loc_flat = reshape(
-        "conv17_2_mbox_loc_flat",
-        conv17_2_mbox_loc_perm,
-        { batch_size,24,1,1 });
 
     auto mbox_priorbox = concatenation(
         "mbox_priorbox",
@@ -621,19 +333,6 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
             conv17_2_mbox_priorbox
         },
         concatenation::along_y
-    );
-
-    auto mbox_conf = concatenation(
-        "mbox_conf",
-        {
-            conv11_mbox_conf_flat,
-            conv13_mbox_conf_flat,
-            conv14_2_mbox_conf_flat,
-            conv15_2_mbox_conf_flat,
-            conv16_2_mbox_conf_flat,
-            conv17_2_mbox_conf_flat
-        },
-        concatenation::along_f
     );
 
     auto mbox_conf_reshape = reshape(
@@ -653,18 +352,6 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
         mbox_conf_softmax,
         { batch_size,40257,1,1 });
 
-    auto mbox_loc = concatenation(
-        "mbox_loc",
-        {
-            conv11_mbox_loc_flat,
-            conv13_mbox_loc_flat,
-            conv14_2_mbox_loc_flat,
-            conv15_2_mbox_loc_flat,
-            conv16_2_mbox_loc_flat,
-            conv17_2_mbox_loc_flat
-        },
-        concatenation::along_f
-    );
 
     auto detection_out = detection_output(
         "output",
@@ -684,25 +371,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     );
 
     topology_inst.add(
-        input,
-        //reordered_input,
-        scale_data,
-        mull_340);
-
-    topology_inst.add(
         conv11_mbox_priorbox
-    );
-
-    topology_inst.add(
-        conv11_mbox_conf, conv11_mbox_conf_w, conv11_mbox_conf_b,
-        conv11_mbox_conf_perm,
-        conv11_mbox_conf_flat
-    );
-
-    topology_inst.add(
-        conv11_mbox_loc, conv11_mbox_loc_w, conv11_mbox_loc_b,
-        conv11_mbox_loc_perm,
-        conv11_mbox_loc_flat
     );
 
     topology_inst.add(
@@ -710,41 +379,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     );
 
     topology_inst.add(
-        conv13_mbox_conf, conv13_mbox_conf_w, conv13_mbox_conf_b,
-        conv13_mbox_conf_perm,
-        conv13_mbox_conf_flat
-    );
-
-    topology_inst.add(
-        conv13_mbox_loc, conv13_mbox_loc_w, conv13_mbox_loc_b,
-        conv13_mbox_loc_perm,
-        conv13_mbox_loc_flat
-    );
-
-    topology_inst.add(
-        conv14_1, conv14_1_w, conv14_1_b,
-        conv14_2, conv14_2_w, conv14_2_b
-    );
-
-    topology_inst.add(
         conv14_2_mbox_priorbox
-    );
-
-    topology_inst.add(
-        conv14_2_mbox_conf, conv14_2_mbox_conf_w, conv14_2_mbox_conf_b,
-        conv14_2_mbox_conf_perm,
-        conv14_2_mbox_conf_flat
-    );
-
-    topology_inst.add(
-        conv14_2_mbox_loc, conv14_2_mbox_loc_w, conv14_2_mbox_loc_b,
-        conv14_2_mbox_loc_perm,
-        conv14_2_mbox_loc_flat
-    );
-
-    topology_inst.add(
-        conv15_1, conv15_1_w, conv15_1_b,
-        conv15_2, conv15_2_w, conv15_2_b
     );
 
     topology_inst.add(
@@ -752,41 +387,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     );
 
     topology_inst.add(
-        conv15_2_mbox_conf, conv15_2_mbox_conf_w, conv15_2_mbox_conf_b,
-        conv15_2_mbox_conf_perm,
-        conv15_2_mbox_conf_flat
-    );
-
-    topology_inst.add(
-        conv15_2_mbox_loc, conv15_2_mbox_loc_w, conv15_2_mbox_loc_b,
-        conv15_2_mbox_loc_perm,
-        conv15_2_mbox_loc_flat
-    );
-
-    topology_inst.add(
-        conv16_1, conv16_1_w, conv16_1_b,
-        conv16_2, conv16_2_w, conv16_2_b
-    );
-
-    topology_inst.add(
         conv16_2_mbox_priorbox
-    );
-
-    topology_inst.add(
-        conv16_2_mbox_conf, conv16_2_mbox_conf_w, conv16_2_mbox_conf_b,
-        conv16_2_mbox_conf_perm,
-        conv16_2_mbox_conf_flat
-    );
-
-    topology_inst.add(
-        conv16_2_mbox_loc, conv16_2_mbox_loc_w, conv16_2_mbox_loc_b,
-        conv16_2_mbox_loc_perm,
-        conv16_2_mbox_loc_flat
-    );
-
-    topology_inst.add(
-        conv17_1, conv17_1_w, conv17_1_b,
-        conv17_2, conv17_2_w, conv17_2_b
     );
 
     topology_inst.add(
@@ -794,21 +395,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     );
 
     topology_inst.add(
-        conv17_2_mbox_conf, conv17_2_mbox_conf_w, conv17_2_mbox_conf_b,
-        conv17_2_mbox_conf_perm,
-        conv17_2_mbox_conf_flat
-    );
-
-    topology_inst.add(
-        conv17_2_mbox_loc, conv17_2_mbox_loc_w, conv17_2_mbox_loc_b,
-        conv17_2_mbox_loc_perm,
-        conv17_2_mbox_loc_flat
-    );
-
-    topology_inst.add(
         mbox_priorbox,
-        mbox_loc,
-        mbox_conf,
         mbox_conf_reshape,
         mbox_conf_softmax,
         mbox_conf_flatten,
