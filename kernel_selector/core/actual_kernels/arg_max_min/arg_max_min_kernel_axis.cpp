@@ -29,6 +29,7 @@ namespace kernel_selector
         k.EnableArgMaxMinAxis(ArgMaxMinAxis::X);
         k.EnableArgMaxMinAxis(ArgMaxMinAxis::Y);
         k.EnableArgMaxMinAxis(ArgMaxMinAxis::FEATURE);
+        k.EnableDifferentTypes();
         k.EnableBatching();
         return k;
     }

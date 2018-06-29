@@ -508,10 +508,12 @@ inline JitConstants MakeLSTMEltJitConstants(const LSTMEltParams& params)
     }
 
     const auto& GEMMInput = params.inputs[0];
+    size_t size = GEMMInput.X().v / 4;
     jit.AddConstants({
-        MakeJitConstant("GEMM_OFFSET1", GEMMInput.X().v / 4),
-        MakeJitConstant("GEMM_OFFSET2", GEMMInput.X().v / 2),
-        MakeJitConstant("GEMM_OFFSET3", 3 * GEMMInput.X().v / 4),
+        MakeJitConstant("GEMM_OFFSET_I", params.GetOffsetIndexI() * size),
+        MakeJitConstant("GEMM_OFFSET_O", params.GetOffsetIndexO() * size),
+        MakeJitConstant("GEMM_OFFSET_F", params.GetOffsetIndexF() * size),
+        MakeJitConstant("GEMM_OFFSET_Z", params.GetOffsetIndexZ() * size),
     });
     return jit;
 }

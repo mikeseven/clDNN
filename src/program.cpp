@@ -580,7 +580,7 @@ void program_impl::replace_nodes_pre()
                 auto lstm_gemm_node = std::make_shared<lstm_gemm>(lstm_gemm_id, lstm_gemm_input_id, weights_id, recurrent_id, bias_id, hidden_id);
                 auto &n1 = get_or_create(lstm_gemm_node);
                 inputs.push_back(&n1);
-                auto lstm_elt_node = std::make_shared<lstm_elt>(lstm_elt_id, lstm_gemm_id, cell_id);
+                auto lstm_elt_node = std::make_shared<lstm_elt>(lstm_elt_id, lstm_gemm_id, cell_id, lstm_prim->offset_order);
                 auto &n2 = get_or_create(lstm_elt_node);
                 inputs.push_back(&n2);
                 hidden_id = crop_id + ":hidden";
@@ -2351,7 +2351,7 @@ void program_impl::prepare_buffer_fusing()
                     // todo: in future, if this case is problem, it can be optimized further to enable buffer fusing
                     //       per single input rather than all/none
                     // + restrict input types to pooling, convolution and activation only due to problems with output padding on b and f
-                    if ((!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>() && !input->is_type<concatenation>() && !input->is_type<crop>()) ||
+                    if ((!input->is_type<pooling>() && !input->is_type<convolution>() && !input->is_type<activation>() && !input->is_type<concatenation>() && !input->is_type<crop>() && !input->is_type<scale>()) ||
                         (input->is_output() && !is_debug) ||
                         input->get_users().size() > 2)
                         return;
