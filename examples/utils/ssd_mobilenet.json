@@ -1,0 +1,84 @@
+"mul1_340":  [],
+"conv0":     "mul1_340",
+
+
+
+"conv1_dw":  {"deps": "conv0",  "split": 32,   "weights": "conv1%2Fdw"},
+"conv1":     "conv1_dw",
+
+
+"conv2_dw":  {"deps": "conv1",  "split": 64,   "weights": "conv2%2Fdw"},
+"conv2":     "conv2_dw",
+
+
+"conv3_dw":  {"deps": "conv2",  "split": 128,  "weights": "conv3%2Fdw"},
+"conv3":     "conv3_dw",
+
+"conv4_dw":  {"deps": "conv3",  "split": 128,  "weights": "conv4%2Fdw"},
+"conv4":     "conv4_dw",
+
+
+"conv5_dw":  {"deps": "conv4",  "split": 256,  "weights": "conv5%2Fdw"},
+"conv5":     "conv5_dw",
+
+"conv6_dw":  {"deps": "conv5",  "split": 256,  "weights": "conv6%2Fdw"},
+"conv6":     "conv6_dw",
+
+
+"conv7_dw":  {"deps": "conv6",  "split": 512,  "weights": "conv7%2Fdw"},
+"conv7":     "conv7_dw",
+
+"conv8_dw":  {"deps": "conv7",  "split": 512,  "weights": "conv8%2Fdw"},
+"conv8":     "conv8_dw",
+
+"conv9_dw":  {"deps": "conv8",  "split": 512,  "weights": "conv9%2Fdw"},
+"conv9":     "conv9_dw",
+
+"conv10_dw": {"deps": "conv9",  "split": 512,  "weights": "conv10%2Fdw"},
+"conv10":    "conv10_dw",
+
+"conv11_dw": {"deps": "conv10", "split": 512,  "weights": "conv11%2Fdw"},
+"conv11":    "conv11_dw",
+
+"conv12_dw": {"deps": "conv11", "split": 512,  "weights": "conv12%2Fdw"},
+"conv12":    "conv12_dw",
+
+
+"conv13_dw": {"deps": "conv12", "split": 1024, "weights": "conv13%2Fdw"},
+"conv13":    "conv13_dw",
+
+
+
+"conv14_1":  "conv13",
+"conv14_2":  "conv14_1",
+
+"conv15_1":  "conv14_2",
+"conv15_2":  "conv15_1",
+
+"conv16_1":  "conv15_2",
+"conv16_2":  "conv16_1",
+
+"conv17_1":  "conv16_2",
+"conv17_2":  "conv17_1",
+
+
+
+
+"conv11_mbox_loc":    "conv11",
+"conv13_mbox_loc":    "conv13",
+"conv14_2_mbox_loc":  "conv14_2",
+"conv15_2_mbox_loc":  "conv15_2",
+"conv16_2_mbox_loc":  "conv16_2",
+"conv17_2_mbox_loc":  "conv17_2",
+
+
+"conv11_mbox_conf":   "conv11",
+"conv13_mbox_conf":   "conv13",
+"conv14_2_mbox_conf": "conv14_2",
+"conv15_2_mbox_conf": "conv15_2",
+"conv16_2_mbox_conf": "conv16_2",
+"conv17_2_mbox_conf": "conv17_2",
+
+
+"mbox_loc":           [],
+"mbox_conf":          [],
