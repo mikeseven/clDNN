@@ -178,6 +178,54 @@ static primitive_id add_mbox_processor(const string& weights_dir, const engine& 
     return mbox_proc;
 }
 
+namespace
+{
+struct input_priorbox_settings
+{
+    primitive_id  input;
+
+    vector<float> min_sizes;
+    vector<float> max_sizes;
+    vector<float> aspect_ratios;
+};
+}
+
+static primitive_id add_mbox_priorbox(const layout& input_layout, topology& topology_inst, const string& root_name,
+                                      const vector<input_priorbox_settings>& input_prior_infos,
+                                      const vector<float>& input_variance = {0.1f, 0.1f, 0.2f, 0.2f},
+                                      const bool input_flip = true, const bool input_clip = false)
+{
+    vector<primitive_id> concat_inputs;
+    for (const auto& input_prior_info : input_prior_infos)
+    {
+        auto input_root = input_prior_info.input + "_" + root_name;
+
+        auto input_priorbox = prior_box(
+            input_root,
+            input_prior_info.input,
+            input_layout.size,
+            input_prior_info.min_sizes,
+            input_prior_info.max_sizes,
+            input_prior_info.aspect_ratios,
+            input_flip,
+            input_clip,
+            input_variance
+        );
+
+        concat_inputs.push_back(input_priorbox);
+
+        topology_inst.add(input_priorbox);
+    }
+
+    auto mbox_priorbox = concatenation(
+        root_name,
+        concat_inputs,
+        concatenation::along_y
+    );
+    topology_inst.add(mbox_priorbox);
+
+    return mbox_priorbox;
+}
 
 
 // Building SSD MobileNet network with loading weights & biases from file
@@ -239,120 +287,32 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
         {conv17, 126}
     });
 
-    auto conv11_mbox_priorbox = prior_box(
-        "conv11_mbox_priorbox",
-        conv11,
-        input_layout.size,
-        { 60 },
-        {},
-        { 2 },
-        true,
-        false,
-        { 0.1f,0.1f,0.2f,0.2f },
-        0,
-        0,
-        0.5f);
+    // Multi-box priorbox (prioritetizer / ROI selectors).
+    auto mbox_priorbox = add_mbox_priorbox(input_layout, topology_inst, "mbox_priorbox", {
+        {conv11, {60},  {},    {2.0}},
+        {conv13, {105}, {150}, {2.0, 3.0}},
+        {conv14, {150}, {195}, {2.0, 3.0}},
+        {conv15, {195}, {240}, {2.0, 3.0}},
+        {conv16, {240}, {285}, {2.0, 3.0}},
+        {conv17, {285}, {300}, {2.0, 3.0}}
+    });
 
-    auto conv13_mbox_priorbox = prior_box(
-        "conv13_mbox_priorbox",
-        conv13,
-        input_layout.size,
-        { 105 },
-        { 150 },
-        { 2.0,3.0 },
-        true,
-        false,
-        { 0.1f,0.1f,0.2f,0.2f },
-        0,
-        0,
-        0.5f);
-
-    auto conv14_2_mbox_priorbox = prior_box(
-        "conv14_2_mbox_priorbox",
-        conv14,
-        input_layout.size,
-        { 150 },
-        { 195 },
-        { 2.0,3.0 },
-        true,
-        false,
-        { 0.1f,0.1f,0.2f,0.2f },
-        0,
-        0,
-        0.5f);
-
-    auto conv15_2_mbox_priorbox = prior_box(
-        "conv15_2_mbox_priorbox",
-        conv15,
-        input_layout.size,
-        { 195 },
-        { 240 },
-        { 2.0,3.0 },
-        true,
-        false,
-        { 0.1f,0.1f,0.2f,0.2f },
-        0,
-        0,
-        0.5f);
-
-    auto conv16_2_mbox_priorbox = prior_box(
-        "conv16_2_mbox_priorbox",
-        conv16,
-        input_layout.size,
-        { 240 },
-        { 285 },
-        { 2.0,3.0 },
-        true,
-        false,
-        { 0.1f,0.1f,0.2f,0.2f },
-        0,
-        0,
-        0.5f);
-
-    auto conv17_2_mbox_priorbox = prior_box(
-        "conv17_2_mbox_priorbox",
-        conv17,
-        input_layout.size,
-        { 285 },
-        { 300 },
-        { 2.0,3.0 },
-        true,
-        false,
-        { 0.1f,0.1f,0.2f,0.2f },
-        0,
-        0,
-        0.5f);
-
-    auto mbox_priorbox = concatenation(
-        "mbox_priorbox",
-        {
-            conv11_mbox_priorbox,
-            conv13_mbox_priorbox,
-            conv14_2_mbox_priorbox,
-            conv15_2_mbox_priorbox,
-            conv16_2_mbox_priorbox,
-            conv17_2_mbox_priorbox
-        },
-        concatenation::along_y
-    );
-
+    // Combining multi-box information into detection output.
     auto mbox_conf_reshape = reshape(
         "mbox_conf_reshape",
         mbox_conf,
-        { batch_size,1917,21,1}
+        {batch_size, 1917, 21, 1}
     );
-
     auto mbox_conf_softmax = softmax(
         "mbox_conf_softmax",
         mbox_conf_reshape,
-        cldnn::softmax::normalize_x
+        softmax::normalize_x
     );
-
     auto mbox_conf_flatten = reshape(
         "mbox_conf_flatten",
         mbox_conf_softmax,
-        { batch_size,40257,1,1 });
-
+        {batch_size, 40257, 1, 1}
+    );
 
     auto detection_out = detection_output(
         "output",
@@ -372,36 +332,8 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     );
 
     topology_inst.add(
-        conv11_mbox_priorbox
-    );
-
-    topology_inst.add(
-        conv13_mbox_priorbox
-    );
-
-    topology_inst.add(
-        conv14_2_mbox_priorbox
-    );
-
-    topology_inst.add(
-        conv15_2_mbox_priorbox
-    );
-
-    topology_inst.add(
-        conv16_2_mbox_priorbox
-    );
-
-    topology_inst.add(
-        conv17_2_mbox_priorbox
-    );
-
-    topology_inst.add(
-        mbox_priorbox,
-        mbox_conf_reshape,
-        mbox_conf_softmax,
-        mbox_conf_flatten,
+        mbox_conf_reshape, mbox_conf_softmax, mbox_conf_flatten,
         detection_out
     );
-
     return topology_inst;
 }
