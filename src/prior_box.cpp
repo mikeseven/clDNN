@@ -186,10 +186,10 @@ void prior_box_node::calc_result()
     result = get_program().get_engine().allocate_memory(get_output_layout());
 
     //perform calculations
-    if (input().get_output_layout().data_type == data_types::f32)
-        calculate_prior_box_output<data_type_to_type<data_types::f32>::type>(*result, input().get_output_layout(), *typed_desc());
-    else
+    if (input().get_output_layout().data_type == data_types::f16)
         calculate_prior_box_output<data_type_to_type<data_types::f16>::type>(*result, input().get_output_layout(), *typed_desc());
+    else
+        calculate_prior_box_output<data_type_to_type<data_types::f32>::type>(*result, input().get_output_layout(), *typed_desc());
 }
 
 layout prior_box_inst::calc_output_layout(prior_box_node const& node)
@@ -209,7 +209,8 @@ layout prior_box_inst::calc_output_layout(prior_box_node const& node)
     // 2 features. First feature stores the mean of each prior coordinate.
     // Second feature stores the variance of each prior coordinate.
 
-    return{ input_layout.data_type, cldnn::format::bfyx, cldnn::tensor( 1, 2, 1, layer_width * layer_height * num_priors * 4 ) };
+    auto output_data_type = input_layout.data_type == data_types::f16 ? data_types::f16 : data_types::f32;
+    return{ output_data_type, cldnn::format::bfyx, cldnn::tensor( 1, 2, 1, layer_width * layer_height * num_priors * 4 ) };
 }
 
 std::string vector_to_string(std::vector<float> vec)

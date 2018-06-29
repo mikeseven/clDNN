@@ -52,7 +52,7 @@ static primitive_id add_conv_layer(const string& weights_dir, const engine& engi
     {
         auto weights_data = file::create({engine, join_path(weights_dir, weights_root + "_weights.nnd")});
         auto bias_data    = file::create({engine, join_path(weights_dir, weights_root + "_bias.nnd")});
-        auto cf_data      = file::create({engine, join_path(weights_dir, weights_root + "_cf.nnd")});
+        auto cf_data      = file::create({engine, join_path(weights_dir, layer_name   + "_cf.nnd")});
         auto qf_data      = file::create({engine, join_path(weights_dir, weights_root + "_qf.nnd")});
 
         weights_data_groups.push_back(weights_data);
@@ -76,7 +76,7 @@ static primitive_id add_conv_layer(const string& weights_dir, const engine& engi
             });
             auto cf_data      = file::create({
                 engine,
-                join_path(weights_dir, weights_root + "_g" + std::to_string(gi) + "_cf.nnd")
+                join_path(weights_dir, layer_name + "_g" + std::to_string(gi) + "_cf.nnd")
             });
             auto qf_data      = file::create({
                 engine,
