@@ -150,7 +150,8 @@ static primitive_id add_mbox_processor(const string& weights_dir, const engine& 
         auto input_root = input_and_size_pair.first + "_" + root_name;
 
         auto input_conv = add_conv_layer(weights_dir, engine, topology_inst, input_root, input_root,
-                                         input_and_size_pair.first);
+                                         input_and_size_pair.first,
+                                         {0, 0, 0, 0}, {1, 1, 1, 1}, 1, false);
         auto input_perm = permute(
             input_root + "_perm",
             input_conv,
@@ -187,7 +188,7 @@ cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn:
     auto input        = cldnn::input_layout("input", input_layout);
     cldnn::topology topology_inst{input};
 
-    auto mul1_340 = add_mul_layer(engine, topology_inst, "mul1_340", input, 0.017f);
+    auto mul1_340 = add_mul_layer(engine, topology_inst, "mul1_340", input, 0.016999864f);
 
     // Initial feature extractor.
     auto conv0 = add_conv_layer(weights_dir, engine, topology_inst, "conv0", "conv0", mul1_340, {0, 0, -1, -1}, {1, 1, 2, 2});
