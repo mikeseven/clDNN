@@ -29,6 +29,7 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
@@ -41,7 +42,7 @@ using namespace std;
 static primitive_id add_conv_layer(const string& weights_dir, const engine& engine, topology& topology_inst,
                                    const string& layer_name, const string& weights_root, const primitive_id& input,
                                    const tensor& padding = {0, 0, 0, 0}, const tensor& stride = {1, 1, 1, 1},
-                                   const size_t split = 1, const bool add_relu = true)
+                                   const size_t split = 1, const bool add_relu = true, const bool decalibrate = false)
 {
     vector<primitive_id> weights_data_groups;
     vector<primitive_id> bias_data_groups;
@@ -107,7 +108,32 @@ static primitive_id add_conv_layer(const string& weights_dir, const engine& engi
     );
     topology_inst.add(conv_layer);
 
-    return conv_layer;
+    primitive_id corrected_conv = conv_layer;
+    if (decalibrate)
+    {
+        std::unique_ptr<cldnn::data> cf_data_ptr;
+        if (split <= 1)
+        {
+            // TODO: WA for bug when using the same data object twice in topology. Correct when the bug will be fixed.
+            auto cf_orig_data = file::create({engine, join_path(weights_dir, layer_name + "_cf.nnd")});
+            cf_data_ptr = std::make_unique<cldnn::data>(layer_name + "_decalib_cf.nnd", cf_orig_data.mem);
+        }
+        else
+        {
+            // For decalibration with split > 1, the combined CF file is used.
+            cf_data_ptr = std::make_unique<cldnn::data>(
+                file::create({engine, join_path(weights_dir, layer_name + "_cf.nnd")}));
+        }
+
+        auto decalibrated_conv_layer = reorder("decalib_" + layer_name, conv_layer,
+            format::bfyx, data_types::f32, *cf_data_ptr, cldnn_reorder_mean_mode::mean_div);
+
+        corrected_conv = decalibrated_conv_layer;
+
+        topology_inst.add(*cf_data_ptr, decalibrated_conv_layer);
+    }
+
+    return corrected_conv;
 }
 
 
@@ -160,6 +186,7 @@ static primitive_id add_reduce_pair(const string& weights_dir, const engine& eng
 static primitive_id add_mbox_processor(const string& weights_dir, const engine& engine, int32_t batch_size,
                                        topology& topology_inst, const string& root_name,
                                        const vector<pair<primitive_id, size_t>>& input_and_size_pairs,
+                                       const bool decalibrate = false,
                                        const vector<uint16_t>& input_order = {0, 2, 3, 1})
 {
     vector<primitive_id> concat_inputs;
@@ -169,7 +196,7 @@ static primitive_id add_mbox_processor(const string& weights_dir, const engine& 
 
         auto input_conv = add_conv_layer(weights_dir, engine, topology_inst, input_root, input_root,
                                          input_and_size_pair.first,
-                                         {0, 0, 0, 0}, {1, 1, 1, 1}, 1, false);
+                                         {0, 0, 0, 0}, {1, 1, 1, 1}, 1, false, decalibrate);
         auto input_perm = permute(
             input_root + "_perm",
             input_conv,
@@ -250,6 +277,9 @@ static primitive_id add_mbox_priorbox(const layout& input_layout, topology& topo
 cldnn::topology build_ssd_mobilenet_i8(const std::string& weights_dir, const cldnn::engine& engine,
                                        cldnn::layout& input_layout, int32_t batch_size)
 {
+    constexpr bool conf_decalibrate_before_concat = true; 
+
+
     // [300x300x3xB]
     input_layout.size = {batch_size, 3, 300, 300};
     auto input        = cldnn::input_layout("input", input_layout);
@@ -300,10 +330,19 @@ cldnn::topology build_ssd_mobilenet_i8(const std::string& weights_dir, const cld
         {conv15, 216},
         {conv16, 96},
         {conv17, 24}
-    });
-    auto mbox_loc_cf_data      = file::create({engine, join_path(weights_dir, "mbox_loc_cf.nnd")});
-    auto decalibrated_mbox_loc = reorder("decalib_mbox_loc", mbox_loc,
-        format::bfyx, data_types::f32, mbox_loc_cf_data, cldnn_reorder_mean_mode::mean_div);
+    }, conf_decalibrate_before_concat);
+
+    primitive_id corrected_mbox_loc = mbox_loc;
+    if (!conf_decalibrate_before_concat)
+    {
+        auto mbox_loc_cf_data      = file::create({engine, join_path(weights_dir, "mbox_loc_cf.nnd")});
+        auto decalibrated_mbox_loc = reorder("decalib_mbox_loc", mbox_loc,
+            format::bfyx, data_types::f32, mbox_loc_cf_data, cldnn_reorder_mean_mode::mean_div);
+
+        corrected_mbox_loc = decalibrated_mbox_loc;
+
+        topology_inst.add(mbox_loc_cf_data, decalibrated_mbox_loc);
+    }
 
     // Multi-box classifier.
     auto mbox_conf = add_mbox_processor(weights_dir, engine, batch_size, topology_inst, "mbox_conf", {
@@ -313,10 +352,19 @@ cldnn::topology build_ssd_mobilenet_i8(const std::string& weights_dir, const cld
         {conv15, 1134},
         {conv16, 504},
         {conv17, 126}
-    });
-    auto mbox_conf_cf_data      = file::create({engine, join_path(weights_dir, "mbox_conf_cf.nnd")});
-    auto decalibrated_mbox_conf = reorder("decalib_mbox_conf", mbox_conf,
-        format::bfyx, data_types::f32, mbox_conf_cf_data, cldnn_reorder_mean_mode::mean_div);
+    }, conf_decalibrate_before_concat);
+
+    primitive_id corrected_mbox_conf = mbox_conf;
+    if (!conf_decalibrate_before_concat)
+    {
+        auto mbox_conf_cf_data      = file::create({engine, join_path(weights_dir, "mbox_conf_cf.nnd")});
+        auto decalibrated_mbox_conf = reorder("decalib_mbox_conf", mbox_conf,
+            format::bfyx, data_types::f32, mbox_conf_cf_data, cldnn_reorder_mean_mode::mean_div);
+
+        corrected_mbox_conf = decalibrated_mbox_conf;
+
+        topology_inst.add(mbox_conf_cf_data, decalibrated_mbox_conf);
+    }
 
     // Multi-box priorbox (prioritetizer / ROI selectors).
     auto mbox_priorbox = add_mbox_priorbox(input_layout, topology_inst, "mbox_priorbox", {
@@ -331,7 +379,7 @@ cldnn::topology build_ssd_mobilenet_i8(const std::string& weights_dir, const cld
     // Combining multi-box information into detection output.
     auto mbox_conf_reshape = reshape(
         "mbox_conf_reshape",
-        decalibrated_mbox_conf,
+        corrected_mbox_conf,
         {batch_size, 1917, 21, 1}
     );
     auto mbox_conf_softmax = softmax(
@@ -347,7 +395,7 @@ cldnn::topology build_ssd_mobilenet_i8(const std::string& weights_dir, const cld
 
     auto detection_out = detection_output(
         "output",
-        decalibrated_mbox_loc,
+        corrected_mbox_loc,
         mbox_conf_flatten,
         mbox_priorbox,
         21,
@@ -363,8 +411,6 @@ cldnn::topology build_ssd_mobilenet_i8(const std::string& weights_dir, const cld
     );
 
     topology_inst.add(
-        mbox_loc_cf_data, decalibrated_mbox_loc,
-        mbox_conf_cf_data, decalibrated_mbox_conf,
         mbox_conf_reshape, mbox_conf_softmax, mbox_conf_flatten,
         detection_out
     );
