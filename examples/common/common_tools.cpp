@@ -1029,28 +1029,30 @@ void run_topology(const execution_params &ep)
             }
             else if (ep.topology_name == "lenet_train")
             {
-                network.set_learning_rate(0.000001);
-                double loss = 0;
-                for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
-                {
-                    if (ep.use_half)
-                        load_data_from_file_list_lenet<half_t>(images_in_batch, input, learn_it, batch_size, true, labels);
-                    else
-                        load_data_from_file_list_lenet(images_in_batch, input, learn_it, batch_size, true, labels);
-
-                    network.set_input_data("input", input);
-                    network.set_input_data("labels", labels);
-                    auto time = execute_topology(network, ep, energyLib, output);
-                    time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-                    auto expected = labels.pointer<float>();
-                    auto vals = output.pointer<float>();
-                    for (int b = 0; b < batch_size; b++)
+                network.set_learning_rate(0.00000001);
+                while (1) {
+                    double loss = 0;
+                    for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
                     {
-                        auto e = expected[b];
-                        loss += -log(vals[b + e * batch_size]);
+                        if (ep.use_half)
+                            load_data_from_file_list_lenet<half_t>(images_in_batch, input, learn_it, batch_size, true, labels);
+                        else
+                            load_data_from_file_list_lenet(images_in_batch, input, learn_it, batch_size, true, labels);
+
+                        network.set_input_data("input", input);
+                        network.set_input_data("labels", labels);
+                        auto time = execute_topology(network, ep, energyLib, output);
+                        time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
+                        auto expected = labels.pointer<float>();
+                        auto vals = output.pointer<float>();
+                        for (int b = 0; b < batch_size; b++)
+                        {
+                            auto e = expected[b];
+                            loss += -log(vals[b + e * batch_size]);
+                        }
+                        double average = loss / (learn_it - ep.image_offset + batch_size);
+                        std::cout << "Iter: " << learn_it - ep.image_offset << " " << "Loss = " << average << std::endl;
                     }
-                    double average = loss / (learn_it - ep.image_offset + batch_size);
-                    std::cout << "Iter: " << learn_it - ep.image_offset << " " << "Loss = " << average << std::endl;
                 }
 
             }

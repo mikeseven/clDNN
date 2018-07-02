@@ -28,9 +28,23 @@ namespace kernel_selector
     {
         fully_connected_grad_weights_params() : weight_bias_params(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
 
+        struct DedicatedParams
+        {
+            bool useMomentum = false;
+        };
+
+        DedicatedParams fcGradWeightsParams;
+
         virtual ParamsKey GetParamsKey() const
         {
-            return weight_bias_params::GetParamsKey();
+            ParamsKey k = weight_bias_params::GetParamsKey();
+            
+            if (fcGradWeightsParams.useMomentum)
+            {
+                k.EnableMomentum();
+            }
+
+            return k;
         }
     };
 

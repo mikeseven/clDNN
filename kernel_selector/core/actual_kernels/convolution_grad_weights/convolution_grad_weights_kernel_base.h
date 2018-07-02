@@ -34,6 +34,7 @@ namespace kernel_selector
         uSize    padding;
         uint32_t split = 1;
         bool     depthwiseSeparableOpt = false;
+        bool     useMomentum = false;
 
         virtual std::string to_string() const override;
 
@@ -55,6 +56,10 @@ namespace kernel_selector
             if (depthwiseSeparableOpt)
             {
                 k.EnableDepthwiseSeparableOpt();
+            }
+            if (useMomentum)
+            {
+                k.EnableMomentum();
             }
             return k;
         }

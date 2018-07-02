@@ -38,7 +38,7 @@ namespace kernel_selector
         k.EnableTensorPitches();
         k.EnableBiasPerFeature();
         k.EnableNonBiasTerm();
-        //TODO: add support to batching, figure out the way to update weights/biases for multiple batches at the same time
+        k.EnableMomentum();
         k.EnableBatching();
         k.EnableSplitSupport();
         k.EnableGradient();

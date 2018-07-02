@@ -59,6 +59,11 @@ namespace kernel_selector
             MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      cp.depthwiseSeparableOpt),
         });
 
+        if (params.convGradWeightsParams.useMomentum)
+        {
+            jit.AddConstant(MakeJitConstant("MOMENTUM", 1));
+        }
+
         return jit;
     }
 
@@ -120,6 +125,12 @@ namespace kernel_selector
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, ROUND_ROBIN, true, !orgParams.bias.empty());
+        if (newParams.convGradWeightsParams.useMomentum)
+        {
+            kernel.arguments.push_back({ ArgumentDescriptor::Types::PREV_WEIGHTS_GRADIENT });
+            if (!newParams.bias.empty())
+                kernel.arguments.push_back({ ArgumentDescriptor::Types::PREV_BIAS_GRADIENT });
+        }
         kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 1 });
         kernel.arguments.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
         kernel.arguments.push_back({ ArgumentDescriptor::Types::LEARNING_RATE, 0 });

@@ -136,6 +136,8 @@ namespace kernel_selector {
             OUTPUT,
             WEIGHTS,
             BIAS,
+            PREV_WEIGHTS_GRADIENT,
+            PREV_BIAS_GRADIENT,
             SCALE_TABLE,
             SLOPE,
             SPLIT,

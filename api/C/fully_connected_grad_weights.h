@@ -36,8 +36,12 @@ CLDNN_BEGIN_PRIMITIVE_DESC(fully_connected_grad_weights)
 cldnn_primitive_id weights;
 /// @brief Primitive id containing bias data.
 cldnn_primitive_id bias;
-/// @brief Primitive id containing fully connected gradient data.
+/// @brief Primitive id containing fully connected gradient data. Used for proper order of gradient calculation. Leave empty if primitive is last in backward pass.
 cldnn_primitive_id fc_grad;
+/// @brief Primitive id containing weight gradient calculated in previous iteration. Memory should be same as weights.
+cldnn_primitive_id prev_weights_grad;
+/// @brief Primitive id containing bias gradient calculated in previous iteration. Memory should be same as bias.
+cldnn_primitive_id prev_bias_grad;
 CLDNN_END_PRIMITIVE_DESC(fully_connected_grad_weights)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(fully_connected_grad_weights);

@@ -259,11 +259,18 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         ip2_w
     );
 
+    auto ip2_w_grad_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 10, 1, 500, 1 } });
+    auto ip2_b_grad_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 10, 1 } });
+    auto ip2_w_prev = mutable_data("ip2_prev_grad_w", ip2_w_grad_mem);
+    auto ip2_b_prev = mutable_data("ip2_prev_grad_b", ip2_b_grad_mem);
+
     auto ip2_grad_weights = fully_connected_grad_weights("ip2_grad_weights",
         softmax_loss_grad,
         ip1_relu,
         ip2_w,
         ip2_b,
+        ip2_w_prev,
+        ip2_b_prev,
         ip2_grad_input
     );
 
@@ -279,11 +286,18 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         ip1_w
     );
 
+    auto ip1_w_grad_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 500, 50, 4, 4 } });
+    auto ip1_b_grad_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 500, 1 } });
+    auto ip1_w_prev = mutable_data("ip1_prev_grad_w", ip1_w_grad_mem);
+    auto ip1_b_prev = mutable_data("ip1_prev_grad_b", ip1_b_grad_mem);
+
     auto ip1_grad_weights = fully_connected_grad_weights("ip1_grad_weights",
         ip1_relu_grad,
         pool2,
         ip1_w,
         ip1_b,
+        ip1_w_prev,
+        ip1_b_prev,
         ip1_grad_input
     );
 
@@ -299,12 +313,19 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         { conv2_w },
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 });
+
+    auto conv2_w_grad_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 50, 20, 5, 5 } });
+    auto conv2_b_grad_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 50, 1 } });
+    auto conv2_w_prev = mutable_data("conv2_prev_grad_w", conv2_w_grad_mem);
+    auto conv2_b_prev = mutable_data("conv2_prev_grad_b", conv2_b_grad_mem);
     
     auto conv2_grad_weights = convolution_grad_weights("conv2_grad_weights",
         pool2_grad,
         pool1,
         { conv2_w },
         { conv2_b },
+        { conv2_w_prev },
+        { conv2_b_prev },
         conv2_grad_input,
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
@@ -316,12 +337,19 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         { 1,1,2,2 }, // kernel
         { 1,1,2,2 } // strd
     );
+
+    auto conv1_w_mem_grad = memory::allocate(engine, { data_types::f32, format::bfyx,{ 20, 1, 5, 5 } });
+    auto conv1_b_mem_grad = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 20, 1 } });
+    auto conv1_w_prev = mutable_data("conv1_prev_grad_w", conv1_w_mem_grad);
+    auto conv1_b_prev = mutable_data("conv1_prev_grad_b", conv1_b_mem_grad);
     
     auto conv1_grad_weights = convolution_grad_weights("output",
         pool1_grad,
         scale_input,
         { conv1_w },
         { conv1_b },
+        { conv1_w_prev },
+        { conv1_b_prev },
         "",
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
@@ -340,12 +368,15 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         softmax,
         //backward pass
         softmax_loss_grad, labels,
-        ip2_grad_input, ip2_grad_weights,
+        ip2_grad_input, 
+        ip2_grad_weights, ip2_w_prev, ip2_b_prev,
         ip1_relu_grad,
-        ip1_grad_input, ip1_grad_weights,
+        ip1_grad_input, 
+        ip1_grad_weights, ip1_w_prev, ip1_b_prev,
         pool2_grad,
-        conv2_grad_input, conv2_grad_weights,
+        conv2_grad_input, 
+        conv2_grad_weights, conv2_w_prev, conv2_b_prev,
         pool1_grad,
-        conv1_grad_weights
+        conv1_grad_weights, conv1_w_prev, conv1_b_prev
     );
 }

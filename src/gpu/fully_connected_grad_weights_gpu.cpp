@@ -37,6 +37,9 @@ protected:
         kernel::kernel_arguments_data args = parent::get_arguments(instance, 1);
         args.weights = &instance.weights_memory();
         args.bias = instance.bias_term() ? &instance.bias_memory() : nullptr;
+        args.prev_weights_grad = instance.use_momentum() ? &instance.prev_weights_grad() : nullptr;
+        args.prev_bias_grad = instance.bias_term() ? instance.use_momentum() ? &instance.prev_bias_grad() : nullptr : nullptr;
+
         args.lr = instance.get_network().get_learning_rate();
 
         return args;
@@ -48,6 +51,11 @@ public:
     {
         auto fully_connected_grad_weights_params = get_weights_bias_default_params<kernel_selector::fully_connected_grad_weights_params>(arg);
         auto fully_connected_grad_weights_optional_params = get_default_weights_bias_optional_params<kernel_selector::fully_connected_grad_weights_optional_params>(arg.get_program());
+
+        if (arg.use_momentum())
+        {
+            fully_connected_grad_weights_params.fcGradWeightsParams.useMomentum = true;
+        }
 
         fully_connected_grad_weights_params.gradient = true;
         fully_connected_grad_weights_params.inputs.push_back(convert_data_tensor(arg.get_dependency(1).get_output_layout()));
