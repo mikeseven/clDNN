@@ -42,7 +42,7 @@ struct program_impl : public refcounted_obj<program_impl>
     friend struct program_node;
 
 public:
-    program_impl(engine_impl& engine_ref, topology_impl const& topology, build_options const& options);
+    program_impl(engine_impl& engine_ref, topology_impl const& topology, build_options const& options, bool is_internal);
 
     void dump_memory_pool() const;
 
@@ -215,7 +215,8 @@ private:
     void backward_bfs(std::function<void(program_node&)> const& mark_func = nullptr, std::function<void(program_node&)> const& unmark_func = nullptr) const;
 
     void dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter = nullptr) const;
-	void serialize(const char* stage, std::string network_name, std::function<bool(program_node const&)> const& filter = nullptr) const;
+	void dump_weights_and_biases(const program_impl& program, std::list<unsigned long long>& offset, std::list<std::string>& data_name, std::ofstream& file_stream) const;
+	void serialize(const char* stage, std::string serialization_name, std::function<bool(program_node const&)> const& filter = nullptr) const;
 
 };
 }

@@ -251,7 +251,7 @@ namespace {
     }
 }
 
-program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topology, build_options const& options)
+program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topology, build_options const& options, bool is_internal)
     : engine(&engine_ref), options(options), output_size_handling_enabled(true)
 {
     static std::atomic<uint32_t> id_gen{ 0 };
@@ -268,15 +268,14 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
     pre_optimize_graph();
     compile_graph();
     post_optimize_graph();
-
+	
     engine->compile_program(*this);
-
     this->dump_program("13_finished", true);
 
 	//Makes serialization with given name.
 	//Placeholder, not working yet, in progress.
 	auto serialization_network_name = get_serialization_network_name(options);
-	if (!serialization_network_name.empty())
+	if (!serialization_network_name.empty() && !is_internal)
 	{
 		this->serialize("serialization", serialization_network_name);
 	}
@@ -3052,13 +3051,60 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
     dump_graph_optimized(graph, *this);
 }
 
+void program_impl::dump_weights_and_biases(const program_impl& program, std::list<unsigned long long>& offset, std::list<std::string>& data_name, std::ofstream& file_stream) const
+{
+	auto program_binaries = engine->get_context().get()->get_kernels_cache().get_context().get_binaries();
+	auto offset_temp = 0;
+	for (tensor::value_type w = 0; w < program_binaries.size(); w++)
+	{
+		for (tensor::value_type k = 0; k < program_binaries.at(w).size(); k++)
+		{
+			char* p = (char*)&program_binaries.at(w).at(k);
+			file_stream.write(p, sizeof(char));
+			offset_temp += sizeof(char);
+		}
+	}
+	data_name.push_back("kernels");
+	offset.push_back(offset_temp);
+
+	for (auto const& n : program.nodes_map)
+	{
+		auto dependency_count = n.second.get()->get_dependencies().size();
+		for (tensor::value_type dp = 1; dp < dependency_count; dp++)
+		{
+			auto& dependency = n.second.get()->get_dependency(dp);
+			if (dependency.is_type<data>())
+			{
+				offset.push_back(offset.back());
+				auto& mem = dependency.as<data>().get_attached_memory();
+				if (mem.get_layout().data_type == data_types::f32)
+					dump_data(mem, file_stream, offset.back(), sizeof(float));
+				else
+					dump_data(mem, file_stream, offset.back(), sizeof(short));
+				data_name.push_back(dependency.as<data>().id());
+			}
+		}
+	}
+	file_stream.close();
+}
+
 //Makes serialization with given name.
 //Placeholder, not working yet, in progress.
-void program_impl::serialize(const char* stage, std::string network_name, std::function<bool(program_node const&)> const& filter) const
+void program_impl::serialize(const char* stage, std::string serialization_name, std::function<bool(program_node const&)> const& filter) const
 {
-	std::ofstream graph(network_name + "_" + stage + ".graph");
+	///offset show from where new network starts
+	std::list<unsigned long long> offset;
+	std::list<std::string> data_name;
+	offset.push_back(0);
+	data_name.push_back("start");
+
+	std::ofstream file_stream(serialization_name + ".bin", std::ios::binary);
+	dump_weights_and_biases(*this, offset, data_name, file_stream);
+	
+	std::ofstream graph(serialization_name + "_" + stage + ".graph");
 	dump_graph_init(graph, *this, filter);
 
-	graph.open(network_name + "_" + stage + ".xml");
+	graph.open(serialization_name + "_" + stage + ".xml");
 	dump_graph_info(graph, *this, filter);
 }
+
