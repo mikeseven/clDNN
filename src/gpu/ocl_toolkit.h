@@ -41,6 +41,7 @@ typedef  CL_API_ENTRY cl_command_queue(CL_API_CALL *pfn_clCreateCommandQueueWith
     cl_device_id device,
     const cl_queue_properties *properties,
     cl_int *errcodeRet);
+typedef cl::vector<cl::vector<unsigned char>> binaries_vectors;
 
 class ocl_error : public error
 {
@@ -66,6 +67,7 @@ struct configuration
     std::string ocl_sources_dumps_dir;
     cldnn_priority_mode_type priority_mode;
     cldnn_throttle_mode_type throttle_mode;
+	binaries_vectors binaries;
 };
 
 class gpu_toolkit;
@@ -114,8 +116,6 @@ protected:
 
 public:
     static std::shared_ptr<gpu_toolkit> create(const configuration& cfg = configuration());
-
-
     const cl::Context& context() const { return _context; }
     const cl::Device& device() const { return _device; }
     const cl::CommandQueue& queue() const { return _command_queue; }
@@ -123,6 +123,8 @@ public:
     const configuration& get_configuration() const { return _configuration; }
     engine_info_internal get_engine_info() const { return _engine_info; }
     kernels_cache& get_kernels_cache() { return _kernels_cache; }
+	binaries_vectors get_binaries() { return _binaries; }
+	void make_binaries(binaries_vectors binaries) { _binaries = binaries; }
     
     inline bool extension_supported(const std::string ext) { return _extensions.find(ext) != std::string::npos; }
 
@@ -142,7 +144,6 @@ public:
 
     void log(uint64_t id, std::string const& msg);
     bool logging_enabled() const { return !_configuration.log.empty(); }
-
     bool is_neo_driver() { return _neo_driver; }
 
 private:
@@ -154,6 +155,7 @@ private:
     cl_platform_id _platform_id;
     engine_info_internal _engine_info;
     kernels_cache _kernels_cache;
+	binaries_vectors _binaries;
 
     std::atomic<uint64_t> _queue_counter{ 0 };
     std::atomic<uint64_t> _last_barrier{ 0 };
