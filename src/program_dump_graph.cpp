@@ -350,6 +350,20 @@ namespace cldnn
         }
         close_stream(graph);
     }
+
+	void dump_data(memory_impl& mem, std::ofstream& stream, unsigned long long& total_offset, unsigned long long type)
+	{
+		unsigned long long offset = 0;
+		auto number = mem.get_layout().count();
+		char * ptr = (char*)mem.lock();
+		for (tensor::value_type x = 1; x <= number; x++)
+		{
+			stream.write(ptr + offset, type);
+			offset += type;
+		}
+		mem.unlock();
+		total_offset += offset;
+	}
 }
 
  

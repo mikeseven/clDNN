@@ -113,9 +113,9 @@ void engine_impl::release_pending_memory()
     get_context()->release_pending_memory();
 }
 
-program_impl::ptr engine_impl::build_program(const topology_impl& topology, const build_options& options)
+program_impl::ptr engine_impl::build_program(const topology_impl& topology, const build_options& options, bool is_internal)
 {
-    return{ new program_impl(*this, topology, options), false };
+    return{ new program_impl(*this, topology, options, is_internal), false };
 }
 
 network_impl::ptr engine_impl::build_network(const topology_impl& topology, const build_options& options, bool internal_network)

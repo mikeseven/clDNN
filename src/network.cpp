@@ -52,7 +52,7 @@ network_impl::network_impl(const program_impl& program, bool is_internal)
 }
 
 network_impl::network_impl(engine_impl& engine, const topology_impl& topo, const build_options& options, bool is_internal)
-    : network_impl(*engine.build_program(topo, options), is_internal)
+    : network_impl(*engine.build_program(topo, options, is_internal), is_internal)
 {
 }
 

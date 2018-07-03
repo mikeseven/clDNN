@@ -246,12 +246,13 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
                 dump_file.emplace(current_dump_file_name);
                 for (auto& s : sources)
                     dump_file.get() << s;
-            }
+			}
 
             try
             {
                 cl::Program program(_context.context(), sources);
                 program.build({ _context.device() }, program_source.options.c_str());
+				_context.make_binaries(program.getInfo<CL_PROGRAM_BINARIES>());
 
                 if (dump_sources)
                 {
@@ -348,3 +349,4 @@ void kernels_cache::build_all()
 }
 
 }}
+ 
