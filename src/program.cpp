@@ -3051,26 +3051,12 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
     dump_graph_optimized(graph, *this);
 }
 
-void program_impl::dump_weights_and_biases(const program_impl& program, std::list<unsigned long long>& offset, std::list<std::string>& data_name, std::ofstream& file_stream) const
+void program_impl::dump_weights_and_biasses(const program_impl& program, std::list<unsigned long long>& offset, std::list<std::string>& data_name, std::ofstream& file_stream) const
 {
-	auto program_binaries = engine->get_context().get()->get_kernels_cache().get_context().get_binaries();
-	auto offset_temp = 0;
-	for (tensor::value_type w = 0; w < program_binaries.size(); w++)
-	{
-		for (tensor::value_type k = 0; k < program_binaries.at(w).size(); k++)
-		{
-			char* p = (char*)&program_binaries.at(w).at(k);
-			file_stream.write(p, sizeof(char));
-			offset_temp += sizeof(char);
-		}
-	}
-	data_name.push_back("kernels");
-	offset.push_back(offset_temp);
-
 	for (auto const& n : program.nodes_map)
 	{
 		auto dependency_count = n.second.get()->get_dependencies().size();
-		for (tensor::value_type dp = 1; dp < dependency_count; dp++)
+		for (tensor::value_type dp = 0; dp < dependency_count; dp++)
 		{
 			auto& dependency = n.second.get()->get_dependency(dp);
 			if (dependency.is_type<data>())
@@ -3092,14 +3078,15 @@ void program_impl::dump_weights_and_biases(const program_impl& program, std::lis
 //Placeholder, not working yet, in progress.
 void program_impl::serialize(const char* stage, std::string serialization_name, std::function<bool(program_node const&)> const& filter) const
 {
-	///offset show from where new network starts
 	std::list<unsigned long long> offset;
 	std::list<std::string> data_name;
 	offset.push_back(0);
 	data_name.push_back("start");
 
 	std::ofstream file_stream(serialization_name + ".bin", std::ios::binary);
-	dump_weights_and_biases(*this, offset, data_name, file_stream);
+	offset.push_back(dump_kernels(engine->get_context().get()->get_kernels_cache().get_context().get_binaries(), file_stream));
+	data_name.push_back("kernels");
+	dump_weights_and_biasses(*this, offset, data_name, file_stream);
 	
 	std::ofstream graph(serialization_name + "_" + stage + ".graph");
 	dump_graph_init(graph, *this, filter);
