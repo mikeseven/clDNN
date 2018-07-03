@@ -289,7 +289,7 @@ cldnn::topology build_ssd_mobilenet_i8(const std::string& weights_dir, const cld
 
     auto mul1_340_cf_data    = file::create({engine, join_path(weights_dir, "mul1_340_cf.nnd")});
     auto calibrated_mul1_340 = reorder("calib_mul1_340", mul1_340,
-        format::byxf_af32, data_types::i8, mul1_340_cf_data, cldnn_reorder_mean_mode::mean_mul);
+        format::bfyx, data_types::i8, mul1_340_cf_data, cldnn_reorder_mean_mode::mean_mul);
     topology_inst.add(mul1_340_cf_data, calibrated_mul1_340);
 
     // Initial feature extractor.

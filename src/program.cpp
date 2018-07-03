@@ -2057,26 +2057,50 @@ void program_impl::prep_opt_depthwise_sep_post()
         if (!node.get_depthwise_sep_opt())
             return;
 
-        auto weights_offset = node.get_primitive()->input.size();
-        auto bias_offset = weights_offset + wrap_if_single(node.get_primitive()->weights).size();
-
-        const auto& weights_layout = node.get_dependency(1).get_output_layout();
         const auto& split = node.get_primitive()->split();
 
+        auto dependency_offset = node.get_primitive()->input.size();
         //concatenate weights
         {
             //if weights were optimized it is needed to use the sizes after optimization
-            auto target_layout = get_weights_layout(node.get_dependency(1), split);
-            merge_buffers(engine, node, target_layout, weights_offset, bias_offset);
+            auto target_layout = get_weights_layout(node.get_dependency(dependency_offset), split);
+            merge_buffers(engine, node, target_layout, dependency_offset, dependency_offset + split);
+            dependency_offset++;
         }
 
         //concatenate biases
         if (node.get_primitive()->bias.size() != 0)
         {
-            auto target_layout = layout(weights_layout.data_type, cldnn::format::bfyx, { 1, 1, weights_layout.size.batch[0] * split, 1 });
-            merge_buffers(engine, node, target_layout, weights_offset + 1, bias_offset + 1);
+            const auto& bias_layout = node.get_dependency(dependency_offset).get_output_layout();
+            auto target_layout = layout(bias_layout.data_type, cldnn::format::bfyx, { 1, 1, bias_layout.size.batch[0] * split, 1 });
+            merge_buffers(engine, node, target_layout, dependency_offset, dependency_offset + split);
+            dependency_offset++;
         }
 
+        if (node.is_type<convolution>())
+        {
+            auto& prim_node = node.as<convolution>();
+            const auto& prim = prim_node.get_primitive();
+
+            // concatenate weights quantization factors
+            if (prim->weights_quantization_factors.size() != 0)
+            {
+                const auto& weights_quantization_layout = node.get_dependency(dependency_offset).get_output_layout();
+                auto target_layout = layout(weights_quantization_layout.data_type, cldnn::format::bfyx, { 1, 1, weights_quantization_layout.size.batch[0] * split, 1 });
+                merge_buffers(engine, node, target_layout, dependency_offset, dependency_offset + split);
+                dependency_offset++;
+            }
+            // concatenate output callibration factors
+            if (prim->output_calibration_factors.size() != 0)
+            {
+                const auto& output_callibration_layout = node.get_dependency(dependency_offset).get_output_layout();
+                auto target_layout = layout(output_callibration_layout.data_type, cldnn::format::bfyx, { 1, 1, output_callibration_layout.size.batch[0] * split, 1 });
+                merge_buffers(engine, node, target_layout, dependency_offset, dependency_offset + split);
+                dependency_offset++;
+            }
+        }
+
+        if(node.get_primitive())
         //override node split, as only one kernel will be executed
         node.set_split(1);
     };
