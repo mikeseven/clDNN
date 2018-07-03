@@ -142,6 +142,7 @@ private:
     void prepare_buffer_fusing();
     void prepare_primitive_fusing();
     void prepare_depthwise_sep_opt();
+    void prep_opt_depthwise_sep_post();
     void update_processing_order();
 
     /*

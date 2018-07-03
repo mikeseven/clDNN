@@ -476,6 +476,7 @@ void program_impl::post_optimize_graph()
     post_optimize_weights(lo); dump_program("9_reordered_weights", true);
     remove_redundant_reorders(); dump_program("10_removed_redundant_reorders", true); //TODO: do we need it at this place also?
     propagate_constants(); dump_program("11_propagated_constants", true);
+    prep_opt_depthwise_sep_post();
     update_processing_order(); dump_program("12_validated_processing_order", true);
     prepare_memory_dependencies();
 }
@@ -2047,6 +2048,10 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
             prep_opt(prim.as<fully_connected>());
         }
     }
+}
+
+void program_impl::prep_opt_depthwise_sep_post()
+{
     const auto prep_opt_depthwise_sep = [this](auto& node) -> void
     {
         if (!node.get_depthwise_sep_opt())
