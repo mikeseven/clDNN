@@ -40,8 +40,12 @@ protected:
         CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input grad memory", instance.input_memory().get_layout().data_type, "output memory", instance.output_memory().get_layout().data_type, "");
         CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory(1).get_layout().data_type, "output memory", instance.output_memory().get_layout().data_type, "");
         CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory().get_layout().data_type, "filter memory", instance.weights_memory(0).get_layout().data_type, "");
-        CLDNN_ERROR_LAYOUT_MISMATCH(_outer.id(), "Filter memory", instance.weights_memory(0).get_layout(), "previous weights grad memory", _outer.prev_weights_grad(0).get_output_layout(), "");
-        CLDNN_ERROR_LAYOUT_MISMATCH(_outer.id(), "Bias memory", instance.bias_memory(0).get_layout(), "previous bias grad memory", _outer.prev_bias_grad(0).get_output_layout(), "");
+
+        if (instance.use_momentum())
+        {
+            CLDNN_ERROR_LAYOUT_MISMATCH(_outer.id(), "Filter memory", instance.weights_memory(0).get_layout(), "previous weights grad memory", _outer.prev_weights_grad(0).get_output_layout(), "");
+            CLDNN_ERROR_LAYOUT_MISMATCH(_outer.id(), "Bias memory", instance.bias_memory(0).get_layout(), "previous bias grad memory", _outer.prev_bias_grad(0).get_output_layout(), "");
+        }
 
         return res;
     }

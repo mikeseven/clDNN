@@ -993,43 +993,39 @@ void run_topology(const execution_params &ep)
                 }
 
             }
-            //for lenet use byte read to read images
-            /*else
-            {
-                if (ep.use_half)
-                    load_data_from_file_list_lenet<half_t>(images_in_batch, input, 0, 1, ep.topology_name == "lenet_train", labels);
-                else
-                    load_data_from_file_list_lenet(images_in_batch, input, 0, 1, ep.topology_name == "lenet_train", labels);
-            }*/
-
             double time_in_sec = 0.0;
             if (ep.topology_name == "lenet")
             {
                 float acc = 0;
-                for (int i = 0; i < 10000; i++)
+                for (int i = 0; i < 10000/batch_size; i += batch_size)
                 {
-                    load_data_from_file_list_lenet(images_in_batch, input, i, batch_size, true, labels);
+                    if (ep.use_half)
+                        load_data_from_file_list_lenet<half_t>(images_in_batch, input, i, batch_size, true, labels);
+                    else
+                        load_data_from_file_list_lenet(images_in_batch, input, i, batch_size, true, labels);
                     network.set_input_data("input", input);
                     auto outputs = network.execute();
                     auto o = outputs.at("output").get_memory().pointer<float>();
                     auto l = labels.pointer<float>();
-                    for (int j = 0; j < o.size(); j++)
+                    for (int b = 0; b < batch_size; b++)
                     {
-                        if (j == l[0])
-                        {
-                            if (o[j] > 0.6)
+                        auto e = l[b];
+                        if (batch_size == 1) {
+                            if (o[e] > 0.5)
                                 acc++;
                         }
-                        std::cout << i << std::endl;
+                        else
+                        {
+                            if (o[b + e * batch_size] > 0.5)
+                                acc++;
+                        }
                     }
                 }
                 std::cout << acc/10000 << std::endl;
-                //auto time = execute_topology(network, ep, energyLib, output, &labels);
-                //time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
             }
             else if (ep.topology_name == "lenet_train")
             {
-                network.set_learning_rate(0.00000001);
+                network.set_learning_rate(0.00001);
                 while (1) {
                     double loss = 0;
                     for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)

@@ -186,8 +186,7 @@ struct memory_filler
     {
         zero = 0,
         one,
-        zero_to_nine,
-        xavier,
+        zero_to_nine
     } filler_type;
 
     template<typename T>

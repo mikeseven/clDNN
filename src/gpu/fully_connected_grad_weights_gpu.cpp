@@ -32,6 +32,19 @@ struct fully_connected_grad_weights_gpu : typed_primitive_gpu_impl<fully_connect
 
 protected:
 
+    virtual bool validate(typed_primitive_inst<fully_connected_grad_weights>& instance) const override
+    {
+        bool res = parent::validate(instance);
+
+        if (instance.use_momentum())
+        {
+            CLDNN_ERROR_LAYOUT_MISMATCH(_outer.id(), "Filter memory", instance.weights_memory().get_layout(), "previous weights grad memory", _outer.prev_weights_grad().get_output_layout(), "");
+            CLDNN_ERROR_LAYOUT_MISMATCH(_outer.id(), "Bias memory", instance.bias_memory().get_layout(), "previous bias grad memory", _outer.prev_bias_grad().get_output_layout(), "");
+        }
+
+        return res;
+    }
+
     virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<fully_connected_grad_weights>& instance, int32_t) const override
     {
         kernel::kernel_arguments_data args = parent::get_arguments(instance, 1);

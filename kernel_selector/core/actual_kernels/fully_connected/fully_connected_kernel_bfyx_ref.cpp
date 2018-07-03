@@ -61,15 +61,12 @@ namespace kernel_selector
         runInfo->lws1 = local[1];
         runInfo->lws2 = 1;
 
-        runInfo->effiency = FORCE_PRIORITY_1;
-
         return std::move(runInfo);
     }
 
     KernelsData FullyConnected_bfyx_Ref::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, DataLayout::bfyx,
-        { WeightsLayout::oiyx, WeightsLayout::oyxi, WeightsLayout::iyxo, WeightsLayout::yxio }
-        , FORCE_PRIORITY_1);
+        { WeightsLayout::oiyx, WeightsLayout::oyxi, WeightsLayout::iyxo, WeightsLayout::yxio });
     }
 }
