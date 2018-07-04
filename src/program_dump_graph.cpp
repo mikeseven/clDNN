@@ -338,18 +338,18 @@ namespace cldnn
         close_stream(graph);
     }
 
-    void dump_graph_info(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter)
-    {
-        for (auto& node : program.get_nodes())
-        {
-            if (filter && !filter(*node))
-                continue;
+	void dump_graph_info(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter, std::list<unsigned long long> offset, std::list<std::string> data_name)
+	{
+		for (auto& node : program.get_nodes())
+		{
+			if (filter && !filter(*node))
+				continue;
 
-            dump_full_node(graph, node.get());
-            graph << std::endl << std::endl;
-        }
-        close_stream(graph);
-    }
+			dump_full_node(graph, node.get(), offset, data_name);
+			graph << std::endl << std::endl;
+		}
+		close_stream(graph);
+	}
 
 	//Function used by serialization. Not working yet, in progress.
 	unsigned long long dump_kernels(cl::vector<cl::vector<unsigned char>> program_binaries, std::ofstream& file_stream)
