@@ -156,9 +156,11 @@ namespace cldnn
 			return "node_" + std::to_string(reinterpret_cast<uintptr_t>(ptr));
 		}
 
-		void dump_full_node(std::ofstream& out, program_node* node)
+		void dump_full_node(std::ofstream& out, program_node* node, std::list<unsigned long long> offset, std::list<std::string> data_name)
 		{
 			out << node->type()->to_string(*node);
+			std::list<unsigned long long>::iterator iter = std::find(offset.begin(), offset.end(), node->id());
+			//out << data_name.
 		}
 	}
 
@@ -336,14 +338,14 @@ namespace cldnn
 		close_stream(graph);
 	}
 
-	void dump_graph_info(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter)
+	void dump_graph_info(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter, std::list<unsigned long long> offset, std::list<std::string> data_name)
 	{
 		for (auto& node : program.get_nodes())
 		{
 			if (filter && !filter(*node))
 				continue;
 
-			dump_full_node(graph, node.get());
+			dump_full_node(graph, node.get(), offset, data_name);
 			graph << std::endl << std::endl;
 		}
 		close_stream(graph);
@@ -352,10 +354,10 @@ namespace cldnn
 	//Function used by serialization, in progress.
 	unsigned long long dump_kernels(cl::vector<cl::vector<unsigned char>> program_binaries, std::ofstream& file_stream)
 	{
-		auto offset_temp = 0;
-		for (auto w = 0; w < program_binaries.size(); w++)
+		unsigned long long offset_temp = 0;
+		for (unsigned int w = 0; w < (unsigned int)program_binaries.size(); w++)
 		{
-			for (auto k = 0; k < program_binaries.at(w).size(); k++)
+			for (unsigned int k = 0; k < (unsigned int)program_binaries.at(w).size(); k++)
 			{
 				char* p = (char*)&program_binaries.at(w).at(k);
 				file_stream.write(p, sizeof(char));
