@@ -3025,7 +3025,7 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
 }
 
 //Dumps weights and biasses in serialization process, not working yet, in progress.
-void program_impl::dump_weights_and_biasses(const program_impl& program, std::list<unsigned long long>& offset, std::list<std::string>& data_name, std::ofstream& file_stream) const
+void program_impl::dump_weights_and_biasses(const program_impl& program, std::vector<unsigned long long>& offset, std::vector<std::string>& data_name, std::ofstream& file_stream) const
 {
 	for (auto const& n : program.nodes_map)
 	{
@@ -3052,8 +3052,8 @@ void program_impl::dump_weights_and_biasses(const program_impl& program, std::li
 //Placeholder, not working yet, in progress.
 void program_impl::serialize(const char* stage, std::string serialization_name, std::function<bool(program_node const&)> const& filter) const
 {
-	std::list<unsigned long long> offset;
-	std::list<std::string> data_name;
+	std::vector<unsigned long long> offset;
+	std::vector<std::string> data_name;
 	offset.push_back(0);
 	data_name.push_back("start");
 
@@ -3066,6 +3066,6 @@ void program_impl::serialize(const char* stage, std::string serialization_name, 
 	dump_graph_init(graph, *this, filter);
 
 	graph.open(serialization_name + "_" + stage + ".xml");
-	dump_graph_info(graph, *this, filter);
+	dump_graph_info(graph, *this, filter, true, offset, data_name);
 }
 
