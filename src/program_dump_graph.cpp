@@ -352,10 +352,10 @@ namespace cldnn
 	//Function used by serialization, in progress.
 	unsigned long long dump_kernels(cl::vector<cl::vector<unsigned char>> program_binaries, std::ofstream& file_stream)
 	{
-		auto offset_temp = 0;
-		for (auto w = 0; w < program_binaries.size(); w++)
+		unsigned long long offset_temp = 0;
+		for (unsigned int w = 0; w < (unsigned int)program_binaries.size(); w++)
 		{
-			for (auto k = 0; k < program_binaries.at(w).size(); k++)
+			for (unsigned int k = 0; k < (unsigned int)program_binaries.at(w).size(); k++)
 			{
 				char* p = (char*)&program_binaries.at(w).at(k);
 				file_stream.write(p, sizeof(char));
