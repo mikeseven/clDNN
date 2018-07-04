@@ -3051,12 +3051,13 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
     dump_graph_optimized(graph, *this);
 }
 
+//Dumps weights and biasses in serialization process, not working yet, in progress.
 void program_impl::dump_weights_and_biasses(const program_impl& program, std::list<unsigned long long>& offset, std::list<std::string>& data_name, std::ofstream& file_stream) const
 {
 	for (auto const& n : program.nodes_map)
 	{
 		auto dependency_count = n.second.get()->get_dependencies().size();
-		for (tensor::value_type dp = 0; dp < dependency_count; dp++)
+		for (auto dp = 0; dp < dependency_count; dp++)
 		{
 			auto& dependency = n.second.get()->get_dependency(dp);
 			if (dependency.is_type<data>())
