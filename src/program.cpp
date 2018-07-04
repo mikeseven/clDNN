@@ -3056,8 +3056,8 @@ void program_impl::dump_weights_and_biasses(const program_impl& program, std::li
 {
 	for (auto const& n : program.nodes_map)
 	{
-		auto dependency_count = n.second.get()->get_dependencies().size();
-		for (auto dp = 0; dp < dependency_count; dp++)
+		auto dependency_count = (unsigned int)n.second.get()->get_dependencies().size();
+		for (unsigned int dp = 0; dp < dependency_count; dp++)
 		{
 			auto& dependency = n.second.get()->get_dependency(dp);
 			if (dependency.is_type<data>())
@@ -3084,7 +3084,7 @@ void program_impl::serialize(const char* stage, std::string serialization_name, 
 	offset.push_back(0);
 	data_name.push_back("start");
 
-	std::ofstream file_stream(serialization_name + ".bin", std::ios::binary);
+	std::ofstream file_stream(serialization_name + "_" + stage + ".bin", std::ios::binary);
 	offset.push_back(dump_kernels(engine->get_context().get()->get_kernels_cache().get_context().get_binaries(), file_stream));
 	data_name.push_back("kernels");
 	dump_weights_and_biasses(*this, offset, data_name, file_stream);
