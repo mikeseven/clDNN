@@ -252,6 +252,7 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
             {
                 cl::Program program(_context.context(), sources);
                 program.build({ _context.device() }, program_source.options.c_str());
+				///Dumps kernels for serialization process.
 				_context.make_binaries(program.getInfo<CL_PROGRAM_BINARIES>());
 
                 if (dump_sources)
