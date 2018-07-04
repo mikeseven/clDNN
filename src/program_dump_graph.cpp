@@ -156,11 +156,20 @@ namespace cldnn
         return "node_" + std::to_string(reinterpret_cast<uintptr_t>(ptr));
     }
 
-    void dump_full_node(std::ofstream& out, program_node* node)
-    {
-        out << node->type()->to_string(*node);
-    }
-}
+		void dump_full_node(std::ofstream& out, program_node* node, bool serialize, std::vector<unsigned long long> offset, std::vector<std::string> data_name)
+		{
+			out << node->type()->to_string(*node);
+			if (serialize)
+			{
+				auto iter = -1;
+				for (auto& name : data_name) {
+					iter++;
+					if (name == node->id())
+						out << "data offset: [" << offset.at(iter - 1) << " : " << offset.at(iter) << "]";
+				}
+			}
+		}
+	}
 
     std::string get_dir_path(build_options opts)
     {
@@ -338,14 +347,15 @@ namespace cldnn
         close_stream(graph);
     }
 
-	void dump_graph_info(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter, std::list<unsigned long long> offset, std::list<std::string> data_name)
+	void dump_graph_info(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter, bool serialize, std::vector<unsigned long long> offset, std::vector<std::string> data_name)
 	{
+		if (serialize) graph << "kernels offset: [" << offset.at(0) << " : " << offset.at(1) << "]\n";
 		for (auto& node : program.get_nodes())
 		{
 			if (filter && !filter(*node))
 				continue;
 
-			dump_full_node(graph, node.get(), offset, data_name);
+			dump_full_node(graph, node.get(), serialize, offset, data_name);
 			graph << std::endl << std::endl;
 		}
 		close_stream(graph);

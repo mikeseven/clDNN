@@ -3091,6 +3091,6 @@ void program_impl::serialize(std::string network_name, std::function<bool(progra
 	dump_graph_init(graph, *this, filter);
 
 	graph.open(network_name + "_" + "serialization" + ".xml");
-	dump_graph_info(graph, *this, filter);
+	dump_graph_info(graph, *this, filter, true, offset, data_name);
 }
 
