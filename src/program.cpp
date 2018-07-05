@@ -2077,9 +2077,9 @@ void program_impl::prep_opt_depthwise_sep_post()
             dependency_offset++;
         }
 
-        if (node.is_type<convolution>())
+        if (node.template is_type<convolution>())
         {
-            auto& prim_node = node.as<convolution>();
+            auto& prim_node = node.template as<convolution>();
             const auto& prim = prim_node.get_primitive();
 
             // concatenate weights quantization factors
