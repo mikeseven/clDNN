@@ -2072,7 +2072,7 @@ void program_impl::prep_opt_depthwise_sep_post()
         if (node.get_primitive()->bias.size() != 0)
         {
             const auto& bias_layout = node.get_dependency(dependency_offset).get_output_layout();
-            auto target_layout = layout(bias_layout.data_type, cldnn::format::bfyx, { 1, 1, bias_layout.size.batch[0] * split, 1 });
+            auto target_layout = layout(bias_layout.data_type, cldnn::format::bfyx, { 1, 1, bias_layout.size.spatial[0] * split, 1 });
             merge_buffers(engine, node, target_layout, dependency_offset, dependency_offset + split);
             dependency_offset++;
         }
