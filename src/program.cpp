@@ -277,7 +277,7 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
 	auto serialization_network_name = get_serialization_network_name(options);
 	if (!serialization_network_name.empty() && !is_internal)
 	{
-		this->serialize("serialization", serialization_network_name);
+		this->serialize(serialization_network_name);
 	}
 
     cleanup();
@@ -3025,9 +3025,9 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
 }
 
 //Dumps weights and biasses in serialization process, not working yet, in progress.
-void program_impl::dump_weights_and_biasses(const program_impl& program, std::vector<unsigned long long>& offset, std::vector<std::string>& data_name, std::ofstream& file_stream) const
+void program_impl::dump_weights_and_biasses(std::list<unsigned long long>& offsets, std::list<std::string>& data_names, std::ofstream& file_stream) const
 {
-	for (auto const& n : program.nodes_map)
+	for (auto const& n : nodes_map)
 	{
 		auto dependency_count = (unsigned int)n.second.get()->get_dependencies().size();
 		for (unsigned int dp = 0; dp < dependency_count; dp++)
@@ -3035,13 +3035,13 @@ void program_impl::dump_weights_and_biasses(const program_impl& program, std::ve
 			auto& dependency = n.second.get()->get_dependency(dp);
 			if (dependency.is_type<data>())
 			{
-				offset.push_back(offset.back());
+				offsets.push_back(offsets.back());
 				auto& mem = dependency.as<data>().get_attached_memory();
 				if (mem.get_layout().data_type == data_types::f32)
-					dump_data(mem, file_stream, offset.back(), sizeof(float));
+					dump_data(mem, file_stream, offsets.back(), sizeof(float));
 				else
-					dump_data(mem, file_stream, offset.back(), sizeof(short));
-				data_name.push_back(dependency.as<data>().id());
+					dump_data(mem, file_stream, offsets.back(), sizeof(short));
+				data_names.push_back(dependency.as<data>().id());
 			}
 		}
 	}
@@ -3050,22 +3050,20 @@ void program_impl::dump_weights_and_biasses(const program_impl& program, std::ve
 
 //Makes serialization with given name.
 //Placeholder, not working yet, in progress.
-void program_impl::serialize(const char* stage, std::string serialization_name, std::function<bool(program_node const&)> const& filter) const
+void program_impl::serialize(std::string network_name, std::function<bool(program_node const&)> const& filter) const
 {
-	std::vector<unsigned long long> offset;
-	std::vector<std::string> data_name;
-	offset.push_back(0);
-	data_name.push_back("start");
+	std::list<unsigned long long> offsets;
+	std::list<std::string> data_names;
 
-	std::ofstream file_stream(serialization_name + "_" + stage + ".bin", std::ios::binary);
-	offset.push_back(dump_kernels(engine->get_context().get()->get_kernels_cache().get_context().get_binaries(), file_stream));
-	data_name.push_back("kernels");
-	dump_weights_and_biasses(*this, offset, data_name, file_stream);
+	std::ofstream file_stream(network_name + "_" + "serialization" + ".bin", std::ios::binary);
+	offsets.push_back(dump_kernels(engine->get_context().get()->get_kernels_cache().get_context().get_binaries(), file_stream));
+	data_names.push_back("kernels");
+	dump_weights_and_biasses(offsets, data_names, file_stream);
 	
-	std::ofstream graph(serialization_name + "_" + stage + ".graph");
+	std::ofstream graph(network_name + "_" + "serialization" + ".graph");
 	dump_graph_init(graph, *this, filter);
 
-	graph.open(serialization_name + "_" + stage + ".xml");
+	graph.open(network_name + "_" + "serialization" + ".xml");
 	dump_graph_info(graph, *this, filter, true, offset, data_name);
 }
 

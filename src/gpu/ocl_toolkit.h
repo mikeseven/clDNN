@@ -41,7 +41,7 @@ typedef  CL_API_ENTRY cl_command_queue(CL_API_CALL *pfn_clCreateCommandQueueWith
     cl_device_id device,
     const cl_queue_properties *properties,
     cl_int *errcodeRet);
-typedef cl::vector<cl::vector<unsigned char>> binaries_vectors;
+typedef cl::vector<cl::vector<unsigned char>> kernels_binaries_vector;
 
 class ocl_error : public error
 {
@@ -67,7 +67,6 @@ struct configuration
     std::string ocl_sources_dumps_dir;
     cldnn_priority_mode_type priority_mode;
     cldnn_throttle_mode_type throttle_mode;
-	binaries_vectors binaries;
 };
 
 class gpu_toolkit;
@@ -123,8 +122,10 @@ public:
     const configuration& get_configuration() const { return _configuration; }
     engine_info_internal get_engine_info() const { return _engine_info; }
     kernels_cache& get_kernels_cache() { return _kernels_cache; }
-	binaries_vectors get_binaries() { return _binaries; }
-	void make_binaries(binaries_vectors binaries) { _binaries = binaries; }
+	kernels_binaries_vector get_binaries() { return _binaries; }
+	bool get_serialization_flag() { return serialize; }
+	void set_serialization_flag(bool serialization_flag) { serialize = serialization_flag; }
+	void store_binaries(kernels_binaries_vector binaries) { _binaries = binaries; }
     
     inline bool extension_supported(const std::string ext) { return _extensions.find(ext) != std::string::npos; }
 
@@ -155,7 +156,8 @@ private:
     cl_platform_id _platform_id;
     engine_info_internal _engine_info;
     kernels_cache _kernels_cache;
-	binaries_vectors _binaries;
+	kernels_binaries_vector _binaries;
+	bool serialize;
 
     std::atomic<uint64_t> _queue_counter{ 0 };
     std::atomic<uint64_t> _last_barrier{ 0 };
