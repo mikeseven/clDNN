@@ -184,7 +184,6 @@ gpu_toolkit::gpu_toolkit(const configuration& config)
                         : cl::QueueProperties::None))
     , _engine_info(*this)
     , _kernels_cache(*this)
-	, _binaries(config.binaries)
 {
     _device.getInfo(CL_DEVICE_EXTENSIONS, &_extensions);
 

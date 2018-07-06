@@ -139,9 +139,11 @@ gpu::engine_info_internal engine_impl::get_engine_info() const
     return _context->get_engine_info();
 }
 
-void engine_impl::compile_program(program_impl&)
+void engine_impl::compile_program(program_impl& program)
 {
-    //TODO: better compilation logic instead of a simple 'compile all'?
+	if (!program.get_options().get<build_option_type::serialize_network>()->serialization_network_name.empty()) 
+		_context->get_kernels_cache().get_context().set_serialization_flag(true);
+	//TODO: better compilation logic instead of a simple 'compile all'?
     _context->get_kernels_cache().build_all();
 }
 
