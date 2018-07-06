@@ -93,6 +93,7 @@ private:
     memory_impl::ptr mem;
     T* ptr;
 };
+
 }
 
 API_CAST(::cldnn_memory, cldnn::memory_impl)
