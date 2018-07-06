@@ -214,8 +214,11 @@ private:
     void backward_bfs(std::function<void(program_node&)> const& mark_func = nullptr, std::function<void(program_node&)> const& unmark_func = nullptr) const;
 
     void dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter = nullptr) const;
-	void dump_weights_and_biasses(const program_impl& program, std::list<unsigned long long>& offset, std::list<std::string>& data_name, std::ofstream& file_stream) const;
-	void serialize(const char* stage, std::string serialization_name, std::function<bool(program_node const&)> const& filter = nullptr) const;
+	//Dumps weights and biasses in serialization process, not working yet, in progress.
+	void dump_weights_and_biasses(std::list<unsigned long long>& offsets, std::list<std::string>& data_names, std::ofstream& file_stream) const;
+	//Makes serialization with given name.
+	//Placeholder, not working yet, in progress.
+	void serialize(std::string network_name, std::function<bool(program_node const&)> const& filter = nullptr) const;
 
 };
 }

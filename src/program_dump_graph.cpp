@@ -349,10 +349,10 @@ namespace cldnn
 		close_stream(graph);
 	}
 
-	//Function used by serialization, in progress.
+	//Function used by serialization. Not working yet, in progress.
 	unsigned long long dump_kernels(cl::vector<cl::vector<unsigned char>> program_binaries, std::ofstream& file_stream)
 	{
-		unsigned long long offset_temp = 0;
+		auto offset_temp = 0;
 		for (unsigned int w = 0; w < (unsigned int)program_binaries.size(); w++)
 		{
 			for (unsigned int k = 0; k < (unsigned int)program_binaries.at(w).size(); k++)
@@ -365,13 +365,12 @@ namespace cldnn
 		return offset_temp;
 	}
 
-	//Function used by serialization, in progress.
+	//Function used by serialization. Not working yet, in progress.
 	void dump_data(memory_impl& mem, std::ofstream& stream, unsigned long long& total_offset, unsigned long long type)
 	{
-		unsigned long long offset = 0;
-		auto number = (unsigned int)mem.get_layout().count();
+		auto offset = 0ull;
 		char * ptr = (char*)mem.lock();
-		for (unsigned int x = 1; x <= number; x++)
+		for (unsigned int x = 0; x < (unsigned int)mem.get_layout().count(); x++)
 		{
 			stream.write(ptr + offset, type);
 			offset += type;
