@@ -20,9 +20,24 @@
 
 namespace kernel_selector
 {
-    JitConstants LSTMEltKernelBase::GetJitConstants(const LSTMEltParams& params) const
+    JitConstants LSTMEltKernelBase::GetJitConstants(const lstm_elt_params& params) const
     {
-        return MakeLSTMEltJitConstants(params);
+        JitConstants jit = MakeBaseParamsJitConstants(params);
+
+        if (params.hasCell) {
+            const auto& cell = params.cell;
+            jit.AddConstants({ MakeJitConstant("CELL_TERM", true), MakeJitConstant("CELL", cell) });
+        }
+
+        const auto& GEMMInput = params.inputs[0];
+        size_t size = GEMMInput.X().v / 4;
+        jit.AddConstants({
+            MakeJitConstant("GEMM_OFFSET_I", params.GetOffsetIndexI() * size),
+            MakeJitConstant("GEMM_OFFSET_O", params.GetOffsetIndexO() * size),
+            MakeJitConstant("GEMM_OFFSET_F", params.GetOffsetIndexF() * size),
+            MakeJitConstant("GEMM_OFFSET_Z", params.GetOffsetIndexZ() * size),
+        });
+        return jit;
     }
 
     KernelsData LSTMEltKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options) const
@@ -32,9 +47,9 @@ namespace kernel_selector
             return{};
         }
 
-        const LSTMEltParams& orgParams = static_cast<const LSTMEltParams&>(params);
+        const lstm_elt_params& orgParams = static_cast<const lstm_elt_params&>(params);
 
-        KernelData kd = KernelData::Default<LSTMEltParams>(params, orgParams.inputs.size());
+        KernelData kd = KernelData::Default<lstm_elt_params>(params, orgParams.inputs.size());
 
         float effiency = FORCE_PRIORITY_1;
         const auto& input = orgParams.inputs[0];

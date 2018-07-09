@@ -29,30 +29,6 @@ namespace kernel_selector
         return true;
     }
 
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // MakeLRNJitConstants
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    inline JitConstants MakeLRNJitConstants(const lrn_params& params)
-    {
-        JitConstants jit = MakeBaseParamsJitConstants(params);
-
-        const auto& np = params.lrnParams;
-
-        const auto padding = (np.localSize - 1) / 2;
-
-        jit.AddConstants({
-            MakeJitConstant("LOCAL_SIZE",   np.localSize),
-            MakeJitConstant("PADDING",      padding),
-            MakeJitConstant("ALPHA",        np.alpha),
-            MakeJitConstant("BETA",         np.beta),
-            MakeJitConstant("K",            np.k),
-            MakeJitConstant(toString(np.divMode) + "_KERNEL_DIVIDER", ""),
-            MakeJitConstant(toString(np.normMode), ""),
-        });
-
-        return jit;
-    }
-
     JitConstants LRNKernelBase::GetJitConstants(const lrn_params& params, LRNKernelBase::DispatchData kd) const
     {
         JitConstants mem_consts = MakeBaseParamsJitConstants(params);

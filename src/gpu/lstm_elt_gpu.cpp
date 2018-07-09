@@ -20,6 +20,8 @@
 #include "primitive_gpu_base.h"
 #include "implementation_map.h"
 #include "kernel_selector_helper.h"
+#include "lstm/lstm_elt_kernel_selector.h"
+#include "lstm/lstm_elt_kernel_base.h"
 #include "network_impl.h"
 #include "error_handler.h"
 

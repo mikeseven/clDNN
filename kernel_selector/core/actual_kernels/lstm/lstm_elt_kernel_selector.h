@@ -20,17 +20,17 @@
 
 namespace kernel_selector
 {
-    class LSTMEltKernelSelector : public kernel_selector_base
+    class lstm_elt_kernel_selector : public kernel_selector_base
     {
     public:
-        static LSTMEltKernelSelector &Instance() {
-            static LSTMEltKernelSelector instance_;
+        static lstm_elt_kernel_selector &Instance() {
+            static lstm_elt_kernel_selector instance_;
             return instance_;
         }
 
-        LSTMEltKernelSelector();
+        lstm_elt_kernel_selector();
 
-        virtual ~LSTMEltKernelSelector() {}
+        virtual ~lstm_elt_kernel_selector() {}
 
         virtual KernelsData GetBestKernels(const Params& params, const optional_params& options) const override;
     };
