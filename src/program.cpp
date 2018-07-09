@@ -3052,7 +3052,7 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
 }
 
 //Dumps weights and biasses in serialization process, not working yet, in progress.
-void program_impl::dump_weights_and_biasses(std::list<unsigned long long>& offsets, std::list<std::string>& data_names, std::ofstream& file_stream) const
+void program_impl::dump_weights_and_biasses(std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names, std::ofstream& file_stream) const
 {
 	for (auto const& n : nodes_map)
 	{
@@ -3079,18 +3079,17 @@ void program_impl::dump_weights_and_biasses(std::list<unsigned long long>& offse
 //Placeholder, not working yet, in progress.
 void program_impl::serialize(std::string network_name, std::function<bool(program_node const&)> const& filter) const
 {
-	std::list<unsigned long long> offsets;
-	std::list<std::string> data_names;
+	std::vector<unsigned long long> offsets;
+	std::vector<std::string> data_names;
 
 	std::ofstream file_stream(network_name + "_" + "serialization" + ".bin", std::ios::binary);
-	offsets.push_back(dump_kernels(engine->get_context().get()->get_kernels_cache().get_context().get_binaries(), file_stream));
-	data_names.push_back("kernels");
+	dump_kernels(engine->get_context().get()->get_kernels_cache().get_context().get_binaries(), offsets, data_names, file_stream);
 	dump_weights_and_biasses(offsets, data_names, file_stream);
 	
 	std::ofstream graph(network_name + "_" + "serialization" + ".graph");
 	dump_graph_init(graph, *this, filter);
 
 	graph.open(network_name + "_" + "serialization" + ".xml");
-	dump_graph_info(graph, *this, filter, true, offset, data_name);
+	dump_graph_info(graph, *this, filter, true, offsets, data_names);
 }
 

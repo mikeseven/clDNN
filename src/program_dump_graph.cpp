@@ -156,16 +156,16 @@ namespace cldnn
         return "node_" + std::to_string(reinterpret_cast<uintptr_t>(ptr));
     }
 
-		void dump_full_node(std::ofstream& out, program_node* node, bool serialize, std::vector<unsigned long long> offset, std::vector<std::string> data_name)
+		void dump_full_node(std::ofstream& out, program_node* node, bool serialize, std::vector<unsigned long long> offsets, std::vector<std::string> data_names)
 		{
 			out << node->type()->to_string(*node);
 			if (serialize)
 			{
 				auto iter = -1;
-				for (auto& name : data_name) {
+				for (auto& name : data_names) {
 					iter++;
 					if (name == node->id())
-						out << "data offset: [" << offset.at(iter - 1) << " : " << offset.at(iter) << "]";
+						out << "data offsets: [" << offsets.at(iter - 1) << " : " << offsets.at(iter) << "]";
 				}
 			}
 		}
@@ -347,34 +347,49 @@ namespace cldnn
         close_stream(graph);
     }
 
-	void dump_graph_info(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter, bool serialize, std::vector<unsigned long long> offset, std::vector<std::string> data_name)
+	void dump_graph_info(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter, bool serialize, std::vector<unsigned long long> offsets, std::vector<std::string> data_names)
 	{
-		if (serialize) graph << "kernels offset: [" << offset.at(0) << " : " << offset.at(1) << "]\n";
+		if (serialize)
+		{
+			for (unsigned int postion = 0; postion < data_names.size(); postion++)
+				if (data_names.at(postion).find("kernels_part")!=std::string::npos)
+				{
+					if (postion == 0)
+						graph << "kernels 0-"<< (postion+1)*10 << ", offset: [0" << " : " << offsets.at(postion) << "]\n";
+					else
+						graph << "kernels "<< postion*10 << "-" << (postion+1)*10 <<", offset: [" << offsets.at(postion -1) << " : " << offsets.at(postion) << "]\n";
+				}
+		}
 		for (auto& node : program.get_nodes())
 		{
 			if (filter && !filter(*node))
 				continue;
 
-			dump_full_node(graph, node.get(), serialize, offset, data_name);
+			dump_full_node(graph, node.get(), serialize, offsets, data_names);
 			graph << std::endl << std::endl;
 		}
 		close_stream(graph);
 	}
 
 	//Function used by serialization. Not working yet, in progress.
-	unsigned long long dump_kernels(cl::vector<cl::vector<unsigned char>> program_binaries, std::ofstream& file_stream)
+	void dump_kernels(kernels_binaries_container program_binaries, std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names, std::ofstream& file_stream)
 	{
 		auto offset_temp = 0;
-		for (unsigned int w = 0; w < (unsigned int)program_binaries.size(); w++)
+		for (unsigned int i = 0; i < (unsigned int)program_binaries.size(); i++)
 		{
-			for (unsigned int k = 0; k < (unsigned int)program_binaries.at(w).size(); k++)
+			for (unsigned int j = 0; j < (unsigned int)program_binaries.at(i).size(); j++)
 			{
-				char* p = (char*)&program_binaries.at(w).at(k);
-				file_stream.write(p, sizeof(char));
-				offset_temp += sizeof(char);
+				for (unsigned int k = 0; k < (unsigned int)program_binaries.at(i).at(j).size(); k++)
+				{
+					char* p = (char*)&program_binaries.at(i).at(j).at(k);
+					file_stream.write(p, sizeof(char));
+					offset_temp += sizeof(char);
+				}
 			}
+			offsets.push_back(offset_temp);
+			std::string offset_name = "kernels_part_" + std::to_string(i);
+			data_names.push_back(offset_name);
 		}
-		return offset_temp;
 	}
 
 	//Function used by serialization. Not working yet, in progress.
