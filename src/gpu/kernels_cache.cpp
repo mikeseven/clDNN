@@ -253,7 +253,8 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
                 cl::Program program(_context.context(), sources);
                 program.build({ _context.device() }, program_source.options.c_str());
 				///Store kernels for serialization process.
-				if(_context.get_serialization_flag())_context.store_binaries(program.getInfo<CL_PROGRAM_BINARIES>());
+				if (_context.get_serialization_flag()) _context.store_binaries(program.getInfo<CL_PROGRAM_BINARIES>());
+				if (_context.get_binaries().empty()) throw std::runtime_error("Binaries have not been dump\n");
 
                 if (dump_sources)
                 {

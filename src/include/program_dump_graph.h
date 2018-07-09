@@ -31,7 +31,7 @@ namespace cldnn
     void dump_graph_init(std::ofstream&, const program_impl&, std::function<bool(program_node const&)> const&);
 	void dump_graph_info(std::ofstream&, const program_impl&, std::function<bool(program_node const&)> const&, 
 		bool serialize = false, std::vector<unsigned long long> offset = { 0ull }, std::vector<std::string> data_name = { "" });
-	unsigned long long dump_kernels(cl::vector<cl::vector<unsigned char>> program_binaries, std::ofstream& file_stream);
+	void dump_kernels(kernels_binaries_container program_binaries, std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names, std::ofstream& file_stream);
 	void dump_data(memory_impl& mem, std::ofstream& stream, unsigned long long& total_offset, unsigned long long type);
 }
 
