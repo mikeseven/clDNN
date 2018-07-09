@@ -48,8 +48,6 @@ inline uint FUNC(get_output_index)(uint b, uint f, uint y, uint x)
     return GET_DATA_BF8_XY16_INDEX(OUTPUT, b, f, y, x);
 #elif defined OUTPUT_LAYOUT_BYXF_AF32
 	return GET_DATA_BYXF_AF32_INDEX(OUTPUT, b, f, y, x);
-#elif defined OUTPUT_LAYOUT_BYXF_AF32
-	return GET_DATA_BYXF_AF32_INDEX(OUTPUT, b, f, y, x);
 #else
 #error reorder_data.cl: output format - not supported
 #endif
