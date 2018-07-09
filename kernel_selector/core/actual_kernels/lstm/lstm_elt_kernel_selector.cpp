@@ -19,12 +19,12 @@
 
 namespace kernel_selector
 {
-    LSTMEltKernelSelector::LSTMEltKernelSelector()
+    lstm_elt_kernel_selector::lstm_elt_kernel_selector()
     {
         Attach<LSTMEltKernelRef>();
     }
 
-    KernelsData LSTMEltKernelSelector::GetBestKernels(const Params& params, const optional_params& options) const
+    KernelsData lstm_elt_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const
     {
         return GetNaiveBestKernel(params, options, KernelType::LSTM_ELT);
     }

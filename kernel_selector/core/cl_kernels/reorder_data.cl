@@ -77,13 +77,6 @@ KERNEL (reorder_data)(
     const uint input_idx  = FUNC_CALL(get_input_index)(b, f, y, x);
     const uint output_idx = FUNC_CALL(get_output_index)(ov[0],ov[1],ov[2],ov[3]);
 
-/*#if defined OUTPUT_LAYOUT_BYXF_AF32
-	if(b == 0 && f == 0 && x == 0)
-	{
-		printf("X: %u Y: %u F: %u B: %u IDX: %u \n", x, y, f, b, output_idx);    
-	}
-#endif*/
-
 #if defined MEAN_SUBTRACT_INSIDE_PARAMS
     float res = TO_MEAN_TYPE(input[input_idx]);
     res = MEAN_OP(res, VALUE_TO_SUBTRACT[f % VALUE_TO_SUBTRACT_SIZE]);

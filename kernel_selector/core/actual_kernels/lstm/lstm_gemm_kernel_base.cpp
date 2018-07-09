@@ -20,9 +20,23 @@
 
 namespace kernel_selector
 {
-    JitConstants LSTMGemmKernelBase::GetJitConstants(const LSTMGemmParams& params) const
+    JitConstants LSTMGemmKernelBase::GetJitConstants(const lstm_gemm_params& params) const
     {
-        return MakeLSTMGemmJitConstants(params);
+        JitConstants jit = MakeBaseParamsJitConstants(params);
+        const auto& weights = params.weights;
+        const auto& recurrent = params.recurrent;
+        const auto& hidden = params.hidden;
+        const auto& bias = params.bias;
+        if (params.hasBias) {
+            jit.AddConstants({ MakeJitConstant("BIAS", bias), MakeJitConstant("BIAS_TERM", true) });
+        }
+        if (params.hasHidden) {
+            jit.AddConstants({ MakeJitConstant("HIDDEN", hidden), MakeJitConstant("HIDDEN_TERM", true) , MakeJitConstant("RECURRENT", recurrent) });
+        }
+
+        jit.AddConstants({ MakeJitConstant("WEIGHTS", weights) });
+
+        return jit;
     }
 
     KernelsData LSTMGemmKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options) const
@@ -32,9 +46,9 @@ namespace kernel_selector
             return{};
         }
 
-        const LSTMGemmParams& orgParams = static_cast<const LSTMGemmParams&>(params);
+        const lstm_gemm_params& orgParams = static_cast<const lstm_gemm_params&>(params);
 
-        KernelData kd = KernelData::Default<LSTMGemmParams>(params, orgParams.inputs.size());
+        KernelData kd = KernelData::Default<lstm_gemm_params>(params, orgParams.inputs.size());
 
         float effiency = FORCE_PRIORITY_1;
         const auto& input = orgParams.inputs[0];

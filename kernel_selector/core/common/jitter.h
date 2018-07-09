@@ -473,49 +473,4 @@ inline JitConstants MakeLoopUnrollParamsJitConstants(uint32_t loopCount)
     return jit;
 }
 
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeLSTMGemmJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeLSTMGemmJitConstants(const LSTMGemmParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-    const auto& weights = params.weights;
-    const auto& recurrent = params.recurrent;
-    const auto& hidden = params.hidden;
-    const auto& bias = params.bias;
-    if (params.hasBias) {
-        jit.AddConstants({ MakeJitConstant("BIAS", bias), MakeJitConstant("BIAS_TERM", true) });
-    }
-    if (params.hasHidden) {
-        jit.AddConstants({ MakeJitConstant("HIDDEN", hidden), MakeJitConstant("HIDDEN_TERM", true) , MakeJitConstant("RECURRENT", recurrent) });
-    }
-
-    jit.AddConstants({ MakeJitConstant("WEIGHTS", weights)});
-
-    return jit;
-}
-
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-// MakeLSTMEltJitConstants
-////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-inline JitConstants MakeLSTMEltJitConstants(const LSTMEltParams& params)
-{
-    JitConstants jit = MakeBaseParamsJitConstants(params);
-
-    if (params.hasCell) {
-        const auto& cell = params.cell;
-        jit.AddConstants({ MakeJitConstant("CELL_TERM", true), MakeJitConstant("CELL", cell) });
-    }
-
-    const auto& GEMMInput = params.inputs[0];
-    size_t size = GEMMInput.X().v / 4;
-    jit.AddConstants({
-        MakeJitConstant("GEMM_OFFSET_I", params.GetOffsetIndexI() * size),
-        MakeJitConstant("GEMM_OFFSET_O", params.GetOffsetIndexO() * size),
-        MakeJitConstant("GEMM_OFFSET_F", params.GetOffsetIndexF() * size),
-        MakeJitConstant("GEMM_OFFSET_Z", params.GetOffsetIndexZ() * size),
-    });
-    return jit;
-}
-
 }

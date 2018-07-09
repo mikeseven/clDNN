@@ -21,6 +21,59 @@
 
 namespace kernel_selector
 {
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // lstm_gemm_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct lstm_gemm_params : public base_params
+    {
+        lstm_gemm_params() : base_params(KernelType::LSTM_GEMM) {}
+
+        DataTensor weights;
+        DataTensor recurrent;
+        DataTensor bias;
+        DataTensor hidden;
+        bool hasBias = false;
+        bool hasHidden = false;
+
+        void SetBias(const DataTensor& v) {
+            bias = v;
+            hasBias = true;
+        }
+
+        void SetHidden(const DataTensor& v) {
+            hidden = v;
+            hasHidden = true;
+        }
+
+        virtual ParamsKey GetParamsKey() const override
+        {
+            ParamsKey k = base_params::GetParamsKey();
+
+            if (hasBias)
+            {
+                k.EnableLSTMGEMMBias();
+            }
+
+            if (hasHidden)
+            {
+                k.EnableLSTMGEMMHidden();
+            }
+
+            return k;
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // lstm_gemm_optional_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct lstm_gemm_optional_params : optional_params
+    {
+        lstm_gemm_optional_params() : optional_params(KernelType::LSTM_GEMM) {}
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // LSTMGemmKernelBase
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     class LSTMGemmKernelBase : public common_kernel_base
     {
     public:
@@ -31,7 +84,7 @@ namespace kernel_selector
         {};
 
     protected:
-        virtual JitConstants GetJitConstants(const LSTMGemmParams& params) const;
+        virtual JitConstants GetJitConstants(const lstm_gemm_params& params) const;
         KernelsData GetCommonKernelsData(const Params& params, const optional_params& optParams) const;
 
         bool Validate(const Params& p, const optional_params&) const override
