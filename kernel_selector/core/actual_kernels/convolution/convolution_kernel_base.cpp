@@ -200,7 +200,6 @@ namespace kernel_selector
 
         
         kd.cldnnStyle.ofmPerWorkItem = 1;
-        kd.cldnnStyle.batchesPerWorkItem = 1;
         kd.cldnnStyle.blockWidth = 1;
         kd.cldnnStyle.blockHeight = 1;
         kd.cldnnStyle.prefetch = 0;

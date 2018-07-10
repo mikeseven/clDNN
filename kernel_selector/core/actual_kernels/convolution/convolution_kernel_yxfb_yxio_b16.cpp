@@ -54,6 +54,35 @@ namespace kernel_selector
         }
     }
 
+    namespace {
+        // how many batches will a single work item compute
+        size_t GetBatchesPerWorkItem(size_t batch_size, Datatype dataType)
+        {
+            if (dataType == Datatype::F16)
+            {
+                const uint32_t min_batches_per_wi = 1;
+                const uint32_t min_lws = 16;
+
+                if (batch_size % (4 * min_batches_per_wi * min_lws) == 0)
+                {
+                    return 4 * min_batches_per_wi; // USE_BLOCK_READ_2 + as_half4
+                }
+                else if (batch_size % (2 * min_batches_per_wi * min_lws) == 0)
+                {
+                    return 2 * min_batches_per_wi; // USE_BLOCK_READ_1 + as_half2
+                }
+                else
+                {
+                    return min_batches_per_wi;
+                }
+            }
+            else
+            {
+                return 2;
+            }
+        }
+    }
+
     ConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b16::SetDefault(const convolution_params& arg, int) const
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
@@ -62,36 +91,24 @@ namespace kernel_selector
         const auto batch_size = arg.output.Batch().v;
         const uint32_t min_lws = 16;
 
+        const size_t batchesPerWorkItem = GetBatchesPerWorkItem(batch_size, arg.inputs[0].GetDType());
+
         if (arg.inputs[0].GetDType() == Datatype::F16)
         {
             const uint32_t min_ofm_per_wi = 16;
             const uint32_t min_batches_per_wi = 1;
 
             runInfo.cldnnStyle.ofmPerWorkItem = min_ofm_per_wi;
-            if (batch_size % (4 * min_batches_per_wi * min_lws) == 0)
-            {
-                runInfo.cldnnStyle.batchesPerWorkItem = 4 * min_batches_per_wi; // USE_BLOCK_READ_2 + as_half4
-            }
-            else if (batch_size % (2 * min_batches_per_wi * min_lws) == 0)
-            {
-                runInfo.cldnnStyle.batchesPerWorkItem = 2 * min_batches_per_wi; // USE_BLOCK_READ_1 + as_half2
-            }
-            else
-            {
-                runInfo.cldnnStyle.batchesPerWorkItem = min_batches_per_wi;
-            }
-            
             runInfo.effiency = FORCE_PRIORITY_7;
         }
         else
         {
             runInfo.cldnnStyle.ofmPerWorkItem = 8;
-            runInfo.cldnnStyle.batchesPerWorkItem = 2;
             runInfo.effiency = FORCE_PRIORITY_9;
         }
 
         runInfo.lws0 = min_lws;
-        runInfo.gws0 = filter_ofm_num * batch_size / (runInfo.cldnnStyle.ofmPerWorkItem * runInfo.cldnnStyle.batchesPerWorkItem);
+        runInfo.gws0 = filter_ofm_num * batch_size / (runInfo.cldnnStyle.ofmPerWorkItem * batchesPerWorkItem);
         
         return runInfo;
     }
@@ -174,10 +191,12 @@ namespace kernel_selector
             }
         }
 
+        const size_t batchesPerWorkItem = GetBatchesPerWorkItem(batch_size, params.inputs[0].GetDType());
+
         jit.AddConstants({
-            MakeJitConstant("BATCHES_PER_WORK_ITEM",                            kd.cldnnStyle.batchesPerWorkItem), // how many batches will a single work item compute
-            MakeJitConstant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS",    std::max(batch_size / kd.cldnnStyle.batchesPerWorkItem / local_work_group_size, static_cast<size_t>(1))), // how many local work groups we need to compute single element for each batch
-            MakeJitConstant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / kd.cldnnStyle.batchesPerWorkItem), // how many work items we need to compute single element for each batch
+            MakeJitConstant("BATCHES_PER_WORK_ITEM",                            batchesPerWorkItem), // how many batches will a single work item compute
+            MakeJitConstant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS",    std::max(batch_size / batchesPerWorkItem / local_work_group_size, static_cast<size_t>(1))), // how many local work groups we need to compute single element for each batch
+            MakeJitConstant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / batchesPerWorkItem), // how many work items we need to compute single element for each batch
         });
 
         return jit;

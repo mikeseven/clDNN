@@ -61,9 +61,7 @@ namespace kernel_selector
             runInfo.cldnnStyle.ofmPerWorkItem = 16;
         }
 
-        constexpr size_t batchesPerWorkItem = 1;
-
-        runInfo.gws0 = filterOfmNum * batchSize / (runInfo.cldnnStyle.ofmPerWorkItem * batchesPerWorkItem);
+        runInfo.gws0 = filterOfmNum * batchSize / (runInfo.cldnnStyle.ofmPerWorkItem);
 
         runInfo.effiency = FORCE_PRIORITY_9;
         
