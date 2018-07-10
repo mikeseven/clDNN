@@ -66,8 +66,8 @@ namespace kernel_selector
         virtual bool Validate(const Params& p, const optional_params& o) const override;
         virtual JitConstants GetJitConstants(const convolution_params& params, const DispatchData& kd) const;
         virtual DispatchData SetDefault(const convolution_params& params, int autoTuneIndex = -1) const;
-        bool CheckWorkGroups(const DispatchData&) const;
-        bool CheckPitchForSplitOnly(const convolution_params& params) const;
+        static bool CheckWorkGroups(const DispatchData&);
+        static bool CheckPitchForSplitOnly(const convolution_params& params);
         KernelsData GetCommonKernelsData(const Params& params, const optional_params& options, const std::string exeMode = ROUND_ROBIN, int autoTuneIndex = -1) const;
     };
 }

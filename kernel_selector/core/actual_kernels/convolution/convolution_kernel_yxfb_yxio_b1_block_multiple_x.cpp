@@ -76,7 +76,7 @@ namespace kernel_selector
             runInfo.gws1 = static_cast<size_t>(std::ceil(static_cast<float>(runInfo.gws1) / 8.0f));
         }
 
-        runInfo.gws0 = filter_ofm_num * batch_size / (runInfo.cldnnStyle.ofmPerWorkItem * runInfo.cldnnStyle.batchesPerWorkItem);
+        runInfo.gws0 = filter_ofm_num * batch_size / (runInfo.cldnnStyle.ofmPerWorkItem);
         
         return runInfo;
     }

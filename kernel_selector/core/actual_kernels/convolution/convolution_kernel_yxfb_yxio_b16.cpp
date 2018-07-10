@@ -147,6 +147,9 @@ namespace kernel_selector
     {
         auto jit = Parent::GetJitConstants(params, kd);
 
+        const auto local_work_group_size = kd.lws0;
+        const auto batch_size = params.output.Batch().v;
+
         if (params.inputs[0].GetDType() == Datatype::F32)
         {
             // A LITTLE HACK, for convolutions with low number of input features don't use block reads, and it will speed up by 25%
@@ -158,7 +161,6 @@ namespace kernel_selector
         }
         else
         {
-            const auto batch_size = params.output.Batch().v;
             const auto batch_pad_before = params.output.Batch().pad.before;
             const auto feature_pitch = params.output.Feature().pitch;
 
@@ -171,6 +173,12 @@ namespace kernel_selector
                 jit.AddConstant(MakeJitConstant("USE_BLOCK_READ_1", ""));
             }
         }
+
+        jit.AddConstants({
+            MakeJitConstant("BATCHES_PER_WORK_ITEM",                            kd.cldnnStyle.batchesPerWorkItem), // how many batches will a single work item compute
+            MakeJitConstant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS",    std::max(batch_size / kd.cldnnStyle.batchesPerWorkItem / local_work_group_size, static_cast<size_t>(1))), // how many local work groups we need to compute single element for each batch
+            MakeJitConstant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / kd.cldnnStyle.batchesPerWorkItem), // how many work items we need to compute single element for each batch
+        });
 
         return jit;
     }
