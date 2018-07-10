@@ -98,18 +98,6 @@ namespace kernel_selector
         JitConstants mem_consts_loop = MakeLoopUnrollParamsJitConstants(loopCount);
         mem_consts.Merge(mem_consts_loop);
 
-        if (params.inputs[0].GetLayout() == DataLayout::yxfb &&
-            params.weights.GetLayout() == WeightsLayout::yxio)
-        {
-            const auto local_work_group_size = kd.lws0;
-            const auto batch_size = params.output.Batch().v;
-
-            mem_consts.AddConstants({
-                MakeJitConstant("LOCAL_WORK_GROUP_SIZE",                            local_work_group_size),
-                MakeJitConstant("OFM_PER_WORK_ITEM",                                kd.cldnnStyle.ofmPerWorkItem), // how many output feature maps for a single batch will a single work item produce
-            });
-        }
-
         return mem_consts;
     }
 
@@ -198,8 +186,6 @@ namespace kernel_selector
         kd.lws1 = local[1];
         kd.lws2 = local[2];
 
-        
-        kd.cldnnStyle.ofmPerWorkItem = 1;
         kd.cldnnStyle.blockWidth = 1;
         kd.cldnnStyle.blockHeight = 1;
         kd.cldnnStyle.prefetch = 0;

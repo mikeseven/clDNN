@@ -48,6 +48,14 @@ namespace kernel_selector
         return runInfo;
     }
 
+    JitConstants ConvolutionKernel_yxfb_yxio_b1_block::GetJitConstants(const convolution_params& params, const DispatchData& kd) const
+    {
+        auto cldnn_jit = ConvolutionKernelBase::GetJitConstants(params, kd);
+
+        cldnn_jit.AddConstant(MakeJitConstant("LOCAL_WORK_GROUP_SIZE", kd.lws0));
+        return cldnn_jit;
+    }
+
     KernelsData ConvolutionKernel_yxfb_yxio_b1_block::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options);

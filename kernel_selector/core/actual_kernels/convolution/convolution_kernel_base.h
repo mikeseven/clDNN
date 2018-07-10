@@ -34,7 +34,6 @@ namespace kernel_selector
         {
             struct CLDNNStyle
             {
-                size_t ofmPerWorkItem;          // how many output feature maps a single work item compute
                 size_t blockWidth, blockHeight; // used for kernels processing blocks
                 size_t prefetch;
                 size_t inputBlockArraySize;     // Number of elements in array of UNIT_TYPE that must be specified in kernel to store/cache input block.

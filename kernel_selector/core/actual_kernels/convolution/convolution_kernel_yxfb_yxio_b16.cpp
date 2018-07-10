@@ -81,6 +81,13 @@ namespace kernel_selector
                 return 2;
             }
         }
+
+        size_t GetOfmPerWorkitem(Datatype dataType)
+        {
+            if (dataType == Datatype::F16)
+                return 16;
+            return 8;
+        }
     }
 
     ConvolutionKernelBase::DispatchData ConvolutionKernel_yxfb_yxio_b16::SetDefault(const convolution_params& arg, int) const
@@ -92,23 +99,19 @@ namespace kernel_selector
         const uint32_t min_lws = 16;
 
         const size_t batchesPerWorkItem = GetBatchesPerWorkItem(batch_size, arg.inputs[0].GetDType());
+        const size_t ofmPerWorkItem = GetOfmPerWorkitem(arg.inputs[0].GetDType());
 
         if (arg.inputs[0].GetDType() == Datatype::F16)
         {
-            const uint32_t min_ofm_per_wi = 16;
-            const uint32_t min_batches_per_wi = 1;
-
-            runInfo.cldnnStyle.ofmPerWorkItem = min_ofm_per_wi;
             runInfo.effiency = FORCE_PRIORITY_7;
         }
         else
         {
-            runInfo.cldnnStyle.ofmPerWorkItem = 8;
             runInfo.effiency = FORCE_PRIORITY_9;
         }
 
         runInfo.lws0 = min_lws;
-        runInfo.gws0 = filter_ofm_num * batch_size / (runInfo.cldnnStyle.ofmPerWorkItem * batchesPerWorkItem);
+        runInfo.gws0 = filter_ofm_num * batch_size / (ofmPerWorkItem * batchesPerWorkItem);
         
         return runInfo;
     }
@@ -192,8 +195,11 @@ namespace kernel_selector
         }
 
         const size_t batchesPerWorkItem = GetBatchesPerWorkItem(batch_size, params.inputs[0].GetDType());
+        const size_t ofmPerWorkItem = GetOfmPerWorkitem(params.inputs[0].GetDType());
 
         jit.AddConstants({
+            MakeJitConstant("LOCAL_WORK_GROUP_SIZE", kd.lws0),
+            MakeJitConstant("OFM_PER_WORK_ITEM", ofmPerWorkItem),
             MakeJitConstant("BATCHES_PER_WORK_ITEM",                            batchesPerWorkItem), // how many batches will a single work item compute
             MakeJitConstant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS",    std::max(batch_size / batchesPerWorkItem / local_work_group_size, static_cast<size_t>(1))), // how many local work groups we need to compute single element for each batch
             MakeJitConstant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS", batch_size / batchesPerWorkItem), // how many work items we need to compute single element for each batch
