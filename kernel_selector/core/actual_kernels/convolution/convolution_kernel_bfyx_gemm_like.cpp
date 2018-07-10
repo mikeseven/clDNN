@@ -56,7 +56,7 @@ namespace kernel_selector
         }
     }
 
-    JitConstants ConvolutionKernel_bfyx_GEMMLike::GetJitConstants(const convolution_params& params, Parent::DispatchData runInfo) const
+    JitConstants ConvolutionKernel_bfyx_GEMMLike::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
     {
         JitConstants jit = Parent::GetJitConstants(params, runInfo);
         

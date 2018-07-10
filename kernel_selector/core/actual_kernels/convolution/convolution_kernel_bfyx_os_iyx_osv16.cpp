@@ -20,6 +20,8 @@
 
 namespace kernel_selector 
 {
+    // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
+    constexpr size_t sub_group_size = 16;
 
     ConvolutionKernel_bfyx_os_iyx_osv16::ConvolutionKernel_bfyx_os_iyx_osv16() : ConvolutionKernelBase("convolution_gpu_bfyx_os_iyx_osv16")
     {
@@ -78,7 +80,7 @@ namespace kernel_selector
         const uSize& filter_size,
         const uSize& stride,
         const uSize& dilation,
-        size_t sub_group_size = 16,
+        size_t sg_size = 16,
         size_t read_chunk_size = 8,
         size_t min_read_size = 16)
     {
@@ -94,7 +96,7 @@ namespace kernel_selector
         // Required number of elements in X dimension rounded to nearest >= read chunk size.
         size_t input_block_read_width = std::max(RoundUp(input_block_req_width, read_chunk_size), min_read_size);
         // Number of sub-group-sized vectors of unit type needed to store input block.
-        size_t input_block_array_size = CeilDiv(input_block_req_height * input_block_read_width, sub_group_size);
+        size_t input_block_array_size = CeilDiv(input_block_req_height * input_block_read_width, sg_size);
 
         return std::make_pair(input_block_array_size, input_block_read_width);
     }
@@ -121,9 +123,6 @@ namespace kernel_selector
         {
             return autoTuneOptions[autoTuneIndex];
         }
-
-        // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
-        constexpr size_t sub_group_size = 16;
 
         AutoTuneOption option = { 0, 0, 0, ROUND_ROBIN };
 
@@ -187,12 +186,8 @@ namespace kernel_selector
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
-        // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
-        constexpr size_t sub_group_size = 16;
-
         const auto of_maps = arg.output.Feature().v;
         const size_t of_threads_per_batch = RoundUp(of_maps, sub_group_size);
-        runInfo.cldnnStyle.leftovers = of_threads_per_batch - of_maps;
 
         const auto cp = arg.convParams;
 
@@ -237,8 +232,12 @@ namespace kernel_selector
         return true;
     }
 
-    JitConstants ConvolutionKernel_bfyx_os_iyx_osv16::GetJitConstants(const convolution_params& params, DispatchData runInfo) const
+    JitConstants ConvolutionKernel_bfyx_os_iyx_osv16::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
     {
+        const auto of_maps = params.output.Feature().v;
+        const size_t of_threads_per_batch = RoundUp(of_maps, sub_group_size);
+        size_t leftovers = of_threads_per_batch - of_maps;
+
         auto jit = Parent::GetJitConstants(params, runInfo);
 
         jit.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", runInfo.lws2));
@@ -248,9 +247,9 @@ namespace kernel_selector
         jit.AddConstant(MakeJitConstant("IN_BLOCK_WIDTH", runInfo.cldnnStyle.inputBlockWidth));
         jit.AddConstant(MakeJitConstant("PREFETCH", runInfo.cldnnStyle.prefetch));
 
-        if (runInfo.cldnnStyle.leftovers)
+        if (leftovers)
         {
-            jit.AddConstant(MakeJitConstant("LEFTOVERS", runInfo.cldnnStyle.leftovers));
+            jit.AddConstant(MakeJitConstant("LEFTOVERS", leftovers));
         }
 
         return jit;

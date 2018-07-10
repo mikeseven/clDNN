@@ -143,7 +143,7 @@ namespace kernel_selector
         return true;
     }
 
-    JitConstants ConvolutionKernel_yxfb_yxio_b16::GetJitConstants(const convolution_params& params, DispatchData kd) const
+    JitConstants ConvolutionKernel_yxfb_yxio_b16::GetJitConstants(const convolution_params& params, const DispatchData& kd) const
     {
         auto jit = Parent::GetJitConstants(params, kd);
 

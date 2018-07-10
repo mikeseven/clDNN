@@ -226,7 +226,6 @@ namespace kernel_selector
 
         const auto of_maps = arg.output.Feature().v;
         const size_t of_threads_per_batch = RoundUp(of_maps, sub_group_size);
-        runInfo.cldnnStyle.leftovers = of_threads_per_batch - of_maps;
 
         runInfo.effiency = FORCE_PRIORITY_3;
 
@@ -241,7 +240,7 @@ namespace kernel_selector
         return runInfo;
     }
 
-    JitConstants ConvolutionKernel_DPAS_blocks::GetJitConstants(const convolution_params& params, DispatchData runInfo) const
+    JitConstants ConvolutionKernel_DPAS_blocks::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
     {
         auto jit = Parent::GetJitConstants(params, runInfo);
 

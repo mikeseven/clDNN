@@ -81,7 +81,7 @@ namespace kernel_selector
         return runInfo;
     }
 
-    JitConstants ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::GetJitConstants(const convolution_params& params, DispatchData kd) const
+    JitConstants ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x::GetJitConstants(const convolution_params& params, const DispatchData& kd) const
     {
         auto cldnn_jit = ConvolutionKernelBase::GetJitConstants(params, kd);
 

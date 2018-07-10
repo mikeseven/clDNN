@@ -48,7 +48,7 @@ namespace kernel_selector
         return true;
     }
 
-    JitConstants ConvolutionKernelBase::GetJitConstants(const convolution_params& params, ConvolutionKernelBase::DispatchData kd) const
+    JitConstants ConvolutionKernelBase::GetJitConstants(const convolution_params& params, const DispatchData& kd) const
     {
         JitConstants mem_consts = WeightBiasKernelBase::GetJitConstants(params);
         const auto& padding = params.convParams.padding;
@@ -209,7 +209,6 @@ namespace kernel_selector
         kd.cldnnStyle.prefetch = 0;
         kd.cldnnStyle.inputBlockArraySize = 0;
         kd.cldnnStyle.inputBlockWidth = 0;
-        kd.cldnnStyle.leftovers = 0;
         kd.effiency = DONT_USE_IF_HAVE_SOMETHING_ELSE;
         return kd;
     }
