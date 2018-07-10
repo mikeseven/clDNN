@@ -191,6 +191,13 @@ namespace kernel_selector
         kd.cldnnStyle.prefetch = 0;
         kd.cldnnStyle.inputBlockArraySize = 0;
         kd.cldnnStyle.inputBlockWidth = 0;
+
+        kd.gemmStyle.globalWorkSizeDX = 1;
+        kd.gemmStyle.globalWorkSizeDY = 1;
+        kd.gemmStyle.globalWorkSizeDZ = 1;
+        kd.gemmStyle.subBlockDimK = 1;
+        kd.gemmStyle.subBlockDimM = 0;
+        kd.gemmStyle.subBlockDimN = 0;
         kd.effiency = DONT_USE_IF_HAVE_SOMETHING_ELSE;
         return kd;
     }
