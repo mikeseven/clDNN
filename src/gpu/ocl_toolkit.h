@@ -123,8 +123,8 @@ public:
     engine_info_internal get_engine_info() const { return _engine_info; }
     kernels_cache& get_kernels_cache() { return _kernels_cache; }
 	kernels_binaries_vector get_binaries() { return _binaries; }
-	bool get_serialization_flag() { return serialize; }
-	void set_serialization_flag(bool serialization_flag) { serialize = serialization_flag; }
+	bool get_serialization_flag() { return _serialize; }
+	void set_serialization_flag(bool serialization_flag) { _serialize = serialization_flag; }
 	void store_binaries(kernels_binaries_vector binaries) { _binaries = binaries; }
     
     inline bool extension_supported(const std::string ext) { return _extensions.find(ext) != std::string::npos; }
@@ -157,7 +157,7 @@ private:
     engine_info_internal _engine_info;
     kernels_cache _kernels_cache;
 	kernels_binaries_vector _binaries;
-	bool serialize;
+	bool _serialize = false;
 
     std::atomic<uint64_t> _queue_counter{ 0 };
     std::atomic<uint64_t> _last_barrier{ 0 };
