@@ -165,7 +165,7 @@ namespace kernel_selector {
         return true;
     }
 
-    JitConstants ConvolutionKernel_Tutorial::GetJitConstants(const convolution_params& params, DispatchData kd) const
+    JitConstants ConvolutionKernel_Tutorial::GetJitConstants(const convolution_params& params, const DispatchData& kd) const
     {
         auto jit = Parent::GetJitConstants(params, kd);
         jit.AddConstant(MakeJitConstant("ADVANCED_TUTORIAL", ""));

@@ -123,7 +123,7 @@ namespace kernel_selector
         return runInfo;
     }
 
-    JitConstants ConvolutionKernel_bfyx_3x3_dw_opt::GetJitConstants(const convolution_params& params, DispatchData kd) const
+    JitConstants ConvolutionKernel_bfyx_3x3_dw_opt::GetJitConstants(const convolution_params& params, const DispatchData& kd) const
     {
         stSize tileDims = { kd.cldnnStyle.blockWidth, kd.cldnnStyle.blockHeight };
         auto mem_consts = ConvolutionKernelBase::GetJitConstants(params, kd);

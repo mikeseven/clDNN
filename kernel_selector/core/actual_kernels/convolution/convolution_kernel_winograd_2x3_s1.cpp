@@ -47,7 +47,7 @@ namespace kernel_selector {
         return k;
     }
 
-    JitConstants ConvolutionKernel_Winograd_2x3_s1::GetJitConstants(const convolution_params& params, Parent::DispatchData runInfo) const
+    JitConstants ConvolutionKernel_Winograd_2x3_s1::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
     {
         JitConstants jit = Parent::GetJitConstants(params, runInfo);
 

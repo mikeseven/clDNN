@@ -48,7 +48,7 @@ namespace kernel_selector
         return true;
     }
 
-    JitConstants ConvolutionKernelBase::GetJitConstants(const convolution_params& params, ConvolutionKernelBase::DispatchData kd) const
+    JitConstants ConvolutionKernelBase::GetJitConstants(const convolution_params& params, const DispatchData& kd) const
     {
         JitConstants mem_consts = WeightBiasKernelBase::GetJitConstants(params);
         const auto& padding = params.convParams.padding;
@@ -98,25 +98,10 @@ namespace kernel_selector
         JitConstants mem_consts_loop = MakeLoopUnrollParamsJitConstants(loopCount);
         mem_consts.Merge(mem_consts_loop);
 
-        if (params.inputs[0].GetLayout() == DataLayout::yxfb &&
-            params.weights.GetLayout() == WeightsLayout::yxio)
-        {
-            const auto local_work_group_size = kd.lws0;
-            const auto batch_size = params.output.Batch().v;
-
-            mem_consts.AddConstants({
-                MakeJitConstant("LOCAL_WORK_GROUP_SIZE",                            local_work_group_size),
-                MakeJitConstant("OFM_PER_WORK_ITEM",                                kd.cldnnStyle.ofmPerWorkItem), // how many output feature maps for a single batch will a single work item produce
-                MakeJitConstant("BATCHES_PER_WORK_ITEM",                            kd.cldnnStyle.batchesPerWorkItem), // how many batches will a single work item compute
-                MakeJitConstant("LOCAL_WORK_GROUPS_PER_SINGLE_BATCHES_ELEMENTS",    std::max(batch_size / kd.cldnnStyle.batchesPerWorkItem / local_work_group_size, static_cast<size_t>(1))), // how many local work groups we need to compute single element for each batch
-                MakeJitConstant("WORK_ITEMS_PER_SINGLE_BATCHES_ELEMENTS",           batch_size / kd.cldnnStyle.batchesPerWorkItem), // how many work items we need to compute single element for each batch
-            });
-        }
-
         return mem_consts;
     }
 
-    bool ConvolutionKernelBase::CheckWorkGroups(const ConvolutionKernelBase::DispatchData& kd) const
+    bool ConvolutionKernelBase::CheckWorkGroups(const ConvolutionKernelBase::DispatchData& kd)
     {
         if (kd.gws0 == 0 ||
             kd.gws1 == 0 ||
@@ -169,7 +154,7 @@ namespace kernel_selector
         }
     }
 
-    bool ConvolutionKernelBase::CheckPitchForSplitOnly(const convolution_params& params) const
+    bool ConvolutionKernelBase::CheckPitchForSplitOnly(const convolution_params& params)
     {
         // TODO: it's better to add pitch+offset support than handle this case
         return CheckTensorForSplit(params.inputs[0], params.convParams.split);
@@ -201,15 +186,18 @@ namespace kernel_selector
         kd.lws1 = local[1];
         kd.lws2 = local[2];
 
-        
-        kd.cldnnStyle.ofmPerWorkItem = 1;
-        kd.cldnnStyle.batchesPerWorkItem = 1;
         kd.cldnnStyle.blockWidth = 1;
         kd.cldnnStyle.blockHeight = 1;
         kd.cldnnStyle.prefetch = 0;
         kd.cldnnStyle.inputBlockArraySize = 0;
         kd.cldnnStyle.inputBlockWidth = 0;
-        kd.cldnnStyle.leftovers = 0;
+
+        kd.gemmStyle.globalWorkSizeDX = 1;
+        kd.gemmStyle.globalWorkSizeDY = 1;
+        kd.gemmStyle.globalWorkSizeDZ = 1;
+        kd.gemmStyle.subBlockDimK = 1;
+        kd.gemmStyle.subBlockDimM = 0;
+        kd.gemmStyle.subBlockDimN = 0;
         kd.effiency = DONT_USE_IF_HAVE_SOMETHING_ELSE;
         return kd;
     }

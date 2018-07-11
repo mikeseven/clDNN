@@ -81,7 +81,7 @@ namespace kernel_selector {
         return true;
     }
 
-    JitConstants ConvolutionKernel_bfyx_1x1_gemm_buf::GetJitConstants(const convolution_params& params, DispatchData runInfo) const
+    JitConstants ConvolutionKernel_bfyx_1x1_gemm_buf::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
     {
         auto jit = Parent::GetJitConstants(params, runInfo);
 

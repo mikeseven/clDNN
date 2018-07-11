@@ -32,7 +32,7 @@ namespace kernel_selector {
     protected:
         std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&) const override { return{ WeightsLayout::yxio }; }
         bool Validate(const Params& p, const optional_params& o) const override;
-        JitConstants GetJitConstants(const convolution_params& params, DispatchData kd) const override;
+        JitConstants GetJitConstants(const convolution_params& params, const DispatchData& kd) const override;
         DispatchData SetDefault(const convolution_params& arg, int autoTuneIndex = -1) const override;
     };
 }
