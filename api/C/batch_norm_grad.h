@@ -15,8 +15,8 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
-#ifndef AVERAGE_UNPOOLING_H
-#define AVERAGE_UNPOOLING_H
+#ifndef BATCH_NORM_GRAD_H
+#define BATCH_NORM_GRAD_H
 
 #include "cldnn.h"
 /// @addtogroup c_api C API
@@ -30,19 +30,15 @@
 extern "C" {
 #endif
 
-/// @brief Performs "average_unpooling" operation.
-/// @details Reverse operation of average pooling.
-/// Each element in every pooling window is filled with output / window size value. In case of window overlap the elements are added.
-CLDNN_BEGIN_PRIMITIVE_DESC(average_unpooling)
-/// @brief Defines shift in output buffer.
-cldnn_tensor stride;
-/// @brief Pooling kernel size.
-cldnn_tensor size;
-/// @brief Output size of this primitive.
-cldnn_tensor output_size;
-CLDNN_END_PRIMITIVE_DESC(average_unpooling)
+/// @brief Performs backward batch normalization layer.
+/// @details Calculates mean gradient and gradient * input for every feature in data, 
+/// then output is calculated as inv_variance * (input_grad - mean_grad_input * input - mean_grad)
+CLDNN_BEGIN_PRIMITIVE_DESC(batch_norm_grad)
+/// @brief Primitive id containing inverted variance from forward pass.
+cldnn_primitive_id inv_variance;
+CLDNN_END_PRIMITIVE_DESC(batch_norm_grad)
 
-CLDNN_DECLARE_PRIMITIVE_TYPE_ID(average_unpooling);
+CLDNN_DECLARE_PRIMITIVE_TYPE_ID(batch_norm_grad);
 
 #ifdef __cplusplus
 }
@@ -51,5 +47,5 @@ CLDNN_DECLARE_PRIMITIVE_TYPE_ID(average_unpooling);
 /// @}
 /// @}
 /// @}
-#endif /* AVERAGE_UNPOOLING_H */
+#endif /* BATCH_NORM_GRAD_H */
 

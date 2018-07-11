@@ -29,25 +29,26 @@ namespace cldnn
 /// @{
 
 /// @brief Performs "average_unpooling" operation.
-/// @details Reverse operation of average pooling, based on the argaverage data where indices of each average pooling region are stored.
+/// @details Reverse operation of average pooling.
+/// Each element in every pooling window is filled with output / window size value. In case of window overlap the elements are added.
 struct average_unpooling : public primitive_base<average_unpooling, CLDNN_PRIMITIVE_DESC(average_unpooling)>
 {
     CLDNN_DECLARE_PRIMITIVE(average_unpooling)
 
-        /// @brief Constructs average_unpooling primitive.
-        /// @param id This primitive id.
-        /// @param input Input primitive id.
-        /// @param output_size Size of input for average pooling forward.
-        /// @param stride Defines shift in input buffer between adjacent calculations of output values.
-        /// @param size Pooling kernel size.
-        average_unpooling(
-            const primitive_id& id,
-            const primitive_id& input,
-            const tensor output_size,
-            const tensor& size,
-            const tensor& stride,
-            const padding& output_padding = padding()
-        )
+    /// @brief Constructs average_unpooling primitive.
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param output_size Size of input for average pooling forward.
+    /// @param stride Defines shift in output buffer.
+    /// @param size Pooling kernel size.
+    average_unpooling(
+        const primitive_id& id,
+        const primitive_id& input,
+        const tensor output_size,
+        const tensor& size,
+        const tensor& stride,
+        const padding& output_padding = padding()
+    )
         : primitive_base(id, { input }, output_padding)
         , stride(stride)
         , size(size)
@@ -62,9 +63,9 @@ struct average_unpooling : public primitive_base<average_unpooling, CLDNN_PRIMIT
         , output_size(dto->output_size)
     {}
 
-    /// @brief Defines shift in input buffer between adjacent calculations of output values. Used only for output size computation.
+    /// @brief Defines shift in output buffer.
     tensor stride;
-    /// @brief Pooling kernel size. Used only for output size computation.
+    /// @brief Pooling kernel size.
     tensor size;
     /// @brief Output size of this primitive.
     tensor output_size;

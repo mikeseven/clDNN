@@ -52,11 +52,15 @@ namespace cldnn
         auto desc = node.get_primitive();
         auto node_info = node.desc_to_json();
         auto& input = node.input();
+        auto& strd = desc->stride;
+        auto& window_size = desc->size;
 
         std::stringstream primitive_description;
 
         json_composite average_unpooling_info;
         average_unpooling_info.add("input", input.id());
+        average_unpooling_info.add("stride", strd.to_string());
+        average_unpooling_info.add("window size", window_size.to_string());
 
         node_info.add("average_unpooling info", average_unpooling_info);
         node_info.dump(primitive_description);
