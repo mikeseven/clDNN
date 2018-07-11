@@ -31,25 +31,7 @@ inline uint FUNC(get_input_index)(uint b, uint f, uint y, uint x)
 #elif defined INPUT0_LAYOUT_BYXF_AF32
 	return GET_DATA_BYXF_AF32_INDEX(INPUT0, b, f, y, x);
 #else
-#error reorder_data.cl: input format - not supported
-#endif
-}
-
-///////////////////////// Output Index /////////////////////////
-
-inline uint FUNC(get_output_index)(uint b, uint f, uint y, uint x)
-{
-#if   OUTPUT_SIMPLE
-    return GET_DATA_INDEX(OUTPUT, b, f, y, x);
-#elif defined OUTPUT_LAYOUT_BS_F_BSV8__AF8  || \
-      defined OUTPUT_LAYOUT_BS_F_BSV16__AF8
-    return GET_DATA_BS_FYX_BSV8_INDEX(OUTPUT, b, f, y, x, SUB_GROUP_SIZE);
-#elif defined OUTPUT_LAYOUT_BF8_XY16
-    return GET_DATA_BF8_XY16_INDEX(OUTPUT, b, f, y, x);
-#elif defined OUTPUT_LAYOUT_BYXF_AF32
-	return GET_DATA_BYXF_AF32_INDEX(OUTPUT, b, f, y, x);
-#else
-#error reorder_data.cl: output format - not supported
+#error reorder_data_to_yxfb_batched.cl: input format - not supported
 #endif
 }
 
@@ -72,7 +54,7 @@ inline void FUNC(get_yxfb_coords_from_linear_idx_no_padding)(uint data_idx, uint
 }
 
 __attribute__((intel_reqd_sub_group_size(8)))
-KERNEL (reorder_data_bfyx_yxfb_batched)(
+KERNEL (reorder_data_to_yxfb_batched)(
     const __global INPUT_REORDER_TYPE* input, 
     __global OUTPUT_REORDER_TYPE* output
     #ifdef MEAN_SUBTRACT_IN_BUFFER

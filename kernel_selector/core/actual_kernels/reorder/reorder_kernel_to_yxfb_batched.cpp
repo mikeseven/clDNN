@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "reorder_kernel_bfyx_yxfb_batched.h"
+#include "reorder_kernel_to_yxfb_batched.h"
 #include "kernel_selector_utils.h"
  
 namespace kernel_selector
 {
-    ParamsKey ReorderKernel_bfyx_yxfb_batched::GetSupportedKey() const
+    ParamsKey ReorderKernel_to_yxfb_batched::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F16);
@@ -27,7 +27,7 @@ namespace kernel_selector
         k.EnableOutputDataType(Datatype::F16);
         k.EnableOutputDataType(Datatype::F32);
         k.EnableDifferentTypes();
-        k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableAllInputLayout();
         k.EnableOutputLayout(DataLayout::yxfb);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
@@ -35,7 +35,7 @@ namespace kernel_selector
         return k;
     }
 
-    bool ReorderKernel_bfyx_yxfb_batched::Validate(const Params& params, const optional_params& o) const
+    bool ReorderKernel_to_yxfb_batched::Validate(const Params& params, const optional_params& o) const
     {
         if (!ReorderKernelBase::Validate(params, o))
         {
@@ -57,7 +57,7 @@ namespace kernel_selector
         return true;
     }
 
-    JitConstants ReorderKernel_bfyx_yxfb_batched::GetJitConstants(const reorder_params& params) const
+    JitConstants ReorderKernel_to_yxfb_batched::GetJitConstants(const reorder_params& params) const
     {
         auto jit = ReorderKernelBase::GetJitConstants(params);
         jit.Merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
@@ -71,7 +71,7 @@ namespace kernel_selector
         return jit;
     }
 
-    ReorderKernelBase::DispatchData ReorderKernel_bfyx_yxfb_batched::SetDefault(const reorder_params& params) const
+    ReorderKernelBase::DispatchData ReorderKernel_to_yxfb_batched::SetDefault(const reorder_params& params) const
     {
         DispatchData kd;
 
@@ -90,7 +90,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData ReorderKernel_bfyx_yxfb_batched::GetKernelsData(const Params& params, const optional_params& options) const
+    KernelsData ReorderKernel_to_yxfb_batched::GetKernelsData(const Params& params, const optional_params& options) const
     {
         assert(params.GetType() == KernelType::REORDER);
 

@@ -20,10 +20,10 @@
  
 namespace kernel_selector 
 {    
-    class ReorderKernel_bfyx_yxfb_batched : public ReorderKernelBase
+    class ReorderKernel_to_yxfb_batched : public ReorderKernelBase
     {
     public:
-        ReorderKernel_bfyx_yxfb_batched() : ReorderKernelBase("reorder_data_bfyx_yxfb_batched") {}
+        ReorderKernel_to_yxfb_batched() : ReorderKernelBase("reorder_data_to_yxfb_batched") {}
         virtual ParamsKey GetSupportedKey() const override;
         virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
 
