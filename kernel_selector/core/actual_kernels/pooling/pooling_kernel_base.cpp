@@ -29,11 +29,9 @@ namespace kernel_selector
         return true;
     }
 
-    JitConstants PoolingKernelBase::GetJitConstants(const pooling_params& params, PoolingKernelBase::DispatchData kd) const
+    JitConstants PoolingKernelBase::GetJitConstants(const pooling_params& pp, PoolingKernelBase::DispatchData kd) const
     {
-        JitConstants mem_consts = MakeBaseParamsJitConstants(params);
-
-        const auto& pp = params.poolParams;
+        JitConstants mem_consts = MakeBaseParamsJitConstants(pp);
 
         mem_consts.AddConstants({
             MakeJitConstant("POOL",     pp.poolSize),
@@ -52,16 +50,14 @@ namespace kernel_selector
     }
 
     // Checks if we need boundary checking in kernel.
-    bool PoolingKernelBase::NeedsBoundaryCheck(const pooling_params& params) const
+    bool PoolingKernelBase::NeedsBoundaryCheck(const pooling_params& pp) const
     {
-        const auto& pp = params.poolParams;
-
         if (pp.poolPad.x != 0 || pp.poolPad.y != 0)
         {
             return true;
         }
 
-        const auto& input = params.inputs[0];
+        const auto& input = pp.inputs[0];
 
         if (input.X().v < pp.poolSize.x || input.Y().v < pp.poolSize.y)
         {
@@ -134,7 +130,7 @@ namespace kernel_selector
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point);
-        if(orgParams.poolParams.poolType == PoolType::MAX_WITH_ARGMAX)
+        if(orgParams.poolType == PoolType::MAX_WITH_ARGMAX)
             kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 1 });
 
         kd.estimatedTime = estimatedTime;

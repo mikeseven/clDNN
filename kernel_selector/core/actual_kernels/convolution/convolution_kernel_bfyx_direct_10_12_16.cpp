@@ -41,17 +41,16 @@ namespace kernel_selector {
         return k;
     }
 
-    JitConstants ConvolutionKernel_bfyx_Direct_10_10_12::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
+    JitConstants ConvolutionKernel_bfyx_Direct_10_10_12::GetJitConstants(const convolution_params& cp, const DispatchData& runInfo) const
     {
-        JitConstants jit = Parent::GetJitConstants(params, runInfo);
-        const auto& cp = params.convParams;
+        JitConstants jit = Parent::GetJitConstants(cp, runInfo);
 
         jit.AddConstants({
-            MakeJitConstant("ALIGNED_OFM",                  RoundUp(params.output.Feature().v, runInfo.gemmStyle.subBlockDimN)),
+            MakeJitConstant("ALIGNED_OFM",                  RoundUp(cp.output.Feature().v, runInfo.gemmStyle.subBlockDimN)),
             MakeJitConstant("DX",                           runInfo.gemmStyle.globalWorkSizeDX),
             MakeJitConstant("DY",                           runInfo.gemmStyle.globalWorkSizeDY),
             MakeJitConstant("KERNEL_SLICE_DIV2",            (cp.filterSize.x * cp.filterSize.y) / 2),
-            MakeJitConstant("RIGHT_PARTIAL_TILE_K",         params.output.X().v % runInfo.gemmStyle.globalWorkSizeDX),
+            MakeJitConstant("RIGHT_PARTIAL_TILE_K",         cp.output.X().v % runInfo.gemmStyle.globalWorkSizeDX),
             MakeJitConstant("INPUT_BUFFER_WIDTH_PADDED",    ""),    // TODO: enable non padding path again
             MakeJitConstant("INPUT_BUFFER_HEIGHT_PADDED",   ""),
         });
@@ -63,10 +62,9 @@ namespace kernel_selector {
     {
         Parent::DispatchData runInfo = Parent::SetDefault(arg);
 
-        const auto& cp = arg.convParams;
         constexpr uint32_t TILE_N = 16;
 
-        if (cp.filterSize.x == 5)
+        if (arg.filterSize.x == 5)
         {
             runInfo.gemmStyle = { 1, 1, TILE_N, /*GWS DX*/ 4, /*GWS DY*/ 4, 1 };
         }
@@ -96,9 +94,7 @@ namespace kernel_selector {
             return false;
         }
 
-        const convolution_params& params = static_cast<const convolution_params&>(p);
-
-        const auto& cp = params.convParams;
+        const convolution_params& cp = static_cast<const convolution_params&>(p);
 
         const bool bStrideOK = (cp.stride.x == 1 && cp.stride.y == 1);
         const bool bFilter3x3 = (cp.filterSize.x == 3 && cp.filterSize.y == 3);

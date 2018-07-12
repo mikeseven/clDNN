@@ -44,10 +44,10 @@ namespace kernel_selector
 
     JitConstants LRNKernelRef::GetJitConstants(const lrn_params& params, LRNKernelRef::Parent::DispatchData kd) const
     {
-        const uint32_t round_norm_size = (params.lrnParams.localSize / 2) * 2 + 1;
+        const uint32_t round_norm_size = (params.localSize / 2) * 2 + 1;
         uint32_t numElement = round_norm_size * round_norm_size;
 
-        if (params.lrnParams.normMode == LRNMode::ACROSS_CHANNEL)
+        if (params.normMode == LRNMode::ACROSS_CHANNEL)
         {
             numElement = round_norm_size;
         }

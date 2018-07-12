@@ -50,7 +50,7 @@ namespace kernel_selector
         if (input.GetLayout() == output.GetLayout() && input.SameDimsSizes(output) &&
             !input.PitchesDifferFromLogicalDims() && !output.PitchesDifferFromLogicalDims() &&
             input.GetDType() != output.GetDType() &&
-            params.reorderParams.mode == MeanSubtractMode::NONE)
+            params.mode == MeanSubtractMode::NONE)
         {
             jit.AddConstant(MakeJitConstant("CHANGE_DATA_TYPE_ONLY", 1));
         }

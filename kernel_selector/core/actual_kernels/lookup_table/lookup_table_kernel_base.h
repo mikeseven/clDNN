@@ -26,22 +26,17 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct lookup_table_params : public base_params
     {
-        lookup_table_params() : base_params(KernelType::LOOKUP_TABLE), lookUpTableParams() {}
+        lookup_table_params() : base_params(KernelType::LOOKUP_TABLE) {}
 
-        struct DedicatedParams
-        {
-            LookUpTableAxis	lookUpTableAxis = LookUpTableAxis::XYF;
-            uint32_t		numberOfValues;
-            DataTensor      inputIndices;
-        };
-
-        DedicatedParams lookUpTableParams;
+        LookUpTableAxis	lookUpTableAxis = LookUpTableAxis::XYF;
+        uint32_t		numberOfValues;
+        DataTensor      inputIndices;
 
         virtual ParamsKey GetParamsKey() const
         {
             ParamsKey k = base_params::GetParamsKey();
-            k.EnableLookUpTableAxis(lookUpTableParams.lookUpTableAxis);
-            k.EnableLookUpTableIndicesFormat(lookUpTableParams.inputIndices.GetDType());
+            k.EnableLookUpTableAxis(lookUpTableAxis);
+            k.EnableLookUpTableIndicesFormat(inputIndices.GetDType());
             return k;
         }
     };

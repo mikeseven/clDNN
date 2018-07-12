@@ -37,7 +37,7 @@ namespace kernel_selector
 
     ReorderWeightsImage_fyx_b_Kernel::DispatchData ReorderWeightsImage_fyx_b_Kernel::SetDefault(const reorder_weights_params& params) const
     {
-        const auto& out = params.reorderParams.output;
+        const auto& out = params.output;
 
         DispatchData kd;
 

@@ -28,15 +28,11 @@ namespace kernel_selector
     {
         fully_connected_params() : weight_bias_params(KernelType::FULLY_CONNECTED) {}
 
-        struct DedicatedParams
-        {
-            bool     int8_quantization = false;
-            bool     output_calibration = false;
-            float    input_quantization_factor = 1.0f;
-            float    output_quantization_factor = 1.0f;
-        };
+        bool     int8_quantization = false;
+        bool     output_calibration = false;
+        float    input_quantization_factor = 1.0f;
+        float    output_quantization_factor = 1.0f;
 
-        DedicatedParams fcParams;
         MultiDataTensor weights_quantization_factors;
         MultiDataTensor output_calibration_factors;
 
@@ -44,12 +40,12 @@ namespace kernel_selector
         {
             ParamsKey k = weight_bias_params::GetParamsKey();
 
-            if (fcParams.int8_quantization)
+            if (int8_quantization)
             {
                 k.EnableInt8Quantization();
             }
 
-            if (fcParams.output_calibration)
+            if (output_calibration)
             {
                 k.EnableOutputCalibration();
             }

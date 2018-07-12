@@ -126,8 +126,7 @@ namespace kernel_selector
 
         AutoTuneOption option = { 0, 0, 0, ROUND_ROBIN };
 
-        const convolution_params& params = static_cast<const convolution_params&>(p);
-        const auto cp = params.convParams;
+        const convolution_params& cp = static_cast<const convolution_params&>(p);
 
         if (cp.stride.x == 1 && cp.stride.y == 1)
         {
@@ -139,9 +138,9 @@ namespace kernel_selector
             }
             //if less than 16 values is required to compute one single row of output
             //then each WI shall compute one single row to maximize reuse within SIMD subgroup (this gives very nice performance results)
-            else if (params.output.X().v + (cp.filterSize.x - 1)*cp.dilation.x < sub_group_size)
+            else if (cp.output.X().v + (cp.filterSize.x - 1)*cp.dilation.x < sub_group_size)
             {
-                option.blockWidth = params.output.X().v;
+                option.blockWidth = cp.output.X().v;
                 option.blockHeight = 1;
                 option.prefetch = 4;
             }
@@ -173,27 +172,25 @@ namespace kernel_selector
         }
 
         // if this is not 1x1 batch1 case then shrink filters, other way we're memory bound and it's best to use 16x1 block sizes
-        if (params.convParams.filterSize.x != 1 || params.convParams.filterSize.y != 1 || params.output.Batch().v != 1)
+        if (cp.filterSize.x != 1 || cp.filterSize.y != 1 || cp.output.Batch().v != 1)
         {
-            shrink_blocks_to_output_size(params.output.X().v, params.output.Y().v,
+            shrink_blocks_to_output_size(cp.output.X().v, cp.output.Y().v,
                 option.blockWidth, option.blockHeight);
         }
 
         return option;
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_os_iyx_osv16::SetDefault(const convolution_params& arg, int autoTuneIndex) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_os_iyx_osv16::SetDefault(const convolution_params& cp, int autoTuneIndex) const
     {
-        DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
+        DispatchData runInfo = ConvolutionKernelBase::SetDefault(cp);
 
-        const auto of_maps = arg.output.Feature().v;
+        const auto of_maps = cp.output.Feature().v;
         const size_t of_threads_per_batch = RoundUp(of_maps, sub_group_size);
-
-        const auto cp = arg.convParams;
 
         runInfo.effiency = FORCE_PRIORITY_3;
 
-        auto tuneOptions = GetAutoTuneOptions(arg, autoTuneIndex);
+        auto tuneOptions = GetAutoTuneOptions(cp, autoTuneIndex);
         runInfo.cldnnStyle.blockWidth = tuneOptions.blockWidth;
         runInfo.cldnnStyle.blockHeight = tuneOptions.blockHeight;
         runInfo.cldnnStyle.prefetch = tuneOptions.prefetch;
@@ -210,9 +207,9 @@ namespace kernel_selector
         runInfo.cldnnStyle.inputBlockArraySize = input_block_dims.first;
         runInfo.cldnnStyle.inputBlockWidth = input_block_dims.second;
 
-        runInfo.gws0 = CeilDiv(arg.output.X().v, runInfo.cldnnStyle.blockWidth);
-        runInfo.gws1 = CeilDiv(arg.output.Y().v, runInfo.cldnnStyle.blockHeight);
-        runInfo.gws2 = of_threads_per_batch * arg.output.Batch().v;
+        runInfo.gws0 = CeilDiv(cp.output.X().v, runInfo.cldnnStyle.blockWidth);
+        runInfo.gws1 = CeilDiv(cp.output.Y().v, runInfo.cldnnStyle.blockHeight);
+        runInfo.gws2 = of_threads_per_batch * cp.output.Batch().v;
 
         runInfo.lws0 = 1;
         runInfo.lws1 = 1;
@@ -262,7 +259,7 @@ namespace kernel_selector
 
     std::vector<WeightsLayout> ConvolutionKernel_bfyx_os_iyx_osv16::GetSupportedWeightLayouts(const convolution_params& params) const
     {
-        if (!params.convParams.transposed)
+        if (!params.transposed)
         {
             return{ WeightsLayout::os_iyx_osv16 };
         }

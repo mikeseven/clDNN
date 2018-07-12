@@ -26,28 +26,23 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct lrn_params : public base_params
     {
-        lrn_params() : base_params(KernelType::LRN), lrnParams() {}
+        lrn_params() : base_params(KernelType::LRN) {}
 
-        struct DedicatedParams
-        {
-            LRNMode             normMode = LRNMode::ACROSS_CHANNEL;
-            KernelDividerMode   divMode = KernelDividerMode::DONT_CARE;
-            float               alpha = 0.f;
-            float               beta = 0.f;
-            float               k = 0.f;
-            uint32_t            localSize = 0;
-        };
-
-        DedicatedParams lrnParams;
+        LRNMode             normMode = LRNMode::ACROSS_CHANNEL;
+        KernelDividerMode   divMode = KernelDividerMode::DONT_CARE;
+        float               alpha = 0.f;
+        float               beta = 0.f;
+        float               k = 0.f;
+        uint32_t            localSize = 0;
 
         virtual ParamsKey GetParamsKey() const
         {
-            ParamsKey k = base_params::GetParamsKey();
+            ParamsKey _k = base_params::GetParamsKey();
 
-            k.EnableLRNMode(lrnParams.normMode);
-            k.EnableLRNKernelDividerMode(lrnParams.divMode);
+            _k.EnableLRNMode(normMode);
+            _k.EnableLRNKernelDividerMode(divMode);
 
-            return k;
+            return _k;
         }
     };
 

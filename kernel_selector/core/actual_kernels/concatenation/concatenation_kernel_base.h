@@ -26,19 +26,14 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct concatenation_params : public base_params
     {
-        concatenation_params() : base_params(KernelType::CONCATENATION), concatParams() {}
+        concatenation_params() : base_params(KernelType::CONCATENATION) {}
 
-        struct DedicatedParams
-        {
-            ConcatAxis axis = ConcatAxis::FEATURE;
-        };
-
-        DedicatedParams concatParams;
+        ConcatAxis axis = ConcatAxis::FEATURE;
 
         virtual ParamsKey GetParamsKey() const
         {
             auto k = base_params::GetParamsKey();
-            k.EnableConcatAxis(concatParams.axis);
+            k.EnableConcatAxis(axis);
             return k;
         }
     };

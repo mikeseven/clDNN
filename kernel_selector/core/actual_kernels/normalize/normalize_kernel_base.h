@@ -26,22 +26,17 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct normalize_params : public base_params
     {
-        normalize_params() : base_params(KernelType::NORMALIZE), normParams() {}
+        normalize_params() : base_params(KernelType::NORMALIZE) {}
 
-        struct DedicatedParams
-        {
-            NormalizeMode normMode = NormalizeMode::ACROSS_SPATIAL;
-            float         epsilon = 1e-10f;
-            DataTensor    scaleTable;
-        };
-
-        DedicatedParams normParams;
+        NormalizeMode normMode = NormalizeMode::ACROSS_SPATIAL;
+        float         epsilon = 1e-10f;
+        DataTensor    scaleTable;
 
         virtual ParamsKey GetParamsKey() const
         {
             ParamsKey k = base_params::GetParamsKey();
 
-            k.EnableNormalizeMode(normParams.normMode);
+            k.EnableNormalizeMode(normMode);
 
             return k;
         }

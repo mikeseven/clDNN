@@ -50,22 +50,22 @@ namespace kernel_selector
         DispatchData runInfo;
         runInfo.fp16UnitUsed = orgParams.inputs[0].GetDType() == Datatype::F16;
 
-        if (orgParams.lookUpTableParams.lookUpTableAxis == LookUpTableAxis::BATCH) {
+        if (orgParams.lookUpTableAxis == LookUpTableAxis::BATCH) {
             runInfo.gws0 = orgParams.inputs[0].X().v;
             runInfo.gws1 = orgParams.inputs[0].Y().v;
             runInfo.gws2 = orgParams.inputs[0].Feature().v;
         }
-        else if (orgParams.lookUpTableParams.lookUpTableAxis == LookUpTableAxis::FEATURE) {
+        else if (orgParams.lookUpTableAxis == LookUpTableAxis::FEATURE) {
             runInfo.gws0 = orgParams.inputs[0].X().v;
             runInfo.gws1 = orgParams.inputs[0].Y().v;
             runInfo.gws2 = orgParams.inputs[0].Batch().v;
         }
-        else if (orgParams.lookUpTableParams.lookUpTableAxis == LookUpTableAxis::Y) {
+        else if (orgParams.lookUpTableAxis == LookUpTableAxis::Y) {
             runInfo.gws0 = orgParams.inputs[0].X().v;
             runInfo.gws1 = orgParams.inputs[0].Feature().v;
             runInfo.gws2 = orgParams.inputs[0].Batch().v;
         }
-        else if (orgParams.lookUpTableParams.lookUpTableAxis == LookUpTableAxis::X) {
+        else if (orgParams.lookUpTableAxis == LookUpTableAxis::X) {
             runInfo.gws0 = orgParams.inputs[0].Y().v;
             runInfo.gws1 = orgParams.inputs[0].Feature().v;
             runInfo.gws2 = orgParams.inputs[0].Batch().v;

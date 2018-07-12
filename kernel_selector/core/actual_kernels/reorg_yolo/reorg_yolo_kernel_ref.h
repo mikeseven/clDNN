@@ -28,12 +28,7 @@ namespace kernel_selector
     {
         reorg_yolo_params() : base_params(KernelType::REORG_YOLO) {}
 
-        struct DedicatedParams
-        {
-            uint32_t stride;
-        };
-
-        struct DedicatedParams ryParams;
+        uint32_t stride;
 
         virtual ParamsKey GetParamsKey() const
         {

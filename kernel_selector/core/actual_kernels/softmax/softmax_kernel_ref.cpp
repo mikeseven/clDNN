@@ -28,7 +28,7 @@ namespace kernel_selector
     {
         auto runInfo = Parent::SetDefault(params, optParams);
 
-        const auto global = GetSoftmaxDimGlobalSizes(params.smParams.dim, params.output);
+        const auto global = GetSoftmaxDimGlobalSizes(params.dim, params.output);
 
         assert(global.size() == 3);
 

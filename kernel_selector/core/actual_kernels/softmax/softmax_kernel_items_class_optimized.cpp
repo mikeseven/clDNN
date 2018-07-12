@@ -34,11 +34,11 @@ namespace kernel_selector
         auto& input = params.inputs[0];
         
         size_t item_class_count = 0;
-        const auto global = GetSoftmaxDimGlobalSizes(params.smParams.dim, params.output);
+        const auto global = GetSoftmaxDimGlobalSizes(params.dim, params.output);
 
         assert(global.size() == 3);
 
-        switch (params.smParams.dim)
+        switch (params.dim)
         {
         case SoftmaxDim::X:
             item_class_count = input.X().v;

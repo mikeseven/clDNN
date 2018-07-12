@@ -201,8 +201,8 @@ namespace kernel_selector { namespace
             reorder_weights_params r_params;
 
             r_params.layerID = newParams.layerID + "_reorder_";
-            r_params.reorderParams.input = newParams.weights;
-            r_params.reorderParams.output = newParams.weights.TransformIgnorePadding(layouts[0], dtype);
+            r_params.input = newParams.weights;
+            r_params.output = newParams.weights.TransformIgnorePadding(layouts[0], dtype);
 
             reorder_optional_params op;
             KernelsData kernels_data = reorderKS.GetBestKernels(r_params, op);
@@ -214,12 +214,12 @@ namespace kernel_selector { namespace
 
             weightsReorderParams.engine = WeightsReorderParams::Engine::GPU;
             weightsReorderParams.clKernel = std::make_shared<clKernelData>(kernels_data[0].kernels[0]);
-            weightsReorderParams.newBufferSize = r_params.reorderParams.output.PhysicalSizeInBytes();
+            weightsReorderParams.newBufferSize = r_params.output.PhysicalSizeInBytes();
             weightsReorderParams.dtype = dtype;
-            weightsReorderParams.destLayout = r_params.reorderParams.output.GetLayout();
-            weightsReorderParams.toImageType = Tensor::IsImageType(r_params.reorderParams.output.GetLayout());
+            weightsReorderParams.destLayout = r_params.output.GetLayout();
+            weightsReorderParams.toImageType = Tensor::IsImageType(r_params.output.GetLayout());
             
-            newParams.weights = r_params.reorderParams.output;
+            newParams.weights = r_params.output;
         }
 
         return true;

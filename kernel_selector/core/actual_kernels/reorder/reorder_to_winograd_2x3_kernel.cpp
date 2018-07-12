@@ -40,8 +40,8 @@ namespace kernel_selector
     {
         auto jit = ReorderKernelBase::GetJitConstants(params);
 
-        jit.AddConstant(MakeJitConstant("INPUT0_OFFSET_SIZE_X", params.reorderParams.winograd_input_offset_x));
-        jit.AddConstant(MakeJitConstant("INPUT0_OFFSET_SIZE_Y", params.reorderParams.winograd_input_offset_y));
+        jit.AddConstant(MakeJitConstant("INPUT0_OFFSET_SIZE_X", params.winograd_input_offset_x));
+        jit.AddConstant(MakeJitConstant("INPUT0_OFFSET_SIZE_Y", params.winograd_input_offset_y));
 
         return jit;
     }
@@ -54,7 +54,7 @@ namespace kernel_selector
         const auto& output = params.output;
 
         kd.gws0 = static_cast<size_t>(input.Feature().v * input.Batch().v);
-        kd.gws1 = static_cast<size_t>(params.reorderParams.winograd_nr_tiles_x);
+        kd.gws1 = static_cast<size_t>(params.winograd_nr_tiles_x);
         kd.gws2 = static_cast<size_t>(output.Y().v);
 
         kd.lws0 = input.Feature().v > 32 ? 32 : static_cast<size_t>(input.Feature().v);

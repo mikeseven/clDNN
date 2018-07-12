@@ -43,7 +43,7 @@ namespace kernel_selector
 
         kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 
-        if (params.mvnParams.mvnMode == MVNMode::WITHIN_CHANNELS)
+        if (params.mvnMode == MVNMode::WITHIN_CHANNELS)
         {
             kd.dataSetSize = input.X().v * input.Y().v;
             kd.dataSetsCount = input.Batch().v * input.Feature().v;

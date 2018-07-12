@@ -39,7 +39,7 @@ namespace kernel_selector
         JitConstants jit = MakeBaseParamsJitConstants(params);
 
         jit.AddConstants({
-            MakeJitConstant("PERMUTE_ORDER", params.permuteParams.order)
+            MakeJitConstant("PERMUTE_ORDER", params.order)
         });
 
         return jit;

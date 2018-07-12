@@ -41,7 +41,6 @@ namespace kernel_selector
     {
         JitConstants jit = MakeBaseParamsJitConstants(params);
 
-        const auto& us = params.usParams;
         const auto& input = params.inputs[0];
         const auto& output = params.output;
 
@@ -49,7 +48,7 @@ namespace kernel_selector
         auto y_ratio = (float)input.Y().v / (float)output.Y().v;
 
         jit.AddConstants({
-            MakeJitConstant(toString(us.sampleType), ""),
+            MakeJitConstant(toString(params.sampleType), ""),
             MakeJitConstant("X_RATIO", x_ratio),
             MakeJitConstant("Y_RATIO", y_ratio),
         });

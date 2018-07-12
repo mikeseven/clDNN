@@ -26,27 +26,22 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct pooling_params : public base_params
     {
-        pooling_params() : base_params(KernelType::POOLING), poolParams() {}
+        pooling_params() : base_params(KernelType::POOLING) {}
 
-        struct DedicatedParams
-        {
-            PoolType            poolType = PoolType::MAX;
-            PoolRemainder       remainderAction = PoolRemainder::FLOOR;
-            KernelDividerMode   divMode = KernelDividerMode::DONT_CARE;
-            uSize               poolSize;
-            uSize               poolStride;
-            uSize               poolPad;
-        };
-
-        DedicatedParams poolParams;
+        PoolType            poolType = PoolType::MAX;
+        PoolRemainder       remainderAction = PoolRemainder::FLOOR;
+        KernelDividerMode   divMode = KernelDividerMode::DONT_CARE;
+        uSize               poolSize;
+        uSize               poolStride;
+        uSize               poolPad;
 
         virtual ParamsKey GetParamsKey() const
         {
             ParamsKey k = base_params::GetParamsKey();
 
-            k.EnablePoolType(poolParams.poolType);
-            k.EnablePoolRemainder(poolParams.remainderAction);
-            k.EnablePoolKernelDividerMode(poolParams.divMode);
+            k.EnablePoolType(poolType);
+            k.EnablePoolRemainder(remainderAction);
+            k.EnablePoolKernelDividerMode(divMode);
 
             return k;
         }

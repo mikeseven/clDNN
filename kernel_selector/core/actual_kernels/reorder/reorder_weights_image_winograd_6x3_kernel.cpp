@@ -40,7 +40,7 @@ namespace kernel_selector
     {
         DispatchData kd;
 
-        const auto& input = params.reorderParams.input;
+        const auto& input = params.input;
 
         kd.gws0 = 1;
         kd.gws1 = 3;

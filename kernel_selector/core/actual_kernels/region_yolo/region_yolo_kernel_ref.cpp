@@ -35,11 +35,9 @@ namespace kernel_selector
         return k;
     }
 
-    JitConstants RegionYoloKernelRef::GetJitConstants(const region_yolo_params& params) const
+    JitConstants RegionYoloKernelRef::GetJitConstants(const region_yolo_params& ry) const
     {
-        JitConstants jit = MakeBaseParamsJitConstants(params);
-
-        const auto& ry = params.ryParams;
+        JitConstants jit = MakeBaseParamsJitConstants(ry);
 
         jit.AddConstants({
             MakeJitConstant("COORDS",  ry.coords),

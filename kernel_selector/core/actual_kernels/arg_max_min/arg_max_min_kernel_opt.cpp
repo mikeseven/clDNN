@@ -41,7 +41,7 @@ namespace kernel_selector
       
         const arg_max_min_params& orgParams = static_cast<const arg_max_min_params&>(params);
 
-        int topK = orgParams.argMaxParams.topK;
+        int topK = orgParams.topK;
         long size = (long)(orgParams.inputs[0].X().v * orgParams.inputs[0].Y().v * orgParams.inputs[0].Feature().v) / 8;
         long outSize = size/16 * topK;
         int kernelAmount = 1;

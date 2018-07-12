@@ -58,8 +58,8 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     inline JitConstants MakeReorderWeightsJitConstants(const reorder_weights_params& params)
     {
-        const auto& input = params.reorderParams.input;
-        const auto& output = params.reorderParams.output;
+        const auto& input = params.input;
+        const auto& output = params.output;
         const bool fp16Supported = output.GetDType() == WeightsType::F16 || input.GetDType() == WeightsType::F16;
 
         JitConstants jit{
@@ -76,7 +76,7 @@ namespace kernel_selector
     {
         JitConstants mem_consts = MakeReorderWeightsJitConstants(params);
        
-        mem_consts.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", SubGroupSize(params.reorderParams.output.GetLayout())));
+        mem_consts.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", SubGroupSize(params.output.GetLayout())));
 
         return mem_consts;
     }
@@ -88,22 +88,22 @@ namespace kernel_selector
     {
         JitConstants jit = MakeBaseParamsJitConstants(params);
 
-        jit.AddConstant(MakeJitConstant("MEAN_SUBTRACT_" + toString(params.reorderParams.mode), 1));
+        jit.AddConstant(MakeJitConstant("MEAN_SUBTRACT_" + toString(params.mode), 1));
 
-        if (params.reorderParams.mode == MeanSubtractMode::INSIDE_PARAMS)
+        if (params.mode == MeanSubtractMode::INSIDE_PARAMS)
         {
-            jit.AddConstant(MakeJitConstant("VALUE_TO_SUBTRACT", params.reorderParams.meanValues));
+            jit.AddConstant(MakeJitConstant("VALUE_TO_SUBTRACT", params.meanValues));
             jit.AddConstant(MakeJitConstant("TO_MEAN_TYPE", "convert_float"));
         }
-        else if (params.reorderParams.mode == MeanSubtractMode::IN_BUFFER)
+        else if (params.mode == MeanSubtractMode::IN_BUFFER)
         {
-            jit.AddConstant(MakeJitConstant("MEAN_SUBTRACT", params.reorderParams.mean));
-            jit.AddConstant(MakeJitConstant("TO_MEAN_TYPE", "convert_" + toCLType(params.reorderParams.mean.GetDType())));
+            jit.AddConstant(MakeJitConstant("MEAN_SUBTRACT", params.mean));
+            jit.AddConstant(MakeJitConstant("TO_MEAN_TYPE", "convert_" + toCLType(params.mean.GetDType())));
         }
 
         //half->half without subtraction (so plain reorder) can be done on shorts without explicit fp16 support
         bool useUshort = (params.inputs[0].GetDType() == Datatype::F16 && params.output.GetDType() == Datatype::F16 &&
-            params.reorderParams.mode == MeanSubtractMode::NONE);
+            params.mode == MeanSubtractMode::NONE);
 
         Datatype calc_type = useUshort ? Datatype::UINT16 : params.inputs[0].GetDType();
 
@@ -113,7 +113,7 @@ namespace kernel_selector
             MakeJitConstant("INPUT_REORDER_TYPE",             useUshort ? toCLType(Datatype::UINT16) : "INPUT0_TYPE"),
             MakeJitConstant("OUTPUT_REORDER_TYPE",            useUshort ? toCLType(Datatype::UINT16) : "OUTPUT_TYPE"),
             MakeJitConstant("TO_OUTPUT_REORDER_TYPE",         useUshort ? "" : "TO_OUTPUT_TYPE"),
-            MakeJitConstant("MEAN_OP(val,mean_val)",          getMeanOpString(params.reorderParams.mean_op))
+            MakeJitConstant("MEAN_OP(val,mean_val)",          getMeanOpString(params.mean_op))
         });
 
         return jit;
@@ -130,7 +130,7 @@ namespace kernel_selector
 
     ReorderKernelBase::DispatchData ReorderKernelBase::SetDefault(const reorder_weights_params& params) const
     {
-        const auto& out = params.reorderParams.output;
+        const auto& out = params.output;
 
         DispatchData kd;
 
@@ -218,7 +218,7 @@ namespace kernel_selector
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point);
 
         kernel.arguments = GetArgsDesc(1, false, false);
-        if (newParams.reorderParams.mode == MeanSubtractMode::IN_BUFFER)
+        if (newParams.mode == MeanSubtractMode::IN_BUFFER)
         {
             kernel.arguments.push_back({ ArgumentDescriptor::Types::BIAS, 0 });
         }

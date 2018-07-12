@@ -53,7 +53,7 @@ namespace kernel_selector {
 
         const size_t input_tile_width = winograd_input_tile_width;
         const size_t input_tile_height = winograd_input_tile_height;
-        const size_t winograd_filter_height = params.convParams.filterSize.y; //for this format, winograd filter is considered to be a set of 1d filters so its height should remain the same as original filter's
+        const size_t winograd_filter_height = params.filterSize.y; //for this format, winograd filter is considered to be a set of 1d filters so its height should remain the same as original filter's
 
         const size_t nr_tiles_x = Align(params.output.X().v, 4) / input_tile_width; //input is already in winograd domain, so simply divide its width by tile's width to get tiles count
         const size_t nr_tiles_y = Align(params.output.Y().v, 8) / input_tile_height;
@@ -103,9 +103,7 @@ namespace kernel_selector {
             return false;
         }
 
-        const convolution_params& params = static_cast<const convolution_params&>(p);
-
-        const auto& cp = params.convParams;
+        const convolution_params& cp = static_cast<const convolution_params&>(p);
 
         const bool bStrideOK = (cp.stride.x == 1 && cp.stride.y == 1);
         const bool bDilationOK = (cp.stride.x == 1 && cp.stride.y == 1);

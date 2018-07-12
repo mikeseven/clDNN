@@ -26,19 +26,14 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct deconvolution_params : public weight_bias_params
     {
-        deconvolution_params() : weight_bias_params(KernelType::DECONVOLUTION), deconvParams() {}
+        deconvolution_params() : weight_bias_params(KernelType::DECONVOLUTION) {}
 
-        struct DedicatedParams
-        {
-            uSize    filterSize;
-            uSize    stride;
-            uSize    dilation;
-            uSize    padding;
-            uint32_t split = 1;
-            bool     depthwiseSeparableOpt = false;
-        };
-
-        DedicatedParams deconvParams;
+        uSize    filterSize;
+        uSize    stride;
+        uSize    dilation;
+        uSize    padding;
+        uint32_t split = 1;
+        bool     depthwiseSeparableOpt = false;
 
         virtual std::string to_string() const override;
 
@@ -46,18 +41,18 @@ namespace kernel_selector
         {
             ParamsKey k = weight_bias_params::GetParamsKey();
 
-            if (deconvParams.split > 1)
+            if (split > 1)
             {
                 k.EnableSplitSupport();
             }
 
-            if (deconvParams.dilation.x != 1 ||
-                deconvParams.dilation.y != 1)
+            if (dilation.x != 1 ||
+                dilation.y != 1)
             {
                 k.EnableDilation();
             }
 
-            if (deconvParams.depthwiseSeparableOpt)
+            if (depthwiseSeparableOpt)
             {
                 k.EnableDepthwiseSeparableOpt();
             }

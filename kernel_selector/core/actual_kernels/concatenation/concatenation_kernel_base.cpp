@@ -22,7 +22,7 @@ namespace kernel_selector
     static int32_t GetConcatChannelIndex(const concatenation_params& params)
     {
         Tensor::DataChannelName name = Tensor::DataChannelName::X;
-        switch (params.concatParams.axis)
+        switch (params.axis)
         {
         case ConcatAxis::X:         name = Tensor::DataChannelName::X; break;
         case ConcatAxis::Y:         name = Tensor::DataChannelName::Y; break;
@@ -56,7 +56,7 @@ namespace kernel_selector
         JitConstants jit = MakeBaseParamsJitConstants(params);
 
         jit.AddConstants({
-            MakeJitConstant("CONCAT_" + toString(params.concatParams.axis), 1),
+            MakeJitConstant("CONCAT_" + toString(params.axis), 1),
         });
 
         jit.AddConstant(MakeJitConstant("CONCAT_AXIS_INDEX", GetConcatChannelIndex(params)));

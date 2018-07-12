@@ -90,7 +90,7 @@ namespace kernel_selector
         }
 
         const auto& input = softmax_params.inputs[0];
-        switch (softmax_params.smParams.dim)
+        switch (softmax_params.dim)
         {
             case SoftmaxDim::X:         return input.Y().v == 1 && input.Feature().v == 1;
             case SoftmaxDim::Y:         return input.X().v == 1 && input.Feature().v == 1;

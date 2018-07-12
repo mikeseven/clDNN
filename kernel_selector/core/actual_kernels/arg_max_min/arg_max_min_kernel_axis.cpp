@@ -47,19 +47,19 @@ namespace kernel_selector
         runInfo.fp16UnitUsed = orgParams.inputs[0].GetDType() == Datatype::F16;
 
         runInfo.gws0 = 128;
-        if (orgParams.argMaxParams.argMaxMinAxis == ArgMaxMinAxis::BATCH) {
+        if (orgParams.argMaxMinAxis == ArgMaxMinAxis::BATCH) {
             runInfo.gws1 = orgParams.inputs[0].X().v;
             runInfo.gws2 = orgParams.inputs[0].Feature().v * orgParams.inputs[0].Y().v; 
         }
-        else if (orgParams.argMaxParams.argMaxMinAxis == ArgMaxMinAxis::FEATURE) {
+        else if (orgParams.argMaxMinAxis == ArgMaxMinAxis::FEATURE) {
             runInfo.gws1 = orgParams.inputs[0].X().v;
             runInfo.gws2 = orgParams.inputs[0].Batch().v * orgParams.inputs[0].Y().v;
         }
-        else if (orgParams.argMaxParams.argMaxMinAxis == ArgMaxMinAxis::Y) {
+        else if (orgParams.argMaxMinAxis == ArgMaxMinAxis::Y) {
             runInfo.gws1 = orgParams.inputs[0].X().v;
             runInfo.gws2 = orgParams.inputs[0].Feature().v * orgParams.inputs[0].Batch().v;
         }
-        else if (orgParams.argMaxParams.argMaxMinAxis == ArgMaxMinAxis::X) {
+        else if (orgParams.argMaxMinAxis == ArgMaxMinAxis::X) {
             runInfo.gws1 = orgParams.inputs[0].Y().v;
             runInfo.gws2 = orgParams.inputs[0].Feature().v * orgParams.inputs[0].Batch().v;
         }

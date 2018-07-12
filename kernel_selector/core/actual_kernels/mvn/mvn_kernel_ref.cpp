@@ -42,7 +42,7 @@ namespace kernel_selector
 
     std::string MVNKernelRef::GetKernelName(const mvn_params& params) const
     {
-        if (params.mvnParams.mvnMode == MVNMode::ACROSS_CHANNELS)
+        if (params.mvnMode == MVNMode::ACROSS_CHANNELS)
             return kernelName + "_accross_channels";
         else
             return kernelName + "_within_channels";

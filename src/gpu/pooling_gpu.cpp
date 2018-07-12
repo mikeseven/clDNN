@@ -108,7 +108,7 @@ public:
         const auto& input_sizes     = arg.input().get_output_layout().size;
         const auto& output_sizes    = arg.get_output_layout().size;
 
-        auto& pp                    = pool_params.poolParams;
+        auto& pp                    = pool_params;
 
         pp.poolType                 = cldnn_2_pool_type(primitive->mode);
         pp.remainderAction          = kernel_selector::pool_remainder::CEIL;

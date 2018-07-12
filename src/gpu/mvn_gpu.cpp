@@ -41,12 +41,12 @@ public:
         auto mvn_params = get_default_params<kernel_selector::mvn_params>(arg);
         auto mvn_optional_params = get_default_optional_params<kernel_selector::mvn_optional_params>(arg.get_program());
 
-        mvn_params.mvnParams.mvnMode =
+        mvn_params.mvnMode =
             arg.get_primitive()->across_channels ?
             kernel_selector::mvn_mode::ACROSS_CHANNELS :
             kernel_selector::mvn_mode::WITHIN_CHANNELS;
-        mvn_params.mvnParams.mvnNormalizeVariance = arg.get_primitive()->normalize_variance;
-        mvn_params.mvnParams.epsilon = arg.get_primitive()->epsilon;
+        mvn_params.mvnNormalizeVariance = arg.get_primitive()->normalize_variance;
+        mvn_params.epsilon = arg.get_primitive()->epsilon;
 
         auto& kernel_selector = kernel_selector::mvn_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(mvn_params, mvn_optional_params);

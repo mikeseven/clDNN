@@ -26,19 +26,14 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct convolution_grad_weights_params : public weight_bias_params
     {
-        convolution_grad_weights_params() : weight_bias_params(KernelType::CONVOLUTION_GRAD_WEIGHTS), convGradWeightsParams() {}
+        convolution_grad_weights_params() : weight_bias_params(KernelType::CONVOLUTION_GRAD_WEIGHTS) {}
 
-        struct DedicatedParams
-        {
-            uSize    filterSize;
-            uSize    stride;
-            uSize    dilation;
-            uSize    padding;
-            uint32_t split = 1;
-            bool     depthwiseSeparableOpt = false;
-        };
-
-        DedicatedParams convGradWeightsParams;
+        uSize    filterSize;
+        uSize    stride;
+        uSize    dilation;
+        uSize    padding;
+        uint32_t split = 1;
+        bool     depthwiseSeparableOpt = false;
 
         virtual std::string to_string() const override;
 
@@ -46,18 +41,18 @@ namespace kernel_selector
         {
             ParamsKey k = weight_bias_params::GetParamsKey();
 
-            if (convGradWeightsParams.split > 1)
+            if (split > 1)
             {
                 k.EnableSplitSupport();
             }
 
-            if (convGradWeightsParams.dilation.x != 1 ||
-                convGradWeightsParams.dilation.y != 1)
+            if (dilation.x != 1 ||
+                dilation.y != 1)
             {
                 k.EnableDilation();
             }
 
-            if (convGradWeightsParams.depthwiseSeparableOpt)
+            if (depthwiseSeparableOpt)
             {
                 k.EnableDepthwiseSeparableOpt();
             }

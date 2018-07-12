@@ -37,17 +37,16 @@ struct softmax_gpu : typed_primitive_gpu_impl<softmax>
 
         auto& input = sm_params.inputs[0];
         auto& output = sm_params.output;
-        auto& sm = sm_params.smParams;
         const auto primitive = arg.get_primitive();
 
         switch (primitive->dimension)
         {
         case softmax::normalize_x:
-            sm.dim = kernel_selector::softmax_dim::X;
+            sm_params.dim = kernel_selector::softmax_dim::X;
             break;
 
         case softmax::normalize_y:
-            sm.dim = kernel_selector::softmax_dim::Y;
+            sm_params.dim = kernel_selector::softmax_dim::Y;
             break;
 
         case softmax::normalize_fyx:
@@ -55,11 +54,11 @@ struct softmax_gpu : typed_primitive_gpu_impl<softmax>
             input = input.FlattenFeatureAndSpatials();
             output = output.FlattenFeatureAndSpatials();
 
-            sm.dim = kernel_selector::softmax_dim::FEATURE;
+            sm_params.dim = kernel_selector::softmax_dim::FEATURE;
             break;
 
         case softmax::normalize_f:
-            sm.dim = kernel_selector::softmax_dim::FEATURE;
+            sm_params.dim = kernel_selector::softmax_dim::FEATURE;
             break;
 
         default:

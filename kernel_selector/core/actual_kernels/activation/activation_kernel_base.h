@@ -25,19 +25,14 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct activation_params : public base_params
     {
-        activation_params() : base_params(KernelType::ACTIVATION), actParams() {}
+        activation_params() : base_params(KernelType::ACTIVATION) {}
 
-        struct DedicatedParams
-        {
-            MultiDataTensor inputActivationParams;
-        };
-
-        DedicatedParams actParams;
+        MultiDataTensor inputActivationParams;
 
         virtual ParamsKey GetParamsKey() const
         {
             auto k = base_params::GetParamsKey();
-            if (!actParams.inputActivationParams.empty())
+            if (!inputActivationParams.empty())
             {
                 k.EnableActivationAdditionalParamsAsInput();
             }

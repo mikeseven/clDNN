@@ -46,7 +46,7 @@ namespace kernel_selector
 
         DispatchData runInfo = PoolingKernelBase::SetDefault(params);
 
-        runInfo.gws1 = CeilDiv(output.Y().v, params.poolParams.poolSize.y);
+        runInfo.gws1 = CeilDiv(output.Y().v, params.poolSize.y);
 
         return runInfo;
     }
@@ -55,7 +55,7 @@ namespace kernel_selector
     {
         auto mem_consts = PoolingKernelBase::GetJitConstants(params, kd);
 
-        mem_consts.AddConstant(MakeJitConstant("BLOCK_SIZE_Y", params.poolParams.poolSize.y + params.poolParams.poolSize.y*params.poolParams.poolStride.y - 1));
+        mem_consts.AddConstant(MakeJitConstant("BLOCK_SIZE_Y", params.poolSize.y + params.poolSize.y*params.poolStride.y - 1));
 
         return mem_consts;
     }
@@ -69,7 +69,7 @@ namespace kernel_selector
 
         const pooling_params& params = static_cast<const pooling_params&>(p);
         if (NeedsBoundaryCheck(params) ||
-            params.poolParams.poolSize.x > 5 || params.poolParams.poolSize.y > 5)
+            params.poolSize.x > 5 || params.poolSize.y > 5)
         {
             return false;
         }
