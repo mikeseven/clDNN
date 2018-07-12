@@ -885,23 +885,23 @@
           "8": {
               "age_conv3": "0xC9F7AAB14F1A727578A5BE5D8FBE8744",
               "prob": "0x9AF166D8D54810188BB0C620FBC52CC4"
-          },
+          }
         },
         "emotions-recognition-retail-0003_fp32": {
           "1":" 0xC2C2B7CB6BB24DF9B291B311DA4C2F52",
-          "16": "0x34B1E5C2CFB1C3DBCE370738622024FF",
+          "16": "0x34B1E5C2CFB1C3DBCE370738622024FF"
         },
         "face-detection-adas-0001_fp16": {
-          "1": "0xD0C2E8C2ED6D9825B56819CC49AAC9A9",
+          "1": "0xD0C2E8C2ED6D9825B56819CC49AAC9A9"
         },
         "face-detection-retail-0004_fp32": {
-          "1": "0x9F68EF583B90F9569BEB1FA1D5677B43",
+          "1": "0x9F68EF583B90F9569BEB1FA1D5677B43"
         },
         "face-person-detection-retail-0002_fp16": {
           "1": {
               "detection_out_face": "0xB823D167519EB0F16F9DB17E7B0078E3",
               "detection_out_pedestrian": "0xCF694ADAA5BDC70D80E30AEB32F41E79"
-          },
+          }
         },
         "head-pose-estimation-adas-0001_fp32": {
           "1": {
@@ -913,7 +913,7 @@
               "angle_p_fc": "0x2FCA94029E7689DE486DCFA03DD8A009",
               "angle_r_fc": "0xB4CF6E2675EB64F60794FB4225DF12B9",
               "angle_y_fc": "0x4618A97CAEFEA8437277CCF9CF7886C0"
-          },
+          }
         },
         "pedestrian-and-vehicle-detector-adas-0001_fp32": {
           "1": "0xEB1AD5BEB80D2DD8EC156F3D25F4E159",
@@ -931,7 +931,7 @@
              "bbox_pred_reshape": "0x76232C3CC1958B0FBA404786BD50988C",
              "cls_prob_reshape": "0xF44D47B2A021E7C0313DBD75D1D847BD",
              "proposal": "0x0A495C13E1B232B30C11F9D279A12364"
-          },
+          }
         },
         "person-detection-retail-0013_fp32": {
           "1": "0x6A587D126B0E843AAFD404EBCADF5F7E"
