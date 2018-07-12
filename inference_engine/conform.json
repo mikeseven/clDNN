@@ -867,15 +867,98 @@
             "128": "0x7A421C2786E95F0ACBF216102C07959C"
         },
         "yolo_v1_tiny_yanli_fp32": {
-            "1": "0x688F22B11988366B2D99ECC66F9BCA32",
-            "2": "0x839E90EAF3DFA3CE15093A5BD3003B23",
-            "4": "0x2FBD108D32FB1E1C439C718CE4F1C25F",
-            "8": "0x65A32A9E248EB891E26DDCC538167BBA",
-            "10": "0x176205245F95E2D5FF797EB7E29829DA",
-            "16": "0x63BE20C70988787B049203DE979EE4E2",
-            "32": "0x3BBEA919DE907DE52442C14822FB8031",
-            "64": "0x3373F5AE6E8CE12FEC0297B286FFC233",
-            "128": "0x0E36920CA659C7B73B7A5CC3FF45C549"
+          "1": "0x688F22B11988366B2D99ECC66F9BCA32",
+          "2": "0x839E90EAF3DFA3CE15093A5BD3003B23",
+          "4": "0x2FBD108D32FB1E1C439C718CE4F1C25F",
+          "8": "0x65A32A9E248EB891E26DDCC538167BBA",
+          "10": "0x176205245F95E2D5FF797EB7E29829DA",
+          "16": "0x63BE20C70988787B049203DE979EE4E2",
+          "32": "0x3BBEA919DE907DE52442C14822FB8031",
+          "64": "0x3373F5AE6E8CE12FEC0297B286FFC233",
+          "128": "0x0E36920CA659C7B73B7A5CC3FF45C549"
+        },
+        "age-gender-recognition-retail-0013_fp16": {
+          "1": {
+              "age_conv3": "0x42E1C8A0A235C250FE82A574672CEA5A",
+              "prob": "0x24D3FE1AC0BFA23058BABDB13B8886B2"
+          },
+          "8": {
+              "age_conv3": "0xC9F7AAB14F1A727578A5BE5D8FBE8744",
+              "prob": "0x9AF166D8D54810188BB0C620FBC52CC4"
+          },
+        },
+        "emotions-recognition-retail-0003_fp32": {
+          "1":" 0xC2C2B7CB6BB24DF9B291B311DA4C2F52",
+          "16": "0x34B1E5C2CFB1C3DBCE370738622024FF",
+        },
+        "face-detection-adas-0001_fp16": {
+          "1": "0xD0C2E8C2ED6D9825B56819CC49AAC9A9",
+        },
+        "face-detection-retail-0004_fp32": {
+          "1": "0x9F68EF583B90F9569BEB1FA1D5677B43",
+        },
+        "face-person-detection-retail-0002_fp16": {
+          "1": {
+              "detection_out_face": "0xB823D167519EB0F16F9DB17E7B0078E3",
+              "detection_out_pedestrian": "0xCF694ADAA5BDC70D80E30AEB32F41E79"
+          },
+        },
+        "head-pose-estimation-adas-0001_fp32": {
+          "1": {
+              "angle_p_fc": "0x130E87469232AD913B6758BA556A2BB6",
+              "angle_r_fc": "0xCDBF359012F826A265C35AAA8823DAFA",
+              "angle_y_fc": "0x9FB802EE35ACF8A8828D084341B080E8"
+          },
+          "32": {
+              "angle_p_fc": "0x2FCA94029E7689DE486DCFA03DD8A009",
+              "angle_r_fc": "0xB4CF6E2675EB64F60794FB4225DF12B9",
+              "angle_y_fc": "0x4618A97CAEFEA8437277CCF9CF7886C0"
+          },
+        },
+        "pedestrian-and-vehicle-detector-adas-0001_fp32": {
+          "1": "0xEB1AD5BEB80D2DD8EC156F3D25F4E159",
+          "8": "0x7484D4C27940FFB3AE206D1C7CB9A205"
+        },
+        "pedestrian-detection-adas-0002_fp16": {
+          "1": "0x050590791E737D77E15C328C097B444F"
+        },
+        "person-attributes-recognition-crossroad-0031_fp32": {
+          "1": "0x2A13405FF3F84DACA3CDDCF9400D81DE",
+          "16": "0x87F937FECB001278798070C192029EF9"
+        },
+        "person-detection-retail-0001_fp16": {
+          "1": {
+             "bbox_pred_reshape": "0x76232C3CC1958B0FBA404786BD50988C",
+             "cls_prob_reshape": "0xF44D47B2A021E7C0313DBD75D1D847BD",
+             "proposal": "0x0A495C13E1B232B30C11F9D279A12364"
+          },
+        },
+        "person-detection-retail-0013_fp32": {
+          "1": "0x6A587D126B0E843AAFD404EBCADF5F7E"
+        },
+        "road-segmentation-adas-0001_fp32": {
+          "1": "0x8DBB3FA3D65377EBD1B8FC69C99A1BB7",
+          "32": "0xAEC98C0874E0CAA34C719846BCC0B5ED"
+        },
+        "semantic-segmentation-adas-0001_fp16": {
+          "1": "0x6B4C9D701804B51ECC267520D4161AB1",
+          "8": "0x7DB41EFE3AA723909153F0B7FF2A2713"
+        },
+        "vehicle-attributes-recognition-barrier-0039_fp32": {
+          "1": {
+             "color": "0x9716BAAE89696F7AD9DBF604045C9077",
+             "type": "0xBA8A712770E8026102BFD32269AAC9A7"
+          },
+          "16": {
+              "color": "0xC416385262E0A300B29506E6A6C22156",
+              "type": "0x0E068437DEA70122355A0F1ECDC9A563"
+          }
+        },
+        "vehicle-detection-adas-0002_fp16": {
+          "1": "0x3594A9FCACBF44B1CE42642EE53ACF8F"
+        },
+        "vehicle-license-plate-detection-barrier-0007_fp32": {
+          "1": "0xB0C4B4C8316967139A9DB14E496D94EB"
         },
         "blank": {
             "1": "x",
