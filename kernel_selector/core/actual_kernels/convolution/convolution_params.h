@@ -26,24 +26,20 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct convolution_params : public weight_bias_params
     {
-        convolution_params() : weight_bias_params(KernelType::CONVOLUTION), convParams() {}
+        convolution_params() : weight_bias_params(KernelType::CONVOLUTION) {}
 
-        struct DedicatedParams
-        {
-            uSize    filterSize;
-            uSize    stride;
-            uSize    dilation;
-            uSize    padding;
-            uint32_t split = 1;
-            bool     depthwiseSeparableOpt = false;
-            bool     transposed = false;
-            bool     int8_quantization = false;
-            bool     output_calibration = false;
-            float    input_quantization_factor = 1.0f;
-            float    output_quantization_factor = 1.0f;
-        };
+        uSize    filterSize;
+        uSize    stride;
+        uSize    dilation;
+        uSize    padding;
+        uint32_t split = 1;
+        bool     depthwiseSeparableOpt = false;
+        bool     transposed = false;
+        bool     int8_quantization = false;
+        bool     output_calibration = false;
+        float    input_quantization_factor = 1.0f;
+        float    output_quantization_factor = 1.0f;
 
-        DedicatedParams convParams;
         MultiDataTensor weights_quantization_factors;
         MultiDataTensor output_calibration_factors;
         virtual std::string to_string() const override;

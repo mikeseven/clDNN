@@ -41,33 +41,30 @@ namespace kernel_selector { namespace
             reqDesc.Feature().pad.after     <= params.inputs[0].Feature().pad.after &&
             reqDesc.Batch().pad.after       <= params.inputs[0].Batch().pad.after;
 
-        const auto& cp = params.convParams;
-        properPadding &= ((cp.padding.x == 0 && cp.padding.y == 0) || params.inputs[0].GetPaddedVal() == 0.f);
+        properPadding &= ((params.padding.x == 0 && params.padding.y == 0) || params.inputs[0].GetPaddedVal() == 0.f);
 
         return properPadding;
     }
 
-    inline DataTensor GetConvolutionBFYXPaddedTensor(const convolution_params& params)
+    inline DataTensor GetConvolutionBFYXPaddedTensor(const convolution_params& cp)
     {
-        assert(params.inputs.size() == 1);
-        assert(params.inputs[0].GetDims().size() == 4U);
+        assert(cp.inputs.size() == 1);
+        assert(cp.inputs[0].GetDims().size() == 4U);
 
-        DataTensor t = params.inputs[0];
+        DataTensor t = cp.inputs[0];
         std::vector<Tensor::Pad> pad{ { 0,0 },{ 0,0 },{ 0,0 },{ 0,0 } };
-
-        const auto& cp = params.convParams;
 
         pad[0].before = cp.padding.x;
         pad[1].before = cp.padding.y;
 
-        const auto inputLimitX = (params.output.X().v - 1) * cp.stride.x + (cp.filterSize.x - 1) * cp.dilation.x + 1;
-        const auto inputLimitY = (params.output.Y().v - 1) * cp.stride.y + (cp.filterSize.y - 1) * cp.dilation.y + 1;
+        const auto inputLimitX = (cp.output.X().v - 1) * cp.stride.x + (cp.filterSize.x - 1) * cp.dilation.x + 1;
+        const auto inputLimitY = (cp.output.Y().v - 1) * cp.stride.y + (cp.filterSize.y - 1) * cp.dilation.y + 1;
 
         pad[0].after = (size_t)std::max((int)inputLimitX - (int)t.X().v - (int)pad[0].before, (int)0);
         pad[1].after = (size_t)std::max((int)inputLimitY - (int)t.Y().v - (int)pad[1].before, (int)0);
 
         Tensor::NDims dims(4);
-        const Tensor::NDims& orgDims = params.inputs[0].GetDims();
+        const Tensor::NDims& orgDims = cp.inputs[0].GetDims();
         size_t pitch = 1;
         for (size_t i = 0; i < dims.size(); i++)
         {

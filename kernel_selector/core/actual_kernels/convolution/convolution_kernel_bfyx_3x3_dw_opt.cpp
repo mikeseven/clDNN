@@ -69,16 +69,16 @@ namespace kernel_selector
             return false;
         }
 
-        const convolution_params& params = static_cast<const convolution_params&>(p);
+        const convolution_params& cp = static_cast<const convolution_params&>(p);
 
-        if ((params.convParams.filterSize.x != 3) ||
-            (params.convParams.filterSize.y != 3) ||
-            (params.convParams.stride.x != 1) ||
-            (params.convParams.stride.y != 1) ||
-            (params.convParams.padding.x != 1) ||
-            (params.convParams.padding.y != 1) ||
-            (params.inputs[0].Feature().v != params.convParams.split) ||
-            params.output.PitchesDifferFromLogicalDims())
+        if ((cp.filterSize.x != 3) ||
+            (cp.filterSize.y != 3) ||
+            (cp.stride.x != 1) ||
+            (cp.stride.y != 1) ||
+            (cp.padding.x != 1) ||
+            (cp.padding.y != 1) ||
+            (cp.inputs[0].Feature().v != cp.split) ||
+            cp.output.PitchesDifferFromLogicalDims())
         {
             return false;
         }
