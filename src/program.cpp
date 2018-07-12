@@ -38,7 +38,6 @@
 #include "concatenation_inst.h"
 #include "crop_inst.h"
 #include "data_inst.h"
-#include "filler_inst.h"
 #include "mutable_data_inst.h"
 #include "deconvolution_inst.h"
 #include "detection_output_inst.h"
@@ -466,7 +465,7 @@ void program_impl::compile_graph()
         if (!node->is_type<internal_primitive>() && !node->is_type<data>())
         {
             node->get_output_layout();
-            if (!node->is_type<data>() && !((node->is_type<mutable_data>() || node->is_type<filler>()) && node->get_dependencies().empty()))
+            if (!node->is_type<data>() && !(node->is_type<mutable_data>() && node->get_dependencies().empty()))
                 node->selected_impl = node->type()->choose_impl(*engine, *node);
         }
     }
@@ -1061,7 +1060,7 @@ void program_impl::mark_data_flow()
     std::list<program_node*> stack;
     for (auto const& node : processing_order)
     {
-        if ((node->is_endpoint() && !node->constant) || node->is_type<mutable_data>() || node->is_type<filler>())
+        if ((node->is_endpoint() && !node->constant) || node->is_type<mutable_data>())
         {
             stack.push_back(node);
             node->data_flow = true;
@@ -2210,7 +2209,7 @@ void program_impl::apply_needed_padding(program_node& node, program_node& prev_n
         return;
 
     // Special handling for input nodes.
-    if (prev_node.is_type<input_layout>() || prev_node.is_type<mutable_data>() || prev_node.is_type<filler>())
+    if (prev_node.is_type<input_layout>() || prev_node.is_type<mutable_data>())
     {
         target_layout.data_padding = needed_padding;
 

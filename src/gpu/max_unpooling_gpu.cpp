@@ -40,6 +40,16 @@ protected:
 
 public:
 
+    event_impl::ptr execute_impl(const std::vector<event_impl::ptr>& events, max_unpooling_inst& instance) override
+    {
+        //clear output buffer
+        std::vector<event_impl::ptr> tmp_events(events);
+        auto ev = instance.get_network().get_engine().create_user_event(false);
+        instance.output_memory().fill(0, ev);
+        tmp_events.push_back(ev);
+        return parent::execute_impl(tmp_events, instance);
+    }
+
     static primitive_impl* create(const max_unpooling_node& arg)
     {
         auto max_unpooling_params = get_default_params<kernel_selector::max_unpooling_params>(arg);

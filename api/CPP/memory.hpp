@@ -43,7 +43,6 @@ struct memory
 {
     friend struct data;
     friend struct mutable_data;
-    friend struct filler;
     friend struct network;
     friend struct network_output;
     friend struct details::memory_c_to_cpp_converter;

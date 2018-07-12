@@ -34,9 +34,12 @@ struct typed_program_node<mutable_data> : public typed_program_node_base<mutable
     void attach_memory(memory_impl& new_mem, bool invalidate_users_if_changed = true);
 
     decltype(auto) input(size_t idx = 0) const { return get_dependency(idx); }
-    
+
 private:
     memory_impl::ptr mem;
+
+    void fill_memory();
+    void fill_memory_xavier();
 };
 
 using mutable_data_node = typed_program_node<mutable_data>;

@@ -42,20 +42,19 @@ KERNEL(fully_connected_grad_weights_gpu_ref)(
     const uint ofm           = ofm_ifm / FILTER_IFM_NUM;
 
     ACCUMULATOR_TYPE grad_w = 0;
+#if BIAS_TERM
     ACCUMULATOR_TYPE grad_b = 0;
+#endif
 
     const uint filter_idx = GET_FILTER_INDEX(FILTER, ofm, ifm, id_y, id_x);
-    for (uint i = 0; i < INPUT0_BATCH_NUM; i++)
+    for (uint b = 0; b < INPUT0_BATCH_NUM; b++)
     {
-        const uint input_grad_idx = GET_DATA_INDEX(INPUT0, i, 0, 0, ofm);
-        const uint input_idx = GET_DATA_INDEX(INPUT1, i, ifm, id_y, id_x);
+        const uint input_grad_idx = GET_DATA_INDEX(INPUT0, b, 0, 0, ofm);
+        const uint input_idx = GET_DATA_INDEX(INPUT1, b, ifm, id_y, id_x);
         UNIT_TYPE grad = input_grad[input_grad_idx];
         grad_w += input[input_idx] * grad;
 #if BIAS_TERM
-        if(ifm == 0 && id_x == 0 && id_y == 0)
-        {
-            grad_b += grad;
-        }
+        grad_b += grad;
 #endif
     }
 

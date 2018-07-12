@@ -18,7 +18,6 @@
 
 #include <boost/filesystem.hpp>
 #include <api/CPP/data.hpp>
-#include <api/CPP/mutable_data.hpp>
 
 #include <cstdint>
 #include <fstream>
@@ -237,9 +236,15 @@ cldnn::data file::create(file::arguments arg, bool validate_magic) {
     return cldnn::data(data_prim_id, file::read(arg, validate_magic));
 }
 
-
-cldnn::mutable_data file::create_mutable(file::arguments arg) {
+cldnn::mutable_data file::create_mutable(file::arguments arg, bool initialize, cldnn::layout layout,cldnn::mutable_data::filler_type filler_type) {
     auto data_id = boost::filesystem::path(arg.name).filename().string();
+    
+    if (initialize)
+    {
+        auto mem = cldnn::memory::allocate(arg.engine, layout);
+        return cldnn::mutable_data(data_id, mem, filler_type);
+    }
+
     return cldnn::mutable_data(data_id, file::read(arg));
 }
 
@@ -272,10 +277,57 @@ void file::serialize(const cldnn::memory& data, const std::string& file_name, bo
     }
 
     fh.version = 3;
+    fh_ext.layout = format;
+    fstream.write(reinterpret_cast<const char*>(&fh),sizeof(fh));
+    fstream.write(reinterpret_cast<const char*>(&fh_ext), sizeof(fh_ext));
+    std::vector<uint64_t> array(fh.dimension);
+    const auto dimension_offset = size.raw.size() - 4 - fh.dimension; // TODO!!! do it better way, this is needed because weights can have 5 dimensions with batch dimension always equal 1!
+    for (auto ar = 0; ar < fh.dimension; ar++)
+    {
+        array[ar] = size.raw[dimension_offset + ar];
+    }
+
+    fstream.write(reinterpret_cast<const char*>(&array[0]), array.size()*sizeof(uint64_t));
+    auto ptr = data.pointer<char>();
+    fstream.write(&ptr[0], ptr.size());
+}
 
     fh.dimension = static_cast<uint8_t>(memory::layout_traits(data.get_layout()).dimension);
     if (fh.dimension == 0 || fh.dimension > 4)
         throw std::runtime_error("Number of dimensions is out of supported range.");
+
+void file::serialize_train(const cldnn::memory& data, const std::string& name)
+{
+    // This function is used for weights updates in network training
+    auto size = argument(data).size;
+    auto format = argument(data).format;
+    boost::filesystem::path dir_path(std::string("weights_format_num") + std::to_string((uint32_t)format));
+    boost::filesystem::create_directories(dir_path);
+    dir_path /= boost::filesystem::path(name).filename();
+    std::ofstream fstream(name, std::ios::out | std::ios::binary);
+    file_header fh;
+    file_header_ext_2 fh_ext;
+    if (data.get_layout().data_type == cldnn::data_types::f16)
+    {
+        fh.data_type = 'H';
+        fh.data_sizeof = sizeof(half_t);
+    }
+    else
+    {
+        fh.data_type = 'F';
+        fh.data_sizeof = sizeof(float);
+    }
+    fh.version = 3;
+
+    auto data_layout_size = data.get_layout().size;
+    if (data_layout_size.batch[0] == 1 && data_layout_size.feature[0] == 1 && data_layout_size.spatial[1] == 1)
+        fh.dimension = 1;
+    else if (data_layout_size.feature[0] == 1 && data_layout_size.spatial[1] == 1)
+        fh.dimension = 2;
+    else
+        fh.dimension = 4;
+
+    if (fh.dimension == 0 || fh.dimension > 4) throw std::runtime_error("dimensions mismatch");
 
     if (fh.dimension == 1)
         fh_ext.layout = cldnn::backward_comp::neural_memory::format::type::bias_x_f32;
@@ -284,17 +336,11 @@ void file::serialize(const cldnn::memory& data, const std::string& file_name, bo
     else
         fh_ext.layout = cldnn::backward_comp::neural_memory::format::type::weights_bfyx_f32;
     if (fh.dimension == 0 || fh.dimension > 4) throw std::runtime_error("dimensions mismatch");
-    //fh_ext.layout = format;
 
-    fstream.write(reinterpret_cast<const char*>(&fh),     sizeof(fh));
+    fstream.write(reinterpret_cast<const char*>(&fh), sizeof(fh));
     fstream.write(reinterpret_cast<const char*>(&fh_ext), sizeof(fh_ext));
 
     std::vector<std::uint64_t> array(fh.dimension);
-    //const auto dimension_offset = size.raw.size() - 4 - fh.dimension; // TODO!!! do it better way, this is needed because weights can have 5 dimensions with batch dimension always equal 1!
-    //for (auto ar = 0; ar < fh.dimension; ar++)
-    //{
-    //    array[ar] = size.raw[dimension_offset + ar];
-    //}
 
     if (fh.dimension == 1)
     {
@@ -313,7 +359,7 @@ void file::serialize(const cldnn::memory& data, const std::string& file_name, bo
         array[0] = size.raw[3];
     }
 
-    fstream.write(reinterpret_cast<const char*>(&array[0]), array.size()*sizeof(uint64_t));
+    fstream.write(reinterpret_cast<const char*>(&array[0]), array.size() * sizeof(uint64_t));
     auto ptr = data.pointer<char>();
     fstream.write(&ptr[0], ptr.size());
 }

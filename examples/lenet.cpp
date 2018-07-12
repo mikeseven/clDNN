@@ -25,7 +25,6 @@
 #include <api/CPP/fully_connected.hpp>
 #include <api/CPP/softmax.hpp>
 #include <api/CPP/scale.hpp>
-#include <api/CPP/filler.hpp>
 #include <api/CPP/mutable_data.hpp>
 #include <api/CPP/fully_connected_grad_input.hpp>
 #include <api/CPP/fully_connected_grad_weights.hpp>
@@ -52,6 +51,7 @@ cldnn::topology build_lenet(const std::string& weights_dir, const cldnn::engine&
 
     auto scale_val = memory::allocate(engine, { input_layout.data_type, format::bfyx,{ 1, 1, 1, 1 } });
     auto scale_factor = cldnn::data("scale_factor_val", scale_val);
+    
     auto ptr = scale_val.pointer<float>();
     ptr[0] = 0.00390625f;
 
@@ -134,7 +134,7 @@ cldnn::topology build_lenet(const std::string& weights_dir, const cldnn::engine&
 
 
 // Building lenet network for training
-cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)
+cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, bool use_existing_weights)
 {
     input_layout.size = { batch_size, 1, 28, 28 };
     auto input = cldnn::input_layout("input", input_layout);
@@ -157,12 +157,10 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         scale_factor
     );
 
-    auto conv1_w_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 20, 1, 5, 5 } });
-    auto conv1_b_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 20, 1 } });
-    auto conv1_w = filler("conv1_weights.nnd", conv1_w_mem, filler::xavier);
-    auto conv1_b = filler("conv1_bias.nnd", conv1_b_mem, filler::xavier);
-    //auto conv1_w = file::create_mutable({ engine, join_path(weights_dir, "conv1_weights.nnd") });
-    //auto conv1_b = file::create_mutable({ engine, join_path(weights_dir, "conv1_bias.nnd") });
+    auto conv1_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 20, 1, 5, 5 } };
+    auto conv1_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 20, 1 } };
+    auto conv1_w = file::create_mutable({ engine, join_path(weights_dir, "conv1_weights.nnd") }, use_existing_weights ? false : true, conv1_w_mem_layout, cldnn::mutable_data::filler_type::xavier);
+    auto conv1_b = file::create_mutable({ engine, join_path(weights_dir, "conv1_bias.nnd") }, use_existing_weights ? false : true, conv1_b_mem_layout, cldnn::mutable_data::filler_type::zero);
 
     auto conv1 = convolution("conv1",
         scale_input,
@@ -184,12 +182,10 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         { 1,1,2,2 } // strd
     );
 
-    auto conv2_w_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 50, 20, 5, 5 } });
-    auto conv2_b_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 50, 1 } });
-    auto conv2_w = filler("conv2_weights.nnd", conv2_w_mem, filler::xavier);
-    auto conv2_b = filler("conv2_bias.nnd", conv2_b_mem, filler::xavier);
-    //auto conv2_w = file::create_mutable({ engine, join_path(weights_dir, "conv2_weights.nnd") });
-    //auto conv2_b = file::create_mutable({ engine, join_path(weights_dir, "conv2_bias.nnd") });
+    auto conv2_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 50, 20, 5, 5 } };
+    auto conv2_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 50, 1 } };
+    auto conv2_w = file::create_mutable({ engine, join_path(weights_dir, "conv2_weights.nnd") }, use_existing_weights ? false : true, conv2_w_mem_layout, cldnn::mutable_data::filler_type::xavier);
+    auto conv2_b = file::create_mutable({ engine, join_path(weights_dir, "conv2_bias.nnd") }, use_existing_weights ? false : true, conv2_b_mem_layout, cldnn::mutable_data::filler_type::zero);
 
     auto conv2 = convolution("conv2",
         pool1,
@@ -211,12 +207,10 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         { 1,1,2,2 } // strd
     );
 
-    auto ip1_w_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 500, 50, 4, 4 } });
-    auto ip1_b_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 500, 1 } });
-    auto ip1_w = filler("ip1_weights.nnd", ip1_w_mem, filler::xavier);
-    auto ip1_b = filler("ip1_bias.nnd", ip1_b_mem, filler::xavier);
-    //auto ip1_w = file::create_mutable({ engine, join_path(weights_dir, "ip1_weights.nnd") });
-    //auto ip1_b = file::create_mutable({ engine, join_path(weights_dir, "ip1_bias.nnd") });
+    auto ip1_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 500, 50, 4, 4 } };
+    auto ip1_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 500, 1 } };
+    auto ip1_w = file::create_mutable({ engine, join_path(weights_dir, "ip1_weights.nnd") }, use_existing_weights ? false : true, ip1_w_mem_layout, cldnn::mutable_data::filler_type::xavier);
+    auto ip1_b = file::create_mutable({ engine, join_path(weights_dir, "ip1_bias.nnd") }, use_existing_weights ? false : true, ip1_b_mem_layout, cldnn::mutable_data::filler_type::zero);
 
     auto ip1 = fully_connected("ip1",
         pool2,
@@ -230,12 +224,10 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         activation_relu
     );
 
-    auto ip2_w_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 10, 1, 500, 1 } });
-    auto ip2_b_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 10, 1 } });
-    auto ip2_w = filler("ip2_weights.nnd", ip2_w_mem, filler::xavier);
-    auto ip2_b = filler("ip2_bias.nnd", ip2_b_mem, filler::xavier);
-    //auto ip2_w = file::create_mutable({ engine, join_path(weights_dir, "ip2_weights.nnd") });
-    //auto ip2_b = file::create_mutable({ engine, join_path(weights_dir, "ip2_bias.nnd") });
+    auto ip2_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 10, 1, 500, 1 } };
+    auto ip2_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 10, 1 } };
+    auto ip2_w = file::create_mutable({ engine, join_path(weights_dir, "ip2_weights.nnd") }, use_existing_weights ? false : true, ip2_w_mem_layout, cldnn::mutable_data::filler_type::xavier);
+    auto ip2_b = file::create_mutable({ engine, join_path(weights_dir, "ip2_bias.nnd") }, use_existing_weights ? false : true, ip2_b_mem_layout, cldnn::mutable_data::filler_type::zero);
 
     auto ip2 = fully_connected("ip2",
         ip1_relu,
@@ -259,10 +251,8 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         ip2_w
     );
 
-    auto ip2_w_grad_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 10, 1, 500, 1 } });
-    auto ip2_b_grad_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 10, 1 } });
-    auto ip2_w_prev = mutable_data("ip2_prev_grad_w", ip2_w_grad_mem);
-    auto ip2_b_prev = mutable_data("ip2_prev_grad_b", ip2_b_grad_mem);
+    auto ip2_w_prev = file::create_mutable({ engine, join_path(weights_dir, "ip2_weights_prev.nnd") }, use_existing_weights ? false : true, ip2_w_mem_layout, cldnn::mutable_data::filler_type::zero);
+    auto ip2_b_prev = file::create_mutable({ engine, join_path(weights_dir, "ip2_bias_prev.nnd") }, use_existing_weights ? false : true, ip2_b_mem_layout, cldnn::mutable_data::filler_type::zero);
 
     auto ip2_grad_weights = fully_connected_grad_weights("ip2_grad_weights",
         softmax_loss_grad,
@@ -286,10 +276,8 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         ip1_w
     );
 
-    auto ip1_w_grad_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 500, 50, 4, 4 } });
-    auto ip1_b_grad_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 500, 1 } });
-    auto ip1_w_prev = mutable_data("ip1_prev_grad_w", ip1_w_grad_mem);
-    auto ip1_b_prev = mutable_data("ip1_prev_grad_b", ip1_b_grad_mem);
+    auto ip1_w_prev = file::create_mutable({ engine, join_path(weights_dir, "ip1_weights_prev.nnd") }, use_existing_weights ? false : true, ip1_w_mem_layout, cldnn::mutable_data::filler_type::zero);
+    auto ip1_b_prev = file::create_mutable({ engine, join_path(weights_dir, "ip1_bias_prev.nnd") }, use_existing_weights ? false : true, ip1_b_mem_layout, cldnn::mutable_data::filler_type::zero);
 
     auto ip1_grad_weights = fully_connected_grad_weights("ip1_grad_weights",
         ip1_relu_grad,
@@ -314,10 +302,8 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 });
 
-    auto conv2_w_grad_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 50, 20, 5, 5 } });
-    auto conv2_b_grad_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 50, 1 } });
-    auto conv2_w_prev = mutable_data("conv2_prev_grad_w", conv2_w_grad_mem);
-    auto conv2_b_prev = mutable_data("conv2_prev_grad_b", conv2_b_grad_mem);
+    auto conv2_w_prev = file::create_mutable({ engine, join_path(weights_dir, "conv2_weights_prev.nnd") }, use_existing_weights ? false : true, conv2_w_mem_layout, cldnn::mutable_data::filler_type::zero);
+    auto conv2_b_prev = file::create_mutable({ engine, join_path(weights_dir, "conv2_bias_prev.nnd") }, use_existing_weights ? false : true, conv2_b_mem_layout, cldnn::mutable_data::filler_type::zero);
     
     auto conv2_grad_weights = convolution_grad_weights("conv2_grad_weights",
         pool2_grad,
@@ -338,10 +324,8 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         { 1,1,2,2 } // strd
     );
 
-    auto conv1_w_mem_grad = memory::allocate(engine, { data_types::f32, format::bfyx,{ 20, 1, 5, 5 } });
-    auto conv1_b_mem_grad = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 20, 1 } });
-    auto conv1_w_prev = mutable_data("conv1_prev_grad_w", conv1_w_mem_grad);
-    auto conv1_b_prev = mutable_data("conv1_prev_grad_b", conv1_b_mem_grad);
+    auto conv1_w_prev = file::create_mutable({ engine, join_path(weights_dir, "conv1_weights_prev.nnd") }, use_existing_weights ? false : true, conv1_w_mem_layout, cldnn::mutable_data::filler_type::zero);
+    auto conv1_b_prev = file::create_mutable({ engine, join_path(weights_dir, "conv1_bias_prev.nnd") }, use_existing_weights ? false : true, conv1_b_mem_layout, cldnn::mutable_data::filler_type::zero);
     
     auto conv1_grad_weights = convolution_grad_weights("output",
         pool1_grad,

@@ -255,9 +255,13 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("lstm_initial_cell", bpo::bool_switch(),
             "LSTM use initial cell tensor.")
         ("image_number", bpo::value<std::uint32_t>()->value_name("<image_number>")->default_value(8),
-            "Number of images that will be used for traning.")
+            "Number of images that will be used for traning. Default value is 8.")
         ("image_offset", bpo::value<std::uint32_t>()->value_name("<image_offset>")->default_value(0),
             "How many images should be skipped in mnist data on execution.")
+        ("use_existing_weights", bpo::bool_switch(),
+            "Parameter used in learning, when it is set then model will use existing weights files")
+        ("lr", bpo::value<float>()->value_name("<lr>")->default_value(0.00001f),
+            "Base learning rate for network training. Default value is 0.00001f.")
         ("version", "Show version of the application.")
         ("help", "Show help message and available command-line options.");
 
@@ -524,6 +528,8 @@ int main(int argc, char* argv[])
         ep.temperature = parsed_args["temperature"].as<float>();
         ep.image_number = parsed_args["image_number"].as<std::uint32_t>();
         ep.image_offset = parsed_args["image_offset"].as<std::uint32_t>();
+        ep.use_existing_weights = parsed_args["use_existing_weights"].as<bool>();
+        ep.learning_rate = parsed_args["lr"].as<float>();
 
         if (ep.rnn_type_of_topology) //we care about temperature for some rnn topologies.
         {

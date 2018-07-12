@@ -130,16 +130,6 @@ struct implementation_key<mutable_data>
 };
 
 template<>
-struct implementation_key<filler>
-{
-    typedef cldnn::engine_types type;
-    type operator()(engine_types engine_type, const typed_program_node<filler>&)
-    {
-        return engine_type;
-    }
-};
-
-template<>
 struct implementation_key<input_layout>
 {
     typedef cldnn::engine_types type;

@@ -44,7 +44,10 @@ KERNEL(convolution_grad_weights_gpu_ref)(
     const int in_y    = id_y - PADDING_SIZE_Y;
 
     ACCUMULATOR_TYPE grad_w = 0;
+
+#if BIAS_TERM
     ACCUMULATOR_TYPE grad_b = 0;
+#endif
 
     uint weights_idx = ofm * FILTER_OFM_PITCH + ifm * FILTER_IFM_PITCH + id_y * FILTER_Y_PITCH + id_x * FILTER_X_PITCH;
 

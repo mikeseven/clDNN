@@ -178,6 +178,8 @@ struct execution_params {
     //training
     uint32_t image_number;
     uint32_t image_offset;
+    bool use_existing_weights;
+    float learning_rate;
 };
 
 struct memory_filler

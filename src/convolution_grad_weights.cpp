@@ -101,7 +101,7 @@ convolution_grad_weights_inst::typed_primitive_inst(network_impl& network, convo
     {
         CLDNN_ERROR_NOT_EQUAL(node.id(), "number of weights", desc->weights.size(), "should be same as prev_weights_grad number", desc->prev_weights_grad.size(), "");
         if (bias_term())
-            CLDNN_ERROR_NOT_EQUAL(node.id(), "number of bias", desc->weights.size(), "should be same as prev_bias_grad number", desc->prev_bias_grad.size(), "");
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "number of bias", desc->bias.size(), "should be same as prev_bias_grad number", desc->prev_bias_grad.size(), "");
     }
 
     auto split = node.get_split();

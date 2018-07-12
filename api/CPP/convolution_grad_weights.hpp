@@ -151,46 +151,6 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
     {
     }
 
-    /// @brief Constructs convolution_grad_weights primitive without bias with momentum optimizer.
-    /// @param id This primitive id.
-    /// @param input Input gradient primitive id.
-    /// @param input Input primitive id from convolution forward pass.
-    /// @param weights List of primitive ids containing weights data.
-    /// @param prev_weights_grad List of primitive ids which contains weights gradient data calculated in previous iteration. Used in momentum optimizer.
-    /// @param conv_grad Id of primitive which uses weights and biases updated in this primitive. This is for correct order of calculating. Leave empty if primitive is last in backward pass.
-    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution_grad_weights window should start calculations.
-    /// @param dilation Defines dilation size.
-    /// @param stride Defines shift in input buffer between adjacent calculations of output values.
-    convolution_grad_weights(
-        const primitive_id& id,
-        const primitive_id& input_grad,
-        const primitive_id& input,
-        const std::vector<primitive_id>& weights,
-        const std::vector<primitive_id>& prev_weights_grad,
-        const primitive_id& conv_grad = "",
-        tensor stride = { 1, 1, 1, 1 },
-        tensor input_offset = { 0, 0, 0, 0 },
-        tensor dilation = { 1, 1, 1, 1 },
-        const padding& output_padding = padding()
-    )
-        :primitive_base(id, { input_grad, input }, output_padding)
-        , weights(_weights.cpp_ids)
-        , bias(_bias.cpp_ids)
-        , input_offset(input_offset)
-        , dilation(dilation)
-        , stride(stride)
-        , _weights(weights)
-        , _bias(std::vector<primitive_id>(0))
-        , conv_grad(conv_grad)
-        , prev_weights_grad(_prev_weights_grad.cpp_ids)
-        , _prev_weights_grad(prev_weights_grad)
-        , prev_bias_grad(_prev_bias_grad.cpp_ids)
-        , _prev_bias_grad(std::vector<primitive_id>(0))
-    {
-    }
-
-
-
     /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{convolution_grad_weights}
     convolution_grad_weights(const dto* dto)
         :primitive_base(dto)
