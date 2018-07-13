@@ -39,7 +39,7 @@ namespace kernel_selector
         return k;
     }
 
-    CommonDispatchData SoftmaxLossGradKernelRef::SetDefault(const SoftmaxLossGradParams& params, const optional_params& optParams) const
+    CommonDispatchData SoftmaxLossGradKernelRef::SetDefault(const softmax_loss_grad_params& params, const optional_params& optParams) const
     {
         auto runInfo = Parent::SetDefault(params, optParams);
 

@@ -59,8 +59,9 @@ KERNEL(fully_connected_grad_weights_gpu_ref)(
     }
 
 #if MOMENTUM
-    weights[filter_idx] -= lr * (grad_w + prev_grad_w[filter_idx] * ALPHA) + DECAY_RATE * lr * weights[filter_idx];
-    prev_grad_w[filter_idx] = grad_w;
+    UNIT_TYPE update_gradient_w = lr * (grad_w + prev_grad_w[filter_idx] * ALPHA) + DECAY_RATE * lr * weights[filter_idx];
+    weights[filter_idx] -= update_gradient_w;
+    prev_grad_w[filter_idx] = update_gradient_w;
 #else
     weights[filter_idx] -= lr * grad_w + DECAY_RATE * lr * weights[filter_idx];
 #endif
@@ -69,8 +70,9 @@ KERNEL(fully_connected_grad_weights_gpu_ref)(
     if(ifm == 0 && id_x == 0 && id_y == 0)
     {
 #if MOMENTUM
-        bias[ofm] -= lr * (prev_grad_b[ofm] * ALPHA + grad_b);
-        prev_grad_b[ofm] = grad_b;
+        UNIT_TYPE update_gradient_b = lr * (prev_grad_b[ofm] * ALPHA + grad_b);
+        bias[ofm] -= update_gradient_b;
+        prev_grad_b[ofm] = update_gradient_b;
 #else
         bias[ofm] -= lr * grad_b;
 #endif

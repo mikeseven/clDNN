@@ -21,6 +21,27 @@
 
 namespace kernel_selector 
 {
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // SoftmaxLossGradParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct softmax_loss_grad_params : public base_params
+    {
+        softmax_loss_grad_params() : base_params(KernelType::SOFT_MAX_LOSS_GRAD) {}
+
+        virtual ParamsKey GetParamsKey() const
+        {
+            return base_params::GetParamsKey();
+        }
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // SoftmaxLossGradOptionalParams
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct softmax_loss_grad_optional_params : optional_params
+    {
+        softmax_loss_grad_optional_params() : optional_params(KernelType::SOFT_MAX_LOSS_GRAD) {}
+    };
+
     class SoftmaxLossGradKernelBase : public common_kernel_base
     {
     public:
@@ -29,8 +50,8 @@ namespace kernel_selector
 
     protected:
         virtual bool Validate(const Params&, const optional_params&) const;
-        virtual JitConstants GetJitConstants(const SoftmaxLossGradParams& params) const;
-        virtual CommonDispatchData SetDefault(const SoftmaxLossGradParams& params, const optional_params& optParams) const;
+        virtual JitConstants GetJitConstants(const softmax_loss_grad_params& params) const;
+        virtual CommonDispatchData SetDefault(const softmax_loss_grad_params& params, const optional_params& optParams) const;
         KernelsData GetCommonKernelsData(const Params& params, const optional_params& optParams) const;
     };
 }

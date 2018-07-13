@@ -250,7 +250,7 @@ cldnn::mutable_data file::create_mutable(file::arguments arg, bool initialize, c
 
 void file::serialize(const cldnn::memory& data, const std::string& file_name, bool old_layout_mode)
 {
-    auto size   = memory_traits(data, old_layout_mode).size;
+    auto size = memory_traits(data, old_layout_mode).size;
     auto format = memory_traits(data, old_layout_mode).format;
 
     boost::filesystem::path dir_path("weights_format_num" + std::to_string(static_cast<std::uint32_t>(format)));
@@ -277,34 +277,37 @@ void file::serialize(const cldnn::memory& data, const std::string& file_name, bo
     }
 
     fh.version = 3;
-    fh_ext.layout = format;
-    fstream.write(reinterpret_cast<const char*>(&fh),sizeof(fh));
-    fstream.write(reinterpret_cast<const char*>(&fh_ext), sizeof(fh_ext));
-    std::vector<uint64_t> array(fh.dimension);
-    const auto dimension_offset = size.raw.size() - 4 - fh.dimension; // TODO!!! do it better way, this is needed because weights can have 5 dimensions with batch dimension always equal 1!
-    for (auto ar = 0; ar < fh.dimension; ar++)
-    {
-        array[ar] = size.raw[dimension_offset + ar];
-    }
-
-    fstream.write(reinterpret_cast<const char*>(&array[0]), array.size()*sizeof(uint64_t));
-    auto ptr = data.pointer<char>();
-    fstream.write(&ptr[0], ptr.size());
-}
 
     fh.dimension = static_cast<uint8_t>(memory::layout_traits(data.get_layout()).dimension);
     if (fh.dimension == 0 || fh.dimension > 4)
         throw std::runtime_error("Number of dimensions is out of supported range.");
 
-void file::serialize_train(const cldnn::memory& data, const std::string& name)
+    fh_ext.layout = format;
+
+    fstream.write(reinterpret_cast<const char*>(&fh), sizeof(fh));
+    fstream.write(reinterpret_cast<const char*>(&fh_ext), sizeof(fh_ext));
+
+    std::vector<std::uint64_t> array(fh.dimension);
+    const auto dimension_offset = size.raw.size() - fh.dimension; // TODO!!! do it better way, this is needed because weights can have 5 dimensions with batch dimension always equal 1!
+    for (auto ar = 0; ar < fh.dimension; ar++)
+    {
+        array[ar] = size.raw[dimension_offset + ar];
+    }
+
+    fstream.write(reinterpret_cast<const char*>(&array[0]), array.size() * sizeof(uint64_t));
+    auto ptr = data.pointer<char>();
+    fstream.write(&ptr[0], ptr.size());
+}
+
+void file::serialize_train(const cldnn::memory& data, const std::string& file_name)
 {
     // This function is used for weights updates in network training
-    auto size = argument(data).size;
-    auto format = argument(data).format;
+    auto size = memory_traits(data).size;
+    auto format = memory_traits(data).format;
     boost::filesystem::path dir_path(std::string("weights_format_num") + std::to_string((uint32_t)format));
     boost::filesystem::create_directories(dir_path);
-    dir_path /= boost::filesystem::path(name).filename();
-    std::ofstream fstream(name, std::ios::out | std::ios::binary);
+    dir_path /= boost::filesystem::path(file_name).filename();
+    std::ofstream fstream(file_name, std::ios::out | std::ios::binary);
     file_header fh;
     file_header_ext_2 fh_ext;
     if (data.get_layout().data_type == cldnn::data_types::f16)
@@ -330,11 +333,11 @@ void file::serialize_train(const cldnn::memory& data, const std::string& name)
     if (fh.dimension == 0 || fh.dimension > 4) throw std::runtime_error("dimensions mismatch");
 
     if (fh.dimension == 1)
-        fh_ext.layout = cldnn::backward_comp::neural_memory::format::type::bias_x_f32;
+        fh_ext.layout = cldnn::backward_comp::neural_memory::nnd_layout_format::type::bias_x_f32;
     else if (fh.dimension == 2)
-        fh_ext.layout = cldnn::backward_comp::neural_memory::format::type::fc_bx_f32;
+        fh_ext.layout = cldnn::backward_comp::neural_memory::nnd_layout_format::type::fc_bx_f32;
     else
-        fh_ext.layout = cldnn::backward_comp::neural_memory::format::type::weights_bfyx_f32;
+        fh_ext.layout = cldnn::backward_comp::neural_memory::nnd_layout_format::type::weights_bfyx_f32;
     if (fh.dimension == 0 || fh.dimension > 4) throw std::runtime_error("dimensions mismatch");
 
     fstream.write(reinterpret_cast<const char*>(&fh), sizeof(fh));

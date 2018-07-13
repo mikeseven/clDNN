@@ -944,7 +944,7 @@ void run_topology(const execution_params &ep)
         primitives = build_lenet(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "lenet_train")
         primitives = build_lenet_train(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_existing_weights);
-    else if (ep.topology_name == "microbench_lstm") {
+    else if (ep.topology_name == "microbench_lstm")
         primitives = build_microbench_lstm(ep.weights_dir, engine, ep.lstm_ep, microbench_lstm_inputs);
     else if (ep.topology_name == "ssd_mobilenet")
         primitives = build_ssd_mobilenet(ep.weights_dir, engine, input_layout, gpu_batch_size);

@@ -22,7 +22,6 @@
 #include "tensor_type.h"
 #include "kernel_selector_params.h"
 #include "kernel_selector_common.h"
-#include "softmax_loss_grad/softmax_loss_grad_kernel_selector.h"
 #include "jitter.h"
 
 using namespace cldnn;
@@ -71,17 +70,6 @@ namespace kernel_selector
     using params                            = kernel_selector::Params;
     using weights_reorder_params            = kernel_selector::WeightsReorderParams;
     using generic_kernel_params             = kernel_selector::GenericKernelParams;
-    using lstm_gemm_params                  = kernel_selector::LSTMGemmParams;
-    using lstm_elt_params                   = kernel_selector::LSTMEltParams;
-    using softmax_loss_grad_params          = kernel_selector::SoftmaxLossGradParams;
-
-    using lstm_gemm_optional_params         = kernel_selector::LSTMGemmOptionalParams;
-    using lstm_elt_optional_params          = kernel_selector::LSTMEltOptionalParams;
-    using softmax_loss_grad_optional_params = kernel_selector::SoftmaxLossGradOptionalParams;
-
-    using lstm_gemm_kernel_selector         = kernel_selector::LSTMGemmKernelSelector;
-    using lstm_elt_kernel_selector          = kernel_selector::LSTMEltKernelSelector;
-    using softmax_loss_grad_kernel_selector = kernel_selector::softmax_loss_grad_kernel_selector;
 }
 
 inline kernel_selector::data_type to_data_type(data_types dt)

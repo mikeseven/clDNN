@@ -18,12 +18,12 @@
 
 namespace kernel_selector 
 {
-    JitConstants SoftmaxLossGradKernelBase::GetJitConstants(const SoftmaxLossGradParams& params) const
+    JitConstants SoftmaxLossGradKernelBase::GetJitConstants(const softmax_loss_grad_params& params) const
     {
-        return MakeSoftmaxLossGradJitConstants(params);
+        return MakeBaseParamsJitConstants(params);
     }
 
-    CommonDispatchData SoftmaxLossGradKernelBase::SetDefault(const SoftmaxLossGradParams& params, const optional_params&) const
+    CommonDispatchData SoftmaxLossGradKernelBase::SetDefault(const softmax_loss_grad_params& params, const optional_params&) const
     {
         CommonDispatchData runInfo;
 
@@ -58,8 +58,8 @@ namespace kernel_selector
             return{};
         }
 
-        const SoftmaxLossGradParams& orgParams = static_cast<const SoftmaxLossGradParams&>(params);
-        KernelData kd = KernelData::Default<SoftmaxLossGradParams>(params);
+        const softmax_loss_grad_params& orgParams = static_cast<const softmax_loss_grad_params&>(params);
+        KernelData kd = KernelData::Default<softmax_loss_grad_params>(params);
 
         auto runInfo = SetDefault(orgParams, options);
         auto cldnn_jit = GetJitConstants(orgParams);
