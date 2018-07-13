@@ -60,15 +60,15 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
         :primitive_base(id, { input_grad, input }, output_padding)
         , weights(_weights.cpp_ids)
         , bias(_bias.cpp_ids)
+        , prev_weights_grad(_prev_weights_grad.cpp_ids)
+        , prev_bias_grad(_prev_bias_grad.cpp_ids)
+        , conv_grad(conv_grad)
+        , stride(stride)
         , input_offset(input_offset)
         , dilation(dilation)
-        , stride(stride)
         , _weights(weights)
         , _bias(bias)
-        , conv_grad(conv_grad)
-        , prev_weights_grad(_prev_weights_grad.cpp_ids)
         , _prev_weights_grad(std::vector<primitive_id>(0))
-        , prev_bias_grad(_prev_bias_grad.cpp_ids)
         , _prev_bias_grad(std::vector<primitive_id>(0))
     {
     }
@@ -96,15 +96,15 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
         :primitive_base(id, { input_grad, input }, output_padding)
         , weights(_weights.cpp_ids)
         , bias(_bias.cpp_ids)
+        , prev_weights_grad(_prev_weights_grad.cpp_ids)
+        , prev_bias_grad(_prev_bias_grad.cpp_ids)
+        , conv_grad(conv_grad)
+        , stride(stride)
         , input_offset(input_offset)
         , dilation(dilation)
-        , stride(stride)
         , _weights(weights)
         , _bias(std::vector<primitive_id>(0))
-        , conv_grad(conv_grad)
-        , prev_weights_grad(_prev_weights_grad.cpp_ids)
         , _prev_weights_grad(std::vector<primitive_id>(0))
-        , prev_bias_grad(_prev_bias_grad.cpp_ids)
         , _prev_bias_grad(std::vector<primitive_id>(0))
     {
     }
@@ -138,15 +138,15 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
         :primitive_base(id, { input_grad, input }, output_padding)
         , weights(_weights.cpp_ids)
         , bias(_bias.cpp_ids)
+        , prev_weights_grad(_prev_weights_grad.cpp_ids)
+        , prev_bias_grad(_prev_bias_grad.cpp_ids)
+        , conv_grad(conv_grad)
+        , stride(stride)
         , input_offset(input_offset)
         , dilation(dilation)
-        , stride(stride)
         , _weights(weights)
         , _bias(bias)
-        , conv_grad(conv_grad)
-        , prev_weights_grad(_prev_weights_grad.cpp_ids)
         , _prev_weights_grad(prev_weights_grad)
-        , prev_bias_grad(_prev_bias_grad.cpp_ids)
         , _prev_bias_grad(prev_bias_grad)
     {
     }
@@ -156,15 +156,15 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
         :primitive_base(dto)
         , weights(_weights.cpp_ids)
         , bias(_bias.cpp_ids)
+        , prev_weights_grad(_prev_weights_grad.cpp_ids)
+        , prev_bias_grad(_prev_bias_grad.cpp_ids)
+        , conv_grad(dto->conv_grad)
+        , stride(dto->stride)
         , input_offset(dto->input_offset)
         , dilation(dto->dilation)
-        , stride(dto->stride)
         , _weights(dto->weights)
         , _bias(dto->bias)
-        , conv_grad(dto->conv_grad)
-        , prev_weights_grad(_prev_weights_grad.cpp_ids)
         , _prev_weights_grad(dto->prev_weights_grad)
-        , prev_bias_grad(_prev_bias_grad.cpp_ids)
         , _prev_bias_grad(dto->prev_bias_grad)
     {
         if (!dto->split || (weights.size() != bias.size() && bias.size() != 0) || dto->split != weights.size())
@@ -175,20 +175,20 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
     fixed_size_vector_ref weights;
     /// @brief List of primitive ids containing bias data.
     fixed_size_vector_ref bias;
-    /// @brief Primitive id containing convolution gradient data.
-    primitive_id conv_grad;
     /// @brief Array of primitive ids containing weights gradient data calculated in previous iteration. Amount of primitives and their memory sizes should be same as weights.
     fixed_size_vector_ref prev_weights_grad;
     /// @brief Array of primitive ids containing bias gradient data calculated in previous iteration. Amount of primitives and their memory sizes should be same as biases.
     fixed_size_vector_ref prev_bias_grad;
+    /// @brief Primitive id containing convolution gradient data.
+    primitive_id conv_grad;
+    /// @brief Defines shift in input buffer between adjacent calculations of output values.
+    tensor stride;
     /// @brief Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution_grad_weights window should start calculations.
     tensor input_offset;
     /// @brief Defines gaps in the input - dilation rate k=1 is normal convolution, k=2 means skipping one pixel per input, k=4 means skipping 3 pixels.
     /// As an example in one dimension, a filter w of size 3 would compute over input x the following: w[0]*x[0] + w[1]*x[1] + w[2]*x[2] for dilation of 1. 
     /// For dilation 2 the filter would instead compute w[0]*x[0] + w[1]*x[2] + w[2]*x[4].
     tensor dilation;
-    /// @brief Defines shift in input buffer between adjacent calculations of output values.
-    tensor stride;
 
     /// @brief On how many cards split the computation to.
     int32_t split() const { return static_cast<int32_t>(weights.size()); }

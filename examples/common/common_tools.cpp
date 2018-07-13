@@ -29,6 +29,7 @@
 #include <regex>
 #include <string>
 #include <algorithm>
+#include <limits>
 #include <api/CPP/data.hpp>
 #include <api/CPP/network.hpp>
 #include "file.h"
@@ -1098,7 +1099,7 @@ void run_topology(const execution_params &ep)
                     for (uint32_t b = 0; b < batch_size; b++)
                     {
                         auto e = expected[b];
-                        loss -= log(std::max(vals[b + e * batch_size], FLT_MIN));
+                        loss -= log(std::max(vals[b + e * batch_size], std::numeric_limits<float>::min()));
                     }
                     loss = loss / batch_size;
                     std::cout << "Iter: " << learn_it - ep.image_offset << std::endl;
@@ -1119,6 +1120,7 @@ void run_topology(const execution_params &ep)
                     lstm_data.fill_memory<float>(input);
                 }
 
+                time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
             }
             network.set_input_data("input", input);
 
