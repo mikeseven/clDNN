@@ -67,7 +67,7 @@ public:
 
         if (arg.use_momentum())
         {
-            fully_connected_grad_weights_params.fcGradWeightsParams.useMomentum = true;
+            fully_connected_grad_weights_params.useMomentum = true;
         }
 
         fully_connected_grad_weights_params.gradient = true;

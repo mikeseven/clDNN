@@ -22,47 +22,49 @@
 namespace kernel_selector
 {
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // average_unpooling_params
+    // scale_grad_weights_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct average_unpooling_params : public base_params
+    struct scale_grad_weights_params : public base_params
     {
-        average_unpooling_params() : base_params(KernelType::AVERAGE_UNPOOLING) {}
+        scale_grad_weights_params() : base_params(KernelType::SCALE_GRAD_WEIGHTS) {}
 
-        uSize unpoolSize;
-        uSize unpoolStride;
+        bool bias_term = false;
+        bool useMomentum = false;
 
         virtual ParamsKey GetParamsKey() const
         {
-            return base_params::GetParamsKey();
+            ParamsKey k = base_params::GetParamsKey();
+
+            if (useMomentum)
+            {
+                k.EnableMomentum();
+            }
+            return k;
         }
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // average_unpooling_optional_params
+    // scale_grad_weights_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct average_unpooling_optional_params : optional_params
+    struct scale_grad_weights_optional_params : optional_params
     {
-        average_unpooling_optional_params() : optional_params(KernelType::AVERAGE_UNPOOLING) {}
+        scale_grad_weights_optional_params() : optional_params(KernelType::SCALE_GRAD_WEIGHTS) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // AverageUnpoolingKernelBase
+    // ScaleGradWeightsKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class AverageUnpoolingKernelBase : public common_kernel_base
+    class ScaleGradWeightsKernelBase : public common_kernel_base
     {
     public:
         using common_kernel_base::common_kernel_base;
-        virtual ~AverageUnpoolingKernelBase() {}
+        virtual ~ScaleGradWeightsKernelBase() {}
 
-        struct DispatchData : public CommonDispatchData
-        {
-            bool needsBoundary = false;
-        };
+        using DispatchData = CommonDispatchData;
 
     protected:
-        virtual bool Validate(const Params&, const optional_params&) const override;
-        virtual JitConstants GetJitConstants(const average_unpooling_params& params) const;
-        virtual DispatchData SetDefault(const average_unpooling_params& params) const;
-        KernelsData GetCommonKernelsData(const Params& params, const optional_params&, float estimatedTime) const;
+        virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const;
+        virtual JitConstants GetJitConstants(const scale_grad_weights_params& params) const;
+        virtual DispatchData SetDefault(const scale_grad_weights_params& params) const;
     };
 }
