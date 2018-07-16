@@ -180,8 +180,7 @@ namespace cldnn
 	/// Returns given name for serialization process.
 	std::string get_serialization_network_name(build_options opts)
 	{
-		auto network_name = opts.get<build_option_type::serialization_network>()->serialization_network_name;
-		return network_name;
+		return opts.get<build_option_type::serialize_network>()->serialization_network_name;
 	}
 
     void dump_graph_init(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter)
@@ -351,6 +350,36 @@ namespace cldnn
         }
         close_stream(graph);
     }
+
+	//Function used by serialization. Not working yet, in progress.
+	unsigned long long dump_kernels(cl::vector<cl::vector<unsigned char>> program_binaries, std::ofstream& file_stream)
+	{
+		auto offset_temp = 0;
+		for (unsigned int w = 0; w < (unsigned int)program_binaries.size(); w++)
+		{
+			for (unsigned int k = 0; k < (unsigned int)program_binaries.at(w).size(); k++)
+			{
+				char* p = (char*)&program_binaries.at(w).at(k);
+				file_stream.write(p, sizeof(char));
+				offset_temp += sizeof(char);
+			}
+		}
+		return offset_temp;
+	}
+
+	//Function used by serialization. Not working yet, in progress.
+	void dump_data(memory_impl& mem, std::ofstream& stream, unsigned long long& total_offset, unsigned long long type)
+	{
+		auto offset = 0ull;
+		char * ptr = (char*)mem.lock();
+		for (unsigned int x = 0; x < (unsigned int)mem.get_layout().count(); x++)
+		{
+			stream.write(ptr + offset, type);
+			offset += type;
+		}
+		mem.unlock();
+		total_offset += offset;
+	}
 }
 
  

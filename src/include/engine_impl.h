@@ -60,7 +60,7 @@ public:
     refcounted_obj_ptr<event_impl> create_user_event(bool set = false);
     void wait_for_events(std::vector<event_impl::ptr> const& events);
 
-    refcounted_obj_ptr<program_impl> build_program(const topology_impl& topology, const build_options& options);
+    refcounted_obj_ptr<program_impl> build_program(const topology_impl& topology, const build_options& options, bool is_internal = false);
     void compile_program(program_impl& prog);
 
     refcounted_obj_ptr<network_impl> allocate_network(const program_impl& program);
