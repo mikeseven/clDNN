@@ -109,69 +109,66 @@ namespace kernel_selector
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
         // extract code
         ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-        namespace
+        enum class DataChannelName
         {
-            enum class DataChannelName
-            {
-                X       = 0,
-                Y       = 1,
-                FEATURE = 2,
-                ROI     = 3,
-                BATCH   = 4,
-            };
+            X       = 0,
+            Y       = 1,
+            FEATURE = 2,
+            ROI     = 3,
+            BATCH   = 4,
+        };
 
-            enum class WeightsChannelName
-            {
-                X   = 0,
-                Y   = 1,
-                IFM = 2,
-                OFM = 3,
-            };
+        enum class WeightsChannelName
+        {
+            X   = 0,
+            Y   = 1,
+            IFM = 2,
+            OFM = 3,
+        };
 
-            inline bool SimpleLayout(WeightsLayout l)
+        inline bool SimpleLayout(WeightsLayout l)
+        {
+            switch (l)
             {
-                switch (l)
-                {
-                case WeightsLayout::oi:
-                case WeightsLayout::io:
-                case WeightsLayout::oiyx:
-                case WeightsLayout::oyxi:
-                case WeightsLayout::iyxo:
-                case WeightsLayout::yxio:
-                    return true;
-                default:
-                    return false;
-                }
+            case WeightsLayout::oi:
+            case WeightsLayout::io:
+            case WeightsLayout::oiyx:
+            case WeightsLayout::oyxi:
+            case WeightsLayout::iyxo:
+            case WeightsLayout::yxio:
+                return true;
+            default:
+                return false;
             }
+        }
 
-            inline bool SimpleLayout(DataLayout l)
+        inline bool SimpleLayout(DataLayout l)
+        {
+            switch (l)
             {
-                switch (l)
-                {
-                case DataLayout::bf:
-                case DataLayout::fb:
-                case DataLayout::bfyx:
-                case DataLayout::yxfb:
-                case DataLayout::byxf:
-                case DataLayout::fyxb:
-                    return true;
-                default:
-                    return false;
-                }
+            case DataLayout::bf:
+            case DataLayout::fb:
+            case DataLayout::bfyx:
+            case DataLayout::yxfb:
+            case DataLayout::byxf:
+            case DataLayout::fyxb:
+                return true;
+            default:
+                return false;
             }
+        }
 
-            inline bool IsImageType(WeightsLayout l)
+        inline bool IsImageType(WeightsLayout l)
+        {
+            switch (l)
             {
-                switch (l)
-                {
-                case WeightsLayout::image_2d_weights_c4_fyx_b:
-                case WeightsLayout::image_2d_weights_c1_b_fyx:
-                case WeightsLayout::image_2d_weights_winograd_6x3_s1_fbxyb:
-                case WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb:
-                    return true;
-                default:
-                    return false;
-                }
+            case WeightsLayout::image_2d_weights_c4_fyx_b:
+            case WeightsLayout::image_2d_weights_c1_b_fyx:
+            case WeightsLayout::image_2d_weights_winograd_6x3_s1_fbxyb:
+            case WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb:
+                return true;
+            default:
+                return false;
             }
         }
 

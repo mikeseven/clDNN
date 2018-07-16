@@ -23,8 +23,8 @@
 #include "reorder/reorder_kernel_base.h"
 #include "convolution/convolution_params.h"
 
-namespace kernel_selector { namespace
-{
+namespace kernel_selector {
+
     inline bool CheckConvolutionPaddedInputDesc(const convolution_params& params, const DataTensor& reqDesc)
     {
         assert(params.inputs.size() == 1);
@@ -314,4 +314,4 @@ namespace kernel_selector { namespace
 
         return no_pitch_same_dims;
     }
-} }
+}
