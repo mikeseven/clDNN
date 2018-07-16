@@ -125,6 +125,7 @@ private:
     void analyze_output_size_handling_need();
     void replace_nodes_pre();
     void replace_nodes_post();
+	void handle_lstm();
     void handle_reshape();
 
     /*
@@ -168,9 +169,9 @@ private:
 
     // Gets or creates program_node for given primitive 'prim' and inserts it as an intermediate
     // node between 'next' and it's dependency at 'prev_idx' index.
-    void add_intermediate(std::shared_ptr<primitive> prim, program_node& next, size_t prev_idx)
+    void add_intermediate(std::shared_ptr<primitive> prim, program_node& next, size_t prev_idx, bool connect_int_node_with_old_dep = true)
     {
-        add_intermediate(get_or_create(prim), next, prev_idx);
+        add_intermediate(get_or_create(prim), next, prev_idx, connect_int_node_with_old_dep);
     }
 
     void add_connection(program_node& prev, program_node& next)
@@ -186,10 +187,15 @@ private:
     }
 
     void remove_all_connections(program_node& node) {
+        // since the graph is not topological sorted, we need to remove the node from both dependencies and users
+        for (auto &e : node.users) {
+            e->dependencies.erase(std::remove(e->dependencies.begin(), e->dependencies.end(), &node), e->dependencies.end());
+        }
         for(auto &e : node.dependencies) {
             e->users.remove(&node);
         }
         node.dependencies.clear();
+		node.users.clear();
     }
 
     void rename(program_node & node, primitive_id const & new_id);

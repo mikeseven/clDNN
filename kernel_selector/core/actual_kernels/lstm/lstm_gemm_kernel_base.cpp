@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,13 +57,13 @@ namespace kernel_selector
         newParams.inputs.resize(1);
         newParams.inputs[0] = input;
         auto out = newParams.output;
-
+        //TODO: reorder weights if needed
         auto& kernel = kd.kernels[0];
         auto cldnnJit = GetJitConstants(newParams);
         auto entryPoint = GetEntryPoint(kernelName, newParams.layerID, options);
         auto jit = CreateJit(kernelName, cldnnJit, entryPoint);
 
-        kernel.workGroups.global = { out.X().v, out.Y().v, 1 };
+        kernel.workGroups.global = { out.X().v, out.Batch().v, 1 };
         kernel.kernelString = GetKernelString(kernelName, jit, entryPoint);
         kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 0 });
         kernel.arguments.push_back({ ArgumentDescriptor::Types::OUTPUT, 0 });

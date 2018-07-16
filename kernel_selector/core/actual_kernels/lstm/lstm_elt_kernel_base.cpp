@@ -31,14 +31,14 @@ namespace kernel_selector
         if (params.clip > 0) {
             std::string psclip = toCodeString(params.clip);
             std::string nsclip = toCodeString(-params.clip);
-            jit.AddConstants({ MakeJitConstant("CLIP(x)", "((x > " + psclip +") ? " +
-                psclip + ": (x < " + nsclip + ") ? " + nsclip + " : (x))")});
+            jit.AddConstants({ MakeJitConstant("CLIP(x)", "((x > " + psclip + ") ? " +
+                psclip + ": (x < " + nsclip + ") ? " + nsclip + " : (x))") });
         }
         else {
-            jit.AddConstants({ MakeJitConstant("CLIP(x)", "(x)")});
+            jit.AddConstants({ MakeJitConstant("CLIP(x)", "(x)") });
         }
         if (params.input_forget) {
-            jit.AddConstants({ MakeJitConstant("INPUT_FORGET", true)});
+            jit.AddConstants({ MakeJitConstant("INPUT_FORGET", true) });
         }
 
         const auto& GEMMInput = params.inputs[0];
@@ -54,7 +54,7 @@ namespace kernel_selector
 
     KernelsData LSTMEltKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options) const
     {
-        if (!Validate(params,  options))
+        if (!Validate(params, options))
         {
             return{};
         }
@@ -76,7 +76,7 @@ namespace kernel_selector
         auto entryPoint = GetEntryPoint(kernelName, newParams.layerID, options);
         auto jit = CreateJit(kernelName, cldnnJit, entryPoint);
 
-        kernel.workGroups.global = { out.X().v, out.Y().v, 1 };
+        kernel.workGroups.global = { out.X().v, out.Batch().v, 1 };
         kernel.kernelString = GetKernelString(kernelName, jit, entryPoint);
         kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 0 });
         kernel.arguments.push_back({ ArgumentDescriptor::Types::OUTPUT, 0 });

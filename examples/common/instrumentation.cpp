@@ -411,7 +411,6 @@ namespace instrumentation {
                     {
                         unsigned int input_it = b*pitches.batch[0] + f*pitches.feature[0] + y*pitches.spatial[1] + x*pitches.spatial[0];
                         streams[b][f] << convert_element(mem_ptr[input_it]) << " ";
-                        input_it++;
                     }
                     streams[b][f] << std::endl;
                 }
@@ -451,6 +450,7 @@ namespace instrumentation {
             {
                 if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
                 {
+                    replace_forbidden_txt_characters(prefix);
                     std::string filename((dump_dir + "/" + prefix + "_" + eng_type + "_b" + std::to_string(b) + "_f" + std::to_string(f) + ".txt"));
                     std::ofstream file_stream = std::ofstream(filename, std::ios::out);
                     file_stream << streams[b][f].str();
@@ -514,5 +514,15 @@ namespace instrumentation {
         }
 
         return dir;
+    }
+    void logger::replace_forbidden_txt_characters(std::string& prefix)
+    {
+        std::string forbidden_characters = R"(<>/\?*|:")";
+        std::size_t found = prefix.find_first_of(forbidden_characters);
+        while (found != std::string::npos)
+        {
+            prefix[found] = '_';
+            found = prefix.find_first_of(forbidden_characters, found + 1);
+        }
     }
 }
