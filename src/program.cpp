@@ -273,7 +273,6 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
 
     engine->compile_program(*this);
 
-
     this->dump_program("13_finished", true);
 
     //Make serialization with given name.
@@ -789,7 +788,7 @@ void program_impl::handle_lstm()
         auto node_itr = itr++;
         auto& node = (*node_itr).second;
         hasLSTMParent = false;
-        // remove lstm nodes since they have been replaced by sequnces of lstm_gemm + lstm_elt
+        // replace lstm node with lstm_gemm and lstm_elt nodes
         if (node->is_type<lstm>()) {
 
             auto lstm_prim = node->as<lstm>().typed_desc();
@@ -918,7 +917,6 @@ void program_impl::handle_lstm()
 
             //removing expanded node
             remove_all_connections(*node);
-            optimized_out.push_back(node->id());
             nodes_map.erase(node->id());
             continue;
         }
@@ -1953,10 +1951,6 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
         {
             prep_opt(prim.as<embed>());
         }
-        //else if (prim.type() == lstm_gemm::type_id()) //TODO: Enable preoptimize bias for lstm
-        //{
-        //    prep_opt(prim.as<lstm_gemm>());
-        //}
     }
 }
 void program_impl::prepare_depthwise_sep_opt()
@@ -2104,7 +2098,7 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
     //generic lambda function which prepares given primitive for weights optimization
     //it deduces the type of weights from the type of the argument and calls 'add_weights' for all
     //weights used by given primitive.
-    //argument should match few requirements:;
+    //argument should match requirements:
     // - it should be of a form 'typed_program_node<T>&'
     // - 'T.weights' should be either of type 'primitive_id' or 'std::vector<primitive_id>'
     const auto prep_opt = [this, &add_weights](auto& node) -> void

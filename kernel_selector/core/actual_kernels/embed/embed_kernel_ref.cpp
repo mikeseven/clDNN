@@ -80,9 +80,6 @@ namespace kernel_selector
 
 		const std::vector<WeightsLayout> weightsLayouts = {
 			WeightsLayout::oiyx,
-			WeightsLayout::iyxo,
-			WeightsLayout::yxio,
-			WeightsLayout::oyxi
 		};
 
 		DispatchData runInfo = SetDefault(orgParams);

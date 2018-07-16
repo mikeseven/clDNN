@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ namespace kernel_selector
         newParams.inputs.resize(1);
         newParams.inputs[0] = input;
         auto out = newParams.output;
-        //TODO: REORDER WEIGHTS IF NEEDED
+        //TODO: reorder weights if needed
         auto& kernel = kd.kernels[0];
         auto cldnnJit = GetJitConstants(newParams);
         auto entryPoint = GetEntryPoint(kernelName, newParams.layerID, options);

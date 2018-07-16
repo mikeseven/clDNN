@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -182,10 +182,10 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Size of a group of images that are classified together (large batch sizes have better performance).")
         ("loop", bpo::value<std::uint32_t>()->value_name("<loop-count>")->default_value(1),
             "Number of iterations to run each execution. Can be used for robust benchmarking. (default 1).\n"
-            "For character-model topos it says how much characters will be predicted.")
+            "For character-model topos it says how many characters will be predicted.")
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
-            "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, resnet50, resnet50-i8, microbench_conv, microbench_lstm, ssd_mobilenet, ssd_mobilenet-i8.")
+            "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, resnet50, resnet50-i8, microbench_conv, microbench_lstm, ssd_mobilenet, ssd_mobilenet-i8, lstm_char.")
         ("run_until_primitive", bpo::value<std::string>()->value_name("<primitive_name>"),
             "Runs topology until specified primitive.")
         ("run_single_layer", bpo::value<std::string>()->value_name("<primitive_name>"),
@@ -448,7 +448,8 @@ int main(int argc, char* argv[])
             auto seq_length = parsed_args["sequence_length"].as<std::uint32_t>();;
             if (seq_length != 0) ep.rnn_type_of_topology = true;
             ep.sequence_length = seq_length;
-
+            if (ep.rnn_type_of_topology && parsed_args["model"].as<std::string>() != "lstm_char")
+                std::cerr << "lstm type params are allowed for lstm type topologies" << std::endl;;
             if (seq_length > 0)
             {
                 auto vocab_file = parsed_args["vocabulary_file"].as<std::string>();
@@ -558,8 +559,9 @@ int main(int argc, char* argv[])
             ep.topology_name == "resnet50-i8" ||
             ep.topology_name == "microbench_conv" ||
             ep.topology_name == "microbench_lstm" ||
-            ep.topology_name == "lstm_char"
-        )
+            ep.topology_name == "lstm_char" || 
+            ep.topology_name == "ssd_mobilenet" ||
+            ep.topology_name == "ssd_mobilenet-i8")
         {
             run_topology(ep);
             return 0;

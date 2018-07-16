@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -97,9 +97,9 @@ void lstm_utils::load_input_sequence(std::vector<std::string> files)
 
         for (currentSequenceLength; currentSequenceLength < dummy_spaces; currentSequenceLength++)
         {
-            // WE SHOULD INSERT RANDOM CHAR HERE, BUT FOR TESTING PURPOSES LEAVE BLANK SPACE
-            // WITH RANDOM CHAR EVERY TIME TOPOLOGY GENERATES NEW OUTPUT (new stories etc. etc.)
-            // WITH BLANK SPACE WE GET SAME OUTPUT EVERY TIME
+            // we should insert random char here, but for testing purposes leave blank space
+            // with random char every time topology generates new output (new stories etc. etc.)
+            // with blank space we get same output every time
             _input_sequence.push_back(' '); //_input_sequence.push_back(random_char());
         }
 

@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -27,8 +27,8 @@
 #include "fully_connected_inst.h"
 #include "detection_output_inst.h"
 #include "embed_inst.h"
-#include "generic_layer.hpp"
 #include "lstm_gemm_inst.h"
+#include "generic_layer.hpp"
 
 #include "kernel_selector_common.h"
 #include "kernel_selector_helper.h"
