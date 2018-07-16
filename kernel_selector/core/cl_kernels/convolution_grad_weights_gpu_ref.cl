@@ -98,7 +98,7 @@ KERNEL(convolution_grad_weights_gpu_ref)(
     }
 
 #if MOMENTUM
-    UNIT_TYPE update_gradient_w = lr * (prev_grad_w[weights_idx] * ALPHA + grad_w) + DECAY_RATE * lr * filter[weights_idx];
+    UNIT_TYPE update_gradient_w = lr * (prev_grad_w[weights_idx] * ALPHA + grad_w + DECAY_RATE * filter[weights_idx]);
     filter[weights_idx] -= update_gradient_w;
     prev_grad_w[weights_idx] = update_gradient_w;
 #else

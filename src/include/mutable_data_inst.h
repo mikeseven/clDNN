@@ -40,6 +40,7 @@ private:
 
     void fill_memory();
     void fill_memory_xavier();
+    void fill_memory_constant(float value);
 };
 
 using mutable_data_node = typed_program_node<mutable_data>;

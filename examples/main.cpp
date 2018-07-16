@@ -563,6 +563,7 @@ int main(int argc, char* argv[])
 
         if (ep.topology_name == "alexnet" ||
             ep.topology_name == "vgg16" ||
+            ep.topology_name == "vgg16_train" ||
             ep.topology_name == "vgg16_face" ||
             ep.topology_name == "googlenet" ||
             ep.topology_name == "gender" ||

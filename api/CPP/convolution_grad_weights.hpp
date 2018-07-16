@@ -41,20 +41,20 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
     /// @param input Input primitive id from convolution forward pass.
     /// @param weights List of primitive ids containing weights data.
     /// @param bias List of primitive ids containing bias data. Provide empty vector if using next parameters without bias.
-    /// @param conv_grad Id of primitive which uses weights and biases updated in this primitive. This is for correct order of calculating. Leave empty if primitive is last in backward pass.
     /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution_grad_weights window should start calculations.
     /// @param dilation Defines dilation size.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
+    /// @param conv_grad Id of primitive which uses weights and biases updated in this primitive. This is for correct order of calculating. Leave empty if primitive is last in backward pass.
     convolution_grad_weights(
         const primitive_id& id,
         const primitive_id& input_grad,
         const primitive_id& input,
         const std::vector<primitive_id>& weights,
         const std::vector<primitive_id>& bias,
-        const primitive_id& conv_grad = "",
         tensor stride = { 1, 1, 1, 1 },
         tensor input_offset = { 0, 0, 0, 0 },
         tensor dilation = { 1, 1, 1, 1 },
+        const primitive_id& conv_grad = "",
         const padding& output_padding = padding()
     )
         :primitive_base(id, { input_grad, input }, output_padding)
@@ -78,19 +78,19 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
     /// @param input Input gradient primitive id.
     /// @param input Input primitive id from convolution forward pass.
     /// @param weights List of primitive ids containing weights data.
-    /// @param conv_grad Id of primitive which uses weights and biases updated in this primitive. This is for correct order of calculating. Leave empty if primitive is last in backward pass.
     /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution_grad_weights window should start calculations.
     /// @param dilation Defines dilation size.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
+    /// @param conv_grad Id of primitive which uses weights and biases updated in this primitive. This is for correct order of calculating. Leave empty if primitive is last in backward pass.
     convolution_grad_weights(
         const primitive_id& id,
         const primitive_id& input_grad,
         const primitive_id& input,
         const std::vector<primitive_id>& weights,
-        const primitive_id& conv_grad = "",
         tensor stride = { 1, 1, 1, 1 },
         tensor input_offset = { 0, 0, 0, 0 },
         tensor dilation = { 1, 1, 1, 1 },
+        const primitive_id& conv_grad = "",
         const padding& output_padding = padding()
     )
         :primitive_base(id, { input_grad, input }, output_padding)
@@ -117,10 +117,10 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
     /// @param bias List of primitive ids containing bias data. Provide empty vector if using next parameters without bias.
     /// @param prev_weights_grad List of primitive ids which contains weights gradient data calculated in previous iteration. Used in momentum optimizer.
     /// @param prev_bias_grad List of primitive ids which contains bias gradient data calculated in previous iteration. Used in momentum optimizer.
-    /// @param conv_grad Id of primitive which uses weights and biases updated in this primitive. This is for correct order of calculating. Leave empty if primitive is last in backward pass.
     /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution_grad_weights window should start calculations.
     /// @param dilation Defines dilation size.
     /// @param stride Defines shift in input buffer between adjacent calculations of output values.
+    /// @param conv_grad Id of primitive which uses weights and biases updated in this primitive. This is for correct order of calculating. Leave empty if primitive is last in backward pass.
     convolution_grad_weights(
         const primitive_id& id,
         const primitive_id& input_grad,
@@ -129,10 +129,10 @@ struct convolution_grad_weights : public primitive_base<convolution_grad_weights
         const std::vector<primitive_id>& bias,
         const std::vector<primitive_id>& prev_weights_grad,
         const std::vector<primitive_id>& prev_bias_grad,
-        const primitive_id& conv_grad = "",
         tensor stride = { 1, 1, 1, 1 },
         tensor input_offset = { 0, 0, 0, 0 },
         tensor dilation = { 1, 1, 1, 1 },
+        const primitive_id& conv_grad = "",
         const padding& output_padding = padding()
     )
         :primitive_base(id, { input_grad, input }, output_padding)

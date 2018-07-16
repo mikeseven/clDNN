@@ -15,6 +15,7 @@
 */
 
 #include "softmax_loss_grad_kernel_base.h"
+#include "kernel_selector_utils.h"
 
 namespace kernel_selector 
 {
@@ -27,13 +28,19 @@ namespace kernel_selector
     {
         CommonDispatchData runInfo;
 
-        runInfo.gws0 = 1;
-        runInfo.gws1 = 1;
-        runInfo.gws2 = 1;
+        std::vector<size_t> global = { params.output.Batch().v * params.output.X().v, 1, 1 };
 
-        runInfo.lws0 = 1;
-        runInfo.lws1 = 1;
-        runInfo.lws2 = 1;
+        auto local = GetOptimalLocalWorkGroupSizes(global);
+
+        runInfo.gws0 = global[0];
+        runInfo.gws1 = global[1];
+        runInfo.gws2 = global[2];
+
+        runInfo.lws0 = local[0];
+        runInfo.lws1 = local[1];
+        runInfo.lws2 = local[2];
+
+        runInfo.effiency = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
         runInfo.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 

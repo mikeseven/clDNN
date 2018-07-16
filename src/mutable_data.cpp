@@ -61,8 +61,7 @@ void mutable_data_node::fill_memory()
 {
     auto prim = get_primitive();
 
-    //the implementation assumes the created buffer is filled with zeroes
-    if (prim->fill_type == mutable_data::filler_type::zero)
+    if (prim->fill_type == mutable_data::filler_type::no_fill)
         return;
 
     auto memory = mem.get();
@@ -72,6 +71,9 @@ void mutable_data_node::fill_memory()
 
     switch (prim->fill_type)
     {
+    case mutable_data::filler_type::zero:
+        fill_memory_constant(0.f);
+        break;
     case mutable_data::filler_type::xavier:
         fill_memory_xavier();
         break;
@@ -93,6 +95,17 @@ void mutable_data_node::fill_memory_xavier()
     std::uniform_real_distribution<float> distribution(-scale, scale);
     for (uint32_t i = 0; i < (uint32_t)layout.count(); i++)
         out_ptr[i] = distribution(generator);
+}
+
+void mutable_data_node::fill_memory_constant(float value)
+{
+    auto memory = mem.get();
+    auto layout = memory->get_layout();
+    mem_lock<float> lock(mem);
+    auto out_ptr = lock.begin();
+
+    for (uint32_t i = 0; i < (uint32_t)layout.count(); i++)
+        out_ptr[i] = value;
 }
 
 std::string mutable_data_inst::to_string(mutable_data_node const& node)

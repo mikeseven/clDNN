@@ -59,7 +59,7 @@ KERNEL(fully_connected_grad_weights_gpu_ref)(
     }
 
 #if MOMENTUM
-    UNIT_TYPE update_gradient_w = lr * (grad_w + prev_grad_w[filter_idx] * ALPHA) + DECAY_RATE * lr * weights[filter_idx];
+    UNIT_TYPE update_gradient_w = lr * (grad_w + prev_grad_w[filter_idx] * ALPHA + DECAY_RATE * weights[filter_idx]);
     weights[filter_idx] -= update_gradient_w;
     prev_grad_w[filter_idx] = update_gradient_w;
 #else

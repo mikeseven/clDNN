@@ -40,6 +40,7 @@ struct mutable_data : public primitive_base<mutable_data, CLDNN_PRIMITIVE_DESC(m
     /// @brief Enum type to specify function for data filling.
     enum filler_type
     {
+        no_fill,
         zero,
         xavier
     };
@@ -49,7 +50,7 @@ struct mutable_data : public primitive_base<mutable_data, CLDNN_PRIMITIVE_DESC(m
     /// @param mem @ref memory object which contains data.
     /// @param filler_type @ref data filling function, default is zero
     /// @note If memory is attached by memory::attach(), the attached buffer should be valid till network build.
-    mutable_data(const primitive_id& id, const memory& mem, filler_type fill_type = filler_type::zero)
+    mutable_data(const primitive_id& id, const memory& mem, filler_type fill_type = filler_type::no_fill)
         :primitive_base(id, {}, padding())
         , mem(mem)
         , fill_type(fill_type)

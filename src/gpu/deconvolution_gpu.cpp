@@ -66,11 +66,6 @@ public:
         const auto& primitive = arg.get_primitive();
         const auto& weights_layout = arg.weights(0).get_output_layout();
 
-        if(primitive->gradient())
-            assert(arg.get_output_layout().size.feature[0] / arg.get_primitive()->split() == weights_layout.size.feature[0]);
-        else
-            assert(arg.get_output_layout().size.feature[0] / arg.get_primitive()->split() == weights_layout.size.batch[0]);
-
         switch (weights_layout.fused_format())
         {
             // FP32 (float)

@@ -29,8 +29,5 @@ namespace kernel_selector
 
         KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         ParamsKey GetSupportedKey() const override;
-
-    protected:
-        CommonDispatchData SetDefault(const softmax_loss_grad_params& params, const optional_params& optParams) const override;
     };
 }

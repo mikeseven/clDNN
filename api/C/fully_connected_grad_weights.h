@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,9 +38,9 @@ cldnn_primitive_id weights;
 cldnn_primitive_id bias;
 /// @brief Primitive id containing fully connected gradient data. Used for proper order of gradient calculation. Leave empty if primitive is last in backward pass.
 cldnn_primitive_id fc_grad;
-/// @brief Primitive id containing weight gradient calculated in previous iteration. Memory should be same as weights.
+/// @brief Primitive id containing weight gradient calculated in previous iteration. Memory size should be same as weights.
 cldnn_primitive_id prev_weights_grad;
-/// @brief Primitive id containing bias gradient calculated in previous iteration. Memory should be same as bias.
+/// @brief Primitive id containing bias gradient calculated in previous iteration. Memory size should be same as bias.
 cldnn_primitive_id prev_bias_grad;
 CLDNN_END_PRIMITIVE_DESC(fully_connected_grad_weights)
 

@@ -62,7 +62,7 @@ TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_p
         data("input", input),
         mutable_data("weights", weights),
         mutable_data("biases", biases),
-        convolution_grad_weights("conv_grad_weights", "input_grad", "input", { "weights" }, { "biases" }, "", { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
+        convolution_grad_weights("conv_grad_weights", "input_grad", "input", { "weights" }, { "biases" }, { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
     );
 
     network network(engine, topology);
@@ -138,7 +138,7 @@ TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz2x2_in8x1x2x2_bfyx_stride2_p
         data("input", input),
         mutable_data("weights", weights),
         mutable_data("biases", biases),
-        convolution_grad_weights("conv_grad_weights", "input_grad", "input", { "weights" }, { "biases" }, "", { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
+        convolution_grad_weights("conv_grad_weights", "input_grad", "input", { "weights" }, { "biases" }, { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
     );
 
     network network(engine, topology);
@@ -208,7 +208,7 @@ TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_p
         input_layout("input_grad", input_grad.get_layout()),
         data("input", input),
         mutable_data("weights", weights),
-        convolution_grad_weights("conv_grad_weights", "input_grad", "input", { "weights" }, "", { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
+        convolution_grad_weights("conv_grad_weights", "input_grad", "input", { "weights" }, { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
     );
 
     network network(engine, topology);
@@ -258,7 +258,7 @@ TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_p
     //  0
 
     engine engine;
-    float lr = 0.00001f;
+    float lr = 0.001f;
     auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 2 } });
 
     auto weights = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 2 } });
@@ -275,11 +275,12 @@ TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_p
         mutable_data("biases", biases),
         convolution("conv", "input_reordered", { "weights" }, { "biases" }, { 1, 1, 1, 1 }, { 0, 0, -1, -1 }),
         convolution_grad_input("conv_grad_input", "conv", { "weights" }, { 1, 1, 1, 1 }, { 0, 0, -1, -1 }),
-        convolution_grad_weights("conv_grad_weights", "conv", "input_reordered", { "weights" }, { "biases" }, "", { 1, 1, 1, 1 }, { 0, 0, -1, -1 })
+        convolution_grad_weights("conv_grad_weights", "conv", "input_reordered", { "weights" }, { "biases" }, { 1, 1, 1, 1 }, { 0, 0, -1, -1 })
     );
 
     network network(engine, topology);
     network.set_input_data("input", input);
+    network.set_learning_rate(lr);
 
     auto outputs = network.execute();
 
@@ -347,7 +348,7 @@ TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_p
         mutable_data("biases", biases),
         mutable_data("weights2", weights2),
         mutable_data("biases2", biases2),
-        convolution_grad_weights("conv_grad_weights", "input_grad", "input", { "weights", "weights2" }, { "biases", "biases2" }, "", { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
+        convolution_grad_weights("conv_grad_weights", "input_grad", "input", { "weights", "weights2" }, { "biases", "biases2" }, { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
     );
 
     network network(engine, topology);

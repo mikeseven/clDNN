@@ -39,27 +39,6 @@ namespace kernel_selector
         return k;
     }
 
-    CommonDispatchData SoftmaxLossGradKernelRef::SetDefault(const softmax_loss_grad_params& params, const optional_params& optParams) const
-    {
-        auto runInfo = Parent::SetDefault(params, optParams);
-
-        std::vector<size_t> global = { params.output.Batch().v * params.output.X().v, 1, 1 };
-
-        auto local = GetOptimalLocalWorkGroupSizes(global);
-
-        runInfo.gws0 = global[0];
-        runInfo.gws1 = global[1];
-        runInfo.gws2 = global[2];
-
-        runInfo.lws0 = local[0];
-        runInfo.lws1 = local[1];
-        runInfo.lws2 = local[2];
-
-        runInfo.effiency = DONT_USE_IF_HAVE_SOMETHING_ELSE;
-
-        return runInfo;
-    }
-
     KernelsData SoftmaxLossGradKernelRef::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options);

@@ -40,7 +40,6 @@ using namespace cldnn;
 // Building lenet network with loading weights & biases from file
 cldnn::topology build_lenet(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)
 {
-    // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
     input_layout.size = { batch_size, 1, 28, 28 };
     auto input = cldnn::input_layout("input", input_layout);
 
@@ -312,10 +311,10 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         { conv2_b },
         { conv2_w_prev },
         { conv2_b_prev },
-        conv2_grad_input,
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
-        { 1, 1, 1, 1 });
+        { 1, 1, 1, 1 },
+        conv2_grad_input);
     
     auto pool1_grad = max_unpooling("pool1_grad",
         conv2_grad_input,
@@ -334,7 +333,6 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         { conv1_b },
         { conv1_w_prev },
         { conv1_b_prev },
-        "",
         { 1, 1, 1, 1 },
         { 0, 0, 0, 0 },
         { 1, 1, 1, 1 });
