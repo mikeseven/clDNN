@@ -3062,7 +3062,7 @@ void program_impl::dump_weights_and_biasses(std::vector<unsigned long long>& off
 			auto& dependency = n.second.get()->get_dependency(dp);
 			if (dependency.is_type<data>())
 			{
-				offsets.push_back(offsets.back());
+				offsets.push_back(offsets.empty() ? 0ull : offsets.back());
 				auto& mem = dependency.as<data>().get_attached_memory();
 				if (mem.get_layout().data_type == data_types::f32)
 					dump_data(mem, file_stream, offsets.back(), sizeof(float));

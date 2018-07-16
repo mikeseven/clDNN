@@ -161,11 +161,16 @@ namespace cldnn
 			out << node->type()->to_string(*node);
 			if (serialize)
 			{
-				auto iter = -1;
+				auto iter = 0;
 				for (auto& name : data_names) {
+					if (name == node->id()) 
+					{
+						if (iter == 0)
+							out << "data offsets: [0 : " << offsets.at(iter) << "]";
+						else
+							out << "data offsets: [" << offsets.at(iter - 1) << " : " << offsets.at(iter) << "]";
+					}
 					iter++;
-					if (name == node->id())
-						out << "data offsets: [" << offsets.at(iter - 1) << " : " << offsets.at(iter) << "]";
 				}
 			}
 		}
@@ -351,7 +356,7 @@ namespace cldnn
 	{
 		if (serialize)
 		{
-			for (unsigned int postion = 0; postion < data_names.size(); postion++)
+			for (unsigned int postion = 0; postion < (unsigned int)data_names.size(); postion++)
 				if (data_names.at(postion).find("kernels_part")!=std::string::npos)
 				{
 					if (postion == 0)
