@@ -19,10 +19,10 @@
 
 
 /**
- * \brief Builds ALEXNET topology
- * \param input_layout - will be set to the layout of the "input" primitive
- * \return topology for Alexnet network where final primitive has id "output"
- */
+* \brief Builds ALEXNET topology
+* \param input_layout - will be set to the layout of the "input" primitive
+* \return topology for Alexnet network where final primitive has id "output"
+*/
 cldnn::topology build_alexnet(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size);
 
 cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size);
