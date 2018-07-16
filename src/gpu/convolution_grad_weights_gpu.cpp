@@ -93,28 +93,28 @@ public:
         auto conv_grad_weights_params = get_weights_bias_default_params<kernel_selector::convolution_grad_weights_params>(arg, depthwise_separable_opt ? 1 : split);
         auto conv_grad_weights_optional_params = get_default_weights_bias_optional_params<kernel_selector::convolution_grad_weights_optional_params>(arg.get_program());
 
-        conv_grad_weights_params.convGradWeightsParams.depthwiseSeparableOpt = depthwise_separable_opt;
+        conv_grad_weights_params.depthwiseSeparableOpt = depthwise_separable_opt;
 
         conv_grad_weights_params.gradient = true;
         conv_grad_weights_params.inputs.push_back(convert_data_tensor(arg.get_dependency(1).get_output_layout()));
 
-        conv_grad_weights_params.convGradWeightsParams.split = split;
-        conv_grad_weights_params.convGradWeightsParams.filterSize = {
+        conv_grad_weights_params.split = split;
+        conv_grad_weights_params.filterSize = {
             (uint32_t)weights_size.spatial[0],
             (uint32_t)weights_size.spatial[1],
         };
 
-        conv_grad_weights_params.convGradWeightsParams.padding = {
+        conv_grad_weights_params.padding = {
             (uint32_t)std::max(-input_offset.spatial[0], 0),
             (uint32_t)std::max(-input_offset.spatial[1], 0)
         };
 
-        conv_grad_weights_params.convGradWeightsParams.stride = {
+        conv_grad_weights_params.stride = {
             (uint32_t)stride.spatial[0],
             (uint32_t)stride.spatial[1]
         };
 
-        conv_grad_weights_params.convGradWeightsParams.dilation = {
+        conv_grad_weights_params.dilation = {
             (uint32_t)dilation.spatial[0],
             (uint32_t)dilation.spatial[1]
         };

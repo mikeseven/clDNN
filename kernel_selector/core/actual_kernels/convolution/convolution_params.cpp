@@ -32,11 +32,11 @@ namespace kernel_selector
         {
             s << "bias_" << bias[0].PhysicalSize() << "_";
         }
-        s << convParams.filterSize.x << "_" << convParams.filterSize.y << "_";
-        s << convParams.stride.x << "_" << convParams.stride.y << "_";
-        s << convParams.dilation.x << "_" << convParams.dilation.y << "_";
-        s << convParams.padding.x << "_" << convParams.padding.y << "_";
-        s << convParams.split;
+        s << filterSize.x << "_" << filterSize.y << "_";
+        s << stride.x << "_" << stride.y << "_";
+        s << dilation.x << "_" << dilation.y << "_";
+        s << padding.x << "_" << padding.y << "_";
+        s << split;
 
         return s.str();
     }
@@ -45,33 +45,33 @@ namespace kernel_selector
     {
         ParamsKey k = weight_bias_params::GetParamsKey();
 
-        if (convParams.split > 1)
+        if (split > 1)
         {
             k.EnableSplitSupport();
         }
 
-        if (convParams.dilation.x != 1 ||
-            convParams.dilation.y != 1)
+        if (dilation.x != 1 ||
+            dilation.y != 1)
         {
             k.EnableDilation();
         }
 
-        if (convParams.depthwiseSeparableOpt)
+        if (depthwiseSeparableOpt)
         {
             k.EnableDepthwiseSeparableOpt();
         }
 
-        if (convParams.transposed)
+        if (transposed)
         {
             k.EnableTranspose();
         }
 
-        if (convParams.int8_quantization)
+        if (int8_quantization)
         {
             k.EnableInt8Quantization();
         }
 
-        if (convParams.output_calibration)
+        if (output_calibration)
         {
             k.EnableOutputCalibration();
         }

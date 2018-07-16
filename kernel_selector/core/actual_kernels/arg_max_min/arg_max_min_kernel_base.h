@@ -26,21 +26,16 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct arg_max_min_params : public base_params
     {
-        arg_max_min_params() : base_params(KernelType::ARG_MAX_MIN), argMaxParams() {}
+        arg_max_min_params() : base_params(KernelType::ARG_MAX_MIN) {}
 
-        struct DedicatedParams
-        {
-            ArgMaxMinAxis	argMaxMinAxis = ArgMaxMinAxis::XYF;
-            ArgMaxMinOut	argMaxMinOut = ArgMaxMinOut::MAX;
-            uint32_t		topK = 1;
-        };
-
-        DedicatedParams argMaxParams;
+        ArgMaxMinAxis	argMaxMinAxis = ArgMaxMinAxis::XYF;
+        ArgMaxMinOut	argMaxMinOut = ArgMaxMinOut::MAX;
+        uint32_t		topK = 1;
 
         virtual ParamsKey GetParamsKey() const
         {
             ParamsKey k = base_params::GetParamsKey();
-            k.EnableArgMaxMinAxis(argMaxParams.argMaxMinAxis);
+            k.EnableArgMaxMinAxis(argMaxMinAxis);
 
             return k;
         }

@@ -22,10 +22,8 @@ namespace kernel_selector
     {
         JitConstants mem_consts = MakeBaseParamsJitConstants(params);
 
-        const auto& sm = params.smParams;
-
         mem_consts.AddConstants({
-            MakeJitConstant("ALONG_" + toString(sm.dim), "")
+            MakeJitConstant("ALONG_" + toString(params.dim), "")
         });
 
         mem_consts.AddConstants({
@@ -118,7 +116,7 @@ namespace kernel_selector
             return true;
         }
 
-        switch (params.smParams.dim)
+        switch (params.dim)
         {
         case SoftmaxDim::X:         return input.Y().v == 1 && input.Feature().v == 1;
         case SoftmaxDim::Y:         return input.X().v == 1 && input.Feature().v == 1;

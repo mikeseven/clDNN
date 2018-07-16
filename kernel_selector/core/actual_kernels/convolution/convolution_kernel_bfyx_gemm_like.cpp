@@ -64,7 +64,7 @@ namespace kernel_selector
             MakeJitConstant("ALIGNED_OFM",                  RoundUp(params.output.Feature().v, runInfo.gemmStyle.subBlockDimN)),
             MakeJitConstant("DX",                           runInfo.gemmStyle.globalWorkSizeDX),
             MakeJitConstant("DY",                           runInfo.gemmStyle.globalWorkSizeDY),
-            MakeJitConstant("FILTER_SIZE_X_DIV2",           params.convParams.filterSize.x / 2),
+            MakeJitConstant("FILTER_SIZE_X_DIV2",           params.filterSize.x / 2),
             MakeJitConstant("INPUT_BUFFER_WIDTH_PADDED",    ""),    // TODO: enable non padding path again
             MakeJitConstant("INPUT_BUFFER_HEIGHT_PADDED",   ""),
         });
@@ -79,20 +79,18 @@ namespace kernel_selector
     {
         DispatchData runInfo = Parent::SetDefault(arg, autoTuneIndex);
 
-        const auto& cp = arg.convParams;
-
         runInfo.lws0 = 1;
         runInfo.lws2 = 1;
 
         if (arg.inputs[0].GetDType() == Datatype::F16)
         {
-            runInfo.gemmStyle = { 1, cp.filterSize.x, 32, 32, 1, 1 };
+            runInfo.gemmStyle = { 1, arg.filterSize.x, 32, 32, 1, 1 };
             runInfo.lws1 = 16;
             runInfo.effiency = FORCE_PRIORITY_6;
         }
         else
         {
-            runInfo.gemmStyle = { 2, cp.filterSize.x, 32, 32, 2, 1 };
+            runInfo.gemmStyle = { 2, arg.filterSize.x, 32, 32, 2, 1 };
             runInfo.lws1 = 8;
             runInfo.effiency = FORCE_PRIORITY_8;
         }

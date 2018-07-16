@@ -27,21 +27,21 @@ namespace kernel_selector
         const auto x_size = input.LogicalSize() / input.Batch().v;
 
         jit.AddConstant(MakeJitConstant("INPUT0_ELEMENTS_COUNT", x_size));
-        jit.AddConstant(MakeJitConstant("QUANTIZATION_TERM", params.fcParams.int8_quantization));
+        jit.AddConstant(MakeJitConstant("QUANTIZATION_TERM", params.int8_quantization));
 
-        if (params.fcParams.int8_quantization)
+        if (params.int8_quantization)
         {
             jit.AddConstants({ MakeJitConstant("W_QF", params.weights_quantization_factors[0]) });
-            jit.AddConstants({ MakeJitConstant("I_QF",params.fcParams.input_quantization_factor) });
+            jit.AddConstants({ MakeJitConstant("I_QF",params.input_quantization_factor) });
 
-            if (params.fcParams.output_calibration)
+            if (params.output_calibration)
             {
-                jit.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.fcParams.output_calibration));
+                jit.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.output_calibration));
                 jit.AddConstant(MakeJitConstant("O_QF", params.output_calibration_factors[0]));
 
             }
             else
-                jit.AddConstants({ MakeJitConstant("O_QF",       params.fcParams.output_quantization_factor) });
+                jit.AddConstants({ MakeJitConstant("O_QF",       params.output_quantization_factor) });
         }
 
         return jit;
@@ -122,7 +122,7 @@ namespace kernel_selector
         std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
         auto& kernel = kd.kernels[0];
-        FillCLKernelData(kernel, *runInfo.get(), kernelName, jit, entry_point, ROUND_ROBIN, true, !orgParams.bias.empty(), 1, newParams.fcParams.int8_quantization, newParams.fcParams.output_calibration);
+        FillCLKernelData(kernel, *runInfo.get(), kernelName, jit, entry_point, ROUND_ROBIN, true, !orgParams.bias.empty(), 1, newParams.int8_quantization, newParams.output_calibration);
 
         kd.estimatedTime = estimated_time;
         kd.autoTuneIndex = -1;

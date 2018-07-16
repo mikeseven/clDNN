@@ -32,21 +32,20 @@ namespace kernel_selector
         {
             s << "bias_size:" << bias[0].PhysicalSize() << "_";
         }
-        s << deconvParams.filterSize.x << "_" << deconvParams.filterSize.y << "_";
-        s << deconvParams.stride.x << "_" << deconvParams.stride.y << "_";
-        s << deconvParams.dilation.x << "_" << deconvParams.dilation.y << "_";
-        s << deconvParams.padding.x << "_" << deconvParams.padding.y << "_";
-        s << deconvParams.split;
+        s << filterSize.x << "_" << filterSize.y << "_";
+        s << stride.x << "_" << stride.y << "_";
+        s << dilation.x << "_" << dilation.y << "_";
+        s << padding.x << "_" << padding.y << "_";
+        s << split;
 
         return s.str();
     }
 
-    JitConstants DeconvolutionKernelBase::GetJitConstants(const deconvolution_params& params) const
+    JitConstants DeconvolutionKernelBase::GetJitConstants(const deconvolution_params& dp) const
     {
-        JitConstants jit = WeightBiasKernelBase::GetJitConstants(params);
-        const auto& dp = params.deconvParams;
+        JitConstants jit = WeightBiasKernelBase::GetJitConstants(dp);
         const auto& padding = dp.padding;
-        const auto& input = params.inputs[0];
+        const auto& input = dp.inputs[0];
 
         int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - (dp.filterSize.x - 1 + padding.x)*input.X().pitch - (dp.filterSize.y - 1 + padding.y)*input.Y().pitch;
         input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);

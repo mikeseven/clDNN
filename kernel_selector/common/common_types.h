@@ -27,6 +27,8 @@ namespace kernel_selector
     {
         UNKNOWN,
 		ARG_MAX_MIN,
+        AVERAGE_UNPOOLING,
+        BATCH_NORM_GRAD,
         LOOKUP_TABLE,
         CONVOLUTION,
         DECONVOLUTION,

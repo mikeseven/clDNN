@@ -44,6 +44,8 @@ CLDNN_BEGIN_PRIMITIVE_DESC(batch_norm)
 cldnn_primitive_id mean;
 /// @brief Primitive id containing variance.
 cldnn_primitive_id variance;
+/// @brief Primitive id containing inverted variance used in future gradient computing.
+cldnn_primitive_id inv_variance;
 /// @brief Epsilon.
 float epsilon;
 CLDNN_END_PRIMITIVE_DESC(batch_norm)

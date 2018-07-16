@@ -40,7 +40,7 @@ namespace kernel_selector
     static unsigned int GetOfmPerSimd(const lrn_params& params)
     {
         const auto &output = params.output;
-        const auto local_size = params.lrnParams.localSize;
+        const auto local_size = params.localSize;
 
         if ((output.Feature().v % 8 == 0) && local_size > 4)
         {
@@ -101,7 +101,7 @@ namespace kernel_selector
         }
 
         const lrn_params& params = static_cast<const lrn_params&>(p);
-        if (params.lrnParams.localSize > 32)
+        if (params.localSize > 32)
         {
             return false;
         }

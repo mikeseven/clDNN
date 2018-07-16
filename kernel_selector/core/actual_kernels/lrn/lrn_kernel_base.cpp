@@ -33,23 +33,21 @@ namespace kernel_selector
     {
         JitConstants mem_consts = MakeBaseParamsJitConstants(params);
 
-        const auto& np = params.lrnParams;
-
-        const auto padding = (np.localSize - 1) / 2;
+        const auto padding = (params.localSize - 1) / 2;
 
         mem_consts.AddConstants({
-            MakeJitConstant("LOCAL_SIZE",   np.localSize),
+            MakeJitConstant("LOCAL_SIZE",   params.localSize),
             MakeJitConstant("PADDING",      padding),
-            MakeJitConstant("ALPHA",        np.alpha),
-            MakeJitConstant("BETA",         np.beta),
-            MakeJitConstant("K",            np.k),
-            MakeJitConstant(toString(np.divMode) + "_KERNEL_DIVIDER", ""),
-            MakeJitConstant(toString(np.normMode), ""),
+            MakeJitConstant("ALPHA",        params.alpha),
+            MakeJitConstant("BETA",         params.beta),
+            MakeJitConstant("K",            params.k),
+            MakeJitConstant(toString(params.divMode) + "_KERNEL_DIVIDER", ""),
+            MakeJitConstant(toString(params.normMode), ""),
         });
 
         //auto pad = (np.localSize) / 2;
-        auto alpha = np.alpha;
-        auto alpha_div_by_size = alpha / np.localSize;
+        auto alpha = params.alpha;
+        auto alpha_div_by_size = alpha / params.localSize;
         auto alpha_sign = std::signbit(alpha) ? -1.0f : 1.0f;
         // When used FP16 the value cannot be scaled afterwards by alpha (it must be scaled before computing sum of squares).
         auto alpha_abs_sqrt = std::sqrt(std::abs(alpha));

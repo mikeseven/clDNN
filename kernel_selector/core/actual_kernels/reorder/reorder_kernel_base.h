@@ -28,25 +28,20 @@ namespace kernel_selector
     {
         reorder_params() : base_params(KernelType::REORDER) {}
 
-        struct DedicatedParams
-        {
-            MeanSubtractMode    mode = MeanSubtractMode::NONE;
-            MeanOp              mean_op = MeanOp::SUB;
-            std::vector<float>  meanValues;
-            DataTensor          mean;
-            uint32_t            winograd_input_offset_x;
-            uint32_t            winograd_input_offset_y;
-            uint32_t            winograd_nr_tiles_x;
-            bool                winograd = false;
-        };
-
-        DedicatedParams reorderParams;
+        MeanSubtractMode    mode = MeanSubtractMode::NONE;
+        MeanOp              mean_op = MeanOp::SUB;
+        std::vector<float>  meanValues;
+        DataTensor          mean;
+        uint32_t            winograd_input_offset_x;
+        uint32_t            winograd_input_offset_y;
+        uint32_t            winograd_nr_tiles_x;
+        bool                winograd = false;
 
         virtual ParamsKey GetParamsKey() const
         {
             auto k = base_params::GetParamsKey();
 
-            if (reorderParams.winograd)
+            if (winograd)
             {
                 k.EnableWinogradReorder();
             }
@@ -67,22 +62,15 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct reorder_weights_params : public Params
     {
-        reorder_weights_params() : Params(KernelType::REORDER, ""), reorderParams() {}
+        reorder_weights_params() : Params(KernelType::REORDER, "") {}
 
-        struct DedicatedParams
-        {
-            WeightsTensor input;
-            WeightsTensor output;
-            bool winograd = false;
-        };
-
-        DedicatedParams reorderParams;
+        WeightsTensor input;
+        WeightsTensor output;
+        bool winograd = false;
 
         virtual ParamsKey GetParamsKey() const
         {
             ParamsKey k;
-            const auto& input = reorderParams.input;
-            const auto& output = reorderParams.output;
             k.EnableInputWeightsType(input.GetDType());
             k.EnableOutputWeightsType(output.GetDType());
             k.EnableInputWeightsLayout(input.GetLayout());
@@ -99,7 +87,7 @@ namespace kernel_selector
                 k.EnableTensorOffset();
             }
 
-            if (reorderParams.winograd)
+            if (winograd)
             {
                 k.EnableWinogradReorder();
             }

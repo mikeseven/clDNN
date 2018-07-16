@@ -27,19 +27,14 @@ namespace kernel_selector
     {
         upsampling_params() : base_params(KernelType::UPSAMPLING) {}
 
-        struct DedicatedParams
-        {
-            uint32_t scale = 1;
-            uint32_t num_filter = 0;
-            SampleType sampleType = SampleType::NEAREST;
-        };
-
-        DedicatedParams usParams;
-
+        uint32_t scale = 1;
+        uint32_t num_filter = 0;
+        SampleType sampleType = SampleType::NEAREST;
+        
         virtual ParamsKey GetParamsKey() const
         {
             auto k = base_params::GetParamsKey();
-            k.EnableUpSamplingSampleType(usParams.sampleType);
+            k.EnableUpSamplingSampleType(sampleType);
             return k;
         }
     };

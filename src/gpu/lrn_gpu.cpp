@@ -37,12 +37,12 @@ struct lrn_gpu : typed_primitive_gpu_impl<lrn>
 
         const auto& primitive = arg.get_primitive();
 
-        lrn_params.lrnParams.alpha      = primitive->alpha;
-        lrn_params.lrnParams.beta       = primitive->beta;
-        lrn_params.lrnParams.k          = primitive->k;
-        lrn_params.lrnParams.localSize  = primitive->size;
-        lrn_params.lrnParams.divMode    = kernel_selector::kernel_divider_mode::FIXED;
-        lrn_params.lrnParams.normMode   = 
+        lrn_params.alpha      = primitive->alpha;
+        lrn_params.beta       = primitive->beta;
+        lrn_params.k          = primitive->k;
+        lrn_params.localSize  = primitive->size;
+        lrn_params.divMode    = kernel_selector::kernel_divider_mode::FIXED;
+        lrn_params.normMode   = 
             primitive->norm_region == cldnn_lrn_norm_region_within_channel ? 
             kernel_selector::lrn_mode::WITHIN_CHANNEL :
             kernel_selector::lrn_mode::ACROSS_CHANNEL;

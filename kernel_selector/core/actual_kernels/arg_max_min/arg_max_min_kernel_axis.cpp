@@ -22,7 +22,7 @@ namespace kernel_selector
         k.EnableInputDataType(Datatype::F16);
         k.EnableInputDataType(Datatype::F32);
         k.EnableInputDataType(Datatype::INT8);
-        k.EnableOutputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F32);  //We support only f32, look into arg_max_min.hpp for more informations.
         k.EnableInputLayout(DataLayout::bfyx);
         k.EnableOutputLayout(DataLayout::bfyx);
         k.EnableArgMaxMinAxis(ArgMaxMinAxis::BATCH);
@@ -47,19 +47,19 @@ namespace kernel_selector
         runInfo.fp16UnitUsed = orgParams.inputs[0].GetDType() == Datatype::F16;
 
         runInfo.gws0 = 128;
-        if (orgParams.argMaxParams.argMaxMinAxis == ArgMaxMinAxis::BATCH) {
+        if (orgParams.argMaxMinAxis == ArgMaxMinAxis::BATCH) {
             runInfo.gws1 = orgParams.inputs[0].X().v;
             runInfo.gws2 = orgParams.inputs[0].Feature().v * orgParams.inputs[0].Y().v; 
         }
-        else if (orgParams.argMaxParams.argMaxMinAxis == ArgMaxMinAxis::FEATURE) {
+        else if (orgParams.argMaxMinAxis == ArgMaxMinAxis::FEATURE) {
             runInfo.gws1 = orgParams.inputs[0].X().v;
             runInfo.gws2 = orgParams.inputs[0].Batch().v * orgParams.inputs[0].Y().v;
         }
-        else if (orgParams.argMaxParams.argMaxMinAxis == ArgMaxMinAxis::Y) {
+        else if (orgParams.argMaxMinAxis == ArgMaxMinAxis::Y) {
             runInfo.gws1 = orgParams.inputs[0].X().v;
             runInfo.gws2 = orgParams.inputs[0].Feature().v * orgParams.inputs[0].Batch().v;
         }
-        else if (orgParams.argMaxParams.argMaxMinAxis == ArgMaxMinAxis::X) {
+        else if (orgParams.argMaxMinAxis == ArgMaxMinAxis::X) {
             runInfo.gws1 = orgParams.inputs[0].Y().v;
             runInfo.gws2 = orgParams.inputs[0].Feature().v * orgParams.inputs[0].Batch().v;
         }

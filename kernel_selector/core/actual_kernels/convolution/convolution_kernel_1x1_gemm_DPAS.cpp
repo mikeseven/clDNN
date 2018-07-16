@@ -51,13 +51,13 @@ namespace kernel_selector {
 
         const auto& params = static_cast<const convolution_params&>(p);
 
-        if (params.convParams.filterSize.x != 1 || params.convParams.filterSize.y != 1)
+        if (params.filterSize.x != 1 || params.filterSize.y != 1)
             return false;
 
-        if (params.convParams.stride.x != 1 || params.convParams.stride.y != 1)
+        if (params.stride.x != 1 || params.stride.y != 1)
             return false;
 
-        if (params.convParams.padding.x != 0 || params.convParams.padding.y != 0)
+        if (params.padding.x != 0 || params.padding.y != 0)
             return false;
 
         const auto& input = params.inputs[0];
@@ -66,7 +66,7 @@ namespace kernel_selector {
         if (input.X().pad.Total() != 0 || input.Y().pad.Total() != 0)
             return false;
 
-        if (params.convParams.split != 1)
+        if (params.split != 1)
             return false;
 
         return true;

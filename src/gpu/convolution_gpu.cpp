@@ -94,42 +94,42 @@ public:
         if(primitive->with_activation)
             convert_activation_func_params(primitive, conv_params);
 
-        conv_params.convParams.depthwiseSeparableOpt = depthwise_separable_opt;
-        conv_params.convParams.transposed = transposed;
+        conv_params.depthwiseSeparableOpt = depthwise_separable_opt;
+        conv_params.transposed = transposed;
 
-        conv_params.convParams.split = split;
-        conv_params.convParams.filterSize = {
+        conv_params.split = split;
+        conv_params.filterSize = {
             (uint32_t)weights_size.spatial[0],
             (uint32_t)weights_size.spatial[1],
         };
 
-        conv_params.convParams.padding = {
+        conv_params.padding = {
             (uint32_t)std::max(-input_offset.spatial[0], 0),
             (uint32_t)std::max(-input_offset.spatial[1], 0)
         };
 
-        conv_params.convParams.stride = {
+        conv_params.stride = {
             (uint32_t)std::min(stride.spatial[0], input_size.spatial[0]),
             (uint32_t)std::min(stride.spatial[1], input_size.spatial[1])
         };
-        conv_params.convParams.dilation = {
+        conv_params.dilation = {
             (uint32_t)std::min(dilation.spatial[0], input_size.spatial[0]),
             (uint32_t)std::min(dilation.spatial[1], input_size.spatial[1])
         };
         
         if (primitive->weights_quantization_factors.size() > 0)
         {
-            conv_params.convParams.int8_quantization = true;
+            conv_params.int8_quantization = true;
             conv_params.weights_quantization_factors.push_back(convert_data_tensor(arg.weights_quantization_factors().get_output_layout()).FlattenFeatureAndSpatials());
-            conv_params.convParams.input_quantization_factor = arg.get_input_qf();
+            conv_params.input_quantization_factor = arg.get_input_qf();
 
             if (primitive->output_calibration_factors.size() > 0)
             {
-                conv_params.convParams.output_calibration = true;
+                conv_params.output_calibration = true;
                 conv_params.output_calibration_factors.push_back(convert_data_tensor(arg.output_calibration_factors().get_output_layout()).FlattenFeatureAndSpatials());
             }
             else
-                conv_params.convParams.output_quantization_factor = arg.get_output_qf();
+                conv_params.output_quantization_factor = arg.get_output_qf();
         }
 
         auto& kernel_selector = kernel_selector::convolution_kernel_selector::Instance();

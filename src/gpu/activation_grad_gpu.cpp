@@ -65,7 +65,7 @@ struct activation_grad_gpu : typed_primitive_gpu_impl<activation_grad>
 
             CLDNN_ERROR_LESS_THAN(arg.id(), "Slope layout size count", slope_layout.size.count(), "output_layout.size.feature[0] * params_num", static_cast<size_t>(output_layout.size.feature[0] * params_num), "Error - not enough data inside additional params buffer");
 
-            activation_grad_params.actParams.inputActivationParams.push_back(convert_data_tensor(slope_layout));
+            activation_grad_params.inputActivationParams.push_back(convert_data_tensor(slope_layout));
         }
 
         auto& kernel_selector = kernel_selector::activation_kernel_selector::Instance();

@@ -84,11 +84,11 @@ public:
         const auto roi_bf = roi_bfyx.FlattenFeatureAndSpatials();
         roi_params.inputs.push_back(roi_bf);
         roi_params.output = { out.GetDims(), out.GetDType(), kernel_selector::data_layout::brfyx, out.GetViewOffset(), out.PhysicalSize(), out.GetPaddedVal() }; // TOOD: it's an hack - cldnn doesn't support roi pooling with batching
-        roi_params.roiParams.mode         = primitive->mode == pooling_mode::max ? kernel_selector::pool_type::MAX : kernel_selector::pool_type::AVG;
-        roi_params.roiParams.pooledWidth  = primitive->pooled_width;
-        roi_params.roiParams.pooledHeight = primitive->pooled_height;
-        roi_params.roiParams.spatialScale = primitive->spatial_scale;
-        roi_params.roiParams.groupSize    = group_sz;
+        roi_params.mode         = primitive->mode == pooling_mode::max ? kernel_selector::pool_type::MAX : kernel_selector::pool_type::AVG;
+        roi_params.pooledWidth  = primitive->pooled_width;
+        roi_params.pooledHeight = primitive->pooled_height;
+        roi_params.spatialScale = primitive->spatial_scale;
+        roi_params.groupSize    = group_sz;
 
         auto& kernel_selector = kernel_selector::roi_pooling_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(roi_params, roi_optional_params);

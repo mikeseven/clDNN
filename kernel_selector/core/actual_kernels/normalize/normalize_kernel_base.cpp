@@ -19,11 +19,9 @@
 
 namespace kernel_selector 
 {
-    JitConstants NormalizeKernelBase::GetJitConstants(const normalize_params& params) const
+    JitConstants NormalizeKernelBase::GetJitConstants(const normalize_params& np) const
     {
-        JitConstants jit = MakeBaseParamsJitConstants(params);
-
-        const auto& np = params.normParams;
+        JitConstants jit = MakeBaseParamsJitConstants(np);
 
         jit.AddConstants({
             MakeJitConstant("SCALE_TABLE",          np.scaleTable),
@@ -45,7 +43,7 @@ namespace kernel_selector
 
         std::vector<size_t> global(3);
 
-        if (params.normParams.normMode == NormalizeMode::WITHIN_SPATIAL)
+        if (params.normMode == NormalizeMode::WITHIN_SPATIAL)
         {
             global = { output.X().v, output.Y().v, output.Batch().v };
         }

@@ -27,16 +27,11 @@ namespace kernel_selector
     {
         roi_pooling_params() : base_params(KernelType::ROI_POOLING) {}
 
-        struct DedicatedParams
-        {
-            PoolType    mode = PoolType::MAX;
-            size_t      pooledWidth = 0;
-            size_t      pooledHeight = 0;
-            size_t      groupSize = 0;
-            float       spatialScale = 1.f;
-        };
-
-        DedicatedParams roiParams;
+        PoolType    mode = PoolType::MAX;
+        size_t      pooledWidth = 0;
+        size_t      pooledHeight = 0;
+        size_t      groupSize = 0;
+        float       spatialScale = 1.f;
 
         virtual ParamsKey GetParamsKey() const
         {

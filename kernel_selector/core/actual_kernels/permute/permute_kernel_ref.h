@@ -27,12 +27,7 @@ namespace kernel_selector
     {
         permute_params(): base_params(KernelType::PERMUTE) {}
 
-        struct DedicatedParams
-        {
-            std::vector<uint16_t> order;
-        };
-
-        DedicatedParams permuteParams;
+        std::vector<uint16_t> order;
 
         virtual ParamsKey GetParamsKey() const
         {

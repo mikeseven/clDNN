@@ -32,32 +32,31 @@ namespace kernel_selector
         {
             s << "bias_" << bias[0].PhysicalSize() << "_";
         }
-        s << convGradWeightsParams.filterSize.x << "_" << convGradWeightsParams.filterSize.y << "_";
-        s << convGradWeightsParams.stride.x << "_" << convGradWeightsParams.stride.y << "_";
-        s << convGradWeightsParams.dilation.x << "_" << convGradWeightsParams.dilation.y << "_";
-        s << convGradWeightsParams.padding.x << "_" << convGradWeightsParams.padding.y << "_";
-        s << convGradWeightsParams.split;
+        s << filterSize.x << "_" << filterSize.y << "_";
+        s << stride.x << "_" << stride.y << "_";
+        s << dilation.x << "_" << dilation.y << "_";
+        s << padding.x << "_" << padding.y << "_";
+        s << split;
 
         return s.str();
     }
 
-    JitConstants ConvolutionGradWeightsKernelBase::GetJitConstants(const convolution_grad_weights_params& params) const
+    JitConstants ConvolutionGradWeightsKernelBase::GetJitConstants(const convolution_grad_weights_params& cp) const
     {
-        JitConstants jit = WeightBiasKernelBase::GetJitConstants(params);
-        const auto& dp = params.convGradWeightsParams;
-        const auto& padding = dp.padding;
-        const auto& input = params.inputs[0];
+        JitConstants jit = WeightBiasKernelBase::GetJitConstants(cp);
+        const auto& padding = cp.padding;
+        const auto& input = cp.inputs[0];
 
-        int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - (dp.filterSize.x - 1 + padding.x)*input.X().pitch - (dp.filterSize.y - 1 + padding.y)*input.Y().pitch;
+        int64_t input_offset_with_padding = (int64_t)input.GetFirstElementOffset() - (cp.filterSize.x - 1 + padding.x)*input.X().pitch - (cp.filterSize.y - 1 + padding.y)*input.Y().pitch;
         input_offset_with_padding = std::max(input_offset_with_padding, (int64_t)0);
 
         jit.AddConstants({
-            MakeJitConstant("STRIDE",                       dp.stride),
-            MakeJitConstant("PADDING",                      dp.padding),
-            MakeJitConstant("DILATION",                     dp.dilation),
-            MakeJitConstant("FILTER_ARRAY_NUM",             dp.split),
+            MakeJitConstant("STRIDE",                       cp.stride),
+            MakeJitConstant("PADDING",                      cp.padding),
+            MakeJitConstant("DILATION",                     cp.dilation),
+            MakeJitConstant("FILTER_ARRAY_NUM",             cp.split),
             MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
-            MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      dp.depthwiseSeparableOpt),
+            MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      cp.depthwiseSeparableOpt),
         });
 
         return jit;

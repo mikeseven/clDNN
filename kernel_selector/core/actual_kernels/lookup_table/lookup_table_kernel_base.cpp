@@ -33,11 +33,9 @@ namespace kernel_selector
     {
         JitConstants jit = MakeBaseParamsJitConstants(params);
 
-        const auto& pp = params.lookUpTableParams;
-
         jit.AddConstants({
-            MakeJitConstant("VAL_NUM", pp.numberOfValues),
-            MakeJitConstant(toString(pp.lookUpTableAxis) + "_AXIS", 1),
+            MakeJitConstant("VAL_NUM", params.numberOfValues),
+            MakeJitConstant(toString(params.lookUpTableAxis) + "_AXIS", 1),
         });
 
         return jit;
@@ -50,8 +48,8 @@ namespace kernel_selector
         kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 
         // Determine global work sizes.
-        kd.gws0 = params.lookUpTableParams.inputIndices.X().v;
-        kd.gws1 = params.lookUpTableParams.inputIndices.Batch().v;                   // B
+        kd.gws0 = params.inputIndices.X().v;
+        kd.gws1 = params.inputIndices.Batch().v;                   // B
         kd.gws2 = 1;
 
         kd.lws0 = std::min(std::max(kd.gws0, static_cast<size_t>(1)), static_cast<size_t>(32));

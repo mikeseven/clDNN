@@ -56,11 +56,9 @@ namespace kernel_selector {
         return kd;
     }
 
-    JitConstants ROIPoolingKernelRef::GetJitConstants(const roi_pooling_params& params) const
+    JitConstants ROIPoolingKernelRef::GetJitConstants(const roi_pooling_params& rp) const
     {
-        JitConstants jit = MakeBaseParamsJitConstants(params);
-
-        const auto& rp = params.roiParams;
+        JitConstants jit = MakeBaseParamsJitConstants(rp);
 
         jit.AddConstants({
             MakeJitConstant("POOLED_HEIGHT",     rp.pooledHeight),
@@ -71,8 +69,8 @@ namespace kernel_selector {
         });
 
         jit.AddConstants({
-            MakeJitConstant("MAX_POOL",                     params.roiParams.mode == PoolType::MAX),
-            MakeJitConstant("USE_OLD_SCALE_AND_ROUNDING",   params.roiParams.groupSize == 0)
+            MakeJitConstant("MAX_POOL",                     rp.mode == PoolType::MAX),
+            MakeJitConstant("USE_OLD_SCALE_AND_ROUNDING",   rp.groupSize == 0)
         });
 
         return jit;

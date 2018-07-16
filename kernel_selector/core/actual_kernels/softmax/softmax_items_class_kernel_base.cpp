@@ -61,7 +61,7 @@ namespace kernel_selector
     {
         auto jit = SoftmaxKernelBase::GetJitConstants(params, kd);
 
-        switch (params.smParams.dim)
+        switch (params.dim)
         {
         case SoftmaxDim::X:
             jit.AddConstants({

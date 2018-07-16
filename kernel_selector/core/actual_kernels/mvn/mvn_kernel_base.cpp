@@ -23,12 +23,10 @@ namespace kernel_selector
     {
         JitConstants jit = MakeBaseParamsJitConstants(params);
 
-        const auto& mvnp = params.mvnParams;
-
         jit.AddConstants({
-            MakeJitConstant("EPSILON",              mvnp.epsilon),
-            MakeJitConstant(toString(mvnp.mvnMode), ""),
-            MakeJitConstant("NORMALIZE_VARIANCE",   mvnp.mvnNormalizeVariance),
+            MakeJitConstant("EPSILON",              params.epsilon),
+            MakeJitConstant(toString(params.mvnMode), ""),
+            MakeJitConstant("NORMALIZE_VARIANCE",   params.mvnNormalizeVariance),
         });
 
         return jit;
@@ -44,7 +42,7 @@ namespace kernel_selector
 
         kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 
-        if (params.mvnParams.mvnMode == MVNMode::WITHIN_CHANNELS)
+        if (params.mvnMode == MVNMode::WITHIN_CHANNELS)
         {
             global = { output.Batch().v, output.Feature().v, 1 };
         }

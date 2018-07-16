@@ -46,12 +46,12 @@ namespace kernel_selector
             return{};
         }
 
-        if ((params.poolParams.poolSize.x != 3) ||
-            (params.poolParams.poolSize.y != 3) ||
-            (params.poolParams.poolStride.x != 1) ||
-            (params.poolParams.poolStride.y != 1) ||
-            (params.poolParams.poolPad.x != 1) ||
-            (params.poolParams.poolPad.y != 1) ||
+        if ((params.poolSize.x != 3) ||
+            (params.poolSize.y != 3) ||
+            (params.poolStride.x != 1) ||
+            (params.poolStride.y != 1) ||
+            (params.poolPad.x != 1) ||
+            (params.poolPad.y != 1) ||
             !(params.inputs[0] == params.output) ||
             params.inputs[0].PitchesDifferFromLogicalDims() ||
             params.output.PitchesDifferFromLogicalDims())
@@ -100,7 +100,7 @@ namespace kernel_selector
             mem_consts.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", kd.lws0));
             mem_consts.AddConstant(MakeJitConstant("TILE_HEIGHT", tileDims.y));
             mem_consts.AddConstant(MakeJitConstant("TILE_WIDTH", tileDims.x));
-            mem_consts.AddConstant(MakeJitConstant("ONE_OVER_POOL_SIZE", 1.f / (params.poolParams.poolSize.x * params.poolParams.poolSize.y)));
+            mem_consts.AddConstant(MakeJitConstant("ONE_OVER_POOL_SIZE", 1.f / (params.poolSize.x * params.poolSize.y)));
         }
 
         return mem_consts;

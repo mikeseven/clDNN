@@ -26,24 +26,19 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct mvn_params : public base_params
     {
-        mvn_params() : base_params(KernelType::MVN), mvnParams() {}
+        mvn_params() : base_params(KernelType::MVN) {}
 
-        struct DedicatedParams
-        {
-            MVNMode mvnMode = MVNMode::WITHIN_CHANNELS;
-            bool mvnNormalizeVariance = true;
-            float         epsilon = 1e-10f;
-        };
-
-        DedicatedParams mvnParams;
+        MVNMode mvnMode = MVNMode::WITHIN_CHANNELS;
+        bool mvnNormalizeVariance = true;
+        float         epsilon = 1e-10f;
 
         virtual ParamsKey GetParamsKey() const
         {
             ParamsKey k = base_params::GetParamsKey();
 
-            k.EnableMVNMode(mvnParams.mvnMode);
+            k.EnableMVNMode(mvnMode);
 
-            if (mvnParams.mvnNormalizeVariance)
+            if (mvnNormalizeVariance)
                 k.EnableMVNNormalizeVariance();
 
             return k;

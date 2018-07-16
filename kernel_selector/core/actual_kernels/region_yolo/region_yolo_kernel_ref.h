@@ -28,16 +28,11 @@ namespace kernel_selector
     {
         region_yolo_params() : base_params(KernelType::REGION_YOLO) {}
 
-        struct DedicatedParams
-        {
-            uint32_t coords;
-            uint32_t classes;
-            uint32_t num;
-            uint32_t mask_size;
-            bool do_softmax;
-        };
-
-        struct DedicatedParams ryParams;
+        uint32_t coords;
+        uint32_t classes;
+        uint32_t num;
+        uint32_t mask_size;
+        bool do_softmax;
 
         virtual ParamsKey GetParamsKey() const
         {

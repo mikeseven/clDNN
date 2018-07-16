@@ -52,12 +52,12 @@ public:
 
         const auto& scale_layout  = arg.scale().get_output_layout();
 
-        norm_params.normParams.normMode = 
+        norm_params.normMode = 
             arg.get_primitive()->across_spatial ?
             kernel_selector::normalize_mode::ACROSS_SPATIAL :
             kernel_selector::normalize_mode::WITHIN_SPATIAL;
-        norm_params.normParams.epsilon = arg.get_primitive()->epsilon;
-        norm_params.normParams.scaleTable = convert_data_tensor(scale_layout).FlattenFeatureAndSpatials();
+        norm_params.epsilon = arg.get_primitive()->epsilon;
+        norm_params.scaleTable = convert_data_tensor(scale_layout).FlattenFeatureAndSpatials();
 
         auto& kernel_selector = kernel_selector::normalize_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(norm_params, norm_optional_params);

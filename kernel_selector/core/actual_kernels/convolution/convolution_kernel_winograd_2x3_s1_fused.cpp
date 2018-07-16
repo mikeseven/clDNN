@@ -57,8 +57,8 @@ namespace kernel_selector {
         auto C4_up16 = ((uint32_t)((idepth + 15) / 16) * 16) / 4;
 
 		//if there's input padding then input offset should be ignored
-		const auto inoffset_x = (input_pad_x) ? 0 : params.convParams.padding.x;
-		const auto inoffset_y = (input_pad_y) ? 0 : params.convParams.padding.y;
+		const auto inoffset_x = (input_pad_x) ? 0 : params.padding.x;
+		const auto inoffset_y = (input_pad_y) ? 0 : params.padding.y;
 
         jit.AddConstants({
             MakeJitConstant("H", rows),
@@ -94,8 +94,8 @@ namespace kernel_selector {
         const auto cols = arg.inputs[0].X().v + input_pad_x;
 
 		//if there's input padding then input offset should be ignored
-		const auto inoffset_x = (input_pad_x) ? 0 : arg.convParams.padding.x;
-		const auto inoffset_y = (input_pad_y) ? 0 : arg.convParams.padding.y;
+		const auto inoffset_x = (input_pad_x) ? 0 : arg.padding.x;
+		const auto inoffset_y = (input_pad_y) ? 0 : arg.padding.y;
 
         auto P = rows - 2 + 2 * inoffset_y;
         auto Q = cols - 2 + 2 * inoffset_x;
@@ -129,10 +129,10 @@ namespace kernel_selector {
         const convolution_params& params = static_cast<const convolution_params&>(p);
 
         if ((params.weights.X().v != 3) || (params.weights.Y().v != 3) ||
-            (params.convParams.stride.x != 1) ||
-            (params.convParams.stride.y != 1) ||
-            (params.convParams.filterSize.x != 3) ||
-            (params.convParams.filterSize.y != 3) ||
+            (params.stride.x != 1) ||
+            (params.stride.y != 1) ||
+            (params.filterSize.x != 3) ||
+            (params.filterSize.y != 3) ||
             (params.output.Feature().v % 32) ||
             (params.inputs[0].Feature().v % 32) ||
             (params.output.Feature().pad.before != 0) || (params.output.Feature().pad.after != 0) ||

@@ -33,12 +33,10 @@ namespace kernel_selector
 	{
         JitConstants jit = MakeBaseParamsJitConstants(params);
 
-        const auto& pp = params.argMaxParams;
-
         jit.AddConstants({
-            MakeJitConstant("TOP_K", pp.topK),
-            MakeJitConstant(toString(pp.argMaxMinAxis) + "_AXIS", 1),
-            pp.argMaxMinOut == ArgMaxMinOut::MAX ? MakeJitConstant("MAX_OUT", 1) : MakeJitConstant("MIN_OUT", 1)
+            MakeJitConstant("TOP_K", params.topK),
+            MakeJitConstant(toString(params.argMaxMinAxis) + "_AXIS", 1),
+            params.argMaxMinOut == ArgMaxMinOut::MAX ? MakeJitConstant("MAX_OUT", 1) : MakeJitConstant("MIN_OUT", 1)
         });
 
         return jit;

@@ -101,25 +101,25 @@ public:
         if(primitive->with_activation)
             convert_activation_func_params(primitive, deconv_params);
 
-        deconv_params.deconvParams.depthwiseSeparableOpt = depthwise_separable_opt;
+        deconv_params.depthwiseSeparableOpt = depthwise_separable_opt;
 
-        deconv_params.deconvParams.split = split;
-        deconv_params.deconvParams.filterSize = {
+        deconv_params.split = split;
+        deconv_params.filterSize = {
             (uint32_t)weights_size.spatial[0],
             (uint32_t)weights_size.spatial[1],
         };
 
-        deconv_params.deconvParams.padding = {
+        deconv_params.padding = {
             (uint32_t)std::max(-input_offset.spatial[0], 0),
             (uint32_t)std::max(-input_offset.spatial[1], 0)
         };
 
-        deconv_params.deconvParams.stride = {
+        deconv_params.stride = {
             (uint32_t)stride.spatial[0],
             (uint32_t)stride.spatial[1]
         };
 
-        deconv_params.deconvParams.dilation = {
+        deconv_params.dilation = {
             (uint32_t)dilation.spatial[0],
             (uint32_t)dilation.spatial[1]
         };

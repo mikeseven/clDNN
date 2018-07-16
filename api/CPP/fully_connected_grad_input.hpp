@@ -36,10 +36,9 @@ struct fully_connected_grad_input : public primitive_base<fully_connected_grad_i
 
     /// @brief Constructs fully connected layer grad for input.
     /// @param id This primitive id.
-    /// @param input Input gradient primitive id.
+    /// @param input_grad Input gradient primitive id.
     /// @param input Input primitive id.
     /// @param weights Primitive id containing weights data.
-    /// @param bias Primitive id containing bias data. Provide empty string if using Relu without bias.
     fully_connected_grad_input(
         const primitive_id& id,
         const primitive_id& input_grad,

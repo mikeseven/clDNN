@@ -28,17 +28,12 @@ namespace kernel_selector
     {
         softmax_params() : base_params(KernelType::SOFT_MAX) {}
 
-        struct DedicatedParams
-        {
-            SoftmaxDim dim = SoftmaxDim::FEATURE;
-        };
-
-        DedicatedParams smParams;
+        SoftmaxDim dim = SoftmaxDim::FEATURE;
 
         virtual ParamsKey GetParamsKey() const
         {
             auto k = base_params::GetParamsKey();
-            k.EnableSoftmaxDim(smParams.dim);
+            k.EnableSoftmaxDim(dim);
             return k;
         }
     };

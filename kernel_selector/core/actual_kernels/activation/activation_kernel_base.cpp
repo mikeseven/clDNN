@@ -50,7 +50,7 @@ namespace kernel_selector
     {
         JitConstants jit = MakeBaseParamsJitConstants(params);
 
-        const auto& inputNlParams = params.actParams.inputActivationParams;
+        const auto& inputNlParams = params.inputActivationParams;
 
         jit.AddConstants({
             MakeJitConstant("PARAMS_NUM", GetActivationAdditionalParamsNumber(params.activationFunc)),
@@ -101,7 +101,7 @@ namespace kernel_selector
         if (newParams.gradient)
             kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 1 });
 
-        if (!newParams.actParams.inputActivationParams.empty())
+        if (!newParams.inputActivationParams.empty())
         {
             kernel.arguments.push_back({ ArgumentDescriptor::Types::SLOPE, 0 });
         }
