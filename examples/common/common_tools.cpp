@@ -771,7 +771,8 @@ void run_topology(const execution_params &ep)
     else if (ep.topology_name == "microbench_conv")
         primitives = build_microbench_conv(ep.weights_dir, engine, microbench_conv_inputs, gpu_batch_size);
     else if (ep.topology_name == "lstm_char")
-        primitives = build_char_level(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.sequence_length);    else if (ep.topology_name == "squeezenet")
+        primitives = build_char_level(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.sequence_length);   
+	else if (ep.topology_name == "squeezenet")
     {
         if (ep.calibration)
         {
@@ -782,7 +783,7 @@ void run_topology(const execution_params &ep)
             primitives = build_squeezenet(ep.weights_dir, engine, input_layout, gpu_batch_size);
         }
     }
-    else if (ep.topology_name == "microbench_lstm") {
+    else if (ep.topology_name == "microbench_lstm") 
         primitives = build_microbench_lstm(ep.weights_dir, engine, ep.lstm_ep, microbench_lstm_inputs);
     else if (ep.topology_name == "ssd_mobilenet")
         primitives = build_ssd_mobilenet(ep.weights_dir, engine, input_layout, gpu_batch_size);

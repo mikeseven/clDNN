@@ -78,7 +78,7 @@ namespace kernel_selector
     class LSTMGemmKernelBase : public common_kernel_base
     {
     public:
-        using WeightBiasKernelBase::WeightBiasKernelBase;
+		using common_kernel_base::common_kernel_base;
         virtual ~LSTMGemmKernelBase() {}
 
         struct DispatchData : public CommonDispatchData

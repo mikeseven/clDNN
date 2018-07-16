@@ -818,9 +818,9 @@ void program_impl::handle_lstm()
 
 			}
 			//calculating sizes
-			tensor input_size = { nodes_map.at("input")->get_output_layout().size.batch[0], nodes_map.at("input")->get_output_layout().size.spatial[1], node->get_dependency(0).get_output_layout().size.feature[0] ,1 };
+			auto input_size = node->get_dependency(0).get_output_layout().size;
 			auto recurrent_size = nodes_map.at(lstm_prim->recurrent)->get_output_layout().size;
-			auto hidden_size = tensor(input_size.batch[0], recurrent_size.feature[0], recurrent_size.spatial[0], input_size.spatial[0]);
+			auto hidden_size = tensor(input_size.batch[0], recurrent_size.feature[0], recurrent_size.spatial[0], input_size.feature[0]);
 
 			//check if parent is lstm node
 			for (auto& user : node->get_users())
@@ -842,7 +842,7 @@ void program_impl::handle_lstm()
 				auto &n1 = get_or_create(lstm_gemm_node);
 
 
-				auto lstm_elt_node = std::make_shared<lstm_elt>(lstm_elt_id, lstm_gemm_id, cell_id, lstm_prim->offset_order);
+				auto lstm_elt_node = std::make_shared<lstm_elt>(lstm_elt_id, lstm_gemm_id, cell_id, lstm_prim->clip, lstm_prim->input_forget, lstm_prim->activations, lstm_prim->activation_params, lstm_prim->offset_order);
 				auto &n2 = get_or_create(lstm_elt_node);
 				//adding lstm_elt as user
 				add_connection(n1, n2);
@@ -861,6 +861,7 @@ void program_impl::handle_lstm()
 					add_connection(*cell_list.back(), n2);
 					add_connection(*concat_depends.back(), n1);
 				}
+				//if initial values are present
 				else
 				{
 					if (node->as<lstm>().initial_hidden_term())

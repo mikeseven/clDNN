@@ -28,7 +28,7 @@ KERNEL(lstm_elt)(
 {
     const uint x = get_global_id(0);
     const uint b = get_global_id(1);
-	
+
     ACCUMULATOR_TYPE it = input[GET_DATA_INDEX(INPUT0, b, 0, 0, x + GEMM_OFFSET_I)];
     ACCUMULATOR_TYPE ot = input[GET_DATA_INDEX(INPUT0, b, 0, 0, x + GEMM_OFFSET_O)]; // pass constant offsets here
     ACCUMULATOR_TYPE zt = input[GET_DATA_INDEX(INPUT0, b, 0, 0, x + GEMM_OFFSET_Z)];
@@ -36,14 +36,9 @@ KERNEL(lstm_elt)(
     ACCUMULATOR_TYPE val = ACTIVATION_LOGISTIC(CLIP(it)) * ACTIVATION_HYPERBOLIC_TAN(CLIP(zt));
 
 #if CELL_TERM || INPUT_FORGET
-
     ACCUMULATOR_TYPE ft = input[GET_DATA_INDEX(INPUT0, b, 0, 0, x + GEMM_OFFSET_F)];
-    val += cell[GET_DATA_INDEX(CELL, b, 0, 0, x)] * ACTIVATION_LOGISTIC(ft);
-
 #endif
 
-    output[GET_DATA_INDEX(OUTPUT, b, 0, 0, x)] = ACTIVATION_HYPERBOLIC_TAN(val) * ACTIVATION_LOGISTIC(ot);
-    output[GET_DATA_INDEX(OUTPUT, b, 1, 0, x)] = (OUTPUT_TYPE)val;
 #if INPUT_FORGET
     val *= ((ACCUMULATOR_TYPE)1 - ft);
 #endif
@@ -52,6 +47,6 @@ KERNEL(lstm_elt)(
     val += cell[GET_DATA_INDEX(CELL, b, 0, 0, x)] * ACTIVATION_LOGISTIC(CLIP(ft));
 #endif
 
-    output[GET_DATA_INDEX(OUTPUT, b, 0, 0, x)] = ACTIVATION_HYPERBOLIC_TAN(val) * ACTIVATION_LOGISTIC(ot); //hidden
-    output[GET_DATA_INDEX(OUTPUT, b, 1, 0, x)] = (OUTPUT_TYPE)val; //cell
+    output[GET_DATA_INDEX(OUTPUT, b, 0, 0, x)] = ACTIVATION_HYPERBOLIC_TAN(val) * ACTIVATION_LOGISTIC(ot); // hidden
+    output[GET_DATA_INDEX(OUTPUT, b, 1, 0, x)] = (OUTPUT_TYPE)val; // cell
 }
