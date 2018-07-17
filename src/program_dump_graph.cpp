@@ -156,25 +156,25 @@ namespace cldnn
         return "node_" + std::to_string(reinterpret_cast<uintptr_t>(ptr));
     }
 
-		void dump_full_node(std::ofstream& out, program_node* node, bool serialize, std::vector<unsigned long long> offsets, std::vector<std::string> data_names)
-		{
-			out << node->type()->to_string(*node);
-			if (serialize)
-			{
-				auto iter = 0;
-				for (auto& name : data_names) {
-					if (name == node->id()) 
-					{
-						if (iter == 0)
-							out << "data offsets: [0 : " << offsets.at(iter) << "]";
-						else
-							out << "data offsets: [" << offsets.at(iter - 1) << " : " << offsets.at(iter) << "]";
-					}
-					iter++;
-				}
-			}
-		}
-	}
+        void dump_full_node(std::ofstream& out, program_node* node, bool serialize, std::vector<unsigned long long> offsets, std::vector<std::string> data_names)
+        {
+            out << node->type()->to_string(*node);
+            if (serialize)
+            {
+                 auto iter = 0;
+                 for (auto& name : data_names) {
+                    if (name == node->id()) 
+                    {
+                        if (iter == 0)
+                            out << "data offsets: [0 : " << offsets.at(iter) << "]";
+                        else
+                            out << "data offsets: [" << offsets.at(iter - 1) << " : " << offsets.at(iter) << "]";
+                    }
+                    iter++;
+                }
+            }
+        }
+    }
 
     std::string get_dir_path(build_options opts)
     {
@@ -191,11 +191,11 @@ namespace cldnn
         return path;
     }
 
-	/// Returns given name for serialization process.
-	std::string get_serialization_network_name(build_options opts)
-	{
-		return opts.get<build_option_type::serialize_network>()->serialization_network_name;
-	}
+    /// Returns given name for serialization process.
+    std::string get_serialization_network_name(build_options opts)
+    {
+        return opts.get<build_option_type::serialize_network>()->serialization_network_name;
+    }
 
     void dump_graph_init(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter)
     {
@@ -258,14 +258,14 @@ namespace cldnn
                 #pragma clang diagnostic push
                 #pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
             #endif
-			std::string node_type = get_extr_type(typeid(*node).name());
-			graph << "    " << get_node_id(node.get()) << "[label=\"" << node->id() << ":\n" << node_type << "\n out format: " + extr_oformat(node.get())
+            std::string node_type = get_extr_type(typeid(*node).name());
+            graph << "    " << get_node_id(node.get()) << "[label=\"" << node->id() << ":\n" << node_type << "\n out format: " + extr_oformat(node.get())
                 << "\n out data_type: " + extr_data_type(node.get())
-				<< "\\nprocessing number: " << node->get_processing_num() << "\\n color:" << (node->is_reusing_memory() ? std::to_string(node->get_reused_memory_color()) : "none")
-				<< (node->can_be_optimized() ? "\\n optimized out" : "");
-			if (node_type != "struct cldnn::data" && node_type != "struct cldnn::input_layout" && !node->can_be_optimized())
-				graph << "\\n Selected kernel: " << (node->get_selected_impl() == nullptr ? "none" : node->get_selected_impl().get()->get_kernel_name());
-			graph << "\"";
+                << "\\nprocessing number: " << node->get_processing_num() << "\\n color:" << (node->is_reusing_memory() ? std::to_string(node->get_reused_memory_color()) : "none")
+                << (node->can_be_optimized() ? "\\n optimized out" : "");
+            if (node_type != "struct cldnn::data" && node_type != "struct cldnn::input_layout" && !node->can_be_optimized())
+                graph << "\\n Selected kernel: " << (node->get_selected_impl() == nullptr ? "none" : node->get_selected_impl().get()->get_kernel_name());
+            graph << "\"";
             #ifdef __clang__
                 #pragma clang diagnostic pop
             #endif
@@ -352,64 +352,64 @@ namespace cldnn
         close_stream(graph);
     }
 
-	void dump_graph_info(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter, bool serialize, std::vector<unsigned long long> offsets, std::vector<std::string> data_names)
-	{
-		if (serialize)
-		{
-			for (unsigned int postion = 0; postion < (unsigned int)data_names.size(); postion++)
-				if (data_names.at(postion).find("kernels_part")!=std::string::npos)
-				{
-					if (postion == 0)
-						graph << "kernels 0-"<< (postion+1)*10 << ", offset: [0" << " : " << offsets.at(postion) << "]\n";
-					else
-						graph << "kernels "<< postion*10 << "-" << (postion+1)*10 <<", offset: [" << offsets.at(postion -1) << " : " << offsets.at(postion) << "]\n";
-				}
-		}
-		for (auto& node : program.get_nodes())
-		{
-			if (filter && !filter(*node))
-				continue;
+    void dump_graph_info(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter, bool serialize, std::vector<unsigned long long> offsets, std::vector<std::string> data_names)
+    {
+        if (serialize)
+        {
+            for (unsigned int postion = 0; postion < (unsigned int)data_names.size(); postion++)
+                if (data_names.at(postion).find("kernels_part")!=std::string::npos)
+                {
+                    if (postion == 0)
+                        graph << "kernels 0-"<< (postion+1)*10 << ", offset: [0" << " : " << offsets.at(postion) << "]\n";
+                    else
+                        graph << "kernels "<< postion*10 << "-" << (postion+1)*10 <<", offset: [" << offsets.at(postion -1) << " : " << offsets.at(postion) << "]\n";
+                }
+        }
+        for (auto& node : program.get_nodes())
+        {
+            if (filter && !filter(*node))
+                continue;
 
-			dump_full_node(graph, node.get(), serialize, offsets, data_names);
-			graph << std::endl << std::endl;
-		}
-		close_stream(graph);
-	}
+            dump_full_node(graph, node.get(), serialize, offsets, data_names);
+            graph << std::endl << std::endl;
+        }
+        close_stream(graph);
+    }
 
-	//Function used by serialization. Not working yet, in progress.
-	void dump_kernels(kernels_binaries_container program_binaries, std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names, std::ofstream& file_stream)
-	{
-		auto offset_temp = 0;
-		for (unsigned int i = 0; i < (unsigned int)program_binaries.size(); i++)
-		{
-			for (unsigned int j = 0; j < (unsigned int)program_binaries.at(i).size(); j++)
-			{
-				for (unsigned int k = 0; k < (unsigned int)program_binaries.at(i).at(j).size(); k++)
-				{
-					char* p = (char*)&program_binaries.at(i).at(j).at(k);
-					file_stream.write(p, sizeof(char));
-					offset_temp += sizeof(char);
-				}
-			}
-			offsets.push_back(offset_temp);
-			std::string offset_name = "kernels_part_" + std::to_string(i);
-			data_names.push_back(offset_name);
-		}
-	}
+    //Function used by serialization. Not working yet, in progress.
+    void dump_kernels(kernels_binaries_container program_binaries, std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names, std::ofstream& file_stream)
+    {
+        auto offset_temp = 0;
+        for (unsigned int i = 0; i < (unsigned int)program_binaries.size(); i++)
+        {
+            for (unsigned int j = 0; j < (unsigned int)program_binaries.at(i).size(); j++)
+            {
+                for (unsigned int k = 0; k < (unsigned int)program_binaries.at(i).at(j).size(); k++)
+                {
+                    char* p = (char*)&program_binaries.at(i).at(j).at(k);
+                    file_stream.write(p, sizeof(char));
+                    offset_temp += sizeof(char);
+                }
+            }
+            offsets.push_back(offset_temp);
+            std::string offset_name = "kernels_part_" + std::to_string(i);
+            data_names.push_back(offset_name);
+        }
+    }
 
-	//Function used by serialization. Not working yet, in progress.
-	void dump_data(memory_impl& mem, std::ofstream& stream, unsigned long long& total_offset, unsigned long long type)
-	{
-		auto offset = 0ull;
-		char * ptr = (char*)mem.lock();
-		for (unsigned int x = 0; x < (unsigned int)mem.get_layout().count(); x++)
-		{
-			stream.write(ptr + offset, type);
-			offset += type;
-		}
-		mem.unlock();
-		total_offset += offset;
-	}
+    //Function used by serialization. Not working yet, in progress.
+    void dump_data(memory_impl& mem, std::ofstream& stream, unsigned long long& total_offset, unsigned long long type)
+    {
+        auto offset = 0ull;
+        char * ptr = (char*)mem.lock();
+        for (unsigned int x = 0; x < (unsigned int)mem.get_layout().count(); x++)
+        {
+            stream.write(ptr + offset, type);
+            offset += type;
+        }
+        mem.unlock();
+        total_offset += offset;
+    }
 }
 
  

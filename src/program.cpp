@@ -268,17 +268,17 @@ program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topolog
     pre_optimize_graph();
     compile_graph();
     post_optimize_graph();
-	
+
     engine->compile_program(*this);
     this->dump_program("13_finished", true);
 
-	//Makes serialization with given name.
-	//Placeholder, not working yet, in progress.
-	auto serialization_network_name = get_serialization_network_name(options);
-	if (!serialization_network_name.empty() && !is_internal)
-	{
-		this->serialize(serialization_network_name);
-	}
+    //Makes serialization with given name.
+    //Placeholder, not working yet, in progress.
+    auto serialization_network_name = get_serialization_network_name(options);
+    if (!serialization_network_name.empty() && !is_internal)
+    {
+        this->serialize(serialization_network_name);
+    }
 
     cleanup();
 }
@@ -3054,42 +3054,41 @@ void program_impl::dump_program(const char* stage, bool with_full_info, std::fun
 //Dumps weights and biasses in serialization process, not working yet, in progress.
 void program_impl::dump_weights_and_biasses(std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names, std::ofstream& file_stream) const
 {
-	for (auto const& n : nodes_map)
-	{
-		auto dependency_count = (unsigned int)n.second.get()->get_dependencies().size();
-		for (unsigned int dp = 0; dp < dependency_count; dp++)
-		{
-			auto& dependency = n.second.get()->get_dependency(dp);
-			if (dependency.is_type<data>())
-			{
-				offsets.push_back(offsets.empty() ? 0ull : offsets.back());
-				auto& mem = dependency.as<data>().get_attached_memory();
-				if (mem.get_layout().data_type == data_types::f32)
-					dump_data(mem, file_stream, offsets.back(), sizeof(float));
-				else
-					dump_data(mem, file_stream, offsets.back(), sizeof(short));
-				data_names.push_back(dependency.as<data>().id());
-			}
-		}
-	}
-	file_stream.close();
+    for (auto const& n : nodes_map)
+    {
+        auto dependency_count = (unsigned int)n.second.get()->get_dependencies().size();
+        for (unsigned int dp = 0; dp < dependency_count; dp++)
+        {
+            auto& dependency = n.second.get()->get_dependency(dp);
+            if (dependency.is_type<data>())
+            {
+                offsets.push_back(offsets.empty() ? 0ull : offsets.back());
+                auto& mem = dependency.as<data>().get_attached_memory();
+                if (mem.get_layout().data_type == data_types::f32)
+                    dump_data(mem, file_stream, offsets.back(), sizeof(float));
+                else
+                    dump_data(mem, file_stream, offsets.back(), sizeof(short));
+                data_names.push_back(dependency.as<data>().id());
+            }
+        }
+    }
+    file_stream.close();
 }
 
 //Makes serialization with given name.
 //Placeholder, not working yet, in progress.
 void program_impl::serialize(std::string network_name, std::function<bool(program_node const&)> const& filter) const
 {
-	std::vector<unsigned long long> offsets;
-	std::vector<std::string> data_names;
+    std::vector<unsigned long long> offsets;
+    std::vector<std::string> data_names;
 
-	std::ofstream file_stream(network_name + "_" + "serialization" + ".bin", std::ios::binary);
-	dump_kernels(engine->get_context().get()->get_kernels_cache().get_context().get_binaries(), offsets, data_names, file_stream);
-	dump_weights_and_biasses(offsets, data_names, file_stream);
-	
-	std::ofstream graph(network_name + "_" + "serialization" + ".graph");
-	dump_graph_init(graph, *this, filter);
+    std::ofstream file_stream(network_name + "_" + "serialization" + ".bin", std::ios::binary);
+    dump_kernels(engine->get_context().get()->get_kernels_cache().get_context().get_binaries(), offsets, data_names, file_stream);
+    dump_weights_and_biasses(offsets, data_names, file_stream);
 
-	graph.open(network_name + "_" + "serialization" + ".xml");
-	dump_graph_info(graph, *this, filter, true, offsets, data_names);
+    std::ofstream graph(network_name + "_" + "serialization" + ".graph");
+    dump_graph_init(graph, *this, filter);
+
+    graph.open(network_name + "_" + "serialization" + ".xml");
+    dump_graph_info(graph, *this, filter, true, offsets, data_names);
 }
-

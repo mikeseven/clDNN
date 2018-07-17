@@ -24,15 +24,13 @@
 namespace cldnn
 {
     std::string get_dir_path(build_options);
-	std::string get_serialization_network_name(build_options);
-  
+    std::string get_serialization_network_name(build_options);
+
     void dump_graph_optimized(std::ofstream&, const program_impl&);
     void dump_graph_processing_order(std::ofstream&, const program_impl&);
     void dump_graph_init(std::ofstream&, const program_impl&, std::function<bool(program_node const&)> const&);
-	void dump_graph_info(std::ofstream&, const program_impl&, std::function<bool(program_node const&)> const&, 
-		bool serialize = false, std::vector<unsigned long long> offset = { 0ull }, std::vector<std::string> data_name = { "" });
-	void dump_kernels(kernels_binaries_container program_binaries, std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names, std::ofstream& file_stream);
-	void dump_data(memory_impl& mem, std::ofstream& stream, unsigned long long& total_offset, unsigned long long type);
+    void dump_graph_info(std::ofstream&, const program_impl&, std::function<bool(program_node const&)> const&, 
+        bool serialize = false, std::vector<unsigned long long> offset = { 0ull }, std::vector<std::string> data_name = { "" });
+    void dump_kernels(kernels_binaries_container program_binaries, std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names, std::ofstream& file_stream);
+    void dump_data(memory_impl& mem, std::ofstream& stream, unsigned long long& total_offset, unsigned long long type);
 }
-
- 
