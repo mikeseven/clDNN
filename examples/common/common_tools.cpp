@@ -1007,7 +1007,7 @@ void run_topology(const execution_params &ep)
                 input_files_in_batch.push_back(*input_list_iterator);
             }
             double time_in_sec = 0.0;
-            lstm_utils lstm_data(ep.sequence_length, batch_size, ep.loop, ep.temperature);
+            lstm_utils lstm_data(ep.sequence_length, batch_size, (unsigned int)ep.loop, ep.temperature);
             // load croped and resized images into input
             if (!ep.rnn_type_of_topology && ep.topology_name != "lenet" && ep.topology_name != "lenet_train")
             {

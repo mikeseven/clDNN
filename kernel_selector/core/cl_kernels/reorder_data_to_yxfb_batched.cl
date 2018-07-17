@@ -45,12 +45,12 @@ inline void FUNC(get_yxfb_coords_from_linear_idx_no_padding)(uint data_idx, uint
     *f = data_idx - tmp_data_idx * INPUT0_FEATURE_NUM;
     data_idx = tmp_data_idx;
 
-    tmp_data_idx  = data_idx / INPUT0_SIZE_Y;
-    *x = data_idx - tmp_data_idx * INPUT0_SIZE_Y;
+    tmp_data_idx  = data_idx / INPUT0_SIZE_X;
+    *x = data_idx - tmp_data_idx * INPUT0_SIZE_X;
     data_idx = tmp_data_idx;
 
-    tmp_data_idx = data_idx / INPUT0_SIZE_X;
-    *y = data_idx - tmp_data_idx * INPUT0_SIZE_X;
+    tmp_data_idx = data_idx / INPUT0_SIZE_Y;
+    *y = data_idx - tmp_data_idx * INPUT0_SIZE_Y;
 }
 
 __attribute__((intel_reqd_sub_group_size(8)))

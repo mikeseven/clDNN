@@ -31,7 +31,7 @@ public:
         , _batch(batch)
         , _predictions_count(predictions)
         , _temperature(temperature)
-        , random_engine(std::mt19937( random_seed ? std::chrono::high_resolution_clock::now().time_since_epoch().count() : 42)) //42 as a magic seed
+        , random_engine(std::mt19937( random_seed ? (unsigned int)(std::chrono::high_resolution_clock::now().time_since_epoch().count()) : 42)) //42 as a magic seed
     {}
 
     lstm_utils()

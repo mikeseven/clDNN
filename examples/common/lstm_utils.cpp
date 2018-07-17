@@ -29,7 +29,7 @@ void lstm_utils::pre_processing(std::vector<std::string> input_files, const std:
 void lstm_utils::prepare_input_vector_for_new_prediction()
 {
     _input_vector = std::vector<float>(_seq_length * _batch, 0.0f);
-    for (auto j = 0; j < _seq_length * _batch; ++j)
+    for (int j = 0; j < _seq_length * _batch; ++j)
     {
         _input_vector.at(j) = static_cast<float>(_input.at(j));
     }
@@ -37,7 +37,6 @@ void lstm_utils::prepare_input_vector_for_new_prediction()
 
 std::pair<unsigned, float> lstm_utils::get_predicted_character_and_its_value(size_t batch_index)
 {
-    char predicted_char;
     auto& out_vector_batch = _output_vector.at(batch_index);
     auto max_element = std::max_element(out_vector_batch.begin(), out_vector_batch.end()); //iterator
     if (_temperature == 0.0f)
