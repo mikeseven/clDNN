@@ -986,8 +986,8 @@ void run_topology(const execution_params &ep)
         else if (ep.topology_name == "gender")
             neurons_list_filename = "gender.txt";
 
-        auto img_list = get_directory_images(ep.input_dir);
-        if (img_list.empty())
+        auto input_list = get_input_list(ep.input_dir);
+        if (input_list.empty())
             throw std::runtime_error("specified input images directory is empty (does not contain image data)");
 
         auto number_of_batches = (input_list.size() % batch_size == 0)
@@ -1006,7 +1006,7 @@ void run_topology(const execution_params &ep)
             {
                 input_files_in_batch.push_back(*input_list_iterator);
             }
-
+            double time_in_sec = 0.0;
             lstm_utils lstm_data(ep.sequence_length, batch_size, ep.loop, ep.temperature);
             // load croped and resized images into input
             if (!ep.rnn_type_of_topology && ep.topology_name != "lenet" && ep.topology_name != "lenet_train")
@@ -1021,8 +1021,7 @@ void run_topology(const execution_params &ep)
                 }
 
             }
-            double time_in_sec = 0.0;
-            if (ep.topology_name == "lenet")
+            else if (ep.topology_name == "lenet")
             {
                 float acc = 0;
                 uint32_t labels_num = 10;
@@ -1030,9 +1029,9 @@ void run_topology(const execution_params &ep)
                 for (uint32_t i = ep.image_offset; i < ep.image_number + ep.image_offset; i += batch_size)
                 {
                     if (ep.use_half)
-                        load_data_from_file_list_lenet<half_t>(img_list, input, i, batch_size, false, labels);
+                        load_data_from_file_list_lenet<half_t>(input_list, input, i, batch_size, false, labels);
                     else
-                        load_data_from_file_list_lenet(img_list, input, i, batch_size, false, labels);
+                        load_data_from_file_list_lenet(input_list, input, i, batch_size, false, labels);
                     network.set_input_data("input", input);
                     auto outputs = network.execute();
                     auto o = outputs.at("output").get_memory().pointer<float>();
@@ -1085,13 +1084,13 @@ void run_topology(const execution_params &ep)
                     network.set_learning_rate(learning_rate);
 
                     if (ep.use_half)
-                        load_data_from_file_list_lenet<half_t>(img_list, input, learn_it, batch_size, true, labels);
+                        load_data_from_file_list_lenet<half_t>(input_list, input, learn_it, batch_size, true, labels);
                     else
-                        load_data_from_file_list_lenet(img_list, input, learn_it, batch_size, true, labels);
+                        load_data_from_file_list_lenet(input_list, input, learn_it, batch_size, true, labels);
 
                     network.set_input_data("input", input);
                     network.set_input_data("labels", labels);
-                    auto time = execute_topology(network, ep, energyLib, output);
+                    auto time = execute_cnn_topology(network, ep, energyLib, output);
                     time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
                     auto expected = labels.pointer<float>();
                     auto vals = output.pointer<float>();
@@ -1119,8 +1118,6 @@ void run_topology(const execution_params &ep)
                 {
                     lstm_data.fill_memory<float>(input);
                 }
-
-                time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
             }
             network.set_input_data("input", input);
 
@@ -1134,9 +1131,9 @@ void run_topology(const execution_params &ep)
                 time = execute_rnn_topology(network, ep, energyLib, output, input, lstm_data);
             }
 
-            auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
+            time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
 
-            if (ep.run_until_primitive_name.empty() && ep.run_single_kernel_name.empty() && !ep.rnn_type_of_topology && ep.topology_name != "lenet" && ep.topology_name == "lenet_train")
+            if (ep.run_until_primitive_name.empty() && ep.run_single_kernel_name.empty() && !ep.rnn_type_of_topology && ep.topology_name != "lenet" && ep.topology_name != "lenet_train")
             {
                 output_file.batch(output, join_path(get_executable_info()->dir(), neurons_list_filename), input_files_in_batch, ep.print_type);
             }
