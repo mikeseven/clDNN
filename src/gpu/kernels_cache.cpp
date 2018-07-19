@@ -255,6 +255,7 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
                 ///Store kernels for serialization process.
                 if(_context.get_serialization_flag())
                     _context.store_binaries(program.getInfo<CL_PROGRAM_BINARIES>());
+				//get<build_option_type::serialize_network>()->serialization_network_name.empty();
 
                 if (dump_sources)
                 {
