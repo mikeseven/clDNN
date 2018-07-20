@@ -35,7 +35,6 @@ namespace kernel_selector {
         k.EnableNonBiasTerm();
         k.EnableTensorOffset();
         k.EnableTensorPitches();
-        k.EnableBatching();
         return k;
     }
 

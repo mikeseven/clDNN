@@ -93,6 +93,21 @@ namespace {
                     status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.bias).get_buffer());
                 }
                 break;
+            case kernel_selector::kernel_argument_types::PREV_WEIGHTS_GRADIENT:
+                if (data.prev_weights_grad)
+                {
+                    if (data.prev_weights_grad->get_layout().format.is_image_2d())
+                        status = kernel.setArg(i, dynamic_cast<const gpu::gpu_image2d&>(*data.prev_weights_grad).get_buffer());
+                    else
+                        status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.prev_weights_grad).get_buffer());
+                }
+                break;
+            case kernel_selector::kernel_argument_types::PREV_BIAS_GRADIENT:
+                if (data.prev_bias_grad)
+                {
+                    status = kernel.setArg(i, dynamic_cast<const gpu::gpu_buffer&>(*data.prev_bias_grad).get_buffer());
+                }
+                break;
             case kernel_selector::kernel_argument_types::WEIGHTS_QUANTIZATION_FACTORS:
                 if (data.weights_quantization_factors)
                 {
@@ -119,6 +134,9 @@ namespace {
                 break;
             case kernel_selector::kernel_argument_types::SPLIT:
                 status = kernel.setArg(i, data.split);
+                break;
+            case kernel_selector::kernel_argument_types::LEARNING_RATE:
+                status = kernel.setArg(i, data.lr);
                 break;
             case kernel_selector::kernel_argument_types::SCALAR:
                 if (data.scalars && args[i].index < data.scalars->size())

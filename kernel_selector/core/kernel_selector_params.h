@@ -68,6 +68,7 @@ namespace kernel_selector
                     uint32_t activationAdditionalParamsAsInput : 1;
                     uint32_t FP16Emulation : 1;
                     uint32_t gradient : 1;
+                    uint32_t momentum : 1;
 
                     union dedicated_t
                     {
@@ -434,6 +435,11 @@ namespace kernel_selector
         void EnableActivationAdditionalParamsAsInput()
         {
             key.restrict.val.activationAdditionalParamsAsInput = 1;
+        }
+
+        void EnableMomentum()
+        {
+            key.restrict.val.momentum = 1;
         }
 
         void EnableLRNMode(LRNMode m)

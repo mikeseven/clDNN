@@ -67,7 +67,6 @@ namespace kernel_selector
     KernelsData FullyConnected_bfyx_Ref::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, DataLayout::bfyx,
-        { WeightsLayout::oiyx, WeightsLayout::oyxi, WeightsLayout::iyxo, WeightsLayout::yxio }
-        );
+        { WeightsLayout::oiyx, WeightsLayout::oyxi, WeightsLayout::iyxo, WeightsLayout::yxio });
     }
 }

@@ -42,6 +42,10 @@ layout deconvolution_inst::calc_output_layout(deconvolution_node const& node)
 
     auto number_of_features = weights_layout.size.batch[0] * static_cast<int32_t>(split);
 
+    //Deconvolution is used for convolution backward pass, but number of features will differ then
+    if(desc->gradient())
+        number_of_features = weights_layout.size.feature[0] * static_cast<int32_t>(split);
+
     if (desc->with_output_size)
     {
         CLDNN_ERROR_LESS_OR_EQUAL_THAN(node.id(), "User-defined output spatial X", desc->output_size.spatial[0], "value 0", 0, "User-defined size of output layout must be positive (>= 1)");

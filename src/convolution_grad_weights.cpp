@@ -83,6 +83,8 @@ convolution_grad_weights_inst::typed_primitive_inst(network_impl& network, convo
     auto dilation = argument.dilation;
     auto output_size = output_memory().get_layout().size;
 
+    auto desc = node.get_primitive();
+
     auto input_inst = input_memory(1).get_layout();
     auto input_grad_inst = input_memory(0).get_layout();
     auto output_inst = output_memory().get_layout();
@@ -94,6 +96,13 @@ convolution_grad_weights_inst::typed_primitive_inst(network_impl& network, convo
     //TODO: add support to dilation not equal 1, 1
     CLDNN_ERROR_NOT_EQUAL(node.id(), "convolution_grad_weights dilation x", dilation.spatial[0], "should be 1", 1, "Only dilation x = 1 is supported right now.");
     CLDNN_ERROR_NOT_EQUAL(node.id(), "convolution_grad_weights dilation y", dilation.spatial[1], "should be 1", 1, "Only dilation y = 1 is supported right now.");
+
+    if (use_momentum())
+    {
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "number of weights", desc->weights.size(), "should be same as prev_weights_grad number", desc->prev_weights_grad.size(), "");
+        if (bias_term())
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "number of bias", desc->bias.size(), "should be same as prev_bias_grad number", desc->prev_bias_grad.size(), "");
+    }
 
     auto split = node.get_split();
     for (decltype(split) j = 0; j < split; j++)

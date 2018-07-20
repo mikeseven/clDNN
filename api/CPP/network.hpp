@@ -124,6 +124,18 @@ struct network
         check_status<void>("set network input failed", [&](status_t* status) { cldnn_set_network_input(_impl, id.c_str(), mem.get(), status); });
     }
 
+    /// @brief Sets learning rate for training primitives.
+    void set_learning_rate(const float lr)
+    {
+        check_status<void>("set learning rate failed", [&](status_t* status) { cldnn_set_learning_rate(_impl, lr, status); });
+    }
+
+    /// @brief Return learning rate.
+    float get_learning_rate()
+    {
+        return check_status<float>("get learning rate failed", [&](status_t* status) { return cldnn_get_learning_rate(_impl, status); });
+    }
+
    
     std::string get_primitive_info(const primitive_id& id) const
     {

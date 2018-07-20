@@ -17,7 +17,7 @@
 
 #include "api/CPP/memory.hpp"
 #include "api/CPP/data.hpp"
-
+#include "api/CPP/mutable_data.hpp"
 #include <string>
 
 
@@ -36,6 +36,7 @@ namespace file
         std::string                  name;
     };
 
+    cldnn::mutable_data create_mutable(arguments arg, bool initialize = false, cldnn::layout layout = { cldnn::data_types::f32, cldnn::format::bfyx,{ 1,1,1,1 } }, cldnn::mutable_data::filler_type filler_type = cldnn::mutable_data::filler_type::zero);
     /// @brief Reads .nnd file pointed by passed arguments into newly created clDNN memory object.
     ///
     /// @param arg            Arguments describing file location and engine on which returned 
@@ -62,4 +63,5 @@ namespace file
     ///                        If @c true, it will return old layout format (shifted properly based on data type
     ///                        used in .nnd).
     void serialize(const cldnn::memory& data, const std::string& file_name, bool old_layout_mode = false);
+    void serialize_train(const cldnn::memory&, const std::string&);
 }

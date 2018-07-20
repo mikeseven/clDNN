@@ -48,6 +48,12 @@ uint32_t split;
 cldnn_primitive_id_arr weights;
 /// @brief Array of primitive ids containing bias data. Size of array should be equivalent to @p split or should be empty (if not using bias).
 cldnn_primitive_id_arr bias;
+/// @brief Primitive id containing convolution gradient data. Used for proper order of gradient calculation. Leave empty if primitive is last in backward pass.
+cldnn_primitive_id conv_grad;
+/// @brief Array of primitive ids containing weights gradient data calculated in previous iteration. Amount of primitives and their memory sizes should be same as weights.
+cldnn_primitive_id_arr prev_weights_grad;
+/// @brief Array of primitive ids containing bias gradient data calculated in previous iteration. Amount of primitives and their memory sizes should be same as biases.
+cldnn_primitive_id_arr prev_bias_grad;
 CLDNN_END_PRIMITIVE_DESC(convolution_grad_weights)
 
 CLDNN_DECLARE_PRIMITIVE_TYPE_ID(convolution_grad_weights);

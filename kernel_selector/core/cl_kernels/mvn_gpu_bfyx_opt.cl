@@ -33,7 +33,6 @@ KERNEL (mvn_gpu_bfyx_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE* o
     const uint data_set_offset = data_set_idx * data_set_size;
     const uint my_data_offset = data_set_offset + in_data_set_idx;
 
-    float my_chunk[ITEMS_NUM + 1];
     float my_sum = 0.f;
     float tmp;
 
@@ -42,16 +41,12 @@ KERNEL (mvn_gpu_bfyx_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE* o
     //each WI reads ITEMS_NUM consecutive items from batch*feature
     for (uint i=0; i<ITEMS_NUM; ++i)
     {
-        tmp = (float)input[my_data_offset + i * workers_per_data_set];
-        my_sum += tmp;
-        my_chunk[i] = tmp;
+        my_sum += (float)input[my_data_offset + i * workers_per_data_set];
     }
 
     if (in_data_set_idx < LEFTOVERS)
     {
-        tmp = (float)input[data_set_offset + workers_per_data_set * ITEMS_NUM + in_data_set_idx];
-        my_sum += tmp;
-        my_chunk[ITEMS_NUM] = tmp;
+        my_sum += (float)input[data_set_offset + workers_per_data_set * ITEMS_NUM + in_data_set_idx];
     }
 
     lg_storage[in_data_set_idx] = my_sum;
@@ -70,9 +65,9 @@ KERNEL (mvn_gpu_bfyx_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE* o
 
 #if NORMALIZE_VARIANCE == 0
     for (uint i=0; i<ITEMS_NUM; ++i)
-        output[my_data_offset + i * workers_per_data_set] = ACTIVATION(UNIT_CVT_FUNC(my_chunk[i]) - UNIT_CVT_FUNC(my_sum), NL_M ,NL_N);
+        output[my_data_offset + i * workers_per_data_set] = ACTIVATION(UNIT_CVT_FUNC(input[my_data_offset + i * workers_per_data_set]) - UNIT_CVT_FUNC(my_sum), NL_M ,NL_N);
     if (in_data_set_idx < LEFTOVERS)
-        output[data_set_offset + workers_per_data_set * ITEMS_NUM + in_data_set_idx] = ACTIVATION(UNIT_CVT_FUNC(my_chunk[ITEMS_NUM]) - UNIT_CVT_FUNC(my_sum), NL_M ,NL_N);
+        output[data_set_offset + workers_per_data_set * ITEMS_NUM + in_data_set_idx] = ACTIVATION(UNIT_CVT_FUNC(input[data_set_offset + workers_per_data_set * ITEMS_NUM + in_data_set_idx]) - UNIT_CVT_FUNC(my_sum), NL_M ,NL_N);
 #else
     barrier(CLK_LOCAL_MEM_FENCE);
 
@@ -80,14 +75,16 @@ KERNEL (mvn_gpu_bfyx_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE* o
     //each WI reads ITEMS_NUM consecutive items from batch*feature
     for (uint i=0; i<ITEMS_NUM; ++i)
     {
-        my_chunk[i] -= my_sum;
-        my_variance = fma(my_chunk[i], my_chunk[i], my_variance);
+        tmp = (float)input[my_data_offset + i * workers_per_data_set];
+        tmp -= my_sum;
+        my_variance = fma(tmp, tmp, my_variance);
     }
 
     if (in_data_set_idx < LEFTOVERS)
     {
-        my_chunk[ITEMS_NUM] -= my_sum;
-        my_variance = fma(my_chunk[ITEMS_NUM], my_chunk[ITEMS_NUM], my_variance);
+        tmp = (float)input[data_set_offset + workers_per_data_set * ITEMS_NUM + in_data_set_idx];
+        tmp -= my_sum;
+        my_variance = fma(tmp, tmp, my_variance);
     }
 
     lg_storage[in_data_set_idx] = my_variance;
@@ -106,9 +103,9 @@ KERNEL (mvn_gpu_bfyx_opt)(const __global UNIT_TYPE* input, __global UNIT_TYPE* o
     my_variance = lg_storage[0];
 
     for (uint i=0; i<ITEMS_NUM; ++i)
-        output[my_data_offset + i * workers_per_data_set] = ACTIVATION(UNIT_CVT_FUNC(my_chunk[i]) * UNIT_CVT_FUNC(my_variance), NL_M ,NL_N);
+        output[my_data_offset + i * workers_per_data_set] = ACTIVATION((UNIT_CVT_FUNC(input[my_data_offset + i * workers_per_data_set]) - UNIT_CVT_FUNC(my_sum)) * UNIT_CVT_FUNC(my_variance), NL_M ,NL_N);
     if (in_data_set_idx < LEFTOVERS)
-        output[data_set_offset + workers_per_data_set * ITEMS_NUM + in_data_set_idx] = ACTIVATION(UNIT_CVT_FUNC(my_chunk[ITEMS_NUM]) * UNIT_CVT_FUNC(my_variance), NL_M ,NL_N);
+        output[data_set_offset + workers_per_data_set * ITEMS_NUM + in_data_set_idx] = ACTIVATION((UNIT_CVT_FUNC(input[data_set_offset + workers_per_data_set * ITEMS_NUM + in_data_set_idx]) - UNIT_CVT_FUNC(my_sum)) * UNIT_CVT_FUNC(my_variance), NL_M ,NL_N);
 #endif
 }
 

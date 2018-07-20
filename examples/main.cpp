@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -180,13 +180,14 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Name for serialization process.")
         ("reserialization", bpo::value<std::string>()->value_name("<network name>")->default_value(""),
             "Name of reserialization process.")
-        ("batch", bpo::value<std::uint32_t>()->value_name("<batch-size>")->default_value(8),
+        ("batch", bpo::value<std::uint32_t>()->value_name("<batch-size>")->default_value(1),
             "Size of a group of images that are classified together (large batch sizes have better performance).")
         ("loop", bpo::value<std::uint32_t>()->value_name("<loop-count>")->default_value(1),
-            "Number of iterations to run each execution. Can be used for robust benchmarking. (default 1)")
+            "Number of iterations to run each execution. Can be used for robust benchmarking. (default 1).\n"
+            "For character-model topos it says how many characters will be predicted.")
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
-            "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, resnet50, resnet50-i8, microbench_conv, microbench_lstm, ssd_mobilenet, ssd_mobilenet-i8.")
+            "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, resnet50, resnet50-i8, microbench_conv, microbench_lstm, ssd_mobilenet, ssd_mobilenet-i8, lstm_char, lenet.")
         ("run_until_primitive", bpo::value<std::string>()->value_name("<primitive_name>"),
             "Runs topology until specified primitive.")
         ("run_single_layer", bpo::value<std::string>()->value_name("<primitive_name>"),
@@ -233,8 +234,14 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Performs weights convertion to most desirable format for each network layer while building network.")
         ("memory_opt_disable", bpo::bool_switch(),
             "Disables memory reuse within primitves.")
+        ("sequence_length", bpo::value<std::uint32_t>()->value_name("<sequence-length>")->default_value(0),
+            "Used in RNN topologies (LSTM).")
         ("perf_per_watt", bpo::bool_switch(),
             "Triggers power consumption measuring and outputing frames per second per watt.")
+        ("vocabulary_file", bpo::value<std::string>()->value_name("<vocabulary-file>"),
+            "Path to vocabulary file (.txt format). File has to contain all the characters, which model recognizes.")
+        ("temperature", bpo::value<float>()->value_name("<temperature-value>")->default_value(0.0f),
+            "Temperature for character selection at the output <range from 0.0 to 1.0>. (default 0.0f)")        
         ("lstm_input_size", bpo::value<std::uint32_t>()->value_name("<input_size>")->default_value(10),
             "LSTM microbench input size.")
         ("lstm_hidden_size", bpo::value<std::uint32_t>()->value_name("<hidden_size>")->default_value(7),
@@ -249,6 +256,14 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "LSTM use initial hidden tensor.")
         ("lstm_initial_cell", bpo::bool_switch(),
             "LSTM use initial cell tensor.")
+        ("image_number", bpo::value<std::uint32_t>()->value_name("<image_number>")->default_value(8),
+            "Number of images that will be used for traning. Default value is 8.")
+        ("image_offset", bpo::value<std::uint32_t>()->value_name("<image_offset>")->default_value(0),
+            "How many images should be skipped in mnist data on execution.")
+        ("use_existing_weights", bpo::bool_switch(),
+            "Parameter used in learning, when it is set then model will use existing weights files")
+        ("lr", bpo::value<float>()->value_name("<lr>")->default_value(0.00001f),
+            "Base learning rate for network training. Default value is 0.00001f.")
         ("version", "Show version of the application.")
         ("help", "Show help message and available command-line options.");
 
@@ -329,7 +344,6 @@ int main(int argc, char* argv[])
     extern void googlenet_v1(const execution_params &ep);
     extern void convert_weights(cldnn::data_types dt, cldnn::format::type format,
                                 const std::string& conv_path_filter, bool validate_magic = false);
-
 
     set_executable_info(argc, argv); // Must be set before using get_executable_info().
 
@@ -441,6 +455,23 @@ int main(int argc, char* argv[])
                 }
             }
 
+            auto seq_length = parsed_args["sequence_length"].as<std::uint32_t>();;
+            if (seq_length != 0) ep.rnn_type_of_topology = true;
+            ep.sequence_length = seq_length;
+            if (ep.rnn_type_of_topology && parsed_args["model"].as<std::string>() != "lstm_char")
+                std::cerr << "lstm type params are allowed for lstm type topologies" << std::endl;;
+            if (seq_length > 0)
+            {
+                auto vocab_file = parsed_args["vocabulary_file"].as<std::string>();
+                if (!bfs::exists(vocab_file) || !bfs::is_regular_file(vocab_file) || bfs::extension(vocab_file) != ".txt")
+                {
+                    std::cerr << "ERROR: specified vocabulary file (\"" << vocab_file
+                        << "\") does not exist or is not .txt type of file !!!" << std::endl;
+                    return 1;
+                }
+                ep.vocabulary_file = vocab_file;
+            }
+
             ep.input_dir = input_dir;
             ep.weights_dir = weights_dir;
         }
@@ -496,6 +527,26 @@ int main(int argc, char* argv[])
         ep.loop = parsed_args["loop"].as<std::uint32_t>();
         ep.disable_mem_pool = parsed_args["memory_opt_disable"].as<bool>();
         ep.calibration = parsed_args["use_calibration"].as<bool>();
+        ep.sequence_length = parsed_args["sequence_length"].as<std::uint32_t>();
+        ep.temperature = parsed_args["temperature"].as<float>();
+        ep.image_number = parsed_args["image_number"].as<std::uint32_t>();
+        ep.image_offset = parsed_args["image_offset"].as<std::uint32_t>();
+        ep.use_existing_weights = parsed_args["use_existing_weights"].as<bool>();
+        ep.learning_rate = parsed_args["lr"].as<float>();
+
+        if (ep.rnn_type_of_topology) //we care about temperature for some rnn topologies.
+        {
+            if (ep.temperature > 1.0f)
+            {
+                std::cout << "[WARNING] Temperature too high. Lowered to max value = 1.0f." << std::endl;
+                ep.temperature = 1.0f;
+            }
+            if (ep.temperature < 0.0f)
+            {
+                std::cout << "[WARNING] Temperature can't be negative. Higered to min. value = 0.0f." << std::endl;
+                ep.temperature = 0.0f;
+            }
+        }
 
         std::uint32_t print = parsed_args["print_type"].as<std::uint32_t>();
         ep.print_type = (PrintType)((print >= (std::uint32_t)PrintType::PrintType_count) ? 0 : print);
@@ -515,14 +566,18 @@ int main(int argc, char* argv[])
 
         if (ep.topology_name == "alexnet" ||
             ep.topology_name == "vgg16" ||
+            ep.topology_name == "vgg16_train" ||
             ep.topology_name == "vgg16_face" ||
             ep.topology_name == "googlenet" ||
             ep.topology_name == "gender" ||
             ep.topology_name == "squeezenet" ||
+            ep.topology_name == "lenet" ||
+            ep.topology_name == "lenet_train" ||
             ep.topology_name == "resnet50" ||
             ep.topology_name == "resnet50-i8" ||
             ep.topology_name == "microbench_conv" ||
             ep.topology_name == "microbench_lstm" ||
+            ep.topology_name == "lstm_char" || 
             ep.topology_name == "ssd_mobilenet" ||
             ep.topology_name == "ssd_mobilenet-i8")
         {

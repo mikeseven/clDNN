@@ -97,6 +97,16 @@ void network_impl::set_input_data(const primitive_id& id, memory_impl& data)
     input->set_data(data);
 }
 
+void network_impl::set_learning_rate(const float lr)
+{
+    _learning_rate = lr;
+}
+
+float network_impl::get_learning_rate()
+{
+    return _learning_rate;
+}
+
 std::string network_impl::get_primitive_info(const primitive_id& id) const
 {    
     const auto& node = _program->get_node(id);

@@ -19,6 +19,7 @@
 
 #include "power_instrumentation.h"
 #include "instrumentation.h"
+#include "lstm_utils.h"
 
 #include "api/CPP/topology.hpp"
 #include "api/CPP/network.hpp"
@@ -30,6 +31,8 @@
 #include <type_traits>
 #include <utility>
 #include <vector>
+
+using cldnn_output = std::map<cldnn::primitive_id, cldnn::network_output>;
 
 enum PrintType
 {
@@ -165,8 +168,19 @@ struct execution_params {
     bool perf_per_watt; // power instrumentation
     bool disable_mem_pool; // memory 
     bool calibration; // int8 precission
-
     lstm_execution_params lstm_ep; // LSTM microbench parameters
+
+    //RNN specific
+    bool        rnn_type_of_topology = false;
+    float       temperature;
+    std::string vocabulary_file;
+    uint32_t    sequence_length;
+
+    //training
+    uint32_t image_number;
+    uint32_t image_offset;
+    bool use_existing_weights;
+    float learning_rate;
 };
 
 struct memory_filler
@@ -175,7 +189,7 @@ struct memory_filler
     {
         zero = 0,
         one,
-        zero_to_nine,
+        zero_to_nine
     } filler_type;
 
     template<typename T>
@@ -192,11 +206,14 @@ struct memory_filler
     }
 };
 
-std::vector<std::string> get_directory_images(const std::string& images_path);
+std::vector<std::string> get_input_list(const std::string& images_path);
 std::vector<std::string> get_directory_weights(const std::string& images_path);
 
 template <typename MemElemTy = float>
 void load_images_from_file_list(const std::vector<std::string>& images_list, cldnn::memory& memory); 
+
+template <typename MemElemTy = float>
+void load_data_from_file_list_lenet(const std::vector<std::string>& images_list, cldnn::memory& memory, const uint32_t images_offset, const uint32_t images_number, const bool train, cldnn::memory& memory_labels);
 
 /// function moved from alexnet.cpp, they will be probably used by each topology
 void print_profiling_table(std::ostream& os, const std::vector<cldnn::instrumentation::profiling_info>& profiling_info);
@@ -204,9 +221,20 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
 uint32_t get_next_nearest_power_of_two(int number);
 uint32_t get_gpu_batch_size(int number);
 
-std::chrono::nanoseconds execute_topology(cldnn::network network,
-                                          const execution_params &ep,
-                                          CIntelPowerGadgetLib& energyLib,
-                                          cldnn::memory& output);
+void make_instrumentations(const execution_params&, cldnn::memory&, std::map<cldnn::primitive_id, cldnn::network_output>&);
+
+std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& timer_execution,
+                                            const execution_params &ep,
+                                            cldnn::memory& output,
+                                            cldnn_output& outputs,
+                                            bool log_energy,
+                                            CIntelPowerGadgetLib& energyLib);
+
+std::chrono::nanoseconds execute_rnn_topology(cldnn::network network,
+                                                const execution_params &ep,
+                                                CIntelPowerGadgetLib& energyLib,
+                                                cldnn::memory& output,
+                                                cldnn::memory& input,
+                                                lstm_utils& lstm_data);
 
 void run_topology(const execution_params &ep);

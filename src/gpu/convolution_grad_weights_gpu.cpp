@@ -41,6 +41,12 @@ protected:
         CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory(1).get_layout().data_type, "output memory", instance.output_memory().get_layout().data_type, "");
         CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory().get_layout().data_type, "filter memory", instance.weights_memory(0).get_layout().data_type, "");
 
+        if (instance.use_momentum())
+        {
+            CLDNN_ERROR_LAYOUT_MISMATCH(_outer.id(), "Filter memory", instance.weights_memory(0).get_layout(), "previous weights grad memory", _outer.prev_weights_grad(0).get_output_layout(), "");
+            CLDNN_ERROR_LAYOUT_MISMATCH(_outer.id(), "Bias memory", instance.bias_memory(0).get_layout(), "previous bias grad memory", _outer.prev_bias_grad(0).get_output_layout(), "");
+        }
+
         return res;
     }
 
@@ -50,6 +56,9 @@ protected:
 
         args.weights    = &instance.weights_memory(split);
         args.bias       = instance.bias_term() ? &instance.bias_memory(split) : nullptr;
+        args.prev_weights_grad = instance.use_momentum() ? &instance.prev_weights_grad(split) : nullptr;
+        args.prev_bias_grad = instance.bias_term() ? instance.use_momentum() ? &instance.prev_bias_grad(split) : nullptr : nullptr;
+        args.lr         = instance.get_network().get_learning_rate();
 
         return args;
     }
@@ -95,8 +104,14 @@ public:
 
         conv_grad_weights_params.depthwiseSeparableOpt = depthwise_separable_opt;
 
+
         conv_grad_weights_params.gradient = true;
         conv_grad_weights_params.inputs.push_back(convert_data_tensor(arg.get_dependency(1).get_output_layout()));
+
+        if (arg.use_momentum()) 
+        {
+            conv_grad_weights_params.useMomentum = true;
+        }
 
         conv_grad_weights_params.split = split;
         conv_grad_weights_params.filterSize = {

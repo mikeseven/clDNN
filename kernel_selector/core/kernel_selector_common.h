@@ -136,6 +136,8 @@ namespace kernel_selector {
             OUTPUT,
             WEIGHTS,
             BIAS,
+            PREV_WEIGHTS_GRADIENT,
+            PREV_BIAS_GRADIENT,
             SCALE_TABLE,
             SLOPE,
             SPLIT,
@@ -146,7 +148,8 @@ namespace kernel_selector {
             RECURRENT, // RNN/LSTM/GRU recurrent weights
             HIDDEN,    // RNN/LSTM/GRU hidden input
             CELL,      // LSTM cell input
-            LSTM_PACK  // LSTM packed output
+            LSTM_PACK, // LSTM packed output
+            LEARNING_RATE
         };
 
         enum class ScalarTypes

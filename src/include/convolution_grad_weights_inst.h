@@ -60,6 +60,28 @@ public:
         return get_dependency(2 + this->get_split() + idx);
     }
 
+    decltype(auto) prev_weights_grad(size_t idx = 0) const
+    {
+        if (static_cast<int32_t>(idx) >= get_split())
+            throw std::range_error("prev weights grad offset too big");
+        return get_dependency(2 + (bias_term() ? 2 : 1) * get_split() + idx);
+    }
+
+    decltype(auto) prev_bias_grad(size_t idx = 0) const
+    {
+        if (static_cast<int32_t>(idx) >= get_split())
+            throw std::range_error("prev bias grad offset too big");
+        return get_dependency(2 + 3 * get_split() + idx);
+    }
+
+    bool use_momentum() const
+    {
+        if (get_primitive()->prev_weights_grad.size() != 0)
+            return true;
+        else
+            return false;
+    }
+
     bool bias_term() const
     {
         if (get_primitive()->bias.size() != 0)
@@ -104,6 +126,36 @@ public:
             throw std::range_error("bias offset too big");
 
         return dep_memory(2 + node.get_split() + index);
+    }
+
+    decltype(auto) prev_weights_grad(size_t index) const
+    {
+        if(argument.prev_weights_grad.size() == 0 && static_cast<int32_t>(index) >= node.get_split())
+            throw std::range_error("no prev weights grad data");
+
+        if (static_cast<int32_t>(index) >= node.get_split())
+            throw std::range_error("prev weights grad offset too big");
+
+        return dep_memory(2 + (bias_term() ? 2 : 1) * node.get_split() + index);
+    }
+
+    decltype(auto) prev_bias_grad(size_t index) const
+    {
+        if (argument.prev_bias_grad.size() == 0 && static_cast<int32_t>(index) >= node.get_split())
+            throw std::range_error("no prev bias grad data");
+
+        if (static_cast<int32_t>(index) >= node.get_split())
+            throw std::range_error("prev bias grad offset too big");
+
+        return dep_memory(2 + 3 * node.get_split() + index);
+    }
+
+    bool use_momentum() const
+    {
+        if (argument.prev_weights_grad.size() != 0)
+            return true;
+        else
+            return false;
     }
 
     bool bias_term() const

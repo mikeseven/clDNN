@@ -73,7 +73,10 @@ public:
         memory_impl::cptr lookup_table;
         memory_impl::cptr scale_table;
         memory_impl::cptr slope;
+        memory_impl::cptr prev_weights_grad;
+        memory_impl::cptr prev_bias_grad;
         int32_t           split          = 0;
+        float             lr;
         const kernel_selector::kernel_scalar_arguments* scalars = nullptr;
     };
 
