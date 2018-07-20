@@ -171,6 +171,94 @@ json_composite program_node::desc_to_json() const
     return node_info;
 }
 
+xml_composite program_node::desc_to_xml() const
+{
+    xml_composite node_info;
+    node_info.add("ptr", "node_" + std::to_string(reinterpret_cast<uintptr_t>(this)));
+    node_info.add("id", id());
+    node_info.add("type", get_extr_type(typeid(*this).name()));
+    node_info.add("internal", bool_to_str(this->is_type<internal_primitive>()));
+    node_info.add("valid output layout", bool_to_str(valid_output_layout));
+
+    xml_composite output_layout_info;
+    output_layout_info.add("data_type", dt_to_str(output_layout.data_type));
+    output_layout_info.add("format", fmt_to_str(output_layout.format));
+    output_layout_info.add("size", output_layout.size.to_string());
+
+    xml_composite padding_info;
+    padding_info.add("lower size", output_layout.data_padding.lower_size().to_string());
+    padding_info.add("upper size", output_layout.data_padding.upper_size().to_string());
+    output_layout_info.add("padding info", padding_info);
+
+    node_info.add("output layout", output_layout_info);
+
+    node_info.add("processing number", processing_num);
+    node_info.add("constant", bool_to_str(constant));
+    node_info.add("in data flow", bool_to_str(data_flow));
+    node_info.add("main branch", bool_to_str(main_branch));
+    node_info.add("dominator", std::to_string(reinterpret_cast<uintptr_t>(dominator)));
+    node_info.add("joint", std::to_string(reinterpret_cast<uintptr_t>(joint)));
+    node_info.add("output", bool_to_str(output));
+
+    std::vector<std::string> deps_ptrs;
+    {
+        bool empty = true;
+        auto itr = dependencies.begin();
+        while (itr != dependencies.end())
+        {
+            if (empty)
+            {
+                empty = false;
+            }
+            deps_ptrs.push_back(std::to_string(reinterpret_cast<uintptr_t>(*itr++)));
+        }
+        if (deps_ptrs.empty())
+        {
+            deps_ptrs.push_back("null");
+        }
+    }
+    node_info.add("dependencies", deps_ptrs);
+
+    std::vector<std::string> users_ptrs;
+    {
+        bool empty = true;
+        auto itr = users.begin();
+        while (itr != users.end())
+        {
+            if (empty)
+            {
+                empty = false;
+            }
+            users_ptrs.push_back(std::to_string(reinterpret_cast<uintptr_t>(*itr++)));
+        }
+        if (users_ptrs.empty())
+        {
+            users_ptrs.push_back("null");
+        }
+    }
+    node_info.add("users", users_ptrs);
+
+    std::vector<std::string> impls;
+    if (!selected_impl)
+    {
+        impls.push_back("null");
+    }
+    else
+    {
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
+#endif
+        impls.push_back(selected_impl->get_kernel_name());
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
+    }
+    node_info.add("implementation", impls);
+
+    return node_info;
+}
+
 void program_node::remove_dependency(program_node & node)
 {
     for (size_t i = 0; i < dependencies.size(); ++i)

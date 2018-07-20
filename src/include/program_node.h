@@ -22,6 +22,7 @@
 
 #include "to_string_utils.h"
 #include "json_object.h"
+#include "xml_object.h"
 #include "meta_utils.h"
 
 namespace cldnn
@@ -102,6 +103,7 @@ public:
     const program_node* get_next() const { auto itr = processing_itr; return (*++itr); }
 
     json_composite desc_to_json() const;
+    xml_composite desc_to_xml() const;
     //do not modify primitive directly to keep synchronisation wit graph
     std::shared_ptr<const primitive> get_primitive() const { return desc; }
     //primitive modification functions

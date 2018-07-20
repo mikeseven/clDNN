@@ -156,24 +156,10 @@ namespace cldnn
         return "node_" + std::to_string(reinterpret_cast<uintptr_t>(ptr));
     }
 
-        void dump_full_node(std::ofstream& out, program_node* node, bool serialize, std::vector<unsigned long long> offsets, std::vector<std::string> data_names)
-        {
-            out << node->type()->to_string(*node);
-            if (serialize)
-            {
-                 auto iter = 0;
-                 for (auto& name : data_names) {
-                    if (name == node->id()) 
-                    {
-                        if (iter == 0)
-                            out << "data offsets: [0 : " << offsets.at(iter) << "]";
-                        else
-                            out << "data offsets: [" << offsets.at(iter - 1) << " : " << offsets.at(iter) << "]";
-                    }
-                    iter++;
-                }
-            }
-        }
+    void dump_full_node(std::ofstream& out, program_node* node)
+    {
+        out << node->type()->to_string(*node);
+    }
     }
 
     std::string get_dir_path(build_options opts)
@@ -357,26 +343,55 @@ namespace cldnn
         close_stream(graph);
     }
 
-    void dump_graph_info(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter, bool serialize, std::vector<unsigned long long> offsets, std::vector<std::string> data_names)
+    void dump_graph_info(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter)
     {
-        if (serialize)
-        {
-            for (unsigned int postion = 0; postion < (unsigned int)data_names.size(); postion++)
-                if (data_names.at(postion).find("kernels_part")!=std::string::npos)
-                {
-                    if (postion == 0)
-                        graph << "kernels 0-"<< (postion+1)*10 << ", offset: [0" << " : " << offsets.at(postion) << "]\n";
-                    else
-                        graph << "kernels "<< postion*10 << "-" << (postion+1)*10 <<", offset: [" << offsets.at(postion -1) << " : " << offsets.at(postion) << "]\n";
-                }
-        }
         for (auto& node : program.get_nodes())
         {
             if (filter && !filter(*node))
                 continue;
 
-            dump_full_node(graph, node.get(), serialize, offsets, data_names);
+            dump_full_node(graph, node.get());
             graph << std::endl << std::endl;
+        }
+        close_stream(graph);
+    }
+
+    //Function used by serialization. Not working yet, in progress.
+    void dump_to_xml(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter, std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names)
+    {
+		auto postion = 0ull;
+        for (auto& node : program.get_nodes())
+        {
+            if (filter && !filter(*node))
+                continue;
+
+            auto node_info = node.get()->desc_to_xml();
+            auto id = node->id();
+            auto offset = 0ull;
+            auto size = offsets.at(0);
+            for (auto p = postion; p < (unsigned int)data_names.size(); p++)
+            {
+                    if (p != 0)
+                    {
+                        offset = offsets.at(p - 1);
+                        size = offsets.at(p) - offsets.at(p - 1);
+                    }
+                    if (data_names.at(p).find("kernels") != std::string::npos)
+                    {
+                        xml_composite kernels;
+                        node_info = kernels;
+                        node_info.add("id", data_names.at(p));
+                        id = "kernels";
+                        postion++;
+                    }
+                    if (data_names.at(p).find(id) != std::string::npos)
+                    {
+                        node_info.add("data offset", std::to_string(offset));
+                        node_info.add("data size", std::to_string(size));
+                        break;
+                    }
+            }
+            node_info.dump(graph); 
         }
         close_stream(graph);
     }
@@ -397,7 +412,7 @@ namespace cldnn
                 }
             }
             offsets.push_back(offset_temp);
-            std::string offset_name = "kernels_part_" + std::to_string(i);
+            std::string offset_name = "kernels_part_" + std::to_string(i+1);
             data_names.push_back(offset_name);
         }
     }
