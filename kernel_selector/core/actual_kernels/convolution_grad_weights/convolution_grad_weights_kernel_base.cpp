@@ -127,9 +127,9 @@ namespace kernel_selector
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, ROUND_ROBIN, true, !orgParams.bias.empty());
         if (newParams.useMomentum)
         {
-            kernel.arguments.push_back({ ArgumentDescriptor::Types::PREV_WEIGHTS_GRADIENT });
+            kernel.arguments.push_back({ ArgumentDescriptor::Types::PREV_WEIGHTS_GRADIENT, 0 });
             if (!newParams.bias.empty())
-                kernel.arguments.push_back({ ArgumentDescriptor::Types::PREV_BIAS_GRADIENT });
+                kernel.arguments.push_back({ ArgumentDescriptor::Types::PREV_BIAS_GRADIENT, 0 });
         }
         kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 1 });
         kernel.arguments.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });

@@ -74,8 +74,6 @@ namespace cldnn
     scale_grad_input_inst::typed_primitive_inst(network_impl& network, scale_grad_input_node const& node)
         :parent(network, node)
     {
-        auto scale_input_format = scale_input_memory().get_layout().format;
-
         auto scale_input_batch_size = scale_input_memory().get_layout().size.batch[0];
         auto scale_input_feature_size = scale_input_memory().get_layout().size.feature[0];
 

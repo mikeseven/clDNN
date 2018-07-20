@@ -48,10 +48,10 @@ struct scale_grad_weights : public primitive_base<scale_grad_weights, CLDNN_PRIM
         const padding& output_padding = padding()
      )
         :primitive_base(id, { input, input_grad }, output_padding)
-        , bias("")
-        , prev_bias_grad("")
-        , prev_scale_grad("")
         , scale_input(scale_input)
+        , bias("")
+        , prev_scale_grad("")
+        , prev_bias_grad("")
         , scale_grad(scale_grad)
     {
     }
@@ -73,10 +73,10 @@ struct scale_grad_weights : public primitive_base<scale_grad_weights, CLDNN_PRIM
         const padding& output_padding = padding()
     )
         :primitive_base(id, { input,  input_grad }, output_padding)
-        , bias (bias)
         , scale_input(scale_input)
-        , prev_bias_grad("")
+        , bias(bias)
         , prev_scale_grad("")
+        , prev_bias_grad("")
         , scale_grad(scale_grad)
     {
     }
@@ -102,10 +102,10 @@ struct scale_grad_weights : public primitive_base<scale_grad_weights, CLDNN_PRIM
         const padding& output_padding = padding()
     )
         :primitive_base(id, { input,  input_grad }, output_padding)
-        , bias(bias)
         , scale_input(scale_input)
-        , prev_bias_grad(prev_bias_grad)
+        , bias(bias)
         , prev_scale_grad(prev_scale_grad)
+        , prev_bias_grad(prev_bias_grad)
         , scale_grad(scale_grad)
     {
     }
@@ -113,8 +113,8 @@ struct scale_grad_weights : public primitive_base<scale_grad_weights, CLDNN_PRIM
     /// @brief Constructs a copy from C API @CLDNN_PRIMITIVE_DESC{scale_grad_weights}
     scale_grad_weights(const dto* dto)
         :primitive_base(dto)
-        , bias(dto->bias)
         , scale_input(dto->scale_input)
+        , bias(dto->bias)
         , prev_scale_grad(dto->prev_scale_grad)
         , prev_bias_grad(dto->prev_bias_grad)
         , scale_grad(dto->scale_grad)
