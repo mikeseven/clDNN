@@ -255,9 +255,7 @@ xml_composite program_node::desc_to_xml() const
 #endif
     }
     node_info.add("implementation", impls);
-    xml_composite node_container;
-    node_container.add("node",node_info);
-	return node_container;
+    return node_info;
 }
 
 void program_node::remove_dependency(program_node & node)

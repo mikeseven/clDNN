@@ -391,7 +391,9 @@ namespace cldnn
                         break;
                     }
             }
-            node_info.dump(graph); 
+            xml_composite data_container;
+            data_container.add("data_package", node_info);
+            data_container.dump(graph); 
         }
         close_stream(graph);
     }
