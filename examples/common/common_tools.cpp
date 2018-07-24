@@ -18,7 +18,6 @@
 #include "FreeImage_wraps.h"
 #include "output_parser.h"
 #include "lstm_utils.h"
-#include "lmdb_utils.hpp"
 
 #include "topologies.h"
 
@@ -418,107 +417,47 @@ void load_data_from_file_list_imagenet(
     if (!cldnn::data_type_match<MemElemTy>(memory_layout.data_type))
         throw std::runtime_error("Memory format expects different type of elements than specified");
 
-    //we use images from imagenet converted to lmdb format. The images file are hardcoded to:
-    // - train-images.idx3-ubyte for training
-    // - t10k-images.idx3-ubyte for testing
-    std::string img_name = "";
-    if (!train)
-        img_name = "test.mdb";
-    else
-        img_name = "train.mdb";
+    if ((images_offset + images_number) > images_list.size())
+        throw std::runtime_error("images_offset + images_number is bigger than number of images in imagenet directory");
 
-    std::string img = "";
-    for (auto img_from_list : images_list)
+    std::vector<std::string> requested_images;
+    for (uint32_t i = images_offset; i < images_offset + images_number; i++)
+        requested_images.push_back(images_list[i]);
+
+    //read in images
+    load_images_from_file_list<MemElemTy>(requested_images, memory);
+
+    //read in labels
+    auto labels_ptr = memory_labels.pointer<MemElemTy>();
+    auto labels_it = labels_ptr.begin();
+
+    auto labels_file = join_path(get_executable_info()->dir(), "synset_words.txt");
+    std::ifstream rfile_labels(labels_file, std::ios::binary);
+
+    if (rfile_labels)
     {
-        if (img_from_list.find(img_name) != std::string::npos)
+        std::string line;
+        std::vector<std::string> line_mappings;
+        while (std::getline(rfile_labels, line))
+            line_mappings.push_back(line.substr(0, 9));
+
+        std::vector<std::uint32_t> requested_labels;
+        for (uint32_t j = 0; j < requested_images.size(); j++)
         {
-            img = img_from_list;
-            break;
+            auto img_label = requested_images[j].substr(requested_images[j].find_last_of("/\\") + 1, 9);
+            auto pos = std::find(line_mappings.begin(), line_mappings.end(), img_label);
+
+            if (pos != line_mappings.end())
+            {
+                auto vec_idx = (uint32_t)(pos - line_mappings.begin());
+                labels_ptr[j] = (MemElemTy)vec_idx;
+            }
+            else
+                throw std::runtime_error("Cannot find requested label in synset_words.txt file.");
         }
     }
-
-    if (img == "")
-        throw std::runtime_error("Image file from imagenet not found.");
-
-    std::shared_ptr<lmdb_utils::DB> db(new lmdb_utils::LMDB());
-    db->Open(img, lmdb_utils::Mode::READ);
-    std::shared_ptr<lmdb_utils::Cursor> cursor(db->NewCursor());
-
-    auto valid = cursor->valid();
-    auto key = cursor->key();
-    auto value = cursor->value();
-    auto size = value.size();
-    auto data = value.data();
-    
-    //if (rfile)
-    //{
-    //    // Read the magic and the meta data
-    //    uint32_t magic;
-    //    uint32_t num_items;
-    //    uint32_t rows;
-    //    uint32_t cols;
-    //
-    //    rfile.read(reinterpret_cast<char*>(&magic), 4);
-    //    magic = swap_endian(magic);
-    //    if (magic != 2051)
-    //        throw std::runtime_error("Incorrect image file magic.");
-    //    rfile.read(reinterpret_cast<char*>(&num_items), 4);
-    //    num_items = swap_endian(num_items);
-    //    rfile.read(reinterpret_cast<char*>(&rows), 4);
-    //    rows = swap_endian(rows);
-    //    rfile.read(reinterpret_cast<char*>(&cols), 4);
-    //    cols = swap_endian(cols);
-    //    auto img_size = rows * cols;
-    //
-    //    std::vector<unsigned char> tmpBuffer(img_size * images_number);
-    //
-    //    rfile.seekg(images_offset * img_size, rfile.cur);
-    //    rfile.read(reinterpret_cast<char *>(&tmpBuffer[0]), img_size * images_number);
-    //    rfile.close();
-    //
-    //    for (uint32_t i = 0; i < img_size * images_number; ++i) {
-    //        *it = static_cast<MemElemTy>(tmpBuffer[i]);
-    //        it++;
-    //    }
-    //
-    //    //read in labels
-    //    auto labels_ptr = memory_labels.pointer<MemElemTy>();
-    //    auto labels_it = labels_ptr.begin();
-    //
-    //    std::string img_ext = "-images.idx3-ubyte";
-    //    auto labels_file = img.substr(0, img.length() - img_ext.length()) + "-labels.idx1-ubyte";
-    //    std::ifstream rfile_labels(labels_file, std::ios::binary);
-    //
-    //    if (rfile_labels)
-    //    {
-    //        // Read the magic and the meta data
-    //        uint32_t magic;
-    //        uint32_t num_items;
-    //
-    //        rfile_labels.read(reinterpret_cast<char*>(&magic), 4);
-    //        magic = swap_endian(magic);
-    //        if (magic != 2049)
-    //            throw std::runtime_error("Incorrect image file magic.");
-    //        rfile_labels.read(reinterpret_cast<char*>(&num_items), 4);
-    //        num_items = swap_endian(num_items);
-    //
-    //        std::vector<unsigned char> tmpBuffer(sizeof(char)*images_number);
-    //
-    //        rfile_labels.seekg(images_offset, rfile_labels.cur);
-    //        rfile_labels.read(reinterpret_cast<char *>(&tmpBuffer[0]), images_number);
-    //        rfile_labels.close();
-    //
-    //        for (uint32_t i = 0; i < images_number; ++i) {
-    //            *labels_it = static_cast<MemElemTy>(tmpBuffer[i]);
-    //            labels_it++;
-    //        }
-    //    }
-    //    else
-    //        throw std::runtime_error("Cannot read labels for lenet topology.");
-    //    count++;
-    //}
-    //else
-    //    throw std::runtime_error("Cannot read image for lenet topology.");
+    else
+        throw std::runtime_error("Cannot read labels file for imagenet.");
 }
 
 template void load_data_from_file_list_imagenet<float>(const std::vector<std::string>&, cldnn::memory&, const uint32_t, const uint32_t, const bool, cldnn::memory&);
@@ -680,7 +619,91 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     }
     else if (ep.topology_name == "vgg16_train")
     {
+        //set weights outputs for vgg16 training
+        outputs.push_back("conv1_1_weights.nnd");
+        outputs.push_back("conv1_1_bias.nnd");
+        outputs.push_back("conv1_2_weights.nnd");
+        outputs.push_back("conv1_2_bias.nnd");
+        outputs.push_back("conv2_1_weights.nnd");
+        outputs.push_back("conv2_1_bias.nnd");
+        outputs.push_back("conv2_2_weights.nnd");
+        outputs.push_back("conv2_2_bias.nnd");
+        outputs.push_back("conv3_1_weights.nnd");
+        outputs.push_back("conv3_1_bias.nnd");
+        outputs.push_back("conv3_2_weights.nnd");
+        outputs.push_back("conv3_2_bias.nnd");
+        outputs.push_back("conv3_3_weights.nnd");
+        outputs.push_back("conv3_3_bias.nnd");
+        outputs.push_back("conv4_1_weights.nnd");
+        outputs.push_back("conv4_1_bias.nnd");
+        outputs.push_back("conv4_2_weights.nnd");
+        outputs.push_back("conv4_2_bias.nnd");
+        outputs.push_back("conv4_3_weights.nnd");
+        outputs.push_back("conv4_3_bias.nnd");
+        outputs.push_back("conv5_1_weights.nnd");
+        outputs.push_back("conv5_1_bias.nnd");
+        outputs.push_back("conv5_2_weights.nnd");
+        outputs.push_back("conv5_2_bias.nnd");
+        outputs.push_back("conv5_3_weights.nnd");
+        outputs.push_back("conv5_3_bias.nnd");
+        outputs.push_back("fc6_weights.nnd");
+        outputs.push_back("fc6_bias.nnd");
+        outputs.push_back("fc7_weights.nnd");
+        outputs.push_back("fc7_bias.nnd");
+        outputs.push_back("fc8_weights.nnd");
+        outputs.push_back("fc8_bias.nnd");
+
+        outputs.push_back("conv1_1_grad_weights_prev.nnd");
+        outputs.push_back("conv1_1_grad_bias_prev.nnd");
+        outputs.push_back("conv1_2_grad_weights_prev.nnd");
+        outputs.push_back("conv1_2_grad_bias_prev.nnd");
+        outputs.push_back("conv2_1_grad_weights_prev.nnd");
+        outputs.push_back("conv2_1_grad_bias_prev.nnd");
+        outputs.push_back("conv2_2_grad_weights_prev.nnd");
+        outputs.push_back("conv2_2_grad_bias_prev.nnd");
+        outputs.push_back("conv3_1_grad_weights_prev.nnd");
+        outputs.push_back("conv3_1_grad_bias_prev.nnd");
+        outputs.push_back("conv3_2_grad_weights_prev.nnd");
+        outputs.push_back("conv3_2_grad_bias_prev.nnd");
+        outputs.push_back("conv3_3_grad_weights_prev.nnd");
+        outputs.push_back("conv3_3_grad_bias_prev.nnd");
+        outputs.push_back("conv4_1_grad_weights_prev.nnd");
+        outputs.push_back("conv4_1_grad_bias_prev.nnd");
+        outputs.push_back("conv4_2_grad_weights_prev.nnd");
+        outputs.push_back("conv4_2_grad_bias_prev.nnd");
+        outputs.push_back("conv4_3_grad_weights_prev.nnd");
+        outputs.push_back("conv4_3_grad_bias_prev.nnd");
+        outputs.push_back("conv5_1_grad_weights_prev.nnd");
+        outputs.push_back("conv5_1_grad_bias_prev.nnd");
+        outputs.push_back("conv5_2_grad_weights_prev.nnd");
+        outputs.push_back("conv5_2_grad_bias_prev.nnd");
+        outputs.push_back("conv5_3_grad_weights_prev.nnd");
+        outputs.push_back("conv5_3_grad_bias_prev.nnd");
+        outputs.push_back("fc6_grad_weights_prev.nnd");
+        outputs.push_back("fc6_grad_bias_prev.nnd");
+        outputs.push_back("fc7_grad_weights_prev.nnd");
+        outputs.push_back("fc7_grad_bias_prev.nnd");
+        outputs.push_back("fc8_grad_weights_prev.nnd");
+        outputs.push_back("fc8_grad_bias_prev.nnd");
+
+        outputs.push_back("conv1_2_grad_weights");
+        outputs.push_back("conv2_1_grad_weights");
+        outputs.push_back("conv2_2_grad_weights");
+        outputs.push_back("conv3_1_grad_weights");
+        outputs.push_back("conv3_2_grad_weights");
+        outputs.push_back("conv3_3_grad_weights");
+        outputs.push_back("conv4_1_grad_weights");
+        outputs.push_back("conv4_2_grad_weights");
+        outputs.push_back("conv4_3_grad_weights");
+        outputs.push_back("conv5_1_grad_weights");
+        outputs.push_back("conv5_2_grad_weights");
+        outputs.push_back("conv5_3_grad_weights");
+        outputs.push_back("fc6_grad_weights");
+        outputs.push_back("fc7_grad_weights");
+        outputs.push_back("fc8_grad_weights");
+
         outputs.push_back("softmax");
+        outputs.push_back("output");
     }
 
 
@@ -1228,7 +1251,7 @@ void run_topology(const execution_params &ep)
 
                     for (uint32_t b = 0; b < batch_size; b++)
                     {
-                        auto e = expected[b];
+                        auto e = (uint32_t)expected[b];
                         loss -= log(std::max(vals[b + e * batch_size], std::numeric_limits<float>::min()));
                     }
                     loss = loss / batch_size;
@@ -1240,6 +1263,8 @@ void run_topology(const execution_params &ep)
             }
             else if (ep.topology_name == "vgg16_train")
             {
+                float acc = 0;
+                uint32_t labels_num = 1000;
                 auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
                 float base_learning_rate = ep.learning_rate;
                 float learning_rate = base_learning_rate;
@@ -1248,7 +1273,7 @@ void run_topology(const execution_params &ep)
                     double loss = 0;
                     //update learning rate, policy "step", gamma=0.001, stepsize=1000.
                     //TODO: enable getting learning rate params from command line
-                    learning_rate = base_learning_rate * pow(0.001f, learn_it / 1000);
+                    learning_rate = base_learning_rate * pow(0.001f, learn_it / 1000.f);
                     loss = 0;
                     network.set_learning_rate(learning_rate);
 
@@ -1266,14 +1291,27 @@ void run_topology(const execution_params &ep)
 
                     for (uint32_t b = 0; b < batch_size; b++)
                     {
-                        auto e = expected[b];
+                        auto e = (uint32_t)expected[b];
+                        std::vector< std::pair<float, uint32_t> > output_vec;
+
                         loss -= log(std::max(vals[b + e * batch_size], std::numeric_limits<float>::min()));
+
+                        //check if true label is on top of predictions
+                        for (uint32_t j = 0; j < labels_num; j++)
+                            output_vec.push_back(std::make_pair(vals[j], j));
+
+                        std::sort(output_vec.begin(), output_vec.end(), std::greater<std::pair<float, uint32_t> >());
+
+                        if (output_vec[0].second == e)
+                            acc++;
                     }
                     loss = loss / batch_size;
                     std::cout << "Iter: " << learn_it - ep.image_offset << std::endl;
                     std::cout << "Loss = " << loss << std::endl;
                     std::cout << "Learning Rate = " << learning_rate << std::endl;
                 }
+                std::cout << "Images processed = " << ep.image_number << std::endl;
+                std::cout << "Accuracy = " << acc / ep.image_number << std::endl;
                 continue;
             }
             else
