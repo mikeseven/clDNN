@@ -108,9 +108,6 @@ set(CLDNN__KHR_CLHPP_DIR "${CLDNN__COMMON_DIR}/khronos_ocl_clhpp")
 # Path which points to directory with fused version of googletest framework (with fused googlemock as well).
 set(CLDNN__GTEST_DIR     "${CLDNN__COMMON_DIR}/googletest-fused")
 
-# Path which points to directory with lmdb library.
-set(CLDNN__LMDB_DIR "${CLDNN__COMMON_DIR}/lmdb")
-
 # Build targets settings.
 
 # Path which points to default root directory for compilation output.
@@ -379,23 +376,6 @@ if(__CLDNN_BoostDefaultVersion VERSION_EQUAL "0")
 endif()
 
 # ======================================================================================================
-
-# Detecting all versions of added lmdb library in the project.
-if(NOT EXISTS "${CLDNN__LMDB_DIR}")
-  message(FATAL_ERROR "[clDNN] Root for lmdb library is invalid or does not exist.
-    Please make sure that libraries are added into \"${CLDNN__LMDB_DIR}\".")
-endif()
-
-cldnn_locate_component_versions(__CLDNN_LMDBVersions __CLDNN_LMDBPaths __CLDNN_LMDBDefaultVersion
-    "lmdb library" "${CLDNN__LMDB_DIR}"
-    "include/lmdb.h"
-  )
-
-if(__CLDNN_LMDBDefaultVersion VERSION_EQUAL "0")
-  message(FATAL_ERROR "[clDNN] lmdb library required for build cannot be located.")
-endif()
-
-# ======================================================================================================
 # ============================================ CMAKE OPTIONS ===========================================
 # ======================================================================================================
 
@@ -456,13 +436,6 @@ set_property(CACHE CLDNN__FREEIMAGE_VERSION PROPERTY STRINGS ${__CLDNN_FreeImage
 set(CLDNN__BOOST_VERSION "${__CLDNN_BoostDefaultVersion}" CACHE STRING "boost libraries (filesystem subset): Version of libraries used to build clDNN framework.")
 mark_as_advanced(CLDNN__BOOST_VERSION)
 set_property(CACHE CLDNN__BOOST_VERSION PROPERTY STRINGS ${__CLDNN_BoostVersions})
-
-# ======================================================================================================
-
-# LMDB library: Version of library used to build clDNN.
-set(CLDNN__LMDB_VERSION "${__CLDNN_LMDBDefaultVersion}" CACHE STRING "lmdb library: Version of library used to build clDNN framework.")
-mark_as_advanced(CLDNN__LMDB_VERSION)
-set_property(CACHE CLDNN__LMDB_VERSION PROPERTY STRINGS ${__CLDNN_LMDBVersions})
 
 # ======================================================================================================
 ## PROCESS PPC BEGIN (Examples)
@@ -738,20 +711,6 @@ cldnn_dmsg("")
 
 # ======================================================================================================
 
-# Selecting LMDB library version and path.
-list(FIND __CLDNN_LMDBVersions "${CLDNN__LMDB_VERSION}" __CLDNN_LMDBVersionIdx)
-if(__CLDNN_LMDBVersionIdx LESS 0)
-  message(FATAL_ERROR "[clDNN] CLDNN__LMDB_VERSION: Selected version of lmdb library cannot be found.
-    Please use one of following values: ${__CLDNN_LMDBVersions}.")
-endif()
-list(GET __CLDNN_LMDBPaths ${__CLDNN_LMDBVersionIdx} CLDNN__LMDB_ROOT)
-set(CLDNN__LMDB_ROOT "${CLDNN__LMDB_ROOT}" CACHE INTERNAL "Path to lmdb library used to build clDNN framework.")
-
-set(CLDNN__LMDB_INCDIRS "${CLDNN__LMDB_ROOT}/include" CACHE INTERNAL "Paths to interface headers for lmdb.")
-set(CLDNN__LMDB_LIBDIRS "${CLDNN__LMDB_ROOT}/${__CLDNN_TargetOs}/${__CLDNN_TargetCpuDir}" CACHE INTERNAL "Paths to libraries to link for lmdb.")
-
-# ======================================================================================================
-
 # Clean-up of helper variables for component paths.
 unset(__CLDNN_TargetOs)
 unset(__CLDNN_TargetCpu)
@@ -850,7 +809,6 @@ endif()
 ## PROCESS PPC BEGIN (FreeImage)
 message(STATUS "[clDNN]  - FreeImage v. used to build:    ${CLDNN__FREEIMAGE_VERSION}")
 ## PROCESS PPC END
-message(STATUS "[clDNN]  - lmdb v. used to build:         ${CLDNN__LMDB_VERSION}")
 message(STATUS "[clDNN]  - boost ver. used to build:      ${CLDNN__BOOST_VERSION}")
 message(STATUS "[clDNN]")
 message(STATUS "[clDNN]  - Include/Build cldnn core:      ${CLDNN__INCLUDE_CORE}")
@@ -885,11 +843,6 @@ message(STATUS "[clDNN]     + Headers:      ${CLDNN__FREEIMAGE_INCDIRS}")
 message(STATUS "[clDNN]     + Libs to link: ${CLDNN__FREEIMAGE_LIBDIRS}")
 message(STATUS "[clDNN]")
 ## PROCESS PPC END
-message(STATUS "[clDNN] lmdb:")
-message(STATUS "[clDNN]  - Root:            ${CLDNN__LMDB_ROOT}")
-message(STATUS "[clDNN]     + Headers:      ${CLDNN__LMDB_INCDIRS}")
-message(STATUS "[clDNN]     + Libs to link: ${CLDNN__LMDB_LIBDIRS}")
-message(STATUS "[clDNN]")
 message(STATUS "[clDNN] boost libraries:")
 message(STATUS "[clDNN]  - Root:            ${CLDNN__BOOST_ROOT}")
 message(STATUS "[clDNN]     + Headers:      ${Boost_INCLUDE_DIRS}")
@@ -1357,7 +1310,6 @@ include_directories(
 ## PROCESS PPC BEGIN (FreeImage)
     ${CLDNN__FREEIMAGE_INCDIRS}
 ## PROCESS PPC END
-    ${CLDNN__LMDB_INCDIRS}
     "${CLDNN__KHR_CLHPP_DIR}"
     ${Boost_INCLUDE_DIRS}
     "${CLDNN__CODEGEN_INCDIR}"
@@ -1367,7 +1319,6 @@ link_directories(
 ## PROCESS PPC BEGIN (FreeImage)
     ${CLDNN__FREEIMAGE_LIBDIRS}
 ## PROCESS PPC END
-	${CLDNN__LMDB_LIBDIRS}
   )
 
 # =================================== Link targets and dependencies ====================================

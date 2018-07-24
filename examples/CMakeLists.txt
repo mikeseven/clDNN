@@ -45,6 +45,7 @@ file(GLOB __CLDNN_Sources__common
     "${__CLDNN_Directory__common}/*.cpp"
   )
 
+
 set(__CLDNN_AllSources
     ${__CLDNN_Sources__main}
     ${__CLDNN_Sources__common}
@@ -74,7 +75,6 @@ set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD
 target_link_libraries("${CLDNN_BUILD__PROJ}"
     "${CLDNN_BUILD__PROJ__clDNN}"
     FreeImage
-	lmdb
     Boost::filesystem
     Boost::program_options
     Boost::system
@@ -91,11 +91,6 @@ find_library(CLDNN_FIND__FREEIMAGE_SHLPATH
   PATHS ${CLDNN__FREEIMAGE_LIBDIRS}
   NO_CMAKE_FIND_ROOT_PATH
 )
-find_library(CLDNN_FIND__LMDB_SHLPATH
-  NAMES lmdb
-  PATHS ${CLDNN__LMDB_LIBDIRS}
-  NO_CMAKE_FIND_ROOT_PATH
-)
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${__CLDNN_FindLibSuffixes})
 
 if(CLDNN_FIND__FREEIMAGE_SHLPATH)
@@ -105,15 +100,7 @@ if(CLDNN_FIND__FREEIMAGE_SHLPATH)
     )
 endif()
 
-if(CLDNN_FIND__LMDB_SHLPATH)
-  add_custom_command(TARGET "${CLDNN_BUILD__PROJ}" POST_BUILD
-      COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CLDNN_FIND__LMDB_SHLPATH}" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/"
-      COMMENT "Copying lmdb shared library to output..."
-    )
-endif()
-
 unset(CLDNN_FIND__FREEIMAGE_SHLPATH CACHE)
-unset(CLDNN_FIND__LMDB_SHLPATH CACHE)
 unset(__CLDNN_FindLibSuffixes)
 
 # ======================================================================================================
