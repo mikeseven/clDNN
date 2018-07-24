@@ -50,4 +50,7 @@ cldnn::topology build_ssd_mobilenet_i8(const std::string& weights_dir, const cld
 cldnn::topology build_char_level(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, int32_t sequence_length);
 
 cldnn::topology build_lenet(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size);
+
 cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_existing_weights);
+
+cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_existing_weights);

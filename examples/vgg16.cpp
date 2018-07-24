@@ -288,3 +288,211 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
 
     return topology;
 }
+
+static primitive_id add_conv_layer(const std::string& weights_dir, const engine& engine, topology& topology_inst,
+    const std::string& layer_name, const primitive_id& input, const layout weights_layout, const layout bias_layout, const bool use_existing_weights,
+    const tensor& padding = { 0, 0, 0, 0 }, const tensor& stride = { 1, 1, 1, 1 }, const bool add_relu = true)
+{
+    auto weights_data = file::create_mutable({ engine, join_path(weights_dir, layer_name + "_weights.nnd") }, use_existing_weights ? false : true, weights_layout, cldnn::mutable_data::filler_type::xavier);
+    auto bias_data = file::create_mutable({ engine, join_path(weights_dir, layer_name + "_bias.nnd") }, use_existing_weights ? false : true, bias_layout, cldnn::mutable_data::filler_type::zero);
+
+    auto conv_layer = convolution(
+        layer_name,
+        input,
+        { weights_data },
+        { bias_data },
+        stride,
+        padding,
+        { 1, 1, 1, 1 },
+        add_relu);
+
+    topology_inst.add(weights_data, bias_data, conv_layer);
+
+    return conv_layer;
+}
+
+static primitive_id add_fc_layer(const std::string& weights_dir, const engine& engine, topology& topology_inst,
+    const std::string& layer_name, const primitive_id& input, const layout weights_layout, const layout bias_layout, const bool use_existing_weights)
+{
+    auto weights_data = file::create_mutable({ engine, join_path(weights_dir, layer_name + "_weights.nnd") }, use_existing_weights ? false : true, weights_layout, cldnn::mutable_data::filler_type::xavier);
+    auto bias_data = file::create_mutable({ engine, join_path(weights_dir, layer_name + "_bias.nnd") }, use_existing_weights ? false : true, bias_layout, cldnn::mutable_data::filler_type::zero);
+
+    auto fc_layer = fully_connected(
+        layer_name,
+        input,
+        weights_data,
+        bias_data,
+        true);
+
+    topology_inst.add(weights_data, bias_data, fc_layer);
+
+    return fc_layer;
+}
+
+cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, bool use_existing_weights)
+{
+    // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
+    input_layout.size = { batch_size, 3, 224, 224 };
+    auto input = cldnn::input_layout("input", input_layout);
+    auto labels = cldnn::input_layout("labels", { input_layout.data_type, format::bfyx,{ batch_size, 1, 1, 1 } });
+
+    topology topology_inst{ input, labels };
+
+    // subtract mean values
+    auto reorder_mean = file::create({ engine, join_path(weights_dir, "imagenet_mean.nnd") });
+    auto reordered_input = reorder(
+        "reorder",
+        input,
+        { input_layout.data_type, cldnn::format::bfyx, input_layout.size },
+        reorder_mean);
+
+
+    auto conv1_1_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 64, 3, 3, 3 } };
+    auto conv1_1_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 64, 1 } };
+    auto conv1_1 = add_conv_layer(weights_dir, engine, topology_inst, "conv1_1", reordered_input,  conv1_1_w_mem_layout, conv1_1_b_mem_layout,
+        use_existing_weights, { 0, 0, -1, -1 });
+
+    auto conv1_2_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 64, 64, 3, 3 } };
+    auto conv1_2_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 64, 1 } };
+    auto conv1_2 = add_conv_layer(weights_dir, engine, topology_inst, "conv1_2", conv1_1, conv1_2_w_mem_layout, conv1_2_b_mem_layout,
+        use_existing_weights, { 0, 0, -1, -1 });
+
+    auto pool1_argmax_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_size, 64, 112, 112 } });
+    auto pool1_argmax = mutable_data("pool1_argmax", pool1_argmax_mem);
+
+    auto pool1 = pooling("pool1",
+        conv1_2,
+        pool1_argmax,
+        pooling_mode::max_with_argmax,
+        { 1,1,2,2 }, // kernel
+        { 1,1,2,2 } // strd
+    );
+
+    auto conv2_1_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 128, 64, 3, 3 } };
+    auto conv2_1_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 128, 1 } };
+    auto conv2_1 = add_conv_layer(weights_dir, engine, topology_inst, "conv2_1", pool1, conv2_1_w_mem_layout, conv2_1_b_mem_layout,
+        use_existing_weights, { 0, 0, -1, -1 });
+
+    auto conv2_2_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 128, 128, 3, 3 } };
+    auto conv2_2_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 128, 1 } };
+    auto conv2_2 = add_conv_layer(weights_dir, engine, topology_inst, "conv2_2", conv2_1, conv2_2_w_mem_layout, conv2_2_b_mem_layout,
+        use_existing_weights, { 0, 0, -1, -1 });
+
+    auto pool2_argmax_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_size, 128, 56, 56 } });
+    auto pool2_argmax = mutable_data("pool2_argmax", pool2_argmax_mem);
+
+    auto pool2 = pooling("pool2",
+        conv2_2,
+        pool2_argmax,
+        pooling_mode::max_with_argmax,
+        { 1,1,2,2 }, // kernel
+        { 1,1,2,2 } // strd
+    );
+
+    auto conv3_1_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 256, 128, 3, 3 } };
+    auto conv3_1_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 256, 1 } };
+    auto conv3_1 = add_conv_layer(weights_dir, engine, topology_inst, "conv3_1", pool2, conv3_1_w_mem_layout, conv3_1_b_mem_layout,
+        use_existing_weights, { 0, 0, -1, -1 });
+
+    auto conv3_2_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 256, 256, 3, 3 } };
+    auto conv3_2_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 256, 1 } };
+    auto conv3_2 = add_conv_layer(weights_dir, engine, topology_inst, "conv3_2", conv3_1, conv3_2_w_mem_layout, conv3_2_b_mem_layout,
+        use_existing_weights, { 0, 0, -1, -1 });
+
+    auto conv3_3_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 256, 256, 3, 3 } };
+    auto conv3_3_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 256, 1 } };
+    auto conv3_3 = add_conv_layer(weights_dir, engine, topology_inst, "conv3_3", conv3_2, conv3_3_w_mem_layout, conv3_3_b_mem_layout,
+        use_existing_weights, { 0, 0, -1, -1 });
+
+    auto pool3_argmax_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_size, 256, 28, 28 } });
+    auto pool3_argmax = mutable_data("pool3_argmax", pool3_argmax_mem);
+
+    auto pool3 = pooling("pool3",
+        conv3_3,
+        pool3_argmax,
+        pooling_mode::max_with_argmax,
+        { 1,1,2,2 }, // kernel
+        { 1,1,2,2 } // strd
+    );
+
+    auto conv4_1_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 512, 256, 3, 3 } };
+    auto conv4_1_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 512, 1 } };
+    auto conv4_1 = add_conv_layer(weights_dir, engine, topology_inst, "conv4_1", pool3, conv4_1_w_mem_layout, conv4_1_b_mem_layout,
+        use_existing_weights, { 0, 0, -1, -1 });
+
+    auto conv4_2_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 512, 512, 3, 3 } };
+    auto conv4_2_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 512, 1 } };
+    auto conv4_2 = add_conv_layer(weights_dir, engine, topology_inst, "conv4_2", conv4_1, conv4_2_w_mem_layout, conv4_2_b_mem_layout,
+        use_existing_weights, { 0, 0, -1, -1 });
+
+    auto conv4_3_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 512, 512, 3, 3 } };
+    auto conv4_3_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 512, 1 } };
+    auto conv4_3 = add_conv_layer(weights_dir, engine, topology_inst, "conv4_3", conv4_2, conv4_3_w_mem_layout, conv4_3_b_mem_layout,
+        use_existing_weights, { 0, 0, -1, -1 });
+
+    auto pool4_argmax_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_size, 512, 14, 14 } });
+    auto pool4_argmax = mutable_data("pool4_argmax", pool4_argmax_mem);
+
+    auto pool4 = pooling("pool4",
+        conv4_3,
+        pool4_argmax,
+        pooling_mode::max_with_argmax,
+        { 1,1,2,2 }, // kernel
+        { 1,1,2,2 } // strd
+    );
+
+    auto conv5_1_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 512, 512, 3, 3 } };
+    auto conv5_1_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 512, 1 } };
+    auto conv5_1 = add_conv_layer(weights_dir, engine, topology_inst, "conv5_1", pool4, conv5_1_w_mem_layout, conv5_1_b_mem_layout,
+        use_existing_weights, { 0, 0, -1, -1 });
+
+    auto conv5_2_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 512, 512, 3, 3 } };
+    auto conv5_2_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 512, 1 } };
+    auto conv5_2 = add_conv_layer(weights_dir, engine, topology_inst, "conv5_2", conv5_1, conv5_2_w_mem_layout, conv5_2_b_mem_layout,
+        use_existing_weights, { 0, 0, -1, -1 });
+
+    auto conv5_3_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 512, 512, 3, 3 } };
+    auto conv5_3_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 512, 1 } };
+    auto conv5_3 = add_conv_layer(weights_dir, engine, topology_inst, "conv5_3", conv5_2, conv5_3_w_mem_layout, conv5_3_b_mem_layout,
+        use_existing_weights, { 0, 0, -1, -1 });
+
+    auto pool5_argmax_mem = memory::allocate(engine, { data_types::f32, format::bfyx,{ batch_size, 512, 7, 7 } });
+    auto pool5_argmax = mutable_data("pool5_argmax", pool5_argmax_mem);
+
+    auto pool5 = pooling("pool5",
+        conv5_3,
+        pool5_argmax,
+        pooling_mode::max_with_argmax,
+        { 1,1,2,2 }, // kernel
+        { 1,1,2,2 } // strd
+    );
+
+    auto fc6_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 4096, 512, 7, 7 } };
+    auto fc6_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 4096, 1 } };
+    auto fc6 = add_fc_layer(weights_dir, engine, topology_inst, "fc6", pool5, fc6_w_mem_layout, fc6_b_mem_layout,
+        use_existing_weights);
+
+    auto fc7_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 4096, 1, 1, 1 } };
+    auto fc7_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 4096, 1 } };
+    auto fc7 = add_fc_layer(weights_dir, engine, topology_inst, "fc7", fc6, fc7_w_mem_layout, fc7_b_mem_layout,
+        use_existing_weights);
+
+    auto fc8_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 4096, 1, 1, 1 } };
+    auto fc8_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 1000, 1 } };
+    auto fc8 = add_fc_layer(weights_dir, engine, topology_inst, "fc8", fc7, fc8_w_mem_layout, fc8_b_mem_layout,
+        use_existing_weights);
+
+    auto softmax = cldnn::softmax(
+        "softmax",
+        fc8);
+
+    topology_inst.add( reordered_input, reorder_mean,
+        pool1, pool1_argmax,
+        pool2, pool2_argmax,
+        pool3, pool3_argmax,
+        pool4, pool4_argmax,
+        pool5, pool5_argmax,
+        softmax);
+
+    return topology_inst;
+}
