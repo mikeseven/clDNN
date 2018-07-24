@@ -43,7 +43,7 @@ namespace kernel_selector
 
     JitConstants ConvolutionGradWeightsKernelBase::GetJitConstants(const convolution_grad_weights_params& cp) const
     {
-        JitConstants jit = WeightBiasKernelBase::GetJitConstants(cp);
+        JitConstants jit = training_kernel_base::GetJitConstants(cp);
         const auto& padding = cp.padding;
         const auto& input = cp.inputs[0];
 
@@ -58,11 +58,6 @@ namespace kernel_selector
             MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
             MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      cp.depthwiseSeparableOpt),
         });
-
-        if (cp.useMomentum)
-        {
-            jit.AddConstant(MakeJitConstant("MOMENTUM", 1));
-        }
 
         return jit;
     }
@@ -130,7 +125,7 @@ namespace kernel_selector
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, ROUND_ROBIN, true, !orgParams.bias.empty());
-        if (newParams.useMomentum)
+        if (newParams.use_momentum)
         {
             kernel.arguments.push_back({ ArgumentDescriptor::Types::PREV_WEIGHTS_GRADIENT, 0 });
             if (!newParams.bias.empty())

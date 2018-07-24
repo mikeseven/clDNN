@@ -48,6 +48,9 @@ enum class build_option_type
     /// @brief User selected list of program outputs.
     outputs = cldnn_build_option_outputs,
 
+	/// @brief User defined learning parameters.
+	learning_config = cldnn_build_option_learning_config,
+
     /// @brief Tuning config (default: Tuning is disabled).
     /// @details The tuner will automatically find the optimal kernel/config for each node in the graph,
     /// by running multiple implementations and configurations per node and storing the optimal one in cache.
@@ -88,6 +91,18 @@ struct tuning_config_options
     {}
 };
 
+/// @brief Learning parameters.
+struct learning_params
+{
+	float momentum;
+	float weights_decay;
+
+	learning_params() :
+		momentum(0.9f),
+		weights_decay(0.0005f)
+	{}
+};
+
 /// @brief Represents user-provided program build option.
 struct build_option
 {
@@ -103,6 +118,9 @@ struct build_option
 
     /// @brief User selected list of program outputs.
     static std::shared_ptr<const build_option> outputs(const std::vector<primitive_id>& outs);
+
+	/// @brief User defined learning parameters.
+	static std::shared_ptr<const build_option> learning_config(const learning_params& params = learning_params());
 
     /// @brief Tuning configuration (default: false).
     /// @details This option will automatically find the optimal kernel/config for each node in the graph,
@@ -212,6 +230,49 @@ private:
         }
         return result;
     }
+};
+
+/// @brief @ref build_option specialization for learning config.
+struct build_option_learning_config : build_option
+{
+	/// @brief Learning parameters.
+	const learning_params params;
+
+	/// @brief Constructs learning config build option.
+	/// @param learning_params Parameters for learning.
+	explicit build_option_learning_config(const learning_params& params) :
+		params(params),
+		params_ref({ params.momentum, params.weights_decay })
+	{}
+
+	/// @brief Constructs learning config build option from C API @ref ::cldnn_build_option.
+	explicit build_option_learning_config(const cldnn_build_option& value)
+		: build_option_learning_config(make_config_from_ref(value))
+	{
+		assert(value.type == static_cast<int32_t>(cldnn_build_option_learning_config));
+	}
+
+private:
+	/// @brief Returns build_option_type::learning_config.
+	build_option_type get_type() const override { return build_option_type::learning_config; }
+	/// @brief Returns pointer to @ref cldnn_learning_params.
+	const void* get_data() const override { return &params_ref; }
+
+	build_option_learning_config(const build_option_learning_config& other) = delete;
+	build_option_learning_config& operator=(const build_option_learning_config& other) = delete;
+
+	const cldnn_learning_params params_ref;
+
+	static learning_params make_config_from_ref(const cldnn_build_option& value)
+	{
+		if (value.type != cldnn_build_option_learning_config) throw std::invalid_argument("option type does not match: should be 'learning_config'");
+		if (value.data == nullptr) throw std::invalid_argument("Learning params data is empty");
+		auto refs = reinterpret_cast<const cldnn_learning_params*>(value.data);
+		learning_params result;
+		result.momentum = refs->momentum;
+		result.weights_decay = refs->weights_decay;
+		return result;
+	}
 };
 
 /// @brief @ref build_option specialization for tuning config.
@@ -422,6 +483,16 @@ namespace detail
             return std::make_shared<object_type>(option);
         }
     };
+	template<> struct build_option_traits<build_option_type::learning_config>
+	{
+		typedef build_option_learning_config object_type;
+		static std::shared_ptr<const build_option> make_default() { return build_option::learning_config(); }
+		static std::shared_ptr<const build_option> make_option(const cldnn_build_option& option)
+		{
+			assert(option.type == cldnn_build_option_learning_config);
+			return std::make_shared<object_type>(option);
+		}
+	};
     template<> struct build_option_traits<build_option_type::tuning_config>
     {
         typedef build_option_tuning_config object_type;
@@ -485,6 +556,11 @@ inline std::shared_ptr<const build_option> build_option::debug(bool enable)
 inline std::shared_ptr<const build_option> build_option::outputs(const std::vector<primitive_id>& outs)
 {
     return std::make_shared<build_option_outputs>(outs);
+}
+
+inline std::shared_ptr<const build_option> build_option::learning_config(const learning_params& params)
+{
+	return std::make_shared<build_option_learning_config>(params);
 }
 
 inline std::shared_ptr<const build_option> build_option::tuning_config(const tuning_config_options& config)
@@ -589,6 +665,8 @@ private:
         {
         case cldnn_build_option_fusing:
             return detail::build_option_traits<build_option_type::fusing>::make_option(option);
+		case cldnn_build_option_learning_config:
+			return detail::build_option_traits<build_option_type::learning_config>::make_option(option);
         case cldnn_build_option_optimize_data:
             return detail::build_option_traits<build_option_type::optimize_data>::make_option(option);
         case cldnn_build_option_debug:

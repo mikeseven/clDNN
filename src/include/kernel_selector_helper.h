@@ -443,6 +443,24 @@ inline params_t get_weights_bias_default_params(const arg_t& arg, uint32_t split
     return params;
 }
 
+template <typename params_t, typename arg_t>
+inline params_t get_default_learning_params(const arg_t& arg, uint32_t split = 1)
+{
+	params_t params = get_weights_bias_default_params<params_t>(arg, split);
+
+	const auto learning_params = arg.get_program().get_options().template get<build_option_type::learning_config>()->params;
+
+	if (arg.use_momentum())
+	{
+		params.use_momentum = true;
+	}
+
+	params.momentum_factor = learning_params.momentum;
+	params.weights_decay = learning_params.weights_decay;
+
+	return params;
+}
+
 template <typename optional_params_t>
 inline optional_params_t get_default_optional_params(const program_impl& program)
 {
@@ -466,4 +484,10 @@ template <typename optional_params_t>
 inline optional_params_t get_default_weights_bias_optional_params(const program_impl& program)
 {
     return get_default_optional_params<optional_params_t>(program);
+}
+
+template <typename optional_params_t>
+inline optional_params_t get_default_learning_optional_params(const program_impl& program)
+{
+	return get_default_weights_bias_optional_params<optional_params_t>(program);
 }

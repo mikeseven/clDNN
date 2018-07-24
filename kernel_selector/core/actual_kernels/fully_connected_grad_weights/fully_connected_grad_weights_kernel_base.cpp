@@ -21,10 +21,7 @@ namespace kernel_selector
 {
     JitConstants FullyConnectedGradWeightsKernelBase::GetJitConstants(const fully_connected_grad_weights_params& params) const
     {
-        JitConstants jit = WeightBiasKernelBase::GetJitConstants(params);
-
-        if (params.useMomentum)
-            jit.AddConstant(MakeJitConstant("MOMENTUM", 1));
+        JitConstants jit = training_kernel_base::GetJitConstants(params);
 
         return jit;
     }
@@ -86,10 +83,10 @@ namespace kernel_selector
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, ROUND_ROBIN, true, !orgParams.bias.empty());
-        if (newParams.useMomentum)
+        if (orgParams.use_momentum)
         {
             kernel.arguments.push_back({ ArgumentDescriptor::Types::PREV_WEIGHTS_GRADIENT, 0 });
-            if (!newParams.bias.empty())
+            if (!orgParams.bias.empty())
                 kernel.arguments.push_back({ ArgumentDescriptor::Types::PREV_BIAS_GRADIENT, 0 });
         }
         kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 1 });

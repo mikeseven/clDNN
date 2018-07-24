@@ -32,7 +32,7 @@ public:
 
     decltype(auto) input() const { return get_dependency(0); }
     decltype(auto) input_grad() const { return get_dependency(1); };
-    decltype(auto) scale_in() const { return get_dependency(2); }
+    decltype(auto) weights() const { return get_dependency(2); }
     decltype(auto) bias() const { return get_dependency(3); }
     decltype(auto) prev_scale_grad() const { return bias_term() ? get_dependency(4) : get_dependency(3); }
     decltype(auto) prev_bias_grad() const { return get_dependency(5); }
@@ -55,7 +55,7 @@ public:
 public:
     typed_primitive_inst(network_impl& network, scale_grad_weights_node const& desc);
 
-    decltype(auto) scale_memory() const { return dep_memory(2); }
+    decltype(auto) weights_memory() const { return dep_memory(2); }
     decltype(auto) bias_memory() const { return dep_memory(3); }
     decltype(auto) prev_scale_grad() const { return bias_term() ? dep_memory(4) : dep_memory(3); }
     decltype(auto) prev_bias_grad() const { return dep_memory(5); }

@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "common_kernel_base.h"
+#include "training_kernel_base.h"
 #include "kernel_selector_params.h"
 
 namespace kernel_selector
@@ -24,21 +24,14 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // scale_grad_weights_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct scale_grad_weights_params : public base_params
+    struct scale_grad_weights_params : public training_params
     {
-        scale_grad_weights_params() : base_params(KernelType::SCALE_GRAD_WEIGHTS) {}
-
-        bool bias_term = false;
-        bool useMomentum = false;
+        scale_grad_weights_params() : training_params(KernelType::SCALE_GRAD_WEIGHTS) {}
 
         virtual ParamsKey GetParamsKey() const
         {
-            ParamsKey k = base_params::GetParamsKey();
+            ParamsKey k = training_params::GetParamsKey();
 
-            if (useMomentum)
-            {
-                k.EnableMomentum();
-            }
             return k;
         }
     };
@@ -46,18 +39,18 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // scale_grad_weights_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct scale_grad_weights_optional_params : optional_params
+    struct scale_grad_weights_optional_params : training_optional_params
     {
-        scale_grad_weights_optional_params() : optional_params(KernelType::SCALE_GRAD_WEIGHTS) {}
+        scale_grad_weights_optional_params() : training_optional_params(KernelType::SCALE_GRAD_WEIGHTS) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // ScaleGradWeightsKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class ScaleGradWeightsKernelBase : public common_kernel_base
+    class ScaleGradWeightsKernelBase : public training_kernel_base
     {
     public:
-        using common_kernel_base::common_kernel_base;
+        using training_kernel_base::training_kernel_base;
         virtual ~ScaleGradWeightsKernelBase() {}
 
         using DispatchData = CommonDispatchData;

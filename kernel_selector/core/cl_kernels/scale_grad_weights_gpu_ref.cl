@@ -15,18 +15,16 @@
 
 #include "include/include_all.cl"
 
-#define DECAY_RATE 0.0005f
-#define ALPHA 0.9f
 #define LOCAL_SIZE INPUT0_BATCH_NUM
 
 KERNEL(scale_grad_weights_gpu_ref)(
     const __global UNIT_TYPE* input,
     const __global UNIT_TYPE* input_grad,
-    __global UNIT_TYPE* scale,
+    __global OUTPUT_TYPE* output,
+	__global UNIT_TYPE* scale,
 #if BIAS_TERM
     __global UNIT_TYPE* bias,
 #endif
-    __global OUTPUT_TYPE* output,
 #if MOMENTUM
     __global UNIT_TYPE* prev_grad_w,
 #if BIAS_TERM
@@ -73,7 +71,7 @@ KERNEL(scale_grad_weights_gpu_ref)(
     if (local_idx == 0)
     {
 #if MOMENTUM
-    UNIT_TYPE update_gradient_w = grad_sum_in[0] + prev_grad_w[f] * ALPHA + DECAY_RATE * lr * scale[f];
+    UNIT_TYPE update_gradient_w = grad_sum_in[0] + prev_grad_w[f] * MOMENTUM_FACTOR + DECAY_RATE * lr * scale[f];
     scale[f] -= update_gradient_w;
     prev_grad_w[f] = update_gradient_w;
 #else
@@ -82,7 +80,7 @@ KERNEL(scale_grad_weights_gpu_ref)(
 
 #if BIAS_TERM
 #if MOMENTUM
-    UNIT_TYPE update_gradient_b = prev_grad_b[f] * ALPHA + grad_sum[0];
+    UNIT_TYPE update_gradient_b = prev_grad_b[f] * MOMENTUM_FACTOR + grad_sum[0];
     bias[f] -= update_gradient_b;
     prev_grad_b[f] = update_gradient_b;
 #else

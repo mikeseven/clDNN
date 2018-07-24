@@ -37,13 +37,11 @@ protected:
     virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<scale_grad_weights>& instance, int32_t) const override
     {
         kernel::kernel_arguments_data args;
-        args.inputs = { &instance.input_memory(0), &instance.input_memory(1), &instance.scale_memory() };
+        args.inputs = { &instance.input_memory(0), &instance.input_memory(1)};
         args.output = &instance.output_memory();
 
-        if (_outer.bias_term())
-        {
-            args.inputs.push_back(&instance.bias_memory());
-        }
+		args.bias = _outer.bias_term() ? &instance.bias_memory() : nullptr;
+		args.weights = &instance.weights_memory();
         
         args.prev_weights_grad = instance.use_momentum() ? &instance.prev_scale_grad() : nullptr;
         args.prev_bias_grad = instance.bias_term() ? instance.use_momentum() ? &instance.prev_bias_grad() : nullptr : nullptr;
@@ -56,14 +54,8 @@ public:
 
     static primitive_impl* create(const scale_grad_weights_node& arg)
     {
-        auto scale_params = get_default_params<kernel_selector::scale_grad_weights_params>(arg);
-        auto scale_optional_params = get_default_optional_params<kernel_selector::scale_grad_weights_optional_params>(arg.get_program());
-
-        scale_params.bias_term = arg.bias_term();
-        if (arg.use_momentum())
-        {
-            scale_params.useMomentum = true;
-        }
+        auto scale_params = get_default_learning_params<kernel_selector::scale_grad_weights_params>(arg);
+        auto scale_optional_params = get_default_learning_optional_params<kernel_selector::scale_grad_weights_optional_params>(arg.get_program());
 
         auto& kernel_selector = kernel_selector::scale_grad_weights_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(scale_params, scale_optional_params);

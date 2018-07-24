@@ -14,9 +14,6 @@
 
 #include "include/include_all.cl"
 
-#define DECAY_RATE 0.0005f
-#define ALPHA 0.9f
-
 __attribute__((intel_reqd_sub_group_size(32)))
 KERNEL(convolution_grad_weights_gpu_ref)(
     const __global UNIT_TYPE* input_grad,
@@ -99,7 +96,7 @@ KERNEL(convolution_grad_weights_gpu_ref)(
     if (local_id == 0)
     {
 #if MOMENTUM
-        UNIT_TYPE update_gradient_w = lr * (prev_grad_w[weights_idx] * ALPHA + grad_w + DECAY_RATE * filter[weights_idx]);
+        UNIT_TYPE update_gradient_w = lr * (prev_grad_w[weights_idx] * MOMENTUM_FACTOR + grad_w + DECAY_RATE * filter[weights_idx]);
         filter[weights_idx] -= update_gradient_w;
         prev_grad_w[weights_idx] = update_gradient_w;
 #else
@@ -110,7 +107,7 @@ KERNEL(convolution_grad_weights_gpu_ref)(
         if(ifm == 0 && id_x == 0 && id_y == 0)
         {
 #if MOMENTUM
-            UNIT_TYPE update_gradient_b = lr * (prev_grad_b[ofm] * ALPHA + grad_b);
+            UNIT_TYPE update_gradient_b = lr * (prev_grad_b[ofm] * MOMENTUM_FACTOR + grad_b);
             bias[ofm] -= update_gradient_b;
             prev_grad_b[ofm] = update_gradient_b;
 #else

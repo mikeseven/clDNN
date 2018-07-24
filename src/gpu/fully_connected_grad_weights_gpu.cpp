@@ -62,13 +62,8 @@ public:
 
     static primitive_impl* create(const fully_connected_grad_weights_node& arg)
     {
-        auto fully_connected_grad_weights_params = get_weights_bias_default_params<kernel_selector::fully_connected_grad_weights_params>(arg);
-        auto fully_connected_grad_weights_optional_params = get_default_weights_bias_optional_params<kernel_selector::fully_connected_grad_weights_optional_params>(arg.get_program());
-
-        if (arg.use_momentum())
-        {
-            fully_connected_grad_weights_params.useMomentum = true;
-        }
+        auto fully_connected_grad_weights_params = get_default_learning_params<kernel_selector::fully_connected_grad_weights_params>(arg);
+        auto fully_connected_grad_weights_optional_params = get_default_learning_optional_params<kernel_selector::fully_connected_grad_weights_optional_params>(arg.get_program());
 
         fully_connected_grad_weights_params.gradient = true;
         fully_connected_grad_weights_params.inputs.push_back(convert_data_tensor(arg.get_dependency(1).get_output_layout()));

@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include "weight_bias_kernel_base.h"
+#include "training_kernel_base.h"
 #include "kernel_selector_params.h"
 
 namespace kernel_selector 
@@ -24,20 +24,13 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // fully_connected_grad_weights_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct fully_connected_grad_weights_params : public weight_bias_params
+    struct fully_connected_grad_weights_params : public training_params
     {
-        fully_connected_grad_weights_params() : weight_bias_params(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
-
-        bool useMomentum = false;
+        fully_connected_grad_weights_params() : training_params(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
 
         virtual ParamsKey GetParamsKey() const
         {
-            ParamsKey k = weight_bias_params::GetParamsKey();
-            
-            if (useMomentum)
-            {
-                k.EnableMomentum();
-            }
+            ParamsKey k = training_params::GetParamsKey();
 
             return k;
         }
@@ -46,18 +39,18 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // fully_connected_grad_weights_optional_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    struct fully_connected_grad_weights_optional_params : weight_bias_optional_params
+    struct fully_connected_grad_weights_optional_params : training_optional_params
     {
-        fully_connected_grad_weights_optional_params() : weight_bias_optional_params(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
+        fully_connected_grad_weights_optional_params() : training_optional_params(KernelType::FULLY_CONNECTED_GRAD_WEIGHTS) {}
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // FullyConnectedGradWeightsKernelBase
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    class FullyConnectedGradWeightsKernelBase : public WeightBiasKernelBase
+    class FullyConnectedGradWeightsKernelBase : public training_kernel_base
     {
     public:
-        using WeightBiasKernelBase::WeightBiasKernelBase;
+        using training_kernel_base::training_kernel_base;
         virtual ~FullyConnectedGradWeightsKernelBase() {}
 
         using DispatchData = CommonDispatchData;
