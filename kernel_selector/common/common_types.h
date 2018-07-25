@@ -50,6 +50,7 @@ namespace kernel_selector
         REORG_YOLO,
         MAX_UNPOOLING,
         CONVOLUTION_GRAD_WEIGHTS,
+        SCALE_GRAD_WEIGHTS,
         MVN,
         FULLY_CONNECTED_GRAD_INPUT,
         FULLY_CONNECTED_GRAD_WEIGHTS,

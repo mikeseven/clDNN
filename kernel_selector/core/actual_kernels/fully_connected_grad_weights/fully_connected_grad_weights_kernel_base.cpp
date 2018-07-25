@@ -23,7 +23,7 @@ namespace kernel_selector
     {
         JitConstants jit = WeightBiasKernelBase::GetJitConstants(params);
 
-        if (params.fcGradWeightsParams.useMomentum)
+        if (params.useMomentum)
             jit.AddConstant(MakeJitConstant("MOMENTUM", 1));
 
         return jit;
@@ -86,7 +86,7 @@ namespace kernel_selector
 
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, ROUND_ROBIN, true, !orgParams.bias.empty());
-        if (newParams.fcGradWeightsParams.useMomentum)
+        if (newParams.useMomentum)
         {
             kernel.arguments.push_back({ ArgumentDescriptor::Types::PREV_WEIGHTS_GRADIENT, 0 });
             if (!newParams.bias.empty())

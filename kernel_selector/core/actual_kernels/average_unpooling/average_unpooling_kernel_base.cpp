@@ -33,11 +33,9 @@ namespace kernel_selector
     {
         JitConstants jit = MakeBaseParamsJitConstants(params);
 
-        auto p = params.avgUnpoolParams;
-
         jit.AddConstants({
-            MakeJitConstant("UNPOOL",   p.unpoolSize),
-            MakeJitConstant("STRIDE",   p.unpoolStride)
+            MakeJitConstant("UNPOOL", params.unpoolSize),
+            MakeJitConstant("STRIDE", params.unpoolStride)
         });
 
         return jit;

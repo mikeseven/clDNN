@@ -44,7 +44,7 @@ namespace cldnn {
             {
                 auto average_unpooling_params = get_default_params<kernel_selector::average_unpooling_params>(arg);
                 auto average_unpooling_optional_params = get_default_optional_params<kernel_selector::average_unpooling_optional_params>(arg.get_program());
-                auto& params = average_unpooling_params.avgUnpoolParams;
+                auto& params = average_unpooling_params;
 
                 auto primitive = arg.get_primitive();
                 auto stride = primitive->stride;
