@@ -33,6 +33,7 @@ namespace cldnn
     {
     public:
         virtual void dump(std::ostream& out, int offset) = 0;
+        virtual void dump_as_xml(std::ostream& out, int offset) = 0;
     };
 
     template<class Type>
@@ -41,11 +42,15 @@ namespace cldnn
     private:
         Type value;
     public:
-		json_leaf(const Type& val) : value(val) {}
-		json_leaf(Type&& val) : value(std::move(val)) {}
+        json_leaf(const Type& val) : value(val) {}
+        json_leaf(Type&& val) : value(std::move(val)) {}
         void dump(std::ostream& out, int) override
         {
             out << value << ",\n";
+        }
+        void dump_as_xml(std::ostream& out, int) override
+        {
+            out << value;
         }
     };
 
@@ -55,17 +60,26 @@ namespace cldnn
     private:
         std::vector<Type> values;
     public:
-		json_basic_array(const std::vector<Type>& arr) : values(arr) {}
-		json_basic_array(std::vector<Type>&& arr) : values(std::move(arr)) {}
+        json_basic_array(const std::vector<Type>& arr) : values(arr) {}
+        json_basic_array(std::vector<Type>&& arr) : values(std::move(arr)) {}
         void dump(std::ostream& out, int) override
         {
-			const char* delim = "";
+            const char* delim = "";
             for (size_t i = 0; i < values.size(); i++)
             {       
                 out << delim << values[i];
-				delim = ",";
+                delim = ",";
             }
             out << ",\n";
+        }
+        void dump_as_xml(std::ostream& out, int) override
+        {
+            const char* delim = "";
+            for (size_t i = 0; i < values.size(); i++)
+            {
+                out << delim << values[i];
+                delim = ",";
+            }
         }
     };
 
@@ -92,16 +106,54 @@ namespace cldnn
                 out << spaces << it.first << " : ";
                 it.second->dump(out, offset);
             };
-			
+
             if (offset > 0)         
-			{
-				out << spaces << "},\n";
-				offset--;
+            {
+                out << spaces << "},\n";
+                offset--;
             }
-			else
-			{
-				out << spaces << "}\n";
-			}
+            else
+            {
+                out << spaces << "}\n";
+            }
+        }
+
+        void dump_as_xml(std::ostream& out, int offset = -1) override
+        {
+            offset++;
+            bool first = true;
+            static int offset_temp;
+            std::string spaces(offset * 4, ' ');
+			if (offset!=0) out << "\n";
+
+            for (const auto& it : children)
+            {
+                if (first)
+                {
+                    out << spaces << "<" << it.first << ">";
+                    first = false;
+                }
+                else
+                    out << "\n" << spaces << "<" << it.first << ">";
+
+                offset_temp = offset;
+                it.second->dump_as_xml(out, offset);
+
+                std::string spaces_behind(0, ' ');
+                if (offset_temp != offset)
+                    spaces_behind = spaces;
+                out << spaces_behind << "</" << it.first << ">";
+				if (offset == 1)
+				{
+					out << spaces << "\n";
+				}
+            };
+
+            if (offset > 0)
+            {
+                out << spaces << "\n";
+                offset--;
+            }
         }
 
         template<class Type>

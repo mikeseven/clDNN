@@ -359,13 +359,17 @@ namespace cldnn
     //Function used by serialization. Not working yet, in progress.
     void dump_to_xml(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter, std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names)
     {
+		json_composite node_container;
 		auto postion = 0ull;
+		auto node_number = 1;
+		auto kernels_number = 1;
         for (auto& node : program.get_nodes())
         {
             if (filter && !filter(*node))
                 continue;
 
-            auto node_info = node.get()->desc_to_xml();
+			std::string package_name = "node_" + std::to_string(node_number);
+            auto node_info = node.get()->desc_to_json(true);
             auto id = node->id();
             auto offset = 0ull;
             auto size = offsets.at(0);
@@ -378,23 +382,29 @@ namespace cldnn
                     }
                     if (data_names.at(p).find("kernels") != std::string::npos)
                     {
-                        xml_composite kernels;
+                        json_composite kernels;
                         node_info = kernels;
                         node_info.add("id", data_names.at(p));
                         id = "kernels";
+						package_name = "kernels_" + std::to_string(kernels_number);
+
                         postion++;
+						kernels_number++;
+						node_number--;
                     }
                     if (data_names.at(p).find(id) != std::string::npos)
                     {
-                        node_info.add("data offset", std::to_string(offset));
-                        node_info.add("data size", std::to_string(size));
+                        node_info.add("data_offset", std::to_string(offset));
+                        node_info.add("data_size", std::to_string(size));
+						node_number++;
                         break;
                     }
             }
-            xml_composite data_container;
-            data_container.add("data_package", node_info);
-            data_container.dump(graph); 
+            node_container.add(package_name, node_info); 
         }
+		json_composite data_container;
+		data_container.add("data", node_container);
+		data_container.dump_as_xml(graph);
         close_stream(graph);
     }
 
