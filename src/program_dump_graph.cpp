@@ -362,7 +362,7 @@ namespace cldnn
         json_composite data_container, node_container, kernels;
         auto node_number = 1;
         auto kernels_number = 1;
-        auto postion = 0ull;
+        auto postion = 0u;
         auto offset = 0ull;
         auto size = offsets.at(0);
         for (auto& node : program.get_nodes())
