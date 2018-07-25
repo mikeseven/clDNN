@@ -77,24 +77,20 @@ int get_gpu_device_id()
     }
 #elif defined(__linux__)
     {
-        std::string dev_base{ "/sys/class/graphics/fb" };
-        int dev_idx = 0;
-        for (; dev_idx < 32; dev_idx++)
+        std::string dev_base{ "/sys/devices/pci0000:00/0000:00:02.0/" };
+        std::ifstream ifs(dev_base + "vendor");
+        if (ifs.good())
         {
-            std::ifstream ifs(dev_base + std::to_string(dev_idx) + "/device/vendor");
-            if (ifs.good())
+            int ven_id;
+            ifs >> std::hex >> ven_id;
+            ifs.close();
+            if (ven_id == 0x8086)
             {
-                int ven_id;
-                ifs >> std::hex >> ven_id;
-                if (ven_id == 0x8086) break;
-            }
-        }
-        if(dev_idx < 32)
-        {
-            std::ifstream ifs(dev_base + std::to_string(dev_idx) + "/device/device");
-            if (ifs.good())
-            {
-                ifs >> std::hex >> result;
+                ifs.open(dev_base + "device");
+                if (ifs.good())
+                {
+                    ifs >> std::hex >> result;
+                }
             }
         }
     }
