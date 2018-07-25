@@ -124,8 +124,7 @@ namespace cldnn
             bool first = true;
             static int offset_temp;
             std::string spaces(offset * 4, ' ');
-			if (offset!=0) out << "\n";
-
+            if (offset!=0) out << "\n";
             for (const auto& it : children)
             {
                 if (first)
@@ -143,10 +142,10 @@ namespace cldnn
                 if (offset_temp != offset)
                     spaces_behind = spaces;
                 out << spaces_behind << "</" << it.first << ">";
-				if (offset == 1)
-				{
-					out << spaces << "\n";
-				}
+                if (offset == 1)
+                {
+                    out << spaces << "\n";
+                }
             };
 
             if (offset > 0)

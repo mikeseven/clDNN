@@ -3172,9 +3172,6 @@ void program_impl::serialize(std::string network_name, std::function<bool(progra
     dump_kernels(engine->get_context().get()->get_kernels_cache().get_context().get_binaries(), offsets, data_names, file_stream);
     dump_weights_and_biasses(offsets, data_names, file_stream);
 
-    std::ofstream graph(network_name + "_" + "serialization" + ".graph");
-    dump_graph_init(graph, *this, filter);
-
-    graph.open(network_name + "_" + "serialization" + ".xml");
+    std::ofstream graph(network_name + "_" + "serialization" + ".xml");
     dump_to_xml(graph, *this, filter, offsets, data_names);
 }

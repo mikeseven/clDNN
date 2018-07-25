@@ -86,6 +86,7 @@ void program_node::add_memory_dependency(std::vector<primitive_id> prim_list)
 json_composite program_node::desc_to_json(bool to_xml) const
 {
     json_composite node_info;
+    node_info.add("ptr", "node_" + std::to_string(reinterpret_cast<uintptr_t>(this)));
     node_info.add("id", id());
     node_info.add("valid_output_layout", bool_to_str(valid_output_layout));
     
@@ -146,7 +147,6 @@ json_composite program_node::desc_to_json(bool to_xml) const
     node_info.add("users", users_ptrs);
     if (!to_xml)
     {
-        node_info.add("ptr", "node_" + std::to_string(reinterpret_cast<uintptr_t>(this)));
         node_info.add("type", get_extr_type(typeid(*this).name()));
         node_info.add("internal", bool_to_str(this->is_type<internal_primitive>()));
         node_info.add("in_data_flow", bool_to_str(data_flow));
