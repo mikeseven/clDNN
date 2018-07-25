@@ -178,6 +178,7 @@ namespace {
                         break;
                     }
                 }
+                break;
             case kernel_selector::kernel_argument_types::RECURRENT: // RNN/LSTM/GRU layers
                 if (data.recurrent)
                 {
