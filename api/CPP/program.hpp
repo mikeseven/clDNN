@@ -60,7 +60,7 @@ enum class build_option_type
     graph_dumps_dir = cldnn_build_option_graph_dumps_dir,
     /// @brief Name for serialization process
     serialize_network = cldnn_build_option_serialization,
-    reserialize_network = cldnn_build_option_reserialization
+    load_program = cldnn_build_option_loading_program
 };
 
 /// @brief Tuning mode.
@@ -117,8 +117,8 @@ struct build_option
 
     /// @brief Specifies a name for serialization process.
     static std::shared_ptr<const build_option> serialize_network(const std::string& network_name);
-    /// @brief Specifies a name of reserialization process.
-    static std::shared_ptr<const build_option> reserialize_network(const std::string& network_name);
+    /// @brief Specifies a name of loading_program process.
+    static std::shared_ptr<const build_option> load_program(const std::string& network_name);
 
 
     virtual ~build_option() = default;
@@ -331,30 +331,30 @@ private:
 };
 
 
-/// @brief @ref build_option specialization for reserialization process.
+/// @brief @ref build_option specialization for loading_program process.
 template<build_option_type OptType>
-struct build_option_reserialization : build_option
+struct build_option_loading_program : build_option
 {
-    const std::string reserialization_network_name;
+    const std::string load_program_name;
 
 
-    explicit build_option_reserialization(const std::string& name)
-        : reserialization_network_name(name)
+    explicit build_option_loading_program(const std::string& name)
+        : load_program_name(name)
     {}
 
 
-    explicit build_option_reserialization(const cldnn_build_option& value)
-        : reserialization_network_name(from_c_value(value))
+    explicit build_option_loading_program(const cldnn_build_option& value)
+        : load_program_name(from_c_value(value))
     {}
 
 private:
 
-    build_option_type get_type() const override { return build_option_type::reserialize_network; }
+    build_option_type get_type() const override { return build_option_type::load_program; }
 
-    const void* get_data() const override { return (reserialization_network_name.empty() ? nullptr : reserialization_network_name.c_str()); }
+    const void* get_data() const override { return (load_program_name.empty() ? nullptr : load_program_name.c_str()); }
 
-    build_option_reserialization(const build_option_reserialization& other) = delete;
-    build_option_reserialization& operator=(const build_option_reserialization& other) = delete;
+    build_option_loading_program(const build_option_loading_program& other) = delete;
+    build_option_loading_program& operator=(const build_option_loading_program& other) = delete;
 
     static std::string from_c_value(const cldnn_build_option& value)
     {
@@ -452,13 +452,13 @@ namespace detail
             return std::make_shared<object_type>(option);
         }
     };
-    template<> struct build_option_traits<build_option_type::reserialize_network>
+    template<> struct build_option_traits<build_option_type::load_program>
     {
-        typedef build_option_reserialization<build_option_type::reserialize_network> object_type;
-        static std::shared_ptr<const build_option> make_default() { return build_option::reserialize_network({}); }
+        typedef build_option_loading_program<build_option_type::load_program> object_type;
+        static std::shared_ptr<const build_option> make_default() { return build_option::load_program({}); }
         static std::shared_ptr<const build_option> make_option(const cldnn_build_option& option)
         {
-            assert(option.type == cldnn_build_option_reserialization);
+            assert(option.type == cldnn_build_option_loading_program);
             return std::make_shared<object_type>(option);
         }
     };
@@ -500,9 +500,9 @@ inline std::shared_ptr<const build_option> build_option::serialize_network(const
 {
     return std::make_shared<build_option_serialization<build_option_type::serialize_network>>(name);
 }
-inline std::shared_ptr<const build_option> build_option::reserialize_network(const std::string& name)
+inline std::shared_ptr<const build_option> build_option::load_program(const std::string& name)
 {
-    return std::make_shared<build_option_reserialization<build_option_type::reserialize_network>>(name);
+    return std::make_shared<build_option_loading_program<build_option_type::load_program>>(name);
 }
 #endif
 
@@ -601,8 +601,8 @@ private:
             return detail::build_option_traits<build_option_type::graph_dumps_dir>::make_option(option);
         case cldnn_build_option_serialization:
             return detail::build_option_traits<build_option_type::serialize_network>::make_option(option);
-        case cldnn_build_option_reserialization:
-            return detail::build_option_traits<build_option_type::reserialize_network>::make_option(option);
+        case cldnn_build_option_loading_program:
+            return detail::build_option_traits<build_option_type::load_program>::make_option(option);
         default: throw std::out_of_range("unsupported build option type");
         }
     }

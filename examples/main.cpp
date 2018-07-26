@@ -178,8 +178,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Path to input directory containing images to classify (mandatory when running classification).")
         ("serialization", bpo::value<std::string>()->value_name("<network name>")->default_value(""),
             "Name for serialization process.")
-        ("reserialization", bpo::value<std::string>()->value_name("<network name>")->default_value(""),
-            "Name of reserialization process.")
+        ("loading_program", bpo::value<std::string>()->value_name("<network name>")->default_value(""),
+            "Name of loading_program process.")
         ("batch", bpo::value<std::uint32_t>()->value_name("<batch-size>")->default_value(1),
             "Size of a group of images that are classified together (large batch sizes have better performance).")
         ("loop", bpo::value<std::uint32_t>()->value_name("<loop-count>")->default_value(1),
@@ -505,7 +505,7 @@ int main(int argc, char* argv[])
 
         ep.topology_name = parsed_args["model"].as<std::string>();
         ep.serialization = parsed_args["serialization"].as<std::string>();
-        ep.reserialization = parsed_args["reserialization"].as<std::string>();
+        ep.loading_program = parsed_args["loading_program"].as<std::string>();
         ep.batch = parsed_args["batch"].as<std::uint32_t>();
         ep.meaningful_kernels_names = parsed_args["meaningful_names"].as<bool>();
         ep.profiling = parsed_args["profiling"].as<bool>();

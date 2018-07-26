@@ -253,8 +253,7 @@ kernels_cache::kernels_map kernels_cache::build_program(const program_code& prog
                 cl::Program program(_context.context(), sources);
                 program.build({ _context.device() }, program_source.options.c_str());
                 ///Store kernels for serialization process.
-                //if(_context.get_serialization_flag())
-                    _context.store_binaries(program.getInfo<CL_PROGRAM_BINARIES>());
+                _context.store_binaries(program.getInfo<CL_PROGRAM_BINARIES>());
 
                 if (dump_sources)
                 {

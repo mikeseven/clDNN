@@ -208,7 +208,7 @@ typedef enum /*:int32_t*/
     cldnn_build_option_tuning_config,           ///< Tuning config.
     cldnn_build_option_graph_dumps_dir,         ///< Specifies a directory to which stages of network compilation should be dumped.
     cldnn_build_option_serialization,			///< Specifies a name of files to which serialization should be dumped.
-    cldnn_build_option_reserialization			///< Specifies a name of reserialization process.
+    cldnn_build_option_loading_program			///< Specifies a name of loading_program process.
 } cldnn_build_option_type;
 
 /// @brief Tuning modes.
