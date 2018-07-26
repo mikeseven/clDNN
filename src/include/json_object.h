@@ -33,7 +33,6 @@ namespace cldnn
     {
     public:
         virtual void dump(std::ostream& out, int offset) = 0;
-        virtual void dump_as_xml(std::ostream& out, int offset) = 0;
     };
 
     template<class Type>
@@ -47,10 +46,6 @@ namespace cldnn
         void dump(std::ostream& out, int) override
         {
             out << value << ",\n";
-        }
-        void dump_as_xml(std::ostream& out, int) override
-        {
-            out << value;
         }
     };
 
@@ -71,15 +66,6 @@ namespace cldnn
                 delim = ",";
             }
             out << ",\n";
-        }
-        void dump_as_xml(std::ostream& out, int) override
-        {
-            const char* delim = "";
-            for (size_t i = 0; i < values.size(); i++)
-            {
-                out << delim << values[i];
-                delim = ",";
-            }
         }
     };
 
@@ -115,43 +101,6 @@ namespace cldnn
             else
             {
                 out << spaces << "}\n";
-            }
-        }
-
-        void dump_as_xml(std::ostream& out, int offset = -1) override
-        {
-            offset++;
-            bool first = true;
-            static int offset_temp;
-            std::string spaces(offset * 4, ' ');
-            if (offset!=0) out << "\n";
-            for (const auto& it : children)
-            {
-                if (first)
-                {
-                    out << spaces << "<" << it.first << ">";
-                    first = false;
-                }
-                else
-                    out << "\n" << spaces << "<" << it.first << ">";
-
-                offset_temp = offset;
-                it.second->dump_as_xml(out, offset);
-
-                std::string spaces_behind(0, ' ');
-                if (offset_temp != offset)
-                    spaces_behind = spaces;
-                out << spaces_behind << "</" << it.first << ">";
-                if (offset == 1)
-                {
-                    out << spaces << "\n";
-                }
-            };
-
-            if (offset > 0)
-            {
-                out << spaces << "\n";
-                offset--;
             }
         }
 

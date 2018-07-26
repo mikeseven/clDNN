@@ -359,7 +359,7 @@ namespace cldnn
     //Function used by serialization. Not working yet, in progress.
     void dump_to_xml(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter, std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names)
     {
-        json_composite data_container, node_container, kernels;
+        xml_composite data_container, node_container, kernels;
         auto node_number = 1;
         auto kernels_number = 1;
         auto postion = 0u;
@@ -371,7 +371,7 @@ namespace cldnn
                 continue;
 
             std::string package_name = "node_" + std::to_string(node_number);
-            auto node_info = node.get()->desc_to_json(true);
+            auto node_info = node.get()->desc_to_xml();
             auto id = node->id();
             for (auto p = postion; p < (unsigned int)data_names.size(); p++)
             {
@@ -402,7 +402,7 @@ namespace cldnn
             node_container.add(package_name, node_info); 
         }
         data_container.add("data", node_container);
-        data_container.dump_as_xml(graph);
+        data_container.dump(graph);
         close_stream(graph);
     }
 
