@@ -88,8 +88,13 @@ json_composite program_node::desc_to_json(bool to_xml) const
     json_composite node_info;
     node_info.add("ptr", "node_" + std::to_string(reinterpret_cast<uintptr_t>(this)));
     node_info.add("id", id());
+    if (!to_xml)
+    {
+        node_info.add("type", get_extr_type(typeid(*this).name()));
+        node_info.add("internal", bool_to_str(this->is_type<internal_primitive>()));
+    }
     node_info.add("valid_output_layout", bool_to_str(valid_output_layout));
-    
+
     json_composite output_layout_info;
     output_layout_info.add("data_type", dt_to_str(output_layout.data_type));
     output_layout_info.add("format", fmt_to_str(output_layout.format));
@@ -104,12 +109,17 @@ json_composite program_node::desc_to_json(bool to_xml) const
 
     node_info.add("processing_number", processing_num);
     node_info.add("constant", bool_to_str(constant));
+    if (!to_xml)
+    {
+        node_info.add("in_data_flow", bool_to_str(data_flow));
+        node_info.add("main_branch", bool_to_str(main_branch));
+    }
     node_info.add("dominator", std::to_string(reinterpret_cast<uintptr_t>(dominator)));
     node_info.add("joint", std::to_string(reinterpret_cast<uintptr_t>(joint)));
     node_info.add("output", bool_to_str(output));
 
     std::vector<std::string> deps_ptrs;
-    {     
+    {
         bool empty = true;
         auto itr = dependencies.begin();
         while (itr != dependencies.end())
@@ -147,11 +157,6 @@ json_composite program_node::desc_to_json(bool to_xml) const
     node_info.add("users", users_ptrs);
     if (!to_xml)
     {
-        node_info.add("type", get_extr_type(typeid(*this).name()));
-        node_info.add("internal", bool_to_str(this->is_type<internal_primitive>()));
-        node_info.add("in_data_flow", bool_to_str(data_flow));
-        node_info.add("main_branch", bool_to_str(main_branch));
-
         std::vector<std::string> impls;
         if (!selected_impl)
         {
@@ -159,20 +164,19 @@ json_composite program_node::desc_to_json(bool to_xml) const
         }
         else
         {
-            #ifdef __clang__
-                #pragma clang diagnostic push
-                #pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
-            #endif
+#ifdef __clang__
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wpotentially-evaluated-expression"
+#endif
             impls.push_back(selected_impl->get_kernel_name());
-            #ifdef __clang__
-                #pragma clang diagnostic pop
-            #endif
+#ifdef __clang__
+#pragma clang diagnostic pop
+#endif
         }
         node_info.add("implementation", impls);
     }
-
     return node_info;
-}
+    }
 
 void program_node::remove_dependency(program_node & node)
 {
