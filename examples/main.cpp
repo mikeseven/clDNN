@@ -187,7 +187,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "For character-model topos it says how many characters will be predicted.")
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
-            "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, resnet50, resnet50-i8, microbench_conv, microbench_lstm, ssd_mobilenet, ssd_mobilenet-i8, lstm_char, lenet.")
+            "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, resnet50, resnet50-i8, microbench_conv, microbench_lstm, ssd_mobilenet, ssd_mobilenet-i8, lstm_char, lenet, lenet_train, vgg16_train, vgg16_test.")
         ("run_until_primitive", bpo::value<std::string>()->value_name("<primitive_name>"),
             "Runs topology until specified primitive.")
         ("run_single_layer", bpo::value<std::string>()->value_name("<primitive_name>"),
@@ -262,6 +262,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "How many images should be skipped in mnist data on execution.")
         ("use_existing_weights", bpo::bool_switch(),
             "Parameter used in learning, when it is set then model will use existing weights files")
+        ("compute_imagemean", bpo::bool_switch(),
+            "Parameter used in learning, when it is set then imagemean value will be computed for the requested image set")
         ("lr", bpo::value<float>()->value_name("<lr>")->default_value(0.00001f),
             "Base learning rate for network training. Default value is 0.00001f.")
         ("version", "Show version of the application.")
@@ -532,6 +534,7 @@ int main(int argc, char* argv[])
         ep.image_number = parsed_args["image_number"].as<std::uint32_t>();
         ep.image_offset = parsed_args["image_offset"].as<std::uint32_t>();
         ep.use_existing_weights = parsed_args["use_existing_weights"].as<bool>();
+        ep.compute_imagemean = parsed_args["compute_imagemean"].as<bool>();
         ep.learning_rate = parsed_args["lr"].as<float>();
 
         if (ep.rnn_type_of_topology) //we care about temperature for some rnn topologies.
@@ -567,6 +570,7 @@ int main(int argc, char* argv[])
         if (ep.topology_name == "alexnet" ||
             ep.topology_name == "vgg16" ||
             ep.topology_name == "vgg16_train" ||
+            ep.topology_name == "vgg16_test" ||
             ep.topology_name == "vgg16_face" ||
             ep.topology_name == "googlenet" ||
             ep.topology_name == "gender" ||

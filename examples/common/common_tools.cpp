@@ -258,6 +258,49 @@ void nn_data_load_from_image(
     }
 }
 
+void nn_data_load_from_image(
+    std::string  filename,                       // Load of all data from a image filename
+    std::vector<float>::iterator dst_buffer,
+    uint32_t                   std_size,         // size of image both: height and width
+    bool                       RGB_order)        // if true - image have RGB order, otherwise BGR
+                                                 // supported formats: JPEG, J2K, JP2, PNG, BMP, WEBP, GIF, TIFF
+{
+    if (FIBITMAP *bitmap_raw = fi::crop_image_to_square_and_resize(fi::load_image_from_file(filename), std_size)) {
+        FIBITMAP *bitmap;
+        if (FreeImage_GetBPP(bitmap_raw) != 24) {
+            bitmap = FreeImage_ConvertTo24Bits(bitmap_raw);
+            FreeImage_Unload(bitmap_raw);
+        }
+        else bitmap = bitmap_raw;
+
+        auto bytes_per_pixel = FreeImage_GetLine(bitmap) / std_size;
+        auto data_buffer = dst_buffer;
+        if (RGB_order) {
+            for (uint32_t y = 0u; y<std_size; ++y) {
+                uint8_t *pixel = FreeImage_GetScanLine(bitmap, std_size - y - 1);
+                for (uint32_t x = 0u; x<std_size; ++x) {
+                    *(data_buffer + 0 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_RED];
+                    *(data_buffer + 1 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_GREEN];
+                    *(data_buffer + 2 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_BLUE];
+                    pixel += bytes_per_pixel;
+                }
+            }
+        }
+        else {
+            for (uint32_t y = 0u; y<std_size; ++y) {
+                uint8_t *pixel = FreeImage_GetScanLine(bitmap, std_size - y - 1);
+                for (uint32_t x = 0u; x<std_size; ++x) {
+                    *(data_buffer + 0 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_BLUE];
+                    *(data_buffer + 1 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_GREEN];
+                    *(data_buffer + 2 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_RED];
+                    pixel += bytes_per_pixel;
+                }
+            }
+        }
+        FreeImage_Unload(bitmap);
+    }
+}
+
 // i am not sure what is better: pass memory as primitive where layout, ptr and size are included
 // or pass as separate parameters to avoid including neural.h in common tools?
 template <typename MemElemTy>
@@ -406,7 +449,7 @@ template void load_data_from_file_list_lenet<half_t>(const std::vector<std::stri
 
 template <typename MemElemTy>
 void load_data_from_file_list_imagenet(
-    const std::vector<std::string>& images_list,
+    const std::vector<std::string>& images_list, const std::string& input_dir,
     cldnn::memory& memory, const uint32_t images_offset, const uint32_t images_number, const bool train, cldnn::memory& memory_labels)
 {
     auto dst_ptr = memory.pointer<MemElemTy>();
@@ -420,9 +463,22 @@ void load_data_from_file_list_imagenet(
     if ((images_offset + images_number) > images_list.size())
         throw std::runtime_error("images_offset + images_number is bigger than number of images in imagenet directory");
 
+    auto class_num = 0;
+    auto images_per_class = 0;
+
+    for (directory_iterator it(input_dir); it != directory_iterator(); ++it)
+        class_num++;
+
+    for (recursive_directory_iterator it(input_dir); it != recursive_directory_iterator(); ++it)
+        images_per_class++;
+    images_per_class = (images_per_class - class_num) / class_num;
+
     std::vector<std::string> requested_images;
     for (uint32_t i = images_offset; i < images_offset + images_number; i++)
-        requested_images.push_back(images_list[i]);
+    {
+        auto img_idx = i * images_per_class % (class_num * images_per_class) + i * images_per_class / (class_num * images_per_class);
+        requested_images.push_back(images_list[img_idx]);
+    }
 
     //read in images
     load_images_from_file_list<MemElemTy>(requested_images, memory);
@@ -444,7 +500,7 @@ void load_data_from_file_list_imagenet(
         std::vector<std::uint32_t> requested_labels;
         for (uint32_t j = 0; j < requested_images.size(); j++)
         {
-            auto img_label = requested_images[j].substr(requested_images[j].find_last_of("/\\") + 1, 9);
+            auto img_label = requested_images[j].substr(requested_images[j].find_last_of("/\\") - 9, 9);
             auto pos = std::find(line_mappings.begin(), line_mappings.end(), img_label);
 
             if (pos != line_mappings.end())
@@ -460,8 +516,63 @@ void load_data_from_file_list_imagenet(
         throw std::runtime_error("Cannot read labels file for imagenet.");
 }
 
-template void load_data_from_file_list_imagenet<float>(const std::vector<std::string>&, cldnn::memory&, const uint32_t, const uint32_t, const bool, cldnn::memory&);
-template void load_data_from_file_list_imagenet<half_t>(const std::vector<std::string>&, cldnn::memory&, const uint32_t, const uint32_t, const bool, cldnn::memory&);
+template void load_data_from_file_list_imagenet<float>(const std::vector<std::string>&, const std::string&, cldnn::memory&, const uint32_t, const uint32_t, const bool, cldnn::memory&);
+template void load_data_from_file_list_imagenet<half_t>(const std::vector<std::string>&, const std::string&, cldnn::memory&, const uint32_t, const uint32_t, const bool, cldnn::memory&);
+
+void compute_image_mean(const execution_params &ep, cldnn::engine& engine, const uint32_t channels_num, const uint32_t size_x, const uint32_t size_y)
+{
+    auto input_list = get_input_list(ep.input_dir);
+
+    std::vector<std::string> requested_images;
+    for (uint32_t i = ep.image_offset; i < ep.image_offset + ep.image_number; i++)
+        requested_images.push_back(input_list[i]);
+
+    auto memory_layout = cldnn::layout({ cldnn::data_types::f32, cldnn::format::byxf,cldnn::tensor{ 1, (cldnn::tensor::value_type)channels_num, (cldnn::tensor::value_type)size_x, (cldnn::tensor::value_type)size_y } });
+
+    auto memory = cldnn::memory::allocate(engine, memory_layout);
+
+    auto dst_ptr = memory.pointer<float>();
+
+    if (memory_layout.format != cldnn::format::byxf) throw std::runtime_error("Only byxf format is supported as input to images from files");
+
+    if (!cldnn::data_type_match<float>(memory_layout.data_type))
+        throw std::runtime_error("Memory format expects different type of elements than specified");
+    
+    const uint32_t spatial_size = size_x * size_y;
+    auto single_image_size = spatial_size * channels_num;
+    std::vector<float> img_sum(single_image_size, 0);
+    std::vector<float> img_tmp(single_image_size, 0);
+    auto img_sum_it = img_sum.begin();
+    auto img_tmp_it = img_tmp.begin();
+
+    for (auto img : requested_images)
+    {
+        // "false" because we want to load images in BGR format because weights are in BGR format and we don't want any conversions between them.
+        nn_data_load_from_image(img, img_tmp_it, size_x, false);
+        
+        for (uint32_t i = 0; i < img_sum.size(); i++)
+            img_sum[i] += img_tmp[i];
+    }
+
+    for (uint32_t i = 0; i < img_sum.size(); i++)
+        img_sum[i] /= ep.image_number;
+
+    //per channel mean
+    std::vector<float> mean_values(channels_num, 0);
+    for (uint32_t i = 0; i < channels_num; i++)
+    {
+        for (uint32_t j = 0; j < spatial_size; j++)
+            mean_values[i] += img_sum[i *  spatial_size + j];
+
+        mean_values[i] /= spatial_size;
+
+        for (uint32_t j = 0; j < spatial_size; j++)
+            dst_ptr[i *  spatial_size + j] = mean_values[i];
+
+    }
+
+    file::serialize_train(memory, join_path(ep.weights_dir, "imagenet_mean.nnd"));
+}
 
 void print_profiling_table(std::ostream& os, const std::vector<cldnn::instrumentation::profiling_info>& profiling_info) {
     if (profiling_info.size() == 0)
@@ -1061,6 +1172,7 @@ void run_topology(const execution_params &ep)
     {
         std::cout << "Extended testing of " << ep.topology_name << std::endl;
     }
+
     cldnn::instrumentation::timer<> timer_build;
     cldnn::layout input_layout = { ep.use_half ? cldnn::data_types::f16 : cldnn::data_types::f32, cldnn::format::byxf, {} };
     std::map<cldnn::primitive_id, cldnn::layout> microbench_conv_inputs;
@@ -1068,10 +1180,15 @@ void run_topology(const execution_params &ep)
     microbench_conv_inputs.insert({ "input_layout", input_layout }); //add dummy input so we pass data format to mcirobench_conv topology
     if (ep.topology_name == "alexnet")
         primitives = build_alexnet(ep.weights_dir, engine, input_layout, gpu_batch_size);
-    else if (ep.topology_name == "vgg16" || ep.topology_name == "vgg16_face")
+    else if (ep.topology_name == "vgg16" || ep.topology_name == "vgg16_face" || ep.topology_name == "vgg16_test")
         primitives = build_vgg16(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "vgg16_train")
+    {
+        if (ep.compute_imagemean)
+            compute_image_mean(ep, engine, 3, 224, 224);
+
         primitives = build_vgg16_train(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_existing_weights);
+    }
     else if (ep.topology_name == "googlenet")
         primitives = build_googlenetv1(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "gender")
@@ -1150,7 +1267,7 @@ void run_topology(const execution_params &ep)
         auto input_list_iterator = input_list.begin();
         auto input_list_end = input_list.end();
 
-        if (ep.topology_name == "lenet" || ep.topology_name == "lenet_train" || ep.topology_name == "vgg16_train")
+        if (ep.topology_name == "lenet" || ep.topology_name == "lenet_train" || ep.topology_name == "vgg16_train" || ep.topology_name == "vgg16_test")
             number_of_batches = 1;
 
         for (decltype(number_of_batches) batch = 0; batch < number_of_batches; batch++)
@@ -1163,7 +1280,7 @@ void run_topology(const execution_params &ep)
             double time_in_sec = 0.0;
             lstm_utils lstm_data(ep.sequence_length, batch_size, (unsigned int)ep.loop, ep.temperature);
             // load croped and resized images into input
-            if (!ep.rnn_type_of_topology && ep.topology_name != "lenet" && ep.topology_name != "lenet_train" && ep.topology_name != "vgg16_train")
+            if (!ep.rnn_type_of_topology && ep.topology_name != "lenet" && ep.topology_name != "lenet_train" && ep.topology_name != "vgg16_train" && ep.topology_name != "vgg16_test")
             {
                 if (ep.use_half)
                 {
@@ -1278,9 +1395,9 @@ void run_topology(const execution_params &ep)
                     network.set_learning_rate(learning_rate);
 
                     if (ep.use_half)
-                        load_data_from_file_list_imagenet<half_t>(input_list, input, learn_it, batch_size, true, labels);
+                        load_data_from_file_list_imagenet<half_t>(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
                     else
-                        load_data_from_file_list_imagenet(input_list, input, learn_it, batch_size, true, labels);
+                        load_data_from_file_list_imagenet(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
 
                     network.set_input_data("input", input);
                     network.set_input_data("labels", labels);
@@ -1309,6 +1426,41 @@ void run_topology(const execution_params &ep)
                     std::cout << "Iter: " << learn_it - ep.image_offset << std::endl;
                     std::cout << "Loss = " << loss << std::endl;
                     std::cout << "Learning Rate = " << learning_rate << std::endl;
+                }
+                continue;
+            }
+            else if (ep.topology_name == "vgg16_test")
+            {
+                float acc = 0;
+                uint32_t labels_num = 1000;
+                auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
+                for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
+                {
+                    if (ep.use_half)
+                        load_data_from_file_list_imagenet<half_t>(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
+                    else
+                        load_data_from_file_list_imagenet(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
+
+                    network.set_input_data("input", input);
+                    auto time = execute_cnn_topology(network, ep, energyLib, output);
+                    time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
+                    auto expected = labels.pointer<float>();
+                    auto vals = output.pointer<float>();
+
+                    for (uint32_t b = 0; b < batch_size; b++)
+                    {
+                        auto e = (uint32_t)expected[b];
+                        std::vector< std::pair<float, uint32_t> > output_vec;
+
+                        //check if true label is on top of predictions
+                        for (uint32_t j = 0; j < labels_num; j++)
+                            output_vec.push_back(std::make_pair(vals[j], j));
+
+                        std::sort(output_vec.begin(), output_vec.end(), std::greater<std::pair<float, uint32_t> >());
+
+                        if (output_vec[0].second == e)
+                            acc++;
+                    }
                 }
                 std::cout << "Images processed = " << ep.image_number << std::endl;
                 std::cout << "Accuracy = " << acc / ep.image_number << std::endl;
