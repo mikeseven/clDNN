@@ -79,6 +79,7 @@ public:
     }
     
     const engine_configuration& configuration() const { return _configuration; }
+    void set_mem_pool(bool flag) { _configuration.enable_memory_pool = flag; }
     std::shared_ptr<gpu_toolkit> get_context() const { return _context; }
     gpu::engine_info_internal get_engine_info() const;
     memory_pool& get_memory_pool() { return _memory_pool; }

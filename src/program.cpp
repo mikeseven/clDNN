@@ -1004,6 +1004,17 @@ void program_impl::update_processing_order()
     {
         node->processing_num = ++idx;
     }
+    // TODO: REMOVE BELOW, AFTER 847 FIX
+    for (auto& node : processing_order)
+    {
+        for (auto& dep : node->get_dependencies())
+        {
+            if (node->processing_num < dep->processing_num)
+            {
+                engine->set_mem_pool(false);
+            }
+        }
+    }
 }
 
 void program_impl::calc_prior_boxes()
