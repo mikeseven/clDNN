@@ -1007,12 +1007,10 @@ void program_impl::update_processing_order()
     // TODO: REMOVE BELOW, AFTER 847 FIX
     for (auto& node : processing_order)
     {
-        for (auto& dep : node->get_dependencies())
+        if(!processing_order_is_correct(node))
         {
-            if (node->processing_num < dep->processing_num)
-            {
-                engine->set_mem_pool(false);
-            }
+            engine->set_mem_pool(false);
+            return;
         }
     }
 }

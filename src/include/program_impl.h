@@ -198,6 +198,18 @@ private:
 		node.users.clear();
     }
 
+    bool processing_order_is_correct(program_node* node)
+    {
+        for (auto& dep : node->get_dependencies())
+        {
+            if (node->processing_num < dep->processing_num)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
+
     void rename(program_node & node, primitive_id const & new_id);
     void swap_names(program_node& node1, program_node& node2);
     void replace_all_usages(program_node& old_node, program_node& new_node);
