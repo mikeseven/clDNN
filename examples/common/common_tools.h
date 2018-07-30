@@ -160,7 +160,7 @@ struct execution_params {
     bool        log_engine;
     bool        dump_sources;
     std::string serialization;
-    std::string loading_program;
+    std::string load_program;
 
     PrintType print_type = PrintType::Verbose; // printing modes - to support Verbose, vs Perf ony, vs ImageNet testing prints
     size_t loop = 1; // running the same input in a loop for smoothing perf results
