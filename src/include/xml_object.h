@@ -24,99 +24,105 @@
 
 namespace cldnn
 {
-    class json_base;
-    using json_key = std::string;
-    using json_base_ptr = std::shared_ptr<json_base>;
-    using json_map = std::unordered_map<json_key, json_base_ptr>;
+    class xml_base;
+    using xml_key = std::string;
+    using xml_base_ptr = std::shared_ptr<xml_base>;
+    using xml_map = std::unordered_map<xml_key, xml_base_ptr>;
 
-    class json_base
+    class xml_base
     {
     public:
         virtual void dump(std::ostream& out, int offset) = 0;
     };
 
     template<class Type>
-    class json_leaf : public json_base
+    class xml_leaf : public xml_base
     {
     private:
         Type value;
     public:
-        json_leaf(const Type& val) : value(val) {}
-        json_leaf(Type&& val) : value(std::move(val)) {}
+        xml_leaf(const Type& val) : value(val) {}
+        xml_leaf(Type&& val) : value(std::move(val)) {}
         void dump(std::ostream& out, int) override
         {
-            out << value << ",\n";
+            out << value;
         }
     };
 
     template<class Type>
-    class json_basic_array : public json_base
+    class xml_basic_array : public xml_base
     {
     private:
         std::vector<Type> values;
     public:
-        json_basic_array(const std::vector<Type>& arr) : values(arr) {}
-        json_basic_array(std::vector<Type>&& arr) : values(std::move(arr)) {}
+        xml_basic_array(const std::vector<Type>& arr) : values(arr) {}
+        xml_basic_array(std::vector<Type>&& arr) : values(std::move(arr)) {}
         void dump(std::ostream& out, int) override
         {
             const char* delim = "";
             for (size_t i = 0; i < values.size(); i++)
-            {       
+            {
                 out << delim << values[i];
                 delim = ",";
             }
-            out << ",\n";
         }
     };
 
-    class json_composite : public json_base
+    class xml_composite : public xml_base
     {
     private:
-        json_map children;
+        xml_map children;
     public:
         void dump(std::ostream& out, int offset = -1) override
         {
             offset++;
+            bool first = true;
+            static int offset_temp;
             std::string spaces(offset * 4, ' ');
-            if (offset > 0)
-            {
-                out <<"\n" << spaces << "{\n";
-            }
-            else
-            {
-                out << "{\n";
-            }
-            
+            if (offset!=0) out << "\n";
             for (const auto& it : children)
             {
-                out << spaces << it.first << " : ";
+                if (first)
+                {
+                    out << spaces << "<" << it.first << ">";
+                    first = false;
+                }
+                else
+                    out << "\n" << spaces << "<" << it.first << ">";
+
+                offset_temp = offset;
                 it.second->dump(out, offset);
+
+                std::string spaces_behind(0, ' ');
+                if (offset_temp != offset)
+                    spaces_behind = spaces;
+                out << spaces_behind << "</" << it.first << ">";
+                if (offset == 1)
+                {
+                    out << spaces << "\n";
+                }
             };
 
-            if (offset > 0)         
+            if (offset > 0)
             {
-                out << spaces << "},\n";
+                out << spaces << "\n";
                 offset--;
-            }
-            else
-            {
-                out << spaces << "}\n";
             }
         }
 
         template<class Type>
-        void add(json_key key, Type value)
+        void add(xml_key key, Type value)
         {
-            children[key] = std::make_shared<json_leaf<Type>>(value);
+            children[key] = std::make_shared<xml_leaf<Type>>(value);
         }
-        void add(json_key key, json_composite comp)
+        void add(xml_key key, xml_composite comp)
         {
-            children[key] = std::make_shared<json_composite>(comp);
+            children[key] = std::make_shared<xml_composite>(comp);
         }
         template<class Type>
-        void add(json_key key, std::vector<Type> array)
+        void add(xml_key key, std::vector<Type> array)
         {
-            children[key] = std::make_shared<json_basic_array<Type>>(array);
+            children[key] = std::make_shared<xml_basic_array<Type>>(array);
         }
     };
 

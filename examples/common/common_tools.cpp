@@ -489,7 +489,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     else
         options.set_option(cldnn::build_option::optimize_data(true));
     options.set_option(cldnn::build_option::debug(ep.dump_hidden_layers || ep.profiling));
-	options.set_option(cldnn::build_option::serialize_network(ep.serialization));
+    options.set_option(cldnn::build_option::serialize_network(ep.serialization));
 
     if (ep.dump_graphs)
     {

@@ -34,14 +34,16 @@
 #include <chrono>
 #include <fstream>
 
-namespace cldnn { namespace gpu {
+namespace cldnn { 
+    typedef cl::vector<cl::vector<unsigned char>> kernels_binaries_vector;
+    typedef cl::vector<kernels_binaries_vector> kernels_binaries_container;	
+namespace gpu {
 
 typedef  CL_API_ENTRY cl_command_queue(CL_API_CALL *pfn_clCreateCommandQueueWithPropertiesINTEL)(
     cl_context context,
     cl_device_id device,
     const cl_queue_properties *properties,
     cl_int *errcodeRet);
-typedef cl::vector<cl::vector<unsigned char>> kernels_binaries_vector;
 
 class ocl_error : public error
 {
@@ -122,10 +124,10 @@ public:
     const configuration& get_configuration() const { return _configuration; }
     engine_info_internal get_engine_info() const { return _engine_info; }
     kernels_cache& get_kernels_cache() { return _kernels_cache; }
-	kernels_binaries_vector get_binaries() { return _binaries; }
-	bool get_serialization_flag() { return _serialize; }
-	void set_serialization_flag(bool serialization_flag) { _serialize = serialization_flag; }
-	void store_binaries(kernels_binaries_vector binaries) { _binaries = binaries; }
+    kernels_binaries_container get_binaries() { return _binaries; }
+    void store_binaries(kernels_binaries_vector binaries) { _binaries.push_back(binaries); }
+    bool get_serialization_flag() { return _serialize; }
+    void set_serialization_flag(bool serialization_flag) { _serialize = serialization_flag; }
     
     inline bool extension_supported(const std::string ext) { return _extensions.find(ext) != std::string::npos; }
 
@@ -156,8 +158,8 @@ private:
     cl_platform_id _platform_id;
     engine_info_internal _engine_info;
     kernels_cache _kernels_cache;
-	kernels_binaries_vector _binaries;
-	bool _serialize = false;
+    kernels_binaries_container _binaries;
+    bool _serialize = false;
 
     std::atomic<uint64_t> _queue_counter{ 0 };
     std::atomic<uint64_t> _last_barrier{ 0 };
