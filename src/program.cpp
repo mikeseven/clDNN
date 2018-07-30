@@ -2599,6 +2599,7 @@ void program_impl::prepare_buffer_fusing()
 
         do_for_types<reshape>(*node, [this](reshape_node& node)
         {
+            node.get_output_layout();
             if (node.is_in_place())
                 node.can_be_optimized(true);
         });
