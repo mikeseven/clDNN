@@ -95,6 +95,11 @@ namespace kernel_selector
     {
         assert(params.GetType() == KernelType::CONVOLUTION_GRAD_WEIGHTS);
 
+        if (!Validate(params, options))
+        {
+            return{};
+        }
+
         const convolution_grad_weights_params& orgParams = static_cast<const convolution_grad_weights_params&>(params);
 
         const std::vector<WeightsLayout> weightsLayouts = {

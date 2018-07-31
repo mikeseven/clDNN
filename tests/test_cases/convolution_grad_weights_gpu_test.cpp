@@ -404,3 +404,180 @@ TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz2x2_in2x2x1x2_bfyx_stride2_p
         EXPECT_FLOAT_EQ(x, -y) << "on biases verification" << random_seed << std::endl;
     }
 }
+
+TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz1x1_in1x2x5x5_bfyx_stride2_pad1) {
+    //  Filter : 1x1
+    //  Input grad  : 1x2x2x2
+    //  Input  : 1x1x2x2
+    //  Stride : 2x2
+    //
+    //  Input grad:
+    //  0.5    0.6    0.7    0.9   1      1.1    0.7    0.9    0.1    1.9
+    //  0.7    0.8    0.8    1.7   1.8    1.2    2.1    0.5    0.2    0.9
+    //  0.6    0.5    0.4    0.2   0.1    1.5    0.6    0.7    0.3    0.8
+    //  0.7    0.8    0.9    0.2   0.4    1.8    0.4    0.9    0.4    0.7
+    //  0.6    0.5    0.4    0.1   0.1    1.7    0.5    0.4    0.5    0.6
+    //
+    //  Input:
+    //  8  0.5 1  2
+    //  6  9   3  4
+    //  5  6   7  8
+    //  9  10 11 11
+
+    engine engine;
+    float lr = 0.00001f;
+    auto input_grad = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 2, 5, 5 } });
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 4, 4 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::bfyx,{ 2, 1, 1, 1 } });
+    auto biases = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 1 } });
+
+    set_values(input, { 
+        8.f, 0.5f, 1.f, 2.f,
+        6.f, 9.f, 3.f, 4.f,
+        5.f, 6.f, 7.f, 8.f,
+        9.f, 10.f, 11.f, 11.f
+    });
+    set_values(input_grad, { 
+        0.5f, 0.6f, 0.7f, 0.9f, 1.f,
+        0.7f, 0.8f, 0.8f, 1.7f, 1.8f,
+        0.6f, 0.5f, 0.4f, 0.2f, 0.1f,
+        0.7f, 0.8f, 0.9f, 0.2f, 0.4f,
+        0.6f, 0.5f, 0.4f, 0.1f, 0.1f,
+        1.1f, 0.7f, 0.9f, 0.1f, 1.9f,
+        1.2f, 2.1f, 0.5f, 0.2f, 0.9f,
+        1.5f, 0.6f, 0.7f, 0.3f, 0.8f,
+        1.8f, 0.4f, 0.9f, 0.4f, 0.7f,
+        1.7f, 0.5f, 0.4f, 0.5f, 0.6f
+    });
+
+    topology topology(
+        input_layout("input_grad", input_grad.get_layout()),
+        data("input", input),
+        mutable_data("weights", weights),
+        mutable_data("biases", biases),
+        convolution_grad_weights("conv_grad_weights", "input_grad", "input", { "weights" }, { "biases" }, { 1, 1, 2, 2 }, { 0, 0, -1, -1 })
+    );
+
+    network network(engine, topology);
+    network.set_input_data("input_grad", input_grad);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "conv_grad_weights");
+
+    auto output_prim = outputs.begin()->second.get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+    auto weights_ptr = weights.pointer<float>();
+    auto biases_ptr = biases.pointer<float>();
+
+    std::vector<float> expected_weights_vec = {
+        19.8f, 34.6f
+    };
+
+    std::vector<float> expected_bias_vec = {
+        16.0f, 21.4f
+    };
+
+    for (unsigned int i = 0; i < expected_weights_vec.size(); i++)
+    {
+        float x = float_round(expected_weights_vec[i] * lr), y = float_round(weights_ptr[i]);
+        EXPECT_FLOAT_EQ(x, -y) << "on weights verification " << random_seed << std::endl;
+    }
+
+    for (unsigned int i = 0; i < expected_bias_vec.size(); i++)
+    {
+        float x = float_round(expected_bias_vec[i] * lr), y = float_round(biases_ptr[i]);
+        EXPECT_FLOAT_EQ(x, -y) << "on biases verification " << random_seed << std::endl;
+    }
+}
+
+TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz2x2_in32x1x2x2_yxfb_stride1) {
+	//  Filter : 1x1
+	//  Input grad  : 32x1x2x2
+	//  Input  : 32x1x3x3
+	//  Stride : 1x1
+	//
+	//  Input grad:
+	// y0: x0: 0.5  0.6  0.7  0.9  1    1.1  0.7  0.9  0.1  1.9  0.6  0.5  0.4  0.1  0.1  1.7  0.5  0.4  0.5  0.6  0.7  0.8  0.8  1.7  1.8  1.2  2.1  0.5  0.2  0.9  
+	// y0: x1: 0.7  0.8  0.8  1.7  1.8  1.2  2.1  0.5  0.2  0.9  0.4  0.1  0.1  1.7  0.5  0.4  0.5  0.6  0.7  0.9  1    1.1  0.7  0.9  0.1  1.9  0.1  1.5  0.6  2.1
+	// y1: x0: 0.5  0.6  0.7  0.9  1    1.1  0.7  0.9  0.1  1.9  0.1  1.7  0.5  0.4  0.4  0.1  0.1  1.7  0.5  0.4  0.5  0.6  1.2  2.1  0.5  0.2  0.9  0.4  0.1  1.2
+	// y1: x1: 0.7  0.8  0.8  1.7  1.8  1.2  2.1  0.9  0.1  1.9  0.1  1.7  0.5  0.6  0.7  0.9  1    1.1  0.7  0.9  0.1  0.1  1.7  0.5  0.4  1.7  0.5  0.4  0.5  0.6
+	//
+	//  Input:
+	// y0: x0: 0.4  0.1  0.1  1.7  0.5  0.4  0.5  0.6  0.7  0.8  0.8  1.7  1.8  1.2  2.1  0.5  0.2  0.9  0.5  0.6  0.7  0.9  1    1.1  0.7  0.9  0.1  0.6  1.2  2.1 
+	// y0: x1: 0.7  0.8  0.8  1.7  1.8  1.2  2.1  0.5  0.2  0.9  0.4  0.1  0.1  1.7  0.5  0.4  0.5  1    1.1  0.7  0.9  0.1  1.9  0.1  1.7  0.5  0.4  0.4  0.1  0.1
+	// y0: x2: 0.1  1.7  0.5  0.4  0.4  0.1  0.1  1.7  0.5  0.4  0.5  1.1  0.7  0.9  0.1  0.1  1.7  0.5  0.1  1.9  0.6  0.5  0.4  0.1  0.1  1.7  0.5  0.4  2.1  0.5
+	// y1: x0: 1.9  0.1  1.7  0.5  0.6  0.7  0.9  1    1.1  0.7  0.8  1.7  1.8  1.2  2.1  0.5  0.2  0.9  0.4  0.2  0.9  0.4  0.1  1.2  1.9  0.1  1.5  0.6  2.1  2.3
+	// y1: x1: 0.4  0.1  0.1  1.7  0.5  0.4  0.5  0.6  0.7  0.8  0.8  1.7  1.8  1.2  2.1  0.5  0.2  0.9  0.5  0.6  0.7  0.9  1    1.1  0.7  0.9  0.1  0.6  1.2  2.1 
+	// y1: x2: 0.7  0.8  0.8  1.7  1.8  1.2  2.1  0.5  0.2  0.9  0.4  0.1  0.1  1.7  0.5  0.4  0.5  1    1.1  0.7  0.9  0.1  1.9  0.1  1.7  0.5  0.4  0.4  0.1  0.1
+	// y2: x0: 0.7  0.8  0.8  1.7  1.8  1.2  2.1  0.9  0.1  1.9  0.1  1.7  0.5  0.6  0.7  0.9  1    1.1  0.7  0.9  0.1  0.1  1.7  0.5  0.4  1.7  0.5  0.4  0.5  0.6
+	// y2: x1: 0.5  0.6  0.7  0.9  1    1.1  0.7  0.9  0.1  1.9  0.6  0.5  0.4  0.1  0.1  1.7  0.5  0.4  0.5  0.6  0.7  0.8  0.8  1.7  1.8  1.2  2.1  0.5  0.2  0.9  
+	// y2: x2: 0.5  0.6  0.7  0.9  1    1.1  0.7  0.9  0.1  1.9  0.1  1.7  0.5  0.4  0.4  0.1  0.1  1.7  0.5  0.4  0.5  0.6  1.2  2.1  0.5  0.2  0.9  0.4  0.1  1.2
+
+	engine engine;
+	float lr = 0.00001f;
+	auto input_grad = memory::allocate(engine, { data_types::f32, format::bfyx,{ 32, 1, 2, 2 } });
+	auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 32, 1, 3, 3 } });
+	auto weights = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 2 } });
+	auto biases = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 1, 1 } });
+
+	set_values(input, {
+		0.4f, 0.1f, 0.1f, 1.7f, 0.5f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.8f, 1.7f, 1.8f, 1.2f, 2.1f, 0.5f, 0.2f, 0.9f, 0.5f, 0.6f, 0.7f, 0.9f, 1.f,  1.1f, 0.7f, 0.9f, 0.1f, 0.6f, 1.2f, 2.1f,
+		0.7f, 0.8f, 0.8f, 1.7f, 1.8f, 1.2f, 2.1f, 0.5f, 0.2f, 0.9f, 0.4f, 0.1f, 0.1f, 1.7f, 0.5f, 0.4f, 0.5f, 1.f,  1.1f, 0.7f, 0.9f, 0.1f, 1.9f, 0.1f, 1.7f, 0.5f, 0.4f, 0.4f, 0.1f, 0.1f,
+		0.1f, 1.7f, 0.5f, 0.4f, 0.4f, 0.1f, 0.1f, 1.7f, 0.5f, 0.4f, 0.5f, 1.1f, 0.7f, 0.9f, 0.1f, 0.1f, 1.7f, 0.5f, 0.1f, 1.9f, 0.6f, 0.5f, 0.4f, 0.1f, 0.1f, 1.7f, 0.5f, 0.4f, 2.1f, 0.5f,
+		1.9f, 0.1f, 1.7f, 0.5f, 0.6f, 0.7f, 0.9f, 1.f,  1.1f, 0.7f, 0.8f, 1.7f, 1.8f, 1.2f, 2.1f, 0.5f, 0.2f, 0.9f, 0.4f, 0.2f, 0.9f, 0.4f, 0.1f, 1.2f, 1.9f, 0.1f, 1.5f, 0.6f, 2.1f, 2.3f,
+		0.4f, 0.1f, 0.1f, 1.7f, 0.5f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.8f, 1.7f, 1.8f, 1.2f, 2.1f, 0.5f, 0.2f, 0.9f, 0.5f, 0.6f, 0.7f, 0.9f, 1.f,  1.1f, 0.7f, 0.9f, 0.1f, 0.6f, 1.2f, 2.1f,
+		0.7f, 0.8f, 0.8f, 1.7f, 1.8f, 1.2f, 2.1f, 0.5f, 0.2f, 0.9f, 0.4f, 0.1f, 0.1f, 1.7f, 0.5f, 0.4f, 0.5f, 1.f,  1.1f, 0.7f, 0.9f, 0.1f, 1.9f, 0.1f, 1.7f, 0.5f, 0.4f, 0.4f, 0.1f, 0.1f,
+		0.7f, 0.8f, 0.8f, 1.7f, 1.8f, 1.2f, 2.1f, 0.9f, 0.1f, 1.9f, 0.1f, 1.7f, 0.5f, 0.6f, 0.7f, 0.9f, 1.f,  1.1f, 0.7f, 0.9f, 0.1f, 0.1f, 1.7f, 0.5f, 0.4f, 1.7f, 0.5f, 0.4f, 0.5f, 0.6f,
+		0.5f, 0.6f, 0.7f, 0.9f, 1.f,  1.1f, 0.7f, 0.9f, 0.1f, 1.9f, 0.6f, 0.5f, 0.4f, 0.1f, 0.1f, 1.7f, 0.5f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.8f, 1.7f, 1.8f, 1.2f, 2.1f, 0.5f, 0.2f, 0.9f,
+		0.5f, 0.6f, 0.7f, 0.9f, 1.f,  1.1f, 0.7f, 0.9f, 0.1f, 1.9f, 0.1f, 1.7f, 0.5f, 0.4f, 0.4f, 0.1f, 0.1f, 1.7f, 0.5f, 0.4f, 0.5f, 0.6f, 1.2f, 2.1f, 0.5f, 0.2f, 0.9f, 0.4f, 0.1f, 1.2f
+		});
+	set_values(input_grad, {
+		0.5f, 0.6f, 0.7f, 0.9f, 1.f,  1.1f, 0.7f, 0.9f, 0.1f, 1.9f, 0.6f, 0.5f, 0.4f, 0.1f, 0.1f, 1.7f, 0.5f, 0.4f, 0.5f, 0.6f, 0.7f, 0.8f, 0.8f, 1.7f, 1.8f, 1.2f, 2.1f, 0.5f, 0.2f, 0.9f,
+		0.7f, 0.8f, 0.8f, 1.7f, 1.8f, 1.2f, 2.1f, 0.5f, 0.2f, 0.9f, 0.4f, 0.1f, 0.1f, 1.7f, 0.5f, 0.4f, 0.5f, 0.6f, 0.7f, 0.9f, 1.f,  1.1f, 0.7f, 0.9f, 0.1f, 1.9f, 0.1f, 1.5f, 0.6f, 2.1f,
+		0.5f, 0.6f, 0.7f, 0.9f, 1.f,  1.1f, 0.7f, 0.9f, 0.1f, 1.9f, 0.1f, 1.7f, 0.5f, 0.4f, 0.4f, 0.1f, 0.1f, 1.7f, 0.5f, 0.4f, 0.5f, 0.6f, 1.2f, 2.1f, 0.5f, 0.2f, 0.9f, 0.4f, 0.1f, 1.2f,
+		0.7f, 0.8f, 0.8f, 1.7f, 1.8f, 1.2f, 2.1f, 0.9f, 0.1f, 1.9f, 0.1f, 1.7f, 0.5f, 0.6f, 0.7f, 0.9f, 1.f,  1.1f, 0.7f, 0.9f, 0.1f, 0.1f, 1.7f, 0.5f, 0.4f, 1.7f, 0.5f, 0.4f, 0.5f, 0.6f
+		});
+
+	topology topology(
+		input_layout("input_grad", input_grad.get_layout()),
+		data("input", input),
+		mutable_data("weights", weights),
+		mutable_data("biases", biases),
+		convolution_grad_weights("conv_grad_weights", "input_grad", "input", { "weights" }, { "biases" }, { 1, 1, 1, 1 }, { 0, 0, 0, 0 })
+	);
+
+	network network(engine, topology);
+	network.set_input_data("input_grad", input_grad);
+
+	auto outputs = network.execute();
+	EXPECT_EQ(outputs.size(), size_t(1));
+	EXPECT_EQ(outputs.begin()->first, "conv_grad_weights");
+
+	auto output_prim = outputs.begin()->second.get_memory();
+
+	auto output_ptr = output_prim.pointer<float>();
+	auto weights_ptr = weights.pointer<float>();
+	auto biases_ptr = biases.pointer<float>();
+
+	std::vector<float> expected_weights_vec = {
+		79.32f, 78.37f, 80.41f, 81.44f
+	};
+
+	std::vector<float> expected_bias_vec = {
+		99.8f
+	};
+
+	for (unsigned int i = 0; i < expected_weights_vec.size(); i++)
+	{
+		float x = float_round(expected_weights_vec[i] * lr), y = float_round(weights_ptr[i]);
+		EXPECT_FLOAT_EQ(x, -y) << "on weights verification " << random_seed << std::endl;
+	}
+
+	for (unsigned int i = 0; i < expected_bias_vec.size(); i++)
+	{
+		float x = float_round(expected_bias_vec[i] * lr), y = float_round(biases_ptr[i]);
+		EXPECT_FLOAT_EQ(x, -y) << "on biases verification " << random_seed << std::endl;
+	}
+}

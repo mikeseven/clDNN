@@ -80,7 +80,7 @@ KERNEL(convolution_grad_weights_gpu_ref)(
 #if BIAS_TERM
                     result = fma(input[input_idx], grad, result);
 #else
-                    uint input_grad_idx = grad_split_offset + b*INPUT1_BATCH_PITCH + ofm*INPUT0_FEATURE_PITCH + j*INPUT0_X_PITCH + i*INPUT0_Y_PITCH;
+                    uint input_grad_idx = grad_split_offset + b*INPUT0_BATCH_PITCH + ofm*INPUT0_FEATURE_PITCH + j*INPUT0_X_PITCH + i*INPUT0_Y_PITCH;
                     result = fma(input[input_idx], input_grad[input_grad_idx], result);
 #endif
                 }
