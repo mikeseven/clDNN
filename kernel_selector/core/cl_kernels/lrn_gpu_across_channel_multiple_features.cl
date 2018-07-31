@@ -52,9 +52,7 @@ KERNEL (lrn_gpu_across_channel_multiple_features)(const __global INPUT0_TYPE* in
     for(uint i = 0; i < OFM_PER_SIMD; i++)
     {
         bool zero = input_offset_f < 0 || input_offset_f >= INPUT0_FEATURE_NUM;
-        UNIT_TYPE _in = *OFFSET_GLOBAL_PTR(UNIT_TYPE, input, input_idx);
-        UNIT_TYPE value = zero ? UNIT_VAL_ZERO : TO_UNIT_TYPE(ALPHA_VAL_FACTOR_DIV_BY_SIZE) * _in;
-        vals[i] = value;
+        vals[i] = zero ? UNIT_VAL_ZERO : TO_UNIT_TYPE(ALPHA_VAL_FACTOR_DIV_BY_SIZE) * (*OFFSET_GLOBAL_PTR(UNIT_TYPE, input, input_idx));
         input_offset_f++;
         input_idx += MULTIPLY_OFFSET(UNIT_TYPE, INPUT0_FEATURE_PITCH);
     }
@@ -71,10 +69,7 @@ KERNEL (lrn_gpu_across_channel_multiple_features)(const __global INPUT0_TYPE* in
         }
 
         bool zero = input_offset_f < 0 || input_offset_f >= INPUT0_FEATURE_NUM;
-        UNIT_TYPE _in = *OFFSET_GLOBAL_PTR(UNIT_TYPE, input, input_idx);
-        UNIT_TYPE value = zero ? UNIT_VAL_ZERO : TO_UNIT_TYPE(ALPHA_VAL_FACTOR_DIV_BY_SIZE) * _in;
-        vals[OFM_PER_SIMD-1] = value;
-
+        vals[OFM_PER_SIMD-1] = zero ? UNIT_VAL_ZERO : TO_UNIT_TYPE(ALPHA_VAL_FACTOR_DIV_BY_SIZE) * (*OFFSET_GLOBAL_PTR(UNIT_TYPE, input, input_idx));
         input_offset_f++;
         input_idx += MULTIPLY_OFFSET(UNIT_TYPE, INPUT0_FEATURE_PITCH);
     }
