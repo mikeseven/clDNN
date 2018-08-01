@@ -332,6 +332,58 @@ TEST(depth_concatenate_f32_gpu, test04_fused_relu) {
     }
 }
 
+
+TEST(depth_concatenate_f32_gpu, test05_different_formats) {
+    // 2 inputs of size 3x10x10 concatenated on f axis 
+
+    engine engine;
+    auto input1 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1,3,2,2 } });
+    auto input2 = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1,3,2,2 } });
+
+    set_values(input1, { 1.0f, 1.0f, 1.0f, 1.0f,
+                        2.0f, 2.0f, 2.0f, 2.0f,
+                        3.0f, 3.0f, 3.0f, 3.0f });
+    set_values(input2, { -1.0f, -2.0f, -3.0f,
+                         -1.0f, -2.0f, -3.0f, 
+                         -1.0f, -2.0f, -3.0f,
+                        - 1.0f, -2.0f, -3.0f });
+
+    std::vector<float> out_ref = {
+        1.0f, 1.0f, 1.0f, 1.0f,
+        2.0f, 2.0f, 2.0f, 2.0f,
+        3.0f, 3.0f, 3.0f, 3.0f,
+        -1.0f, -1.0f, -1.0f, -1.0f,
+        -2.0f, -2.0f, -2.0f, -2.0f,
+        -3.0f, -3.0f, -3.0f, -3.0f
+    };
+
+    topology topology;
+    topology.add(input_layout("input1", input1.get_layout()));
+    topology.add(input_layout("input2", input2.get_layout()));
+    topology.add(concatenation("depth1", { "input1", "input2" }, concatenation::along_f));
+
+    cldnn::build_options options;
+    options.set_option(cldnn::build_option::optimize_data(true));
+    network network(engine, topology, options);
+
+    network.set_input_data("input1", input1);
+    network.set_input_data("input2", input2);
+
+    auto outputs = network.execute({});
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "depth1");
+
+    auto output = outputs.at("depth1").get_memory();
+    auto output_ptr = output.pointer<float>();
+    int cntr = 0;
+    for (float val : output_ptr)
+    {
+        EXPECT_EQ(val, out_ref[cntr++]);
+    }
+    
+
+}
+
 //////////////////////////////////////////////////////////////////////////////
 //                                                                          //
 //                      Exhaustive Negative Matrix tests                    //

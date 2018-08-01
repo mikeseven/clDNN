@@ -47,6 +47,16 @@ namespace kernel_selector
 
         const concatenation_params& params = static_cast<const concatenation_params&>(p);
 
+        // all inputs have to have same layout
+        auto same_layout = params.inputs[0].GetLayout();
+        for (const auto& lt : params.inputs)
+        { 
+            if (lt.GetLayout() != same_layout)
+            {
+                return false;
+            }
+        }
+
         //kernel uses intel_sub_group_block_read that has 4-byte alignment requirement
         if (params.output.GetDType() == Datatype::F16)
         {
