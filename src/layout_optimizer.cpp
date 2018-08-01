@@ -407,8 +407,7 @@ std::vector<std::pair<std::shared_ptr<primitive>, bool>> layout_optimizer::get_g
     const kernel_selector::weights_reorder_params & reorder_params,
     primitive_id input_id,
     const layout & old_layout,
-    data_type type,
-    bool create_reorder)
+    data_type type)
 {
 
     if (reorder_params.engine == kernel_selector::weights_reorder_params::Engine::NONE || type != data_type::weights)
@@ -436,36 +435,20 @@ std::vector<std::pair<std::shared_ptr<primitive>, bool>> layout_optimizer::get_g
     }
 
     auto new_dtype = from_weights_type(reorder_params.dtype);
+    const auto bpp = data_type_traits::size_of(new_dtype);
+    tensor expected_size = { 1,1,1,(tensor::value_type)(reorder_params.newBufferSize / bpp) };
 
-    if (create_reorder)
-    {
-        auto expected_format = from_weights_layout(reorder_params.destLayout);
+    if (reorder_params.toImageType)
+        expected_size = old_layout.size;
 
-        layout expected_layout = {
-            new_dtype, expected_format, old_layout.size.transform(expected_format, 1)
-        };
+    layout expected_layout = {
+        new_dtype, reorder_params.toImageType ? from_weights_layout(reorder_params.destLayout) : format::bfyx, // simple linear format (flatten to x channel)
+        expected_size
+    };
 
-        auto reorder = create_reorder_if_needed(old_layout, input_id, expected_layout);
-        if (reorder.first)
-            ret.push_back(reorder);
-    }
-    else
-    {
-        const auto bpp = data_type_traits::size_of(new_dtype);
-        tensor expected_size = { 1,1,1,(tensor::value_type)(reorder_params.newBufferSize / bpp) };
-
-        if (reorder_params.toImageType)
-            expected_size = old_layout.size;
-
-        layout expected_layout = {
-            new_dtype, reorder_params.toImageType ? from_weights_layout(reorder_params.destLayout) : format::bfyx, // simple linear format (flatten to x channel)
-            expected_size
-        };
-
-        auto reorder = create_reorder_from_given_source(input_id, expected_layout, reorder_params);
-        if (reorder.first)
-            ret.push_back(reorder);
-    }
+    auto reorder = create_reorder_from_given_source(input_id, expected_layout, reorder_params);
+    if (reorder.first)
+        ret.push_back(reorder);
 
     return ret;
 }

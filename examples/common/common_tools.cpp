@@ -131,30 +131,6 @@ std::vector<std::string> get_directory_weights(const std::string& images_path)
     return get_directory_files(images_path, allowed_exts);
 }
 
-// returns image width and height with unchanged aspect ration and min_size provided
-std::pair<uint32_t, uint32_t> get_image_sizes(const std::pair<uint32_t, uint32_t> &img_sizes, uint32_t min_size)
-{
-    const uint32_t img_width = img_sizes.first;
-    const uint32_t img_height = img_sizes.second;
-    const float aspect_ratio = img_width / img_height;
-
-    uint32_t target_width;
-    uint32_t target_height;
-
-    if (img_width <= img_height)
-    {
-        target_width = min_size;
-        target_height = target_width / aspect_ratio;
-    }
-    else
-    {
-        target_height = min_size;
-        target_width = target_height * aspect_ratio;
-    }
-
-    return std::pair<uint32_t, uint32_t>(target_width, target_height);
-}
-
 void nn_data_load_from_image(
     std::string  filename,                       // Load of all data from a image filename
     cldnn::pointer<float>::iterator dst_buffer,
