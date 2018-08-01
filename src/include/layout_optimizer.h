@@ -174,7 +174,8 @@ public:
         const kernel_selector::weights_reorder_params& reorder_params,
         primitive_id input_id,
         const layout& old_layout,
-        data_type type);
+        data_type type,
+        bool create_reorder = false);
 
     void set_optimization_attribute(optimization_attributes_type attribute, int32_t val);
 };

@@ -684,7 +684,7 @@ void program_impl::replace_nodes_post()
             auto deconv_prim = node->as<deconvolution>().typed_desc();
 
             //limit optimization to stride = 1
-            if (deconv_prim->stride.spatial[0] != 1 || deconv_prim->stride.spatial[1] != 1)
+            if (deconv_prim->stride.spatial[0] != 1 || deconv_prim->stride.spatial[1] != 1 || deconv_prim->gradient())
                 continue;
 
             primitive_id deconv_id = node->id();
@@ -2089,7 +2089,8 @@ void program_impl::post_optimize_weights(layout_optimizer& lo)
             impl->_weights_reorder_params,
             weights.id(),
             weights_layout,
-            weights_type);
+            weights_type,
+            node.get_dependency(1).is_type<mutable_data>());
 
         for (auto& reorder : reorders)
         {

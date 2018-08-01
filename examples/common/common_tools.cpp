@@ -131,14 +131,46 @@ std::vector<std::string> get_directory_weights(const std::string& images_path)
     return get_directory_files(images_path, allowed_exts);
 }
 
+// returns image width and height with unchanged aspect ration and min_size provided
+std::pair<uint32_t, uint32_t> get_image_sizes(const std::pair<uint32_t, uint32_t> &img_sizes, uint32_t min_size)
+{
+    const uint32_t img_width = img_sizes.first;
+    const uint32_t img_height = img_sizes.second;
+    const float aspect_ratio = img_width / img_height;
+
+    uint32_t target_width;
+    uint32_t target_height;
+
+    if (img_width <= img_height)
+    {
+        target_width = min_size;
+        target_height = target_width / aspect_ratio;
+    }
+    else
+    {
+        target_height = min_size;
+        target_width = target_height * aspect_ratio;
+    }
+
+    return std::pair<uint32_t, uint32_t>(target_width, target_height);
+}
+
 void nn_data_load_from_image(
     std::string  filename,                       // Load of all data from a image filename
     cldnn::pointer<float>::iterator dst_buffer,
     uint32_t                   std_size,         // size of image both: height and width
-    bool                       RGB_order)        // if true - image have RGB order, otherwise BGR
+    bool                       RGB_order,        // if true - image have RGB order, otherwise BGR
+    uint32_t                   min_size = 0)     // optional min_size to which image will be resized without aspect ratio change
                                                  // supported formats: JPEG, J2K, JP2, PNG, BMP, WEBP, GIF, TIFF
 {
-    if (FIBITMAP *bitmap_raw = fi::crop_image_to_square_and_resize(fi::load_image_from_file(filename), std_size)) {
+    FIBITMAP *bitmap_load;
+
+    if (min_size)
+        bitmap_load = fi::resize_image(fi::load_image_from_file(filename), min_size);
+    else
+        bitmap_load = fi::load_image_from_file(filename);
+
+    if (FIBITMAP *bitmap_raw = fi::crop_image_to_square_and_resize(bitmap_load, std_size)) {
         FIBITMAP *bitmap;
         if (FreeImage_GetBPP(bitmap_raw) != 24) {
             bitmap = FreeImage_ConvertTo24Bits(bitmap_raw);
@@ -219,10 +251,18 @@ void nn_data_load_from_image(
     std::string  filename,                       // Load of all data from a image filename
     cldnn::pointer<half_t>::iterator dst_buffer,
     uint32_t                   std_size,         // size of image both: height and width
-    bool                       RGB_order)        // if true - image have RGB order, otherwise BGR
+    bool                       RGB_order,        // if true - image have RGB order, otherwise BGR
+    uint32_t                   min_size = 0)     // optional min_size to which image will be resized without aspect ratio change
                                                  // supported formats: JPEG, J2K, JP2, PNG, BMP, WEBP, GIF, TIFF
 {
-    if (FIBITMAP *bitmap_raw = fi::crop_image_to_square_and_resize(fi::load_image_from_file(filename), std_size)) {
+    FIBITMAP *bitmap_load;
+
+    if (min_size)
+        bitmap_load = fi::resize_image(fi::load_image_from_file(filename), min_size);
+    else
+        bitmap_load = fi::load_image_from_file(filename);
+
+    if (FIBITMAP *bitmap_raw = fi::crop_image_to_square_and_resize(bitmap_load, std_size)) {
         FIBITMAP *bitmap;
         if (FreeImage_GetBPP(bitmap_raw) != 24) {
             bitmap = FreeImage_ConvertTo24Bits(bitmap_raw);
@@ -262,10 +302,18 @@ void nn_data_load_from_image(
     std::string  filename,                       // Load of all data from a image filename
     std::vector<float>::iterator dst_buffer,
     uint32_t                   std_size,         // size of image both: height and width
-    bool                       RGB_order)        // if true - image have RGB order, otherwise BGR
+    bool                       RGB_order,        // if true - image have RGB order, otherwise BGR
+    uint32_t                   min_size = 0)     // optional min_size to which image will be resized without aspect ratio change
                                                  // supported formats: JPEG, J2K, JP2, PNG, BMP, WEBP, GIF, TIFF
 {
-    if (FIBITMAP *bitmap_raw = fi::crop_image_to_square_and_resize(fi::load_image_from_file(filename), std_size)) {
+    FIBITMAP *bitmap_load;
+
+    if (min_size)
+        bitmap_load = fi::resize_image(fi::load_image_from_file(filename), min_size);
+    else
+        bitmap_load = fi::load_image_from_file(filename);
+
+    if (FIBITMAP *bitmap_raw = fi::crop_image_to_square_and_resize(bitmap_load, std_size)) {
         FIBITMAP *bitmap;
         if (FreeImage_GetBPP(bitmap_raw) != 24) {
             bitmap = FreeImage_ConvertTo24Bits(bitmap_raw);
@@ -306,7 +354,8 @@ void nn_data_load_from_image(
 template <typename MemElemTy>
 void load_images_from_file_list(
     const std::vector<std::string>& images_list,
-    cldnn::memory& memory)
+    cldnn::memory& memory,
+    const uint32_t min_size)
 {
     auto memory_layout = memory.get_layout();
     auto dst_ptr = memory.pointer<MemElemTy>();
@@ -322,7 +371,7 @@ void load_images_from_file_list(
     for (auto img : images_list)
     {
         // "false" because we want to load images in BGR format because weights are in BGR format and we don't want any conversions between them.
-        nn_data_load_from_image(img, it, dim[0], false);
+        nn_data_load_from_image(img, it, dim[0], false, min_size);
         it += single_image_size;
     }
 }
@@ -333,8 +382,8 @@ uint32_t swap_endian(uint32_t val) {
 }
 
 // Explicit instantiation of all used template function instances used in examples.
-template void load_images_from_file_list<float>(const std::vector<std::string>&, cldnn::memory&);
-template void load_images_from_file_list<half_t>(const std::vector<std::string>&, cldnn::memory&);
+template void load_images_from_file_list<float>(const std::vector<std::string>&, cldnn::memory&, const uint32_t);
+template void load_images_from_file_list<half_t>(const std::vector<std::string>&, cldnn::memory&, const uint32_t);
 
 template <typename MemElemTy>
 void load_data_from_file_list_lenet(
@@ -481,7 +530,7 @@ void load_data_from_file_list_imagenet(
     }
 
     //read in images
-    load_images_from_file_list<MemElemTy>(requested_images, memory);
+    load_images_from_file_list<MemElemTy>(requested_images, memory, 256);
 
     //read in labels
     auto labels_ptr = memory_labels.pointer<MemElemTy>();
@@ -548,7 +597,7 @@ void compute_image_mean(const execution_params &ep, cldnn::engine& engine, const
     for (auto img : requested_images)
     {
         // "false" because we want to load images in BGR format because weights are in BGR format and we don't want any conversions between them.
-        nn_data_load_from_image(img, img_tmp_it, size_x, false);
+        nn_data_load_from_image(img, img_tmp_it, size_x, false, 256);
         
         for (uint32_t i = 0; i < img_sum.size(); i++)
             img_sum[i] += img_tmp[i];
@@ -654,7 +703,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     cldnn::build_options options;
 
     //TODO set proper network build options
-    if (ep.topology_name == "lenet_train" || ep.topology_name == "vgg16_train")
+    if(ep.topology_name == "vgg16_train")
         options.set_option(cldnn::build_option::optimize_data(false));
     else
         options.set_option(cldnn::build_option::optimize_data(true));
@@ -927,7 +976,9 @@ bool do_log_energy(const execution_params &ep, CIntelPowerGadgetLib& energyLib)
 std::chrono::nanoseconds execute_cnn_topology(cldnn::network network,
                                                 const execution_params &ep,
                                                 CIntelPowerGadgetLib& energyLib,
-                                                cldnn::memory& output, cldnn::memory* labels = nullptr)
+                                                cldnn::memory& output,
+                                                const uint32_t iteration = 0,
+                                                const uint32_t execution_count = 0)
 {
     bool log_energy = do_log_energy(ep, energyLib);
 
@@ -950,7 +1001,7 @@ std::chrono::nanoseconds execute_cnn_topology(cldnn::network network,
             energyLib.ReadSample();
     }
 
-    return get_execution_time(timer_execution, ep, output, outputs, log_energy, energyLib);
+    return get_execution_time(timer_execution, ep, output, outputs, log_energy, energyLib, iteration, execution_count);
 }
 
 std::chrono::nanoseconds execute_rnn_topology(cldnn::network network,
@@ -1007,7 +1058,9 @@ std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& tim
                                           cldnn::memory& output,
                                           cldnn_output& outputs,
                                           bool log_energy,
-                                          CIntelPowerGadgetLib& energyLib)
+                                          CIntelPowerGadgetLib& energyLib,
+                                          const uint32_t iteration,
+                                          const uint32_t execution_count)
 {
 
     //GPU primitives scheduled in unblocked manner
@@ -1022,9 +1075,13 @@ std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& tim
 
     if (ep.topology_name == "lenet_train" || ep.topology_name == "vgg16_train")
     {
-        for (auto& p : outputs)
+        if (iteration % ep.train_snapshot == 0 || iteration == execution_count)
         {
-            file::serialize_train(p.second.get_memory(), join_path(ep.weights_dir, p.first));
+            for (auto& p : outputs)
+            {
+                file::serialize_train(p.second.get_memory(), join_path(ep.weights_dir, p.first));
+            }
+            std::cout << "Weights snapshot done." << std::endl;
         }
         output = outputs.at("softmax").get_memory();
     }
@@ -1345,6 +1402,7 @@ void run_topology(const execution_params &ep)
                 auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
                 float base_learning_rate = ep.learning_rate;
                 float learning_rate = base_learning_rate;
+                uint32_t iteration = 0;
                 for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
                 {
                     double loss = 0;
@@ -1361,7 +1419,7 @@ void run_topology(const execution_params &ep)
 
                     network.set_input_data("input", input);
                     network.set_input_data("labels", labels);
-                    auto time = execute_cnn_topology(network, ep, energyLib, output);
+                    auto time = execute_cnn_topology(network, ep, energyLib, output, iteration, ep.image_number / batch_size);
                     time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
                     auto expected = labels.pointer<float>();
                     auto vals = output.pointer<float>();
@@ -1375,6 +1433,8 @@ void run_topology(const execution_params &ep)
                     std::cout << "Iter: " << learn_it - ep.image_offset << std::endl;
                     std::cout << "Loss = " << loss << std::endl;
                     std::cout << "Learning Rate = " << learning_rate << std::endl;
+
+                    iteration++;
                 }
                 continue;
             }
@@ -1385,13 +1445,13 @@ void run_topology(const execution_params &ep)
                 auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
                 float base_learning_rate = ep.learning_rate;
                 float learning_rate = base_learning_rate;
+                uint32_t iteration = 0;
                 for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
                 {
                     double loss = 0;
                     //update learning rate, policy "step", gamma=0.001, stepsize=1000.
                     //TODO: enable getting learning rate params from command line
-                    learning_rate = base_learning_rate * pow(0.001f, learn_it / 1000.f);
-                    loss = 0;
+                    learning_rate = base_learning_rate * pow(0.001f, (learn_it / 128.f) / 1000.f);
                     network.set_learning_rate(learning_rate);
 
                     if (ep.use_half)
@@ -1401,7 +1461,7 @@ void run_topology(const execution_params &ep)
 
                     network.set_input_data("input", input);
                     network.set_input_data("labels", labels);
-                    auto time = execute_cnn_topology(network, ep, energyLib, output);
+                    auto time = execute_cnn_topology(network, ep, energyLib, output, iteration, ep.image_number / batch_size);
                     time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
                     auto expected = labels.pointer<float>();
                     auto vals = output.pointer<float>();
@@ -1412,20 +1472,12 @@ void run_topology(const execution_params &ep)
                         std::vector< std::pair<float, uint32_t> > output_vec;
 
                         loss -= log(std::max(vals[b + e * batch_size], std::numeric_limits<float>::min()));
-
-                        //check if true label is on top of predictions
-                        for (uint32_t j = 0; j < labels_num; j++)
-                            output_vec.push_back(std::make_pair(vals[j], j));
-
-                        std::sort(output_vec.begin(), output_vec.end(), std::greater<std::pair<float, uint32_t> >());
-
-                        if (output_vec[0].second == e)
-                            acc++;
                     }
                     loss = loss / batch_size;
                     std::cout << "Iter: " << learn_it - ep.image_offset << std::endl;
                     std::cout << "Loss = " << loss << std::endl;
                     std::cout << "Learning Rate = " << learning_rate << std::endl;
+                    iteration++;
                 }
                 continue;
             }
@@ -1562,7 +1614,7 @@ void run_topology(const execution_params &ep)
             network.set_input_data(inp_data.first, mem);
         }
 		
-        auto time = execute_cnn_topology(network, ep, energyLib, output, nullptr);
+        auto time = execute_cnn_topology(network, ep, energyLib, output);
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
         if (time_in_sec != 0.0)
         {

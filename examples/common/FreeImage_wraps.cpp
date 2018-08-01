@@ -76,3 +76,31 @@ FIBITMAP * fi::resize_image_to_square(FIBITMAP * bmp_in, uint16_t new_size)
     FreeImage_Unload(bmp_in);
     return bmp_temp1;
 }
+
+FIBITMAP * fi::resize_image(FIBITMAP * bmp_in, uint16_t min_size)
+{
+    FIBITMAP *bmp_temp1 = nullptr;
+
+    uint16_t  img_width, img_height;
+    img_width = FreeImage_GetWidth(bmp_in);
+    img_height = FreeImage_GetHeight(bmp_in);
+    const float aspect_ratio = (float)img_width / (float)img_height;
+
+    uint32_t target_width;
+    uint32_t target_height;
+
+    if (img_width <= img_height)
+    {
+        target_width = min_size;
+        target_height = (uint16_t)(target_width / aspect_ratio);
+    }
+    else
+    {
+        target_height = min_size;
+        target_width = (uint16_t)(target_height * aspect_ratio);
+    }
+
+    bmp_temp1 = FreeImage_Rescale(bmp_in, target_width, target_height, FILTER_CATMULLROM);
+    FreeImage_Unload(bmp_in);
+    return bmp_temp1;
+}

@@ -266,6 +266,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Parameter used in learning, when it is set then imagemean value will be computed for the requested image set")
         ("lr", bpo::value<float>()->value_name("<lr>")->default_value(0.00001f),
             "Base learning rate for network training. Default value is 0.00001f.")
+        ("train_snapshot", bpo::value<std::uint32_t>()->value_name("<train_snapshot>")->default_value(100),
+            "After how many iterations, the weights and biases files will be updated on disk. Default value is 100.")
         ("version", "Show version of the application.")
         ("help", "Show help message and available command-line options.");
 
@@ -533,6 +535,7 @@ int main(int argc, char* argv[])
         ep.temperature = parsed_args["temperature"].as<float>();
         ep.image_number = parsed_args["image_number"].as<std::uint32_t>();
         ep.image_offset = parsed_args["image_offset"].as<std::uint32_t>();
+        ep.train_snapshot = parsed_args["train_snapshot"].as<std::uint32_t>();
         ep.use_existing_weights = parsed_args["use_existing_weights"].as<bool>();
         ep.compute_imagemean = parsed_args["compute_imagemean"].as<bool>();
         ep.learning_rate = parsed_args["lr"].as<float>();

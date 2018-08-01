@@ -182,6 +182,7 @@ struct execution_params {
     bool use_existing_weights;
     bool compute_imagemean;
     float learning_rate;
+    uint32_t train_snapshot;
 };
 
 struct memory_filler
@@ -211,7 +212,7 @@ std::vector<std::string> get_input_list(const std::string& images_path);
 std::vector<std::string> get_directory_weights(const std::string& images_path);
 
 template <typename MemElemTy = float>
-void load_images_from_file_list(const std::vector<std::string>& images_list, cldnn::memory& memory); 
+void load_images_from_file_list(const std::vector<std::string>& images_list, cldnn::memory& memory, const uint32_t min_size = 0); 
 
 template <typename MemElemTy = float>
 void load_data_from_file_list_lenet(const std::vector<std::string>& images_list, cldnn::memory& memory, const uint32_t images_offset, const uint32_t images_number, const bool train, cldnn::memory& memory_labels);
@@ -234,7 +235,9 @@ std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& tim
                                             cldnn::memory& output,
                                             cldnn_output& outputs,
                                             bool log_energy,
-                                            CIntelPowerGadgetLib& energyLib);
+                                            CIntelPowerGadgetLib& energyLib,
+                                            const uint32_t iteration = 0,
+                                            const uint32_t execution_count = 0);
 
 std::chrono::nanoseconds execute_rnn_topology(cldnn::network network,
                                                 const execution_params &ep,

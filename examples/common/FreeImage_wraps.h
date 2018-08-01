@@ -30,6 +30,7 @@ namespace fi {
     FIBITMAP * load_image_from_file( std::string );
     FIBITMAP * crop_image_to_square_and_resize( FIBITMAP *,uint16_t );
     FIBITMAP * resize_image_to_square(FIBITMAP *, uint16_t);
+    FIBITMAP * resize_image(FIBITMAP *, uint16_t);
 
     typedef  FIBITMAP* (*prepare_image_t)(FIBITMAP *, uint16_t);
 

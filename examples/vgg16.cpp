@@ -620,12 +620,12 @@ cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::e
     auto fc8_grad_relu = add_relu_grad("fc8_grad_relu", softmax_loss_grad, fc8, topology_inst);
 
     auto fc8_grad_input = add_fc_grad_layer(weights_dir, engine, topology_inst, "fc8_grad", fc8_grad_relu, fc8_w_mem_layout, fc8_b_mem_layout,
-        "fc8_weights.nnd", "fc8_bias.nnd", fc7, use_existing_weights);
+        "fc8_weights.nnd", "fc8_bias.nnd", fc7_relu, use_existing_weights);
 
     auto fc7_grad_relu = add_relu_grad("fc7_grad_relu", fc8_grad_input, fc7, topology_inst);
 
     auto fc7_grad_input = add_fc_grad_layer(weights_dir, engine, topology_inst, "fc7_grad", fc7_grad_relu, fc7_w_mem_layout, fc7_b_mem_layout,
-        "fc7_weights.nnd", "fc7_bias.nnd", fc6, use_existing_weights);
+        "fc7_weights.nnd", "fc7_bias.nnd", fc6_relu, use_existing_weights);
 
     auto fc6_grad_relu = add_relu_grad("fc6_grad_relu", fc7_grad_input, fc6, topology_inst);
 
@@ -642,12 +642,12 @@ cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::e
     auto conv5_3_grad_relu = add_relu_grad("conv5_3_grad_relu", pool5_grad, conv5_3, topology_inst);
 
     auto conv5_3_grad_input = add_conv_grad_layer(weights_dir, engine, topology_inst, "conv5_3_grad", conv5_3_grad_relu, conv5_3_w_mem_layout, conv5_3_b_mem_layout,
-        use_existing_weights, { 0, 0, -1, -1 }, "conv5_3_weights.nnd", "conv5_3_bias.nnd", conv5_2);
+        use_existing_weights, { 0, 0, -1, -1 }, "conv5_3_weights.nnd", "conv5_3_bias.nnd", conv5_2_relu);
 
     auto conv5_2_grad_relu = add_relu_grad("conv5_2_grad_relu", conv5_3_grad_input, conv5_2, topology_inst);
 
     auto conv5_2_grad_input = add_conv_grad_layer(weights_dir, engine, topology_inst, "conv5_2_grad", conv5_2_grad_relu, conv5_2_w_mem_layout, conv5_2_b_mem_layout,
-        use_existing_weights, { 0, 0, -1, -1 }, "conv5_2_weights.nnd", "conv5_2_bias.nnd", conv5_1);
+        use_existing_weights, { 0, 0, -1, -1 }, "conv5_2_weights.nnd", "conv5_2_bias.nnd", conv5_1_relu);
 
     auto conv5_1_grad_relu = add_relu_grad("conv5_1_grad_relu", conv5_2_grad_input, conv5_1, topology_inst);
 
@@ -664,12 +664,12 @@ cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::e
     auto conv4_3_grad_relu = add_relu_grad("conv4_3_grad_relu", pool4_grad, conv4_3, topology_inst);
 
     auto conv4_3_grad_input = add_conv_grad_layer(weights_dir, engine, topology_inst, "conv4_3_grad", conv4_3_grad_relu, conv4_3_w_mem_layout, conv4_3_b_mem_layout,
-        use_existing_weights, { 0, 0, -1, -1 }, "conv4_3_weights.nnd", "conv4_3_bias.nnd", conv4_2);
+        use_existing_weights, { 0, 0, -1, -1 }, "conv4_3_weights.nnd", "conv4_3_bias.nnd", conv4_2_relu);
 
     auto conv4_2_grad_relu = add_relu_grad("conv4_2_grad_relu", conv4_3_grad_input, conv4_2, topology_inst);
 
     auto conv4_2_grad_input = add_conv_grad_layer(weights_dir, engine, topology_inst, "conv4_2_grad", conv4_2_grad_relu, conv4_2_w_mem_layout, conv4_2_b_mem_layout,
-        use_existing_weights, { 0, 0, -1, -1 }, "conv4_2_weights.nnd", "conv4_2_bias.nnd", conv4_1);
+        use_existing_weights, { 0, 0, -1, -1 }, "conv4_2_weights.nnd", "conv4_2_bias.nnd", conv4_1_relu);
 
     auto conv4_1_grad_relu = add_relu_grad("conv4_1_grad_relu", conv4_2_grad_input, conv4_1, topology_inst);
 
@@ -686,12 +686,12 @@ cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::e
     auto conv3_3_grad_relu = add_relu_grad("conv3_3_grad_relu", pool3_grad, conv3_3, topology_inst);
 
     auto conv3_3_grad_input = add_conv_grad_layer(weights_dir, engine, topology_inst, "conv3_3_grad", conv3_3_grad_relu, conv3_3_w_mem_layout, conv3_3_b_mem_layout,
-        use_existing_weights, { 0, 0, -1, -1 }, "conv3_3_weights.nnd", "conv3_3_bias.nnd", conv3_2);
+        use_existing_weights, { 0, 0, -1, -1 }, "conv3_3_weights.nnd", "conv3_3_bias.nnd", conv3_2_relu);
 
     auto conv3_2_grad_relu = add_relu_grad("conv3_2_grad_relu", conv3_3_grad_input, conv3_2, topology_inst);
 
     auto conv3_2_grad_input = add_conv_grad_layer(weights_dir, engine, topology_inst, "conv3_2_grad", conv3_2_grad_relu, conv3_2_w_mem_layout, conv3_2_b_mem_layout,
-        use_existing_weights, { 0, 0, -1, -1 }, "conv3_2_weights.nnd", "conv3_2_bias.nnd", conv3_1);
+        use_existing_weights, { 0, 0, -1, -1 }, "conv3_2_weights.nnd", "conv3_2_bias.nnd", conv3_1_relu);
 
     auto conv3_1_grad_relu = add_relu_grad("conv3_1_grad_relu", conv3_2_grad_input, conv3_1, topology_inst);
 
@@ -708,7 +708,7 @@ cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::e
     auto conv2_2_grad_relu = add_relu_grad("conv2_2_grad_relu", pool2_grad, conv2_2, topology_inst);
 
     auto conv2_2_grad_input = add_conv_grad_layer(weights_dir, engine, topology_inst, "conv2_2_grad", conv2_2_grad_relu, conv2_2_w_mem_layout, conv2_2_b_mem_layout,
-        use_existing_weights, { 0, 0, -1, -1 }, "conv2_2_weights.nnd", "conv2_2_bias.nnd", conv2_1);
+        use_existing_weights, { 0, 0, -1, -1 }, "conv2_2_weights.nnd", "conv2_2_bias.nnd", conv2_1_relu);
 
     auto conv2_1_grad_relu = add_relu_grad("conv2_1_grad_relu", conv2_2_grad_input, conv2_1, topology_inst);
 
@@ -725,14 +725,16 @@ cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::e
     auto conv1_2_grad_relu = add_relu_grad("conv1_2_grad_relu", pool1_grad, conv1_2, topology_inst);
 
     auto conv1_2_grad_input = add_conv_grad_layer(weights_dir, engine, topology_inst, "conv1_2_grad", conv1_2_grad_relu, conv1_2_w_mem_layout, conv1_2_b_mem_layout,
-        use_existing_weights, { 0, 0, -1, -1 }, "conv1_2_weights.nnd", "conv1_2_bias.nnd", conv1_1);
+        use_existing_weights, { 0, 0, -1, -1 }, "conv1_2_weights.nnd", "conv1_2_bias.nnd", conv1_1_relu);
+
+    auto conv1_1_grad_relu = add_relu_grad("conv1_1_grad_relu", conv1_2_grad_input, conv1_1, topology_inst);
 
     auto conv1_1_weights_data_prev = file::create_mutable({ engine, join_path(weights_dir, "conv1_1_grad_weights_prev.nnd") }, use_existing_weights ? false : true, conv1_1_w_mem_layout, cldnn::mutable_data::filler_type::zero);
     auto conv1_1_bias_data_prev = file::create_mutable({ engine, join_path(weights_dir, "conv1_1_grad_bias_prev.nnd") }, use_existing_weights ? false : true, conv1_1_b_mem_layout, cldnn::mutable_data::filler_type::zero);
 
     auto conv1_1_grad_weights = convolution_grad_weights(
         "output",
-        conv1_2_grad_input,
+        conv1_1_grad_relu,
         reordered_input,
         { "conv1_1_weights.nnd" },
         { "conv1_1_bias.nnd" },
