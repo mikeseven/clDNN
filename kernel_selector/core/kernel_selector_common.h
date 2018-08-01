@@ -15,10 +15,18 @@
 */
 
 #pragma once
-#include <string>
-#include <memory>
+
 #include "kernel_selector_params.h"
+#include "primitive_db.h"
+
 #include <cfloat>
+#include <cstdint>
+#include <limits>
+#include <memory>
+#include <sstream>
+#include <cfloat>
+#include <string>
+#include <vector>
 
 #define AGE_BASED "-cl-no-subgroup-ifp"
 #define ROUND_ROBIN ""
@@ -276,4 +284,31 @@ namespace kernel_selector {
     std::string toString(NonLinearParams params);
     std::string toString(const Tensor::Dim& dim);
     std::string toString(const DataTensor& tensor);
+    inline std::uint64_t create_hash(const unsigned char* begin, const unsigned char* end)
+    {
+        // Compatible with VS std::hash.
+        constexpr auto start_acc  = static_cast<std::uint64_t>(UINT64_C(14695981039346656037));
+        constexpr auto mul_factor = static_cast<std::uint64_t>(UINT64_C(1099511628211));
+
+        std::uint64_t acc = start_acc;
+        for (auto elem_it = begin; elem_it != end; ++elem_it)
+        {
+            acc ^= static_cast<std::uint64_t>(*elem_it);
+            acc *= mul_factor;
+        }
+
+        return acc;
+    }
+
+    template <typename ElemTy>
+    std::uint64_t create_hash(const ElemTy* begin, const std::size_t size)
+    {
+        return create_hash(reinterpret_cast<const unsigned char*>(begin), reinterpret_cast<const unsigned char*>(begin + size));
+    }
+
+    template <typename CharTy, typename CharTraits, typename AllocatorTy>
+    std::uint64_t create_hash(const std::basic_string<CharTy, CharTraits, AllocatorTy>& value)
+    {
+        return create_hash<CharTy>(value.data(), value.size());
+    }
 }
