@@ -14,11 +14,11 @@
 // limitations under the License.
 */
 
-#include "pooling_kernel_gpu_DPAS.h"
+#include "pooling_kernel_gpu_byxf_af32.h"
  
 namespace kernel_selector 
 {
-    ParamsKey PoolingKerneGPU_DPAS::GetSupportedKey() const
+    ParamsKey PoolingKerneGPU_byxf_af32::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::INT8);
@@ -39,7 +39,7 @@ namespace kernel_selector
         return k;
     }
 
-    PoolingKernelBase::DispatchData PoolingKerneGPU_DPAS::SetDefault(const pooling_params& params) const
+    PoolingKernelBase::DispatchData PoolingKerneGPU_byxf_af32::SetDefault(const pooling_params& params) const
     {
         constexpr int simdSize = 8;
 
@@ -57,7 +57,7 @@ namespace kernel_selector
         return runInfo;
     }
     
-    KernelsData PoolingKerneGPU_DPAS::GetKernelsData(const Params& params, const optional_params& options) const
+    KernelsData PoolingKerneGPU_byxf_af32::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, FORCE_PRIORITY_1);
     }

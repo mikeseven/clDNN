@@ -47,7 +47,7 @@ namespace kernel_selector
             // TODO: most of the kernel doesn't support ROI. we need to handle it correctly.
             brfyx,              // 4D+batch
             winograd_2x3_s1_data, //winograd convolution input, F(2,3) -- filter 3x3 with stride 1
-            byxf_af32, // for DPAS convolution
+            byxf_af32, // for MMAD convolution
             DataLayoutCount // NMBER OF ELEMENTS IN ENUM
         };
 
@@ -77,7 +77,7 @@ namespace kernel_selector
             winograd_6x3_s1_fused_weights, //winograd convolution weights for fused kernel, F(6, 3) --filter 3x3 with stride 1
             image_2d_weights_winograd_6x3_s1_fbxyb, // image 2d winograd convolution weights for fused kernel, F(2, 3) --filter 3x3 with stride 1
             image_2d_weights_winograd_6x3_s1_xfbyb, // image 2d winograd convolution weights for fused kernel, F(2, 3) --filter 3x3 with stride 1
-            os_is_yx_isa8_osv8_isv4, // for DPAS convolution
+            os_is_yx_isa8_osv8_isv4, // for MMAD convolution
             WeightsLayoutCount // NMBER OF ELEMENTS IN ENUM
         };
 

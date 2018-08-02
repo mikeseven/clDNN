@@ -16,18 +16,28 @@
 
 #pragma once
 
-#include "pooling_kernel_base.h"
+#include "convolution_kernel_base.h"
  
-namespace kernel_selector 
-{    
-    class PoolingKerneGPU_DPAS : public PoolingKernelBase
+namespace kernel_selector {
+    
+    class ConvolutionKernel_MMAD : public ConvolutionKernelBase
     {
     public:
-        PoolingKerneGPU_DPAS() : PoolingKernelBase("pooling_gpu_dpas") {}
-        virtual ~PoolingKerneGPU_DPAS() {}
+        using Parent = ConvolutionKernelBase;
+        ConvolutionKernel_MMAD() : ConvolutionKernelBase("convolution_gpu_mmad") {}
+        virtual ~ConvolutionKernel_MMAD() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
-        DispatchData SetDefault(const pooling_params& params) const override;
+
+    protected:
+        JitConstants GetJitConstants(const convolution_params& params, const DispatchData& kd) const override;
+        DispatchData SetDefault(const convolution_params& arg, int autoTuneIndex = -1) const override;
+        virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&) const override
+        {
+            return{
+                WeightsLayout::os_is_yx_isa8_osv8_isv4,
+            };
+        }
     };
 }

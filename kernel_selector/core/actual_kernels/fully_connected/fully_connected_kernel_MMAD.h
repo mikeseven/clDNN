@@ -20,12 +20,12 @@
  
 namespace kernel_selector {
     
-    class FullyConnectedKernelDPAS : public FullyConnectedKernelBase
+    class FullyConnectedKernelMMAD : public FullyConnectedKernelBase
     {
     public:
         using Parent = FullyConnectedKernelBase;
 
-        FullyConnectedKernelDPAS() : Parent("fully_connected_gpu_DPAS") {}
+        FullyConnectedKernelMMAD() : Parent("fully_connected_gpu_MMAD") {}
 
         KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         ParamsKey GetSupportedKey() const override;

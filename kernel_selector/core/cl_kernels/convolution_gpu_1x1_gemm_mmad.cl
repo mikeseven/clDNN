@@ -16,15 +16,15 @@
 #include "include/activation_functions.cl"
 #include "include/data_types.cl"
 #include "include/fetch.cl"
-#include "include/dpas.cl"
+#include "include/mmad.cl"
 
-#define FILTER_IFM_DPAS_NUM ((FILTER_IFM_NUM + 31) / 32)
-#define FILTER_OFM_DPAS_NUM ((FILTER_OFM_NUM + 7) / 8)
-#define FILTER_IFM_ALIGNED (FILTER_IFM_DPAS_NUM * 32)
-#define FILTER_OFM_ALIGNED (FILTER_OFM_DPAS_NUM * 8)
+#define FILTER_IFM_MMAD_NUM ((FILTER_IFM_NUM + 31) / 32)
+#define FILTER_OFM_MMAD_NUM ((FILTER_OFM_NUM + 7) / 8)
+#define FILTER_IFM_ALIGNED (FILTER_IFM_MMAD_NUM * 32)
+#define FILTER_OFM_ALIGNED (FILTER_OFM_MMAD_NUM * 8)
 
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
-KERNEL(convolution_1x1_gemm_DPAS)(
+KERNEL(convolution_1x1_gemm_MMAD)(
     __global INPUT0_TYPE* input, 
     __global OUTPUT_TYPE* output, 
     __global FILTER_TYPE* weights, 
@@ -54,7 +54,7 @@ KERNEL(convolution_1x1_gemm_DPAS)(
     const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
     uint in_addr = input_offset + input_x * INPUT0_X_PITCH + input_y * INPUT0_Y_PITCH;
 
-    const uint filter_offset = (get_group_id(1) % FILTER_OFM_DPAS_NUM) * FILTER_OFM_BLOCK_PITCH;
+    const uint filter_offset = (get_group_id(1) % FILTER_OFM_MMAD_NUM) * FILTER_OFM_BLOCK_PITCH;
     uint filter_idx = filter_offset;
 
     int8 tileA;
@@ -66,7 +66,7 @@ KERNEL(convolution_1x1_gemm_DPAS)(
     }
 
    	__attribute__((opencl_unroll_hint(1)))
-    for (uint k = 0; k < FILTER_IFM_DPAS_NUM; ++k)
+    for (uint k = 0; k < FILTER_IFM_MMAD_NUM; ++k)
     {
         // load A tile ( input )
         for(uint i = 0; i < 8; i++)
@@ -79,7 +79,7 @@ KERNEL(convolution_1x1_gemm_DPAS)(
         tileB = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
     
         // compute C tile ( output )
-        tileC = DPAS_8x8(tileA, tileB, tileC);
+        tileC = MMAD_8x8(tileA, tileB, tileC);
 
         in_addr += 32; // 4 features per channel * 8 SIMD channels
         filter_idx += 32*8; // 32 features per channel * 8 output features per SIMD channel
@@ -115,7 +115,7 @@ KERNEL(convolution_1x1_gemm_DPAS)(
     }
 }
 
-#undef FILTER_IFM_DPAS_NUM
-#undef FILTER_OFM_DPAS_NUM
+#undef FILTER_IFM_MMAD_NUM
+#undef FILTER_OFM_MMAD_NUM
 #undef FILTER_IFM_ALIGNED
 #undef FILTER_OFM_ALIGNED

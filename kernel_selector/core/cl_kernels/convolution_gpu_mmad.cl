@@ -16,15 +16,15 @@
 #include "include/activation_functions.cl"
 #include "include/data_types.cl"
 #include "include/fetch.cl"
-#include "include/dpas.cl"
+#include "include/mmad.cl"
 
-#define FILTER_IFM_DPAS_NUM ((FILTER_IFM_NUM + 31) / 32)
-#define FILTER_OFM_DPAS_NUM ((FILTER_OFM_NUM + 7) / 8)
-#define FILTER_IFM_ALIGNED (FILTER_IFM_DPAS_NUM * 32)
-#define FILTER_OFM_ALIGNED (FILTER_OFM_DPAS_NUM * 8)
+#define FILTER_IFM_MMAD_NUM ((FILTER_IFM_NUM + 31) / 32)
+#define FILTER_OFM_MMAD_NUM ((FILTER_OFM_NUM + 7) / 8)
+#define FILTER_IFM_ALIGNED (FILTER_IFM_MMAD_NUM * 32)
+#define FILTER_OFM_ALIGNED (FILTER_OFM_MMAD_NUM * 8)
 
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
-KERNEL(convolution_DPAS)(
+KERNEL(convolution_MMAD)(
     __global INPUT0_TYPE* input, 
     __global OUTPUT_TYPE* output, 
     __global FILTER_TYPE* weights, 
@@ -60,10 +60,10 @@ KERNEL(convolution_DPAS)(
 
     const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
 
-    const uint filter_offset = (get_group_id(2) % FILTER_OFM_DPAS_NUM) * FILTER_OFM_BLOCK_PITCH;
+    const uint filter_offset = (get_group_id(2) % FILTER_OFM_MMAD_NUM) * FILTER_OFM_BLOCK_PITCH;
     const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
 
-    for (uint k = 0; k < FILTER_IFM_DPAS_NUM; ++k)
+    for (uint k = 0; k < FILTER_IFM_MMAD_NUM; ++k)
     {
         for (uint j = 0; j < FILTER_SIZE_Y ; ++j)
         {
@@ -95,7 +95,7 @@ KERNEL(convolution_DPAS)(
 
 						int8 weights_data = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
 
-						dotProd = DPAS_8(activations, weights_data, dotProd);
+						dotProd = MMAD_8(activations, weights_data, dotProd);
                     }
                 }
             }
@@ -128,7 +128,7 @@ KERNEL(convolution_DPAS)(
 #endif  
 }
 
-#undef FILTER_IFM_DPAS_NUM
-#undef FILTER_OFM_DPAS_NUM
+#undef FILTER_IFM_MMAD_NUM
+#undef FILTER_OFM_MMAD_NUM
 #undef FILTER_IFM_ALIGNED
 #undef FILTER_OFM_ALIGNED

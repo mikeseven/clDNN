@@ -14,7 +14,7 @@
 // limitations under the License.
 */
 
-inline int FUNC(dp4a_SW)(char4 input, char4 weight, int acc)
+inline int FUNC(mmad_4)(char4 input, char4 weight, int acc)
 {
 	acc += (input[0] * weight[0]);
 	acc += (input[1] * weight[1]);
@@ -23,21 +23,21 @@ inline int FUNC(dp4a_SW)(char4 input, char4 weight, int acc)
 	return acc;
 }
 
-inline int FUNC(dp4a_s8)(int8 A_scalars, int8 B_vectors, int acc)
+inline int FUNC(mmad8)(int8 A_scalars, int8 B_vectors, int acc)
 {
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[0]), as_char4(B_vectors[0]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[1]), as_char4(B_vectors[1]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[2]), as_char4(B_vectors[2]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[3]), as_char4(B_vectors[3]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[4]), as_char4(B_vectors[4]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[5]), as_char4(B_vectors[5]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[6]), as_char4(B_vectors[6]), acc);
-	acc = FUNC_CALL(dp4a_SW)(as_char4(A_scalars[7]), as_char4(B_vectors[7]), acc);
+	acc = FUNC_CALL(mmad_4)(as_char4(A_scalars[0]), as_char4(B_vectors[0]), acc);
+	acc = FUNC_CALL(mmad_4)(as_char4(A_scalars[1]), as_char4(B_vectors[1]), acc);
+	acc = FUNC_CALL(mmad_4)(as_char4(A_scalars[2]), as_char4(B_vectors[2]), acc);
+	acc = FUNC_CALL(mmad_4)(as_char4(A_scalars[3]), as_char4(B_vectors[3]), acc);
+	acc = FUNC_CALL(mmad_4)(as_char4(A_scalars[4]), as_char4(B_vectors[4]), acc);
+	acc = FUNC_CALL(mmad_4)(as_char4(A_scalars[5]), as_char4(B_vectors[5]), acc);
+	acc = FUNC_CALL(mmad_4)(as_char4(A_scalars[6]), as_char4(B_vectors[6]), acc);
+	acc = FUNC_CALL(mmad_4)(as_char4(A_scalars[7]), as_char4(B_vectors[7]), acc);
 
 	return acc;
 }
 
-inline int8 FUNC(dp4a_s8_r8)(int8 A_vectors, int8 B_vectors, int8 acc)
+inline int8 FUNC(mmad8x8)(int8 A_vectors, int8 B_vectors, int8 acc)
 {
     int8 ret;
     for(uint i = 0; i < 8; i++)
@@ -51,10 +51,12 @@ inline int8 FUNC(dp4a_s8_r8)(int8 A_vectors, int8 B_vectors, int8 acc)
         A_scalars.s5 = sub_group_broadcast(A_vectors[i], 5);
         A_scalars.s6 = sub_group_broadcast(A_vectors[i], 6);
         A_scalars.s7 = sub_group_broadcast(A_vectors[i], 7);
-        ret[i] = FUNC_CALL(dp4a_s8)(A_scalars, B_vectors, acc[i]);    
+        ret[i] = FUNC_CALL(mmad8)(A_scalars, B_vectors, acc[i]);    
     }
     return ret;
 }
+
+// ## PROCESS PPC BEGIN (DPAS)
 
 #if DPAS_SUPPORTED == 1
 
@@ -68,8 +70,11 @@ int8 __builtin_IB_sub_group_idpas_s8_s8_8_8( int8 acc, int8 a, int8 b ) __attrib
 #define DPAS_8x8(A, B, C) (__builtin_IB_sub_group_idpas_s8_s8_8_8(C, A, B))
 
 #else
+// ## PROCESS PPC END
 
-#define DPAS_8(A, B, C) FUNC_CALL(dp4a_s8)(A, B, C)
-#define DPAS_8x8(A, B, C) FUNC_CALL(dp4a_s8_r8)(A, B, C)
+#define MMAD_8(A, B, C) FUNC_CALL(mmad8)(A, B, C)
+#define MMAD_8x8(A, B, C) FUNC_CALL(mmad8x8)(A, B, C)
 
+// ## PROCESS PPC BEGIN (DPAS)
 #endif
+// ## PROCESS PPC END

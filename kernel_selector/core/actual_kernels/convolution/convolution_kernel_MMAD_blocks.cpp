@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "convolution_kernel_DPAS_blocks.h"
+#include "convolution_kernel_MMAD_blocks.h"
 #include "kernel_selector_utils.h"
 
 namespace kernel_selector 
 {
-    ConvolutionKernel_DPAS_blocks::ConvolutionKernel_DPAS_blocks() : ConvolutionKernelBase("convolution_gpu_dpas_blocks")
+    ConvolutionKernel_MMAD_blocks::ConvolutionKernel_MMAD_blocks() : ConvolutionKernelBase("convolution_gpu_mmad_blocks")
     {
         // Generate the dispatch options to the auto-tuner.
         std::vector<size_t> blockWidthSizes = { 1,2,4,5,6,8,10,12,14,16,18,20,22,24,26,28,30,32 };
@@ -46,7 +46,7 @@ namespace kernel_selector
         }
     }
 
-    ParamsKey ConvolutionKernel_DPAS_blocks::GetSupportedKey() const
+    ParamsKey ConvolutionKernel_MMAD_blocks::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::INT8);
@@ -68,7 +68,7 @@ namespace kernel_selector
         return k;
     }
 
-    bool ConvolutionKernel_DPAS_blocks::Validate(const Params& p, const optional_params& o) const
+    bool ConvolutionKernel_MMAD_blocks::Validate(const Params& p, const optional_params& o) const
     {
         if (!Parent::Validate(p, o))
         {
@@ -100,14 +100,14 @@ namespace kernel_selector
         block_y -= unused_y / simds_y;
     }
 
-    ConvolutionKernel_DPAS_blocks::AutoTuneOption ConvolutionKernel_DPAS_blocks::GetAutoTuneOptions(const Params& p, int autoTuneIndex) const
+    ConvolutionKernel_MMAD_blocks::AutoTuneOption ConvolutionKernel_MMAD_blocks::GetAutoTuneOptions(const Params& p, int autoTuneIndex) const
     {
         if ((autoTuneIndex >= 0) && (autoTuneIndex < (int)autoTuneOptions.size()))
         {
             return autoTuneOptions[autoTuneIndex];
         }
 
-        // Sub-group size used by "convolution_gpu_dpas_blocks" kernel.
+        // Sub-group size used by "convolution_gpu_mmad_blocks" kernel.
         constexpr size_t sub_group_size = 16;
 
         AutoTuneOption option = { 0, 0, 0, ROUND_ROBIN };
@@ -196,9 +196,9 @@ namespace kernel_selector
         return std::make_pair(input_block_array_size, input_block_read_width);
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_DPAS_blocks::SetDefault(const convolution_params& cp, int autoTuneIndex) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_MMAD_blocks::SetDefault(const convolution_params& cp, int autoTuneIndex) const
     {
-        // Sub-group size used by "convolution_gpu_dpas_blocks" kernel.
+        // Sub-group size used by "convolution_gpu_mmad_blocks" kernel.
         constexpr size_t sub_group_size = 8;
 
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(cp);
@@ -237,7 +237,7 @@ namespace kernel_selector
         return runInfo;
     }
 
-    JitConstants ConvolutionKernel_DPAS_blocks::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
+    JitConstants ConvolutionKernel_MMAD_blocks::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
     {
         auto jit = Parent::GetJitConstants(params, runInfo);
 
@@ -255,12 +255,12 @@ namespace kernel_selector
         return jit;
     }
 
-    KernelsData ConvolutionKernel_DPAS_blocks::GetTunedKernelsDataByIndex(const Params& params, const optional_params& options, const int autoTuneIndex) const
+    KernelsData ConvolutionKernel_MMAD_blocks::GetTunedKernelsDataByIndex(const Params& params, const optional_params& options, const int autoTuneIndex) const
     {
         return GetCommonKernelsData(params, options, GetAutoTuneOptions(params, autoTuneIndex).exeMode, autoTuneIndex);
     }
 
-    KernelsData ConvolutionKernel_DPAS_blocks::GetKernelsData(const Params& params, const optional_params& options) const
+    KernelsData ConvolutionKernel_MMAD_blocks::GetKernelsData(const Params& params, const optional_params& options) const
     {
         KernelsData kd = GetCommonKernelsData(params, options);
         if (!kd.empty())
@@ -269,7 +269,7 @@ namespace kernel_selector
         return kd;
     }
 
-    KernelsData ConvolutionKernel_DPAS_blocks::GetKernelsDataForAutoTune(const Params& params, const optional_params& options) const
+    KernelsData ConvolutionKernel_MMAD_blocks::GetKernelsDataForAutoTune(const Params& params, const optional_params& options) const
     {
         if (!Validate(params, options))
         {

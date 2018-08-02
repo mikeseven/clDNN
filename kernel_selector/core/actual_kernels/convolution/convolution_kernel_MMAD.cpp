@@ -1,4 +1,4 @@
-﻿/*
+/*
 // Copyright (c) 2016 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -14,51 +14,56 @@
 // limitations under the License.
 */
 
-#include "fully_connected_kernel_DPAS.h"
+#include "convolution_kernel_MMAD.h"
 #include "kernel_selector_utils.h"
- 
-namespace kernel_selector 
-{
-    ParamsKey FullyConnectedKernelDPAS::GetSupportedKey() const
+
+namespace kernel_selector {
+    
+    ParamsKey ConvolutionKernel_MMAD::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::INT8);
         k.EnableOutputDataType(Datatype::INT8);
         k.EnableInputWeightsType(WeightsType::INT8);
         k.EnableInputLayout(DataLayout::byxf_af32);
-        k.EnableOutputLayout(DataLayout::bf);
-        k.EnableOutputLayout(DataLayout::fb);
-        k.EnableBiasPerOutput();
-        k.EnableBiasPerFeature();
-        k.EnableNonBiasTerm();
+        k.EnableOutputLayout(DataLayout::byxf_af32);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
+        k.EnableDilation();
+        k.EnableBiasPerFeature();
+        k.EnableBiasPerOutput();
+        k.EnableNonBiasTerm();
         k.EnableBatching();
+        k.EnableSplitSupport();
         k.EnableInt8Quantization();
         k.EnableOutputCalibration();
+        k.DisableTuning();
         return k;
     }
 
-    std::unique_ptr<FullyConnectedKernelDPAS::Parent::DispatchData> FullyConnectedKernelDPAS::SetDefault(const fully_connected_params& params) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_MMAD::SetDefault(const convolution_params& arg, int) const
     {
-        auto runInfo = Parent::SetDefault(params);
-        
+        DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
+
         constexpr size_t sub_group_size = 8;
-        const auto of_maps = params.output.Feature().v;
+
+        const auto of_maps = arg.output.Feature().v;
         const size_t of_threads_per_batch = RoundUp(of_maps, sub_group_size);
 
-        runInfo->gws0 = 1;
-        runInfo->gws1 = 1;
-        runInfo->gws2 = of_threads_per_batch * params.output.Batch().v;
+        runInfo.effiency = FORCE_PRIORITY_3;
 
-        runInfo->lws0 = 1;
-        runInfo->lws1 = 1;
-        runInfo->lws2 = sub_group_size;
+        runInfo.gws0 = arg.output.X().v;
+        runInfo.gws1 = arg.output.Y().v;
+        runInfo.gws2 = of_threads_per_batch * arg.output.Batch().v;
 
-        return std::move(runInfo);
+        runInfo.lws0 = 1;
+        runInfo.lws1 = 1;
+        runInfo.lws2 = sub_group_size;
+
+        return runInfo;
     }
 
-    JitConstants FullyConnectedKernelDPAS::GetJitConstants(const fully_connected_params& params, const DispatchData& runInfo) const
+    JitConstants ConvolutionKernel_MMAD::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
     {
         auto jit = Parent::GetJitConstants(params, runInfo);
 
@@ -72,10 +77,11 @@ namespace kernel_selector
         return jit;
     }
 
-    KernelsData FullyConnectedKernelDPAS::GetKernelsData(const Params& params, const optional_params& options) const
+    KernelsData ConvolutionKernel_MMAD::GetKernelsData(const Params& params, const optional_params& options) const
     {
-        return GetCommonKernelsData(params, options, DataLayout::byxf_af32,
-        { WeightsLayout::os_is_yx_isa8_osv8_isv4 }
-        );
+        KernelsData kd = GetCommonKernelsData(params, options);
+        if(!kd.empty())
+            kd[0].estimatedTime = FORCE_PRIORITY_3;
+        return kd;
     }
 }

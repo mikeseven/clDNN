@@ -109,7 +109,7 @@ namespace {
                 { std::make_tuple(engine_types::ocl, data_types::f32, format::byxf), concatenation_gpu::create },
                 { std::make_tuple(engine_types::ocl, data_types::f16, format::byxf), concatenation_gpu::create },
                 { std::make_tuple(engine_types::ocl, data_types::i8,  format::byxf), concatenation_gpu::create },
-                // DPAS
+                // MMAD
                 { std::make_tuple(engine_types::ocl, data_types::i8,  format::byxf_af32), concatenation_gpu::create },
 
             });

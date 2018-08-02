@@ -16,15 +16,15 @@
 #include "include/activation_functions.cl"
 #include "include/data_types.cl"
 #include "include/fetch.cl"
-#include "include/dpas.cl"
+#include "include/mmad.cl"
 
-#define FILTER_IFM_DPAS_NUM ((FILTER_IFM_NUM + 31) / 32)
-#define FILTER_OFM_DPAS_NUM ((FILTER_OFM_NUM + 7) / 8)
-#define FILTER_IFM_ALIGNED (FILTER_IFM_DPAS_NUM * 32)
-#define FILTER_OFM_ALIGNED (FILTER_OFM_DPAS_NUM * 8)
+#define FILTER_IFM_MMAD_NUM ((FILTER_IFM_NUM + 31) / 32)
+#define FILTER_OFM_MMAD_NUM ((FILTER_OFM_NUM + 7) / 8)
+#define FILTER_IFM_ALIGNED (FILTER_IFM_MMAD_NUM * 32)
+#define FILTER_OFM_ALIGNED (FILTER_OFM_MMAD_NUM * 8)
 
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
-KERNEL(convolution_DPAS_blocks)(
+KERNEL(convolution_MMAD_blocks)(
     __global INPUT0_TYPE* input, 
     __global OUTPUT_TYPE* output, 
     __global FILTER_TYPE* weights,
@@ -56,14 +56,14 @@ KERNEL(convolution_DPAS_blocks)(
 
     const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
 
-    const uint filter_offset = (get_group_id(2) % FILTER_OFM_DPAS_NUM) * FILTER_OFM_BLOCK_PITCH;
+    const uint filter_offset = (get_group_id(2) % FILTER_OFM_MMAD_NUM) * FILTER_OFM_BLOCK_PITCH;
     const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
 
     uint in_addr = input_offset + input_x * INPUT0_X_PITCH + input_y * INPUT0_Y_PITCH;
     uint filter_idx = filter_offset;
 
    	__attribute__((opencl_unroll_hint(1)))
-    for (uint k = 0; k < FILTER_IFM_DPAS_NUM; ++k)
+    for (uint k = 0; k < FILTER_IFM_MMAD_NUM; ++k)
     {
         // preload input data
         for(uint in_block_pos = 0; in_block_pos < IN_BLOCK_ARRAY_SIZE; in_block_pos++)
@@ -100,7 +100,7 @@ KERNEL(convolution_DPAS_blocks)(
                         activations.s6 = sub_group_broadcast(input_data, 6); 
                         activations.s7 = sub_group_broadcast(input_data, 7); 
         
-                        out[br * OUTPUT_BLOCK_WIDTH + bc] = DPAS_8(activations, weights_data, out[br * OUTPUT_BLOCK_WIDTH + bc]);
+                        out[br * OUTPUT_BLOCK_WIDTH + bc] = MMAD_8(activations, weights_data, out[br * OUTPUT_BLOCK_WIDTH + bc]);
                     }
                 }
                 filter_idx += 32*8; // 32 features per channel * 8 output features per SIMD channel
@@ -146,7 +146,7 @@ KERNEL(convolution_DPAS_blocks)(
     }
 }
 
-#undef FILTER_IFM_DPAS_NUM
-#undef FILTER_OFM_DPAS_NUM
+#undef FILTER_IFM_MMAD_NUM
+#undef FILTER_OFM_MMAD_NUM
 #undef FILTER_IFM_ALIGNED
 #undef FILTER_OFM_ALIGNED
