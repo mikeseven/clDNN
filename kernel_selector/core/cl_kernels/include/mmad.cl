@@ -66,8 +66,8 @@ inline int8 FUNC(mmad8x8)(int8 A_vectors, int8 B_vectors, int8 acc)
 int __builtin_IB_dpas_8(int c, int8 a, int pa, int8 b, int pb) __attribute__((const));
 int8 __builtin_IB_sub_group_idpas_s8_s8_8_8( int8 acc, int8 a, int8 b ) __attribute__((const));
 
-#define DPAS_8(A, B, C) (__builtin_IB_dpas_8(C, A, PRECISION_S8, B, PRECISION_S8))
-#define DPAS_8x8(A, B, C) (__builtin_IB_sub_group_idpas_s8_s8_8_8(C, A, B))
+#define MMAD_8(A, B, C) (__builtin_IB_dpas_8(C, A, PRECISION_S8, B, PRECISION_S8))
+#define MMAD_8x8(A, B, C) (__builtin_IB_sub_group_idpas_s8_s8_8_8(C, A, B))
 
 #else
 // ## PROCESS PPC END
