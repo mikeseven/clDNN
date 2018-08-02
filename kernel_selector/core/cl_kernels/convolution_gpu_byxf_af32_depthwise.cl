@@ -16,7 +16,7 @@
 #include "include/activation_functions.cl"
 #include "include/data_types.cl"
 #include "include/fetch.cl"
-#include "include/dpas.cl"
+#include "include/mmad.cl"
 
 KERNEL(convolution_gpu_byxf_af32_depthwise)(
     __global INPUT0_TYPE* input, 
@@ -78,7 +78,6 @@ KERNEL(convolution_gpu_byxf_af32_depthwise)(
                         uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH + k*INPUT0_FEATURE_PITCH;
                         uint filter_idx = filter_offset + k*FILTER_IFM_PITCH + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
 #if QUANTIZATION_TERM
-                        // emulation dpas with 32bit accumulatorS
                         dotProd += (int)input[input_idx] * (int)weights[filter_idx];
 #else
                         dotProd += input[input_idx] * weights[filter_idx];

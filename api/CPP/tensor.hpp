@@ -100,8 +100,8 @@ struct format
         winograd_6x3_s1_fused_weights,    ///< format used for weights for winograd fused convolution, F(6,3) -- filter 3x3 with stride 1
         image_2d_weights_winograd_6x3_s1_fbxyb,      ///< image format used for weights for winograd fused convolution, F(6,3) -- filter 3x3 with stride 1
         image_2d_weights_winograd_6x3_s1_xfbyb,      ///< image format used for weights for winograd fused convolution, F(6,3) -- filter 3x3 with stride 1
-        os_is_yx_isa8_osv8_isv4,                        /// format for weights for DPAS convolution
-        byxf_af32,           /// < \n format for input for primitives using DPAS
+        os_is_yx_isa8_osv8_isv4,                        /// format for weights for MMAD convolution
+        byxf_af32,           /// < \n format for input for primitives using MMAD
         format_num = cldnn_format_format_num, ///< number of format types
         any = cldnn_format_any
     };

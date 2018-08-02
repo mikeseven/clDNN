@@ -151,7 +151,7 @@ namespace {
                 { std::make_tuple(engine_types::ocl, data_types::f32, format::byxf), val_fw },
                 { std::make_tuple(engine_types::ocl, data_types::f16, format::byxf), val_fw },
                 { std::make_tuple(engine_types::ocl, data_types::i8,  format::bfyx), val_fw },
-                // DPAS
+                // MMAD
                 { std::make_tuple(engine_types::ocl, data_types::i8,  format::byxf_af32), val_fw },
             });
         }

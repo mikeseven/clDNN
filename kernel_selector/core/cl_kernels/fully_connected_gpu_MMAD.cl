@@ -17,9 +17,9 @@
 #include "include/activation_functions.cl"
 #include "include/data_types.cl"
 #include "include/fetch.cl"
-#include "include/dpas.cl"
+#include "include/mmad.cl"
 
-KERNEL(fully_connected_gpu_DPAS)(
+KERNEL(fully_connected_gpu_MMAD)(
     const __global INPUT0_TYPE* input,
     __global OUTPUT_TYPE* output,
     const __global FILTER_TYPE* weights
@@ -51,10 +51,10 @@ KERNEL(fully_connected_gpu_DPAS)(
 
     const uint in_split_offset = split_idx * INPUT0_FEATURE_PITCH * FILTER_IFM_NUM;
 
-    const uint filter_offset = (get_group_id(2) % FILTER_OFM_DPAS_NUM) * FILTER_OFM_BLOCK_PITCH;
+    const uint filter_offset = (get_group_id(2) % FILTER_OFM_MMAD_NUM) * FILTER_OFM_BLOCK_PITCH;
     const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
 
-    for (uint k = 0; k < FILTER_IFM_DPAS_NUM; ++k)
+    for (uint k = 0; k < FILTER_IFM_MMAD_NUM; ++k)
     {
         for (uint j = 0; j < FILTER_SIZE_Y ; ++j)
         {
@@ -86,7 +86,7 @@ KERNEL(fully_connected_gpu_DPAS)(
 
 						int8 weights_data = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
 
-						dotProd = DPAS_8(activations, weights_data, dotProd);
+						dotProd = MMAD_8(activations, weights_data, dotProd);
                     }
                 }
             }
@@ -111,7 +111,7 @@ KERNEL(fully_connected_gpu_DPAS)(
     output[dst_index] = ACTIVATION(convert_char(dotProd), NL_M, NL_N);
 }
 
-#undef FILTER_IFM_DPAS_NUM
-#undef FILTER_OFM_DPAS_NUM
+#undef FILTER_IFM_MMAD_NUM
+#undef FILTER_OFM_MMAD_NUM
 #undef FILTER_IFM_ALIGNED
 #undef FILTER_OFM_ALIGNED

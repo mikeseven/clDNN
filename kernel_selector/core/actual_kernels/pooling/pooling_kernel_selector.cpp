@@ -20,7 +20,7 @@
 #include "pooling_kernel_gpu_average_opt.h"
 #include "pooling_kernel_gpu_bfyx_block_opt.h"
 #include "pooling_kernel_gpu_byxf_padding_opt.h"
-#include "pooling_kernel_gpu_DPAS.h"
+#include "pooling_kernel_gpu_byxf_af32.h"
 #include "pooling_kernel_gpu_int8_ref.h"
 
 namespace kernel_selector {
@@ -33,7 +33,7 @@ namespace kernel_selector {
         Attach<PoolingKernelGPUBfyxBlockOpt>();
         Attach<PoolingKernelGPUByxfPaddingOpt>();
         Attach<PoolingKernelGPUInt8Ref>();
-        Attach<PoolingKerneGPU_DPAS>();
+        Attach<PoolingKerneGPU_byxf_af32>();
     }
 
     KernelsData pooling_kernel_selector::GetBestKernels(const Params& params, const optional_params& options) const

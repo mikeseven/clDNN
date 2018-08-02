@@ -33,7 +33,7 @@ inline int FUNC(apply_pooling)(int tmp, int in)
 #endif
 }
 
-KERNEL(pooling_gpu_DPAS)(
+KERNEL(pooling_gpu_byxf_af32)(
     const __global UNIT_TYPE* input,
     __global UNIT_TYPE* output)
 {

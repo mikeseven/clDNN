@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "convolution_kernel_DPAS.h"
+#include "convolution_kernel_1x1_gemm_MMAD.h"
 #include "kernel_selector_utils.h"
 
 namespace kernel_selector {
     
-    ParamsKey ConvolutionKernel_DPAS::GetSupportedKey() const
+    ParamsKey ConvolutionKernel_1x1_gemm_MMAD::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::INT8);
@@ -35,40 +35,71 @@ namespace kernel_selector {
         k.EnableNonBiasTerm();
         k.EnableBatching();
         k.EnableSplitSupport();
+        k.EnableDepthwiseSeparableOpt();
         k.EnableInt8Quantization();
         k.EnableOutputCalibration();
         k.DisableTuning();
         return k;
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_DPAS::SetDefault(const convolution_params& arg, int) const
+    bool ConvolutionKernel_1x1_gemm_MMAD::Validate(const Params& p, const optional_params& o) const
+    {
+        if (!ConvolutionKernelBase::Validate(p, o))
+        {
+            return false;
+        }
+
+        const auto& params = static_cast<const convolution_params&>(p);
+
+        if (params.filterSize.x != 1 || params.filterSize.y != 1)
+            return false;
+
+        if (params.stride.x != 1 || params.stride.y != 1)
+            return false;
+
+        if (params.padding.x != 0 || params.padding.y != 0)
+            return false;
+
+        const auto& input = params.inputs[0];
+
+        // we do not support padded input
+        if (input.X().pad.Total() != 0 || input.Y().pad.Total() != 0)
+            return false;
+
+        if (params.split != 1)
+            return false;
+
+        return true;
+    }
+
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_1x1_gemm_MMAD::SetDefault(const convolution_params& arg, int) const
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
-        // Sub-group size used by "kernel_name_bfyx_os_iyx_osv16" kernel.
+        // Sub-group size used by "convolution_1x1_gemm_MMAD" kernel.
         constexpr size_t sub_group_size = 8;
 
         const auto of_maps = arg.output.Feature().v;
         const size_t of_threads_per_batch = RoundUp(of_maps, sub_group_size);
 
-        runInfo.effiency = FORCE_PRIORITY_3;
+        runInfo.effiency = FORCE_PRIORITY_1;
 
-        runInfo.gws0 = arg.output.X().v;
-        runInfo.gws1 = arg.output.Y().v;
-        runInfo.gws2 = of_threads_per_batch * arg.output.Batch().v;
+        runInfo.gws0 = RoundUp(arg.output.X().v * arg.output.Y().v, 8) / 8;
+        runInfo.gws1 = of_threads_per_batch * arg.output.Batch().v;
+        runInfo.gws2 = 1;
 
         runInfo.lws0 = 1;
-        runInfo.lws1 = 1;
-        runInfo.lws2 = sub_group_size;
+        runInfo.lws1 = sub_group_size;
+        runInfo.lws2 = 1;
 
         return runInfo;
     }
 
-    JitConstants ConvolutionKernel_DPAS::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
+    JitConstants ConvolutionKernel_1x1_gemm_MMAD::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
     {
         auto jit = Parent::GetJitConstants(params, runInfo);
 
-        jit.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", runInfo.lws2));
+        jit.AddConstant(MakeJitConstant("SUB_GROUP_SIZE", runInfo.lws1));
 
         // pitch for special block format used in this kernel
         const size_t ifm_32_aligned = Align(params.weights.IFM().v, 32);
@@ -78,11 +109,8 @@ namespace kernel_selector {
         return jit;
     }
 
-    KernelsData ConvolutionKernel_DPAS::GetKernelsData(const Params& params, const optional_params& options) const
+    KernelsData ConvolutionKernel_1x1_gemm_MMAD::GetKernelsData(const Params& params, const optional_params& options) const
     {
-        KernelsData kd = GetCommonKernelsData(params, options);
-        if(!kd.empty())
-            kd[0].estimatedTime = FORCE_PRIORITY_3;
-        return kd;
+        return GetCommonKernelsData(params, options);
     }
 }

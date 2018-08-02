@@ -20,25 +20,38 @@
  
 namespace kernel_selector {
     
-    class ConvolutionKernel_1x1_gemm_dpas : public ConvolutionKernelBase
+    class ConvolutionKernel_MMAD_blocks : public ConvolutionKernelBase
     {
     public:
         using Parent = ConvolutionKernelBase;
-        ConvolutionKernel_1x1_gemm_dpas() : ConvolutionKernelBase("convolution_gpu_1x1_gemm_DPAS") {}
-        virtual ~ConvolutionKernel_1x1_gemm_dpas() {}
+        ConvolutionKernel_MMAD_blocks();
+        virtual ~ConvolutionKernel_MMAD_blocks() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
+        virtual KernelsData GetKernelsDataForAutoTune(const Params& params, const optional_params& options) const override;
+        virtual KernelsData GetTunedKernelsDataByIndex(const Params& params, const optional_params& options, int autoTuneIndex) const override;
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
+        bool Validate(const Params& p, const optional_params& o) const override;
         JitConstants GetJitConstants(const convolution_params& params, const DispatchData& kd) const override;
         DispatchData SetDefault(const convolution_params& arg, int autoTuneIndex = -1) const override;
-        bool Validate(const Params& p, const optional_params& o) const override;
         virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&) const override
         {
             return{
                 WeightsLayout::os_is_yx_isa8_osv8_isv4,
             };
         }
+    private:
+        struct AutoTuneOption
+        {
+            size_t blockWidth;
+            size_t blockHeight;
+            size_t prefetch;
+            std::string exeMode;
+        };
+
+        AutoTuneOption GetAutoTuneOptions(const Params& arg, int autoTuneIndex) const;
+        std::vector<AutoTuneOption> autoTuneOptions = {};
     };
 }
