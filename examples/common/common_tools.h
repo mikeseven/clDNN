@@ -224,11 +224,14 @@ void compute_image_mean(const execution_params &ep, cldnn::engine& engine, const
 
 /// function moved from alexnet.cpp, they will be probably used by each topology
 void print_profiling_table(std::ostream& os, const std::vector<cldnn::instrumentation::profiling_info>& profiling_info);
-cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology& topology, const execution_params &ep);
+cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology& topology, const execution_params &ep, const std::vector<cldnn::primitive_id> &output_ids = std::vector<cldnn::primitive_id>(0));
 uint32_t get_next_nearest_power_of_two(int number);
 uint32_t get_gpu_batch_size(int number);
 
 void make_instrumentations(const execution_params&, cldnn::memory&, std::map<cldnn::primitive_id, cldnn::network_output>&);
+
+template<typename MemElemTy = float>
+void prepare_data_for_lstm(lstm_utils& lstm_data, const std::vector<std::string>& input_files, const std::string& vocabulary_file);
 
 std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& timer_execution,
                                             const execution_params &ep,
@@ -238,6 +241,13 @@ std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& tim
                                             CIntelPowerGadgetLib& energyLib,
                                             const uint32_t iteration = 0,
                                             const uint32_t execution_count = 0);
+
+std::chrono::nanoseconds execute_cnn_topology(cldnn::network network,
+                                                const execution_params &ep,
+                                                CIntelPowerGadgetLib& energyLib,
+                                                cldnn::memory& output,
+                                                const uint32_t iteration = 0,
+                                                const uint32_t execution_count = 0);
 
 std::chrono::nanoseconds execute_rnn_topology(cldnn::network network,
                                                 const execution_params &ep,
