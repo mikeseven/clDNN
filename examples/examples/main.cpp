@@ -14,10 +14,10 @@
 // limitations under the License.
 */
 
-#include "../common/common_tools.h"
-#include "../common/neural_memory.h"
-#include "../common/command_line_utils.h"
-#include "../common/output_parser.h"
+#include "common_tools.h"
+#include "neural_memory.h"
+#include "command_line_utils.h"
+#include "output_parser.h"
 
 #include "api/CPP/memory.hpp"
 #include "topologies.h"

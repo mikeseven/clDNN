@@ -14,8 +14,8 @@
 // limitations under the License.
 */
 
-#include "../common/common_tools.h"
-#include "../common/file.h"
+#include "common_tools.h"
+#include "file.h"
 
 #include <string>
 #include <api/CPP/input_layout.hpp>

@@ -21,8 +21,8 @@
 #include <api/CPP/softmax.hpp>
 #include <api/CPP/eltwise.hpp>
 
-#include "../common/common_tools.h"
-#include "../common/file.h"
+#include "common_tools.h"
+#include "file.h"
 
 #include <string>
 

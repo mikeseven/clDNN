@@ -24,8 +24,8 @@
 #include <api/CPP/reshape.hpp>
 #include <api/CPP/detection_output.hpp>
 
-#include "../common/common_tools.h"
-#include "../common/file.h"
+#include "common_tools.h"
+#include "file.h"
 
 #include <cstddef>
 #include <cstdint>

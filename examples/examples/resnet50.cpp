@@ -23,8 +23,8 @@
 
 #include <string>
 
-#include "../common/common_tools.h"
-#include "../common/file.h"
+#include "common_tools.h"
+#include "file.h"
 
 
 using namespace cldnn;
