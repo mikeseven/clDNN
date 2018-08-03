@@ -14,9 +14,10 @@
 
 # ========================================= Name / Output settings =====================================
 
-set(CLDNN_BUILD__PROJ             "examples_common_lib")
-set(CLDNN_BUILD__PROJ_LABEL       "${CLDNN_BUILD__PROJ}")
+set(CLDNN_BUILD__PROJ             "examples_common")
+set(CLDNN_BUILD__PROJ_LABEL       "${CLDNN_BUILD__PROJ}_lib")
 set(CLDNN_BUILD__PROJ_OUTPUT_NAME "${CLDNN_BUILD__PROJ}${CLDNN__OUT_CPU_SUFFIX}")
+set(CLDNN_BUILD__PROJ_examples_common "${CLDNN_BUILD__PROJ}" PARENT_SCOPE)
 
 # =========================================== Compiler options =========================================
 

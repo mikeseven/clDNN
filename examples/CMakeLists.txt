@@ -12,9 +12,28 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# ========================================= Name / Output settings =====================================
+
+# =================================== Custom pre- and post-steps =======================================
+
+set(__CLDNN_FindLibSuffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
+set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+find_library(CLDNN_FIND__FREEIMAGE_SHLPATH
+  NAMES FreeImage
+  PATHS ${CLDNN__FREEIMAGE_LIBDIRS}
+  NO_CMAKE_FIND_ROOT_PATH
+)
+set(CMAKE_FIND_LIBRARY_SUFFIXES ${__CLDNN_FindLibSuffixes})
+
+# =================================== Link targets and dependencies ====================================
 
 add_subdirectory(common)
 add_subdirectory(examples)
 add_subdirectory(examples_training)
 add_subdirectory(microbench)
+
+# =================================== Custom pre- and post-steps =======================================
+
+unset(CLDNN_FIND__FREEIMAGE_SHLPATH CACHE)
+unset(__CLDNN_FindLibSuffixes)
+
+# ======================================================================================================
