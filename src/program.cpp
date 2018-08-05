@@ -1364,12 +1364,8 @@ void program_impl::trim_to_outputs()
 
 void add_memory_dependency(program_node* node, program_node* dep)
 {
-    if (node->can_be_optimized())
-    {
-        return;
-    }
-
-    if (node->id() == dep->id())
+    if (node->can_be_optimized() ||
+        node->id() == dep->id())
     {
         return;
     }

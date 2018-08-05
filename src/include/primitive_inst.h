@@ -98,8 +98,6 @@ public:
     const auto desc() const { return _node.get_primitive(); }
     network_impl& get_network() const { return _network; }
     uint32_t get_network_id() const { return _network.get_id(); }
-    auto get_executed_event() const { return _event; }
-    void set_event(event_impl::ptr ev) { _event = ev; }
 
     //return pointer to const to prevent arbitrary 'execute' call -> use primitive_inst.execute() instead
     const auto get_impl() const { return _impl.get(); }
@@ -132,7 +130,6 @@ protected:
     program_node const& _node;
 
     std::shared_ptr<primitive_impl> _impl;
-    event_impl::ptr _event;
 
     //this is a set of dependencies in terms of memory, if execution of this primitive requires data from another one, it should be added to this set
     std::vector<std::shared_ptr<primitive_inst>> _deps;
