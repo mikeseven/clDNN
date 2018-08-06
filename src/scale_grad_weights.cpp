@@ -60,12 +60,14 @@ std::string scale_grad_weights_inst::to_string(scale_grad_weights_node const& no
 scale_grad_weights_inst::typed_primitive_inst(network_impl& network, scale_grad_weights_node const& node)
     :parent(network, node)
 {
-    auto scale_format = weights_memory().get_layout().format;
+    auto scale_layout = node.weights().get_output_layout();
+    auto scale_format = scale_layout.format;
 
-    auto scale_sizes = weights_memory().get_layout().size;
-    auto scale_feature_size = weights_memory().get_layout().size.feature[0];
+    auto scale_sizes = scale_layout.size;
+    auto scale_feature_size = scale_layout.size.feature[0];
 
-    auto input_feature_size = input_memory().get_layout().size.feature[0];
+    auto input_layout = node.input().get_output_layout();
+    auto input_feature_size = input_layout.size.feature[0];
 
     CLDNN_ERROR_NOT_EQUAL(node.id(), "Scale feature size", scale_feature_size, "input feature size", input_feature_size, "");
 
@@ -76,20 +78,21 @@ scale_grad_weights_inst::typed_primitive_inst(network_impl& network, scale_grad_
 
     if (node.use_momentum())
     {
-        CLDNN_ERROR_LAYOUT_MISMATCH(node.id(), "Scale memory", weights_memory().get_layout(), "previous scale grad memory", node.prev_scale_grad().get_output_layout(), "");
-        CLDNN_ERROR_LAYOUT_MISMATCH(node.id(), "Bias memory", bias_memory().get_layout(), "previous bias grad memory", node.prev_bias_grad().get_output_layout(), "");
+        CLDNN_ERROR_LAYOUT_MISMATCH(node.id(), "Scale memory", node.weights().get_output_layout(), "previous scale grad memory", node.prev_scale_grad().get_output_layout(), "");
+        CLDNN_ERROR_LAYOUT_MISMATCH(node.id(), "Bias memory", node.bias().get_output_layout(), "previous bias grad memory", node.prev_bias_grad().get_output_layout(), "");
     }
 
-    if (node.bias_term())
+    if (node.bias_term()) 
     {
-        auto bias_format = bias_memory().get_layout().format;
-        auto bias_raw_sizes = bias_memory().get_layout().size.raw;
+        auto bias_layout = node.bias().get_output_layout();
+        auto bias_format = bias_layout.format;
+        auto bias_raw_sizes = bias_layout.size.raw;
 
         CLDNN_ERROR_NOT_PROPER_FORMAT(node.id(), "Scale format", scale_format.value, "bias format", bias_format);
 
-        for (size_t i = 0; i < bias_memory().get_layout().size.raw.size(); ++i)
+        for (size_t i = 0; i < bias_layout.size.raw.size(); ++i)
         {
-            if (weights_memory().get_layout().size.raw[i] != bias_raw_sizes[i])
+            if (scale_layout.size.raw[i] != bias_raw_sizes[i])
                 CLDNN_ERROR_MESSAGE(node.id(), "Scale input size do not match bias size! Size index:" + std::to_string(i));
         }
     }
