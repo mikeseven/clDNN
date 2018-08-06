@@ -1365,17 +1365,16 @@ void program_impl::trim_to_outputs()
 void add_memory_dependency(program_node* node, program_node* dep)
 {
     if (node->can_be_optimized() ||
-        node->id() == dep->id())
-    {
-        return;
-    }
-
-    if (!dep->can_be_optimized())
+        !dep->can_be_optimized())
     {
         node->add_memory_dependency(dep->id());
     }
     else
     {
+        if (node->id() == dep->id())
+        {
+            return;
+        }
         for (auto subdep : dep->get_dependencies())
         {
             add_memory_dependency(node, subdep);

@@ -19,7 +19,6 @@
 
 #include "api/CPP/primitive.hpp"
 #include "api/CPP/concatenation.hpp"
-#include <api/CPP/scale.hpp>
 
 #include "event_impl.h"
 #include "program_impl.h"
@@ -217,7 +216,7 @@ namespace details
     private:
         bool do_allocate_memory(typed_node const& typ_node)
         {
-            if (typ_node.template is_predecessor_of_type<concatenation>() &&
+            if (typ_node.template have_user_with_type<concatenation>() &&
                 typ_node.get_users().size() == 1 &&
                 typ_node.get_users().front()->can_be_optimized()) //check if the only user is concat
             {

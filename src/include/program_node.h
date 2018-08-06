@@ -93,7 +93,7 @@ public:
     void add_memory_dependency(std::vector<primitive_id>);
 
     template<class PType>
-    bool is_predecessor_of_type() const
+    bool have_user_with_type() const
     {
         for (auto const& usr : users)
         {

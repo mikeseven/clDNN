@@ -84,7 +84,8 @@ convolution_grad_weights_inst::typed_primitive_inst(network_impl& network, convo
 
     auto input_inst = node.input(1).get_output_layout();
     auto input_grad_inst = node.input().get_output_layout();
-    auto desc = node.get_primitive();    auto output_inst = node.get_output_layout();
+    auto desc = node.get_primitive();
+    auto output_inst = node.get_output_layout();
     auto output_size = output_inst.size;
 
     CLDNN_ERROR_NOT_EQUAL(node.id(), "convolution_grad_weights Input_grad size", input_grad_inst.size.raw.size(), "Input size", output_inst.size.raw.size(), "Input_grad/Input number of dimension does not match.");
