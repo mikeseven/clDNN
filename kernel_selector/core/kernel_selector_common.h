@@ -20,7 +20,7 @@
 #include <memory>
 #include "primitive_db.h"
 #include "kernel_selector_params.h"
-#include <float.h>
+#include <cfloat>
 #include <sstream>
 
 #define AGE_BASED "-cl-no-subgroup-ifp"
@@ -557,6 +557,17 @@ namespace kernel_selector {
         case SampleType::NEAREST: return "SAMPLE_TYPE_NEAREST";
         case SampleType::BILINEAR: return "SAMPLE_TYPE_BILINEAR";
         default: return "";
+        }
+    }
+
+    inline std::string toString(const BorderType type)
+    {
+        switch (type)
+        {
+        case BorderType::ZERO:       return "BORDER_TYPE_ZERO";
+        case BorderType::MIRROR:     return "BORDER_TYPE_MIRROR";
+        case BorderType::MIRROR_101: return "BORDER_TYPE_MIRROR_101";
+        default:                     return "";
         }
     }
 

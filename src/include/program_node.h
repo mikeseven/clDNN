@@ -59,6 +59,8 @@ struct program_node
 
     program_node(program_node const&) = delete;
 
+    virtual ~program_node() = default;
+
 public:
     virtual const primitive_id& id() const { return desc->id; }
     virtual primitive_type_id type() const { return desc->type; }

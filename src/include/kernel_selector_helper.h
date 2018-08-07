@@ -1,5 +1,4 @@
-/*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2016-2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,19 +11,25 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-*/
 
 #pragma once
+
 #include "api/C/cldnn.h"
 #include "api/CPP/program.hpp"
-#include "program_impl.h"
+
 #include "gpu/ocl_toolkit.h"
-#include "tensor_type.h"
+#include "program_impl.h"
+
+#include "jitter.h"
 #include "kernel_selector_params.h"
 #include "kernel_selector_common.h"
-#include "jitter.h"
+#include "tensor_type.h"
+
+#include <cstdint>
+
 
 using namespace cldnn;
+
 
 namespace kernel_selector
 {
@@ -45,8 +50,8 @@ namespace kernel_selector
     using activation_function               = kernel_selector::ActivationFunction;
     using pool_type                         = kernel_selector::PoolType;
     using pool_remainder                    = kernel_selector::PoolRemainder;
-	using argm_axis							= kernel_selector::ArgMaxMinAxis;
-	using argm_output						= kernel_selector::ArgMaxMinOut;
+	using argm_axis                         = kernel_selector::ArgMaxMinAxis;
+	using argm_output                       = kernel_selector::ArgMaxMinOut;
     using lookt_axis                        = kernel_selector::LookUpTableAxis;
     using lrn_mode                          = kernel_selector::LRNMode;
     using normalize_mode                    = kernel_selector::NormalizeMode;
@@ -60,9 +65,11 @@ namespace kernel_selector
     using concat_axis                       = kernel_selector::ConcatAxis;
     using tuning_mode                       = kernel_selector::TuningMode;
     using sample_type                       = kernel_selector::SampleType;
+    using border_type                       = kernel_selector::BorderType;
 
     using data_tensor                       = kernel_selector::DataTensor;
     using weights_tensor                    = kernel_selector::WeightsTensor;
+    template <typename T> using dim_tensor  = kernel_selector::DimTensor<T>;
     using data_layout                       = kernel_selector::DataLayout;
     using weights_layout                    = kernel_selector::WeightsLayout;
     using multi_data_tensor                 = kernel_selector::MultiDataTensor;
@@ -308,6 +315,18 @@ inline kernel_selector::weights_tensor convert_weights_tensor(const layout& l)
         vec,
         ks_type,
         base_layout).TransformIgnorePadding(ks_layout);
+}
+
+template <typename T = std::uint32_t>
+kernel_selector::dim_tensor<T> convert_dim_vector(const tensor& t)
+{
+    const auto& sizes = t.sizes(format::bfyx);
+    return {
+        static_cast<T>(sizes[0]),
+        static_cast<T>(sizes[1]),
+        static_cast<T>(sizes[2]),
+        static_cast<T>(sizes[3]),
+    };
 }
 
 template <typename p_type>

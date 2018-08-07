@@ -33,6 +33,7 @@ namespace cldnn
     {
     public:
         virtual void dump(std::ostream& out, int offset) = 0;
+        virtual ~json_base() = default;
     };
 
     template<class Type>

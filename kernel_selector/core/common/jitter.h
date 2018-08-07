@@ -16,12 +16,16 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 #pragma once
-#include "tensor_type.h"
+
+#include "kernel_selector_common.h"
 #include "kernel_selector_params.h"
+#include "tensor_type.h"
+
 #include <algorithm>
 #include <iostream>
 #include <sstream>
 #include <cmath>
+
 
 namespace kernel_selector {
 
@@ -372,6 +376,35 @@ template <typename T>
 inline std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const Size<T>& value)
 {
     return std::static_pointer_cast<JitConstant>(std::make_shared<SizeJitConstant<T>>(name, value));
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+// DimTensor
+////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+template <typename T>
+class DimVectorJitConstant : public JitConstant
+{
+    const DimTensor<T> _dims;
+
+public:
+    DimVectorJitConstant(const std::string& name, const DimTensor<T>& size) : JitConstant(name), _dims(size) {}
+
+    JitDefinitions GetDefinitions() const override
+    {
+        JitDefinitions definitions{
+            { _name + "_BATCH_NUM",   toCodeString(_dims.b) },
+            { _name + "_FEATURE_NUM", toCodeString(_dims.f) },
+            { _name + "_SIZE_Y",      toCodeString(_dims.y) },
+            { _name + "_SIZE_X",      toCodeString(_dims.x) },
+        };
+        return definitions;
+    }
+};
+
+template <typename T>
+std::shared_ptr<JitConstant> MakeJitConstant(const std::string& name, const DimTensor<T>& value)
+{
+    return std::make_shared<DimVectorJitConstant<T>>(name, value);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
