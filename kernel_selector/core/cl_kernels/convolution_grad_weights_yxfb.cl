@@ -73,25 +73,25 @@ KERNEL(convolution_grad_weights_gpu_ref)(
                 for (uint b = 0; b < INPUT0_BATCH_NUM / 32; b++)
                 {
 #if BIAS_TERM
-                    uint input_grad_idx = grad_split_offset + b*INPUT0_BATCH_PITCH + ofm*INPUT0_FEATURE_PITCH + j*INPUT0_X_PITCH + i*INPUT0_Y_PITCH;
-                    UNIT_TYPE grad = intel_sub_group_block_read(input_grad + input_grad_idx);
+                    uint input_grad_idx = grad_split_offset + b*INPUT0_BATCH_PITCH + ofm*INPUT0_FEATURE_PITCH + x*INPUT0_X_PITCH + y*INPUT0_Y_PITCH;
+                    UNIT_TYPE grad = as_float(intel_sub_group_block_read((const __global uint*)(input_grad + input_grad_idx)));
 #endif
                     uint input_idx = in_split_offset + b*INPUT1_BATCH_PITCH + ifm*INPUT1_FEATURE_PITCH + (uint)input_offset_x*INPUT1_X_PITCH + (uint)input_offset_y*INPUT1_Y_PITCH;
 #if BIAS_TERM
-                    grad_w = fma(intel_sub_group_block_read(input + input_idx), grad, grad_w);
+                    grad_w = fma(as_float(intel_sub_group_block_read((const __global uint*)(input + input_idx))), grad, grad_w);
 #else
-                    uint input_grad_idx = grad_split_offset + b*INPUT1_BATCH_PITCH + ofm*INPUT0_FEATURE_PITCH + j*INPUT0_X_PITCH + i*INPUT0_Y_PITCH;
-                    grad_w = fma(intel_sub_group_block_read(input + input_idx), intel_sub_group_block_read(input_grad + input_grad_idx), grad_w);
+                    uint input_grad_idx = grad_split_offset + b*INPUT1_BATCH_PITCH + ofm*INPUT0_FEATURE_PITCH + x*INPUT0_X_PITCH + y*INPUT0_Y_PITCH;
+                    grad_w = fma(as_float(intel_sub_group_block_read((const __global uint*)(input + input_idx))), as_float(intel_sub_group_block_read((const __global uint*)(input_grad + input_grad_idx))), grad_w);
 #endif
                 }
             }
         }
     }
 
-    grad_w = intel_sub_group_reduce_add(grad_w);
+    grad_w = sub_group_reduce_add(grad_w);
 #if BIAS_TERM
-    grad_b = intel_sub_group_reduce_add(grad_b);
-#else
+    grad_b = sub_group_reduce_add(grad_b);
+#endif
 
     if (local_id == 0)
     {
