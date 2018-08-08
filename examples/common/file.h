@@ -64,4 +64,6 @@ namespace file
     ///                        used in .nnd).
     void serialize(const cldnn::memory& data, const std::string& file_name, bool old_layout_mode = false);
     void serialize_train(const cldnn::memory&, const std::string&);
+    void save_train_iteration(const std::string& file_name, const uint32_t iteration);
+    uint32_t get_train_iteration(const std::string& file_name);
 }

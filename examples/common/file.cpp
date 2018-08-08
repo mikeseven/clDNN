@@ -366,3 +366,25 @@ void file::serialize_train(const cldnn::memory& data, const std::string& file_na
     auto ptr = data.pointer<char>();
     fstream.write(&ptr[0], ptr.size());
 }
+
+void file::save_train_iteration(const std::string& file_name, const uint32_t iteration)
+{
+    std::ofstream fstream(file_name, std::ios::out | std::ios::binary);
+    fstream << iteration;
+    fstream.close();
+}
+
+uint32_t file::get_train_iteration(const std::string& file_name)
+{
+    std::ifstream rfile(file_name, std::ios::binary);
+    uint32_t iteration = 0;
+    if (rfile)
+    {
+        rfile >> iteration;
+        rfile.close();
+    }
+    else
+        throw std::runtime_error("cannot find continue training file");
+
+    return iteration;
+}

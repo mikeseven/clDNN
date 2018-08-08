@@ -257,3 +257,5 @@ std::chrono::nanoseconds execute_rnn_topology(cldnn::network network,
                                                 lstm_utils& lstm_data);
 
 void run_topology(const execution_params &ep);
+
+std::string get_model_name(const std::string& topology_name);

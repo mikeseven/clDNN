@@ -18,6 +18,7 @@
 #include "neural_memory.h"
 #include "command_line_utils.h"
 #include "output_parser.h"
+#include "file.h"
 
 #include "api/CPP/memory.hpp"
 #include "topologies.h"
@@ -70,7 +71,9 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("lr", bpo::value<float>()->value_name("<lr>")->default_value(0.00001f),
             "Base learning rate for network training. Default value is 0.00001f.")
         ("train_snapshot", bpo::value<std::uint32_t>()->value_name("<train_snapshot>")->default_value(100),
-            "After how many iterations, the weights and biases files will be updated on disk. Default value is 100.");
+            "After how many iterations, the weights and biases files will be updated on disk. Default value is 100.")
+        ("continue_training", bpo::bool_switch(),
+            "Continue training with the data provided in train_iteration.txt file.");
 
     // Conversions options.
     bpo::options_description weights_conv_cmdline_options("Weights conversion options");
@@ -300,7 +303,6 @@ void run_topology(const execution_params &ep)
                 auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
                 float base_learning_rate = ep.learning_rate;
                 float learning_rate = base_learning_rate;
-                uint32_t iteration = 0;
                 for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
                 {
                     double loss = 0;
@@ -317,7 +319,7 @@ void run_topology(const execution_params &ep)
 
                     network.set_input_data("input", input);
                     network.set_input_data("labels", labels);
-                    auto time = execute_cnn_topology(network, ep, energyLib, output, iteration, ep.image_number / batch_size);
+                    auto time = execute_cnn_topology(network, ep, energyLib, output, learn_it, ep.image_offset + ep.image_number / batch_size - 1);
                     time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
                     auto expected = labels.pointer<float>();
                     auto vals = output.pointer<float>();
@@ -331,8 +333,6 @@ void run_topology(const execution_params &ep)
                     std::cout << "Iter: " << learn_it - ep.image_offset << std::endl;
                     std::cout << "Loss = " << loss << std::endl;
                     std::cout << "Learning Rate = " << learning_rate << std::endl;
-
-                    iteration++;
                 }
                 continue;
             }
@@ -343,7 +343,6 @@ void run_topology(const execution_params &ep)
                 auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
                 float base_learning_rate = ep.learning_rate;
                 float learning_rate = base_learning_rate;
-                uint32_t iteration = 0;
                 for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
                 {
                     double loss = 0;
@@ -359,7 +358,7 @@ void run_topology(const execution_params &ep)
 
                     network.set_input_data("input", input);
                     network.set_input_data("labels", labels);
-                    auto time = execute_cnn_topology(network, ep, energyLib, output, iteration, ep.image_number / batch_size);
+                    auto time = execute_cnn_topology(network, ep, energyLib, output, learn_it, ep.image_offset + ep.image_number / batch_size - 1);
                     time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
                     auto expected = labels.pointer<float>();
                     auto vals = output.pointer<float>();
@@ -375,7 +374,6 @@ void run_topology(const execution_params &ep)
                     std::cout << "Iter: " << learn_it - ep.image_offset << std::endl;
                     std::cout << "Loss = " << loss << std::endl;
                     std::cout << "Learning Rate = " << learning_rate << std::endl;
-                    iteration++;
                 }
                 continue;
             }
@@ -392,7 +390,7 @@ void run_topology(const execution_params &ep)
                         load_data_from_file_list_imagenet(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
 
                     network.set_input_data("input", input);
-                    auto time = execute_cnn_topology(network, ep, energyLib, output);
+                    auto time = execute_cnn_topology(network, ep, energyLib, output, learn_it, ep.image_offset + ep.image_number / batch_size - 1);
                     time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
                     auto expected = labels.pointer<float>();
                     auto vals = output.pointer<float>();
@@ -510,6 +508,7 @@ int main(int argc, char* argv[])
         // Execute network otherwise.
         execution_params ep;
         parse_common_args(parsed_args, ep);
+
         if (parsed_args.count("input"))
         {
             // Validate input directory.
@@ -524,14 +523,18 @@ int main(int argc, char* argv[])
             // Determine weights directory (either based on executable directory - if not specified, or
             // relative to current working directory or absolute - if specified).
             auto weights_dir = std::string(); 
-            
+
             if (parsed_args.count("weights"))
                 weights_dir = bfs::absolute(parsed_args["weights"].as<std::string>(), exec_info->dir()).string();
             else
             {
-                weights_dir = join_path(exec_info->dir(), parsed_args["model"].as<std::string>());
-                if (!bfs::exists(weights_dir) || !bfs::is_directory(weights_dir))
-                    weights_dir = join_path(exec_info->dir(), "weights");
+                std::string model_name = get_model_name(parsed_args["model"].as<std::string>());
+                weights_dir = join_path(exec_info->dir(), model_name);
+
+                auto lr_string = std::to_string(parsed_args["lr"].as<float>());
+                lr_string = lr_string.substr(lr_string.find_last_of(".") + 1);
+                weights_dir += "_lr" + lr_string + "_b" + std::to_string(ep.batch);
+                boost::filesystem::create_directories(weights_dir);
             }
 
             // Validate weights directory.
@@ -556,9 +559,17 @@ int main(int argc, char* argv[])
 
         ep.topology_name = parsed_args["model"].as<std::string>();
         ep.image_number = parsed_args["image_number"].as<std::uint32_t>();
-        ep.image_offset = parsed_args["image_offset"].as<std::uint32_t>();
-        ep.train_snapshot = parsed_args["train_snapshot"].as<std::uint32_t>();
         ep.use_existing_weights = parsed_args["use_existing_weights"].as<bool>();
+
+        if (parsed_args["continue_training"].as<bool>())
+        {
+            ep.use_existing_weights = true;
+            ep.image_offset = file::get_train_iteration(join_path(ep.weights_dir, "train_iteration.txt"));
+        }
+        else
+            ep.image_offset = parsed_args["image_offset"].as<std::uint32_t>();
+        ep.train_snapshot = parsed_args["train_snapshot"].as<std::uint32_t>();
+
         ep.compute_imagemean = parsed_args["compute_imagemean"].as<bool>();
         ep.learning_rate = parsed_args["lr"].as<float>();
 

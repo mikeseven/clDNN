@@ -129,6 +129,17 @@ std::vector<std::string> get_directory_weights(const std::string& images_path)
     return get_directory_files(images_path, allowed_exts);
 }
 
+//get_model_name (subtract _train or _test from topology string)
+std::string get_model_name(const std::string& topology_name)
+{
+    std::string model_name = topology_name;
+    if (model_name.find_first_of("_train") != std::string::npos)
+        model_name = model_name.substr(0, model_name.length() - model_name.find("_train") - 1);
+    else if (model_name.find_first_of("_test") != std::string::npos)
+        model_name = model_name.substr(0, model_name.length() - model_name.find("_test") - 1);
+    return model_name;
+}
+
 void nn_data_load_from_image(
     std::string  filename,                       // Load of all data from a image filename
     cldnn::pointer<float>::iterator dst_buffer,
@@ -938,6 +949,11 @@ std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& tim
                 file::serialize_train(p.second.get_memory(), join_path(ep.weights_dir, p.first));
             }
             std::cout << "Weights snapshot done." << std::endl;
+
+            //make snapshot of execution data, from which training can be continued
+            auto lr_string = std::to_string(ep.learning_rate);
+            lr_string = lr_string.substr(lr_string.find_last_of(".") + 1);
+            file::save_train_iteration(join_path(ep.weights_dir, "train_iteration.txt"), iteration);
         }
         output = outputs.at("softmax").get_memory();
     }
