@@ -22,9 +22,7 @@ namespace kernel_selector
 	ParamsKey ConvolutionGradWeightsKernel_yxfb::GetSupportedKey() const
 	{
 		ParamsKey k;
-		k.EnableInputDataType(Datatype::F16);
 		k.EnableInputDataType(Datatype::F32);
-		k.EnableInputWeightsType(WeightsType::F16);
 		k.EnableInputWeightsType(WeightsType::F32);
 		k.EnableOutputDataType(Datatype::F16);
 		k.EnableOutputDataType(Datatype::F32);
@@ -50,7 +48,7 @@ namespace kernel_selector
 		const convolution_grad_weights_params& params = static_cast<const convolution_grad_weights_params&>(p);
 		auto batch = params.inputs[0].Batch().v;
 
-		if (batch % 32 != 0)
+		if (batch % 16 != 0)
 			return false;
 		if (params.stride.x != 1 || params.stride.y != 1)
 			return false;

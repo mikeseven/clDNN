@@ -14,7 +14,7 @@
 
 #include "include/include_all.cl"
 
-__attribute__((intel_reqd_sub_group_size(32)))
+__attribute__((intel_reqd_sub_group_size(16)))
 KERNEL(convolution_grad_weights_gpu_ref)(
     const __global UNIT_TYPE* input_grad,
     __global UNIT_TYPE* output,
@@ -34,7 +34,7 @@ KERNEL(convolution_grad_weights_gpu_ref)(
 {
     const uint local_id = get_local_id(0);
     const uint ofm_ifm  = get_global_id(1);
-    const uint id_x_y   = (uint)get_global_id(2);
+    const uint id_x_y   = get_global_id(2);
 
     const uint id_x     = id_x_y % FILTER_SIZE_X;
     const uint id_y     = id_x_y / FILTER_SIZE_X;
@@ -49,11 +49,6 @@ KERNEL(convolution_grad_weights_gpu_ref)(
     ACCUMULATOR_TYPE grad_b = 0;
 #endif
 
-    UNIT_TYPE result = UNIT_VAL_ZERO;
-#if BIAS_TERM
-    UNIT_TYPE result_bias = UNIT_VAL_ZERO;
-#endif
-
     const uint grad_split_offset = split_idx * INPUT0_FEATURE_PITCH * FILTER_OFM_NUM;
     const uint in_split_offset = split_idx * INPUT1_FEATURE_PITCH * FILTER_IFM_NUM;
 
@@ -62,29 +57,29 @@ KERNEL(convolution_grad_weights_gpu_ref)(
     for(int y = 0; y < INPUT0_SIZE_Y; y++)
     {
         const int input_offset_y = in_y + y * STRIDE_SIZE_Y;
+	    const bool zero_y = input_offset_y >= INPUT1_SIZE_Y || input_offset_y < 0;
         for (uint x = 0; x < INPUT0_SIZE_X; x++)
         {
             const int input_offset_x = in_x + x * STRIDE_SIZE_X;
-
-            const bool zero_y = input_offset_y >= INPUT1_SIZE_Y || input_offset_y < 0;
-            const bool zero_x = input_offset_x >= INPUT1_SIZE_X || input_offset_x < 0;
-            if(!zero_x && !zero_y)
+			const bool zero_x = input_offset_x >= INPUT1_SIZE_X || input_offset_x < 0;
+            for (uint b = 0; b < INPUT0_BATCH_NUM / 16; b++)
             {
-                for (uint b = 0; b < INPUT0_BATCH_NUM / 32; b++)
-                {
 #if BIAS_TERM
-                    uint input_grad_idx = grad_split_offset + b*INPUT0_BATCH_PITCH + ofm*INPUT0_FEATURE_PITCH + x*INPUT0_X_PITCH + y*INPUT0_Y_PITCH;
-                    UNIT_TYPE grad = as_float(intel_sub_group_block_read((const __global uint*)(input_grad + input_grad_idx)));
+                uint input_grad_idx = grad_split_offset + b*16*INPUT0_BATCH_PITCH + ofm*INPUT0_FEATURE_PITCH + x*INPUT0_X_PITCH + y*INPUT0_Y_PITCH;
+                UNIT_TYPE grad = as_float(intel_sub_group_block_read((const __global uint*)(input_grad + input_grad_idx)));
+				grad_b += grad;
 #endif
-                    uint input_idx = in_split_offset + b*INPUT1_BATCH_PITCH + ifm*INPUT1_FEATURE_PITCH + (uint)input_offset_x*INPUT1_X_PITCH + (uint)input_offset_y*INPUT1_Y_PITCH;
+				if(!zero_x && !zero_y)
+				{
+                uint input_idx = in_split_offset + b*16*INPUT1_BATCH_PITCH + ifm*INPUT1_FEATURE_PITCH + (uint)input_offset_x*INPUT1_X_PITCH + (uint)input_offset_y*INPUT1_Y_PITCH;
 #if BIAS_TERM
-                    grad_w = fma(as_float(intel_sub_group_block_read((const __global uint*)(input + input_idx))), grad, grad_w);
+                grad_w = fma(as_float(intel_sub_group_block_read((const __global uint*)(input + input_idx))), grad, grad_w);
 #else
-                    uint input_grad_idx = grad_split_offset + b*INPUT1_BATCH_PITCH + ofm*INPUT0_FEATURE_PITCH + x*INPUT0_X_PITCH + y*INPUT0_Y_PITCH;
-                    grad_w = fma(as_float(intel_sub_group_block_read((const __global uint*)(input + input_idx))), as_float(intel_sub_group_block_read((const __global uint*)(input_grad + input_grad_idx))), grad_w);
+                uint input_grad_idx = grad_split_offset + b*16*INPUT0_BATCH_PITCH + ofm*INPUT0_FEATURE_PITCH + x*INPUT0_X_PITCH + y*INPUT0_Y_PITCH;
+                grad_w = fma(as_float(intel_sub_group_block_read((const __global uint*)(input + input_idx))), as_float(intel_sub_group_block_read((const __global uint*)(input_grad + input_grad_idx))), grad_w);
 #endif
-                }
-            }
+				}
+			}
         }
     }
 
@@ -96,18 +91,18 @@ KERNEL(convolution_grad_weights_gpu_ref)(
     if (local_id == 0)
     {
 #if MOMENTUM
-        UNIT_TYPE update_gradient_w = lr * (prev_grad_w[weights_idx] * MOMENTUM_FACTOR + grad_w + DECAY_RATE * filter[weights_idx]);
+        UNIT_TYPE update_gradient_w = lr * (grad_w + DECAY_RATE * filter[weights_idx]) + prev_grad_w[weights_idx] * MOMENTUM_FACTOR;
         filter[weights_idx] -= update_gradient_w;
         prev_grad_w[weights_idx] = update_gradient_w;
 #else
-        filter[weights_idx] -= lr * grad_w + DECAY_RATE * lr * filter[weights_idx];
+        filter[weights_idx] -= lr * (grad_w + DECAY_RATE * filter[weights_idx]);
 #endif
 
 #if BIAS_TERM
         if(ifm == 0 && id_x == 0 && id_y == 0)
         {
 #if MOMENTUM
-            UNIT_TYPE update_gradient_b = lr * (prev_grad_b[ofm] * MOMENTUM_FACTOR + grad_b);
+            UNIT_TYPE update_gradient_b = lr * grad_b + prev_grad_b[ofm] * MOMENTUM_FACTOR;
             bias[ofm] -= update_gradient_b;
             prev_grad_b[ofm] = update_gradient_b;
 #else
