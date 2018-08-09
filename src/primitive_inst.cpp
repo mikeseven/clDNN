@@ -61,8 +61,27 @@ primitive_inst::primitive_inst(network_impl& network, program_node const& node, 
 {
     if (allocate_memory)
     {
-        if (node.get_users().size() == 1 && node.get_users().front()->is_type<mutable_data>())
-            _output = node.get_users().front()->as<mutable_data>().get_attached_memory_ptr();
+        //In case when output is mutable_data primitive, and other users dependencies are only used for suychronization,
+        //The output memory of such primitive will be fused with mutable_data
+        auto users = node.get_users();
+        auto user_count = users.size();
+        uint32_t mutable_data_count = 0;
+        for (auto& user : users)
+        {
+            //Get mutable_data nodes count from nodes users
+            if (user->is_type<mutable_data>())
+                mutable_data_count++;
+            //For certain primitives, it is known which dependency is used for synchronization only
+            else if (user->is_type<apply_adam>() && (user->get_dependencies().size() == 6) && (user->get_dependency(5).id() == node.id()))
+                user_count--;
+        }
+
+        if (user_count == 1 && mutable_data_count == 1)
+        {
+            for (auto& user : node.get_users())
+                if (user->is_type<mutable_data>())
+                    _output = user->as<mutable_data>().get_attached_memory_ptr();
+        }
         else
             _output = allocate_output();
     }
