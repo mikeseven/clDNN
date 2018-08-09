@@ -72,7 +72,7 @@ primitive_inst::primitive_inst(network_impl& network, program_node const& node, 
             if (user->is_type<mutable_data>())
                 mutable_data_count++;
             //For certain primitives, it is known which dependency is used for synchronization only
-            else if (user->is_type<apply_adam>() && (user->get_dependencies().size() == 6) && (user->get_dependency(5).id() == node.id()))
+            else if (user->is_type<apply_adam>() && (user->as<apply_adam>().has_additional_dep()) && (user->as<apply_adam>().additional_dep().id() == node.id()))
                 user_count--;
         }
 
