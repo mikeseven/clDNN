@@ -35,6 +35,7 @@
 #include <string>
 #include <sstream>
 #include <type_traits>
+#include <random>
 
 
   /// Prepares command-line options for current application.
@@ -98,6 +99,20 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
     help_msg_out << all_visible_cmdline_options;
 
     return {all_cmdline_options, help_msg_out.str(), version_msg_out.str()};
+}
+
+template<typename MemElemTy>
+void generate_bernoulli(cldnn::memory& mem, const float threshold)
+{
+    auto memory_layout = mem.get_layout();
+    auto dst_ptr = mem.pointer<MemElemTy>();
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    float scale = 1.f / (1.f - threshold);
+
+    std::bernoulli_distribution distribution(threshold);
+    for (uint32_t i = 0; i < (uint32_t)memory_layout.count(); i++)
+        dst_ptr[i] = distribution(gen) * scale;
 }
 
 void run_topology(const execution_params &ep)
@@ -341,6 +356,8 @@ void run_topology(const execution_params &ep)
                 float acc = 0;
                 uint32_t labels_num = 1000;
                 auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
+                auto fc6_dropout_mem = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,4096,1 } });
+                auto fc7_dropout_mem = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,4096,1 } });
                 float base_learning_rate = ep.learning_rate;
                 float learning_rate = base_learning_rate;
                 for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
@@ -356,8 +373,13 @@ void run_topology(const execution_params &ep)
                     else
                         load_data_from_file_list_imagenet(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
 
+                    generate_bernoulli<float>(fc6_dropout_mem, 0.5f);
+                    generate_bernoulli<float>(fc7_dropout_mem, 0.5f);
+
                     network.set_input_data("input", input);
                     network.set_input_data("labels", labels);
+                    network.set_input_data("fc6_dropout_mask", fc6_dropout_mem);
+                    network.set_input_data("fc7_dropout_mask", fc7_dropout_mem);
                     auto time = execute_cnn_topology(network, ep, energyLib, output, learn_it, ep.image_offset + ep.image_number / batch_size - 1);
                     time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
                     auto expected = labels.pointer<float>();

@@ -32,6 +32,7 @@
 #include <api/CPP/convolution_grad_weights.hpp>
 #include <api/CPP/activation.hpp>
 #include <api/CPP/activation_grad.hpp>
+#include <api/CPP/eltwise.hpp>
 
 using namespace cldnn;
 
@@ -604,16 +605,24 @@ cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::e
 
     auto fc6_relu = add_relu("fc6_relu", fc6, topology_inst);
 
+    auto fc6_mem_dropout_mask_layout = layout{ data_types::f32, format::bfyx,{ batch_size, 1, 4096, 1 } };
+    auto fc6_dropout_mask = cldnn::input_layout("fc6_dropout_mask", fc6_mem_dropout_mask_layout);
+    auto fc6_dropout = eltwise("fc6_dropout", { fc6_relu, fc6_dropout_mask }, eltwise_mode::prod);
+
     auto fc7_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 4096, 1, 4096, 1 } };
     auto fc7_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 4096, 1 } };
-    auto fc7 = add_fc_layer(weights_dir, engine, topology_inst, "fc7", fc6_relu, fc7_w_mem_layout, fc7_b_mem_layout,
+    auto fc7 = add_fc_layer(weights_dir, engine, topology_inst, "fc7", fc6_dropout, fc7_w_mem_layout, fc7_b_mem_layout,
         use_existing_weights, outputs);
 
     auto fc7_relu = add_relu("fc7_relu", fc7, topology_inst);
 
+    auto fc7_mem_dropout_mask_layout = layout{ data_types::f32, format::bfyx,{ batch_size, 1, 4096, 1 } };
+    auto fc7_dropout_mask = cldnn::input_layout("fc7_dropout_mask", fc7_mem_dropout_mask_layout);
+    auto fc7_dropout = eltwise("fc7_dropout", { fc7_relu, fc7_dropout_mask }, eltwise_mode::prod);
+
     auto fc8_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 1000, 1, 4096, 1 } };
     auto fc8_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 1000, 1 } };
-    auto fc8 = add_fc_layer(weights_dir, engine, topology_inst, "fc8", fc7_relu, fc8_w_mem_layout, fc8_b_mem_layout,
+    auto fc8 = add_fc_layer(weights_dir, engine, topology_inst, "fc8", fc7_dropout, fc8_w_mem_layout, fc8_b_mem_layout,
         use_existing_weights, outputs);
 
     auto fc8_relu = add_relu("fc8_relu", fc8, topology_inst);
@@ -633,12 +642,16 @@ cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::e
     auto fc8_grad_input = add_fc_grad_layer(weights_dir, engine, topology_inst, "fc8_grad", fc8_grad_relu, fc8_w_mem_layout, fc8_b_mem_layout,
         "fc8_weights.nnd", "fc8_bias.nnd", fc7_relu, use_existing_weights, outputs);
 
-    auto fc7_grad_relu = add_relu_grad("fc7_grad_relu", fc8_grad_input, fc7, topology_inst);
+    auto fc7_dropout_grad = eltwise("fc7_dropout_grad", { fc8_grad_input, fc7_dropout_mask }, eltwise_mode::prod);
+
+    auto fc7_grad_relu = add_relu_grad("fc7_grad_relu", fc7_dropout_grad, fc7, topology_inst);
 
     auto fc7_grad_input = add_fc_grad_layer(weights_dir, engine, topology_inst, "fc7_grad", fc7_grad_relu, fc7_w_mem_layout, fc7_b_mem_layout,
         "fc7_weights.nnd", "fc7_bias.nnd", fc6_relu, use_existing_weights, outputs);
 
-    auto fc6_grad_relu = add_relu_grad("fc6_grad_relu", fc7_grad_input, fc6, topology_inst);
+    auto fc6_dropout_grad = eltwise("fc6_dropout_grad", { fc7_grad_input, fc6_dropout_mask }, eltwise_mode::prod);
+
+    auto fc6_grad_relu = add_relu_grad("fc6_grad_relu", fc6_dropout_grad, fc6, topology_inst);
 
     auto fc6_grad_input = add_fc_grad_layer(weights_dir, engine, topology_inst, "fc6_grad", fc6_grad_relu, fc6_w_mem_layout, fc6_b_mem_layout,
         "fc6_weights.nnd", "fc6_bias.nnd", pool5, use_existing_weights, outputs);
@@ -763,7 +776,10 @@ cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::e
         pool3, pool3_argmax,
         pool4, pool4_argmax,
         pool5, pool5_argmax,
+        fc6_dropout, fc6_dropout_mask,
+        fc7_dropout, fc7_dropout_mask,
         softmax, softmax_loss_grad,
+        fc7_dropout_grad, fc6_dropout_grad,
         pool1_grad, pool2_grad, pool3_grad,
         pool4_grad, pool5_grad,
         conv1_1_weights_data_prev, conv1_1_bias_data_prev,
