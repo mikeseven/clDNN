@@ -25,6 +25,8 @@
 #include "test_utils/test_utils.h"
 #include "test_utils/uniform_quantized_real_distribution.hpp"
 
+#include <cstddef>
+
 
 using namespace cldnn;
 using namespace ::tests;
@@ -108,7 +110,7 @@ TEST(border_gpu, basic_yxfb_0x0x1x2_0x0x3x4_border_zero) {
     auto output = outputs.at("output").get_memory();
     auto output_ptr = output.pointer<float>();
 
-    ASSERT_EQ(out_data.size(), out_size_b * out_size_f * out_size_y * out_size_x);
+    ASSERT_EQ(out_data.size(), static_cast<std::size_t>(out_size_b * out_size_f * out_size_y * out_size_x));
 
     for (auto b = 0; b < out_size_b; ++b) {             // B
         for (auto f = 0; f < out_size_f; ++f) {         // F
@@ -184,7 +186,7 @@ TEST(border_gpu, basic_yxfb_0x0x1x2_0x0x3x4_border_mirror) {
     auto output = outputs.at("output").get_memory();
     auto output_ptr = output.pointer<float>();
 
-    ASSERT_EQ(out_data.size(), out_size_b * out_size_f * out_size_y * out_size_x);
+    ASSERT_EQ(out_data.size(), static_cast<std::size_t>(out_size_b * out_size_f * out_size_y * out_size_x));
 
     for (auto b = 0; b < out_size_b; ++b) {             // B
         for (auto f = 0; f < out_size_f; ++f) {         // F
@@ -262,7 +264,7 @@ TEST(border_gpu, basic_yxfb_0x0x1x2_0x0x3x4_border_mirror_101) {
     auto output = outputs.at("output").get_memory();
     auto output_ptr = output.pointer<float>();
 
-    ASSERT_EQ(out_data.size(), out_size_b * out_size_f * out_size_y * out_size_x);
+    ASSERT_EQ(out_data.size(), static_cast<std::size_t>(out_size_b * out_size_f * out_size_y * out_size_x));
 
     for (auto b = 0; b < out_size_b; ++b) {             // B
         for (auto f = 0; f < out_size_f; ++f) {         // F
