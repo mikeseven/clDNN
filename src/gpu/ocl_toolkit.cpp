@@ -391,6 +391,11 @@ event_impl::ptr gpu_toolkit::enqueue_marker(std::vector<event_impl::ptr> const& 
     }
 }
 
+event_impl::ptr gpu_toolkit::group_events(std::vector<event_impl::ptr> const& deps)
+{
+    return{ new base_events(shared_from_this(), deps), false };
+}
+
 void gpu_toolkit::flush()
 {
     if (logging_enabled())
@@ -452,7 +457,7 @@ void gpu_toolkit::sync_events(std::vector<event_impl::ptr> const & deps)
     bool needs_barrier = false;
     for (auto& dep : deps)
     {
-        auto* ocl_ev = dynamic_cast<base_event*>(dep.get());
+        auto* ocl_ev = dynamic_cast<ocl_base_event*>(dep.get());
         if (ocl_ev->get_queue_stamp() > _last_barrier)
         {
             needs_barrier = true;

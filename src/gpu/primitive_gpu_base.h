@@ -99,10 +99,13 @@ protected:
         return 1;
     }
 
-    event_impl::ptr aggregate_events(const std::vector<event_impl::ptr>& events) const
+    event_impl::ptr aggregate_events(const std::vector<event_impl::ptr>& events, bool group=false) const
     {
         if (events.size() == 1)
             return events[0];
+
+        if (group)
+            return _outer.get_program().get_engine().get_context()->group_events(events);
 
         return events_waiter(_outer.get_program().get_engine().get_context()).run(events);
     }
@@ -166,7 +169,8 @@ protected:
             tmp_events = new_events;
         }
 
-        return aggregate_events(tmp_events);
+        bool group_events = split > 1 ? true : false;
+        return aggregate_events(tmp_events, group_events);
     }
 };
 

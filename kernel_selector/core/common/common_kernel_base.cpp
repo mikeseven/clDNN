@@ -83,6 +83,7 @@ namespace kernel_selector
         }
 
         std::replace(kernelID.begin(), kernelID.end(), '.', '_');
+        std::replace(kernelID.begin(), kernelID.end(), '/', '_');
 
         kernelID += "_" + std::to_string(UniqeID());
 
