@@ -133,10 +133,10 @@ std::vector<std::string> get_directory_weights(const std::string& images_path)
 std::string get_model_name(const std::string& topology_name)
 {
     std::string model_name = topology_name;
-    if (model_name.find_first_of("_train") != std::string::npos)
-        model_name = model_name.substr(0, model_name.length() - model_name.find("_train") - 1);
-    else if (model_name.find_first_of("_test") != std::string::npos)
-        model_name = model_name.substr(0, model_name.length() - model_name.find("_test") - 1);
+    if (model_name.find("_train") != std::string::npos)
+        model_name = model_name.substr(0, model_name.find("_train"));
+    else if (model_name.find("_test") != std::string::npos)
+        model_name = model_name.substr(0, model_name.find("_test"));
     return model_name;
 }
 
