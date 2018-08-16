@@ -63,6 +63,7 @@ namespace kernel_selector
     using mean_subtruct_mode                = kernel_selector::MeanSubtractMode;
     using mean_op                           = kernel_selector::MeanOp;
     using concat_axis                       = kernel_selector::ConcatAxis;
+    using tile_axis                         = kernel_selector::TileAxis;
     using tuning_mode                       = kernel_selector::TuningMode;
     using sample_type                       = kernel_selector::SampleType;
     using border_type                       = kernel_selector::BorderType;

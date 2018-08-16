@@ -549,6 +549,17 @@ namespace kernel_selector {
         default: return "";
         }
     }
+    inline std::string toString(TileAxis a)
+    {
+        switch (a)
+        {
+        case TileAxis::X:         return "X";
+        case TileAxis::Y:         return "Y";
+        case TileAxis::FEATURE:   return "FEATURE";
+        case TileAxis::BATCH:     return "BATCH";
+        default: return "";
+        }
+    }
 
     inline std::string toString(SampleType type)
     {
