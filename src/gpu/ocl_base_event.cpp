@@ -95,7 +95,7 @@ void base_events::wait_impl()
 {
     if (!_events.empty())
     {
-        for (int i = 0; i < _events.size(); i++)
+        for (size_t i = 0; i < _events.size(); i++)
         {
             _events[i]->wait();
         }
@@ -106,7 +106,7 @@ bool base_events::is_set_impl()
 {
     if (!_events.empty())
     {
-        for (int i = 0; i < _events.size(); i++)
+        for (size_t i = 0; i < _events.size(); i++)
         {
             if (!_events[i]->is_set())
                 return false;
@@ -123,7 +123,7 @@ bool base_events::get_profiling_info_impl(std::list<cldnn_profiling_interval>& i
     cl_ulong min_start = CL_ULONG_MAX;
     uint64_t execution_time = 0;
 
-    for (int i = 0; i < _events.size(); i++)
+    for (size_t i = 0; i < _events.size(); i++)
     {
 
         auto be = dynamic_cast<base_event*>(_events[i].get());

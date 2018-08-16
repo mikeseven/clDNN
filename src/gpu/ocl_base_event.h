@@ -54,7 +54,7 @@ public:
     base_events(std::shared_ptr<gpu_toolkit> ctx, std::vector<event_impl::ptr> const &ev) : ocl_base_event(0), _ctx(ctx), _events(ev)
     {
         uint64_t _queue_stamp_max = 0;
-        for (int i = 0; i < ev.size(); i++)
+        for (size_t i = 0; i < ev.size(); i++)
         {
             auto * _base_event = dynamic_cast<base_event*>(ev[i].get());
             if (_base_event->get_queue_stamp() > _queue_stamp_max)
