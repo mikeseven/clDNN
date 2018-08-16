@@ -23,7 +23,7 @@ protected:
 struct base_event : virtual public ocl_base_event
 {
 public:
-    base_event(std::shared_ptr<gpu_toolkit> ctx, cl::Event const& ev, uint64_t queue_stamp = 0) : _ctx(ctx), _event(ev), ocl_base_event(queue_stamp)
+    base_event(std::shared_ptr<gpu_toolkit> ctx, cl::Event const& ev, uint64_t queue_stamp = 0) : ocl_base_event(queue_stamp), _ctx(ctx), _event(ev)
     {}
 
     auto get_context() const { return _ctx; }
@@ -51,7 +51,7 @@ private:
 struct base_events : virtual public ocl_base_event
 {
 public:
-    base_events(std::shared_ptr<gpu_toolkit> ctx, std::vector<event_impl::ptr> const &ev) : _ctx(ctx), _events(ev)
+    base_events(std::shared_ptr<gpu_toolkit> ctx, std::vector<event_impl::ptr> const &ev) : ocl_base_event(0), _ctx(ctx), _events(ev)
     {
         uint64_t _queue_stamp_max = 0;
         for (int i = 0; i < ev.size(); i++)
