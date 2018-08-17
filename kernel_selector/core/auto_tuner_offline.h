@@ -25,12 +25,14 @@ namespace kernel_selector
 {
     // SKL GT4e
     void tuning_cache_193B(tuning_data&);
-    //KBLGT2
-    void tuning_cache_5912(tuning_data&);
+    void tuning_cache_193B_0(tuning_data&);
+    void tuning_cache_193B_1(tuning_data&);
+    void tuning_cache_193B_2(tuning_data&);
     //SKL GT2
     void tuning_cache_1912(tuning_data&);
-    //KBL GT3e
-    void tuning_cache_5927(tuning_data&);
+    void tuning_cache_1912_0(tuning_data&);
+    void tuning_cache_1912_1(tuning_data&);
+    void tuning_cache_1912_2(tuning_data&);
     //APL 10W
     void tuning_cache_5A84(tuning_data&);
     // Device ID for APL E3930.
@@ -50,9 +52,7 @@ namespace kernel_selector
         const std::map<std::string, void(*)(tuning_data&)> sku_cache_fillers
         {
             { "0x193B" , tuning_cache_193B },
-            { "0x5912" , tuning_cache_5912 },
             { "0x1912" , tuning_cache_1912 },
-            { "0x5927" , tuning_cache_5927 },
             { "0x5A84" , tuning_cache_5A84 },
             { "0x5A85" , tuning_cache_5A84 },
             { "0x3184" , tuning_cache_5A84 },
