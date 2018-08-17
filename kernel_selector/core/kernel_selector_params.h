@@ -783,6 +783,8 @@ namespace kernel_selector
         bool bFP16Support = false;
         bool bFP64Support = false;
         bool bImageSupport = false;
+        bool bIMADSupport = false;
+        bool bIMMADSupport = false;
         uint64_t maxWorkGroupSize = 0;
         uint64_t maxLocalMemSize = 0;
         uint64_t maxImage2dWidth = 0;

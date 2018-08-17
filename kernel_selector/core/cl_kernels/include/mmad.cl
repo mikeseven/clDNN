@@ -58,7 +58,7 @@ inline int8 FUNC(mmad8x8)(int8 A_vectors, int8 B_vectors, int8 acc)
 
 // ## PROCESS PPC BEGIN (DPAS)
 
-#if DPAS_SUPPORTED == 1
+#if MMAD_SUPPORTED == 1
 
 // here declare compiler DPAS intrinsic
 #define PRECISION_U8 3

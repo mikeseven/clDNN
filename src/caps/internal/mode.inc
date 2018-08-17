@@ -15,3 +15,18 @@
 */
 
 bool public_caps = false;
+bool is_imad_supported(int dev_id) {
+// ATS
+    if(dev_id == 0x9A49)
+        return true;
+// TGL SIMULATION
+    if(dev_id == 0xFF20)
+        return true;
+    return false;
+}
+bool is_immad_supported(int dev_id) {
+// ATS
+    if(dev_id == 0x9A49)
+        return true;
+    return false;
+}
