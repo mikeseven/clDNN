@@ -465,6 +465,8 @@ inline JitConstants MakeBaseParamsJitConstants(const base_params& params)
         MakeJitConstant("OUTPUT",               params.output),
         MakeJitConstant("FP64_SUPPORTED",       params.engineInfo.bFP64Support),
         MakeJitConstant("FP16_SUPPORTED",       params.engineInfo.bFP16Support),
+        MakeJitConstant("MAD_SUPPORTED",        params.engineInfo.bIMADSupport),
+        MakeJitConstant("MMAD_SUPPORTED",       params.engineInfo.bIMMADSupport),
         MakeJitConstant("FP16_UNIT_USED",       bFP16Used),
         MakeJitConstant("INT8_UNIT_USED",       bInt8Used),
         MakeJitConstant("UNIT_TYPE",            bInt8Used ? "char" : bFP16Used ? "half" : "float"),
