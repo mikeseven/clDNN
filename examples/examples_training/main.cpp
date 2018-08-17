@@ -102,17 +102,16 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
 }
 
 template<typename MemElemTy>
-void generate_bernoulli(cldnn::memory& mem, const float threshold)
+void generate_bernoulli(cldnn::memory& mem, const float threshold, unsigned int seed)
 {
     auto memory_layout = mem.get_layout();
     auto dst_ptr = mem.pointer<MemElemTy>();
-    std::random_device rd;
-    std::mt19937 gen(rd());
+    std::default_random_engine generator(seed);
     float scale = 1.f / (1.f - threshold);
 
     std::bernoulli_distribution distribution(threshold);
     for (uint32_t i = 0; i < (uint32_t)memory_layout.count(); i++)
-        dst_ptr[i] = distribution(gen) * scale;
+        dst_ptr[i] = distribution(generator) * scale;
 }
 
 void run_topology(const execution_params &ep)
@@ -373,8 +372,8 @@ void run_topology(const execution_params &ep)
                     else
                         load_data_from_file_list_imagenet(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
 
-                    generate_bernoulli<float>(fc6_dropout_mem, 0.5f);
-                    generate_bernoulli<float>(fc7_dropout_mem, 0.5f);
+                    generate_bernoulli<float>(fc6_dropout_mem, 0.5f, learn_it);
+                    generate_bernoulli<float>(fc7_dropout_mem, 0.5f, learn_it + 1);
 
                     network.set_input_data("input", input);
                     network.set_input_data("labels", labels);
