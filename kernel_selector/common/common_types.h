@@ -64,8 +64,9 @@ namespace kernel_selector
         SELECT,
         BROADCAST,
         GEMM,
-        INDEX_SELECT
-    };
+        INDEX_SELECT,
+ 		DETECTION_OUTPUT    
+	};
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // Datatype
