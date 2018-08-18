@@ -179,10 +179,7 @@ typedef struct
     uint8_t supports_fp16;             ///< Does engine support FP16.
     uint8_t supports_fp16_denorms;     ///< Does engine support denormalized FP16.
     uint8_t supports_subgroups_short;  ///< Does engine support cl_intel_subgroups_short.
-    uint8_t supports_image;            ///< Does engine support images (CL_DEVICE_IMAGE_SUPPORT cap).
-
-    uint8_t supports_imad;             ///< Does engine support int8 mad.
-    uint8_t supports_immad;            ///< Does engine support int8 multi mad.
+    uint8_t supports_image;           ///< Does engine support images (CL_DEVICE_IMAGE_SUPPORT cap).
 }  cldnn_engine_info;
 /// @}
 

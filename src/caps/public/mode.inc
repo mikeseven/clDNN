@@ -15,5 +15,3 @@
 */
 
 bool public_caps = true;
-bool is_imad_supported(int) { return false; }
-bool is_immad_supported(int) { return false; }
