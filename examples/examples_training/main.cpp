@@ -56,7 +56,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Path to input directory containing images to classify (mandatory when running classification).")
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("lenet"),
             "Name of a neural network model that is used for classification.\n"
-            "It can be one of:\n  \tlenet, lenet_train, vgg16_train, vgg16_test.")
+            "It can be one of:\n  \tlenet, lenet_train, vgg16_train, vgg16_test, resnet50, resnet50_train.")
         ("weights", bpo::value<std::string>()->value_name("<weights-dir>"),
             "Path to directory containing weights used in classification.\n"
             "Non-absolute paths are computed in relation to <executable-dir> (not working directory).\n"
@@ -204,6 +204,10 @@ void run_topology(const execution_params &ep)
         primitives = build_lenet(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "lenet_train")
         primitives = build_lenet_train(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_existing_weights, outputs);
+    else if (ep.topology_name == "resnet50")
+        primitives = build_resnet50(ep.weights_dir, engine, input_layout, gpu_batch_size, false);
+    else if (ep.topology_name == "resnet50_train")
+        primitives = build_resnet50_train(ep.weights_dir, engine, input_layout, gpu_batch_size, false, ep.use_existing_weights, outputs);
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
 
@@ -242,7 +246,7 @@ void run_topology(const execution_params &ep)
         auto input_list_iterator = input_list.begin();
         auto input_list_end = input_list.end();
 
-        if (ep.topology_name == "lenet" || ep.topology_name == "lenet_train" || ep.topology_name == "vgg16_train" || ep.topology_name == "vgg16_test")
+        if (ep.topology_name == "lenet" || ep.topology_name == "lenet_train" || ep.topology_name == "vgg16_train" || ep.topology_name == "vgg16_test" || ep.topology_name == "resnet50" || ep.topology_name == "resnet50_train")
             number_of_batches = 1;
 
         for (decltype(number_of_batches) batch = 0; batch < number_of_batches; batch++)
@@ -254,7 +258,7 @@ void run_topology(const execution_params &ep)
             }
             double time_in_sec = 0.0;
             // load croped and resized images into input
-            if (ep.topology_name != "lenet" && ep.topology_name != "lenet_train" && ep.topology_name != "vgg16_train" && ep.topology_name != "vgg16_test")
+            if (ep.topology_name != "lenet" && ep.topology_name != "lenet_train" && ep.topology_name != "vgg16_train" && ep.topology_name != "vgg16_test" && ep.topology_name != "resnet50" && ep.topology_name != "resnet50_train")
             {
                 if (ep.use_half)
                 {
@@ -358,7 +362,7 @@ void run_topology(const execution_params &ep)
                 }
                 continue;
             }
-            else if (ep.topology_name == "vgg16_train")
+            else if (ep.topology_name == "vgg16_train" || ep.topology_name == "resnet50_train")
             {
                 if (ep.image_set != "imagenet")
                     throw std::runtime_error("Vgg16 support only imagenet images!");
@@ -409,7 +413,7 @@ void run_topology(const execution_params &ep)
                 }
                 continue;
             }
-            else if (ep.topology_name == "vgg16_test")
+            else if (ep.topology_name == "vgg16_test" || ep.topology_name == "resnet50")
             {
                 if (ep.image_set != "imagenet")
                     throw std::runtime_error("Vgg16 supports only imagenet images!");
@@ -615,7 +619,9 @@ int main(int argc, char* argv[])
         if (ep.topology_name == "vgg16_train" ||
             ep.topology_name == "vgg16_test" ||
             ep.topology_name == "lenet" ||
-            ep.topology_name == "lenet_train")
+            ep.topology_name == "lenet_train" ||
+            ep.topology_name == "resnet50" ||
+            ep.topology_name == "resnet50_train")
         {
             run_topology(ep);
             return 0;
