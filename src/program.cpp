@@ -805,17 +805,14 @@ void program_impl::handle_lstm()
             remove_connection(*nodes_map.at(recurrent_id), *node);
             if (node->as<lstm>().bias_term())
                 remove_connection(*nodes_map.at(bias_id), *node);
+            if (node->as<lstm>().initial_hidden_term())
+                remove_connection(*nodes_map.at(hidden_id), *node);
+            if (node->as<lstm>().initial_cell_term())
+                remove_connection(*nodes_map.at(cell_id), *node);
 
             //input size lstm
-            size_t sequence_len = 0;
-            for (auto& depend : node->get_dependencies())
-            {
-                if (depend->is_type<crop>())
-                {
-                    sequence_len++;
-                }
+            size_t sequence_len = node->get_dependencies().size();
 
-            }
             //calculating sizes
             auto input_size = node->get_dependency(0).get_output_layout().size;
             auto recurrent_size = nodes_map.at(lstm_prim->recurrent)->get_output_layout().size;
