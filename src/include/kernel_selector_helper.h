@@ -439,6 +439,8 @@ inline params_t get_default_params(const arg_t& arg, uint32_t split = 1)
     params.engineInfo.bSubGroupShortSupport = context->extension_supported("cl_intel_subgroups_short");
     params.engineInfo.bFP16Support          = context->extension_supported("cl_khr_fp16");
     params.engineInfo.bFP64Support          = context->extension_supported("cl_khr_fp64");
+    params.engineInfo.bIMADSupport          = engine_info.supports_imad != 0;
+    params.engineInfo.bIMMADSupport         = engine_info.supports_immad != 0;
     params.engineInfo.bImageSupport         = engine_info.supports_image != 0;
     params.engineInfo.maxWorkGroupSize      = engine_info.max_work_group_size;
     params.engineInfo.maxLocalMemSize       = engine_info.max_local_mem_size;
