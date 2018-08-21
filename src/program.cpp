@@ -2796,8 +2796,8 @@ void program_impl::prepare_primitive_fusing()
             // - primitives input cannot be output
             // - no activation additional input
             // - input was optimized
-            if (node.has_padded_dependency() || (input.is_output() && !is_debug) || node.get_dependencies().size() != 1 ||
-                input.can_be_optimized())
+            if (node.has_padded_dependency() || (input.is_output() && !is_debug) || node.is_output() || 
+                node.get_dependencies().size() != 1 ||  input.can_be_optimized())
                 return;
 
             // - check if there is no activation fused already
