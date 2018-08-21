@@ -74,7 +74,9 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("train_snapshot", bpo::value<std::uint32_t>()->value_name("<train_snapshot>")->default_value(100),
             "After how many iterations, the weights and biases files will be updated on disk. Default value is 100.")
         ("continue_training", bpo::bool_switch(),
-            "Continue training with the data provided in train_iteration.txt file.");
+            "Continue training with the data provided in train_iteration.txt file.")
+        ("image_set", bpo::value<std::string>()->value_name("<image_set>")->default_value("imagenet"),
+            "Imageset that will be used. Currently supported: mnist (lenet), imagenet (vgg16), cifar10 (vgg16).");
 
     // Conversions options.
     bpo::options_description weights_conv_cmdline_options("Weights conversion options");
@@ -194,7 +196,7 @@ void run_topology(const execution_params &ep)
     else if (ep.topology_name == "vgg16_train")
     {
         if (ep.compute_imagemean)
-            compute_image_mean(ep, engine, 3, 224, 224);
+            compute_image_mean(ep, engine, ep.image_set == "cifar10");
 
         primitives = build_vgg16_train(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_existing_weights, outputs);
     }
@@ -266,6 +268,9 @@ void run_topology(const execution_params &ep)
             }
             else if (ep.topology_name == "lenet")
             {
+                if (ep.image_set != "mnist")
+                    throw std::runtime_error("Lenet only support mnist images. Please use --image_set=mnist!");
+
                 float acc = 0;
                 uint32_t labels_num = 10;
                 auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
@@ -314,6 +319,9 @@ void run_topology(const execution_params &ep)
             }
             else if (ep.topology_name == "lenet_train")
             {
+                if (ep.image_set != "mnist")
+                    throw std::runtime_error("Lenet only support mnist images. Please use --image_set=mnist!");
+
                 auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
                 float base_learning_rate = ep.learning_rate;
                 float learning_rate = base_learning_rate;
@@ -352,8 +360,10 @@ void run_topology(const execution_params &ep)
             }
             else if (ep.topology_name == "vgg16_train")
             {
+                if (ep.image_set != "imagenet")
+                    throw std::runtime_error("Vgg16 support only imagenet images!");
+
                 float acc = 0;
-                uint32_t labels_num = 1000;
                 auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
                 auto fc6_dropout_mem = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,4096,1 } });
                 auto fc7_dropout_mem = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,4096,1 } });
@@ -390,6 +400,7 @@ void run_topology(const execution_params &ep)
                         std::vector< std::pair<float, uint32_t> > output_vec;
 
                         loss -= log(std::max(vals[b + e * batch_size], std::numeric_limits<float>::min()));
+                        std::cout << "Expected: " << e << " prob of expected: " << vals[b + e * batch_size] << std::endl;
                     }
                     loss = loss / batch_size;
                     std::cout << "Iter: " << learn_it - ep.image_offset << std::endl;
@@ -400,15 +411,18 @@ void run_topology(const execution_params &ep)
             }
             else if (ep.topology_name == "vgg16_test")
             {
+                if (ep.image_set != "imagenet")
+                    throw std::runtime_error("Vgg16 supports only imagenet images!");
+
                 float acc = 0;
                 uint32_t labels_num = 1000;
                 auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
                 for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
                 {
                     if (ep.use_half)
-                        load_data_from_file_list_imagenet<half_t>(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
+                        load_data_from_file_list_imagenet<half_t>(input_list, ep.input_dir, input, learn_it, batch_size, false, labels);
                     else
-                        load_data_from_file_list_imagenet(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
+                        load_data_from_file_list_imagenet(input_list, ep.input_dir, input, learn_it, batch_size, false, labels);
 
                     network.set_input_data("input", input);
                     auto time = execute_cnn_topology(network, ep, energyLib, output, learn_it, ep.image_offset + ep.image_number / batch_size - 1);
@@ -581,6 +595,10 @@ int main(int argc, char* argv[])
         ep.topology_name = parsed_args["model"].as<std::string>();
         ep.image_number = parsed_args["image_number"].as<std::uint32_t>();
         ep.use_existing_weights = parsed_args["use_existing_weights"].as<bool>();
+        ep.image_set = parsed_args["image_set"].as<std::string>();
+
+        if(ep.image_set != "mnist" && ep.image_set != "imagenet" && ep.image_set != "cifar10")
+            std::cerr << "ERROR: image_set (\"" << ep.topology_name << "\") is not implemented!!!" << std::endl;
 
         if (parsed_args["continue_training"].as<bool>())
         {

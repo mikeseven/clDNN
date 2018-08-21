@@ -183,6 +183,7 @@ struct execution_params {
     bool compute_imagemean;
     float learning_rate;
     uint32_t train_snapshot;
+    std::string image_set;
 };
 
 struct memory_filler
@@ -220,7 +221,10 @@ void load_data_from_file_list_lenet(const std::vector<std::string>& images_list,
 template <typename MemElemTy = float>
 void load_data_from_file_list_imagenet(const std::vector<std::string>& images_list, const std::string& input_dir, cldnn::memory& memory, const uint32_t images_offset, const uint32_t images_number, const bool train, cldnn::memory& memory_labels);
 
-void compute_image_mean(const execution_params &ep, cldnn::engine& engine, const uint32_t channels_num, const uint32_t size_x, const uint32_t size_y);
+template <typename MemElemTy = float>
+void load_data_from_file_list_cifar10(const std::vector<std::string>& images_list, const std::string& input_dir, cldnn::memory& memory, const uint32_t images_offset, const uint32_t images_number, const bool train, cldnn::memory& memory_labels);
+
+void compute_image_mean(const execution_params &ep, cldnn::engine& engine, bool use_cifar10);
 
 /// function moved from alexnet.cpp, they will be probably used by each topology
 void print_profiling_table(std::ostream& os, const std::vector<cldnn::instrumentation::profiling_info>& profiling_info);

@@ -116,7 +116,7 @@ static inline std::vector<std::string> get_directory_files(const std::string& im
 // returns list of files (path+filename) from specified directory
 std::vector<std::string> get_input_list(const std::string& images_path)
 {
-    std::regex allowed_exts("^\\.(jpe?g|png|bmp|gif|j2k|jp2|tiff|txt|idx3\\-ubyte|mdb)$",
+    std::regex allowed_exts("^\\.(jpe?g|png|bmp|gif|j2k|jp2|tiff|txt|idx3\\-ubyte|mdb|bin)$",
                             std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
     return get_directory_files(images_path, allowed_exts);
 }
@@ -334,6 +334,23 @@ void nn_data_load_from_image(
     }
 }
 
+std::string get_image_file(const std::string& img_name, const std::vector<std::string>& images_list)
+{
+    std::string img = "";
+    for (auto img_from_list : images_list)
+    {
+        if (img_from_list.find(img_name) != std::string::npos)
+        {
+            img = img_from_list;
+            break;
+        }
+    }
+    if (img == "")
+        throw std::runtime_error("Image file was not found.");
+
+    return img;
+}
+
 // i am not sure what is better: pass memory as primitive where layout, ptr and size are included
 // or pass as separate parameters to avoid including neural.h in common tools?
 template <typename MemElemTy>
@@ -392,19 +409,7 @@ void load_data_from_file_list_lenet(
     else
         img_name = "train-images.idx3-ubyte";
 
-    std::string img = "";
-    for (auto img_from_list : images_list)
-    {
-        if (img_from_list.find(img_name) != std::string::npos)
-        {
-            img = img_from_list;
-            break;
-        }
-    }
-
-    if(img == "")
-        throw std::runtime_error("Image file from Lenet not found.");
-
+    std::string img = get_image_file(img_name, images_list);
     std::ifstream rfile(img, std::ios::binary);
 
     if (rfile)
@@ -553,13 +558,82 @@ void load_data_from_file_list_imagenet(
 template void load_data_from_file_list_imagenet<float>(const std::vector<std::string>&, const std::string&, cldnn::memory&, const uint32_t, const uint32_t, const bool, cldnn::memory&);
 template void load_data_from_file_list_imagenet<half_t>(const std::vector<std::string>&, const std::string&, cldnn::memory&, const uint32_t, const uint32_t, const bool, cldnn::memory&);
 
-void compute_image_mean(const execution_params &ep, cldnn::engine& engine, const uint32_t channels_num, const uint32_t size_x, const uint32_t size_y)
+template <typename MemElemTy>
+void load_data_from_file_list_cifar10(
+    const std::vector<std::string>& images_list, const std::string& input_dir,
+    cldnn::memory& memory, const uint32_t images_offset, const uint32_t images_number, const bool train, cldnn::memory& memory_labels)
 {
+    auto dst_ptr = memory.pointer<MemElemTy>();
+    auto labels_ptr = memory_labels.pointer<MemElemTy>();
+    auto labels_it = labels_ptr.begin();
+
+    auto memory_layout = memory.get_layout();
+    int count = 0;
+    if (!cldnn::data_type_match<MemElemTy>(memory_layout.data_type))
+        throw std::runtime_error("Memory format expects different type of elements than specified");
+
+    //The images file from cifar10 are hardcoded to:
+    // - training: data_batch.bin
+    // - testing: test_batch.bin
+    std::string img_name = "";
+    if (!train)
+        img_name = "test_batch.bin";
+    else
+        img_name = "data_batch.bin";
+
+    std::ifstream rfile(get_image_file(img_name, images_list), std::ios::binary);
+
+    const uint32_t img_spatial = 32;
+    const uint32_t img_size = 1 + img_spatial * img_spatial * 3; //1-byte for label, 32*32*3 bytes for image data;
+
+    if (rfile)
+    {
+        std::vector<unsigned char> tmpBuffer(img_size * images_number);
+
+        rfile.seekg(images_offset * img_size, rfile.cur);
+        rfile.read(reinterpret_cast<char *>(&tmpBuffer[0]), img_size * images_number);
+        rfile.close();
+
+        //read in image data
+        for (uint32_t j = 0; j < images_number; ++j)
+        {
+            for (uint32_t y = 0u; y < img_spatial; ++y)
+            {
+                for (uint32_t x = 0u; x < img_spatial; ++x)
+                {
+                    dst_ptr[j * (img_size - 1) + y * 3 * img_spatial + x * 3 + 2] = static_cast<MemElemTy>(tmpBuffer[j * img_size + 1 + y * img_spatial + x + 0]);
+                    dst_ptr[j * (img_size - 1) + y * 3 * img_spatial + x * 3 + 1] = static_cast<MemElemTy>(tmpBuffer[j * img_size + 1 + y * img_spatial + x + 1024]);
+                    dst_ptr[j * (img_size - 1) + y * 3 * img_spatial + x * 3 + 0] = static_cast<MemElemTy>(tmpBuffer[j * img_size + 1 + y * img_spatial + x + 2048]);
+                }
+            }
+        }
+
+        //read in labels
+        for (uint32_t i = 0; i < images_number; i++) {
+            *labels_it = static_cast<MemElemTy>(tmpBuffer[i * img_size]);
+            labels_it++;
+        }
+    }
+    else
+        throw std::runtime_error("Cannot read image cifar10 image file.");
+}
+
+template void load_data_from_file_list_cifar10<float>(const std::vector<std::string>&, const std::string&, cldnn::memory&, const uint32_t, const uint32_t, const bool, cldnn::memory&);
+template void load_data_from_file_list_cifar10<half_t>(const std::vector<std::string>&, const std::string&, cldnn::memory&, const uint32_t, const uint32_t, const bool, cldnn::memory&);
+
+
+void compute_image_mean(const execution_params &ep, cldnn::engine& engine, bool use_cifar10)
+{
+    const uint32_t channels_num = 3;
+    const uint32_t size_x = use_cifar10 ? 32 : 256;
+    const uint32_t size_y = use_cifar10 ? 32 : 256;
+
     auto input_list = get_input_list(ep.input_dir);
 
     std::vector<std::string> requested_images;
-    for (uint32_t i = ep.image_offset; i < ep.image_offset + ep.image_number; i++)
-        requested_images.push_back(input_list[i]);
+    if(!use_cifar10)
+        for (uint32_t i = ep.image_offset; i < ep.image_offset + ep.image_number; i++)
+            requested_images.push_back(input_list[i]);
 
     auto memory_layout = cldnn::layout({ cldnn::data_types::f32, cldnn::format::byxf,cldnn::tensor{ 1, (cldnn::tensor::value_type)channels_num, (cldnn::tensor::value_type)size_x, (cldnn::tensor::value_type)size_y } });
 
@@ -576,16 +650,54 @@ void compute_image_mean(const execution_params &ep, cldnn::engine& engine, const
     auto single_image_size = spatial_size * channels_num;
     std::vector<float> img_sum(single_image_size, 0);
     std::vector<float> img_tmp(single_image_size, 0);
-    auto img_sum_it = img_sum.begin();
     auto img_tmp_it = img_tmp.begin();
 
-    for (auto img : requested_images)
+    if (!use_cifar10)
     {
-        // "false" because we want to load images in BGR format because weights are in BGR format and we don't want any conversions between them.
-        nn_data_load_from_image(img, img_tmp_it, size_x, false, 256);
-        
-        for (uint32_t i = 0; i < img_sum.size(); i++)
-            img_sum[i] += img_tmp[i];
+        for (auto img : requested_images)
+        {
+            // "false" because we want to load images in BGR format because weights are in BGR format and we don't want any conversions between them.
+            nn_data_load_from_image(img, img_tmp_it, size_x, false, 256);
+
+            for (uint32_t i = 0; i < img_sum.size(); i++)
+                img_sum[i] += img_tmp[i];
+        }
+    }
+    else
+    {
+        std::ifstream rfile(get_image_file("data_batch.bin", input_list), std::ios::binary);
+
+        const uint32_t img_spatial = 32;
+        const uint32_t img_size = 1 + img_spatial * img_spatial * 3; //1-byte for label, 32*32*3 bytes for image data;
+
+        if (rfile)
+        {
+            auto images_number = ep.image_number;
+            std::vector<unsigned char> tmpBuffer(img_size * images_number);
+
+            rfile.seekg(ep.image_offset * img_size, rfile.cur);
+            rfile.read(reinterpret_cast<char *>(&tmpBuffer[0]), img_size * images_number);
+            rfile.close();
+
+            //read in image data
+            for (uint32_t j = 0; j < images_number; ++j)
+            {
+                for (uint32_t y = 0u; y < img_spatial; ++y)
+                {
+                    for (uint32_t x = 0u; x < img_spatial; ++x)
+                    {
+                        img_tmp[y * 3 * img_spatial + x * 3 + 2] = static_cast<float>(tmpBuffer[j * img_size + 1 + y * img_spatial + x + 0]);
+                        img_tmp[y * 3 * img_spatial + x * 3 + 1] = static_cast<float>(tmpBuffer[j * img_size + 1 + y * img_spatial + x + 1024]);
+                        img_tmp[y * 3 * img_spatial + x * 3 + 0] = static_cast<float>(tmpBuffer[j * img_size + 1 + y * img_spatial + x + 2048]);
+                    }
+                }
+
+                for (uint32_t i = 0; i < img_sum.size(); i++)
+                    img_sum[i] += img_tmp[i];
+            }
+        }
+        else
+            throw std::runtime_error("Cannot read image cifar10 image file.");
     }
 
     for (uint32_t i = 0; i < img_sum.size(); i++)
@@ -596,12 +708,12 @@ void compute_image_mean(const execution_params &ep, cldnn::engine& engine, const
     for (uint32_t i = 0; i < channels_num; i++)
     {
         for (uint32_t j = 0; j < spatial_size; j++)
-            mean_values[i] += img_sum[i *  spatial_size + j];
+            mean_values[i] += img_sum[i + j * channels_num];
 
         mean_values[i] /= spatial_size;
 
         for (uint32_t j = 0; j < spatial_size; j++)
-            dst_ptr[i *  spatial_size + j] = mean_values[i];
+            dst_ptr[i * spatial_size + j] = mean_values[i];
 
     }
 
