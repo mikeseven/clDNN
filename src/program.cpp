@@ -2707,6 +2707,42 @@ void program_impl::prepare_buffer_fusing()
     }
 }
 
+void program_impl::fuse_skip_layers(program_node* node)
+{
+    do_for_types<eltwise>(*node, [this](eltwise_node& node)
+    {
+        bool skippable = false;
+        int index = 0;
+        if (node.get_primitive()->mode != eltwise_mode::sum || node.inputs_count() != 2)
+            return;
+
+        if (node.input(0).is_type<deconvolution>())
+        {
+            skippable = true;
+        }
+        else if (node.input(1).is_type<deconvolution>())
+        {
+            skippable = true;
+            index = 1;
+        }
+
+        if (!skippable)
+            return;
+
+        auto& to_fuse_with = node.input(index);
+        int to_fuse_index = index == 0 ? 1 : 0;
+
+        add_connection(node.input(to_fuse_index), to_fuse_with);
+        remove_connection(node.input(to_fuse_index), node);
+
+        if (node.get_fused_activation_func() != activation_none)
+            to_fuse_with.set_fused_activation(node.get_fused_activation_func(), node.get_fused_activation_params());
+        to_fuse_with.set_output_padding(node.get_output_layout().data_padding);
+
+        extract_and_remove(node);
+    });
+}
+
 void program_impl::prepare_primitive_fusing()
 {
     bool is_debug = options.get<build_option_type::debug>()->enabled();
@@ -2779,6 +2815,15 @@ void program_impl::prepare_primitive_fusing()
             input.set_output_layout(node.get_output_layout(), false);
             extract_and_remove(node);
         });
+    }
+    //Third loop tries fusing eltwise (sum) with deconvolution
+    itr = processing_order.begin();
+    while (itr != processing_order.end())
+    {
+        auto node_itr = itr++;
+        auto& node = (*node_itr);
+
+        fuse_skip_layers(node);
     }
 }
 

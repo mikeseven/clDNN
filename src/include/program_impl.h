@@ -141,6 +141,7 @@ private:
     void prepare_padding();
     void propagate_constants();
     void prepare_buffer_fusing();
+    void fuse_skip_layers(program_node* node);
     void prepare_primitive_fusing();
     void prepare_depthwise_sep_opt();
     void prep_opt_depthwise_sep_post();

@@ -57,6 +57,7 @@ namespace kernel_selector
             MakeJitConstant("FILTER_ARRAY_NUM",             dp.split),
             MakeJitConstant("INPUT0_OFFSET_WITH_PADDING",   input_offset_with_padding),
             MakeJitConstant("DEPTHWISE_SEPARABLE_OPT",      dp.depthwiseSeparableOpt),
+            MakeJitConstant("FUSED_ELTWISE",                dp.fused_eltwise)
         });
 
         return jit;
@@ -121,6 +122,8 @@ namespace kernel_selector
         auto& kernel = kd.kernels[0];
         FillCLKernelData(kernel, runInfo, kernelName, jit, entry_point, ROUND_ROBIN, true, !newParams.bias.empty());
         kernel.arguments.push_back({ ArgumentDescriptor::Types::SPLIT, 0 });
+        if (orgParams.fused_eltwise)
+            kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 1 });
 
         kd.estimatedTime = runInfo.effiency;
 
