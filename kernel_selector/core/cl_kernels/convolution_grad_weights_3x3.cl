@@ -163,7 +163,7 @@ KERNEL(convolution_grad_weights_gpu_3x3)(
     vstore8(uweights_0_7.v, 0, &filter[weights_idx]);
     filter[weights_idx + 8] = uweights8;
 #if MOMENTUM
-    vstore8(newDelta_1_8, 0, &prev_grad_w[weights_idx]);
+    vstore8(newDelta_0_7, 0, &prev_grad_w[weights_idx]);
     prev_grad_w[weights_idx + 8] = newDelta8;
 #endif
 

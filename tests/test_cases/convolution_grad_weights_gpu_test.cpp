@@ -662,3 +662,89 @@ TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz3x3_in2x1x3x3_bfyx_stride1_p
         EXPECT_FLOAT_EQ(x, -y) << "on biases verification" << random_seed << std::endl;
     }
 }
+
+TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz3x3_in2x1x3x3_bfyx_stride1_pad1_momentum) {
+    //  Filter : 3x3
+    //  Input grad  : 2x2x3x3
+    //  Input  : 2x1x3x3
+    //  Stride : 1x1
+    //
+    //  Input grad:
+    //  0.4  0.1  0.1  1.7  0.5  0.4  0.5  0.6  0.7
+    //  0.7  0.8  0.8  1.7  1.8  1.2  2.1  0.5  0.2
+    //  0.1  1.7  0.5  0.4  0.4  0.1  0.1  1.7  0.5
+    //  1.9  0.1  1.7  0.5  0.6  0.7  0.9  1    1.1
+    //
+    //  Input:
+    //  0.5  0.6  0.7  0.9  1    1.1  0.7  0.9  0.1
+    //  0.7  0.8  0.8  1.7  1.8  1.2  2.1  0.5  0.2
+
+    engine engine;
+    float lr = 0.00001f;
+    auto input_grad = memory::allocate(engine, { data_types::f32, format::bfyx,{ 2, 2, 3, 3 } });
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 2, 1, 3, 3 } });
+    auto weights = memory::allocate(engine, { data_types::f32, format::bfyx,{ 2, 1, 3, 3 } });
+    auto biases = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 1 } });
+    auto prev_weights = memory::allocate(engine, { data_types::f32, format::bfyx,{ 2, 1, 3, 3} });
+    auto prev_biases = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 1} });
+
+    set_values(input, {
+        0.5f, 0.6f, 0.7f, 0.9f, 1.f,  1.1f, 0.7f, 0.9f, 0.1f,
+        0.7f, 0.8f, 0.8f, 1.7f, 1.8f, 1.2f, 2.1f, 0.5f, 0.2f
+        });
+    set_values(input_grad, {
+        0.4f, 0.1f, 0.1f, 1.7f, 0.5f, 0.4f, 0.5f, 0.6f, 0.7f,
+        0.7f, 0.8f, 0.8f, 1.7f, 1.8f, 1.2f, 2.1f, 0.5f, 0.2f,
+        0.1f, 1.7f, 0.5f, 0.4f, 0.4f, 0.1f, 0.1f, 1.7f, 0.5f,
+        1.9f, 0.1f, 1.7f, 0.5f, 0.6f, 0.7f, 0.9f, 1.f,  1.1f
+        });
+
+    topology topology(
+        input_layout("input_grad", input_grad.get_layout()),
+        data("input", input),
+        mutable_data("weights", weights),
+        mutable_data("biases", biases),
+        mutable_data("prev_weights", prev_weights),
+        mutable_data("prev_biases", prev_biases),
+        convolution_grad_weights("conv_grad_weights", "input_grad", "input", { "weights" }, { "biases" }, { "prev_weights" }, { "prev_biases" }, { 1, 1, 1, 1 }, { 0, 0, -1, -1 })
+    );
+
+    network network(engine, topology);
+    network.set_input_data("input_grad", input_grad);
+
+    auto outputs = network.execute();
+    EXPECT_EQ(outputs.size(), size_t(1));
+    EXPECT_EQ(outputs.begin()->first, "conv_grad_weights");
+
+    auto output_prim = outputs.begin()->second.get_memory();
+
+    auto output_ptr = output_prim.pointer<float>();
+    auto weights_ptr = weights.pointer<float>();
+    auto biases_ptr = biases.pointer<float>();
+
+    std::vector<float> expected_weights_vec = {
+        5.88f, 7.76f, 5.39f,
+        8.28f, 8.27f, 6.1f,
+        5.58f, 7.14f, 4.59f,
+
+        6.93f, 11.42f, 8.63f,
+        10.59f, 16.13f, 10.47f,
+        8.7f, 12.18f, 7.2f
+    };
+
+    std::vector<float> expected_bias_vec = {
+        10.5f, 18.3f
+    };
+
+    for (unsigned int i = 0; i < expected_weights_vec.size(); i++)
+    {
+        float x = float_round(expected_weights_vec[i] * lr), y = float_round(weights_ptr[i]);
+        EXPECT_FLOAT_EQ(x, -y) << "on weights verification" << random_seed << std::endl;
+    }
+
+    for (unsigned int i = 0; i < expected_bias_vec.size(); i++)
+    {
+        float x = float_round(expected_bias_vec[i] * lr), y = float_round(biases_ptr[i]);
+        EXPECT_FLOAT_EQ(x, -y) << "on biases verification" << random_seed << std::endl;
+    }
+}
