@@ -800,7 +800,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     cldnn::build_options options;
 
     //TODO set proper network build options
-    if(ep.topology_name == "vgg16_train")
+    if(ep.topology_name == "vgg16_train" || ep.topology_name == "resnet50_train")
         options.set_option(cldnn::build_option::optimize_data(false));
     else
         options.set_option(cldnn::build_option::optimize_data(true));
@@ -1052,7 +1052,7 @@ std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& tim
         output = outputs.at(output_primitve_id).get_memory();
     }
 
-    if (ep.topology_name == "lenet_train" || ep.topology_name == "vgg16_train")
+    if (ep.topology_name == "lenet_train" || ep.topology_name == "vgg16_train" || ep.topology_name == "resnet50_train")
     {
         if (iteration % ep.train_snapshot == 0 || iteration == execution_count)
         {

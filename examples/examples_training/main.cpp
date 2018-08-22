@@ -76,7 +76,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("continue_training", bpo::bool_switch(),
             "Continue training with the data provided in train_iteration.txt file.")
         ("image_set", bpo::value<std::string>()->value_name("<image_set>")->default_value("imagenet"),
-            "Imageset that will be used. Currently supported: mnist (lenet), imagenet (vgg16), cifar10 (vgg16).");
+            "Imageset that will be used. Currently supported: mnist (lenet), imagenet (vgg16), cifar10.");
 
     // Conversions options.
     bpo::options_description weights_conv_cmdline_options("Weights conversion options");
@@ -205,7 +205,12 @@ void run_topology(const execution_params &ep)
     else if (ep.topology_name == "lenet_train")
         primitives = build_lenet_train(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.use_existing_weights, outputs);
     else if (ep.topology_name == "resnet50_train")
-        primitives = build_resnet50_train(ep.weights_dir, engine, input_layout, gpu_batch_size, false, ep.use_existing_weights);
+    {
+        if (ep.compute_imagemean)
+            compute_image_mean(ep, engine, ep.image_set == "cifar10");
+
+        primitives = build_resnet50_train(ep.weights_dir, engine, input_layout, gpu_batch_size, true, ep.use_existing_weights, outputs);
+    }
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
 
@@ -384,13 +389,17 @@ void run_topology(const execution_params &ep)
                     else
                         load_data_from_file_list_imagenet(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
 
-                    generate_bernoulli<float>(fc6_dropout_mem, 0.5f, learn_it);
-                    generate_bernoulli<float>(fc7_dropout_mem, 0.5f, learn_it + 1);
-
+                    //add dropout layers to VGG16
+                    if (ep.topology_name == "vgg16_train")
+                    {
+                        generate_bernoulli<float>(fc6_dropout_mem, 0.5f, learn_it);
+                        generate_bernoulli<float>(fc7_dropout_mem, 0.5f, learn_it + 1);
+                        network.set_input_data("fc6_dropout_mask", fc6_dropout_mem);
+                        network.set_input_data("fc7_dropout_mask", fc7_dropout_mem);
+                    }
                     network.set_input_data("input", input);
                     network.set_input_data("labels", labels);
-                    network.set_input_data("fc6_dropout_mask", fc6_dropout_mem);
-                    network.set_input_data("fc7_dropout_mask", fc7_dropout_mem);
+
                     auto time = execute_cnn_topology(network, ep, energyLib, output, learn_it, ep.image_offset + ep.image_number / batch_size - 1);
                     time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
                     auto expected = labels.pointer<float>();
@@ -402,7 +411,6 @@ void run_topology(const execution_params &ep)
                         std::vector< std::pair<float, uint32_t> > output_vec;
 
                         loss -= log(std::max(vals[b + e * batch_size], std::numeric_limits<float>::min()));
-                        std::cout << "Expected: " << e << " prob of expected: " << vals[b + e * batch_size] << std::endl;
                     }
                     loss = loss / batch_size;
                     std::cout << "Iter: " << learn_it - ep.image_offset << std::endl;

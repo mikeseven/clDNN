@@ -49,11 +49,12 @@ using namespace std;
 static primitive_id add_conv_layer_train(const string& weights_dir, const engine& engine, topology& topology_inst,
                                          const string& layer_name, const primitive_id& input,
                                          const int feature_in, const int feature_out, const int kernel_size,
-                                         const bool use_existing_weights, const tensor& padding = { 0, 0, 0, 0 },
+                                         const bool use_existing_weights, std::vector<cldnn::primitive_id>& outputs, const tensor& padding = { 0, 0, 0, 0 },
                                          const tensor& stride = { 1, 1, 1, 1 }, const bool add_relu = false)
 {
     auto conv_w_mem_layout = layout{ data_types::f32, format::bfyx, { feature_out, feature_in, kernel_size, kernel_size } };
     auto weights_data = file::create_mutable({ engine, join_path(weights_dir, layer_name + "_weights.nnd") }, use_existing_weights ? false : true, conv_w_mem_layout, cldnn::mutable_data::filler_type::xavier);
+    outputs.push_back(layer_name + "_weights.nnd");
 
     auto conv_layer = convolution(
         layer_name,
@@ -72,7 +73,7 @@ static primitive_id add_conv_layer_train(const string& weights_dir, const engine
 static primitive_id add_conv_layer_grad(const string& weights_dir, const engine& engine, topology& topology_inst,
                                         const string& layer_name, const primitive_id& input, const primitive_id& input_grad,
                                         const int feature_in, const int feature_out, const int kernel_size,
-                                        const bool use_existing_weights, const tensor& padding = { 0, 0, 0, 0 },
+                                        const bool use_existing_weights, std::vector<cldnn::primitive_id>& outputs, const tensor& padding = { 0, 0, 0, 0 },
                                         const tensor& stride = { 1, 1, 1, 1 }, const bool add_relu = false)
 {
     auto conv_input = convolution_grad_input(
@@ -93,6 +94,7 @@ static primitive_id add_conv_layer_grad(const string& weights_dir, const engine&
         { 1,1,1,1 },
         conv_input
     );
+    outputs.push_back(layer_name + "_prev_weights");
 
     topology_inst.add(conv_input, conv_weights);
 
@@ -100,13 +102,14 @@ static primitive_id add_conv_layer_grad(const string& weights_dir, const engine&
 }
 
 static primitive_id add_batch_norm_layer(const string& weights_dir, const engine& engine, topology& topology_inst,
-                                         const string& layer_name, const primitive_id& input, const int featur_size,
-                                         const bool use_existing_weights)
+                                         const string& layer_name, const primitive_id& input, const int channel_num,
+                                         const bool use_existing_weights, std::vector<cldnn::primitive_id>& outputs)
 {
-    auto inv_variance_mem_layout = layout{ data_types::f32, format::bfyx, {1, featur_size, 1, 1 } };
+    auto inv_variance_mem_layout = layout{ data_types::f32, format::bfyx, {1, channel_num, 1, 1 } };
     auto inv_variance = file::create_mutable({ engine, join_path(weights_dir, layer_name + "_var.nnd") }, use_existing_weights ? false : true, inv_variance_mem_layout, cldnn::mutable_data::filler_type::zero);
+    outputs.push_back(layer_name + "_var.nnd");
 
-    float epsilon = 0.0001f;
+    float epsilon = 0.00001f;
     auto batch_norm_layer = batch_norm(
         layer_name,
         input,
@@ -135,11 +138,13 @@ static primitive_id add_batch_norm_layer_grad(topology& topology_inst, const str
 
 static primitive_id add_scale_layer(const string& weights_dir, const engine& engine, topology& topology_inst,
                                     const string& layer_name, const primitive_id& input,
-                                    const int feature_size, const bool use_existing_weights)
+                                    const int feature_size, const bool use_existing_weights, std::vector<cldnn::primitive_id>& outputs)
 {
     auto scale_mem_layout = layout{ data_types::f32, format::bfyx, {1, feature_size, 1, 1} };
-    auto scale_input = file::create_mutable({ engine, join_path(weights_dir, layer_name + "_scale_input.nnd") }, use_existing_weights ? false : true, scale_mem_layout, cldnn::mutable_data::filler_type::xavier);
-    auto scale_bias = file::create_mutable({ engine, join_path(weights_dir, layer_name + "_bias.nnd") }, use_existing_weights ? false : true, scale_mem_layout, cldnn::mutable_data::filler_type::xavier);
+    auto scale_input = file::create_mutable({ engine, join_path(weights_dir, layer_name + "_scale_input.nnd") }, use_existing_weights ? false : true, scale_mem_layout, cldnn::mutable_data::filler_type::one);
+    auto scale_bias = file::create_mutable({ engine, join_path(weights_dir, layer_name + "_bias.nnd") }, use_existing_weights ? false : true, scale_mem_layout, cldnn::mutable_data::filler_type::zero);
+    outputs.push_back(layer_name + "_scale_input.nnd");
+    outputs.push_back(layer_name + "_bias.nnd");
 
     auto mul_layer = cldnn::scale(
         layer_name,
@@ -153,7 +158,7 @@ static primitive_id add_scale_layer(const string& weights_dir, const engine& eng
 }
 
 static primitive_id add_scale_layer_grad(topology& topology_inst, const string& layer_name,
-                                         const primitive_id& input, const primitive_id& input_grad)
+                                         const primitive_id& input, const primitive_id& input_grad, std::vector<cldnn::primitive_id>& outputs)
 {
     auto scale_input = scale_grad_input(
         layer_name + "_prev_input",
@@ -170,6 +175,7 @@ static primitive_id add_scale_layer_grad(topology& topology_inst, const string& 
         scale_input,
         cldnn::padding()
     );
+    outputs.push_back(layer_name + "_prev_weights");
 
     topology_inst.add(scale_input, scale_weights);
 
@@ -207,15 +213,15 @@ static primitive_id add_activation_grad_layer(topology& topology_inst, const str
 static primitive_id add_block(const string& weights_dir, const engine& engine, topology& topology_inst,
                               const string& block_name, const primitive_id& input,
                               const int feature_in, const int feature_out,
-                              const int kernel_size, const bool use_existing_weights, bool with_activation,
+                              const int kernel_size, const bool use_existing_weights, bool with_activation, std::vector<cldnn::primitive_id>& outputs,
                               const tensor& padding = { 0, 0, 0, 0 }, const tensor& res_stride = { 1, 1, 1, 1 })
 {
     auto conv = add_conv_layer_train(weights_dir, engine, topology_inst, "res" + block_name, input, feature_in,
-        feature_out, kernel_size, use_existing_weights, padding, res_stride);
-    auto batch_morm = add_batch_norm_layer(weights_dir, engine, topology_inst, "bn" + block_name, conv,
-        feature_out, use_existing_weights);
-    auto scale = add_scale_layer(weights_dir, engine, topology_inst, "scale" + block_name, batch_morm,
-        feature_out, use_existing_weights);
+        feature_out, kernel_size, use_existing_weights, outputs, padding, res_stride);
+    auto batch_norm = add_batch_norm_layer(weights_dir, engine, topology_inst, "bn" + block_name, conv,
+        feature_out, use_existing_weights, outputs);
+    auto scale = add_scale_layer(weights_dir, engine, topology_inst, "scale" + block_name, batch_norm,
+        feature_out, use_existing_weights, outputs);
 
     primitive_id block = scale;
     if (with_activation)
@@ -227,16 +233,16 @@ static primitive_id add_block(const string& weights_dir, const engine& engine, t
 static primitive_id add_block_backward(const string& weights_dir, const engine& engine, topology& topology_inst,
                                        const string& block_name, const primitive_id& input, const primitive_id& conv_relu,
                                        const int feature_in, const int feature_out,
-                                       const int kernel_size, const bool use_existing_weights, bool with_activation,
+                                       const int kernel_size, const bool use_existing_weights, bool with_activation, std::vector<cldnn::primitive_id>& outputs,
                                        const tensor& padding = { 0, 0, 0, 0 }, const tensor& res_stride = { 1, 1, 1, 1 })
 {
     auto block = input;
     if (with_activation)
         block = add_activation_grad_layer(topology_inst, "res" + block_name + "_relu_grad", input, "scale" + block_name);
 
-    auto scale_grad = add_scale_layer_grad(topology_inst, "scale" + block_name, "bn" + block_name, block);
+    auto scale_grad = add_scale_layer_grad(topology_inst, "scale" + block_name, "bn" + block_name, block, outputs);
     auto batch_norm_grad = add_batch_norm_layer_grad(topology_inst, "bn" + block_name, "res" + block_name, scale_grad);
-    auto conv_grad = add_conv_layer_grad(weights_dir, engine, topology_inst, "res" + block_name, conv_relu, batch_norm_grad, feature_in, feature_out, kernel_size, use_existing_weights, padding, res_stride);
+    auto conv_grad = add_conv_layer_grad(weights_dir, engine, topology_inst, "res" + block_name, conv_relu, batch_norm_grad, feature_in, feature_out, kernel_size, use_existing_weights, outputs, padding, res_stride);
 
     return conv_grad;
 }
@@ -244,19 +250,19 @@ static primitive_id add_block_backward(const string& weights_dir, const engine& 
 static primitive_id add_residual_layers_train(const string& weights_dir, const engine& engine, topology& topology_inst,
                                               const string& res_name, const primitive_id& input,
                                               const int feature_size, const int feature_in_size, const bool use_existing_weights,
-                                              bool conv_in_branch1, const tensor& res_stride = { 1, 1, 1, 1 })
+                                              bool conv_in_branch1, std::vector<cldnn::primitive_id>& outputs, const tensor& res_stride = { 1, 1, 1, 1 })
 {
     auto branch2a = add_block(weights_dir, engine, topology_inst, res_name + "_branch2a", input, feature_in_size,
-        feature_size, 1, use_existing_weights, true, { 0, 0, 0, 0 }, res_stride);
+        feature_size, 1, use_existing_weights, true, outputs, { 0, 0, 0, 0 }, res_stride);
     auto branch2b = add_block(weights_dir, engine, topology_inst, res_name + "_branch2b", branch2a, feature_size,
-        feature_size, 3, use_existing_weights, true, { 0, 0, -1, -1 });
+        feature_size, 3, use_existing_weights, true, outputs, { 0, 0, -1, -1 });
     auto branch2c = add_block(weights_dir, engine, topology_inst, res_name + "_branch2c", branch2b, feature_size,
-        4 * feature_size, 1, use_existing_weights, false);
+        4 * feature_size, 1, use_existing_weights, false, outputs);
 
     primitive_id branch1 = input;
     if (conv_in_branch1)
         branch1 = add_block(weights_dir, engine, topology_inst, res_name + "_branch1", input, feature_in_size,
-            4 * feature_size, 1, use_existing_weights, false, { 0, 0, 0, 0 }, res_stride);
+            4 * feature_size, 1, use_existing_weights, false, outputs, { 0, 0, 0, 0 }, res_stride);
 
     auto res_sum = eltwise("res" + res_name, branch1, branch2c, eltwise_mode::sum);
     auto res_relu = add_activation_layer(topology_inst, "res" + res_name + "_relu", res_sum);
@@ -268,17 +274,17 @@ static primitive_id add_residual_layers_train(const string& weights_dir, const e
 static primitive_id add_residual_layers_backward(const string& weights_dir, const engine& engine, topology& topology_inst,
                                                  const string& res_name, const primitive_id& input, const primitive_id& last_conv_relu,
                                                  const int feature_size, const int feature_in_size, const bool use_existing_weights,
-                                                 bool conv_in_branch1, const tensor& res_stride = { 1, 1, 1, 1 })
+                                                 bool conv_in_branch1, std::vector<cldnn::primitive_id>& outputs, const tensor& res_stride = { 1, 1, 1, 1 })
 {
     auto res_relu_grad = add_activation_grad_layer(topology_inst, "res" + res_name + "_relu_grad", "res" + res_name, input);
 
     primitive_id branch1_grad = res_relu_grad;
     if (conv_in_branch1)
-        branch1_grad = add_block_backward(weights_dir, engine, topology_inst, res_name + "_branch1", res_relu_grad, last_conv_relu, feature_in_size, 4 * feature_size, 1, use_existing_weights, false, { 0,0,0,0 }, res_stride);
+        branch1_grad = add_block_backward(weights_dir, engine, topology_inst, res_name + "_branch1", res_relu_grad, last_conv_relu, feature_in_size, 4 * feature_size, 1, use_existing_weights, false, outputs, { 0,0,0,0 }, res_stride);
 
-    auto branch2c_grad = add_block_backward(weights_dir, engine, topology_inst, res_name + "_branch2c", res_relu_grad, "res" + res_name + "_branch2b_relu", feature_size, 4 * feature_size, 1, use_existing_weights, false);
-    auto branch2b_grad = add_block_backward(weights_dir, engine, topology_inst, res_name + "_branch2b", branch2c_grad, "res" + res_name + "_branch2a_relu", feature_size, feature_size, 3, use_existing_weights, true, { 0,0,-1,-1 });
-    auto branch2a_grad = add_block_backward(weights_dir, engine, topology_inst, res_name + "_branch2a", branch2b_grad, last_conv_relu, feature_in_size, feature_size, 1, use_existing_weights, true, { 0, 0, 0, 0 }, res_stride);
+    auto branch2c_grad = add_block_backward(weights_dir, engine, topology_inst, res_name + "_branch2c", res_relu_grad, "res" + res_name + "_branch2b_relu", feature_size, 4 * feature_size, 1, use_existing_weights, false, outputs);
+    auto branch2b_grad = add_block_backward(weights_dir, engine, topology_inst, res_name + "_branch2b", branch2c_grad, "res" + res_name + "_branch2a_relu", feature_size, feature_size, 3, use_existing_weights, true, outputs, { 0,0,-1,-1 });
+    auto branch2a_grad = add_block_backward(weights_dir, engine, topology_inst, res_name + "_branch2a", branch2b_grad, last_conv_relu, feature_in_size, feature_size, 1, use_existing_weights, true, outputs, { 0, 0, 0, 0 }, res_stride);
 
     auto sum = eltwise("res" + res_name + "_prev", branch1_grad, branch2a_grad, eltwise_mode::sum);
     topology_inst.add(sum);
@@ -288,7 +294,7 @@ static primitive_id add_residual_layers_backward(const string& weights_dir, cons
 
 
 // Building resnet50 network for training
-cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, const bool mean_subtract, bool use_existing_weights)
+cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, const bool mean_subtract, bool use_existing_weights, std::vector<cldnn::primitive_id>& outputs)
 {
     input_layout.size = { batch_size, 3, 224, 224 };
     auto input = cldnn::input_layout("input", input_layout);
@@ -299,7 +305,7 @@ cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn
     if (mean_subtract)
     {
         // Subtract mean values if necessary.
-        auto reorder_mean = file::create({ engine, join_path(weights_dir, "resnet50_mean.nnd") });
+        auto reorder_mean = file::create({ engine, join_path(weights_dir, "imagenet_mean.nnd") });
         auto reordered_input = reorder(
             "reorder",
             input,
@@ -322,6 +328,8 @@ cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn
     auto conv1_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 64, 1 } };
     auto conv1_w = file::create_mutable({ engine, join_path(weights_dir, "conv1_weights.nnd") }, use_existing_weights ? false : true, conv1_w_mem_layout, cldnn::mutable_data::filler_type::xavier);
     auto conv1_b = file::create_mutable({ engine, join_path(weights_dir, "conv1_bias.nnd") }, use_existing_weights ? false : true, conv1_b_mem_layout, cldnn::mutable_data::filler_type::zero);
+    outputs.push_back("conv1_weights.nnd");
+    outputs.push_back("conv1_bias.nnd");
 
     auto conv1 = convolution(
         "conv1",
@@ -335,8 +343,8 @@ cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn
     );
     topology_inst.add(conv1, conv1_w, conv1_b);
 
-    auto bn_conv1 = add_batch_norm_layer(weights_dir, engine, topology_inst, "bn_conv1", conv1, 64, use_existing_weights);
-    auto scale_conv1 = add_scale_layer(weights_dir, engine, topology_inst, "scale_conv1", bn_conv1, 64, use_existing_weights);
+    auto bn_conv1 = add_batch_norm_layer(weights_dir, engine, topology_inst, "bn_conv1", conv1, 64, use_existing_weights, outputs);
+    auto scale_conv1 = add_scale_layer(weights_dir, engine, topology_inst, "scale_conv1", bn_conv1, 64, use_existing_weights, outputs);
     auto conv1_relu = add_activation_layer(topology_inst, "con1_relu", scale_conv1);
 
     auto pool1_argmax_mem = memory::allocate(engine, { data_types::f32, format::bfyx, {batch_size, 64, 56, 56} });
@@ -352,28 +360,28 @@ cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn
     topology_inst.add(pool1, pool1_argmax);
 
     // [56x56x64xF] res2a->res2b->res2c [56x56x256xF].
-    auto res2a = add_residual_layers_train(weights_dir, engine, topology_inst, "2a", pool1, 64, 64, use_existing_weights, true);
-    auto res2b = add_residual_layers_train(weights_dir, engine, topology_inst, "2b", res2a, 64, 256, use_existing_weights, false);
-    auto res2c = add_residual_layers_train(weights_dir, engine, topology_inst, "2c", res2b, 64, 256, use_existing_weights, false);
+    auto res2a = add_residual_layers_train(weights_dir, engine, topology_inst, "2a", pool1, 64, 64, use_existing_weights, true, outputs);
+    auto res2b = add_residual_layers_train(weights_dir, engine, topology_inst, "2b", res2a, 64, 256, use_existing_weights, false, outputs);
+    auto res2c = add_residual_layers_train(weights_dir, engine, topology_inst, "2c", res2b, 64, 256, use_existing_weights, false, outputs);
 
     // [56x56x256xF] res3a->res3b->res3c->res3d [28x28x512xF].
-    auto res3a = add_residual_layers_train(weights_dir, engine, topology_inst, "3a", res2c, 128, 256, use_existing_weights, true, { 1, 1, 2, 2 });
-    auto res3b = add_residual_layers_train(weights_dir, engine, topology_inst, "3b", res3a, 128, 512, use_existing_weights, false);
-    auto res3c = add_residual_layers_train(weights_dir, engine, topology_inst, "3c", res3b, 128, 512, use_existing_weights, false);
-    auto res3d = add_residual_layers_train(weights_dir, engine, topology_inst, "3d", res3c, 128, 512, use_existing_weights, false);
+    auto res3a = add_residual_layers_train(weights_dir, engine, topology_inst, "3a", res2c, 128, 256, use_existing_weights, true, outputs, { 1, 1, 2, 2 });
+    auto res3b = add_residual_layers_train(weights_dir, engine, topology_inst, "3b", res3a, 128, 512, use_existing_weights, false, outputs);
+    auto res3c = add_residual_layers_train(weights_dir, engine, topology_inst, "3c", res3b, 128, 512, use_existing_weights, false, outputs);
+    auto res3d = add_residual_layers_train(weights_dir, engine, topology_inst, "3d", res3c, 128, 512, use_existing_weights, false, outputs);
 
     // [28x28x512xF] res4a->res4b->res4c->res4d->res4e->res4f [14x14x1024xF].
-    auto res4a = add_residual_layers_train(weights_dir, engine, topology_inst, "4a", res3d, 256, 512, use_existing_weights, true, { 1, 1, 2, 2 });
-    auto res4b = add_residual_layers_train(weights_dir, engine, topology_inst, "4b", res4a, 256, 1024, use_existing_weights, false);
-    auto res4c = add_residual_layers_train(weights_dir, engine, topology_inst, "4c", res4b, 256, 1024, use_existing_weights, false);
-    auto res4d = add_residual_layers_train(weights_dir, engine, topology_inst, "4d", res4c, 256, 1024, use_existing_weights, false);
-    auto res4e = add_residual_layers_train(weights_dir, engine, topology_inst, "4e", res4d, 256, 1024, use_existing_weights, false);
-    auto res4f = add_residual_layers_train(weights_dir, engine, topology_inst, "4f", res4e, 256, 1024, use_existing_weights, false);
+    auto res4a = add_residual_layers_train(weights_dir, engine, topology_inst, "4a", res3d, 256, 512, use_existing_weights, true, outputs, { 1, 1, 2, 2 });
+    auto res4b = add_residual_layers_train(weights_dir, engine, topology_inst, "4b", res4a, 256, 1024, use_existing_weights, false, outputs);
+    auto res4c = add_residual_layers_train(weights_dir, engine, topology_inst, "4c", res4b, 256, 1024, use_existing_weights, false, outputs);
+    auto res4d = add_residual_layers_train(weights_dir, engine, topology_inst, "4d", res4c, 256, 1024, use_existing_weights, false, outputs);
+    auto res4e = add_residual_layers_train(weights_dir, engine, topology_inst, "4e", res4d, 256, 1024, use_existing_weights, false, outputs);
+    auto res4f = add_residual_layers_train(weights_dir, engine, topology_inst, "4f", res4e, 256, 1024, use_existing_weights, false, outputs);
 
     // [14x14x1024xF] res5a->res5b->res5c [7x7x2048xF].
-    auto res5a = add_residual_layers_train(weights_dir, engine, topology_inst, "5a", res4f, 512, 1024, use_existing_weights, true, { 1, 1, 2, 2 });
-    auto res5b = add_residual_layers_train(weights_dir, engine, topology_inst, "5b", res5a, 512, 2048, use_existing_weights, false);
-    auto res5c = add_residual_layers_train(weights_dir, engine, topology_inst, "5c", res5b, 512, 2048, use_existing_weights, false);
+    auto res5a = add_residual_layers_train(weights_dir, engine, topology_inst, "5a", res4f, 512, 1024, use_existing_weights, true, outputs, { 1, 1, 2, 2 });
+    auto res5b = add_residual_layers_train(weights_dir, engine, topology_inst, "5b", res5a, 512, 2048, use_existing_weights, false, outputs);
+    auto res5c = add_residual_layers_train(weights_dir, engine, topology_inst, "5c", res5b, 512, 2048, use_existing_weights, false, outputs);
 
     auto pool5 = pooling(
         "pool5",
@@ -386,6 +394,8 @@ cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn
     auto fc1000_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 1000, 1 } };
     auto fc1000_weights_data = file::create_mutable({ engine, join_path(weights_dir, "fc1000_weights.nnd") }, use_existing_weights ? false : true, fc1000_w_mem_layout, cldnn::mutable_data::filler_type::xavier);
     auto fc1000_bias_data = file::create_mutable({ engine, join_path(weights_dir, "fc1000_bias.nnd") }, use_existing_weights ? false : true, fc1000_w_mem_layout, cldnn::mutable_data::filler_type::zero);
+    outputs.push_back("fc1000_weights.nnd");
+    outputs.push_back("fc1000_bias.nnd");
 
     auto fc1000 = fully_connected(
         "fc1000",
@@ -396,6 +406,7 @@ cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn
     auto softmax = cldnn::softmax(
         "softmax",
         fc1000);
+    outputs.push_back("softmax");
 
     topology_inst.add(pool5,
         fc1000_weights_data, fc1000_bias_data, fc1000,
@@ -418,6 +429,8 @@ cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn
 
     auto fc1000_weights_data_prev = file::create_mutable({ engine, join_path(weights_dir, "fc1000_weights_prev.nnd") }, use_existing_weights ? false : true, fc1000_w_mem_layout, cldnn::mutable_data::filler_type::zero);
     auto fc1000_bias_data_prev = file::create_mutable({ engine, join_path(weights_dir, "fc1000_bias_prev.nnd") }, use_existing_weights ? false : true, fc1000_w_mem_layout, cldnn::mutable_data::filler_type::zero);
+    outputs.push_back("fc1000_weights_prev.nnd");
+    outputs.push_back("fc1000_bias_prev.nnd");
 
     auto fc1000_grad_weights = fully_connected_grad_weights(
         "fc1000_grad_weights",
@@ -429,6 +442,7 @@ cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn
         fc1000_bias_data_prev,
         fc1000_grad_input
     );
+    outputs.push_back("fc1000_grad_weights");
 
     auto pool5_grad = average_unpooling(
         "pool5_grad",
@@ -439,28 +453,28 @@ cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn
     );
 
     // [7x7x2048xF] res5c_grad->res5b_grad->res5a_grad [14x14x1024xF].
-    auto res5c_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "5c", pool5_grad, "res5b_relu", 512, 2048, use_existing_weights, false);
-    auto res5b_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "5b", res5c_grad, "res5a_relu", 512, 2048, use_existing_weights, false);
-    auto res5a_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "5a", res5b_grad, "res4f_relu", 512, 1024, use_existing_weights, true, { 1,1,2,2 });
+    auto res5c_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "5c", pool5_grad, "res5b_relu", 512, 2048, use_existing_weights, false, outputs);
+    auto res5b_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "5b", res5c_grad, "res5a_relu", 512, 2048, use_existing_weights, false, outputs);
+    auto res5a_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "5a", res5b_grad, "res4f_relu", 512, 1024, use_existing_weights, true, outputs, { 1,1,2,2 });
 
     // [14x14x1024xF] res4f_grad->res4e_grad->res4d_grad->res4c_grad->res4b_grad->res4a_grad [28x28x512xF].
-    auto res4f_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "4f", res5a_grad, "res4e_relu", 256, 1024, use_existing_weights, false);
-    auto res4e_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "4e", res4f_grad, "res4d_relu", 256, 1024, use_existing_weights, false);
-    auto res4d_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "4d", res4e_grad, "res4c_relu", 256, 1024, use_existing_weights, false);
-    auto res4c_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "4c", res4d_grad, "res4b_relu", 256, 1024, use_existing_weights, false);
-    auto res4b_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "4b", res4c_grad, "res4a_relu", 256, 1024, use_existing_weights, false);
-    auto res4a_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "4a", res4b_grad, "res3d_relu", 256, 512, use_existing_weights, true, { 1,1,2,2 });
+    auto res4f_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "4f", res5a_grad, "res4e_relu", 256, 1024, use_existing_weights, false, outputs);
+    auto res4e_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "4e", res4f_grad, "res4d_relu", 256, 1024, use_existing_weights, false, outputs);
+    auto res4d_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "4d", res4e_grad, "res4c_relu", 256, 1024, use_existing_weights, false, outputs);
+    auto res4c_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "4c", res4d_grad, "res4b_relu", 256, 1024, use_existing_weights, false, outputs);
+    auto res4b_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "4b", res4c_grad, "res4a_relu", 256, 1024, use_existing_weights, false, outputs);
+    auto res4a_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "4a", res4b_grad, "res3d_relu", 256, 512, use_existing_weights, true, outputs, { 1,1,2,2 });
 
     // [28x28x512xF] res3d_grad->res3c_grad->res3b_grad->res3a_grad [56x56x256xF].
-    auto res3d_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "3d", res4a_grad, "res3c_relu", 128, 512, use_existing_weights, false);
-    auto res3c_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "3c", res3d_grad, "res3b_relu", 128, 512, use_existing_weights, false);
-    auto res3b_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "3b", res3c_grad, "res3a_relu", 128, 512, use_existing_weights, false);
-    auto res3a_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "3a", res3b_grad, "res2c_relu", 128, 256, use_existing_weights, true, { 1,1,2,2 });
+    auto res3d_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "3d", res4a_grad, "res3c_relu", 128, 512, use_existing_weights, false, outputs);
+    auto res3c_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "3c", res3d_grad, "res3b_relu", 128, 512, use_existing_weights, false, outputs);
+    auto res3b_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "3b", res3c_grad, "res3a_relu", 128, 512, use_existing_weights, false, outputs);
+    auto res3a_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "3a", res3b_grad, "res2c_relu", 128, 256, use_existing_weights, true, outputs, { 1,1,2,2 });
 
     // [56x56x256xF] res2c_grad->res2b_grad->res2a_grad [56x56x64xF].
-    auto res2c_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "2c", res3a_grad, "res2b_relu", 64, 256, use_existing_weights, false);
-    auto res2b_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "2b", res2c_grad, "res2a_relu", 64, 256, use_existing_weights, false);
-    auto res2a_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "2a", res2b_grad, "pool1", 64, 64, use_existing_weights, true);
+    auto res2c_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "2c", res3a_grad, "res2b_relu", 64, 256, use_existing_weights, false, outputs);
+    auto res2b_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "2b", res2c_grad, "res2a_relu", 64, 256, use_existing_weights, false, outputs);
+    auto res2a_grad = add_residual_layers_backward(weights_dir, engine, topology_inst, "2a", res2b_grad, "pool1", 64, 64, use_existing_weights, true, outputs);
 
     auto pool1_grad = max_unpooling(
         "pool1_grad",
@@ -471,12 +485,14 @@ cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn
     );
 
     auto conv1_relu_grad = add_activation_grad_layer(topology_inst, "conv1_relu_grad", pool1_grad, "scale_conv1");
-    auto scale_conv1_grad = add_scale_layer_grad(topology_inst, "scale_conv1", conv1_relu_grad, "bn_conv1");
+    auto scale_conv1_grad = add_scale_layer_grad(topology_inst, "scale_conv1", conv1_relu_grad, "bn_conv1", outputs);
     auto bn_conv1_grad = add_batch_norm_layer_grad(topology_inst, "bn_conv1", scale_conv1_grad, "conv1");
 
 
     auto conv1_w_prev = file::create_mutable({ engine, join_path(weights_dir, "conv1_weights_prev.nnd") }, use_existing_weights ? false : true, conv1_w_mem_layout, cldnn::mutable_data::filler_type::zero);
     auto conv1_b_prev = file::create_mutable({ engine, join_path(weights_dir, "conv1_bias_prev.nnd") }, use_existing_weights ? false : true, conv1_b_mem_layout, cldnn::mutable_data::filler_type::zero);
+    outputs.push_back("conv1_weights_prev.nnd");
+    outputs.push_back("conv1_bias_prev.nnd");
 
     auto conv1_grad_weights = convolution_grad_weights(
         "output",
@@ -490,6 +506,7 @@ cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn
         { 0, 0, -3, -3 },
         { 1, 1, 1, 1 }
     );
+    outputs.push_back("output");
 
     topology_inst.add(softmax_loss_grad, labels,
         fc1000_grad_input,

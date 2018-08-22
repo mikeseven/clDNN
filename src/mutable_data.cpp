@@ -74,6 +74,9 @@ void mutable_data_node::fill_memory()
     case mutable_data::filler_type::zero:
         fill_memory_constant(0.f);
         break;
+    case mutable_data::filler_type::one:
+        fill_memory_constant(1.f);
+        break;
     case mutable_data::filler_type::xavier:
         fill_memory_xavier();
         break;

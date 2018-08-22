@@ -31,4 +31,4 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
 
 cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size, bool use_existing_weights, std::vector<cldnn::primitive_id>& outputs);
 
-cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size, const bool mean_subtract, bool use_existing_weights);
+cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, int32_t batch_size, const bool mean_subtract, bool use_existing_weights, std::vector<cldnn::primitive_id>& outputs);
