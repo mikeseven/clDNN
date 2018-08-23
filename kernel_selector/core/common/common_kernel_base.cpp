@@ -15,6 +15,7 @@
 */
 
 #include "common_kernel_base.h"
+#include <iostream>
 
 #if defined __INTEL_COMPILER
 #pragma warning disable: 177
