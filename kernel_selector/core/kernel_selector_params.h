@@ -18,8 +18,6 @@
 
 #include <string>
 #include <cstddef>
-#include <memory>
-#include <map>
 #include "common_types.h"
 #include "common_tools.h"
 #include "tensor_type.h"
@@ -223,7 +221,6 @@ namespace kernel_selector
         void EnableAllInputWeightsType();
         void EnableOutputWeightsType(WeightsType wt);
         void EnableAllOutputWeightsType();
-
         void EnableFP16Emulation() { key.restrict.val.FP16Emulation = 1; }
         void EnableDifferentTypes() { key.restrict.val.different_types = 1; }
         void EnableInputLayout(DataLayout l) { key.inputLayout |= (1 << l); }

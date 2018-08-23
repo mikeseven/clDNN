@@ -27,6 +27,10 @@
 #include <sstream>
 
 using namespace cldnn;
+namespace kernel_selector
+{
+    using jit_constants = kernel_selector::JitConstants;
+}
 
 namespace neural
 {

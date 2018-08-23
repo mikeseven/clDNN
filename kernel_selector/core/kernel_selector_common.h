@@ -15,13 +15,10 @@
 */
 
 #pragma once
-#include <limits>
 #include <string>
 #include <memory>
-#include "primitive_db.h"
 #include "kernel_selector_params.h"
 #include <cfloat>
-#include <sstream>
 
 #define AGE_BASED "-cl-no-subgroup-ifp"
 #define ROUND_ROBIN ""
@@ -46,11 +43,6 @@ namespace kernel_selector {
 #define DONT_USE_IF_HAVE_SOMETHING_ELSE (1000000.f)
 #define TUTORIAL_PRIORITY (DONT_USE_IF_HAVE_SOMETHING_ELSE + 1.f)
 #define NOT_SUPPORTED (FLT_MAX)
-
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    // usings
-    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-    using primitive_db = kernel_selector::gpu::cache::primitive_db;
 
     std::string GetStringEnv(const char* varName);
 
@@ -582,32 +574,7 @@ namespace kernel_selector {
         }
     }
 
-    inline std::string toString(NonLinearParams params)
-    {
-        std::stringstream s;
-        s << "m" << params.m << "_n" << params.n;
-        return s.str();
-    }
-
-    inline std::string toString(Tensor::Dim dim)
-    {
-        std::stringstream s;
-        s << "v" << dim.v << "_p" << dim.pitch << "_" << dim.pad.before << "_" << dim.pad.after;
-        return s.str();
-    }
-
-    inline std::string toString(DataTensor tensor)
-    {
-        std::stringstream s;
-        s << toString(tensor.GetDType()) << "_";
-        s << toString(tensor.GetLayout()) << "_";
-        int i = 0;
-        for (auto dim : tensor.GetDims())
-        {
-            s << "d" << i << "_" << toString(dim) << "_";
-            i++;
-        }
-        return s.str();
-    }
-
+    std::string toString(NonLinearParams params);
+    std::string toString(Tensor::Dim dim);
+    std::string toString(DataTensor tensor);
 }

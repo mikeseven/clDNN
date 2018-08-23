@@ -15,7 +15,8 @@
 */
 
 #include "kernel_selector_common.h"
- 
+#include <sstream>
+
 namespace kernel_selector 
 {
     std::string GetStringEnv(const char* varName)
@@ -42,5 +43,33 @@ namespace kernel_selector
 #endif
 
         return str;
+    }
+
+    std::string toString(NonLinearParams params)
+    {
+        std::stringstream s;
+        s << "m" << params.m << "_n" << params.n;
+        return s.str();
+    }
+    
+    std::string toString(Tensor::Dim dim)
+    {
+        std::stringstream s;
+        s << "v" << dim.v << "_p" << dim.pitch << "_" << dim.pad.before << "_" << dim.pad.after;
+        return s.str();
+    }
+
+    std::string toString(DataTensor tensor)
+    {
+        std::stringstream s;
+        s << toString(tensor.GetDType()) << "_";
+        s << toString(tensor.GetLayout()) << "_";
+        int i = 0;
+        for (auto dim : tensor.GetDims())
+        {
+            s << "d" << i << "_" << toString(dim) << "_";
+            i++;
+        }
+        return s.str();
     }
 }

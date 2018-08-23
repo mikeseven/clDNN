@@ -20,7 +20,6 @@
 #include "gpu/ocl_toolkit.h"
 #include "program_impl.h"
 
-#include "jitter.h"
 #include "kernel_selector_params.h"
 #include "kernel_selector_common.h"
 #include "tensor_type.h"
@@ -42,7 +41,6 @@ namespace kernel_selector
     using kernel_argument_types             = kernel_selector::ArgumentDescriptor::Types;
     using kernel_scalar_arguments           = kernel_selector::Scalars;
     using kernel_scalar_argument_types      = kernel_selector::ScalarDescriptor::Types;
-    using jit_constants                     = kernel_selector::JitConstants;
 
     using data_type                         = kernel_selector::Datatype;
     using kernel_type                       = kernel_selector::KernelType;

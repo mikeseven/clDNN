@@ -18,6 +18,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <map>
 #include "kernel_selector_common.h"
 
 namespace kernel_selector 
