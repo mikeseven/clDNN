@@ -17,6 +17,7 @@
 #pragma once
 
 #include <string>
+#include <memory>
 #include <cstddef>
 #include "common_types.h"
 #include "common_tools.h"
