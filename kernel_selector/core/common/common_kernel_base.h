@@ -18,8 +18,6 @@
 
 #include "kernel_base.h"
 #include "jitter.h"
-#include <sstream>
-#include <assert.h>
 
 namespace kernel_selector 
 {
