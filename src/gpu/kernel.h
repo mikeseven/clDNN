@@ -62,7 +62,6 @@ public:
         memory_impl::cptr hidden;
         memory_impl::cptr cell;
         memory_impl::cptr bias;
-        memory_impl::cptr lstm_packed;
         memory_impl::cptr weights_quantization_factors;
         memory_impl::cptr output_calibration_factors;
         memory_impl::cptr lookup_table;

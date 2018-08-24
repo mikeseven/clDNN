@@ -62,8 +62,6 @@ struct offset_order {
 };
 cldnn_lstm_offset_order default_offset_type = cldnn_lstm_offset_order_iofz;
 
-// [ARIEL] TODO: use move semantics when required
-
 template<typename T>
 T clip(T val, T threshold) {
     if (threshold > 0) {
@@ -74,7 +72,8 @@ T clip(T val, T threshold) {
 }
 
 template <typename T>
-VVVVF<T> lstm_elt_reference(VVVVF<T>& tempGEMM, VVVVF<T>& cell, bool hasCell = true, float clip_threshold = 0, bool input_forget = false) {
+VVVVF<T> lstm_elt_reference(VVVVF<T>& tempGEMM, VVVVF<T>& cell,
+                     bool hasCell = true, float clip_threshold = 0, bool input_forget = false, size_t dir = 0) {
     size_t hidden_size = tempGEMM[0][0][0].size() / 4;
     size_t batch_size = tempGEMM.size();
     VVVVF<T> tempOut(batch_size, VVVF<T>(2, VVF<T>(1, VF<T>(hidden_size))));
@@ -91,7 +90,7 @@ VVVVF<T> lstm_elt_reference(VVVVF<T>& tempGEMM, VVVVF<T>& cell, bool hasCell = t
                 val *= (1 - ft[h]);
             }
             if (hasCell) {
-                val += cell[b][0][0][h] * sigmoid(clip(ft[h], clip_threshold));
+                val += cell[b][dir][0][h] * sigmoid(clip(ft[h], clip_threshold));
             }
             tempOut[b][0][0][h] = std::tanh((float)val) * sigmoid(ot[h]);
             tempOut[b][1][0][h] = val;
@@ -102,7 +101,7 @@ VVVVF<T> lstm_elt_reference(VVVVF<T>& tempGEMM, VVVVF<T>& cell, bool hasCell = t
 
 template <typename T>
 VVVVF<T> lstm_gemm_reference(VVVVF<T>& input, VVVVF<T>& weights, VVVVF<T>& recurrent, VVVVF<T>& bias, VVVVF<T>& hidden,
-    bool hasBias = true, bool hasHidden = true) {
+    size_t seq, bool hasBias = true, bool hasHidden = true, size_t dir = 0, size_t input_dir = 0) {
     size_t input_size = input[0][0][0].size();
     size_t hidden_size = hidden[0][0][0].size();
     size_t batch_size = input.size();
@@ -113,15 +112,15 @@ VVVVF<T> lstm_gemm_reference(VVVVF<T>& input, VVVVF<T>& weights, VVVVF<T>& recur
         for (size_t y = 0; y < 4 * hidden_size; ++y) {
             T res = 0;
             for (size_t x = 0; x < input_size; ++x) {
-                res += (T)weights[0][0][y][x] * (T)input[b][0][0][x];
+                res += (T)weights[0][dir][y][x] * (T)input[b][seq][input_dir][x];
             }
             if (hasHidden) {
                 for (size_t x = 0; x < hidden_size; ++x) {
-                    res += (T)recurrent[0][0][y][x] * (T)hidden[b][0][0][x];
+                    res += (T)recurrent[0][dir][y][x] * (T)hidden[b][dir][0][x];
                 }
             }
             if (hasBias) {
-                res += (T)bias[0][0][0][y];
+                res += (T)bias[0][0][dir][y];
             }
             tempGEMM[b][0][0][y] = res;
         }
@@ -147,52 +146,45 @@ void print(const std::string& s, VVVVF<T>& input) {
     printf("---------------------------------------\n");
 }
 
-template<typename T>
-VVVVF<T> lstm_split_reference(VVVVF<T>& input, size_t idx, size_t bufferId) {
-    VVVVF<T> tempOut;
-    switch (idx) {
-    case 0:
-        tempOut = VVVVF<T>(input.size(), VVVF<T>(input[0].size(), VVF<T>(1, VF<T>(input[0][0][0].size()))));
-        for (size_t i = 0; i < input.size(); i++)
-            tempOut[i][0] = input[i][bufferId];
-        break;
-    case 1:
-        tempOut = VVVVF<T>(input.size(), VVVF<T>(1, VVF<T>(1, VF<T>(input[0][0][0].size()))));
-        //tempOut[0][0] = input[0][bufferId];
-        for (size_t i = 0; i < input.size(); i++)
-            tempOut[i][0] = input[i][bufferId];
-        break;
-    case 2:
-        tempOut = VVVVF<T>(1, VVVF<T>(1, VVF<T>(1, VF<T>(input[0][0][0].size()))));
-        tempOut[0][0][0] = input[0][0][bufferId];
-        break;
-    }
-    return tempOut;
-}
-
+// input     = [    batch,  sequence,       direction,      input_size ]
+// weights   = [        1, direction, 4 * hidden_size,      input_size ]
+// recurrent = [        1, direction, 4 * hidden_size,     hidden_size ]
+// biases    = [        1,         1,       direction, 4 * hidden_size ] optional
+// cell      = [    batch, direction,               1,     hidden_size ] optional
+// hidden    = [    batch, direction,               1,     hidden_size ] optional
+// tempGEMM  = [    batch,         1,               1, 4 * hidden_size ] temporary output
+// output    = [    batch,  sequence,       direction,     hidden_size ] output
 template <typename T>
 void lstm_reference(VVVVF<T>& input, VVVVF<T>& hidden, VVVVF<T>& cell, VVVVF<T>& weights, VVVVF<T>& recurrent, VVVVF<T>& bias,
     VVVVF<T>& output, VVVVF<T>& last_hidden, VVVVF<T>& last_cell,
     bool hasBias = true, bool hasInitialHidden = true, bool hasInitialCell = true,
     float clip_threshold = 0, bool input_forget = false) {
-
     size_t sequence_len = input[0].size();
     size_t dir_len = weights[0].size();
     size_t batch = input.size();
+    size_t input_directions = input[0][0].size();
     for (size_t dir = 0; dir < dir_len; ++dir) {
+        bool tempHasInitialHidden = hasInitialHidden;
+        bool tempHasInitialCell = hasInitialCell;
         for (size_t seq = 0; seq < sequence_len; ++seq) {
-            VVVVF<T> splitInput = lstm_split_reference(input, 1, seq);
-            VVVVF<T> tempGEMM = lstm_gemm_reference(splitInput, weights, recurrent, bias, hidden, hasBias, hasInitialHidden);
-            VVVVF<T> tempOutput = lstm_elt_reference(tempGEMM, cell, hasInitialCell, clip_threshold, input_forget);
-            for (size_t i = 0; i < batch; i++)
-                output[i][seq] = tempOutput[i][0]; // hidden, output[dir,seq] = tempOutput[0,dir,batch,hidden]
-            hidden = lstm_split_reference(tempOutput, 0, 0);
-            cell = lstm_split_reference(tempOutput, 0, 1);
-            hasInitialHidden = true;
-            hasInitialCell = true;
+            size_t seq_id = seq;
+            size_t input_direction = 0;
+            if (dir > 0) {
+                seq_id = input_directions == 1 ? sequence_len - seq - 1 : seq;
+                input_direction = input_directions - 1;
+            }
+            VVVVF<T> tempGEMM = lstm_gemm_reference(input, weights, recurrent, bias, hidden, seq_id, hasBias, tempHasInitialHidden, dir, input_direction);
+            VVVVF<T> tempOutput = lstm_elt_reference(tempGEMM, cell, tempHasInitialCell, clip_threshold, input_forget, dir);
+            // tempOutput[batch][0] = hidden and tempOutput[batch][1] = cell
+            for (size_t i = 0; i < batch; i++) {
+                output[i][seq][dir] = tempOutput[i][0][0];
+                hidden[i][dir] = tempOutput[i][0];
+                cell[i][dir] = tempOutput[i][1];
+            }
+            tempHasInitialHidden = true;
+            tempHasInitialCell = true;
         }
     }
-
     last_hidden = hidden;
     last_cell = cell;
 }
@@ -215,7 +207,7 @@ void generic_lstm_gemm_gpu_test(int sequence_len, int direction, int batch_size,
     VF<T> ref_bias_vec = flatten_4d<T>(cldnn::format::bfyx, ref_bias);
     VF<T> ref_hidden_vec = flatten_4d<T>(cldnn::format::bfyx, ref_hidden);
 
-    VVVVF<T> ref_output = lstm_gemm_reference(ref_input, ref_weights, ref_recurrent, ref_bias, ref_hidden, hasBias, hasHidden);
+    VVVVF<T> ref_output = lstm_gemm_reference(ref_input, ref_weights, ref_recurrent, ref_bias, ref_hidden, 0, hasBias, hasHidden);
 
     engine engine;
     memory input = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx,{ batch_size,   sequence_len,  input_size,      1 } });
@@ -444,7 +436,9 @@ template<typename T>
 void generic_lstm_gpu_test(int sequence_len, int direction, int batch_size, int input_size, int hidden_size,
     bool hasBias = true, bool hasInitialHidden = true, bool hasInitialCell = true,
     float clip_threshold = 0, bool input_forget = false) {
-    std::cout << "Input Size = " << input_size << " Hidden Size = " << hidden_size << " Sequence Len = " << sequence_len << " Batch Size = " << batch_size << std::endl;
+    std::cout << "Input Size = " << input_size << " Hidden Size = " << hidden_size
+              << " Sequence Len = " << sequence_len << " Batch Size = " << batch_size
+              << " Direction = " << direction << std::endl;
     int min_random = -2, max_random = 2;
     VVVVF<T> ref_input = generate_random_4d<T>(batch_size, sequence_len, 1, input_size, min_random, max_random);
     VVVVF<T> ref_weights = generate_random_4d<T>(1, direction, 4 * hidden_size, input_size, min_random, max_random);
@@ -512,11 +506,12 @@ void generic_lstm_gpu_test(int sequence_len, int direction, int batch_size, int 
 
     auto output = outputs.begin()->second.get_memory();
     auto output_ptr = output.pointer<T>();
+
     int i = 0;
     for (int b = 0; b < batch_size; ++b) {
         for (int s = 0; s < sequence_len; ++s) {
-            for (int x = 0; x < hidden_size; ++x) {
-                for (int d = 0; d < direction; ++d) {
+            for (int d = 0; d < direction; ++d) {
+                for (int x = 0; x < hidden_size; ++x) {
                     ASSERT_NEAR(ref_output[b][s][d][x], output_ptr[i++], FERROR);
                 }
             }
@@ -634,6 +629,26 @@ TEST(lstm_gpu, generic_lstm_input_forget_f32) {
 
 TEST(lstm_gpu, generic_lstm_clip_input_forget_f32) {
     generic_lstm_gpu_test<float>(3, 1, 3, 3, 2, true, true, true, 0.3f, 1);
+}
+
+TEST(lstm_gpu, generic_lstm_seq1_f32) {
+    generic_lstm_gpu_test<float>(1, 1, 1, 2, 4, true, true, true);
+}
+
+TEST(lstm_gpu, generic_lstm_bi_f32) {
+    generic_lstm_gpu_test<float>(5, 2, 3, 3, 2, false, false, true);
+}
+
+TEST(lstm_gpu, generic_lstm_bi_bias_f32) {
+    generic_lstm_gpu_test<float>(5, 2, 3, 3, 2, true, false, false);
+}
+
+TEST(lstm_gpu, generic_lstm_bi_bias_hidden_f32) {
+    generic_lstm_gpu_test<float>(5, 2, 3, 3, 2, true, true, false);
+}
+
+TEST(lstm_gpu, generic_lstm_bi_bias_hidden_dell_f32) {
+    generic_lstm_gpu_test<float>(5, 2, 3, 3, 2, true, true, true);
 }
 
 TEST(lstm_gpu, generic_lstm_offset_order_ifoz_f32) {

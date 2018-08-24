@@ -35,6 +35,7 @@ namespace kernel_selector
         }
 
         jit.AddConstants({ MakeJitConstant("WEIGHTS", weights)});
+        jit.AddConstants({ MakeJitConstant("DIRECTION", params.direction)});
 
         return jit;
     }

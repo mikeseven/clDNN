@@ -790,33 +790,33 @@ void program_impl::handle_lstm()
         hasLSTMParent = false;
         // replace lstm node with lstm_gemm and lstm_elt nodes
         if (node->is_type<lstm>()) {
-
+            bool initial_hidden_term = node->as<lstm>().initial_hidden_term();
+            bool initial_cell_term = node->as<lstm>().initial_cell_term();
+            bool bias_term = node->as<lstm>().bias_term();
             auto lstm_prim = node->as<lstm>().typed_desc();
-            std::vector<primitive_id> output_ids_offsets;
-            std::list<program_node*> concat_depends;
-            std::list<program_node*> cell_list;
             primitive_id weights_id = lstm_prim->weights;
             primitive_id recurrent_id = lstm_prim->recurrent;
-            primitive_id bias_id = node->as<lstm>().bias_term() ? lstm_prim->bias : "";
-            primitive_id hidden_id = node->as<lstm>().initial_hidden_term() ? lstm_prim->initial_hidden : "";
-            primitive_id cell_id = node->as<lstm>().initial_cell_term() ? lstm_prim->initial_cell : "";
+            primitive_id bias_id = bias_term ? lstm_prim->bias : "";
+            primitive_id initial_hidden_id = initial_hidden_term ? lstm_prim->initial_hidden : "";
+            primitive_id initial_cell_id = initial_cell_term ? lstm_prim->initial_cell : "";
             //removing connection with weights to get proper dependency order for next operations
             remove_connection(*nodes_map.at(weights_id), *node);
             remove_connection(*nodes_map.at(recurrent_id), *node);
-            if (node->as<lstm>().bias_term())
+            if (bias_term)
                 remove_connection(*nodes_map.at(bias_id), *node);
-            if (node->as<lstm>().initial_hidden_term())
-                remove_connection(*nodes_map.at(hidden_id), *node);
-            if (node->as<lstm>().initial_cell_term())
-                remove_connection(*nodes_map.at(cell_id), *node);
+            if (initial_hidden_term)
+                remove_connection(*nodes_map.at(initial_hidden_id), *node);
+            if (initial_cell_term)
+                remove_connection(*nodes_map.at(initial_cell_id), *node);
 
-            //input size lstm
             size_t sequence_len = node->get_dependencies().size();
 
             //calculating sizes
             auto input_size = node->get_dependency(0).get_output_layout().size;
-            auto recurrent_size = nodes_map.at(lstm_prim->recurrent)->get_output_layout().size;
-            auto hidden_size = tensor(input_size.batch[0], recurrent_size.feature[0], recurrent_size.spatial[0], input_size.feature[0]);
+            auto recurrent_size = nodes_map.at(recurrent_id)->get_output_layout().size;
+            auto hidden_size = tensor(input_size.batch[0], 1, recurrent_size.spatial[0], input_size.feature[0]);
+            size_t directions = recurrent_size.feature[0];
+            //auto weights_size = nodes_map.at(weights_id)->get_output_layout().size;
 
             //check if parent is lstm node
             for (auto& user : node->get_users())
@@ -827,72 +827,103 @@ void program_impl::handle_lstm()
                 }
             }
 
+            std::vector<program_node*> cell_list(directions * sequence_len);
+            std::vector<program_node*> concat_depends(directions * sequence_len);
+            std::vector<primitive_id> output_ids_offsets(directions * sequence_len);
+
+            auto multi_layer_crop_gates = [&](const std::string gate, bool initial_term, primitive_id& fwd_id, primitive_id& bck_id) {
+                if (initial_term && directions > 1) {
+                    primitive_id initial_id = fwd_id;
+                    fwd_id = node->id() + ":" + gate + "_fwd";
+                    auto fwd_node = std::make_shared<crop>(fwd_id, initial_id, hidden_size, tensor{ 0,0,0,0 });
+                    auto &n1 = get_or_create(fwd_node);
+                    add_connection(*nodes_map.at(initial_id), n1);
+                    bck_id = node->id() + ":" + gate + "_bck";
+                    auto bck_node = std::make_shared<crop>(bck_id, initial_id, hidden_size, tensor{ 0,1,0,0 });
+                    auto &n2 = get_or_create(bck_node);
+                    add_connection(*nodes_map.at(initial_id), n2);
+                }
+            };
+
+            primitive_id hidden_fwd_id = initial_hidden_id;
+            primitive_id hidden_bck_id = initial_hidden_id;
+            primitive_id cell_fwd_id = initial_cell_id;
+            primitive_id cell_bck_id = initial_cell_id;
+
+            multi_layer_crop_gates("hidden", initial_hidden_term, hidden_fwd_id, hidden_bck_id);
+            multi_layer_crop_gates("cell", initial_cell_term, cell_fwd_id, cell_bck_id);
+
             //lstm expanding
-            for (size_t i = 0; i < sequence_len; ++i) {
-                primitive_id lstm_gemm_id = node->id() + ":lstm_gemm" + getIdString(i);
-                primitive_id lstm_elt_id = node->id() + ":lstm_elt" + getIdString(i);
-                primitive_id crop_id = node->id() + ":crop" + getIdString(i);
-                primitive_id lstm_gemm_input_id = node->get_dependency(i).get_org_primitive_id();
+            for (size_t dir = 0; dir < directions; ++dir) {
+                auto hidden_id = dir == 0 ? hidden_fwd_id : hidden_bck_id;
+                auto cell_id = dir == 0 ? cell_fwd_id : cell_bck_id;
+                for (size_t i = 0; i < sequence_len; ++i) {
+                    size_t idx = i + dir * sequence_len;
+                    primitive_id lstm_gemm_id = node->id() + ":lstm_gemm" + getIdString(idx);
+                    primitive_id lstm_elt_id = node->id() + ":lstm_elt" + getIdString(idx);
+                    primitive_id crop_id = node->id() + ":crop" + getIdString(idx);
+                    size_t input_idx = dir  ? sequence_len - i - 1 : i;
+                    primitive_id lstm_gemm_input_id = node->get_dependency(input_idx).get_org_primitive_id();
 
-                auto lstm_gemm_node = std::make_shared<lstm_gemm>(lstm_gemm_id, lstm_gemm_input_id, weights_id, recurrent_id, bias_id, hidden_id);
-                auto &n1 = get_or_create(lstm_gemm_node);
+                    auto lstm_gemm_node = std::make_shared<lstm_gemm>(lstm_gemm_id, lstm_gemm_input_id, weights_id, recurrent_id, bias_id, hidden_id, (uint32_t)dir);
+                    auto &n1 = get_or_create(lstm_gemm_node);
 
+                    auto lstm_elt_node = std::make_shared<lstm_elt>(lstm_elt_id, lstm_gemm_id, cell_id, lstm_prim->clip, lstm_prim->input_forget,
+                        lstm_prim->activations, lstm_prim->activation_params, lstm_prim->offset_order);
+                    auto &n2 = get_or_create(lstm_elt_node);
+                    //adding lstm_elt as user
+                    add_connection(n1, n2);
+                    //adding dependecy to lstm_gemm node
+                    //input
+                    add_connection(node->get_dependency(input_idx), n1);
+                    //adding weights and initial values to lstm_gemm
+                    add_connection(*nodes_map.at(weights_id), n1);
+                    add_connection(*nodes_map.at(recurrent_id), n1);
+                    if (bias_term)
+                        add_connection(*nodes_map.at(bias_id), n1);
 
-                auto lstm_elt_node = std::make_shared<lstm_elt>(lstm_elt_id, lstm_gemm_id, cell_id, lstm_prim->clip, lstm_prim->input_forget,
-                    lstm_prim->activations, lstm_prim->activation_params, lstm_prim->offset_order);
-                auto &n2 = get_or_create(lstm_elt_node);
-                //adding lstm_elt as user
-                add_connection(n1, n2);
-                //adding dependecy to lstm_gemm node
-                //input
-                add_connection(node->get_dependency(i), n1);
-                //adding weights and initial values to lstm_gemm
-                add_connection(*nodes_map.at(weights_id), n1);
-                add_connection(*nodes_map.at(recurrent_id), n1);
-                if (node->as<lstm>().bias_term())
-                    add_connection(*nodes_map.at(bias_id), n1);
-
-                //adding cell and hiddens as dependencies
-                if (i > 0)
-                {
-                    add_connection(*cell_list.back(), n2);
-                    add_connection(*concat_depends.back(), n1);
-                }
-                //if initial values are present
-                else
-                {
-                    if (node->as<lstm>().initial_hidden_term())
-                        add_connection(*nodes_map.at(hidden_id), n1);
-                    if (node->as<lstm>().initial_cell_term())
-                        add_connection(*nodes_map.at(cell_id), n2);
-                }
-
-                //lstm_hidden
-                hidden_id = crop_id + ":hidden";
-                auto crop_hidden = std::make_shared<crop>(hidden_id, lstm_elt_id, hidden_size, tensor{ 0,0,0,0 });
-                auto &n3 = get_or_create(crop_hidden);
-                //adding eltwise as dependency to hidden
-                add_connection(n2, n3);
-
-                //if parent is lstm adding hiddens as dependency
-                if (hasLSTMParent)
-                {
-                    for (auto& user : node->get_users())
+                    //adding cell and hiddens as dependencies
+                    if (i > 0)
                     {
-                        add_connection(n3, *user);
+                        add_connection(*cell_list[size_t(i-1) * directions + dir], n2);
+                        add_connection(*(concat_depends[size_t(i-1) * directions + dir]), n1);
                     }
-                }
-                concat_depends.push_back(&n3);
+                    //if initial values are present
+                    else
+                    {
+                        if (initial_hidden_term)
+                            add_connection(*nodes_map.at(hidden_id), n1);
+                        if (initial_cell_term)
+                            add_connection(*nodes_map.at(cell_id), n2);
+                    }
 
-                //lstm_cell
-                if (i < sequence_len - 1) {
-                    cell_id = crop_id + ":cell";
-                    auto crop_cell = std::make_shared<crop>(cell_id, lstm_elt_id, hidden_size, tensor{ 0,1,0,0 });
-                    auto &n4 = get_or_create(crop_cell);
-                    add_connection(n2, n4);
-                    cell_list.push_back(&n4);
+                    //lstm_hidden
+                    hidden_id = crop_id + ":hidden";
+                    auto crop_hidden = std::make_shared<crop>(hidden_id, lstm_elt_id, hidden_size, tensor{ 0,0,0,0 });
+                    auto &n3 = get_or_create(crop_hidden);
+                    //adding eltwise as dependency to hidden
+                    add_connection(n2, n3);
+
+                    //if parent is lstm adding hiddens as dependency
+                    if (hasLSTMParent)
+                    {
+                        for (auto& user : node->get_users())
+                        {
+                            add_connection(n3, *user);
+                        }
+                    }
+                    concat_depends[i * directions + dir] = &n3;
+
+                    //lstm_cell
+                    if (i < sequence_len - 1) {
+                        cell_id = crop_id + ":cell";
+                        auto crop_cell = std::make_shared<crop>(cell_id, lstm_elt_id, hidden_size, tensor{ 0,1,0,0 });
+                        auto &n4 = get_or_create(crop_cell);
+                        add_connection(n2, n4);
+                        cell_list[i * directions + dir] = &n4;
+                    }
+                    output_ids_offsets[i * directions + dir] = hidden_id;
                 }
-                output_ids_offsets.push_back(hidden_id);
             }
 
             //if theres no next lstm, concatenation is created
@@ -1376,7 +1407,7 @@ void add_memory_dependency(program_node* node, program_node* dep)
         {
             add_memory_dependency(node, subdep);
             add_memory_dependency(subdep, node);
-        }        
+        }
     }
 }
 
