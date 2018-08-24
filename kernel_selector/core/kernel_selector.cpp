@@ -14,10 +14,10 @@
 // limitations under the License.
 */
 
+#include "kernel_base.h"
 #include "kernel_selector_common.h"
 #include "kernel_selector.h"
 #include <type_traits>
-#include <iostream>
 #include <sstream>
 #include <fstream>
 
