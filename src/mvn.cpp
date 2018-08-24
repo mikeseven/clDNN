@@ -16,7 +16,6 @@
 
 #include "mvn_inst.h"
 #include "primitive_type_base.h"
-#include "error_handler.h"
 #include "json_object.h"
 
 namespace cldnn
