@@ -179,6 +179,7 @@ struct execution_params {
     //training
     uint32_t image_number;
     uint32_t image_offset;
+    uint32_t epoch_number;
     bool use_existing_weights;
     bool compute_imagemean;
     float learning_rate;

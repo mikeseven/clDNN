@@ -76,7 +76,9 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("continue_training", bpo::bool_switch(),
             "Continue training with the data provided in train_iteration.txt file.")
         ("image_set", bpo::value<std::string>()->value_name("<image_set>")->default_value("imagenet"),
-            "Imageset that will be used. Currently supported: mnist (lenet), imagenet (vgg16), cifar10.");
+            "Imageset that will be used. Currently supported: mnist (lenet), imagenet (vgg16), cifar10.")
+        ("epoch", bpo::value<std::uint32_t>()->value_name("<epoch>")->default_value(1),
+            "Number of epochs that will be done for traning. Default value is 1.");
 
     // Conversions options.
     bpo::options_description weights_conv_cmdline_options("Weights conversion options");
@@ -114,6 +116,17 @@ void generate_bernoulli(cldnn::memory& mem, const float threshold, unsigned int 
     std::bernoulli_distribution distribution(threshold);
     for (uint32_t i = 0; i < (uint32_t)memory_layout.count(); i++)
         dst_ptr[i] = distribution(generator) * scale;
+}
+
+uint32_t get_output_index(uint32_t label_idx, uint32_t batch, uint32_t labels_num, uint32_t batch_size, cldnn::format layout)
+{
+    uint32_t index = 0;
+    if (layout == cldnn::format::bfyx || layout == cldnn::format::byxf)
+        index = batch * labels_num + label_idx;
+    else
+        index = batch + label_idx * batch_size;
+
+    return index;
 }
 
 void run_topology(const execution_params &ep)
@@ -290,34 +303,22 @@ void run_topology(const execution_params &ep)
                     network.set_input_data("input", input);
                     auto outputs = network.execute();
                     auto o = outputs.at("output").get_memory().pointer<float>();
+                    auto vals_layout_format = outputs.at("output").get_memory().get_layout().format;
 
                     auto l = labels.pointer<float>();
                     for (uint32_t b = 0; b < batch_size; b++)
                     {
                         auto e = l[b];
                         std::vector< std::pair<float, uint32_t> > output_vec;
-                        //TODO: update this lines to detect output layout and read results based on that
-                        if (batch_size == 1) {
-                            //check if true label is on top of predictions
-                            for (uint32_t j = 0; j < labels_num; j++)
-                                output_vec.push_back(std::make_pair(o[j], j));
 
-                            std::sort(output_vec.begin(), output_vec.end(), std::greater<std::pair<float, uint32_t> >());
+                        //check if true label is on top of predictions
+                        for (uint32_t j = 0; j < labels_num; j++)
+                            output_vec.push_back(std::make_pair(o[get_output_index(j, b, labels_num, batch_size, vals_layout_format)], j));
 
-                            if (output_vec[0].second == e)
-                                acc++;
-                        }
-                        else
-                        {
-                            //check if true label is on top of predictions
-                            for (uint32_t j = 0; j < labels_num; j++)
-                                output_vec.push_back(std::make_pair(o[b + j * batch_size], j));
+                        std::sort(output_vec.begin(), output_vec.end(), std::greater<std::pair<float, uint32_t> >());
 
-                            std::sort(output_vec.begin(), output_vec.end(), std::greater<std::pair<float, uint32_t> >());
-
-                            if (output_vec[0].second == e)
-                                acc++;
-                        }
+                        if (output_vec[0].second == e)
+                            acc++;
                     }
                 }
                 std::cout << "Images processed = " << ep.image_number << std::endl;
@@ -329,46 +330,52 @@ void run_topology(const execution_params &ep)
                 if (ep.image_set != "mnist")
                     throw std::runtime_error("Lenet only support mnist images. Please use --image_set=mnist!");
 
+                uint32_t labels_num = 10;
                 auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
                 float base_learning_rate = ep.learning_rate;
                 float learning_rate = base_learning_rate;
-                for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
+                for (uint32_t epoch_it = 0; epoch_it < ep.epoch_number; epoch_it++)
                 {
-                    double loss = 0;
-                    //update learning rate, policy "inv", gamma=0.0001, power=0.75.
-                    //TODO: enable getting learning rate params from command line
-                    learning_rate = base_learning_rate * pow(1.f + 0.0001f * learn_it, -0.75f);
-                    loss = 0;
-                    network.set_learning_rate(learning_rate);
-
-                    if (ep.use_half)
-                        load_data_from_file_list_lenet<half_t>(input_list, input, learn_it, batch_size, true, labels);
-                    else
-                        load_data_from_file_list_lenet(input_list, input, learn_it, batch_size, true, labels);
-
-                    network.set_input_data("input", input);
-                    network.set_input_data("labels", labels);
-                    auto time = execute_cnn_topology(network, ep, energyLib, output, learn_it, ep.image_offset + ep.image_number / batch_size - 1);
-                    time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-                    auto expected = labels.pointer<float>();
-                    auto vals = output.pointer<float>();
-
-                    for (uint32_t b = 0; b < batch_size; b++)
+                    for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
                     {
-                        auto e = (uint32_t)expected[b];
-                        loss -= log(std::max(vals[b + e * batch_size], std::numeric_limits<float>::min()));
+                        double loss = 0;
+                        //update learning rate, policy "inv", gamma=0.0001, power=0.75.
+                        //TODO: enable getting learning rate params from command line
+                        learning_rate = base_learning_rate * pow(1.f + 0.0001f * learn_it, -0.75f);
+                        loss = 0;
+                        network.set_learning_rate(learning_rate);
+
+                        if (ep.use_half)
+                            load_data_from_file_list_lenet<half_t>(input_list, input, learn_it, batch_size, true, labels);
+                        else
+                            load_data_from_file_list_lenet(input_list, input, learn_it, batch_size, true, labels);
+
+                        network.set_input_data("input", input);
+                        network.set_input_data("labels", labels);
+                        auto time = execute_cnn_topology(network, ep, energyLib, output, learn_it, ep.image_offset + ep.image_number / batch_size - 1);
+                        time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
+                        auto expected = labels.pointer<float>();
+                        auto vals = output.pointer<float>();
+                        auto vals_layout_format = output.get_layout().format;
+
+                        for (uint32_t b = 0; b < batch_size; b++)
+                        {
+                            auto e = (uint32_t)expected[b];
+                            loss -= log(std::max(vals[get_output_index(e, b, labels_num, batch_size, vals_layout_format)], std::numeric_limits<float>::min()));
+                        }
+
+                        loss = loss / batch_size;
+                        std::cout << "Epoch: " << epoch_it << ", Iter: " << learn_it - ep.image_offset << std::endl;
+                        std::cout << "Loss = " << loss << std::endl;
+                        std::cout << "Learning Rate = " << learning_rate << std::endl;
                     }
-                    loss = loss / batch_size;
-                    std::cout << "Iter: " << learn_it - ep.image_offset << std::endl;
-                    std::cout << "Loss = " << loss << std::endl;
-                    std::cout << "Learning Rate = " << learning_rate << std::endl;
                 }
                 continue;
             }
             else if (ep.topology_name == "vgg16_train" || ep.topology_name == "resnet50_train")
             {
                 if (ep.image_set != "imagenet")
-                    throw std::runtime_error("Vgg16 support only imagenet images!");
+                    throw std::runtime_error("Vgg16 and resnet50 support only imagenet images!");
 
                 float acc = 0;
                 auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
@@ -376,53 +383,81 @@ void run_topology(const execution_params &ep)
                 auto fc7_dropout_mem = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,4096,1 } });
                 float base_learning_rate = ep.learning_rate;
                 float learning_rate = base_learning_rate;
-                for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
+                for (uint32_t epoch_it = 0; epoch_it < ep.epoch_number; epoch_it++)
                 {
-                    double loss = 0;
-                    //update learning rate, policy "step", gamma=0.001, stepsize=1000.
-                    //TODO: enable getting learning rate params from command line
-                    learning_rate = base_learning_rate * pow(0.001f, (learn_it / 128.f) / 1000.f);
-                    network.set_learning_rate(learning_rate);
-
-                    if (ep.use_half)
-                        load_data_from_file_list_imagenet<half_t>(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
-                    else
-                        load_data_from_file_list_imagenet(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
-
-                    //add dropout layers to VGG16
-                    if (ep.topology_name == "vgg16_train")
+                    for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
                     {
-                        generate_bernoulli<float>(fc6_dropout_mem, 0.5f, learn_it);
-                        generate_bernoulli<float>(fc7_dropout_mem, 0.5f, learn_it + 1);
-                        network.set_input_data("fc6_dropout_mask", fc6_dropout_mem);
-                        network.set_input_data("fc7_dropout_mask", fc7_dropout_mem);
+                        double loss = 0;
+                        //TODO: enable getting learning rate params from command line
+                        if (ep.topology_name == "vgg16_train")
+                        {
+                            //update learning rate, policy "step", gamma=0.001, stepsize=1000.
+                            learning_rate = base_learning_rate * pow(0.001f, ((epoch_it * ep.image_number + learn_it) / 128.f) / 1000.f);
+                        }
+                        else //resnet50
+                        {
+                            //update learning rate, policy "step", gamma=0.1, stepsize=200000.
+                            learning_rate = base_learning_rate * pow(0.1f, (epoch_it * ep.image_number + learn_it) / 32500.f);
+                        }
+                        network.set_learning_rate(learning_rate);
+
+                        if (ep.use_half)
+                            load_data_from_file_list_imagenet<half_t>(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
+                        else
+                            load_data_from_file_list_imagenet(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
+
+                        //add dropout layers to VGG16
+                        if (ep.topology_name == "vgg16_train")
+                        {
+                            generate_bernoulli<float>(fc6_dropout_mem, 0.5f, learn_it);
+                            generate_bernoulli<float>(fc7_dropout_mem, 0.5f, learn_it + 1);
+                            network.set_input_data("fc6_dropout_mask", fc6_dropout_mem);
+                            network.set_input_data("fc7_dropout_mask", fc7_dropout_mem);
+                        }
+                        network.set_input_data("input", input);
+                        network.set_input_data("labels", labels);
+
+                        auto time = execute_cnn_topology(network, ep, energyLib, output, learn_it, ep.image_offset + ep.image_number / batch_size - 1);
+                        time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
+                        auto expected = labels.pointer<float>();
+                        auto vals = output.pointer<float>();
+                        auto vals_layout_format = output.get_layout().format;
+
+                        float acc = 0;
+                        uint32_t labels_num = 1000;
+
+                        for (uint32_t b = 0; b < batch_size; b++)
+                        {
+                            auto e = (uint32_t)expected[b];
+                            std::vector< std::pair<float, uint32_t> > output_vec;
+                            auto index = get_output_index(e, b, labels_num, batch_size, vals_layout_format);
+
+                            loss -= log(std::max(vals[index], std::numeric_limits<float>::min()));
+
+                            std::cout << "Prob of correct result: " << vals[index] << std::endl;
+
+                            //check if true label is on top of predictions
+                            for (uint32_t j = 0; j < labels_num; j++)
+                                output_vec.push_back(std::make_pair(vals[get_output_index(j, b, labels_num, batch_size, vals_layout_format)], j));
+
+                            std::sort(output_vec.begin(), output_vec.end(), std::greater<std::pair<float, uint32_t> >());
+
+                            if (output_vec[0].second == e)
+                                acc++;
+                        }
+                        loss = loss / batch_size;
+                        std::cout << "Train accuracy: " << acc / batch_size << std::endl;
+                        std::cout << "Epoch: " << epoch_it << ", Iter: " << learn_it - ep.image_offset << std::endl;
+                        std::cout << "Loss = " << loss << std::endl;
+                        std::cout << "Learning Rate = " << learning_rate << std::endl;
                     }
-                    network.set_input_data("input", input);
-                    network.set_input_data("labels", labels);
-
-                    auto time = execute_cnn_topology(network, ep, energyLib, output, learn_it, ep.image_offset + ep.image_number / batch_size - 1);
-                    time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-                    auto expected = labels.pointer<float>();
-                    auto vals = output.pointer<float>();
-
-                    for (uint32_t b = 0; b < batch_size; b++)
-                    {
-                        auto e = (uint32_t)expected[b];
-                        std::vector< std::pair<float, uint32_t> > output_vec;
-
-                        loss -= log(std::max(vals[b + e * batch_size], std::numeric_limits<float>::min()));
-                    }
-                    loss = loss / batch_size;
-                    std::cout << "Iter: " << learn_it - ep.image_offset << std::endl;
-                    std::cout << "Loss = " << loss << std::endl;
-                    std::cout << "Learning Rate = " << learning_rate << std::endl;
                 }
                 continue;
             }
             else if (ep.topology_name == "vgg16_test")
             {
                 if (ep.image_set != "imagenet")
-                    throw std::runtime_error("Vgg16 supports only imagenet images!");
+                    throw std::runtime_error("Vgg16 and resnet50 supports only imagenet images!");
 
                 float acc = 0;
                 uint32_t labels_num = 1000;
@@ -439,6 +474,7 @@ void run_topology(const execution_params &ep)
                     time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
                     auto expected = labels.pointer<float>();
                     auto vals = output.pointer<float>();
+                    auto vals_layout_format = output.get_layout().format;
 
                     for (uint32_t b = 0; b < batch_size; b++)
                     {
@@ -447,7 +483,7 @@ void run_topology(const execution_params &ep)
 
                         //check if true label is on top of predictions
                         for (uint32_t j = 0; j < labels_num; j++)
-                            output_vec.push_back(std::make_pair(vals[j], j));
+                            output_vec.push_back(std::make_pair(vals[get_output_index(j, b, labels_num, batch_size, vals_layout_format)], j));
 
                         std::sort(output_vec.begin(), output_vec.end(), std::greater<std::pair<float, uint32_t> >());
 
@@ -606,6 +642,7 @@ int main(int argc, char* argv[])
         ep.image_number = parsed_args["image_number"].as<std::uint32_t>();
         ep.use_existing_weights = parsed_args["use_existing_weights"].as<bool>();
         ep.image_set = parsed_args["image_set"].as<std::string>();
+        ep.epoch_number = parsed_args["epoch"].as<std::uint32_t>();
 
         if(ep.image_set != "mnist" && ep.image_set != "imagenet" && ep.image_set != "cifar10")
             std::cerr << "ERROR: image_set (\"" << ep.topology_name << "\") is not implemented!!!" << std::endl;
