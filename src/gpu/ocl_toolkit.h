@@ -28,11 +28,8 @@
 #include "engine_info.h"
 #include "event_impl.h"
 
-#include <boost/optional.hpp>
-
 #include <memory>
 #include <chrono>
-#include <fstream>
 
 namespace cldnn { 
     typedef cl::vector<cl::vector<unsigned char>> kernels_binaries_vector;
@@ -169,7 +166,8 @@ private:
 
     std::string _extensions;
 
-    boost::optional<std::ofstream> _log_file;
+    struct ocl_logger;
+    std::unique_ptr<ocl_logger> _logger;
 
     //returns whether a barrier has been added
     void sync_events(std::vector<event_impl::ptr> const& deps);
