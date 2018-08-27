@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-
-#include "include/include_all.cl"
+#include "include/common.cl"
+#include "include/activation_functions.cl"
+#include "include/data_types.cl"
+#include "include/fetch.cl"
 #include "include/mmad.cl"
-
 
 #define FILTER_IFM_MMAD_NUM ((FILTER_IFM_NUM + 31) / 32)
 #define FILTER_OFM_MMAD_NUM ((FILTER_OFM_NUM + 7) / 8)
@@ -40,34 +41,25 @@ KERNEL(fully_connected_kernel_mmad_batched)(
 {
     const uint sg_channel = get_sub_group_local_id();
 
-    const uint x = (get_group_id(0) * 8) % INPUT0_SIZE_X;
-    const uint y = (get_group_id(0) * 8) / INPUT0_SIZE_X;
+    const uint batch_id = (uint)get_group_id(0) * 8;
     const uint f = get_global_id(1) % FILTER_OFM_ALIGNED;
-    const uint b = get_global_id(1) / FILTER_OFM_ALIGNED;
 
-    const int input_x = x;
-    const int input_y = y;
-
-    const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET;
-    uint in_addr = input_offset + input_x * INPUT0_X_PITCH + input_y * INPUT0_Y_PITCH;
+    uint in_addr = INPUT0_OFFSET + batch_id * INPUT0_BATCH_PITCH;
 
     const uint filter_offset = (get_group_id(1) % FILTER_OFM_MMAD_NUM) * FILTER_OFM_BLOCK_PITCH;
     uint filter_idx = filter_offset;
 
     int8 tileA;
     int8 tileB;
-    int8 tileC;
-    for(uint i = 0; i < 8; i++)
-    {
-        tileC[i] = 0;
-    }
+    int8 tileC = 0;
 
-    for (uint k = 0; k < FILTER_IFM_MMAD_NUM; ++k)
+    for (uint k = 0; k < FILTER_IFM_MMAD_NUM * FILTER_SIZE_X * FILTER_SIZE_Y; ++k)
     {
         // load A tile ( input )
+        // load 8 batches 4 channels per WI, so we'll have 8x32 block
         for(uint i = 0; i < 8; i++)
         {
-            uint tmp_addr = in_addr + i * INPUT0_X_PITCH;
+            uint tmp_addr = in_addr + i * INPUT0_BATCH_PITCH;
             tileA[i] = as_int(intel_sub_group_block_read((const __global uint*)(input + tmp_addr)));
         }
 
@@ -75,7 +67,7 @@ KERNEL(fully_connected_kernel_mmad_batched)(
         tileB = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
     
         // compute C tile ( output )
-        tileC = MMAD_8x8(tileA, tileB, tileC);
+        tileC = MMAD_8x8(tileA, tileB, tileC); // here we output 8 batches per workitem, and each workitem gets different output feature
 
         in_addr += 32; // 4 features per channel * 8 SIMD channels
         filter_idx += 32*8; // 32 features per channel * 8 output features per SIMD channel
@@ -83,7 +75,7 @@ KERNEL(fully_connected_kernel_mmad_batched)(
 
 #if BIAS_TERM
 #if   BIAS_PER_OUTPUT
-    const uint bias_index = GET_DATA_INDEX(BIAS, b, f, y, x);
+    const uint bias_index = GET_DATA_INDEX(BIAS, batch_id, f, y, x);
 #elif BIAS_PER_OFM
     const uint bias_index = f;
 #endif
@@ -98,13 +90,12 @@ KERNEL(fully_connected_kernel_mmad_batched)(
 #endif // BIAS_TERM
 
     // save to output
-    for(uint i = 0; i < 8; i++)
+    if(f < FILTER_OFM_NUM)
     {
-        const uint curr_x = (x + i) % INPUT0_SIZE_X;
-        const uint curr_y = y + (x + i) / INPUT0_SIZE_X;
-        if(curr_x < INPUT0_SIZE_X && curr_y < INPUT0_SIZE_Y)
+        for(uint i = 0; i < 8; i++)
         {
-            const uint dst_index = GET_DATA_INDEX(OUTPUT, b, f, curr_y, curr_x);
+            const uint curr_b = batch_id + i;
+            const uint dst_index = GET_DATA_INDEX(OUTPUT, curr_b, f, 0, 0);
             output[dst_index] = ACTIVATION(convert_char(tileC[i]), NL_M, NL_N);
         }
     }

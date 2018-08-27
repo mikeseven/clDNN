@@ -48,8 +48,13 @@ namespace kernel_selector
 
         const auto& params = static_cast<const fully_connected_params&>(p);
 
+        // we do not support padded input
+        if (params.inputs[0].X().pad.Total() != 0 || params.inputs[0].Y().pad.Total() != 0)
+            return false;
+
         size_t batch = params.inputs[0].Batch().v;
-        if (batch != 64)
+        // batch must be a multiple of 8
+        if (batch % 8 != 0)
         {
             return false;
         }
@@ -80,8 +85,8 @@ namespace kernel_selector
         const auto of_maps = params.output.Feature().v;
         const size_t of_threads_per_batch = RoundUp(of_maps, sub_group_size);
 
-        runInfo->gws0 = RoundUp(params.output.X().v * params.output.Y().v, 8) / 8;
-        runInfo->gws1 = of_threads_per_batch * params.output.Batch().v;
+        runInfo->gws0 = params.output.Batch().v / 8; // we process 8 batches in a single WG
+        runInfo->gws1 = of_threads_per_batch;
         runInfo->gws2 = 1;
 
         runInfo->lws0 = 1;
