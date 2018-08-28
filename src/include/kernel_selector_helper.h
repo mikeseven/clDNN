@@ -332,7 +332,7 @@ template <typename p_type>
 inline void convert_activation_func_params(const p_type primitive, kernel_selector::base_params& params)
 {
     const float negative_slope = primitive->activation_negative_slope;
-    if (negative_slope)
+    if (negative_slope != 0.0f)
     {
         params.activationParams.m = negative_slope;
         params.activationFunc = kernel_selector::activation_function::RELU_NEGATIVE_SLOPE;
