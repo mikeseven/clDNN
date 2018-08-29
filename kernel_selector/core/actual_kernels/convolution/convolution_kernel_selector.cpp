@@ -37,6 +37,7 @@
 #include "convolution_kernel_byxf_af32_depthwise.h"
 #include "convolution_kernel_mmad_batched.h"
 #include "convolution_kernel_bfyx_depthwise_weights_lwg.h"
+#include "convolution_kernel_gemm_mmad8_32x3sg_128x128wg_slm_int8.h"
 
 namespace kernel_selector 
 {
@@ -63,6 +64,7 @@ namespace kernel_selector
         Attach<ConvolutionKernel_byxf_af32_depthiwise>();
         Attach<ConvolutionKernel_mmad_batched>();
         Attach<ConvolutionKernel_bfyx_depthwise_weights_lwg>();
+        Attach<convolution_kernel_gemm_mmad8_32x3sg_128x128wg_slm_int8>();
         //Attach<ConvolutionKernel_Tutorial>(); //In order to use this implementation for tutorial purposes please uncomment this line
     }
 

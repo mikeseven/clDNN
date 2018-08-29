@@ -14,6 +14,23 @@
 // limitations under the License.
 */
 
+uint8 FUNC(intel_sub_group_block_read_uint8)(const __local uint* p)
+{
+    uint8 ret;
+    uint idx = get_sub_group_local_id();
+
+    ret.s0 = p[idx]; idx += get_max_sub_group_size();
+    ret.s1 = p[idx]; idx += get_max_sub_group_size();
+    ret.s2 = p[idx]; idx += get_max_sub_group_size();
+    ret.s3 = p[idx]; idx += get_max_sub_group_size();
+    ret.s4 = p[idx]; idx += get_max_sub_group_size();
+    ret.s5 = p[idx]; idx += get_max_sub_group_size();
+    ret.s6 = p[idx]; idx += get_max_sub_group_size();
+    ret.s7 = p[idx]; idx += get_max_sub_group_size();
+
+    return ret;
+}
+
 inline int FUNC(mmad_4)(char4 input, char4 weight, int acc)
 {
 	acc += (input[0] * weight[0]);
@@ -85,10 +102,12 @@ inline int8 FUNC(mmad8x8)(int8 A_vectors, int8 B_vectors, int8 acc)
 int __builtin_IB_dpas_8(int c, int8 a, int pa, int8 b, int pb) __attribute__((const));
 int4 __builtin_IB_sub_group_idpas_s8_s8_8_4 ( int4 acc,int4 a,int8 b ) __attribute__((const));
 int8 __builtin_IB_sub_group_idpas_s8_s8_8_8( int8 acc, int8 a, int8 b ) __attribute__((const));
+uint8 __builtin_IB_simd_block_read_8_local( const __local uint* );
 
 #define MMAD_8(A, B, C) (__builtin_IB_dpas_8(C, A, PRECISION_S8, B, PRECISION_S8))
 #define MMAD_4x8(A, B, C) (__builtin_IB_sub_group_idpas_s8_s8_8_4(C, A, B))
 #define MMAD_8x8(A, B, C) (__builtin_IB_sub_group_idpas_s8_s8_8_8(C, A, B))
+#define SLM_BLOCK_READ_8(A) (__builtin_IB_simd_block_read_8_local(A))
 
 #else
 // ## PROCESS PPC END
@@ -96,6 +115,7 @@ int8 __builtin_IB_sub_group_idpas_s8_s8_8_8( int8 acc, int8 a, int8 b ) __attrib
 #define MMAD_8(A, B, C) FUNC_CALL(mmad8)(A, B, C)
 #define MMAD_4x8(A, B, C) FUNC_CALL(mmad4x8)(A, B, C)
 #define MMAD_8x8(A, B, C) FUNC_CALL(mmad8x8)(A, B, C)
+#define SLM_BLOCK_READ_8(A) (FUNC_CALL(intel_sub_group_block_read_uint8)(A))
 
 // ## PROCESS PPC BEGIN (DPAS)
 #endif
