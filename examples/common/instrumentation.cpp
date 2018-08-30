@@ -401,6 +401,11 @@ namespace instrumentation {
         {
             size.feature[0] = ((size.feature[0] + 31) / 32) * 32;
         }
+        if (mem.get_layout().format == cldnn::format::fs_bs_yx_bsv4_fsv32)
+        {
+            size.feature[0] = ((size.feature[0] + 31) / 32) * 32;
+            size.batch[0] = ((size.batch[0] + 3) / 4) * 4;
+        }
         for (cldnn::tensor::value_type b = 0; b < size.batch[0]; ++b)
         {
             for (cldnn::tensor::value_type f = 0; f < size.feature[0]; ++f)
@@ -426,6 +431,11 @@ namespace instrumentation {
         if (mem.get_layout().format == cldnn::format::byxf_af32)
         {
             feature = ((feature + 31) / 32) * 32;
+        }
+        if (mem.get_layout().format == cldnn::format::fs_bs_yx_bsv4_fsv32)
+        {
+            feature = ((feature + 31) / 32) * 32;
+            batch = ((batch + 3) / 4) * 4;
         }
         auto eng_type =  "gpu" ;
         std::vector<std::vector<std::stringstream>> streams(batch);
