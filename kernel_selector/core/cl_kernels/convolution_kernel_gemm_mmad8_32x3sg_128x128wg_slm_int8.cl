@@ -18,11 +18,6 @@
 #include "include/fetch.cl"
 #include "include/mmad.cl"
 
-#define FILTER_IFM_MMAD_NUM ((FILTER_IFM_NUM + 31) / 32)
-#define FILTER_OFM_MMAD_NUM ((FILTER_OFM_NUM + 7) / 8)
-#define FILTER_IFM_ALIGNED (FILTER_IFM_MMAD_NUM * 32)
-#define FILTER_OFM_ALIGNED (FILTER_OFM_MMAD_NUM * 8)
-
 #define WG_TILE_M 128  // Work-Group tile size M, Must be mutliple of 32
 #define WG_TILE_N 128  // Work-Group tile size N, Must be mutliple of 32
 
@@ -40,9 +35,9 @@
 #define WG_SIZE (SG_SIZE * WG_TILE_N / SG_TILE_N) * (WG_TILE_M / SG_TILE_M)
 
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
-KERNEL(Kernel_GEMM_DPAS8_32x32SG_128x128WG_SLM_INT8)(
+KERNEL(Kernel_GEMM_MMAD8_32x32SG_128x128WG_SLM_INT8)(
     __global int8* const g_matrixA,
-    __global int8* g_matrixC,
+    __global char8* g_matrixC,
     __global int8* const g_matrixB,
 #if BIAS_TERM
     __global BIAS_TYPE* biases,
@@ -84,6 +79,7 @@ KERNEL(Kernel_GEMM_DPAS8_32x32SG_128x128WG_SLM_INT8)(
     const uint sg_local_id = sg_local_idY * get_local_size(DIM_X) / SG_SIZE + sg_local_idX;
 
     // Registers
+    // int8 x 4 x 32 = 32x32 ints for accumulators 
     int8 regC[(SIMD_LANE_M / 8) * SIMD_LANE_N] = {0}; // Each work-item responsible for 32x4 ints elts
     int8 rowA[SG_TILE_M / 8]; // each work-item will hold 1/8 of matrixA
     int8 colB; // each lane will store 32x4 piece of matrixB
@@ -122,7 +118,7 @@ KERNEL(Kernel_GEMM_DPAS8_32x32SG_128x128WG_SLM_INT8)(
          * SLM setup - HDC read only
          */
 
-        // Overlap HDC reads with DPAS compute
+        // Overlap HDC reads with MMAD compute
         int8 hdcReadValueA = g_matrixA[g_idxA];
         int8 hdcReadValueB = g_matrixB[g_idxB];
 
@@ -130,7 +126,7 @@ KERNEL(Kernel_GEMM_DPAS8_32x32SG_128x128WG_SLM_INT8)(
         g_idxB += MATRIX_SMALL_K / sizeof(int8);
 
         /*
-         * DPAS compute
+         * MMAD compute
          */
 
         // Read tile A from SLM to regA
@@ -142,7 +138,7 @@ KERNEL(Kernel_GEMM_DPAS8_32x32SG_128x128WG_SLM_INT8)(
             l_offsetTileATemp += 8 * (MATRIX_SMALL_K / sizeof(uint));
         }
 
-        // Read tile B from SLM to regB and compute DPAS
+        // Read tile B from SLM to regB and compute MMAD
         colB = l_workGroupTileB[l_offsetTileB_col0];
         __attribute__((opencl_unroll_hint(SG_TILE_M / 8)))
         for (uint j = 0; j < (SG_TILE_M / 8); ++j)
@@ -187,6 +183,7 @@ KERNEL(Kernel_GEMM_DPAS8_32x32SG_128x128WG_SLM_INT8)(
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 
+
     // Write final accumulated values
     uint cOffset = sg_global_idX * ((MATRIX_M / 8) * SG_TILE_N) + sg_global_idY * (SG_TILE_M / 8) +
                    sg_tid * (MATRIX_M / 8);
@@ -196,13 +193,17 @@ KERNEL(Kernel_GEMM_DPAS8_32x32SG_128x128WG_SLM_INT8)(
         __attribute__((opencl_unroll_hint(SIMD_LANE_M / 8)))
         for (uint j = 0; j < (SIMD_LANE_M / 8); ++j)
         {
-            g_matrixC[cOffset + j] = regC[i*(SIMD_LANE_M / 8) + j];
+            char8 to_return;
+            for(uint z = 0; z < 8; z++)
+            {
+                to_return[z] = convert_char(regC[i*(SIMD_LANE_M / 8) + j][z]);
+            }
+            if( (cOffset + j) * 8 < OUTPUT_LENGTH)
+            {
+                g_matrixC[cOffset + j] = to_return;
+            }
+
         }
         cOffset += SG_SIZE * (MATRIX_M / 8);
     }
 }
-
-#undef FILTER_IFM_MMAD_NUM
-#undef FILTER_OFM_MMAD_NUM
-#undef FILTER_IFM_ALIGNED
-#undef FILTER_OFM_ALIGNED

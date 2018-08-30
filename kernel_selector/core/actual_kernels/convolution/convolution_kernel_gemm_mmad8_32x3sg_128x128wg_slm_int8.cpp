@@ -74,20 +74,23 @@ namespace kernel_selector {
         const auto k = input.Feature().v;
         const auto n = output.Feature().v * output.Batch().v;
 
-        if (m % 128 != 0)
+        if (input.Batch().v != 64)
             return false;
 
-        if (k % 32 != 0)
+        if (m % (128*8) != 0)
             return false;
 
-        if (n % 128 != 0)
+        if (k % (32*8) != 0/* || output.Feature().v != 1024*/)
+            return false;
+
+        if (n % (128*8) != 0)
             return false;
 
         return true;
     }
 
-#define WG_TILE_M 128  // Work-Group tile size M, Must be mutliple of 32
-#define WG_TILE_N 128  // Work-Group tile size N, Must be mutliple of 32
+#define WG_TILE_M 32  // Work-Group tile size M, Must be mutliple of 32
+#define WG_TILE_N 32  // Work-Group tile size N, Must be mutliple of 32
 
 #define DIM_X 0
 #define DIM_Y 1
