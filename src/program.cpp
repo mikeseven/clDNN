@@ -434,7 +434,6 @@ void program_impl::pre_optimize_graph()
 
     if (options.get<build_option_type::optimize_data>()->enabled())
     {
-        //prepare_buffer_fusing();
         prepare_primitive_fusing();
     }
 
@@ -457,8 +456,7 @@ void program_impl::pre_optimize_graph()
     //try to fuse buffers (i.e. depth_concat in bfyx format) after padding calculations
     if (options.get<build_option_type::optimize_data>()->enabled())
     {
-        //prepare_buffer_fusing();
-        prepare_primitive_fusing();
+        prepare_buffer_fusing();
     }
 
     dump_program("7_pre_optimized", true);

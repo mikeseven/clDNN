@@ -126,7 +126,7 @@ static const char global_range_message[] = "normalize dumped pixel color by full
 DEFINE_bool(global_range, false, global_range_message);
 #endif
 
-static const char mem_pool_message[] = "switch clDNN Memory Pool opt ON";
+static const char mem_pool_message[] = "switch clDNN Memory Pool opt OFF";
 DEFINE_bool(mem_pool, true, mem_pool_message);
 
 extern "C" {
@@ -707,7 +707,7 @@ int main(int argc, char *argv[]) {
         }
 
         if (FLAGS_mem_pool) {
-            sts = _plugin->SetConfig({ { CLDNNConfigParams::KEY_CLDNN_MEM_POOL, PluginConfigParams::YES } }, &dsc);
+            sts = _plugin->SetConfig({ { CLDNNConfigParams::KEY_CLDNN_MEM_POOL, PluginConfigParams::NO } }, &dsc);
         }
 
         // Load model to plugin
