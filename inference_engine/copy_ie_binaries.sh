@@ -1,1 +1,1 @@
-sudo cp -Rf /mnt/samba/Users/leszczyn/clDNN_Validation/cldnn-val-56/linux/* /tmp/Tests/IE/bin/IE_LNX/
+sudo cp -Rf /mnt/samba/Users/leszczyn/clDNN_Validation/cldnn-val-58/linux/* /tmp/Tests/IE/bin/IE_LNX/

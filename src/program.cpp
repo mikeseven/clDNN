@@ -434,6 +434,12 @@ void program_impl::pre_optimize_graph()
 
     if (options.get<build_option_type::optimize_data>()->enabled())
     {
+        //prepare_buffer_fusing();
+        prepare_primitive_fusing();
+    }
+
+    if (options.get<build_option_type::optimize_data>()->enabled())
+    {
         layout_optimizer lo(output_size_handling_enabled);
         reorder_inputs(lo);
         // this code should move to post compilation after kernel selector will support handling reorder bias
@@ -452,7 +458,7 @@ void program_impl::pre_optimize_graph()
     if (options.get<build_option_type::optimize_data>()->enabled())
     {
         prepare_buffer_fusing();
-        prepare_primitive_fusing();
+        //prepare_primitive_fusing();
     }
 
     dump_program("7_pre_optimized", true);
@@ -2790,8 +2796,8 @@ void program_impl::prepare_primitive_fusing()
             // - primitives input cannot be output
             // - no activation additional input
             // - input was optimized
-            if (node.has_padded_dependency() || (input.is_output() && !is_debug) || node.get_dependencies().size() != 1 ||
-                input.can_be_optimized())
+            if (node.has_padded_dependency() || (input.is_output() && !is_debug) || node.is_output() || 
+                node.get_dependencies().size() != 1 ||  input.can_be_optimized())
                 return;
 
             // - check if there is no activation fused already

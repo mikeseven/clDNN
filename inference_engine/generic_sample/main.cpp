@@ -26,7 +26,9 @@
 #include <limits>
 #include <chrono>
 #include <ie_plugin_ptr.hpp>
+#include <cldnn/cldnn_config.hpp>
 #include <ie_plugin_config.hpp>
+//#include <../dpd_vcp_dl-scoring_engine/src/extension/ext_list.hpp> //for CPU
 #include "../dpd_vcp_dl-scoring_engine/include/cpp/ie_cnn_net_reader.h"
 #include "../dpd_vcp_dl-scoring_engine/samples/common/format_reader/format_reader_ptr.h"
 #include "../dpd_vcp_dl-scoring_engine/samples/common/samples/common.hpp"
@@ -104,8 +106,28 @@ DEFINE_bool(newapi, false, newapi_message);
 static const char tuning_message[] = "tuning file to be used/created";
 DEFINE_string(tuning, "", tuning_message);
 
+static const char src_dump_message[] = "directory for clDNN source dump";
+DEFINE_string(src_dump_dir, "", src_dump_message);
+
+static const char graph_dump_message[] = "directory for clDNN graph dump";
+DEFINE_string(graph_dump_dir, "", graph_dump_message);
+
 static const char scale_message[] = "scale output for comparison";
 DEFINE_double(scale, 1.0, scale_message);
+
+#ifdef ENABLE_DEBUG_BMP_OUTPUT
+static const char dump_bmp_message[] = "dump output and diff tensors as a set of 2D pictures (treating spatial dims as XY)";
+DEFINE_bool(dump_bmp, false, dump_bmp_message);
+
+static const char mark_zero_message[] = "mark zero pixels with color in dumped pictures (dump_bmp ON)";
+DEFINE_bool(mark_zero, false, mark_zero_message);
+
+static const char global_range_message[] = "normalize dumped pixel color by full tensor value range than by local image range (dump_bmp ON)";
+DEFINE_bool(global_range, false, global_range_message);
+#endif
+
+static const char mem_pool_message[] = "switch clDNN Memory Pool opt OFF";
+DEFINE_bool(mem_pool, true, mem_pool_message);
 
 extern "C" {
 #include "md5.h"  // taken from http://openwall.info/wiki/people/solar/software/public-domain-source-code/md5
@@ -192,6 +214,14 @@ static void showUsage() {
     std::cout << "    -compare <filename> " << compare_message << std::endl;
     std::cout << "    -csv <filename>     " << csv_message << std::endl;
     std::cout << "    -tuning <filename>  " << tuning_message << std::endl;
+    std::cout << "    -src_dump_dir <dir>  " << src_dump_message << std::endl;
+    std::cout << "    -graph_dump_dir <dir>" << graph_dump_message << std::endl;
+#ifdef ENABLE_DEBUG_BMP_OUTPUT
+    std::cout << "    -dump_bmp           " << dump_bmp_message << std::endl;
+    std::cout << "    -mark_zero          " << mark_zero_message << std::endl;
+    std::cout << "    -global_range       " << global_range_message << std::endl;
+#endif
+    std::cout << "    -mem_pool           " << mem_pool_message << std::endl;
 }
 
 std::vector<std::string> ParseFlagList(const std::vector<std::string>& args, const std::string& flag) {
@@ -235,6 +265,183 @@ double get_rapl_energy_info(unsigned int power_domain, unsigned int node)
     return total_energy_consumed;
 }
 #endif
+
+#ifdef ENABLE_DEBUG_BMP_OUTPUT
+#include <sys/types.h>
+#include <sys/stat.h>
+
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include "../../thirdparty/stb_lib/stb_image_write.h"
+
+#if defined(_WIN32)
+#define mkdir(dir, mode) _mkdir(dir)
+#endif
+
+//rainbow color map functions
+float clamp(float val)
+{
+    return std::max(0.0f, std::min(1.0f, val));
+}
+
+float colormap_red(float x) {
+    if (x < 0.7) {
+        return 4.0 * x - 1.5;
+    }
+    else {
+        return -4.0 * x + 4.5;
+    }
+}
+
+float colormap_green(float x) {
+    if (x < 0.5) {
+        return 4.0 * x - 0.5;
+    }
+    else {
+        return -4.0 * x + 3.5;
+    }
+}
+
+float colormap_blue(float x) {
+    if (x < 0.3) {
+        return 4.0 * x + 0.5;
+    }
+    else {
+        return -4.0 * x + 2.5;
+    }
+}
+
+void colormap(float x,
+    unsigned char& r, unsigned char& g, unsigned char& b) {
+    r = (unsigned char)(clamp(colormap_red(x)) * 255.f);
+    g = (unsigned char)(clamp(colormap_green(x)) * 255.f);
+    b = (unsigned char)(clamp(colormap_blue(x)) * 255.f);
+}
+
+struct bmp_settings {
+    bmp_settings() :
+        mark_zero(true),
+        map_to_rainbow(false),
+        global_range(false) {};
+
+    bool mark_zero;
+    bool map_to_rainbow;
+    bool global_range;
+};
+
+void dump_as_bitmaps(std::string name, float* data,
+    const SizeVector& dims, bmp_settings& opts) {
+    std::replace(name.begin(), name.end(), '\\', '_');
+    std::replace(name.begin(), name.end(), '/', '_');
+
+    std::string dir_name = name + "_bmp_dir/";
+    mkdir(dir_name.c_str(), 0755);
+
+    std::ofstream layer_bmp_log;
+    layer_bmp_log.open(dir_name + "bmp_dump_log.txt");
+
+    if (dims.size() == 1) {
+        layer_bmp_log << "Only one dimension: " << dims[0] << std::endl;
+        layer_bmp_log.close();
+        return;
+    }
+    size_t x = dims[0], y = dims[1], total_images = 1;
+    size_t img_sz = x * y;
+
+    for (size_t k = 0; k < dims.size(); ++k)
+        if (dims[k])
+            total_images *= dims[k];
+
+    total_images /= img_sz;
+
+    //  sanity checks
+    if (img_sz < 100) {
+        layer_bmp_log << "Image size is too small" << std::endl;
+        layer_bmp_log.close();
+        return;
+    }
+    else if (x < 10 || y < 10 || x > 2048 || y > 2048) {
+        layer_bmp_log << "Dimensions are unapropriate to dump - " << y << "x" << x << std::endl;
+        layer_bmp_log.close();
+        return;
+    }
+    else {
+        float ratio = static_cast<float>(x) / static_cast<float>(y);
+        if (ratio < 1.0) ratio = 1.0 / ratio;
+
+        if (ratio > 8.f) {
+            layer_bmp_log << "Suspicious aspect ratio - " << ratio << std::endl;
+            layer_bmp_log.close();
+            return;
+        }
+    }
+
+    layer_bmp_log << total_images << " images to write ..." << std::endl;
+
+    float* dataPtr = data;
+    float gmaxval = -FLT_MAX, gminval = FLT_MAX;
+
+    int stride = 1;
+    if (opts.global_range) {
+        for (size_t p = 0; p < total_images * img_sz; p++) {
+            float val = dataPtr[p];
+            if (val > gmaxval) gmaxval = val;
+            if (val < gminval) gminval = val;
+        }
+    }
+
+    for (size_t img = 0; img < total_images; img++) {
+        std::string img_name = "img" + std::to_string(img) + ".bmp";
+
+        //  copy image plane to separate buffer,
+        //  normalize and convert to 3-channel 8-bit bmp
+        std::vector<float> imgbuf(img_sz);
+
+        float maxval = -FLT_MAX, minval = FLT_MAX;
+        for (size_t i = 0; i < y; i++)
+            for (size_t j = 0; j < x; j++) {
+                float val = dataPtr[(i*x + j) * stride];
+                if (val > maxval) maxval = val;
+                if (val < minval) minval = val;
+                imgbuf[i*x + j] = val;
+            }
+
+        if (minval >= 0.f && maxval <= 0.f) {
+            layer_bmp_log << img_name << " all zero." << std::endl;
+        }
+        else {
+            //const float mult = 256.f / (maxval - minval);
+            const float mult = 1.f / (opts.global_range ? (gmaxval - gminval) : (maxval - minval));
+            const float base = (opts.global_range ? gminval : minval);
+            std::vector<unsigned char> bmpbuf(img_sz * 3);
+            unsigned char* bmp_ptr = bmpbuf.data();
+
+            for (int i = 0; i < imgbuf.size(); i++, bmp_ptr += 3) {
+                float pixel_color = mult * (imgbuf[i] - base);
+
+                if (opts.map_to_rainbow) {
+                    colormap(pixel_color, bmp_ptr[0], bmp_ptr[1], bmp_ptr[2]);
+                }
+                else if (opts.mark_zero && imgbuf[i] >= 0.f && imgbuf[i] <= 0.f) {
+                    //if the value is exactly zero
+                    bmp_ptr[0] = 65;
+                    bmp_ptr[1] = bmp_ptr[2] = 0;
+                }
+                else {
+                    bmp_ptr[0] = bmp_ptr[1] = bmp_ptr[2] = (unsigned char)(pixel_color * 255.f);
+                }
+            }
+
+            //  write bmp file
+            std::string full_name = dir_name + img_name;
+            stbi_write_bmp(full_name.c_str(), x, y, 3, (const void *)bmpbuf.data());
+        }
+        dataPtr += img_sz;
+    }
+
+    layer_bmp_log.close();
+}
+#endif
+
 /**
 * \brief The main function of inference engine sample application
 * @param argc - The number of arguments
@@ -242,7 +449,7 @@ double get_rapl_energy_info(unsigned int power_domain, unsigned int node)
 * @return 0 if all good
 */
 int main(int argc, char *argv[]) {
-    
+
     std::cout << "InferenceEngine: " << InferenceEngine::GetInferenceEngineVersion() << "\n";
     std::string commandLine;
     for (int i = 0; i < argc; i++) {
@@ -278,6 +485,16 @@ int main(int argc, char *argv[]) {
         InferenceEngine::InferenceEnginePluginPtr _plugin(
             selectPlugin({ "", FLAGS_pp, OS_LIB_FOLDER, DEFAULT_PATH_P, "" /* This means "search in default paths including LD_LIBRARY_PATH" */ }, FLAGS_p, FLAGS_d));
 
+        /*If CPU device, load default library with extensions that comes with the product*/
+        if (FLAGS_d.find("CPU") != std::string::npos) {
+            /**
+            * cpu_extensions library is compiled from "extension" folder containing
+            * custom MKLDNNPlugin layer implementations. These layers are not supported
+            * by mkldnn, but they can be useful for inferring custom topologies.
+            **/
+            //_plugin->AddExtension(std::make_shared<Extensions::Cpu::CpuExtensions>(), nullptr);
+        }
+
         const PluginVersion *pluginVersion;
         _plugin->GetVersion((const InferenceEngine::Version *&)pluginVersion);
         std::cout << pluginVersion << std::endl;
@@ -292,6 +509,15 @@ int main(int argc, char *argv[]) {
             _plugin->SetConfig({ { PluginConfigParams::KEY_DUMP_KERNELS, PluginConfigParams::YES } }, nullptr);
         }
 
+        // Src dump
+        if (!FLAGS_src_dump_dir.empty()) {
+            _plugin->SetConfig({ { CLDNNConfigParams::KEY_CLDNN_SOURCES_DUMPS_DIR, FLAGS_src_dump_dir } }, nullptr);
+        }
+        // Graph dump
+        if (!FLAGS_graph_dump_dir.empty()) {
+            _plugin->SetConfig({ { CLDNNConfigParams::KEY_CLDNN_GRAPH_DUMPS_DIR, FLAGS_graph_dump_dir } }, nullptr);
+        }
+
         // Tuning
         if (FLAGS_tuning.size()) {
             _plugin->SetConfig({ { PluginConfigParams::KEY_TUNING_FILE, FLAGS_tuning } }, nullptr);
@@ -299,6 +525,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Power gadget
+
 #ifndef _WIN32
         // Always intialize the power_gov library first
         init_rapl();
@@ -316,7 +543,6 @@ int main(int argc, char *argv[]) {
             }
         }
 #endif
-
 
 
         // Read network
@@ -371,6 +597,7 @@ int main(int argc, char *argv[]) {
         else {
             network.getNetwork().setBatchSize(batchSize);
         }
+
         // read images
         std::vector<std::shared_ptr<unsigned char>> readImages;
         for (size_t i = 0; i < inputNames.size(); i++) {
@@ -440,6 +667,7 @@ int main(int argc, char *argv[]) {
             }
         }
 
+        //create outputs blobs
         InferenceEngine::BlobMap outputBlobs;
         if (FLAGS_newapi) {
             THROW_IE_EXCEPTION << "NewAPI option is currently broken!";
@@ -453,9 +681,8 @@ int main(int argc, char *argv[]) {
             //}
         }
         else {
-            InferenceEngine::OutputsDataMap out;
-            out = network.getNetwork().getOutputsInfo();
-            for (auto &&item : out) {
+            InferenceEngine::OutputsDataMap outputs = network.getNetwork().getOutputsInfo();
+            for (auto &&item : outputs) {
                 InferenceEngine::SizeVector outputDims = item.second->dims;
                 InferenceEngine::TBlob<float>::Ptr output;
                 item.second->precision = InferenceEngine::Precision::FP32;
@@ -477,6 +704,10 @@ int main(int argc, char *argv[]) {
             else {
                 std::cout << "[INFO] Loaded configuration file: " << xml << std::endl;
             }
+        }
+
+        if (FLAGS_mem_pool) {
+            sts = _plugin->SetConfig({ { CLDNNConfigParams::KEY_CLDNN_MEM_POOL, PluginConfigParams::NO } }, &dsc);
         }
 
         // Load model to plugin
@@ -511,8 +742,8 @@ int main(int argc, char *argv[]) {
         else if (sts == InferenceEngine::NOT_IMPLEMENTED) {
             THROW_IE_EXCEPTION << "Model cannot be loaded! Plugin doesn't support this model!";
         }
-
         // Start measuring power Windows
+
 #ifdef _WIN32
         if (!FLAGS_pi.empty()) {
             std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
@@ -532,6 +763,8 @@ int main(int argc, char *argv[]) {
         double total = 0.0;
         double framesPerSecond = 0.0;
         uint32_t niter = FLAGS_ni;
+
+
 #ifndef _WIN32 
         double packageEnergySum = get_rapl_energy_info(0, 0);
         double gpuEnergySum = get_rapl_energy_info(2, 0);
@@ -560,14 +793,14 @@ int main(int argc, char *argv[]) {
                 }
 #endif
             }
-
         }
 
         std::cout << "Average running time of one iteration: " << total / static_cast<double>(niter) << " ms" << std::endl;
         framesPerSecond = (static_cast<double>(batchSize) * 1000.0) / (total / static_cast<double>(niter));
         std::cout << "Average FPS: " << framesPerSecond << std::endl;
         std::sort(times_vector.begin(), times_vector.end());
-       
+
+
         int median_index = niter / 2;
         if (niter % 2 == 1)
             median_index++;
@@ -577,7 +810,8 @@ int main(int argc, char *argv[]) {
             std::cout << "Median running time of one iteration: " << times_vector.at(median_index - 1) << " ms" << std::endl;
             std::cout << "Median FPS: " << medianFramesPerSecond << std::endl;
         }
-        
+
+
 #ifndef _WIN32
         packageEnergySum = get_rapl_energy_info(0, 0) - packageEnergySum;
         gpuEnergySum = get_rapl_energy_info(2, 0) - gpuEnergySum;
@@ -649,6 +883,13 @@ int main(int argc, char *argv[]) {
             std::cout << std::setw(20) << std::left << "Total time: " + std::to_string(totalTime) << " microseconds" << std::endl;
         }
 
+#ifdef ENABLE_DEBUG_BMP_OUTPUT
+        bmp_settings opts;
+        opts.global_range = FLAGS_global_range;
+        opts.mark_zero = FLAGS_mark_zero;
+        opts.map_to_rainbow = !FLAGS_compare.empty();
+#endif
+
         //dump raw outputs
         if (!FLAGS_dump.empty()) {
             std::ofstream outFile(FLAGS_dump, std::ofstream::out);
@@ -666,6 +907,12 @@ int main(int argc, char *argv[]) {
                 // print raw values
                 const TBlob<float>::Ptr pBlob = std::dynamic_pointer_cast<TBlob<float>>(output.second);
                 float* pData = pBlob->data();
+
+#ifdef ENABLE_DEBUG_BMP_OUTPUT
+                if (FLAGS_dump_bmp)
+                    dump_as_bitmaps(output.first, pData, dims, opts);
+#endif
+
                 std::vector<size_t> newline;
                 size_t dimsProd = 1;
                 for (const auto& d : dims) {
@@ -780,6 +1027,7 @@ int main(int argc, char *argv[]) {
                         const TBlob<float>::Ptr pBlob = std::dynamic_pointer_cast<TBlob<float>>(output.second);
                         float* pOutputValues = pBlob->data();
                         auto& refValues = refOutputs.at(output.first);
+
                         for (size_t i = 0; i < refValues.size(); i++)
                         {
                             float diff = fabs((pOutputValues[i] * float(FLAGS_scale)) - refValues[i]);
@@ -792,6 +1040,11 @@ int main(int argc, char *argv[]) {
                                 maxDiffReference = refValues[i];
                             }
 
+#ifdef ENABLE_DEBUG_BMP_OUTPUT
+                            if (FLAGS_dump_bmp)
+                                refValues[i] = diff;
+#endif
+
                             for (int i = 0; i < diffBins.size(); i++)
                             {
                                 if (diff > diffBinsEps[i])
@@ -801,6 +1054,14 @@ int main(int argc, char *argv[]) {
                                 }
                             }
                         }
+
+#ifdef ENABLE_DEBUG_BMP_OUTPUT
+                        if (FLAGS_dump_bmp)
+                            dump_as_bitmaps(output.first + "_diff",
+                                refValues.data(),
+                                output.second->dims(),
+                                opts);
+#endif
 
                         // print results
                         auto numValues = refValues.size();
@@ -831,10 +1092,10 @@ int main(int argc, char *argv[]) {
             }
         }
 
-        }
+    }
     catch (InferenceEngineException ex) {
         std::cerr << ex.what() << std::endl;
         return 3;
     }
     return 0;
-    }
+}

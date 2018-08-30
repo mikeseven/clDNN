@@ -150,7 +150,7 @@ namespace kernel_selector {
         if (params.GetType() == kType &&
             options.GetType() == kType)
         {
-            std::string hash = std::to_string(std::hash<std::string>{}(params.to_string()));
+            std::string hash = std::to_string(create_hash(params.to_string()));
             ParamsKey requireKey = params.GetParamsKey().Merge(options.GetSupportedKey());
             
             std::tuple<std::string, int> cachedKernelConfig;
