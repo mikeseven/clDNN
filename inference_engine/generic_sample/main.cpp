@@ -76,10 +76,8 @@ DEFINE_uint32(ni, 1, ni_message);
 static const char pc_message[] = "used to turn on performance counters";
 DEFINE_bool(pc, false, pc_message);
 
-#ifdef ENABLE_PI
 static const char pi_message[] = "used to turn on power instrumentation (supported only on Windows)";
 DEFINE_string(pi, "", pi_message);
-#endif
 
 static const char dump_message[] = "if defined will dump raw outputs to the specified filename";
 DEFINE_string(dump, "", dump_message);
@@ -207,9 +205,7 @@ static void showUsage() {
     std::cout << "    -m <path>           " << model_message << std::endl;
     std::cout << "    -ni <iter>          " << ni_message << std::endl;
     std::cout << "    -pc                 " << pc_message << std::endl;
-#ifdef ENABLE_PI
     std::cout << "    -pi <csv filename>  " << pi_message << std::endl;
-#endif
     std::cout << "    -dump <filename>    " << dump_message << std::endl;
     std::cout << "    -layer <layername>  " << layer_message << std::endl;
     std::cout << "    -im_info            " << im_info_message << std::endl;
@@ -238,7 +234,6 @@ std::vector<std::string> ParseFlagList(const std::vector<std::string>& args, con
     return result;
 }
 
-#ifdef ENABLE_PI 
 #ifndef _WIN32
 
 extern double MAX_ENERGY_STATUS_JOULES;
@@ -269,7 +264,6 @@ double get_rapl_energy_info(unsigned int power_domain, unsigned int node)
 
     return total_energy_consumed;
 }
-#endif
 #endif
 
 #ifdef ENABLE_DEBUG_BMP_OUTPUT
@@ -531,7 +525,7 @@ int main(int argc, char *argv[]) {
         }
 
         // Power gadget
-#ifdef ENABLE_PI
+
 #ifndef _WIN32
         // Always intialize the power_gov library first
         init_rapl();
@@ -548,7 +542,6 @@ int main(int argc, char *argv[]) {
                 FLAGS_pi.clear();
             }
         }
-#endif
 #endif
 
 
@@ -751,14 +744,12 @@ int main(int argc, char *argv[]) {
         }
         // Start measuring power Windows
 
-#ifdef ENABLE_PI
 #ifdef _WIN32
         if (!FLAGS_pi.empty()) {
             std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
             std::wstring pi_filename = converter.from_bytes(FLAGS_pi);
             energyLib.StartLog((wchar_t*)pi_filename.c_str());
         }
-#endif
 #endif
         // Infer model
         auto pos = FLAGS_m.find_last_of("\\/");
@@ -774,11 +765,9 @@ int main(int argc, char *argv[]) {
         uint32_t niter = FLAGS_ni;
 
 
-#ifdef ENABLE_PI
 #ifndef _WIN32 
         double packageEnergySum = get_rapl_energy_info(0, 0);
         double gpuEnergySum = get_rapl_energy_info(2, 0);
-#endif
 #endif
         for (uint32_t i = 0; i < niter; ++i) {
 
@@ -794,7 +783,6 @@ int main(int argc, char *argv[]) {
             ms d = std::chrono::duration_cast<ms>(fs);
             total += static_cast<double>(d.count());
             times_vector.push_back(static_cast<double>(d.count()));
-#ifdef ENABLE_PI
             if (!FLAGS_pi.empty()) {
 #ifdef _WIN32
                 if (i < (niter - 1)) {
@@ -805,7 +793,6 @@ int main(int argc, char *argv[]) {
                 }
 #endif
             }
-#endif
         }
 
         std::cout << "Average running time of one iteration: " << total / static_cast<double>(niter) << " ms" << std::endl;
@@ -825,7 +812,6 @@ int main(int argc, char *argv[]) {
         }
 
 
-#ifdef ENABLE_PI
 #ifndef _WIN32
         packageEnergySum = get_rapl_energy_info(0, 0) - packageEnergySum;
         gpuEnergySum = get_rapl_energy_info(2, 0) - gpuEnergySum;
@@ -838,7 +824,6 @@ int main(int argc, char *argv[]) {
         std::cout << "FPS/Package Power [FPS/W]: " << framesPerSecond / packagePower << std::endl;
         std::cout << "FPS/Gpu Power [FPS/W]: " << framesPerSecond / gpuPower << std::endl;
         terminate_rapl();
-#endif
 #endif
 
         // Check errors
