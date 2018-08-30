@@ -72,25 +72,25 @@ namespace kernel_selector {
 
         const auto m = input.X().v * input.Y().v *input.Batch().v;
         const auto k = input.Feature().v;
-        const auto n = output.Feature().v * output.Batch().v;
+        const auto n = output.Feature().v;
 
         if (input.Batch().v != 64)
             return false;
 
-        if (m % (128*8) != 0)
+        if (m % 128 != 0)
             return false;
 
-        if (k % (32*8) != 0/* || output.Feature().v != 1024*/)
+        if (k % 32 != 0)
             return false;
 
-        if (n % (128*8) != 0)
+        if (n % 128 != 0)
             return false;
 
         return true;
     }
 
-#define WG_TILE_M 32  // Work-Group tile size M, Must be mutliple of 32
-#define WG_TILE_N 32  // Work-Group tile size N, Must be mutliple of 32
+#define WG_TILE_M 128  // Work-Group tile size M, Must be mutliple of 32
+#define WG_TILE_N 128  // Work-Group tile size N, Must be mutliple of 32
 
 #define DIM_X 0
 #define DIM_Y 1
@@ -111,7 +111,7 @@ namespace kernel_selector {
 
         const auto m = input.X().v * input.Y().v *input.Batch().v;
         const auto k = input.Feature().v;
-        const auto n = output.Feature().v * output.Batch().v;
+        const auto n = output.Feature().v;
 
         // Sub-group size used by "convolution_1x1_gemm_MMAD" kernel.
         constexpr size_t sub_group_size = 8;
@@ -143,7 +143,7 @@ namespace kernel_selector {
 
         const auto m = input.X().v * input.Y().v *input.Batch().v;
         const auto k = input.Feature().v;
-        const auto n = output.Feature().v * output.Batch().v;
+        const auto n = output.Feature().v;
 
         // pitch for special block format used in this kernel
         const size_t ifm_32_aligned = Align(params.weights.IFM().v, 32);
