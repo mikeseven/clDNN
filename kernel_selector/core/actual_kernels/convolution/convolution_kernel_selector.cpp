@@ -35,6 +35,7 @@
 #include "convolution_kernel_MMAD_blocks.h"
 #include "convolution_kernel_1x1_gemm_MMAD.h"
 #include "convolution_kernel_byxf_af32_depthwise.h"
+#include "convolution_kernel_mmad_batched.h"
 
 #include <iostream>
  
@@ -61,6 +62,7 @@ namespace kernel_selector
         Attach<ConvolutionKernel_MMAD_blocks>();
         Attach<ConvolutionKernel_1x1_gemm_MMAD>();
         Attach<ConvolutionKernel_byxf_af32_depthiwise>();
+        Attach<ConvolutionKernel_mmad_batched>();
         //Attach<ConvolutionKernel_Tutorial>(); //In order to use this implementation for tutorial purposes please uncomment this line
     }
 

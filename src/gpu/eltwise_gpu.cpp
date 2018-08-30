@@ -130,7 +130,8 @@ namespace {
                 { std::make_tuple(engine_types::ocl, data_types::f32, format::byxf), eltwise_gpu::create },
                 { std::make_tuple(engine_types::ocl, data_types::f16, format::byxf), eltwise_gpu::create },
                 // MMAD
-                { std::make_tuple(engine_types::ocl, data_types::i8, format::byxf_af32), eltwise_gpu::create }
+                { std::make_tuple(engine_types::ocl, data_types::i8, format::byxf_af32), eltwise_gpu::create },
+                { std::make_tuple(engine_types::ocl, data_types::i8, format::fs_bs_yx_bsv4_fsv32), eltwise_gpu::create }
             });
         }
         ~attach() {}
