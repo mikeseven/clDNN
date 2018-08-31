@@ -15,18 +15,15 @@
 */
 #pragma once
 #include <string>
-#include "program_node.h"
+#include "api/CPP/tensor.hpp"
+#include "api/CPP/layout.hpp"
 
 namespace cldnn
 {
 
-inline std::string bool_to_str(const bool condi)
+inline std::string bool_to_str(bool cond)
 {
-	if (condi)
-	{
-		return "true";
-	}
-	return "false";
+    return cond ? "true" : "false";
 }
 
 inline std::string get_extr_type(const char* str)
