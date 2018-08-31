@@ -48,8 +48,8 @@ std::string mvn_inst::to_string(mvn_node const& node)
     mvn_info.add("across_channels region", across_channels);
     mvn_info.add("normalize_variance region", normalize_variance);
 
-    node_info.add("mvn info", mvn_info);
-    node_info.dump(primitive_description);
+    node_info->add("mvn info", mvn_info);
+    node_info->dump(primitive_description);
 
     return primitive_description.str();
 }

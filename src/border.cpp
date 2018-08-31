@@ -62,10 +62,10 @@ std::string border_inst::to_string(border_node const& node)
     border_info.add("right/bottom sizes", right_bottom_sizes.to_string());
     border_info.add("border type",        border_type_str);
 
-    node_info.add("border info", border_info);
+    node_info->add("border info", border_info);
 
     std::stringstream primitive_description;
-    node_info.dump(primitive_description);
+    node_info->dump(primitive_description);
     return primitive_description.str();
 }
 

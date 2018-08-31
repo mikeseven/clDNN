@@ -71,8 +71,8 @@ std::string convolution_grad_weights_inst::to_string(convolution_grad_weights_no
     deconv_info.add("dilation", dilation.to_string());
     deconv_info.add("split", split);
 
-    node_info.add("convolution_grad_weights info", deconv_info);
-    node_info.dump(primitive_description);
+    node_info->add("convolution_grad_weights info", deconv_info);
+    node_info->dump(primitive_description);
     return primitive_description.str();
 }
 

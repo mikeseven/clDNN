@@ -20,6 +20,7 @@
 #include "memory_impl.h"
 #include <random>
 #include "error_handler.h"
+#include "json_object.h"
 
 namespace cldnn
 {
@@ -117,7 +118,7 @@ std::string mutable_data_inst::to_string(mutable_data_node const& node)
 
     std::stringstream primitive_description;
     
-    node_info.dump(primitive_description);
+    node_info->dump(primitive_description);
     return primitive_description.str();
 }
 

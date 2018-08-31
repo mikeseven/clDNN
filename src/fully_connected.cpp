@@ -92,8 +92,8 @@ std::string fully_connected_inst::to_string(fully_connected_node const& node)
     fc_info.add("bias id", bias_id);
     fc_info.add("with activation", activation);
 
-    node_info.add("fully connected info", fc_info);
-    node_info.dump(primitive_description);
+    node_info->add("fully connected info", fc_info);
+    node_info->dump(primitive_description);
 
     return primitive_description.str();
 }

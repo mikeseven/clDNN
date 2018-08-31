@@ -105,8 +105,8 @@ std::string eltwise_inst::to_string(eltwise_node const& node)
         eltwise_info.add("with activation", activation);
         eltwise_info.add("slope", desc->activation_negative_slope);
     }
-    node_info.add("eltwise info", eltwise_info);
-    node_info.dump(primitive_description);
+    node_info->add("eltwise info", eltwise_info);
+    node_info->dump(primitive_description);
 
     return primitive_description.str();
 }

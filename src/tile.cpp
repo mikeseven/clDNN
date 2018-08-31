@@ -57,8 +57,8 @@ std::string tile_inst::to_string(tile_node const& node)
     tile_info.add("axis", desc->axis);
     tile_info.add("tiles", desc->tiles);
     
-    node_info.add("tile info", tile_info);
-    node_info.dump(primitive_description);
+    node_info->add("tile info", tile_info);
+    node_info->dump(primitive_description);
 
     return primitive_description.str();
 }

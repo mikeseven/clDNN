@@ -110,8 +110,8 @@ std::string deconvolution_inst::to_string(deconvolution_node const& node)
         ud_out_size_info.add("size", desc->output_size.to_string());
         deconv_info.add("with_user_defined_output_size", ud_out_size_info);
     }
-    node_info.add("deconvolution info", deconv_info);
-    node_info.dump(primitive_description);
+    node_info->add("deconvolution info", deconv_info);
+    node_info->dump(primitive_description);
     return primitive_description.str();
 }
 

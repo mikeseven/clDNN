@@ -144,8 +144,8 @@ std::string primitive_inst::generic_to_string(program_node const& node, const ch
     generic_info.add("deps count", node.get_dependencies().size());
     generic_info.add("deps", ss_inputs.str());
 
-    node_info.add("generic info", generic_info);
-    node_info.dump(primitive_description);
+    node_info->add("generic info", generic_info);
+    node_info->dump(primitive_description);
 
     return primitive_description.str();
 }

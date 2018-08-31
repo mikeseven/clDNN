@@ -18,6 +18,7 @@
 
 #include "program_dump_graph.h"
 #include "to_string_utils.h"
+#include "xml_object.h"
 #include <algorithm>
 #include <vector>
 
@@ -380,7 +381,7 @@ namespace cldnn
     //Function used by serialization. Not working yet, in progress.
     void dump_to_xml(std::ofstream& graph, const program_impl& program, std::function<bool(program_node const&)> const& filter, std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names)
     {
-        xml_composite data_container, node_container, kernels;
+        xml_composite data_container, node_container;
         auto node_number = 1;
         auto kernels_number = 1;
         auto postion = 0u;
@@ -403,8 +404,8 @@ namespace cldnn
                     }
                     if (data_names.at(p).find("kernels") != std::string::npos)
                     {
-                        node_info = kernels;
-                        node_info.add("id", data_names.at(p));
+                        node_info.reset(new xml_composite());
+                        node_info->add("id", data_names.at(p));
                         id = "kernels";
                         package_name = "kernels_" + std::to_string(kernels_number);
 
@@ -414,13 +415,13 @@ namespace cldnn
                     }
                     if (data_names.at(p).find(id) != std::string::npos)
                     {
-                        node_info.add("data_offset", std::to_string(offset));
-                        node_info.add("data_size", std::to_string(size));
+                        node_info->add("data_offset", std::to_string(offset));
+                        node_info->add("data_size", std::to_string(size));
                         node_number++;
                         break;
                     }
             }
-            node_container.add(package_name, node_info); 
+            node_container.add(package_name, node_info.get()); 
         }
         data_container.add("data", node_container);
         data_container.dump(graph);
