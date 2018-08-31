@@ -79,6 +79,31 @@ inline uint FUNC(get_byxf_af32_index)(uint b, uint f, uint y, uint x, uint y_pit
         CAT(prefix, _FEATURE_NUM),                      \
         CAT(prefix, _OFFSET))
 
+inline uint FUNC(get_fs_bs_yx_bsv4_fsv32_index)(uint b, uint f, uint y, uint x, uint y_pitch, uint b_pitch, uint size_f, uint size_b, uint offset)
+{
+    const uint f_32_aligned = ((size_f + 31)/32) * 32;
+    const uint fsv_idx = f % 32;
+    const uint bsv_idx = b % 4;
+    const uint fs_idx = f / 32;
+    const uint bs_idx = b / 4;
+
+    size_t idx = offset + fsv_idx + bsv_idx * 32;
+    idx += 32*4 * x;
+    idx += y * y_pitch;
+    idx += bs_idx * b_pitch;
+    idx += fs_idx * size_b * b_pitch;
+
+    return idx;
+}
+
+#define GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(prefix, b, f, y, x)\
+	FUNC_CALL(get_fs_bs_yx_bsv4_fsv32_index)(       \
+		b, f, y, x, CAT(prefix, _Y_PITCH),          \
+		CAT(prefix, _BATCH_PITCH),                  \
+		CAT(prefix, _FEATURE_NUM),                  \
+        CAT(prefix, _BATCH_NUM),                    \
+		CAT(prefix, _OFFSET))
+
 #define GET_FILTER_INDEX(prefix, o, i, y, x)    \
     CAT(prefix, _OFFSET) +                      \
     (x)*CAT(prefix, _X_PITCH) +                 \
