@@ -632,7 +632,7 @@ int main(int argc, char *argv[]) {
             imageDims = dims;//save in case of im_info
 
 
-                             // merge images (assume b0[in0 in1 ...] b1[in0 in1 ...] ...
+            // merge images (assume b0[in0 in1 ...] b1[in0 in1 ...] ...
             std::shared_ptr<unsigned char> batchImageData;
             batchImageData.reset(new unsigned char[inputSizes[imIndex] * batchSize], std::default_delete<unsigned char[]>());
             size_t offset = 0;
