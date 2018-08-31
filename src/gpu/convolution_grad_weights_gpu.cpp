@@ -18,10 +18,10 @@
 #include "primitive_gpu_base.h"
 #include "implementation_map.h"
 #include "error_handler.h"
+#include "network_impl.h"
 #include "kernel_selector_helper.h"
 #include "convolution_grad_weights/convolution_grad_weights_kernel_selector.h"
 #include "convolution_grad_weights/convolution_grad_weights_kernel_base.h"
-
 namespace cldnn { namespace gpu {
 
 struct convolution_grad_weights_gpu : typed_primitive_gpu_impl<convolution_grad_weights>

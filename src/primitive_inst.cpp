@@ -32,6 +32,12 @@
 
 namespace cldnn
 {
+
+uint32_t primitive_inst::get_network_id() const 
+{
+    return _network.get_id();
+}
+
 event_impl::ptr primitive_inst::execute(const std::vector<event_impl::ptr>& events)
 {
     CLDNN_ERROR_BOOL(id(), "Invalid/unset input", !_has_valid_input, "Cannot execute primitive " + id() + " with invalid/unset input");
@@ -50,6 +56,15 @@ event_impl::ptr primitive_inst::execute(const std::vector<event_impl::ptr>& even
     }
 
     return _impl->execute(dependencies, *this);  
+}
+
+void primitive_inst::build_deps()
+{
+    if (_deps.empty() && !_node.get_dependencies().empty())
+    {
+        _deps = _network.get_primitives(_node.get_dependencies());
+        _exec_deps = build_exec_deps(_deps);
+    }
 }
 
 primitive_inst::primitive_inst(network_impl& network, program_node const& node, bool allocate_memory)
