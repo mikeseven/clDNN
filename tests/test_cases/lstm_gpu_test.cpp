@@ -158,7 +158,7 @@ template <typename T>
 void lstm_reference(VVVVF<T>& input, VVVVF<T>& hidden, VVVVF<T>& cell, VVVVF<T>& weights, VVVVF<T>& recurrent, VVVVF<T>& bias,
     VVVVF<T>& output, VVVVF<T>& last_hidden, VVVVF<T>& last_cell,
     bool hasBias = true, bool hasInitialHidden = true, bool hasInitialCell = true,
-    float clip_threshold = 0, bool input_forget = false) {
+    float clip_threshold = 0, bool input_forget = false, bool scramble_input = true) {
     size_t sequence_len = input[0].size();
     size_t dir_len = weights[0].size();
     size_t batch = input.size();
@@ -169,9 +169,13 @@ void lstm_reference(VVVVF<T>& input, VVVVF<T>& hidden, VVVVF<T>& cell, VVVVF<T>&
         for (size_t seq = 0; seq < sequence_len; ++seq) {
             size_t seq_id = seq;
             size_t input_direction = 0;
-            if (dir > 0) {
-                seq_id = input_directions == 1 ? sequence_len - seq - 1 : seq;
-                input_direction = input_directions - 1;
+            if (scramble_input) {
+                if (dir > 0) {
+                    seq_id = input_directions == 1 ? sequence_len - seq - 1 : seq;
+                    input_direction = input_directions - 1;
+                }
+            } else {
+                input_direction = dir;
             }
             VVVVF<T> tempGEMM = lstm_gemm_reference(input, weights, recurrent, bias, hidden, seq_id, hasBias, tempHasInitialHidden, dir, input_direction);
             VVVVF<T> tempOutput = lstm_elt_reference(tempGEMM, cell, tempHasInitialCell, clip_threshold, input_forget, dir);
@@ -303,12 +307,11 @@ void generic_lstm_elt_gpu_test(int sequence_len, int direction, int batch_size, 
     }
 }
 
-std::string getIdString(size_t i) {
+std::string get_string_id(size_t i) {
     std::stringstream ss;
     ss << std::setw(5) << std::setfill('0') << i;
     return ss.str();
 }
-
 
 // --------------- Manually constructed LSTM ----------------------------------------
 // This function manually generates an lstm node sequence by conbining lstm_gemm and lstm_elt nodes
@@ -321,7 +324,7 @@ void generate_lstm_topology(topology& t, memory& input, memory& hidden, memory& 
     std::vector<std::pair<primitive_id, tensor>> input_ids_offsets;
     std::vector<primitive_id> output_ids_offsets;
     for (int i = 0; i < sequence_len; ++i)
-        input_ids_offsets.push_back({ getIdString(i),{ 0, i, 0, 0 } });
+        input_ids_offsets.push_back({ get_string_id(i),{ 0, i, 0, 0 } });
     t.add(split("inputSplit", "input", input_ids_offsets));
     t.add(data("weights", weights));
     t.add(data("recurrent", recurrent));
@@ -345,11 +348,11 @@ void generate_lstm_topology(topology& t, memory& input, memory& hidden, memory& 
         cellStr = "cell";
     }
     for (int i = 0; i < sequence_len; ++i) {
-        std::string lstm_gemm_id = "lstm_gemm" + getIdString(i);
-        std::string lstm_elt_id = "lstm_elt" + getIdString(i);
-        std::string crop_id = "crop" + getIdString(i);
+        std::string lstm_gemm_id = "lstm_gemm" + get_string_id(i);
+        std::string lstm_elt_id = "lstm_elt" + get_string_id(i);
+        std::string crop_id = "crop" + get_string_id(i);
 
-        t.add(lstm_gemm(lstm_gemm_id, "inputSplit:" + getIdString(i), "weights", "recurrent", biasStr, hiddenStr));
+        t.add(lstm_gemm(lstm_gemm_id, "inputSplit:" + get_string_id(i), "weights", "recurrent", biasStr, hiddenStr));
         t.add(lstm_elt(lstm_elt_id, lstm_gemm_id, cellStr));
 
         hiddenStr = crop_id + ":hidden";
@@ -431,49 +434,87 @@ void generic_lstm_custom_gpu_test(int sequence_len, int direction, int batch_siz
 }
 
 // -------------------------------------------------------
-
 template<typename T>
-void generic_lstm_gpu_test(int sequence_len, int direction, int batch_size, int input_size, int hidden_size,
-    bool hasBias = true, bool hasInitialHidden = true, bool hasInitialCell = true,
-    float clip_threshold = 0, bool input_forget = false) {
-    std::cout << "Input Size = " << input_size << " Hidden Size = " << hidden_size
-              << " Sequence Len = " << sequence_len << " Batch Size = " << batch_size
-              << " Direction = " << direction << std::endl;
+void generic_lstm_gpu_test(int layers, int sequence_len, int direction, int batch_size, int input_size, int hidden_size,
+                            bool hasBias = true, bool hasInitialHidden = true, bool hasInitialCell = true,
+                            float clip_threshold = 0, bool input_forget = false) {
+    std::cout << "Layers = " << layers << " Input Size = " << input_size << " Hidden Size = " << hidden_size
+            << " Sequence Len = " << sequence_len << " Direction = " << direction << " Batch Size = " << batch_size << std::endl;
     int min_random = -2, max_random = 2;
+
     VVVVF<T> ref_input = generate_random_4d<T>(batch_size, sequence_len, 1, input_size, min_random, max_random);
-    VVVVF<T> ref_weights = generate_random_4d<T>(1, direction, 4 * hidden_size, input_size, min_random, max_random);
-    VVVVF<T> ref_recurrent = generate_random_4d<T>(1, direction, 4 * hidden_size, hidden_size, min_random, max_random);
-    VVVVF<T> ref_bias = generate_random_4d<T>(1, 1, direction, 4 * hidden_size, min_random, max_random);
-    VVVVF<T> ref_hidden = generate_random_4d<T>(batch_size, direction, 1, hidden_size, min_random, max_random);
-    VVVVF<T> ref_cell = generate_random_4d<T>(batch_size, direction, 1, hidden_size, min_random, max_random);
-    VVVVF<T> ref_output(batch_size, VVVF<T>(sequence_len, VVF<T>(direction, VF<T>(hidden_size))));
+
+    std::vector<VVVVF<T>> ref_weights;
+    std::vector<VVVVF<T>> ref_recurrent;
+    std::vector<VVVVF<T>> ref_bias;
+    std::vector<VVVVF<T>> ref_hidden;
+    std::vector<VVVVF<T>> ref_cell;
+    std::vector<VVVVF<T>> ref_output;
+
+    for (int i = 0; i < layers; ++i) {
+        ref_weights.push_back(generate_random_4d<T>(1, direction, 4 * hidden_size, i==0 ? input_size : hidden_size, min_random, max_random));
+        ref_recurrent.push_back(generate_random_4d<T>(1, direction, 4 * hidden_size, hidden_size, min_random, max_random));
+        ref_bias.push_back(generate_random_4d<T>(1, 1, direction, 4 * hidden_size, min_random, max_random));
+        ref_hidden.push_back(generate_random_4d<T>(batch_size, direction, 1, hidden_size, min_random, max_random));
+        ref_cell.push_back(generate_random_4d<T>(batch_size, direction, 1, hidden_size, min_random, max_random));
+        ref_output.push_back(VVVVF<T>(batch_size, VVVF<T>(sequence_len, VVF<T>(direction, VF<T>(hidden_size)))));
+    }
+
+    VF<T> ref_input_vec = flatten_4d<T>(cldnn::format::bfyx, ref_input);
+    std::vector<VF<T>> ref_weights_vec;
+    std::vector<VF<T>> ref_recurrent_vec;
+    std::vector<VF<T>> ref_bias_vec;
+    std::vector<VF<T>> ref_hidden_vec;
+    std::vector<VF<T>> ref_cell_vec;
+    for (int i = 0; i < layers; ++i) {
+        ref_weights_vec.push_back(flatten_4d<T>(cldnn::format::bfyx, ref_weights[i]));
+        ref_recurrent_vec.push_back(flatten_4d<T>(cldnn::format::bfyx, ref_recurrent[i]));
+        ref_bias_vec.push_back(flatten_4d<T>(cldnn::format::bfyx, ref_bias[i]));
+        ref_hidden_vec.push_back(flatten_4d<T>(cldnn::format::bfyx, ref_hidden[i]));
+        ref_cell_vec.push_back(flatten_4d<T>(cldnn::format::bfyx, ref_cell[i]));
+    }
+
     VVVVF<T> last_hidden(batch_size, VVVF<T>(direction, VVF<T>(1, VF<T>(hidden_size))));
     VVVVF<T> last_cell(batch_size, VVVF<T>(direction, VVF<T>(1, VF<T>(hidden_size))));
 
-    VF<T> ref_input_vec = flatten_4d<T>(cldnn::format::bfyx, ref_input);
-    VF<T> ref_weights_vec = flatten_4d<T>(cldnn::format::bfyx, ref_weights);
-    VF<T> ref_recurrent_vec = flatten_4d<T>(cldnn::format::bfyx, ref_recurrent);
-    VF<T> ref_bias_vec = flatten_4d<T>(cldnn::format::bfyx, ref_bias);
-    VF<T> ref_hidden_vec = flatten_4d<T>(cldnn::format::bfyx, ref_hidden);
-    VF<T> ref_cell_vec = flatten_4d<T>(cldnn::format::bfyx, ref_cell);
-    lstm_reference(ref_input, ref_hidden, ref_cell, ref_weights, ref_recurrent, ref_bias, ref_output, last_hidden, last_cell,
-        hasBias, hasInitialHidden, hasInitialCell, clip_threshold, input_forget);
+    lstm_reference(ref_input, ref_hidden[0], ref_cell[0], ref_weights[0], ref_recurrent[0], ref_bias[0], ref_output[0],
+                   last_hidden, last_cell, hasBias, hasInitialHidden, hasInitialCell,
+                   clip_threshold, input_forget, true);
+    for (int i = 1; i < layers; ++i) {
+        lstm_reference(ref_output[i - 1], ref_hidden[i], ref_cell[i], ref_weights[i], ref_recurrent[i],
+                        ref_bias[i], ref_output[i],
+                        last_hidden, last_cell, hasBias, hasInitialHidden, hasInitialCell,
+                        clip_threshold, input_forget, false);
+    }
 
     engine engine;
 
-    memory input = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx,{ batch_size,    sequence_len,   input_size,      1 } });
-    memory weights = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx,{ 1,             direction,      input_size,      4 * hidden_size } });
-    memory recurrent = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx,{ 1,             direction,      hidden_size,     4 * hidden_size } });
-    memory biases = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx,{ 1,             1,              4 * hidden_size, direction } });
-    memory hidden = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx,{ batch_size,    direction,      hidden_size,     1 } });
-    memory cell = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx,{ batch_size,    direction,      hidden_size,     1 } });
-
+    memory input = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, {batch_size, sequence_len, input_size, 1} });
     set_values(input, ref_input_vec);
-    set_values(weights, ref_weights_vec);
-    set_values(recurrent, ref_recurrent_vec);
-    if (hasBias) set_values(biases, ref_bias_vec);
-    if (hasInitialHidden) set_values(hidden, ref_hidden_vec);
-    if (hasInitialCell) set_values(cell, ref_cell_vec);
+
+    std::vector<memory> weights;
+    std::vector<memory> recurrent;
+    std::vector<memory> biases;
+    std::vector<memory> hidden;
+    std::vector<memory> cell;
+    for(int i = 0; i < layers; ++i) {
+        weights.push_back(memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { 1, direction, i==0 ? input_size : hidden_size, 4 * hidden_size } }));
+        set_values(weights[i], ref_weights_vec[i]);
+        recurrent.push_back(memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { 1, direction, hidden_size, 4 * hidden_size } }));
+        set_values(recurrent[i], ref_recurrent_vec[i]);
+        if (hasBias) {
+            biases.push_back(memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { 1, 1, 4 * hidden_size, direction } }));
+            set_values(biases[i], ref_bias_vec[i]);
+        }
+        if (hasInitialHidden) {
+            hidden.push_back(memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { batch_size,  direction, hidden_size, 1 } }));
+            set_values(hidden[i], ref_hidden_vec[i]);
+        }
+        if (hasInitialCell) {
+            cell.push_back(memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { batch_size, direction, hidden_size, 1 } }));
+            set_values(cell[i], ref_cell_vec[i]);
+        }
+    }
 
     topology topology;
     std::vector<std::pair<primitive_id, tensor>> input_ids_offsets;
@@ -482,37 +523,60 @@ void generic_lstm_gpu_test(int sequence_len, int direction, int batch_size, int 
 
     topology.add(input_layout("input", input.get_layout()));
     for (int i = 0; i < sequence_len; ++i) {
-        input_ids_offsets.push_back({ getIdString(i),{ 0, i, 0, 0 } });
-        lstm_inputs.push_back("inputSplit:" + getIdString(i));
+        input_ids_offsets.push_back({get_string_id(i), {0, i, 0, 0}});
+        lstm_inputs.push_back("inputSplit:"+get_string_id(i));
     }
     topology.add(split("inputSplit", "input", input_ids_offsets));
-    topology.add(data("weights", weights));
-    topology.add(data("recurrent", recurrent));
-    if (hasBias) topology.add(data("biases", biases));
-    if (hasInitialHidden) topology.add(input_layout("hidden", hidden.get_layout()));
-    if (hasInitialCell) topology.add(input_layout("cell", cell.get_layout()));
-    topology.add(lstm("lstm", lstm_inputs, "weights", "recurrent",
-        hasBias ? "biases" : "", hasInitialHidden ? "hidden" : "", hasInitialCell ? "cell" : "", "", clip_threshold, input_forget, {}, {}, default_offset_type));
+    cldnn::primitive_id prev_lstm_id;
+    for(int i = 0; i < layers; ++i) {
+        std::string sid = get_string_id(i);
+        std::string lstm_id = "lstm" + sid;
+        std::string weights_id = "weights" + sid;
+        std::string recurrent_id = "recurrent" + sid;
+        std::string biases_id = "biases" + sid;
+        std::string hidden_id = "hidden" + sid;
+        std::string cell_id = "cell" + sid;
+
+        topology.add(data(weights_id, weights[i]));
+        topology.add(data(recurrent_id, recurrent[i]));
+        if (hasBias) topology.add(data(biases_id, biases[i]));
+        if (hasInitialHidden) topology.add(input_layout(hidden_id, hidden[i].get_layout()));
+        if (hasInitialCell) topology.add(input_layout(cell_id, cell[i].get_layout()));
+        if (i == 0) {
+            topology.add(lstm(lstm_id, lstm_inputs, weights_id, recurrent_id,
+                            hasBias ? biases_id : "", hasInitialHidden ? hidden_id : "", hasInitialCell ? cell_id : "", "",
+                            clip_threshold, input_forget, {}, {}, default_offset_type));
+        }
+        else {
+            topology.add(lstm(lstm_id, { prev_lstm_id }, weights_id, recurrent_id,
+                            hasBias ? biases_id : "", hasInitialHidden ? hidden_id : "", hasInitialCell ? cell_id : "", "",
+                            clip_threshold, input_forget, {}, {}, default_offset_type));
+        }
+        prev_lstm_id = lstm_id;
+    }
 
     network network(engine, topology);
     network.set_input_data("input", input);
-    if (hasInitialHidden) network.set_input_data("hidden", hidden);
-    if (hasInitialCell) network.set_input_data("cell", cell);
+    for (int i = 0; i < layers; ++i) {
+        std::string sid = get_string_id(i);
+        if (hasInitialHidden) network.set_input_data("hidden" + sid, hidden[i]);
+        if (hasInitialCell) network.set_input_data("cell" + sid, cell[i]);
+    }
     auto outputs = network.execute();
+    {
+        ASSERT_EQ(outputs.size(), size_t(1));
+        size_t output_size = outputs.begin()->second.get_memory().size() / sizeof(T);
+        ASSERT_EQ(output_size, size_t(hidden_size * sequence_len * batch_size * direction));
 
-    ASSERT_EQ(outputs.size(), size_t(1));
-    size_t output_size = outputs.begin()->second.get_memory().size() / sizeof(T);
-    ASSERT_EQ(output_size, size_t(hidden_size * sequence_len * batch_size * direction));
-
-    auto output = outputs.begin()->second.get_memory();
-    auto output_ptr = output.pointer<T>();
-
-    int i = 0;
-    for (int b = 0; b < batch_size; ++b) {
-        for (int s = 0; s < sequence_len; ++s) {
-            for (int d = 0; d < direction; ++d) {
-                for (int x = 0; x < hidden_size; ++x) {
-                    ASSERT_NEAR(ref_output[b][s][d][x], output_ptr[i++], FERROR);
+        auto output = outputs.begin()->second.get_memory();
+        auto output_ptr = output.pointer<T>();
+        int i = 0;
+        for (int b = 0; b < batch_size; ++b) {
+            for (int s = 0; s < sequence_len; ++s) {
+                for (int d = 0; d < direction; ++d) {
+                    for (int x = 0; x <  hidden_size; ++x) {
+                        ASSERT_NEAR(ref_output[layers-1][b][s][d][x], output_ptr[i++], FERROR);
+                    }
                 }
             }
         }
@@ -588,73 +652,85 @@ TEST(lstm_custom_gpu, generic_lstm_custom_no_bias_hidden_cell_f32) {
 }
 
 TEST(lstm_gpu, generic_lstm_f32) {
-    generic_lstm_gpu_test<float>(3, 1, 3, 3, 2, true, true, true);
+    generic_lstm_gpu_test<float>(1, 3, 1, 3, 3, 2, true, true, true);
 }
 
 TEST(lstm_gpu, generic_lstm_no_bias_f32) {
-    generic_lstm_gpu_test<float>(3, 1, 3, 3, 2, false, true, true);
+    generic_lstm_gpu_test<float>(1, 3, 1, 3, 3, 2, false, true, true);
 }
 
 TEST(lstm_gpu, generic_lstm_no_hidden_f32) {
-    generic_lstm_gpu_test<float>(3, 1, 5, 4, 3, true, false, true);
+    generic_lstm_gpu_test<float>(1, 3, 1, 5, 4, 3, true, false, true);
 }
 
 TEST(lstm_gpu, generic_lstm_no_bias_hidden_f32) {
-    generic_lstm_gpu_test<float>(3, 1, 5, 4, 3, false, false, true);
+    generic_lstm_gpu_test<float>(1, 3, 1, 5, 4, 3, false, false, true);
 }
 
 TEST(lstm_gpu, generic_lstm_no_cell_f32) {
-    generic_lstm_gpu_test<float>(3, 1, 5, 4, 3, true, true, false);
+    generic_lstm_gpu_test<float>(1, 3, 1, 5, 4, 3, true, true, false);
 }
 
 TEST(lstm_gpu, generic_lstm_no_bias_cell_f32) {
-    generic_lstm_gpu_test<float>(3, 1, 5, 4, 3, false, true, false);
+    generic_lstm_gpu_test<float>(1, 3, 1, 5, 4, 3, false, true, false);
 }
 
 TEST(lstm_gpu, generic_lstm_no_hidden_cell_f32) {
-    generic_lstm_gpu_test<float>(3, 1, 5, 4, 3, true, false, false);
+    generic_lstm_gpu_test<float>(1, 3, 1, 5, 4, 3, true, false, false);
 }
 
 TEST(lstm_gpu, generic_lstm_no_bias_hidden_cell_f32) {
-    generic_lstm_gpu_test<float>(3, 1, 5, 4, 3, false, false, false);
+    generic_lstm_gpu_test<float>(1, 3, 1, 5, 4, 3, false, false, false);
 }
 
 TEST(lstm_gpu, generic_lstm_clip_f32) {
-    generic_lstm_gpu_test<float>(3, 1, 3, 3, 2, true, true, true, 0.3f, 0);
+    generic_lstm_gpu_test<float>(1, 3, 1, 3, 3, 2, true, true, true, 0.3f, 0);
 }
 
 TEST(lstm_gpu, generic_lstm_input_forget_f32) {
-    generic_lstm_gpu_test<float>(3, 1, 3, 3, 2, true, true, true, 0.f, 1);
+    generic_lstm_gpu_test<float>(1, 3, 1, 3, 3, 2, true, true, true, 0.f, 1);
 }
 
 TEST(lstm_gpu, generic_lstm_clip_input_forget_f32) {
-    generic_lstm_gpu_test<float>(3, 1, 3, 3, 2, true, true, true, 0.3f, 1);
-}
-
-TEST(lstm_gpu, generic_lstm_seq1_f32) {
-    generic_lstm_gpu_test<float>(1, 1, 1, 2, 4, true, true, true);
-}
-
-TEST(lstm_gpu, generic_lstm_bi_f32) {
-    generic_lstm_gpu_test<float>(5, 2, 3, 3, 2, false, false, true);
-}
-
-TEST(lstm_gpu, generic_lstm_bi_bias_f32) {
-    generic_lstm_gpu_test<float>(5, 2, 3, 3, 2, true, false, false);
-}
-
-TEST(lstm_gpu, generic_lstm_bi_bias_hidden_f32) {
-    generic_lstm_gpu_test<float>(5, 2, 3, 3, 2, true, true, false);
-}
-
-TEST(lstm_gpu, generic_lstm_bi_bias_hidden_dell_f32) {
-    generic_lstm_gpu_test<float>(5, 2, 3, 3, 2, true, true, true);
+    generic_lstm_gpu_test<float>(1, 3, 1, 3, 3, 2, true, true, true, 0.3f, 1);
 }
 
 TEST(lstm_gpu, generic_lstm_offset_order_ifoz_f32) {
     default_offset_type = cldnn_lstm_offset_order_ifoz;
-    generic_lstm_gpu_test<float>(3, 1, 3, 3, 2, true, true, true);
+    generic_lstm_gpu_test<float>(1, 3, 1, 3, 3, 2, true, true, true);
     default_offset_type = cldnn_lstm_offset_order_iofz;
+}
+
+TEST(lstm_gpu, generic_lstm_canonical_f32) {
+    generic_lstm_gpu_test<float>(1, 1, 1, 1, 2, 4, true, true, true);
+}
+
+TEST(lstm_gpu, generic_lstm_bi_f32) {
+    generic_lstm_gpu_test<float>(1, 5, 2, 3, 3, 2, true, true, true);
+}
+
+TEST(lstm_gpu, generic_lstm_bi_bias_f32) {
+    generic_lstm_gpu_test<float>(1, 5, 2, 3, 3, 2, true, true, true);
+}
+
+TEST(lstm_gpu, generic_lstm_bi_bias_hidden_f32) {
+    generic_lstm_gpu_test<float>(1, 5, 2, 3, 3, 2, true, true, false);
+}
+
+TEST(lstm_gpu, generic_lstm_stacked_no_seq_f32) {
+    generic_lstm_gpu_test<float>(4, 1, 1, 3, 3, 2, true, true, true);
+}
+
+TEST(lstm_gpu, generic_lstm_stacked_seq_f32) {
+    generic_lstm_gpu_test<float>(4, 3, 1, 3, 3, 2, true, true, true);
+}
+
+TEST(lstm_gpu, generic_lstm_stacked_bi_f32) {
+    generic_lstm_gpu_test<float>(4, 1, 2, 3, 3, 2, true, true, true);
+}
+
+TEST(lstm_gpu, generic_lstm_stacked_seq_bi_f32) {
+    generic_lstm_gpu_test<float>(4, 3, 2, 3, 3, 2, true, true, true);
 }
 
 // TODO: Add tests for the following:

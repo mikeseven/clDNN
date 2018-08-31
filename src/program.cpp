@@ -508,8 +508,7 @@ void program_impl::cleanup()
     }
 }
 
-
-std::string getIdString(size_t i) {
+std::string get_id_string(size_t i) {
     std::stringstream ss;
     ss << std::setw(5) << std::setfill('0') << i;
     return ss.str();
@@ -794,13 +793,13 @@ void program_impl::replace_nodes_post()
 
 void program_impl::handle_lstm()
 {
-    bool hasLSTMParent;
+    bool has_lstm_children;
     auto itr = nodes_map.begin(); //note we need to use iterators since currently processed element can be removed
     while (itr != nodes_map.end())
     {
         auto node_itr = itr++;
         auto& node = (*node_itr).second;
-        hasLSTMParent = false;
+        has_lstm_children = false;
         // replace lstm node with lstm_gemm and lstm_elt nodes
         if (node->is_type<lstm>()) {
             bool initial_hidden_term = node->as<lstm>().initial_hidden_term();
@@ -822,21 +821,26 @@ void program_impl::handle_lstm()
             if (initial_cell_term)
                 remove_connection(*nodes_map.at(initial_cell_id), *node);
 
-            size_t sequence_len = node->get_dependencies().size();
-
             //calculating sizes
             auto input_size = node->get_dependency(0).get_output_layout().size;
             auto recurrent_size = nodes_map.at(recurrent_id)->get_output_layout().size;
             auto hidden_size = tensor(input_size.batch[0], 1, recurrent_size.spatial[0], input_size.feature[0]);
             size_t directions = recurrent_size.feature[0];
-            //auto weights_size = nodes_map.at(weights_id)->get_output_layout().size;
+            size_t input_dependencies = node->get_dependencies().size();
+            size_t sequence_len = node->as<lstm>().sequence_len();
 
-            //check if parent is lstm node
+            //if the sequence has a single element but it has multiple inputs then
+            //the parent of this lstm is an lstm node. If this is a bidirectional lstm
+            //then the sequence length is the number of dependencies divided by 2.
+            if (sequence_len == 1 && input_dependencies > 1)
+                sequence_len = (directions == 1) ? input_dependencies : input_dependencies / 2;
+
+            //check if this lstm node has an lstm child
             for (auto& user : node->get_users())
             {
                 if (user->is_type<lstm>())
                 {
-                    hasLSTMParent = true;
+                    has_lstm_children = true;
                 }
             }
 
@@ -844,8 +848,13 @@ void program_impl::handle_lstm()
             std::vector<program_node*> concat_depends(directions * sequence_len);
             std::vector<primitive_id> output_ids_offsets(directions * sequence_len);
 
-            auto multi_layer_crop_gates = [&](const std::string gate, bool initial_term, primitive_id& fwd_id, primitive_id& bck_id) {
-                if (initial_term && directions > 1) {
+            primitive_id hidden_fwd_id = initial_hidden_id;
+            primitive_id hidden_bck_id = initial_hidden_id;
+            primitive_id cell_fwd_id = initial_cell_id;
+            primitive_id cell_bck_id = initial_cell_id;
+
+            auto split_direction = [&](const std::string gate, bool initial_term, primitive_id& fwd_id, primitive_id& bck_id) {
+                if (initial_term) {
                     primitive_id initial_id = fwd_id;
                     fwd_id = node->id() + ":" + gate + "_fwd";
                     auto fwd_node = std::make_shared<crop>(fwd_id, initial_id, hidden_size, tensor{ 0,0,0,0 });
@@ -858,13 +867,11 @@ void program_impl::handle_lstm()
                 }
             };
 
-            primitive_id hidden_fwd_id = initial_hidden_id;
-            primitive_id hidden_bck_id = initial_hidden_id;
-            primitive_id cell_fwd_id = initial_cell_id;
-            primitive_id cell_bck_id = initial_cell_id;
-
-            multi_layer_crop_gates("hidden", initial_hidden_term, hidden_fwd_id, hidden_bck_id);
-            multi_layer_crop_gates("cell", initial_cell_term, cell_fwd_id, cell_bck_id);
+            //if bidirectional lstm then initial_hidden and initial_cell terms need to be split
+            if (directions > 1) {
+                split_direction("hidden", initial_hidden_term, hidden_fwd_id, hidden_bck_id);
+                split_direction("cell", initial_cell_term, cell_fwd_id, cell_bck_id);
+            }
 
             //lstm expanding
             for (size_t dir = 0; dir < directions; ++dir) {
@@ -872,10 +879,17 @@ void program_impl::handle_lstm()
                 auto cell_id = dir == 0 ? cell_fwd_id : cell_bck_id;
                 for (size_t i = 0; i < sequence_len; ++i) {
                     size_t idx = i + dir * sequence_len;
-                    primitive_id lstm_gemm_id = node->id() + ":lstm_gemm" + getIdString(idx);
-                    primitive_id lstm_elt_id = node->id() + ":lstm_elt" + getIdString(idx);
-                    primitive_id crop_id = node->id() + ":crop" + getIdString(idx);
-                    size_t input_idx = dir  ? sequence_len - i - 1 : i;
+                    primitive_id lstm_gemm_id = node->id() + ":lstm_gemm" + get_id_string(idx);
+                    primitive_id lstm_elt_id = node->id() + ":lstm_elt" + get_id_string(idx);
+                    primitive_id crop_id = node->id() + ":crop" + get_id_string(idx);
+
+                    size_t input_idx = i;
+                    //for bidirectional lstms, if first LSTM layer then scrambled the input
+                    //for subsequent stacked layers the input is strided
+                    if (dir > 0) {
+                        input_idx = input_dependencies > sequence_len ? dir * sequence_len + i : sequence_len - i - 1;
+                    }
+
                     primitive_id lstm_gemm_input_id = node->get_dependency(input_idx).get_org_primitive_id();
 
                     auto lstm_gemm_node = std::make_shared<lstm_gemm>(lstm_gemm_id, lstm_gemm_input_id, weights_id, recurrent_id, bias_id, hidden_id, (uint32_t)dir);
@@ -918,7 +932,7 @@ void program_impl::handle_lstm()
                     add_connection(n2, n3);
 
                     //if parent is lstm adding hiddens as dependency
-                    if (hasLSTMParent)
+                    if (has_lstm_children)
                     {
                         for (auto& user : node->get_users())
                         {
@@ -940,7 +954,7 @@ void program_impl::handle_lstm()
             }
 
             //if theres no next lstm, concatenation is created
-            if (!hasLSTMParent)
+            if (!has_lstm_children)
             {
                 primitive_id original_id = node->id();
                 primitive_id concatenation_id = original_id + ":concat";
