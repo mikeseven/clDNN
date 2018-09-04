@@ -131,7 +131,7 @@ struct format
             { image_2d_weights_winograd_6x3_s1_xfbyb,{ 1, 1, 2, "xyfb", "bfxy" } },
             { os_is_yx_isa8_osv8_isv4, { 1, 1, 2, "bfyx", "bfxy" } },
             { byxf_af32, { 1, 1, 2, "byxf", "bfxy" } },
-            { fs_bs_yx_bsv4_fsv32 , { 1, 1, 2, "yxbf", "bfxy" }}
+            { fs_bs_yx_bsv4_fsv32 , { 1, 1, 2, "fbyx", "bfxy" }}
         };
         return traits.at(fmt);
     }

@@ -95,7 +95,6 @@ inline uint FUNC(get_fs_bs_yx_bsv4_fsv32_index)(uint b, uint f, uint y, uint x,
     const uint y_pitch = 32 * 4 * (x_pad_before + x_size + x_pad_after);
     const uint bs_pitch = y_pitch * (y_pad_before + y_size + y_pad_after);
     const uint fs_pitch = bs_pitch * (b_4_aligned / 4);
-
     uint offset = x_pitch * x_pad_before + y_pitch * y_pad_before;
 
     size_t idx = offset + fsv_idx + bsv_idx * 32;
@@ -103,7 +102,6 @@ inline uint FUNC(get_fs_bs_yx_bsv4_fsv32_index)(uint b, uint f, uint y, uint x,
     idx += y * y_pitch;
     idx += bs_idx * bs_pitch;
     idx += fs_idx * fs_pitch;
-    idx += offset;
 
     return idx;
 }
