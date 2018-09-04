@@ -28,7 +28,7 @@
 #include <ie_plugin_ptr.hpp>
 #include <cldnn/cldnn_config.hpp>
 #include <ie_plugin_config.hpp>
-#include <../dpd_vcp_dl-scoring_engine/src/extension/ext_list.hpp>
+//#include <../dpd_vcp_dl-scoring_engine/src/extension/ext_list.hpp> //for CPU
 #include "../dpd_vcp_dl-scoring_engine/include/cpp/ie_cnn_net_reader.h"
 #include "../dpd_vcp_dl-scoring_engine/samples/common/format_reader/format_reader_ptr.h"
 #include "../dpd_vcp_dl-scoring_engine/samples/common/samples/common.hpp"
