@@ -31,7 +31,6 @@ namespace kernel_selector {
         k.EnableTensorPitches();
         k.EnableDilation();
         k.EnableBiasPerFeature();
-        k.EnableBiasPerOutput();
         k.EnableNonBiasTerm();
         k.EnableBatching();
         k.EnableSplitSupport();
@@ -54,7 +53,7 @@ namespace kernel_selector {
 
         runInfo.gws0 = arg.output.X().v;
         runInfo.gws1 = arg.output.Y().v;
-        runInfo.gws2 = of_threads_per_batch * arg.output.Batch().v;
+        runInfo.gws2 = of_threads_per_batch * ((arg.output.Batch().v+3) / 4);
 
         runInfo.lws0 = 1;
         runInfo.lws1 = 1;
@@ -74,6 +73,17 @@ namespace kernel_selector {
         const size_t filter_ofm_block_pitch = (ifm_32_aligned / 32) * params.weights.X().v * params.weights.Y().v * 4 * 8 * 8;
         jit.AddConstant(MakeJitConstant("FILTER_OFM_BLOCK_PITCH", filter_ofm_block_pitch));
 
+        const size_t in_x_pitch = 32 * 4;
+        const size_t in_y_pitch = 32 * 4 * params.inputs[0].X().LogicalDimPadded();
+        const size_t in_b_block_pitch = in_y_pitch * params.inputs[0].Y().LogicalDimPadded();
+        const size_t in_f_block_pitch = in_b_block_pitch * ((params.inputs[0].Batch().v + 3) / 4);
+        const size_t in_offset = in_x_pitch * params.inputs[0].X().pad.before + in_y_pitch * params.inputs[0].Y().pad.before;
+
+        jit.AddConstant(MakeJitConstant("IN_X_PITCH", in_x_pitch));
+        jit.AddConstant(MakeJitConstant("IN_Y_PITCH", in_y_pitch));
+        jit.AddConstant(MakeJitConstant("IN_B_BLOCK_PITCH", in_b_block_pitch));
+        jit.AddConstant(MakeJitConstant("IN_F_BLOCK_PITCH", in_f_block_pitch));
+        jit.AddConstant(MakeJitConstant("IN_OFFSET", in_offset));
         return jit;
     }
 
