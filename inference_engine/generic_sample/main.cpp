@@ -127,7 +127,7 @@ DEFINE_bool(global_range, false, global_range_message);
 #endif
 
 static const char mem_pool_message[] = "switch clDNN Memory Pool opt ON";
-DEFINE_bool(mem_pool, false, mem_pool_message);
+DEFINE_bool(mem_pool, true, mem_pool_message);
 
 extern "C" {
 #include "md5.h"  // taken from http://openwall.info/wiki/people/solar/software/public-domain-source-code/md5
