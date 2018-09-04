@@ -209,7 +209,7 @@ namespace {
     //helper function for getting target layout used in depthwise sep optimization
     layout get_weights_layout(typed_program_node<cldnn::data> &data_node, int32_t split)
     {
-        auto& mem_layout = const_cast<data&>(*data_node.get_primitive()).mem.get_layout();
+        auto mem_layout = data_node.get_output_layout();
 
         return layout(mem_layout.data_type, mem_layout.format, { split * mem_layout.size.batch[0], mem_layout.size.feature[0], mem_layout.size.spatial[0], mem_layout.size.spatial[1] });
     }
@@ -626,20 +626,39 @@ void program_impl::replace_nodes_post()
 
             //setting weights for deconvolution
             auto kernel_size = static_cast<tensor::value_type>((2 * scale) - (scale % 2));
-            layout weights_layout(data_types::f32, format::bfyx, tensor(num_filter, 1, kernel_size, kernel_size));
+            layout weights_layout(data_types::f32, format::bfyx, tensor(1, 1, kernel_size, kernel_size));
 
-            memory_impl::ptr data_to_allocate = engine->allocate_memory(weights_layout);
-            mem_lock<float> dst{ data_to_allocate };
-            float *dst_data = dst.data();
-            //initialize with bilinear weights data
-            auto f = static_cast<uint32_t>(std::ceil(kernel_size / 2.0f));
-            float c = (2 * f - 1 - f % 2) / (2.f * f);
-            float x = 0.f;
-            float y = 0.f;
-            for (size_t i = 0; i < weights_layout.count(); ++i) {
-                x = static_cast<float>(i % kernel_size);
-                y = static_cast<float>((i / kernel_size) % kernel_size);
-                dst_data[i] = (1 - std::abs(x / f - c)) * (1 - std::abs(y / f - c));
+            std::vector<primitive_id> weights_vec;
+            for (uint32_t weights_idx = 0; weights_idx < num_filter; weights_idx++)
+            {
+                memory_impl::ptr data_to_allocate = engine->allocate_memory(weights_layout);
+                mem_lock<float> dst{ data_to_allocate };
+                float *dst_data = dst.data();
+                //initialize with bilinear weights data
+                auto f = static_cast<uint32_t>(std::ceil(kernel_size / 2.0f));
+                float c = (2 * f - 1 - f % 2) / (2.f * f);
+                float x = 0.f;
+                float y = 0.f;
+                for (size_t i = 0; i < weights_layout.count(); ++i) {
+                    x = static_cast<float>(i % kernel_size);
+                    y = static_cast<float>((i / kernel_size) % kernel_size);
+                    dst_data[i] = (1 - std::abs(x / f - c)) * (1 - std::abs(y / f - c));
+                }
+
+                //create weights primitive, with dummy memory which will be replaced in firther step
+                primitive_id weights_id = upsampling_id + "_deconvolution_weights" + std::to_string(weights_idx);
+                layout dummy_layout(data_types::f32, format::bfyx, tensor(1, 1, 1, 1));
+                float zero = 0.f;
+                auto weights_prim = std::make_shared<data>(weights_id, memory::attach(dummy_layout, &zero, 1));
+                get_or_create(weights_prim);
+
+                weights_vec.push_back(weights_id);
+
+                auto weights_node_ptr = nodes_map.find(weights_id)->second;
+
+                //attach weights buffer
+                auto& data_node = weights_node_ptr->as<data>();
+                data_node.attach_memory(*data_to_allocate, false);
             }
 
             //remove upsampling node, rename it and move to the optimized list
@@ -647,17 +666,10 @@ void program_impl::replace_nodes_post()
             auto rename_id = upsampling_id + "_tmp";
             rename(*node, rename_id);
 
-            //create weights primitive, with dummy memory which will be replaced in firther step
-            primitive_id weights_id = upsampling_id + "_deconvolution_weights";
-            layout dummy_layout(data_types::f32, format::bfyx, tensor(1, 1, 1, 1));
-            float zero = 0.f;
-            auto weights_prim = std::make_shared<data>(weights_id, memory::attach(dummy_layout, &zero, 1));
-            get_or_create(weights_prim);
             //create deconvolution primitive
-            auto deconv_prim = std::make_shared<deconvolution>(upsampling_id, input_id, std::vector<primitive_id>{ weights_id }, stride, input_offset);
+            auto deconv_prim = std::make_shared<deconvolution>(upsampling_id, input_id, weights_vec, stride, input_offset);
             get_or_create(deconv_prim);
 
-            auto weights_node_ptr = nodes_map.find(weights_id)->second;
             auto deconv_node_ptr = nodes_map.find(upsampling_id)->second;
 
             auto upsampling_node_ptr = nodes_map.find(rename_id)->second;
@@ -665,13 +677,14 @@ void program_impl::replace_nodes_post()
             optimized_out.push_back(rename_id);
             nodes_map.erase(rename_id);
 
-            //attach weights buffer
-            auto& data_node = weights_node_ptr->as<data>();
-            data_node.attach_memory(*data_to_allocate, false);
-
             //add connections input->deconvolution and weights->deconvolution
             add_connection(input_node, *deconv_node_ptr);
-            add_connection(*weights_node_ptr, *deconv_node_ptr);
+
+            for (uint32_t weights_idx = 0; weights_idx < num_filter; weights_idx++)
+            {
+                auto weights_node_ptr = nodes_map.find(weights_vec[weights_idx])->second;
+                add_connection(*weights_node_ptr, *deconv_node_ptr);
+            }
             continue;
         }
 
