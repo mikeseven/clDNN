@@ -47,8 +47,8 @@ namespace kernel_selector
 
         runInfo.gws0 = params.output.X().v;
         runInfo.gws1 = params.output.Y().v;
-        // we got byxf_af32 format, so if we process 4 features per workitem, that means we process 32 per simd, so divide by 4 and we end up with 8
-        runInfo.gws2 = (RoundUp(params.output.Feature().v, 32) * params.output.Batch().v) / 4;
+        // we got fs_bs_yx_bsv4_fsv32 format, we process 4 batches and 4 features per workitem
+        runInfo.gws2 = (RoundUp(params.output.Feature().v, 32) * RoundUp(params.output.Batch().v, 4)) / (4*4);
 
         runInfo.lws0 = 1;
         runInfo.lws1 = 1;
@@ -57,6 +57,25 @@ namespace kernel_selector
         return runInfo;
     }
     
+    JitConstants PoolingKerneGPU_fs_bs_yx_bsv4_fsv32::GetJitConstants(const pooling_params& params, DispatchData kd) const
+    {
+        auto jit = PoolingKernelBase::GetJitConstants(params, kd);
+
+        const size_t in_x_pitch = 32 * 4;
+        const size_t in_y_pitch = 32 * 4 * params.inputs[0].X().LogicalDimPadded();
+        const size_t in_b_block_pitch = in_y_pitch * params.inputs[0].Y().LogicalDimPadded();
+        const size_t in_f_block_pitch = in_b_block_pitch * ((params.inputs[0].Batch().v + 3) / 4);
+        const size_t in_offset = in_x_pitch * params.inputs[0].X().pad.before + in_y_pitch * params.inputs[0].Y().pad.before;
+
+        jit.AddConstant(MakeJitConstant("IN_X_PITCH", in_x_pitch));
+        jit.AddConstant(MakeJitConstant("IN_Y_PITCH", in_y_pitch));
+        jit.AddConstant(MakeJitConstant("IN_B_BLOCK_PITCH", in_b_block_pitch));
+        jit.AddConstant(MakeJitConstant("IN_F_BLOCK_PITCH", in_f_block_pitch));
+        jit.AddConstant(MakeJitConstant("IN_OFFSET", in_offset));
+
+        return jit;
+    }
+
     KernelsData PoolingKerneGPU_fs_bs_yx_bsv4_fsv32::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options, FORCE_PRIORITY_1);
