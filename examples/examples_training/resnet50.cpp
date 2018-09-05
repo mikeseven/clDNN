@@ -162,7 +162,7 @@ static primitive_id add_scale_layer_grad(topology& topology_inst, const string& 
 {
     auto scale_input = scale_grad_input(
         layer_name + "_prev_input",
-        input,
+        input_grad,
         layer_name + "_scale_input.nnd"
     );
 
