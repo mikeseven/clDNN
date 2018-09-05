@@ -26,6 +26,7 @@ namespace kernel_selector
         { {
             // explaination:
             // 0, 1, 2, 3, 4 means the ordering starts from X, then Y, then F, thenR, then B
+            // -1 means it's not used
             //X, Y, F, R, B
             {-1,-1, 0,-1, 1 }, // DataLayout::bf
             {-1,-1, 1,-1, 0 }, // DataLayout::fb

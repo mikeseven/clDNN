@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,14 +15,6 @@
 */
 
 #include "include/include_all.cl"
-
-//#define GET_INDEX(prefix, num)                                                          \
-//    CAT(CAT(prefix, num), _OFFSET) +                                                    \
-//    (d1 % CAT(CAT(prefix, num), _SIZE_X     ))*CAT(CAT(prefix, num), _X_PITCH) +         \
-//    (d2 % CAT(CAT(prefix, num), _SIZE_Y     ))*CAT(CAT(prefix, num), _Y_PITCH) +         \
-//    (d3 % CAT(CAT(prefix, num), _FEATURE_NUM))*CAT(CAT(prefix, num), _FEATURE_PITCH) +   \
-//    (d4 % CAT(CAT(prefix, num), _BATCH_NUM  ))*CAT(CAT(prefix, num), _BATCH_PITCH)
-//    
 
 #define GET_INDEX(prefix, num) \
     GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(CAT(prefix, num), d4, d3, d2, d1) 

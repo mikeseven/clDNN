@@ -702,7 +702,7 @@ public:
             my_sizes[1] = align_to(my_sizes[1], 32);
             adjusted_coords[1] = align_to(adjusted_coords[1], 32);
         }
-        else if (fmt == cldnn::format::fs_bs_yx_bsv4_fsv32 && (!is_aligned_to(my_sizes[1], 32) || !is_aligned_to(my_sizes[0], 32) ))
+        else if (fmt == cldnn::format::fs_bs_yx_bsv4_fsv32 && (!is_aligned_to(my_sizes[1], 32) || !is_aligned_to(my_sizes[0], 4) ))
         {
             my_sizes[1] = align_to(my_sizes[1], 32);
             my_sizes[0] = align_to(my_sizes[0], 4);
