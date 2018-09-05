@@ -43,7 +43,7 @@ namespace kernel_selector {
         }
 
         const eltwise_params& params = static_cast<const eltwise_params&>(p);
-        for (int i = 0; i < params.inputs.size(); i++)
+        for (auto i = 0; i < params.inputs.size(); i++)
         {
             if (params.inputs[i].GetLayout() == DataLayout::fs_bs_yx_bsv4_fsv32)
                 return false;
