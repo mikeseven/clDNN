@@ -54,7 +54,7 @@ KERNEL(convolution_mmad_batched)(
     const int input_y = y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
 
     const uint filter_offset = (get_group_id(2) % FILTER_OFM_MMAD_NUM) * FILTER_OFM_BLOCK_PITCH;
-    const uint input_offset = IN_OFFSET + IN_B_BLOCK_PITCH * b_block + IN_F_BLOCK_PITCH * f_block;
+    const uint input_offset = IN_OFFSET + IN_B_BLOCK_PITCH * b_block;
 
     for (uint k = 0; k < FILTER_IFM_MMAD_NUM; ++k)
     {
