@@ -75,25 +75,10 @@ KERNEL(convolution_mmad_batched)(
                         uint input_idx = input_offset + input_offset_y * IN_Y_PITCH + input_offset_x * IN_X_PITCH + k * IN_F_BLOCK_PITCH;
                         uint filter_idx = filter_offset + k*FILTER_Y_PITCH * FILTER_SIZE_Y + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
 
-
 						int4 input_data = as_int4(intel_sub_group_block_read4((const __global uint*)(input + input_idx)));
-						int8 activations;  //activations of all lanes
-
                         int8 weights_data = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
 
-                        for(uint b = 0; b < 4; b++)      
-                        {
-						    activations.s0 = sub_group_broadcast(input_data[b], 0); 
-                            activations.s1 = sub_group_broadcast(input_data[b], 1); 
-                            activations.s2 = sub_group_broadcast(input_data[b], 2); 
-                            activations.s3 = sub_group_broadcast(input_data[b], 3); 
-                            activations.s4 = sub_group_broadcast(input_data[b], 4); 
-                            activations.s5 = sub_group_broadcast(input_data[b], 5); 
-                            activations.s6 = sub_group_broadcast(input_data[b], 6); 
-                            activations.s7 = sub_group_broadcast(input_data[b], 7); 
-
-    						dotProd[b] = MMAD_8(activations, weights_data, dotProd[b]);
-                        }
+                        dotProd = MMAD_4x8(input_data, weights_data, dotProd);
                     }
                 }
             }
@@ -116,7 +101,7 @@ for(uint b = 0; b < 4; b++)
 #endif // QUANTIZATION_TERM
 #endif // BIAS_TERM
 
-    const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block + b, f, y, x);//GET_DATA_INDEX(OUTPUT, b_block + b, f, y, x);
+    const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block + b, f, y, x);
 #if QUANTIZATION_TERM
     output[dst_index] = ACTIVATION(convert_char(dotProd[b]), NL_M, NL_N);
 #else
