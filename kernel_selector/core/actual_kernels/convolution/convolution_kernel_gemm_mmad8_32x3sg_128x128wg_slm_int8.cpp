@@ -25,17 +25,12 @@ namespace kernel_selector {
         k.EnableInputDataType(Datatype::INT8);
         k.EnableOutputDataType(Datatype::INT8);
         k.EnableInputWeightsType(WeightsType::INT8);
-        k.EnableInputLayout(DataLayout::byxf_af32);
-        k.EnableOutputLayout(DataLayout::byxf_af32);
+        k.EnableInputLayout(DataLayout::fs_bs_yx_bsv4_fsv32);
+        k.EnableOutputLayout(DataLayout::fs_bs_yx_bsv4_fsv32);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
-        k.EnableDilation();
         k.EnableBiasPerFeature();
-        k.EnableBiasPerOutput();
-        k.EnableNonBiasTerm();
         k.EnableBatching();
-        k.EnableSplitSupport();
-        k.EnableDepthwiseSeparableOpt();
         k.EnableInt8Quantization();
         k.EnableOutputCalibration();
         k.DisableTuning();
@@ -67,6 +62,10 @@ namespace kernel_selector {
         if (input.X().pad.Total() != 0 || input.Y().pad.Total() != 0)
             return false;
 
+        // we do not support padded output
+        if (output.X().pad.Total() != 0 || output.Y().pad.Total() != 0)
+            return false;
+
         if (params.split != 1)
             return false;
 
@@ -74,8 +73,8 @@ namespace kernel_selector {
         const auto k = input.Feature().v;
         const auto n = output.Feature().v;
 
-        if (input.Batch().v != 64)
-            return false;
+//        if (input.Batch().v != 64)
+//            return false;
 
         if (m % 128 != 0)
             return false;
@@ -153,6 +152,17 @@ namespace kernel_selector {
         jit.AddConstant(MakeJitConstant("K", k));
         jit.AddConstant(MakeJitConstant("N", n));
 
+        const size_t out_x_pitch = 32 * 4;
+        const size_t out_y_pitch = 32 * 4 * params.output.X().LogicalDimPadded();
+        const size_t out_b_block_pitch = out_y_pitch * params.output.Y().LogicalDimPadded();
+        const size_t out_f_block_pitch = out_b_block_pitch * ((params.output.Batch().v + 3) / 4);
+        const size_t out_offset = out_x_pitch * params.output.X().pad.before + out_y_pitch * params.output.Y().pad.before;
+
+        jit.AddConstant(MakeJitConstant("OUT_X_PITCH", out_x_pitch));
+        jit.AddConstant(MakeJitConstant("OUT_Y_PITCH", out_y_pitch));
+        jit.AddConstant(MakeJitConstant("OUT_B_BLOCK_PITCH", out_b_block_pitch));
+        jit.AddConstant(MakeJitConstant("OUT_F_BLOCK_PITCH", out_f_block_pitch));
+        jit.AddConstant(MakeJitConstant("OUT_OFFSET", out_offset));
         return jit;
     }
 

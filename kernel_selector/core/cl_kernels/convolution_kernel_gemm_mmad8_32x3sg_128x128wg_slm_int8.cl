@@ -183,6 +183,10 @@ KERNEL(Kernel_GEMM_MMAD8_32x32SG_128x128WG_SLM_INT8)(
         barrier(CLK_LOCAL_MEM_FENCE);
     }
 
+    if(get_global_id(0) == 0 && get_global_id(1) == 0 && get_global_id(2) == 0)
+    {
+        printf("accumulator: %d\n", (int)(regC[0][0]));
+    }
 
     // Write final accumulated values
     uint cOffset = sg_global_idX * ((MATRIX_M / 8) * SG_TILE_N) + sg_global_idY * (SG_TILE_M / 8) +
@@ -196,12 +200,25 @@ KERNEL(Kernel_GEMM_MMAD8_32x32SG_128x128WG_SLM_INT8)(
             char8 to_return;
             for(uint z = 0; z < 8; z++)
             {
-                to_return[z] = convert_char(regC[i*(SIMD_LANE_M / 8) + j][z]);
+                int accumulator = regC[i*(SIMD_LANE_M / 8) + j][z];
+                int byte_offset = cOffset * 8 + j * 8 + z;
+                int f = (byte_offset % 32) + ((byte_offset / OUT_F_BLOCK_PITCH) * 32);
+#if BIAS_TERM
+                const unsigned bias_index = f;
+#if CALIBRATION_TERM
+                accumulator = (UNIT_TYPE)round(((float)accumulator * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
+#else  // CALIBRATION_TERM
+                accumulator = (UNIT_TYPE)round(((float)accumulator * quantizations[f] * I_QF + biases[bias_index]) * O_QF);
+#endif // CALIBRATION_TERM
+
+#endif // BIAS_TERM
+
+                to_return[z] = ACTIVATION(convert_char(accumulator), NL_M, NL_N);
             }
-            if( (cOffset + j) * 8 < OUTPUT_LENGTH)
-            {
+//            if( (cOffset + j) * 8 < OUTPUT_LENGTH)
+//            {
                 g_matrixC[cOffset + j] = to_return;
-            }
+//            }
 
         }
         cOffset += SG_SIZE * (MATRIX_M / 8);
