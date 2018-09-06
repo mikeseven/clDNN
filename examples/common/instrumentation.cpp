@@ -212,29 +212,53 @@ namespace instrumentation {
         const auto y_size = size.spatial[1] + layout.data_padding.lower_size().spatial[1] + layout.data_padding.upper_size().spatial[1];
 
         unsigned int input_it = 0;
-        for (cldnn::tensor::value_type fs = 0; fs < fs_size; fs++)
+        if (single_batch && single_feature)
         {
-            for (cldnn::tensor::value_type bs = 0; bs < bs_size; bs++)
+            const size_t x_pitch = 32 * 4;
+            const size_t y_pitch = 32 * 4 * x_size;
+            const size_t b_block_pitch = y_pitch * y_size;
+            const size_t f_block_pitch = b_block_pitch * bs_size;
+            input_it += (unsigned int)(batch_id % 4 + (batch_id / 4) * b_block_pitch);
+            input_it += (unsigned int)(feature_id % 32 + (feature_id / 32) * f_block_pitch);
+            for (cldnn::tensor::value_type y = 0; y < y_size; y++)
             {
-                for (cldnn::tensor::value_type y = 0; y < y_size; y++)
+                for (cldnn::tensor::value_type x = 0; x < x_size; x++)
                 {
-                    for (cldnn::tensor::value_type x = 0; x < x_size; x++)
+                    streams[batch_id][feature_id] << convert_element(mem_ptr[input_it]) << " ";
+                    if (x == x_size - 1)
                     {
-                        for (cldnn::tensor::value_type bv = 0; bv < 4; bv++)
+                        streams[batch_id][feature_id] << std::endl;
+                    }
+                    input_it++;
+                }
+            }
+        }
+        else
+        {
+            for (cldnn::tensor::value_type fs = 0; fs < fs_size; fs++)
+            {
+                for (cldnn::tensor::value_type bs = 0; bs < bs_size; bs++)
+                {
+                    for (cldnn::tensor::value_type y = 0; y < y_size; y++)
+                    {
+                        for (cldnn::tensor::value_type x = 0; x < x_size; x++)
                         {
-                            for (cldnn::tensor::value_type fv = 0; fv < 32; fv++)
+                            for (cldnn::tensor::value_type bv = 0; bv < 4; bv++)
                             {
-                                const auto b = bs * 4 + bv;
-                                const auto f = fs * 32 + fv;
-                                if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
+                                for (cldnn::tensor::value_type fv = 0; fv < 32; fv++)
                                 {
-                                    streams[b][f] << convert_element(mem_ptr[input_it]) << " ";
-                                    if (x == x_size - 1)
+                                    const auto b = bs * 4 + bv;
+                                    const auto f = fs * 32 + fv;
+                                    if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
                                     {
-                                        streams[b][f] << std::endl;
+                                        streams[b][f] << convert_element(mem_ptr[input_it]) << " ";
+                                        if (x == x_size - 1)
+                                        {
+                                            streams[b][f] << std::endl;
+                                        }
                                     }
+                                    input_it++;
                                 }
-                                input_it++;
                             }
                         }
                     }
@@ -506,15 +530,15 @@ namespace instrumentation {
         if (mem.get_layout().format == cldnn::format::fs_bs_yx_bsv4_fsv32)
         {
             if (mem.get_layout().data_type == cldnn::data_types::f32)
-                dump_fs_bs_yx_bsv4_fsv32<float>(mem, false, 0, false, 0, streams);
+                dump_fs_bs_yx_bsv4_fsv32<float>(mem, single_batch, batch_id, single_feature, feature_id, streams);
             else if (mem.get_layout().data_type == cldnn::data_types::f16)
-                dump_fs_bs_yx_bsv4_fsv32<half_t>(mem, false, 0, false, 0, streams);
+                dump_fs_bs_yx_bsv4_fsv32<half_t>(mem, single_batch, batch_id, single_feature, feature_id, streams);
             else if (mem.get_layout().data_type == cldnn::data_types::i8)
-                dump_fs_bs_yx_bsv4_fsv32<signed char>(mem, false, 0, false, 0, streams);
+                dump_fs_bs_yx_bsv4_fsv32<signed char>(mem, single_batch, batch_id, single_feature, feature_id, streams);
             else if (mem.get_layout().data_type == cldnn::data_types::u8)
-                dump_fs_bs_yx_bsv4_fsv32<unsigned char>(mem, false, 0, false, 0, streams);
+                dump_fs_bs_yx_bsv4_fsv32<unsigned char>(mem, single_batch, batch_id, single_feature, feature_id, streams);
             else
-                dump_fs_bs_yx_bsv4_fsv32<char>(mem, false, 0, false, 0, streams);
+                dump_fs_bs_yx_bsv4_fsv32<char>(mem, single_batch, batch_id, single_feature, feature_id, streams);
         }
         else
         {
