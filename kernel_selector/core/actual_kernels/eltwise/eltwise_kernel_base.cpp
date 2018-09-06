@@ -264,6 +264,51 @@ namespace kernel_selector
         return GetJitConstantsCommon(params, false);
     }
 
+    EltwiseKernelBase::DispatchData EltwiseKernelBase::SetDefault(const eltwise_params& params) const
+    {
+        DispatchData kd;
+
+        if (params.eltwiseParams.layoutBased || params.eltwiseParams.int8_quantization)
+        {
+            auto global = GetTensorFriendlyWorkGroups(params.inputs[0]);
+            kd.gws0 = global[0];
+            kd.gws1 = global[1];
+            kd.gws2 = global[2];
+        }
+        else if (CheckInputsOutputNoPitchSameDims(params))
+        {
+            kd.gws0 = params.inputs[0].LogicalSize();
+            kd.gws1 = 1;
+            kd.gws2 = 1;
+        }
+        else
+        {
+            const auto& out = params.output;
+
+            std::vector<size_t> gws;
+            for (const auto& o : out.GetDims())
+            {
+                gws.push_back(o.v);
+            }
+
+            for (size_t i = gws.size(); i < 4; i++)
+            {
+                gws.push_back(1U);
+            }
+
+            kd.gws0 = gws[0];
+            kd.gws1 = gws[1];
+            kd.gws2 = gws[2] * gws[3];
+        }
+
+        auto local = GetOptimalLocalWorkGroupSizes( { kd.gws0, kd.gws1, kd.gws2 } );
+        kd.lws0 = local[0];
+        kd.lws1 = local[1];
+        kd.lws2 = local[2];
+
+        return kd;
+    }
+
     KernelsData EltwiseKernelBase::GetCommonKernelsData(const Params& params, const optional_params& options) const
     {
         if (!Validate(params, options))
@@ -278,32 +323,13 @@ namespace kernel_selector
         auto cldnn_jit = GetJitConstants(newParams);
         std::string jit = CreateJit(kernelName, cldnn_jit, entry_point);
 
-        const auto& out = newParams.output;
+        DispatchData runInfo = SetDefault(newParams);
+
         auto& kernel = kd.kernels[0];
-        if (newParams.eltwiseParams.layoutBased || newParams.eltwiseParams.int8_quantization)
-        {
-            kernel.workGroups.global = GetTensorFriendlyWorkGroups(newParams.inputs[0]);
-        }
-        else if (CheckInputsOutputNoPitchSameDims(newParams))
-        {
-            kernel.workGroups.global = { newParams.inputs[0].LogicalSize(), 1, 1 };
-        }
-        else
-        {
-            std::vector<size_t> gws;
-            for (const auto& o : out.GetDims())
-            {
-                gws.push_back(o.v);
-            }
 
-            for (size_t i = gws.size(); i < 4; i++)
-            {
-                gws.push_back(1U);
-            }
+        kernel.workGroups.global = { runInfo.gws0, runInfo.gws1, runInfo.gws2 };
+        kernel.workGroups.local = { runInfo.lws0, runInfo.lws1, runInfo.lws2 };
 
-            kernel.workGroups.global = { gws[0], gws[1], gws[2] * gws[3] };
-        }
-        kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
         kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
         kernel.arguments = GetArgsDesc((uint32_t)newParams.inputs.size(), false, false, newParams.eltwiseParams.int8_quantization, newParams.eltwiseParams.output_calibration);
 

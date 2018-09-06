@@ -19,6 +19,7 @@
 #define GET_INDEX(prefix, num) \
     GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(CAT(prefix, num), d4, d3, d2, d1) 
 
+__attribute__((intel_reqd_sub_group_size(8)))
 KERNEL(eltwise_fs_bs_yx_bsv4_fsv32)(
     INPUTS_DECLS
     __global UNIT_TYPE* output

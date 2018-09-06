@@ -141,6 +141,7 @@ namespace kernel_selector
     protected:
         virtual bool Validate(const Params& p, const optional_params& o) const override;
         virtual JitConstants GetJitConstants(const eltwise_params& params) const;
+        virtual DispatchData SetDefault(const eltwise_params& params) const;
         KernelsData GetCommonKernelsData(const Params& params, const optional_params& options) const;
     };
 }
