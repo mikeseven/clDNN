@@ -16,8 +16,23 @@
 
 #include "include/include_all.cl"
 
-#define GET_INDEX(prefix, num) \
-    GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(CAT(prefix, num), d4, d3, d2, d1) 
+#define GET_INDEX(src) \
+    GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(src, d4, d3, d2, d1) 
+
+int16 FUNC(get_int16)(const __global UNIT_TYPE* src, uint idx)
+{
+    int4 int_data = as_int4(intel_sub_group_block_read4((const __global uint*)(src + idx)));
+    int16 to_return;
+    for(uint b = 0; b < 4; b++)
+    {
+        for(uint f = 0; f < 4; f++)
+        {
+            to_return[b * 4 + f] = as_char4(int_data[b])[f];
+        }
+    }
+    return to_return;
+}
+#define GET_INPUT(A, B) FUNC_CALL(get_int16)(A, GET_INDEX(B))
 
 __attribute__((intel_reqd_sub_group_size(8)))
 KERNEL(eltwise_fs_bs_yx_bsv4_fsv32)(
@@ -28,22 +43,36 @@ KERNEL(eltwise_fs_bs_yx_bsv4_fsv32)(
 #endif
     )
 {
-    const uint d1 = get_global_id(GWS_YX) % INPUT0_SIZE_X;   // X
-    const uint d2 = get_global_id(GWS_YX) / INPUT0_SIZE_X;   // Y
-    const uint d3 = get_global_id(GWS_FEATURE);             // Feature
-    const uint d4 = get_global_id(GWS_BATCH);               // Batch
+    const uint of_32_aligned = ((OUTPUT_FEATURE_NUM + 31) / 32) * 32;
+    const uint d1 = get_global_id(0);   // X
+    const uint d2 = get_global_id(1);   // Y
+    uint d3 = (get_global_id(2) * 4) % of_32_aligned; // Feature
+    uint d4 = 4 * (get_global_id(2) * 4) / of_32_aligned;//4 * (get_group_id(2) * 4 * 32) / (of_32_aligned * 4);               // Batch
 
-    uint output_offset = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, d4, d3, d2, d1);
+    int16 res;
 
-    int res;
-    
     DO_ELTWISE;
 
-#if CALIBRATION_TERM
-    res = (int)round(((float)res) * calibrations[d3]);
-#else  // CALIBRATION_TERM
-    res = (int)round(((float)res) * O_QF);
-#endif // CALIBRATION_TERM
+    int4 char_result;
+    for(uint b = 0; b < 4; b++)
+    {
+        char4 char_res;
+        for(uint f = 0; f < 4; f++)
+        {
+            int res_tmp = res[b * 4 + f];
+        #if CALIBRATION_TERM
+            res_tmp = (int)round(((float)res_tmp) * calibrations[d3+f]);
+        #else  // CALIBRATION_TERM
+            res_tmp = (int)round(((float)res_tmp) * O_QF);
+        #endif // CALIBRATION_TERM
+            char_res[f] = ACTIVATION(convert_char(res_tmp), NL_M, NL_N);
+        }
+        // pack 4 chars into int
+        char_result[b] = as_int(char_res);
+    }
 
-    output[output_offset] = ACTIVATION(convert_char(res), NL_M, NL_N);
+    uint output_offset = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, d4, d3, d2, d1);
+    intel_sub_group_block_write4((__global uint*)(output + output_offset), as_uint4(char_result));
 }
+
+#undef GET_INDEX
