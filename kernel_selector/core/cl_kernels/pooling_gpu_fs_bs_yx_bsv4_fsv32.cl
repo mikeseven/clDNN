@@ -33,6 +33,7 @@ inline int FUNC(apply_pooling)(int tmp, int in)
 #endif
 }
 
+__attribute__((intel_reqd_sub_group_size(8)))
 KERNEL(pooling_gpu_fs_bs_yx_bsv4_fsv32)(
     const __global UNIT_TYPE* input,
     __global UNIT_TYPE* output)
@@ -159,7 +160,7 @@ for(uint b = 0; b < 4; b++)
 {
     for(uint op = 0; op < 4; op++)
     {
-        const uint output_pos = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block + b, f+op, y, x);
+        const uint output_pos = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4 + b, f+op, y, x);
         output[output_pos] = ACTIVATION(convert_char(result[b][op]), NL_M ,NL_N);
     }
 }
