@@ -42,9 +42,10 @@ KERNEL(fully_connected_kernel_mmad_batched)(
     const uint sg_channel = get_sub_group_local_id();
 
     const uint batch_id = (uint)get_group_id(0) * 8;
+    const uint b_block = batch_id / 4;
     const uint f = get_global_id(1) % FILTER_OFM_ALIGNED;
 
-    uint in_addr = INPUT0_OFFSET + batch_id * INPUT0_BATCH_PITCH;
+    uint in_addr = IN_OFFSET + b_block * IN_B_BLOCK_PITCH;
 
     const uint filter_offset = (get_group_id(1) % FILTER_OFM_MMAD_NUM) * FILTER_OFM_BLOCK_PITCH;
     uint filter_idx = filter_offset;
@@ -53,24 +54,27 @@ KERNEL(fully_connected_kernel_mmad_batched)(
     int8 tileB;
     int8 tileC = 0;
 
-    for (uint k = 0; k < FILTER_IFM_MMAD_NUM * FILTER_SIZE_X * FILTER_SIZE_Y; ++k)
+    for(uint z = 0; z < FILTER_IFM_MMAD_NUM; z++ )
     {
-        // load A tile ( input )
-        // load 8 batches 4 channels per WI, so we'll have 8x32 block
-        for(uint i = 0; i < 8; i++)
+        for (uint k = 0; k < FILTER_SIZE_X * FILTER_SIZE_Y; ++k)
         {
-            uint tmp_addr = in_addr + i * INPUT0_BATCH_PITCH;
-            tileA[i] = as_int(intel_sub_group_block_read((const __global uint*)(input + tmp_addr)));
-        }
+            // load A tile ( input )
+            // load 8 batches 4 channels per WI, so we'll have 8x32 block
 
-        // load B tile ( weights )
-        tileB = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
+            tileA.lo = as_int4(intel_sub_group_block_read4((const __global uint*)(input + in_addr)));
+            tileA.hi = as_int4(intel_sub_group_block_read4((const __global uint*)(input + in_addr + IN_B_BLOCK_PITCH)));
+
+            // load B tile ( weights )
+            tileB = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
     
-        // compute C tile ( output )
-        tileC = MMAD_8x8(tileA, tileB, tileC); // here we output 8 batches per workitem, and each workitem gets different output feature
+            // compute C tile ( output )
+            tileC = MMAD_8x8(tileA, tileB, tileC); // here we output 8 batches per workitem, and each workitem gets different output feature
 
-        in_addr += 32; // 4 features per channel * 8 SIMD channels
-        filter_idx += 32*8; // 32 features per channel * 8 output features per SIMD channel
+            in_addr += 32 * 4; // 4 batches * 4 features per channel * 8 SIMD channels
+            filter_idx += 32*8; // 32 features per channel * 8 output features per SIMD channel
+        }
+        in_addr += IN_F_BLOCK_PITCH;
+        in_addr -= (FILTER_SIZE_X * FILTER_SIZE_Y * 32 * 4);
     }
 
 #if BIAS_TERM
@@ -95,7 +99,11 @@ KERNEL(fully_connected_kernel_mmad_batched)(
         for(uint i = 0; i < 8; i++)
         {
             const uint curr_b = batch_id + i;
+#if defined OUTPUT_LAYOUT_FS_BS_YX_BSV4_FSV32
+            const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, curr_b, f, 0, 0);
+#else
             const uint dst_index = GET_DATA_INDEX(OUTPUT, curr_b, f, 0, 0);
+#endif
             output[dst_index] = ACTIVATION(convert_char(tileC[i]), NL_M, NL_N);
         }
     }
