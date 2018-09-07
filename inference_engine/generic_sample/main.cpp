@@ -125,7 +125,7 @@ DEFINE_bool(mark_zero, false, mark_zero_message);
 static const char global_range_message[] = "normalize dumped pixel color by full tensor value range than by local image range (dump_bmp ON)";
 DEFINE_bool(global_range, false, global_range_message);
 #endif
-
+// for now its always ON, flag has to be tested
 static const char mem_pool_message[] = "switch clDNN Memory Pool opt OFF";
 DEFINE_bool(mem_pool, true, mem_pool_message);
 
