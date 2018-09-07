@@ -38,10 +38,10 @@ namespace kernel_selector {
     {
         DispatchData kd;
 
-        kd.gws0 = params.inputs[0].X().v;
-        kd.gws1 = params.inputs[0].Y().v;
+        kd.gws0 = params.output.X().v;
+        kd.gws1 = params.output.Y().v;
         // we process 4 batches and 4 features per workitem
-        kd.gws2 = (params.inputs[0].Batch().v / 4) * (params.inputs[0].Feature().v / 4);
+        kd.gws2 = (params.output.Batch().v / 4) * (params.output.Feature().v / 4);
         kd.lws0 = 1;
         kd.lws1 = 1;
         kd.lws2 = 8;

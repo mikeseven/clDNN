@@ -46,8 +46,8 @@ KERNEL(eltwise_fs_bs_yx_bsv4_fsv32)(
     const uint of_32_aligned = ((OUTPUT_FEATURE_NUM + 31) / 32) * 32;
     const uint d1 = get_global_id(0);   // X
     const uint d2 = get_global_id(1);   // Y
-    uint d3 = (get_global_id(2) * 4) % of_32_aligned; // Feature
-    uint d4 = 4 * (get_global_id(2) * 4) / of_32_aligned;//4 * (get_group_id(2) * 4 * 32) / (of_32_aligned * 4);               // Batch
+    const uint d3 = (get_global_id(2) * 4) % of_32_aligned; // Feature
+    const uint d4 = 4 * ((get_global_id(2) * 4) / of_32_aligned); // Batch
 
     int16 res;
 
