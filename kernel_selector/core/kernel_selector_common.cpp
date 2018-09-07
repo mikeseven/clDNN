@@ -94,6 +94,7 @@ namespace kernel_selector
         case kernel_selector::DataLayout::brfyx:             return "BRFYX";
         case kernel_selector::DataLayout::winograd_2x3_s1_data: return "WINOGRAD_2x3_S1_DATA";
         case kernel_selector::DataLayout::byxf_af32: return "BYXF_AF32";
+        case kernel_selector::DataLayout::fs_bs_yx_bsv4_fsv32: return "FS_BS_YX_BSV4_FSV32";
         default: return "";
         }
     }

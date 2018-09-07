@@ -1,5 +1,5 @@
 ﻿/*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,16 +20,15 @@
 
 namespace kernel_selector
 {
-    class EltwiseKernelRef : public EltwiseKernelBase
+    class EltwiseKernel_fs_bs_yx_bsv4_fsv32 : public EltwiseKernelBase
     {
     public:
-        EltwiseKernelRef() : EltwiseKernelBase("generic_eltwise_ref") {}
-        virtual ~EltwiseKernelRef() {}
+        EltwiseKernel_fs_bs_yx_bsv4_fsv32() : EltwiseKernelBase("eltwise_fs_bs_yx_bsv4_fsv32") {}
+        virtual ~EltwiseKernel_fs_bs_yx_bsv4_fsv32() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
     protected:
-        bool Validate(const Params& p, const optional_params& o) const override;
-
+        JitConstants GetJitConstants(const eltwise_params& params) const override;
     };
 }

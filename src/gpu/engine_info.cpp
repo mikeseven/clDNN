@@ -171,6 +171,10 @@ engine_info_internal::engine_info_internal(const gpu_toolkit& context)
     core_frequency = static_cast<uint32_t>(context.device().getInfo<CL_DEVICE_MAX_CLOCK_FREQUENCY>());
 
     max_work_group_size = static_cast<uint64_t>(context.device().getInfo<CL_DEVICE_MAX_WORK_GROUP_SIZE>());
+
+	if (max_work_group_size > 256)
+		max_work_group_size = 256;
+
     max_local_mem_size = static_cast<uint64_t>(context.device().getInfo<CL_DEVICE_LOCAL_MEM_SIZE>());
     max_global_mem_size = static_cast<uint64_t>(context.device().getInfo<CL_DEVICE_GLOBAL_MEM_SIZE>());
     max_alloc_mem_size = static_cast<uint64_t>(context.device().getInfo<CL_DEVICE_MAX_MEM_ALLOC_SIZE>());

@@ -81,27 +81,27 @@ namespace instrumentation {
 #endif
     }
 
-    float convert_element(float f)
+    inline float convert_element(float f)
     {
         return f;
     }
 
-    float convert_element(half_t h)
+    inline float convert_element(half_t h)
     {
         return convert_half_to_float(h);
     }
 
-    float convert_element(char c)
+    inline float convert_element(char c)
     {
         return static_cast<float>(c);
     }
 
-    float convert_element(signed char c)
+    inline float convert_element(signed char c)
     {
         return static_cast<float>(c);
     }
 
-    float convert_element(unsigned char c)
+    inline float convert_element(unsigned char c)
     {
         return static_cast<float>(c);
     }
@@ -190,6 +190,53 @@ namespace instrumentation {
                             }
                         }
                         input_it++;
+                    }
+                }
+            }
+        }
+    }
+
+    template<typename elemType>
+    void dump_fs_bs_yx_bsv4_fsv32(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id, std::vector<std::vector<std::stringstream>> & streams)
+    {
+        auto mem_ptr = mem.pointer<elemType>();
+
+        const auto& layout = mem.get_layout();
+        auto size = layout.size;
+        size.feature[0] = ((size.feature[0] + 31) / 32) * 32;
+        size.batch[0] = ((size.batch[0] + 3) / 4) * 4;
+
+        const auto bs_size = size.batch[0] / 4;
+        const auto fs_size = size.feature[0] / 32;
+        const auto x_size = size.spatial[0] + layout.data_padding.lower_size().spatial[0] + layout.data_padding.upper_size().spatial[0];
+        const auto y_size = size.spatial[1] + layout.data_padding.lower_size().spatial[1] + layout.data_padding.upper_size().spatial[1];
+
+        unsigned int input_it = 0;
+        for (cldnn::tensor::value_type fs = 0; fs < fs_size; fs++)
+        {
+            for (cldnn::tensor::value_type bs = 0; bs < bs_size; bs++)
+            {
+                for (cldnn::tensor::value_type y = 0; y < y_size; y++)
+                {
+                    for (cldnn::tensor::value_type x = 0; x < x_size; x++)
+                    {
+                        for (cldnn::tensor::value_type bv = 0; bv < 4; bv++)
+                        {
+                            for (cldnn::tensor::value_type fv = 0; fv < 32; fv++)
+                            {
+                                const auto b = bs * 4 + bv;
+                                const auto f = fs * 32 + fv;
+                                if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
+                                {
+                                    streams[b][f] << convert_element(mem_ptr[input_it]) << " ";
+                                    if (x == x_size - 1)
+                                    {
+                                        streams[b][f] << std::endl;
+                                    }
+                                }
+                                input_it++;
+                            }
+                        }
                     }
                 }
             }
@@ -395,21 +442,38 @@ namespace instrumentation {
     {
         auto mem_ptr = mem.pointer<T>();
 
-        auto pitches = mem.get_layout().get_pitches();
-        auto size = mem.get_layout().size;
-        if (mem.get_layout().format == cldnn::format::byxf_af32)
+        const auto& layout = mem.get_layout();
+
+        auto pitches = layout.get_pitches();
+        auto size = layout.size;
+        if (layout.format == cldnn::format::byxf_af32)
         {
             size.feature[0] = ((size.feature[0] + 31) / 32) * 32;
         }
-        for (cldnn::tensor::value_type b = 0; b < size.batch[0]; ++b)
+        if (layout.format == cldnn::format::fs_bs_yx_bsv4_fsv32)
         {
-            for (cldnn::tensor::value_type f = 0; f < size.feature[0]; ++f)
+            size.feature[0] = ((size.feature[0] + 31) / 32) * 32;
+            size.batch[0] = ((size.batch[0] + 3) / 4) * 4;
+        }
+        const unsigned int bp = pitches.batch[0];
+        const unsigned int fp = pitches.feature[0];
+        const unsigned int xp = pitches.spatial[0];
+        const unsigned int yp = pitches.spatial[1];
+
+        const auto bs = size.batch[0];
+        const auto fs = size.feature[0];
+        const auto xs = size.spatial[0] + layout.data_padding.lower_size().spatial[0] + layout.data_padding.upper_size().spatial[0]; // dump padded
+        const auto ys = size.spatial[1] + layout.data_padding.lower_size().spatial[1] + layout.data_padding.upper_size().spatial[1]; // dump padded
+
+        for (cldnn::tensor::value_type b = 0; b < bs; ++b)
+        {
+            for (cldnn::tensor::value_type f = 0; f < fs; ++f)
             {
-                for (cldnn::tensor::value_type y = 0; y < size.spatial[1]; ++y)
+                for (cldnn::tensor::value_type y = 0; y < ys; ++y)
                 {
-                    for (cldnn::tensor::value_type x = 0; x < size.spatial[0]; ++x)
+                    for (cldnn::tensor::value_type x = 0; x < xs; ++x)
                     {
-                        unsigned int input_it = b*pitches.batch[0] + f*pitches.feature[0] + y*pitches.spatial[1] + x*pitches.spatial[0];
+                        unsigned int input_it = b*bp + f*fp + y*yp + x*xp;
                         streams[b][f] << convert_element(mem_ptr[input_it]) << " ";
                     }
                     streams[b][f] << std::endl;
@@ -427,6 +491,11 @@ namespace instrumentation {
         {
             feature = ((feature + 31) / 32) * 32;
         }
+        if (mem.get_layout().format == cldnn::format::fs_bs_yx_bsv4_fsv32)
+        {
+            feature = ((feature + 31) / 32) * 32;
+            batch = ((batch + 3) / 4) * 4;
+        }
         auto eng_type =  "gpu" ;
         std::vector<std::vector<std::stringstream>> streams(batch);
         for(cldnn::tensor::value_type b = 0; b < batch; b++)
@@ -434,16 +503,32 @@ namespace instrumentation {
             streams[b].resize(feature);
         }
 
-        if (mem.get_layout().data_type == cldnn::data_types::f32)
-            dump<float>(mem, streams);
-        else if (mem.get_layout().data_type == cldnn::data_types::f16)
-            dump<half_t>(mem, streams);
-        else if (mem.get_layout().data_type == cldnn::data_types::i8)
-            dump<signed char>(mem, streams);
-        else if (mem.get_layout().data_type == cldnn::data_types::u8)
-            dump<unsigned char>(mem, streams);
+        if (mem.get_layout().format == cldnn::format::fs_bs_yx_bsv4_fsv32)
+        {
+            if (mem.get_layout().data_type == cldnn::data_types::f32)
+                dump_fs_bs_yx_bsv4_fsv32<float>(mem, false, 0, false, 0, streams);
+            else if (mem.get_layout().data_type == cldnn::data_types::f16)
+                dump_fs_bs_yx_bsv4_fsv32<half_t>(mem, false, 0, false, 0, streams);
+            else if (mem.get_layout().data_type == cldnn::data_types::i8)
+                dump_fs_bs_yx_bsv4_fsv32<signed char>(mem, false, 0, false, 0, streams);
+            else if (mem.get_layout().data_type == cldnn::data_types::u8)
+                dump_fs_bs_yx_bsv4_fsv32<unsigned char>(mem, false, 0, false, 0, streams);
+            else
+                dump_fs_bs_yx_bsv4_fsv32<char>(mem, false, 0, false, 0, streams);
+        }
         else
-            dump<char>(mem, streams);
+        {
+            if (mem.get_layout().data_type == cldnn::data_types::f32)
+                dump<float>(mem, streams);
+            else if (mem.get_layout().data_type == cldnn::data_types::f16)
+                dump<half_t>(mem, streams);
+            else if (mem.get_layout().data_type == cldnn::data_types::i8)
+                dump<signed char>(mem, streams);
+            else if (mem.get_layout().data_type == cldnn::data_types::u8)
+                dump<unsigned char>(mem, streams);
+            else
+                dump<char>(mem, streams);
+        }
 
         for (cldnn::tensor::value_type b = 0; b < batch; b++)
             for (cldnn::tensor::value_type f = 0; f < feature; f++)

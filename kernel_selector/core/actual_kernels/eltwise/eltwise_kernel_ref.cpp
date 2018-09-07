@@ -35,6 +35,25 @@ namespace kernel_selector {
         return k;
     }
 
+    bool EltwiseKernelRef::Validate(const Params& p, const optional_params& o) const
+    {
+        if (!EltwiseKernelBase::Validate(p, o))
+        {
+            return false;
+        }
+
+        const eltwise_params& params = static_cast<const eltwise_params&>(p);
+        for (size_t i = 0; i < params.inputs.size(); i++)
+        {
+            if (params.inputs[i].GetLayout() == DataLayout::fs_bs_yx_bsv4_fsv32)
+                return false;
+        }
+        if (params.output.GetLayout() == DataLayout::fs_bs_yx_bsv4_fsv32)
+            return false;
+
+        return true;
+    }
+
     KernelsData EltwiseKernelRef::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options);

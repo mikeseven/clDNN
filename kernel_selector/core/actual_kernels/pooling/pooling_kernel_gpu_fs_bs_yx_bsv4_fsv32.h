@@ -1,5 +1,5 @@
 ﻿/*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -16,20 +16,21 @@
 
 #pragma once
 
-#include "eltwise_kernel_base.h"
-
-namespace kernel_selector
-{
-    class EltwiseKernelRef : public EltwiseKernelBase
+#include "pooling_kernel_base.h"
+ 
+namespace kernel_selector 
+{    
+    class PoolingKerneGPU_fs_bs_yx_bsv4_fsv32 : public PoolingKernelBase
     {
     public:
-        EltwiseKernelRef() : EltwiseKernelBase("generic_eltwise_ref") {}
-        virtual ~EltwiseKernelRef() {}
+        PoolingKerneGPU_fs_bs_yx_bsv4_fsv32() : PoolingKernelBase("pooling_gpu_fs_bs_yx_bsv4_fsv32") {}
+        virtual ~PoolingKerneGPU_fs_bs_yx_bsv4_fsv32() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
+        DispatchData SetDefault(const pooling_params& params) const override;
     protected:
-        bool Validate(const Params& p, const optional_params& o) const override;
+        JitConstants GetJitConstants(const pooling_params& params, DispatchData kd) const override;
 
     };
 }
