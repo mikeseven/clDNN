@@ -60,6 +60,7 @@ namespace kernel_selector
             { "0x193B" , tuning_cache_193B },
             { "0x1912" , tuning_cache_1912 },
             { "0x5927" , tuning_cache_5927 },
+            { "0x8A52" , tuning_cache_8A52 },
             { "0x5A84" , tuning_cache_5A84 },
             { "0x5A85" , tuning_cache_5A84 },
             { "0x3184" , tuning_cache_5A84 },

@@ -28,7 +28,7 @@
 #include <ie_plugin_ptr.hpp>
 #include <cldnn/cldnn_config.hpp>
 #include <ie_plugin_config.hpp>
-//#include <../dpd_vcp_dl-scoring_engine/src/extension/ext_list.hpp> //for CPU
+//#include <../dpd_vcp_dl-scoring_engine/src/extension/ext_list.hpp> //for CPU plugin
 #include "../dpd_vcp_dl-scoring_engine/include/cpp/ie_cnn_net_reader.h"
 #include "../dpd_vcp_dl-scoring_engine/samples/common/format_reader/format_reader_ptr.h"
 #include "../dpd_vcp_dl-scoring_engine/samples/common/samples/common.hpp"
@@ -125,7 +125,7 @@ DEFINE_bool(mark_zero, false, mark_zero_message);
 static const char global_range_message[] = "normalize dumped pixel color by full tensor value range than by local image range (dump_bmp ON)";
 DEFINE_bool(global_range, false, global_range_message);
 #endif
-// for now its always ON, flag has to be tested
+// TODO: make it works, for now its always ON, flag has to be tested
 static const char mem_pool_message[] = "switch clDNN Memory Pool opt OFF";
 DEFINE_bool(mem_pool, true, mem_pool_message);
 
@@ -485,7 +485,7 @@ int main(int argc, char *argv[]) {
         InferenceEngine::InferenceEnginePluginPtr _plugin(
             selectPlugin({ "", FLAGS_pp, OS_LIB_FOLDER, DEFAULT_PATH_P, "" /* This means "search in default paths including LD_LIBRARY_PATH" */ }, FLAGS_p, FLAGS_d));
 
-        /*If CPU device, load default library with extensions that comes with the product*/
+        /* TODO If CPU device, load default library with extensions that comes with the product*/
         if (FLAGS_d.find("CPU") != std::string::npos) {
             /**
             * cpu_extensions library is compiled from "extension" folder containing

@@ -435,10 +435,6 @@ void program_impl::pre_optimize_graph()
     if (options.get<build_option_type::optimize_data>()->enabled())
     {
         prepare_primitive_fusing();
-    }
-
-    if (options.get<build_option_type::optimize_data>()->enabled())
-    {
         layout_optimizer lo(output_size_handling_enabled);
         reorder_inputs(lo);
         // this code should move to post compilation after kernel selector will support handling reorder bias
