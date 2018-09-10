@@ -48,8 +48,19 @@
 __attribute__((intel_reqd_sub_group_size(8)))
 KERNEL(convolution_mmad_slm_2x14_rep4)(
 __global int8 *inputs,
+__global uchar* outputs,
 __global int8* weights,
-__global uchar* outputs)
+#if BIAS_TERM
+    __global BIAS_TYPE* biases,
+#endif
+#if QUANTIZATION_TERM
+    const __global float* quantizations,
+#endif
+#if CALIBRATION_TERM
+    const __global float* calibrations,
+#endif
+    uint split_idx
+)
 {
 	const uint TILE_H = OUT_BLOCK_HEIGHT*LOCAL_SIZE_Z;
 	const uint TILE_W = OUT_BLOCK_WIDTH*LOCAL_SIZE_Y; 

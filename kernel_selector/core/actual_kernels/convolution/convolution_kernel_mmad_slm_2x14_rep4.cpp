@@ -69,9 +69,13 @@ namespace kernel_selector {
 
         runInfo.effiency = FORCE_PRIORITY_1;
 
-        runInfo.gws0 = arg.output.Batch().v * arg.output.Feature().v;
-        runInfo.gws1 = arg.output.X().v;
-        runInfo.gws2 = arg.output.Y().v;
+        const size_t rep_count = 4;
+        const size_t batch_per_wi = 1;
+        const size_t out_block_width = 14;
+        const size_t out_block_height = 2;
+        runInfo.gws0 = arg.output.Feature().v * (arg.output.Batch().v / (rep_count * batch_per_wi)); // number of tiles needed to cover output width
+        runInfo.gws1 = ((arg.inputs[0].X().v / arg.stride.x) + (out_block_width - 1)) / out_block_width;
+        runInfo.gws2 = ((arg.inputs[0].Y().v / arg.stride.y) + (out_block_height - 1)) / out_block_height;
 
         runInfo.lws0 = 32; // depth
         runInfo.lws1 = 1; // width
@@ -104,7 +108,7 @@ namespace kernel_selector {
         jit.AddConstant(MakeJitConstant("IN_OFFSET", in_offset));
 
         jit.AddConstant(MakeJitConstant("OUT_BLOCK_WIDTH", 14));
-        jit.AddConstant(MakeJitConstant("OUT_BLOCK_HEIGHT", 8));
+        jit.AddConstant(MakeJitConstant("OUT_BLOCK_HEIGHT", 2));
         jit.AddConstant(MakeJitConstant("LOCAL_SIZE_X", runInfo.lws0));
         jit.AddConstant(MakeJitConstant("LOCAL_SIZE_Y", runInfo.lws1));
         jit.AddConstant(MakeJitConstant("LOCAL_SIZE_Z", runInfo.lws2));
