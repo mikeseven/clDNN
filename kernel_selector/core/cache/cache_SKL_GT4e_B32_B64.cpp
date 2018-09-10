@@ -1498,6 +1498,8 @@ namespace kernel_selector
             { "12771841901357553928", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
             { "5977875644245993099", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
             { "8652128863605749877", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
+         });
+         td.td.insert({
             { "3766048787611884529", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
             { "10961696014697611547", std::make_tuple("fully_connected_gpu_bs_f_bsv8_af8_vload", -1) },
             { "11693134363909241514", std::make_tuple("convolution_gpu_yxfb_yxio_b16", -1) },
