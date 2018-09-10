@@ -95,9 +95,12 @@ void constants_propagator::add_deps_to_tpl(const std::vector<program_node*>& dep
      */
     for (auto& dep : deps)
     {
-        if (is_already_in_tpl(dep->id())) continue;
-        tpl.add(std::make_shared<input_layout>(dep->id(), dep->as<data>().get_primitive()->mem.get_layout()));
-        const_inputs.push_back(&dep->as<data>());
+        if (dep->is_type<data>())
+        {
+            if (is_already_in_tpl(dep->id())) continue;
+            tpl.add(std::make_shared<input_layout>(dep->id(), dep->as<data>().get_primitive()->mem.get_layout()));
+            const_inputs.push_back(&dep->as<data>());
+        }
     }
 }
 
