@@ -16,7 +16,8 @@
   
  */
 
-#include "include/fetch.cl"
+#include "include/data_types.cl"
+#include "include/activation_functions.cl"
 #include "include/mmad.cl"
 
 // mapping to clDNN
@@ -883,42 +884,45 @@ __global int8* weights,
 				/* Get 4K4N values in uint4 - each uint containing 4N values of a K
  				   swizzle the data and pack into another uint4 containing 4N4K values - each uint containing 4K values of a N. 
 				   Use block_writes for writing uint4 */
-				
+			
+                const uint _batch = batch * BATCH_PACK;
+                const uint _feature = fmg * 32 + get_local_id(0) * 4;
+                
 				uint4 out_k4n4 = out_slm3 [ c*8 ];
 			
                	//Pack 4K values of first n
-				uchar4 out_n0k4;
+				char4 out_n0k4;
 
-				out_n0k4.s0 = out_k4n4.s0 & mask_constant;
-				out_n0k4.s1 = out_k4n4.s1 & mask_constant;
-				out_n0k4.s2 = out_k4n4.s2 & mask_constant;
-				out_n0k4.s3 = out_k4n4.s3 & mask_constant;
-		
+                out_n0k4.s0 = ACTIVATION(convert_char(round(((float)(out_k4n4.s0 & mask_constant) * quantizations[_feature + 0] * I_QF + biases[_feature + 0]) * calibrations[_feature + 0])), NL_M, NL_N);
+                out_n0k4.s1 = ACTIVATION(convert_char(round(((float)(out_k4n4.s1 & mask_constant) * quantizations[_feature + 1] * I_QF + biases[_feature + 1]) * calibrations[_feature + 1])), NL_M, NL_N);
+                out_n0k4.s2 = ACTIVATION(convert_char(round(((float)(out_k4n4.s2 & mask_constant) * quantizations[_feature + 2] * I_QF + biases[_feature + 2]) * calibrations[_feature + 2])), NL_M, NL_N);
+                out_n0k4.s3 = ACTIVATION(convert_char(round(((float)(out_k4n4.s3 & mask_constant) * quantizations[_feature + 3] * I_QF + biases[_feature + 3]) * calibrations[_feature + 3])), NL_M, NL_N);
+
 		        /* Assigning to uchar hence need to get the required bits to lower 8-bits*/
 				
 				//Pack 4K values of second n		
-				uchar4 out_n1k4;
+				char4 out_n1k4;
 				
-			    out_n1k4.s0 = (out_k4n4.s0 >> 8) & mask_constant;
-				out_n1k4.s1 = (out_k4n4.s1 >> 8) & mask_constant;
-				out_n1k4.s2 = (out_k4n4.s2 >> 8) & mask_constant;
-				out_n1k4.s3 = (out_k4n4.s3 >> 8) & mask_constant;
+                out_n1k4.s0 = ACTIVATION(convert_char(round(((float)((out_k4n4.s0 >> 8) & mask_constant) * quantizations[_feature + 0] * I_QF + biases[_feature + 0]) * calibrations[_feature + 0])), NL_M, NL_N);
+                out_n1k4.s1 = ACTIVATION(convert_char(round(((float)((out_k4n4.s1 >> 8) & mask_constant) * quantizations[_feature + 1] * I_QF + biases[_feature + 1]) * calibrations[_feature + 1])), NL_M, NL_N);
+                out_n1k4.s2 = ACTIVATION(convert_char(round(((float)((out_k4n4.s2 >> 8) & mask_constant) * quantizations[_feature + 2] * I_QF + biases[_feature + 2]) * calibrations[_feature + 2])), NL_M, NL_N);
+                out_n1k4.s3 = ACTIVATION(convert_char(round(((float)((out_k4n4.s3 >> 8) & mask_constant) * quantizations[_feature + 3] * I_QF + biases[_feature + 3]) * calibrations[_feature + 3])), NL_M, NL_N);
 
 		        //Pack 4K values of third n
-				uchar4 out_n2k4;
-				
-				out_n2k4.s0  = (out_k4n4.s0 >> 16) & mask_constant;
-				out_n2k4.s1  = (out_k4n4.s1 >> 16) & mask_constant;
-				out_n2k4.s2  = (out_k4n4.s2 >> 16) & mask_constant;
-				out_n2k4.s3  = (out_k4n4.s3 >> 16) & mask_constant;
+				char4 out_n2k4;
+
+                out_n2k4.s0 = ACTIVATION(convert_char(round(((float)((out_k4n4.s0 >> 16) & mask_constant) * quantizations[_feature + 0] * I_QF + biases[_feature + 0]) * calibrations[_feature + 0])), NL_M, NL_N);
+                out_n2k4.s1 = ACTIVATION(convert_char(round(((float)((out_k4n4.s1 >> 16) & mask_constant) * quantizations[_feature + 1] * I_QF + biases[_feature + 1]) * calibrations[_feature + 1])), NL_M, NL_N);
+                out_n2k4.s2 = ACTIVATION(convert_char(round(((float)((out_k4n4.s2 >> 16) & mask_constant) * quantizations[_feature + 2] * I_QF + biases[_feature + 2]) * calibrations[_feature + 2])), NL_M, NL_N);
+                out_n2k4.s3 = ACTIVATION(convert_char(round(((float)((out_k4n4.s3 >> 16) & mask_constant) * quantizations[_feature + 3] * I_QF + biases[_feature + 3]) * calibrations[_feature + 3])), NL_M, NL_N);
 
 		        //Pack 4K values of fourth n
-				uchar4 out_n3k4;
+				char4 out_n3k4;
 
-				out_n3k4.s0 = (out_k4n4.s0 >> 24) & mask_constant;
-				out_n3k4.s1 = (out_k4n4.s1 >> 24) & mask_constant;
-				out_n3k4.s2 = (out_k4n4.s2 >> 24) & mask_constant;
-				out_n3k4.s3 = (out_k4n4.s3 >> 24) & mask_constant;
+                out_n3k4.s0 = ACTIVATION(convert_char(round(((float)((out_k4n4.s0 >> 24) & mask_constant) * quantizations[_feature + 0] * I_QF + biases[_feature + 0]) * calibrations[_feature + 0])), NL_M, NL_N);
+                out_n3k4.s1 = ACTIVATION(convert_char(round(((float)((out_k4n4.s1 >> 24) & mask_constant) * quantizations[_feature + 1] * I_QF + biases[_feature + 1]) * calibrations[_feature + 1])), NL_M, NL_N);
+                out_n3k4.s2 = ACTIVATION(convert_char(round(((float)((out_k4n4.s2 >> 24) & mask_constant) * quantizations[_feature + 2] * I_QF + biases[_feature + 2]) * calibrations[_feature + 2])), NL_M, NL_N);
+                out_n3k4.s3 = ACTIVATION(convert_char(round(((float)((out_k4n4.s3 >> 24) & mask_constant) * quantizations[_feature + 3] * I_QF + biases[_feature + 3]) * calibrations[_feature + 3])), NL_M, NL_N);
 				
 				uint4 out_n4k4;
 				
