@@ -16,12 +16,27 @@
   
  */
 
-uint4 __builtin_IB_simd_block_read_4_local (const __local uint* );
-uint8 __builtin_IB_simd_block_read_8_local (const __local uint* );
+#include "include/fetch.cl"
+#include "include/mmad.cl"
 
+// mapping to clDNN
+#define _MMAD_4x8(C, A, B) MMAD_4x8(A, B, C)
+#define _OD OUTPUT_FEATURE_NUM
+#define _OW OUTPUT_SIZE_X
+#define _OH OUTPUT_SIZE_Y
+#define OWPAD (OUTPUT_PAD_BEFORE_SIZE_X + OUTPUT_PAD_AFTER_SIZE_X)
+#define OHPAD (OUTPUT_PAD_BEFORE_SIZE_Y + OUTPUT_PAD_AFTER_SIZE_Y)
+#define _IH INPUT0_SIZE_Y
+#define _IW INPUT0_SIZE_X
+#define _ID INPUT0_FEATURE_NUM
+#define K_HEIGHT FILTER_SIZE_Y
+#define K_WIDTH FILTER_SIZE_X
+#define BATCH_SIZE OUTPUT_BATCH_NUM
 
-void __builtin_IB_simd_block_write_4_local ( __local uint*, uint4 );
-void __builtin_IB_simd_block_write_8_local ( __local uint*, uint8 );
+#define IHPAD (INPUT0_PAD_BEFORE_SIZE_Y + INPUT0_PAD_AFTER_SIZE_Y)
+#define IWPAD (INPUT0_PAD_BEFORE_SIZE_X + INPUT0_PAD_AFTER_SIZE_X)
+#define K_STRIDE STRIDE_SIZE_X
+// end of mapping
 
 // for now kernel stride is square
 #define K_WSTRIDE K_STRIDE
@@ -29,88 +44,6 @@ void __builtin_IB_simd_block_write_8_local ( __local uint*, uint8 );
 
 #define PACK 32
 #define BATCH_PACK 4
-
-void intel_sub_group_block_write_slm4( __local uint* p, uint4 data )
-{ 
-   #if ( SW_SLMBR == 0 )
-			__builtin_IB_simd_block_write_4_local ( p , data );
-   #else
-			p[ get_sub_group_local_id() ] = data.s0;
-			p += 8;
-			p[ get_sub_group_local_id() ] = data.s1;
-			p += 8;
-			p[ get_sub_group_local_id() ] = data.s2;
-			p += 8;
-			p[ get_sub_group_local_id() ] = data.s3;
-   #endif
-}
-
-void intel_sub_group_block_write_slm8( __local uint* p, uint8 data )
-{ 
-   #if ( SW_SLMBR == 0 )
-			__builtin_IB_simd_block_write_8_local ( p , data );
-   #else
-			p[ get_sub_group_local_id() ] = data.s0;
-			p += 8;
-			p[ get_sub_group_local_id() ] = data.s1;
-			p += 8;
-			p[ get_sub_group_local_id() ] = data.s2;
-			p += 8;
-			p[ get_sub_group_local_id() ] = data.s3;
-			p += 8;
-			p[ get_sub_group_local_id() ] = data.s4;
-			p += 8;
-			p[ get_sub_group_local_id() ] = data.s5;
-			p += 8;
-			p[ get_sub_group_local_id() ] = data.s6;
-			p += 8;
-	        p[ get_sub_group_local_id() ] = data.s7;
-   #endif
-}
-
-uint4 intel_sub_group_block_read_slm4( __local uint* p)
-{ 
-   #if ( SW_SLMBR == 0 )
-			return  __builtin_IB_simd_block_read_4_local (p); 
-   #else
-	        uint4 ret;
-			ret.s0 = p[ get_sub_group_local_id() ];
-			p += 8;
-			ret.s1 = p[ get_sub_group_local_id() ];
-			p += 8;
-			ret.s2 = p[ get_sub_group_local_id() ];
-			p += 8;
-			ret.s3 = p[ get_sub_group_local_id() ];
-	
-			return ret;
-   #endif
-}
-
-uint8 intel_sub_group_block_read_slm8( __local uint* p)
-{ 
-   #if ( SW_SLMBR == 0 )
-			return __builtin_IB_simd_block_read_8_local (p) ; 
-   #else
-	        uint8 ret;
-			ret.s0 = p[ get_sub_group_local_id() ];
-			p += 8;
-			ret.s1 = p[ get_sub_group_local_id() ];
-			p += 8;
-			ret.s2 = p[ get_sub_group_local_id() ];
-			p += 8;
-			ret.s3 = p[ get_sub_group_local_id() ];
-			p += 8;
-			ret.s4 = p[ get_sub_group_local_id() ];
-			p += 8;
-			ret.s5 = p[ get_sub_group_local_id() ];
-			p += 8;
-			ret.s6 = p[ get_sub_group_local_id() ];
-			p += 8;
-			ret.s7 = p[ get_sub_group_local_id() ];
-			
-			return ret;
-   #endif
-}
 
 __attribute__((intel_reqd_sub_group_size(8)))
 KERNEL(convolution_mmad_slm_2x14_rep4)(
@@ -327,14 +260,14 @@ __global uchar* outputs)
 			int4 act_col_6 =  as_int4( intel_sub_group_block_read4(activation_tile + 6*8*8) );				
 			int4 act_col_7 =  as_int4( intel_sub_group_block_read4(activation_tile + 7*8*8) );				
 				
-			intel_sub_group_block_write_slm4 ( act_slm_ptr , as_uint4 ( act_col_0 ) );				
-			intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 8*8 ) , as_uint4 ( act_col_1 ) );
-			intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 2*8*8 ) , as_uint4 ( act_col_2 ) );
-			intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 3*8*8 ) , as_uint4 ( act_col_3 ) );
-			intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 4*8*8 ) , as_uint4 ( act_col_4 ) );
-			intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 5*8*8 ) , as_uint4 ( act_col_5 ) );
-			intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 6*8*8 ) , as_uint4 ( act_col_6 ) );
-			intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 7*8*8 ) , as_uint4 ( act_col_7 ) );
+			SLM_BLOCK_WRITE_4 ( act_slm_ptr , as_uint4 ( act_col_0 ) );				
+			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 8*8 ) , as_uint4 ( act_col_1 ) );
+			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 2*8*8 ) , as_uint4 ( act_col_2 ) );
+			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 3*8*8 ) , as_uint4 ( act_col_3 ) );
+			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 4*8*8 ) , as_uint4 ( act_col_4 ) );
+			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 5*8*8 ) , as_uint4 ( act_col_5 ) );
+			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 6*8*8 ) , as_uint4 ( act_col_6 ) );
+			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 7*8*8 ) , as_uint4 ( act_col_7 ) );
 
 			if ( thread_id >=12 )
             {
@@ -350,14 +283,14 @@ __global uchar* outputs)
 				int4 act_col_15 =  as_int4( intel_sub_group_block_read4(activation_tile + 6*8*8) );				
 				int4 act_col_16 =  as_int4( intel_sub_group_block_read4(activation_tile + 7*8*8) );				
 				
-				intel_sub_group_block_write_slm4 ( act_slm_ptr  , as_uint4 ( act_col_9 ) );				
-				intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 8*8 )   , as_uint4 ( act_col_10 ) );
-				intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 2*8*8 ) , as_uint4 ( act_col_11 ) );
-				intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 3*8*8 ) , as_uint4 ( act_col_12 ) );
-				intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 4*8*8 ) , as_uint4 ( act_col_13 ) );
-				intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 5*8*8 ) , as_uint4 ( act_col_14 ) );
-				intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 6*8*8 ) , as_uint4 ( act_col_15 ) );
-				intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 7*8*8 ) , as_uint4 ( act_col_16 ) );
+				SLM_BLOCK_WRITE_4 ( act_slm_ptr  , as_uint4 ( act_col_9 ) );				
+				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 8*8 )   , as_uint4 ( act_col_10 ) );
+				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 2*8*8 ) , as_uint4 ( act_col_11 ) );
+				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 3*8*8 ) , as_uint4 ( act_col_12 ) );
+				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 4*8*8 ) , as_uint4 ( act_col_13 ) );
+				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 5*8*8 ) , as_uint4 ( act_col_14 ) );
+				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 6*8*8 ) , as_uint4 ( act_col_15 ) );
+				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 7*8*8 ) , as_uint4 ( act_col_16 ) );
 			}
 
 		/* load weights from global to weight_slm */
@@ -372,10 +305,10 @@ __global uchar* outputs)
 			int4 w2 = as_int4 ( intel_sub_group_block_read4( weight_tile + 8*8 ) );	
 			int4 w3 = as_int4 ( intel_sub_group_block_read4( weight_tile + 12*8 ) );
 			
-			intel_sub_group_block_write_slm4 ( wt_slm_ptr , as_uint4 ( w0 ) );
-			intel_sub_group_block_write_slm4 ( ( wt_slm_ptr + 8*8 )   , as_uint4 ( w1 ) );		
-			intel_sub_group_block_write_slm4 ( ( wt_slm_ptr + 32*8 ) , as_uint4 ( w2 ) );
-			intel_sub_group_block_write_slm4 ( ( wt_slm_ptr + 32*8 + 8*8 ) , as_uint4 ( w3 ) );
+			SLM_BLOCK_WRITE_4 ( wt_slm_ptr , as_uint4 ( w0 ) );
+			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 8*8 )   , as_uint4 ( w1 ) );		
+			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 32*8 ) , as_uint4 ( w2 ) );
+			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 32*8 + 8*8 ) , as_uint4 ( w3 ) );
 		   
 		   if( threadid_mod_8 < 2 )
            { 
@@ -385,8 +318,8 @@ __global uchar* outputs)
 				int4 w4 = as_int4 ( intel_sub_group_block_read4( weight_tile ) );						
 				int4 w5 = as_int4 ( intel_sub_group_block_read4( weight_tile + 4*8 ) );			
 				
-				intel_sub_group_block_write_slm4 ( wt_slm_ptr , as_uint4 ( w4 ) );
-				intel_sub_group_block_write_slm4 ( ( wt_slm_ptr + 8*8 )   , as_uint4 ( w5 ) );		
+				SLM_BLOCK_WRITE_4 ( wt_slm_ptr , as_uint4 ( w4 ) );
+				SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 8*8 )   , as_uint4 ( w5 ) );		
 			}
 	}		
 
@@ -414,16 +347,16 @@ __global uchar* outputs)
 	
 	                 /* Load weights from SLM into registers  */
 				{
-					    weights_reg0.s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 ) );
-					    weights_reg0.s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 + 64 ) );
+					    weights_reg0.s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 ) );
+					    weights_reg0.s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 + 64 ) );
 						slm_ptr1   			   += LOCAL_SIZE_X*8;	
 						
-						weights_reg1.s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 ) );
-					    weights_reg1.s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 + 64 ) );
+						weights_reg1.s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 ) );
+					    weights_reg1.s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 + 64 ) );
 						slm_ptr1   			   += LOCAL_SIZE_X*8;	
 						
-						weights_reg2.s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 ) );
-					    weights_reg2.s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 + 64 ) );
+						weights_reg2.s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 ) );
+					    weights_reg2.s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 + 64 ) );
 						slm_ptr1   			   += LOCAL_SIZE_X*8;	
 				}
 						
@@ -436,36 +369,36 @@ __global uchar* outputs)
 					 
 					 uint slm_offset = ic * BATCH_PACK * 8 ;
 					 
-    				 act_reg [ ic ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset)) ; 
+    				 act_reg [ ic ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset)) ; 
 				}
 			
 			/* Convolve */ 
 			
 			   /* order the dpas instructions to minimize dependency on src0,dst - also try to maximise reuse of weights-reg*/
 				
-				out[ 0 ] = MMAD_4x8 ( out[ 0 ], act_reg[0], weights_reg0 );
-				out[ 1 ] = MMAD_4x8 ( out[ 1 ], act_reg[1], weights_reg0 );
-				out[ 2 ] = MMAD_4x8 ( out[ 2 ], act_reg[2], weights_reg0 );
-				out[ 3 ] = MMAD_4x8 ( out[ 3 ], act_reg[3], weights_reg0 );
-				out[ 4 ] = MMAD_4x8 ( out[ 4 ], act_reg[4], weights_reg0 );
-				out[ 5 ] = MMAD_4x8 ( out[ 5 ], act_reg[5], weights_reg0 );
-				out[ 6 ] = MMAD_4x8 ( out[ 6 ], act_reg[6], weights_reg0 );
-				out[ 7 ] = MMAD_4x8 ( out[ 7 ], act_reg[7], weights_reg0 );
+				out[ 0 ] = _MMAD_4x8 ( out[ 0 ], act_reg[0], weights_reg0 );
+				out[ 1 ] = _MMAD_4x8 ( out[ 1 ], act_reg[1], weights_reg0 );
+				out[ 2 ] = _MMAD_4x8 ( out[ 2 ], act_reg[2], weights_reg0 );
+				out[ 3 ] = _MMAD_4x8 ( out[ 3 ], act_reg[3], weights_reg0 );
+				out[ 4 ] = _MMAD_4x8 ( out[ 4 ], act_reg[4], weights_reg0 );
+				out[ 5 ] = _MMAD_4x8 ( out[ 5 ], act_reg[5], weights_reg0 );
+				out[ 6 ] = _MMAD_4x8 ( out[ 6 ], act_reg[6], weights_reg0 );
+				out[ 7 ] = _MMAD_4x8 ( out[ 7 ], act_reg[7], weights_reg0 );
 
-				out[ 0 ] = MMAD_4x8 ( out[ 0 ], act_reg[1], weights_reg1 );
-				out[ 1 ] = MMAD_4x8 ( out[ 1 ], act_reg[2], weights_reg1 );
-				out[ 2 ] = MMAD_4x8 ( out[ 2 ], act_reg[3], weights_reg1 );
-				out[ 3 ] = MMAD_4x8 ( out[ 3 ], act_reg[4], weights_reg1 );
-				out[ 4 ] = MMAD_4x8 ( out[ 4 ], act_reg[5], weights_reg1 );
-				out[ 5 ] = MMAD_4x8 ( out[ 5 ], act_reg[6], weights_reg1 );
-				out[ 6 ] = MMAD_4x8 ( out[ 6 ], act_reg[7], weights_reg1 );
+				out[ 0 ] = _MMAD_4x8 ( out[ 0 ], act_reg[1], weights_reg1 );
+				out[ 1 ] = _MMAD_4x8 ( out[ 1 ], act_reg[2], weights_reg1 );
+				out[ 2 ] = _MMAD_4x8 ( out[ 2 ], act_reg[3], weights_reg1 );
+				out[ 3 ] = _MMAD_4x8 ( out[ 3 ], act_reg[4], weights_reg1 );
+				out[ 4 ] = _MMAD_4x8 ( out[ 4 ], act_reg[5], weights_reg1 );
+				out[ 5 ] = _MMAD_4x8 ( out[ 5 ], act_reg[6], weights_reg1 );
+				out[ 6 ] = _MMAD_4x8 ( out[ 6 ], act_reg[7], weights_reg1 );
 				
-				out[ 0 ] = MMAD_4x8 ( out[ 0 ], act_reg[2], weights_reg2 );
-				out[ 1 ] = MMAD_4x8 ( out[ 1 ], act_reg[3], weights_reg2 );
-				out[ 2 ] = MMAD_4x8 ( out[ 2 ], act_reg[4], weights_reg2 );
-				out[ 3 ] = MMAD_4x8 ( out[ 3 ], act_reg[5], weights_reg2 );
-				out[ 4 ] = MMAD_4x8 ( out[ 4 ], act_reg[6], weights_reg2 );
-				out[ 5 ] = MMAD_4x8 ( out[ 5 ], act_reg[7], weights_reg2 );
+				out[ 0 ] = _MMAD_4x8 ( out[ 0 ], act_reg[2], weights_reg2 );
+				out[ 1 ] = _MMAD_4x8 ( out[ 1 ], act_reg[3], weights_reg2 );
+				out[ 2 ] = _MMAD_4x8 ( out[ 2 ], act_reg[4], weights_reg2 );
+				out[ 3 ] = _MMAD_4x8 ( out[ 3 ], act_reg[5], weights_reg2 );
+				out[ 4 ] = _MMAD_4x8 ( out[ 4 ], act_reg[6], weights_reg2 );
+				out[ 5 ] = _MMAD_4x8 ( out[ 5 ], act_reg[7], weights_reg2 );
 			   
 				/* load next 1Hx8Wx4N inputs */
 		
@@ -474,34 +407,34 @@ __global uchar* outputs)
 				{
 					 uint slm_offset = ic * BATCH_PACK * 8;
 					 
-					 act_reg [ ic - 8 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset) ) ; 
+					 act_reg [ ic - 8 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset) ) ; 
 				}
 				
 				/* Convolve */				
 				
-				out[ 6 ] = MMAD_4x8 ( out[ 6 ], act_reg[0], weights_reg2 );
-				out[ 7 ] = MMAD_4x8 ( out[ 7 ], act_reg[1], weights_reg2 );
-				out[ 8 ] = MMAD_4x8 ( out[ 8 ], act_reg[2], weights_reg2 );
-				out[ 9 ] = MMAD_4x8 ( out[ 9 ], act_reg[3], weights_reg2 );
-				out[ 10 ] = MMAD_4x8 ( out[ 10 ], act_reg[4], weights_reg2 );
-				out[ 11 ] = MMAD_4x8 ( out[ 11 ], act_reg[5], weights_reg2 );
-				out[ 12 ] = MMAD_4x8 ( out[ 12 ], act_reg[6], weights_reg2 );
-				out[ 13 ] = MMAD_4x8 ( out[ 13 ], act_reg[7], weights_reg2 );
+				out[ 6 ] = _MMAD_4x8 ( out[ 6 ], act_reg[0], weights_reg2 );
+				out[ 7 ] = _MMAD_4x8 ( out[ 7 ], act_reg[1], weights_reg2 );
+				out[ 8 ] = _MMAD_4x8 ( out[ 8 ], act_reg[2], weights_reg2 );
+				out[ 9 ] = _MMAD_4x8 ( out[ 9 ], act_reg[3], weights_reg2 );
+				out[ 10 ] = _MMAD_4x8 ( out[ 10 ], act_reg[4], weights_reg2 );
+				out[ 11 ] = _MMAD_4x8 ( out[ 11 ], act_reg[5], weights_reg2 );
+				out[ 12 ] = _MMAD_4x8 ( out[ 12 ], act_reg[6], weights_reg2 );
+				out[ 13 ] = _MMAD_4x8 ( out[ 13 ], act_reg[7], weights_reg2 );
 				
-				out[ 7 ]  =  MMAD_4x8 ( out[ 7 ], act_reg[0], weights_reg1 );
-				out[ 8 ]  =  MMAD_4x8 ( out[ 8 ], act_reg[1], weights_reg1 );
-				out[ 9 ]  = MMAD_4x8 (  out[ 9 ],  act_reg[2], weights_reg1 );
-				out[ 10 ] = MMAD_4x8 ( out[ 10 ], act_reg[3], weights_reg1 );
-				out[ 11 ] = MMAD_4x8 ( out[ 11 ], act_reg[4], weights_reg1 );
-				out[ 12 ] = MMAD_4x8 ( out[ 12 ], act_reg[5], weights_reg1 );
-				out[ 13 ] = MMAD_4x8 ( out[ 13 ], act_reg[6], weights_reg1 );
+				out[ 7 ]  =  _MMAD_4x8 ( out[ 7 ], act_reg[0], weights_reg1 );
+				out[ 8 ]  =  _MMAD_4x8 ( out[ 8 ], act_reg[1], weights_reg1 );
+				out[ 9 ]  = _MMAD_4x8 (  out[ 9 ],  act_reg[2], weights_reg1 );
+				out[ 10 ] = _MMAD_4x8 ( out[ 10 ], act_reg[3], weights_reg1 );
+				out[ 11 ] = _MMAD_4x8 ( out[ 11 ], act_reg[4], weights_reg1 );
+				out[ 12 ] = _MMAD_4x8 ( out[ 12 ], act_reg[5], weights_reg1 );
+				out[ 13 ] = _MMAD_4x8 ( out[ 13 ], act_reg[6], weights_reg1 );
 				
-				out[ 8 ] =  MMAD_4x8 ( out[ 8 ],  act_reg[0], weights_reg0 );
-				out[ 9 ] = MMAD_4x8 ( out [ 9 ],   act_reg[1], weights_reg0 );
-				out[ 10 ] = MMAD_4x8 ( out[ 10 ], act_reg[2], weights_reg0 );
-				out[ 11 ] = MMAD_4x8 ( out[ 11 ], act_reg[3], weights_reg0 );
-				out[ 12 ] = MMAD_4x8 ( out[ 12 ], act_reg[4], weights_reg0 );
-				out[ 13 ] = MMAD_4x8 ( out[ 13 ], act_reg[5], weights_reg0 );
+				out[ 8 ] =  _MMAD_4x8 ( out[ 8 ],  act_reg[0], weights_reg0 );
+				out[ 9 ] = _MMAD_4x8 ( out [ 9 ],   act_reg[1], weights_reg0 );
+				out[ 10 ] = _MMAD_4x8 ( out[ 10 ], act_reg[2], weights_reg0 );
+				out[ 11 ] = _MMAD_4x8 ( out[ 11 ], act_reg[3], weights_reg0 );
+				out[ 12 ] = _MMAD_4x8 ( out[ 12 ], act_reg[4], weights_reg0 );
+				out[ 13 ] = _MMAD_4x8 ( out[ 13 ], act_reg[5], weights_reg0 );
 			}	
 			
 			/* Second , Third phase */
@@ -517,16 +450,16 @@ __global uchar* outputs)
 				 /* Load weights of row = 1 from SLM into registers  */
 				 {
 				 
-						weights_reg3.s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 ) );
-					    weights_reg3.s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 + 64 ) );
+						weights_reg3.s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 ) );
+					    weights_reg3.s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 + 64 ) );
 						slm_ptr1   			   += LOCAL_SIZE_X*8;	
 						
-						weights_reg4.s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 ) );
-					    weights_reg4.s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 + 64 ) );
+						weights_reg4.s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 ) );
+					    weights_reg4.s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 + 64 ) );
 						slm_ptr1   			   += LOCAL_SIZE_X*8;	
 						
-						weights_reg5.s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 ) );
-					    weights_reg5.s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 + 64 ) );
+						weights_reg5.s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 ) );
+					    weights_reg5.s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 + 64 ) );
 						slm_ptr1   			   += LOCAL_SIZE_X*8;	
 				}
 				
@@ -534,16 +467,16 @@ __global uchar* outputs)
 					 
 				uint slm_row_offset_2 	  = 1*(TILE_W + 2)*BATCH_PACK*8;	 
 				
-				act_reg_2 [ 0 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_row_offset_2) ) ; 
-				act_reg_2 [ 1 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_row_offset_2 + BATCH_PACK*8) ) ; 
+				act_reg_2 [ 0 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_row_offset_2) ) ; 
+				act_reg_2 [ 1 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_row_offset_2 + BATCH_PACK*8) ) ; 
 				
-				out[ 14 ] = MMAD_4x8 ( out[ 14 ], act_reg_2[0] , weights_reg0 );
-				out[ 0 ]  = MMAD_4x8 ( out[ 0 ],  act_reg_2[0]  , weights_reg3 );
-				out[ 1 ]  = MMAD_4x8 ( out[ 1 ],  act_reg_2[1]  , weights_reg3 );
-				out[ 15 ] = MMAD_4x8 ( out[ 15 ], act_reg_2[1] , weights_reg0 );
+				out[ 14 ] = _MMAD_4x8 ( out[ 14 ], act_reg_2[0] , weights_reg0 );
+				out[ 0 ]  = _MMAD_4x8 ( out[ 0 ],  act_reg_2[0]  , weights_reg3 );
+				out[ 1 ]  = _MMAD_4x8 ( out[ 1 ],  act_reg_2[1]  , weights_reg3 );
+				out[ 15 ] = _MMAD_4x8 ( out[ 15 ], act_reg_2[1] , weights_reg0 );
 				
-				out[ 14 ] = MMAD_4x8 ( out[ 14 ], act_reg_2[1], weights_reg1 );
-				out[ 0 ]  = MMAD_4x8 ( out[ 0 ],  act_reg_2[1], weights_reg4 );			
+				out[ 14 ] = _MMAD_4x8 ( out[ 14 ], act_reg_2[1], weights_reg1 );
+				out[ 0 ]  = _MMAD_4x8 ( out[ 0 ],  act_reg_2[1], weights_reg4 );			
 				
 				/* load input row =1,col=2:7,8:13,1Hx6Wx4N  */
 				
@@ -554,59 +487,59 @@ __global uchar* outputs)
 				
 				uint slm_offset 	  = 1*(TILE_W + 2)*BATCH_PACK*8 + col*BATCH_PACK*8;	 
 	
-				act_reg_2 [ 0 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset)) ; 
-				act_reg_2 [ 1 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset +   BATCH_PACK*8)) ; 
-				act_reg_2 [ 2 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset + 2*BATCH_PACK*8)) ; 
-				act_reg_2 [ 3 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset + 3*BATCH_PACK*8) ) ; 
-   				act_reg_2 [ 4 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset + 4*BATCH_PACK*8) ) ; 
-   				act_reg_2 [ 5 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset + 5*BATCH_PACK*8) ) ; 
+				act_reg_2 [ 0 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset)) ; 
+				act_reg_2 [ 1 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset +   BATCH_PACK*8)) ; 
+				act_reg_2 [ 2 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset + 2*BATCH_PACK*8)) ; 
+				act_reg_2 [ 3 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset + 3*BATCH_PACK*8) ) ; 
+   				act_reg_2 [ 4 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset + 4*BATCH_PACK*8) ) ; 
+   				act_reg_2 [ 5 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset + 5*BATCH_PACK*8) ) ; 
    
    				uint first_row_offset   = col - 2;
 				uint second_row_offset  = 14 + col - 2;
 
-   				out [ first_row_offset ]      =  MMAD_4x8 ( out[ first_row_offset ] ,    act_reg_2[0] , weights_reg5 );
-				out [ first_row_offset + 1 ]  =  MMAD_4x8 ( out[ first_row_offset + 1] , act_reg_2[0],  weights_reg4 );
-				out [ first_row_offset + 2 ]  =  MMAD_4x8 ( out[ first_row_offset + 2] , act_reg_2[0],  weights_reg3 );
-				out [ first_row_offset + 3 ]  =  MMAD_4x8 ( out[ first_row_offset + 3 ], act_reg_2[1], weights_reg3 );
+   				out [ first_row_offset ]      =  _MMAD_4x8 ( out[ first_row_offset ] ,    act_reg_2[0] , weights_reg5 );
+				out [ first_row_offset + 1 ]  =  _MMAD_4x8 ( out[ first_row_offset + 1] , act_reg_2[0],  weights_reg4 );
+				out [ first_row_offset + 2 ]  =  _MMAD_4x8 ( out[ first_row_offset + 2] , act_reg_2[0],  weights_reg3 );
+				out [ first_row_offset + 3 ]  =  _MMAD_4x8 ( out[ first_row_offset + 3 ], act_reg_2[1], weights_reg3 );
 				
-				out [ second_row_offset ]      =  MMAD_4x8 ( out[ second_row_offset ] , act_reg_2[0] , weights_reg2 );			
-				out [ second_row_offset + 1 ]  =  MMAD_4x8 ( out[ second_row_offset + 1] , act_reg_2[0],  weights_reg1 );
-				out [ second_row_offset + 2 ]  =  MMAD_4x8 ( out[ second_row_offset + 2] , act_reg_2[0],  weights_reg0 );
-				out [ second_row_offset + 3 ]  =  MMAD_4x8 ( out[ second_row_offset + 3], act_reg_2[1], weights_reg0 );
+				out [ second_row_offset ]      =  _MMAD_4x8 ( out[ second_row_offset ] , act_reg_2[0] , weights_reg2 );			
+				out [ second_row_offset + 1 ]  =  _MMAD_4x8 ( out[ second_row_offset + 1] , act_reg_2[0],  weights_reg1 );
+				out [ second_row_offset + 2 ]  =  _MMAD_4x8 ( out[ second_row_offset + 2] , act_reg_2[0],  weights_reg0 );
+				out [ second_row_offset + 3 ]  =  _MMAD_4x8 ( out[ second_row_offset + 3], act_reg_2[1], weights_reg0 );
 				
-				out [ first_row_offset + 1 ]   = MMAD_4x8 (  out[ first_row_offset + 1 ], act_reg_2[1], weights_reg5 );
-				out [ first_row_offset + 2 ]   = MMAD_4x8 (  out[ first_row_offset + 2 ], act_reg_2[1], weights_reg4 );
-				out [ first_row_offset + 3 ]   = MMAD_4x8 ( out[ first_row_offset + 3 ],  act_reg_2[2], weights_reg4 );
-				out [ first_row_offset + 4 ]   = MMAD_4x8 ( out[ first_row_offset + 4 ],  act_reg_2[2], weights_reg3 );
+				out [ first_row_offset + 1 ]   = _MMAD_4x8 (  out[ first_row_offset + 1 ], act_reg_2[1], weights_reg5 );
+				out [ first_row_offset + 2 ]   = _MMAD_4x8 (  out[ first_row_offset + 2 ], act_reg_2[1], weights_reg4 );
+				out [ first_row_offset + 3 ]   = _MMAD_4x8 ( out[ first_row_offset + 3 ],  act_reg_2[2], weights_reg4 );
+				out [ first_row_offset + 4 ]   = _MMAD_4x8 ( out[ first_row_offset + 4 ],  act_reg_2[2], weights_reg3 );
 				
-				out [ second_row_offset + 1 ]  = MMAD_4x8 (  out[ second_row_offset + 1 ], act_reg_2[1], weights_reg2 );
-				out [ second_row_offset + 2 ]  = MMAD_4x8 (  out[ second_row_offset + 2 ], act_reg_2[1], weights_reg1 );
-				out [ second_row_offset + 3 ]   = MMAD_4x8 ( out[ second_row_offset + 3 ], act_reg_2[2], weights_reg1 );
-				out [ second_row_offset + 4 ]   = MMAD_4x8 ( out[ second_row_offset + 4 ], act_reg_2[2], weights_reg0 );
+				out [ second_row_offset + 1 ]  = _MMAD_4x8 (  out[ second_row_offset + 1 ], act_reg_2[1], weights_reg2 );
+				out [ second_row_offset + 2 ]  = _MMAD_4x8 (  out[ second_row_offset + 2 ], act_reg_2[1], weights_reg1 );
+				out [ second_row_offset + 3 ]   = _MMAD_4x8 ( out[ second_row_offset + 3 ], act_reg_2[2], weights_reg1 );
+				out [ second_row_offset + 4 ]   = _MMAD_4x8 ( out[ second_row_offset + 4 ], act_reg_2[2], weights_reg0 );
 
-				out [ first_row_offset + 2 ]   = MMAD_4x8 ( out[ first_row_offset + 2], act_reg_2[2], weights_reg5 );				
-				out [ first_row_offset + 3 ]   = MMAD_4x8 ( out[ first_row_offset + 3], act_reg_2[3], weights_reg5 );
-				out [ first_row_offset + 4 ]   = MMAD_4x8 ( out[ first_row_offset + 4], act_reg_2[3], weights_reg4 );
-				out [ first_row_offset + 5 ]   = MMAD_4x8 ( out[ first_row_offset + 5], act_reg_2[3], weights_reg3 );	
+				out [ first_row_offset + 2 ]   = _MMAD_4x8 ( out[ first_row_offset + 2], act_reg_2[2], weights_reg5 );				
+				out [ first_row_offset + 3 ]   = _MMAD_4x8 ( out[ first_row_offset + 3], act_reg_2[3], weights_reg5 );
+				out [ first_row_offset + 4 ]   = _MMAD_4x8 ( out[ first_row_offset + 4], act_reg_2[3], weights_reg4 );
+				out [ first_row_offset + 5 ]   = _MMAD_4x8 ( out[ first_row_offset + 5], act_reg_2[3], weights_reg3 );	
 				
-				out [ second_row_offset + 2 ]   = MMAD_4x8 ( out[ second_row_offset + 2], act_reg_2[2], weights_reg2 );				
-				out [ second_row_offset + 3 ]   = MMAD_4x8 ( out[ second_row_offset + 3], act_reg_2[3], weights_reg2 );
-				out [ second_row_offset + 4 ]   = MMAD_4x8 ( out[ second_row_offset + 4], act_reg_2[3], weights_reg1 );
-				out [ second_row_offset + 5 ]   = MMAD_4x8 ( out[ second_row_offset + 5], act_reg_2[3], weights_reg0 );	
+				out [ second_row_offset + 2 ]   = _MMAD_4x8 ( out[ second_row_offset + 2], act_reg_2[2], weights_reg2 );				
+				out [ second_row_offset + 3 ]   = _MMAD_4x8 ( out[ second_row_offset + 3], act_reg_2[3], weights_reg2 );
+				out [ second_row_offset + 4 ]   = _MMAD_4x8 ( out[ second_row_offset + 4], act_reg_2[3], weights_reg1 );
+				out [ second_row_offset + 5 ]   = _MMAD_4x8 ( out[ second_row_offset + 5], act_reg_2[3], weights_reg0 );	
 
-				out [ first_row_offset + 6 ]   = MMAD_4x8 ( out[ first_row_offset + 6], act_reg_2[4], weights_reg3 );
-				out [ first_row_offset + 7 ]   = MMAD_4x8 ( out[ first_row_offset + 7], act_reg_2[5], weights_reg3 );
-				out [ first_row_offset + 5 ]   = MMAD_4x8 ( out[ first_row_offset + 5], act_reg_2[4], weights_reg4 );
-				out [ first_row_offset + 6 ]   = MMAD_4x8 ( out[ first_row_offset + 6], act_reg_2[5], weights_reg4 );
-				out [ first_row_offset + 4 ]   = MMAD_4x8 ( out[ first_row_offset + 4], act_reg_2[4], weights_reg5 );
-				out [ first_row_offset + 5 ]   = MMAD_4x8 ( out[ first_row_offset + 5], act_reg_2[5], weights_reg5 );
+				out [ first_row_offset + 6 ]   = _MMAD_4x8 ( out[ first_row_offset + 6], act_reg_2[4], weights_reg3 );
+				out [ first_row_offset + 7 ]   = _MMAD_4x8 ( out[ first_row_offset + 7], act_reg_2[5], weights_reg3 );
+				out [ first_row_offset + 5 ]   = _MMAD_4x8 ( out[ first_row_offset + 5], act_reg_2[4], weights_reg4 );
+				out [ first_row_offset + 6 ]   = _MMAD_4x8 ( out[ first_row_offset + 6], act_reg_2[5], weights_reg4 );
+				out [ first_row_offset + 4 ]   = _MMAD_4x8 ( out[ first_row_offset + 4], act_reg_2[4], weights_reg5 );
+				out [ first_row_offset + 5 ]   = _MMAD_4x8 ( out[ first_row_offset + 5], act_reg_2[5], weights_reg5 );
 				
-				out [ second_row_offset + 6 ]   = MMAD_4x8 ( out[ second_row_offset + 6], act_reg_2[4], weights_reg0 );
-				out [ second_row_offset + 7 ]   = MMAD_4x8 ( out[ second_row_offset + 7], act_reg_2[5], weights_reg0 );
-				out [ second_row_offset + 5 ]   = MMAD_4x8 ( out[ second_row_offset + 5], act_reg_2[4], weights_reg1 );
-				out [ second_row_offset + 6 ]   = MMAD_4x8 ( out[ second_row_offset + 6], act_reg_2[5], weights_reg1 );
-				out [ second_row_offset + 4 ]   = MMAD_4x8 ( out[ second_row_offset + 4], act_reg_2[4], weights_reg2 );				
-				out [ second_row_offset + 5 ]   = MMAD_4x8 ( out[ second_row_offset + 5], act_reg_2[5], weights_reg2 );
+				out [ second_row_offset + 6 ]   = _MMAD_4x8 ( out[ second_row_offset + 6], act_reg_2[4], weights_reg0 );
+				out [ second_row_offset + 7 ]   = _MMAD_4x8 ( out[ second_row_offset + 7], act_reg_2[5], weights_reg0 );
+				out [ second_row_offset + 5 ]   = _MMAD_4x8 ( out[ second_row_offset + 5], act_reg_2[4], weights_reg1 );
+				out [ second_row_offset + 6 ]   = _MMAD_4x8 ( out[ second_row_offset + 6], act_reg_2[5], weights_reg1 );
+				out [ second_row_offset + 4 ]   = _MMAD_4x8 ( out[ second_row_offset + 4], act_reg_2[4], weights_reg2 );				
+				out [ second_row_offset + 5 ]   = _MMAD_4x8 ( out[ second_row_offset + 5], act_reg_2[5], weights_reg2 );
 
 				col +=6;
 				
@@ -616,17 +549,17 @@ __global uchar* outputs)
 
 				uint slm_row_offset_3 	  = 1 * (TILE_W + 2) * BATCH_PACK * 8 + 14 * BATCH_PACK * 8;	
 
-				act_reg_2 [ 0 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_row_offset_3)) ; 
-				act_reg_2 [ 1 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_row_offset_3 +   BATCH_PACK*8)) ; 
+				act_reg_2 [ 0 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_row_offset_3)) ; 
+				act_reg_2 [ 1 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_row_offset_3 +   BATCH_PACK*8)) ; 
 				
-				out[ 13 ]  = MMAD_4x8 ( out[ 13 ],   act_reg_2[0],  weights_reg4 );		
-				out[ 27 ]  = MMAD_4x8 ( out[ 27 ],   act_reg_2[0],  weights_reg1 );		
-				out[ 26 ]  = MMAD_4x8 ( out[ 26 ],   act_reg_2[0],  weights_reg2 );	
+				out[ 13 ]  = _MMAD_4x8 ( out[ 13 ],   act_reg_2[0],  weights_reg4 );		
+				out[ 27 ]  = _MMAD_4x8 ( out[ 27 ],   act_reg_2[0],  weights_reg1 );		
+				out[ 26 ]  = _MMAD_4x8 ( out[ 26 ],   act_reg_2[0],  weights_reg2 );	
 				
-				out[ 12 ]  = MMAD_4x8 ( out[ 12 ],  act_reg_2[0],  weights_reg5 );					
-				out[ 13 ]  = MMAD_4x8 ( out[ 13 ],  act_reg_2[1],  weights_reg5 );	
+				out[ 12 ]  = _MMAD_4x8 ( out[ 12 ],  act_reg_2[0],  weights_reg5 );					
+				out[ 13 ]  = _MMAD_4x8 ( out[ 13 ],  act_reg_2[1],  weights_reg5 );	
 				
-				out[ 27 ]  = MMAD_4x8 ( out[ 27 ],  act_reg_2[1],  weights_reg2 );
+				out[ 27 ]  = _MMAD_4x8 ( out[ 27 ],  act_reg_2[1],  weights_reg2 );
 				
                 /****************************************************************************************************************************************
 				   Third phase - load third row of weights, this replaces first weight row, for the third activation row read 1Hx6Wx4N inputs at a time 
@@ -635,31 +568,31 @@ __global uchar* outputs)
 				
 				 /* Load weights of row = 2 from SLM into registers - replaces row = 0 weights  */
 				 {
-					    weights_reg0.s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 ) );
-					    weights_reg0.s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 + 64 ) );
+					    weights_reg0.s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 ) );
+					    weights_reg0.s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 + 64 ) );
 						slm_ptr1   			   += LOCAL_SIZE_X*8;	
 						
-						weights_reg1.s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 ) );
-					    weights_reg1.s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 + 64 ) );
+						weights_reg1.s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 ) );
+					    weights_reg1.s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 + 64 ) );
 						slm_ptr1   			   += LOCAL_SIZE_X*8;	
 						
-						weights_reg2.s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 ) );
-					    weights_reg2.s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptr1 + 64 ) );
+						weights_reg2.s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 ) );
+					    weights_reg2.s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptr1 + 64 ) );
 						slm_ptr1   			   += LOCAL_SIZE_X*8;	
 				}
 				
 				uint slm_row_offset_4 	  = 2*(TILE_W + 2)*BATCH_PACK*8;	 
 				
-				act_reg_2 [ 0 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_row_offset_4)) ; 
-				act_reg_2 [ 1 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_row_offset_4 + BATCH_PACK*8)) ; 
+				act_reg_2 [ 0 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_row_offset_4)) ; 
+				act_reg_2 [ 1 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_row_offset_4 + BATCH_PACK*8)) ; 
 		
-				out[ 14 ] = MMAD_4x8 ( out[ 14 ], act_reg_2[0] , weights_reg3 );
-				out[ 0 ]  = MMAD_4x8 ( out[ 0 ],  act_reg_2[0]  , weights_reg0 );
-				out[ 1 ]  = MMAD_4x8 ( out[ 1 ],  act_reg_2[1]  , weights_reg0 );
-				out[ 15 ] = MMAD_4x8 ( out[ 15 ], act_reg_2[1] , weights_reg3 );
+				out[ 14 ] = _MMAD_4x8 ( out[ 14 ], act_reg_2[0] , weights_reg3 );
+				out[ 0 ]  = _MMAD_4x8 ( out[ 0 ],  act_reg_2[0]  , weights_reg0 );
+				out[ 1 ]  = _MMAD_4x8 ( out[ 1 ],  act_reg_2[1]  , weights_reg0 );
+				out[ 15 ] = _MMAD_4x8 ( out[ 15 ], act_reg_2[1] , weights_reg3 );
 				
-				out[ 14 ] = MMAD_4x8 ( out[ 14 ], act_reg_2[1], weights_reg4 );
-				out[ 0 ]  = MMAD_4x8 ( out[ 0 ],  act_reg_2[1], weights_reg1 );	
+				out[ 14 ] = _MMAD_4x8 ( out[ 14 ], act_reg_2[1], weights_reg4 );
+				out[ 0 ]  = _MMAD_4x8 ( out[ 0 ],  act_reg_2[1], weights_reg1 );	
 				
 				/* load input row =2,col=2:7,8:13,1Hx6Wx4N  */
 				
@@ -670,59 +603,59 @@ __global uchar* outputs)
 				
 				uint slm_offset 	  = 2*(TILE_W + 2)*BATCH_PACK*8 + col_2*BATCH_PACK*8;	 
 	
-				act_reg_2 [ 0 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset)) ; 
-				act_reg_2 [ 1 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset +   BATCH_PACK*8)) ; 
-				act_reg_2 [ 2 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset + 2*BATCH_PACK*8)) ; 
-				act_reg_2 [ 3 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset + 3*BATCH_PACK*8) ) ; 
-   				act_reg_2 [ 4 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset + 4*BATCH_PACK*8) ) ; 
-   				act_reg_2 [ 5 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset + 5*BATCH_PACK*8) ) ; 
+				act_reg_2 [ 0 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset)) ; 
+				act_reg_2 [ 1 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset +   BATCH_PACK*8)) ; 
+				act_reg_2 [ 2 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset + 2*BATCH_PACK*8)) ; 
+				act_reg_2 [ 3 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset + 3*BATCH_PACK*8) ) ; 
+   				act_reg_2 [ 4 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset + 4*BATCH_PACK*8) ) ; 
+   				act_reg_2 [ 5 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset + 5*BATCH_PACK*8) ) ; 
    
    				uint first_row_offset   = col_2 - 2;
 				uint second_row_offset  = 14 + col_2 - 2;
    			
-				out [ first_row_offset + 1 ]  =  MMAD_4x8 ( out[ first_row_offset + 1] , act_reg_2[0],  weights_reg1 );
-				out [ first_row_offset + 2 ]  =  MMAD_4x8 ( out[ first_row_offset + 2] , act_reg_2[0],  weights_reg0 );
-				out [ first_row_offset + 3 ]  =  MMAD_4x8 ( out[ first_row_offset + 3 ], act_reg_2[1], weights_reg0 );
-				out [ first_row_offset ]      =  MMAD_4x8 ( out[ first_row_offset ] ,    act_reg_2[0] , weights_reg2 );
+				out [ first_row_offset + 1 ]  =  _MMAD_4x8 ( out[ first_row_offset + 1] , act_reg_2[0],  weights_reg1 );
+				out [ first_row_offset + 2 ]  =  _MMAD_4x8 ( out[ first_row_offset + 2] , act_reg_2[0],  weights_reg0 );
+				out [ first_row_offset + 3 ]  =  _MMAD_4x8 ( out[ first_row_offset + 3 ], act_reg_2[1], weights_reg0 );
+				out [ first_row_offset ]      =  _MMAD_4x8 ( out[ first_row_offset ] ,    act_reg_2[0] , weights_reg2 );
 				
-				out [ second_row_offset + 1 ]  =  MMAD_4x8 ( out[ second_row_offset + 1] , act_reg_2[0],  weights_reg4 );
-				out [ second_row_offset + 2 ]  =  MMAD_4x8 ( out[ second_row_offset + 2] , act_reg_2[0],  weights_reg3 );
-				out [ second_row_offset + 3 ]  =  MMAD_4x8 ( out[ second_row_offset + 3], act_reg_2[1], weights_reg3 );
-				out [ second_row_offset ]      =  MMAD_4x8 ( out[ second_row_offset ] , act_reg_2[0] , weights_reg5 );
+				out [ second_row_offset + 1 ]  =  _MMAD_4x8 ( out[ second_row_offset + 1] , act_reg_2[0],  weights_reg4 );
+				out [ second_row_offset + 2 ]  =  _MMAD_4x8 ( out[ second_row_offset + 2] , act_reg_2[0],  weights_reg3 );
+				out [ second_row_offset + 3 ]  =  _MMAD_4x8 ( out[ second_row_offset + 3], act_reg_2[1], weights_reg3 );
+				out [ second_row_offset ]      =  _MMAD_4x8 ( out[ second_row_offset ] , act_reg_2[0] , weights_reg5 );
 				
-				out [ first_row_offset + 1 ]   = MMAD_4x8 (  out[ first_row_offset + 1 ], act_reg_2[1], weights_reg2 );
-				out [ first_row_offset + 2 ]   = MMAD_4x8 (  out[ first_row_offset + 2 ], act_reg_2[1], weights_reg1 );
-				out [ first_row_offset + 3 ]   = MMAD_4x8 ( out[ first_row_offset + 3 ],  act_reg_2[2], weights_reg1 );
-				out [ first_row_offset + 4 ]   = MMAD_4x8 ( out[ first_row_offset + 4 ],  act_reg_2[2], weights_reg0 );
+				out [ first_row_offset + 1 ]   = _MMAD_4x8 (  out[ first_row_offset + 1 ], act_reg_2[1], weights_reg2 );
+				out [ first_row_offset + 2 ]   = _MMAD_4x8 (  out[ first_row_offset + 2 ], act_reg_2[1], weights_reg1 );
+				out [ first_row_offset + 3 ]   = _MMAD_4x8 ( out[ first_row_offset + 3 ],  act_reg_2[2], weights_reg1 );
+				out [ first_row_offset + 4 ]   = _MMAD_4x8 ( out[ first_row_offset + 4 ],  act_reg_2[2], weights_reg0 );
 				
-				out [ second_row_offset + 1 ]  = MMAD_4x8 (  out[ second_row_offset + 1 ], act_reg_2[1], weights_reg5 );
-				out [ second_row_offset + 2 ]  = MMAD_4x8 (  out[ second_row_offset + 2 ], act_reg_2[1], weights_reg4 );
-				out [ second_row_offset + 3 ]   = MMAD_4x8 ( out[ second_row_offset + 3 ], act_reg_2[2], weights_reg4 );
-				out [ second_row_offset + 4 ]   = MMAD_4x8 ( out[ second_row_offset + 4 ], act_reg_2[2], weights_reg3 );
+				out [ second_row_offset + 1 ]  = _MMAD_4x8 (  out[ second_row_offset + 1 ], act_reg_2[1], weights_reg5 );
+				out [ second_row_offset + 2 ]  = _MMAD_4x8 (  out[ second_row_offset + 2 ], act_reg_2[1], weights_reg4 );
+				out [ second_row_offset + 3 ]   = _MMAD_4x8 ( out[ second_row_offset + 3 ], act_reg_2[2], weights_reg4 );
+				out [ second_row_offset + 4 ]   = _MMAD_4x8 ( out[ second_row_offset + 4 ], act_reg_2[2], weights_reg3 );
 
-				out [ first_row_offset + 5 ]   = MMAD_4x8 ( out[ first_row_offset + 5], act_reg_2[3], weights_reg0 );	
-				out [ first_row_offset + 2 ]   = MMAD_4x8 ( out[ first_row_offset + 2], act_reg_2[2], weights_reg2 );				
-				out [ first_row_offset + 3 ]   = MMAD_4x8 ( out[ first_row_offset + 3], act_reg_2[3], weights_reg2 );
-				out [ first_row_offset + 4 ]   = MMAD_4x8 ( out[ first_row_offset + 4], act_reg_2[3], weights_reg1 );
+				out [ first_row_offset + 5 ]   = _MMAD_4x8 ( out[ first_row_offset + 5], act_reg_2[3], weights_reg0 );	
+				out [ first_row_offset + 2 ]   = _MMAD_4x8 ( out[ first_row_offset + 2], act_reg_2[2], weights_reg2 );				
+				out [ first_row_offset + 3 ]   = _MMAD_4x8 ( out[ first_row_offset + 3], act_reg_2[3], weights_reg2 );
+				out [ first_row_offset + 4 ]   = _MMAD_4x8 ( out[ first_row_offset + 4], act_reg_2[3], weights_reg1 );
 				
-				out [ second_row_offset + 5 ]   = MMAD_4x8 ( out[ second_row_offset + 5], act_reg_2[3], weights_reg3 );	
-				out [ second_row_offset + 2 ]   = MMAD_4x8 ( out[ second_row_offset + 2], act_reg_2[2], weights_reg5 );				
-				out [ second_row_offset + 3 ]   = MMAD_4x8 ( out[ second_row_offset + 3], act_reg_2[3], weights_reg5 );
-				out [ second_row_offset + 4 ]   = MMAD_4x8 ( out[ second_row_offset + 4], act_reg_2[3], weights_reg4 );
+				out [ second_row_offset + 5 ]   = _MMAD_4x8 ( out[ second_row_offset + 5], act_reg_2[3], weights_reg3 );	
+				out [ second_row_offset + 2 ]   = _MMAD_4x8 ( out[ second_row_offset + 2], act_reg_2[2], weights_reg5 );				
+				out [ second_row_offset + 3 ]   = _MMAD_4x8 ( out[ second_row_offset + 3], act_reg_2[3], weights_reg5 );
+				out [ second_row_offset + 4 ]   = _MMAD_4x8 ( out[ second_row_offset + 4], act_reg_2[3], weights_reg4 );
 
-				out [ first_row_offset + 6 ]   = MMAD_4x8 ( out[ first_row_offset + 6], act_reg_2[4], weights_reg0 );
-				out [ first_row_offset + 7 ]   = MMAD_4x8 ( out[ first_row_offset + 7], act_reg_2[5], weights_reg0 );
-				out [ first_row_offset + 5 ]   = MMAD_4x8 ( out[ first_row_offset + 5], act_reg_2[4], weights_reg1 );
-				out [ first_row_offset + 6 ]   = MMAD_4x8 ( out[ first_row_offset + 6], act_reg_2[5], weights_reg1 );				
-				out [ first_row_offset + 4 ]   = MMAD_4x8 ( out[ first_row_offset + 4], act_reg_2[4], weights_reg2 );
-				out [ first_row_offset + 5 ]   = MMAD_4x8 ( out[ first_row_offset + 5], act_reg_2[5], weights_reg2 );
+				out [ first_row_offset + 6 ]   = _MMAD_4x8 ( out[ first_row_offset + 6], act_reg_2[4], weights_reg0 );
+				out [ first_row_offset + 7 ]   = _MMAD_4x8 ( out[ first_row_offset + 7], act_reg_2[5], weights_reg0 );
+				out [ first_row_offset + 5 ]   = _MMAD_4x8 ( out[ first_row_offset + 5], act_reg_2[4], weights_reg1 );
+				out [ first_row_offset + 6 ]   = _MMAD_4x8 ( out[ first_row_offset + 6], act_reg_2[5], weights_reg1 );				
+				out [ first_row_offset + 4 ]   = _MMAD_4x8 ( out[ first_row_offset + 4], act_reg_2[4], weights_reg2 );
+				out [ first_row_offset + 5 ]   = _MMAD_4x8 ( out[ first_row_offset + 5], act_reg_2[5], weights_reg2 );
 				
-				out [ second_row_offset + 6 ]   = MMAD_4x8 ( out[ second_row_offset + 6], act_reg_2[4], weights_reg3 );
-				out [ second_row_offset + 7 ]   = MMAD_4x8 ( out[ second_row_offset + 7], act_reg_2[5], weights_reg3 );
-				out [ second_row_offset + 5 ]   = MMAD_4x8 ( out[ second_row_offset + 5], act_reg_2[4], weights_reg4 );
-				out [ second_row_offset + 6 ]   = MMAD_4x8 ( out[ second_row_offset + 6], act_reg_2[5], weights_reg4 );
-				out [ second_row_offset + 4 ]   = MMAD_4x8 ( out[ second_row_offset + 4], act_reg_2[4], weights_reg5 );				
-				out [ second_row_offset + 5 ]   = MMAD_4x8 ( out[ second_row_offset + 5], act_reg_2[5], weights_reg5 );
+				out [ second_row_offset + 6 ]   = _MMAD_4x8 ( out[ second_row_offset + 6], act_reg_2[4], weights_reg3 );
+				out [ second_row_offset + 7 ]   = _MMAD_4x8 ( out[ second_row_offset + 7], act_reg_2[5], weights_reg3 );
+				out [ second_row_offset + 5 ]   = _MMAD_4x8 ( out[ second_row_offset + 5], act_reg_2[4], weights_reg4 );
+				out [ second_row_offset + 6 ]   = _MMAD_4x8 ( out[ second_row_offset + 6], act_reg_2[5], weights_reg4 );
+				out [ second_row_offset + 4 ]   = _MMAD_4x8 ( out[ second_row_offset + 4], act_reg_2[4], weights_reg5 );				
+				out [ second_row_offset + 5 ]   = _MMAD_4x8 ( out[ second_row_offset + 5], act_reg_2[5], weights_reg5 );
 				
 				col_2 +=6;
 				
@@ -732,17 +665,17 @@ __global uchar* outputs)
 
 				uint slm_row_offset_5 	  = 2 * (TILE_W + 2) * BATCH_PACK * 8 + 14 * BATCH_PACK * 8;	
 
-				act_reg_2 [ 0 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_row_offset_5)) ; 
-				act_reg_2 [ 1 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_row_offset_5 +   BATCH_PACK*8)) ; 
+				act_reg_2 [ 0 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_row_offset_5)) ; 
+				act_reg_2 [ 1 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_row_offset_5 +   BATCH_PACK*8)) ; 
 				
-				out[ 13 ]  = MMAD_4x8 ( out[ 13 ],   act_reg_2[0],  weights_reg1 );		
-				out[ 27 ]  = MMAD_4x8 ( out[ 27 ],   act_reg_2[0],  weights_reg4 );		
-				out[ 26 ]  = MMAD_4x8 ( out[ 26 ],   act_reg_2[0],  weights_reg5 );	
+				out[ 13 ]  = _MMAD_4x8 ( out[ 13 ],   act_reg_2[0],  weights_reg1 );		
+				out[ 27 ]  = _MMAD_4x8 ( out[ 27 ],   act_reg_2[0],  weights_reg4 );		
+				out[ 26 ]  = _MMAD_4x8 ( out[ 26 ],   act_reg_2[0],  weights_reg5 );	
 				
-				out[ 12 ]  = MMAD_4x8 ( out[ 12 ],  act_reg_2[0],  weights_reg2 );					
-				out[ 13 ]  = MMAD_4x8 ( out[ 13 ],  act_reg_2[1],  weights_reg2 );	
+				out[ 12 ]  = _MMAD_4x8 ( out[ 12 ],  act_reg_2[0],  weights_reg2 );					
+				out[ 13 ]  = _MMAD_4x8 ( out[ 13 ],  act_reg_2[1],  weights_reg2 );	
 				
-				out[ 27 ]  = MMAD_4x8 ( out[ 27 ],  act_reg_2[1],  weights_reg5 );
+				out[ 27 ]  = _MMAD_4x8 ( out[ 27 ],  act_reg_2[1],  weights_reg5 );
 	}
 				
 				/*************************************************************************************************
@@ -761,36 +694,36 @@ __global uchar* outputs)
 				{
 	                 /* Load activations from SLM into registers  */
 					 uint slm_offset = ic * BATCH_PACK * 8  + slm_row_offset_6;
-    				 act_reg [ ic ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset)) ; 
+    				 act_reg [ ic ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset)) ; 
 				}
 			
 			/* Convolve */ 
 			
 				uint phase_offset = 14;
 				
-				out[ phase_offset + 0 ] = MMAD_4x8 ( out[ phase_offset +0 ], act_reg[0], weights_reg0 );
-				out[ phase_offset + 1 ] = MMAD_4x8 ( out[ phase_offset +1 ], act_reg[1], weights_reg0 );
-				out[ phase_offset +2 ] = MMAD_4x8 ( out[ phase_offset +2 ], act_reg[2], weights_reg0 );
-				out[ phase_offset +3 ] = MMAD_4x8 ( out[ phase_offset +3 ], act_reg[3], weights_reg0 );
-				out[ phase_offset +4 ] = MMAD_4x8 ( out[ phase_offset +4 ], act_reg[4], weights_reg0 );
-				out[ phase_offset +5 ] = MMAD_4x8 ( out[ phase_offset +5 ], act_reg[5], weights_reg0 );
-				out[ phase_offset +6 ] = MMAD_4x8 ( out[ phase_offset +6 ], act_reg[6], weights_reg0 );
-				out[ phase_offset +7 ] = MMAD_4x8 ( out[ phase_offset +7 ], act_reg[7], weights_reg0 );
+				out[ phase_offset + 0 ] = _MMAD_4x8 ( out[ phase_offset +0 ], act_reg[0], weights_reg0 );
+				out[ phase_offset + 1 ] = _MMAD_4x8 ( out[ phase_offset +1 ], act_reg[1], weights_reg0 );
+				out[ phase_offset +2 ] = _MMAD_4x8 ( out[ phase_offset +2 ], act_reg[2], weights_reg0 );
+				out[ phase_offset +3 ] = _MMAD_4x8 ( out[ phase_offset +3 ], act_reg[3], weights_reg0 );
+				out[ phase_offset +4 ] = _MMAD_4x8 ( out[ phase_offset +4 ], act_reg[4], weights_reg0 );
+				out[ phase_offset +5 ] = _MMAD_4x8 ( out[ phase_offset +5 ], act_reg[5], weights_reg0 );
+				out[ phase_offset +6 ] = _MMAD_4x8 ( out[ phase_offset +6 ], act_reg[6], weights_reg0 );
+				out[ phase_offset +7 ] = _MMAD_4x8 ( out[ phase_offset +7 ], act_reg[7], weights_reg0 );
 
-				out[ phase_offset +0 ] = MMAD_4x8 ( out[ phase_offset +0 ], act_reg[1], weights_reg1 );
-				out[ phase_offset +1 ] = MMAD_4x8 ( out[ phase_offset +1 ], act_reg[2], weights_reg1 );
-				out[ phase_offset +2 ] = MMAD_4x8 ( out[ phase_offset +2 ], act_reg[3], weights_reg1 );
-				out[ phase_offset +3 ] = MMAD_4x8 ( out[ phase_offset +3 ], act_reg[4], weights_reg1 );
-				out[ phase_offset +4 ] = MMAD_4x8 ( out[ phase_offset +4 ], act_reg[5], weights_reg1 );
-				out[ phase_offset +5 ] = MMAD_4x8 ( out[ phase_offset +5 ], act_reg[6], weights_reg1 );
-				out[ phase_offset +6 ] = MMAD_4x8 ( out[ phase_offset +6 ], act_reg[7], weights_reg1 );
+				out[ phase_offset +0 ] = _MMAD_4x8 ( out[ phase_offset +0 ], act_reg[1], weights_reg1 );
+				out[ phase_offset +1 ] = _MMAD_4x8 ( out[ phase_offset +1 ], act_reg[2], weights_reg1 );
+				out[ phase_offset +2 ] = _MMAD_4x8 ( out[ phase_offset +2 ], act_reg[3], weights_reg1 );
+				out[ phase_offset +3 ] = _MMAD_4x8 ( out[ phase_offset +3 ], act_reg[4], weights_reg1 );
+				out[ phase_offset +4 ] = _MMAD_4x8 ( out[ phase_offset +4 ], act_reg[5], weights_reg1 );
+				out[ phase_offset +5 ] = _MMAD_4x8 ( out[ phase_offset +5 ], act_reg[6], weights_reg1 );
+				out[ phase_offset +6 ] = _MMAD_4x8 ( out[ phase_offset +6 ], act_reg[7], weights_reg1 );
 				
-				out[ phase_offset +0 ] = MMAD_4x8 ( out[ phase_offset +0 ], act_reg[2], weights_reg2 );
-				out[ phase_offset +1 ] = MMAD_4x8 ( out[ phase_offset +1 ], act_reg[3], weights_reg2 );
-				out[ phase_offset +2 ] = MMAD_4x8 ( out[ phase_offset +2 ], act_reg[4], weights_reg2 );
-				out[ phase_offset +3 ] = MMAD_4x8 ( out[ phase_offset +3 ], act_reg[5], weights_reg2 );
-				out[ phase_offset +4 ] = MMAD_4x8 ( out[ phase_offset +4 ], act_reg[6], weights_reg2 );
-				out[ phase_offset +5 ] = MMAD_4x8 ( out[ phase_offset +5 ], act_reg[7], weights_reg2 );
+				out[ phase_offset +0 ] = _MMAD_4x8 ( out[ phase_offset +0 ], act_reg[2], weights_reg2 );
+				out[ phase_offset +1 ] = _MMAD_4x8 ( out[ phase_offset +1 ], act_reg[3], weights_reg2 );
+				out[ phase_offset +2 ] = _MMAD_4x8 ( out[ phase_offset +2 ], act_reg[4], weights_reg2 );
+				out[ phase_offset +3 ] = _MMAD_4x8 ( out[ phase_offset +3 ], act_reg[5], weights_reg2 );
+				out[ phase_offset +4 ] = _MMAD_4x8 ( out[ phase_offset +4 ], act_reg[6], weights_reg2 );
+				out[ phase_offset +5 ] = _MMAD_4x8 ( out[ phase_offset +5 ], act_reg[7], weights_reg2 );
 			   
 				/* load next 1Hx8Wx4N inputs */
 		
@@ -798,34 +731,34 @@ __global uchar* outputs)
 				for (int ic = 8; ic < 16; ic++)
 				{
 					 uint slm_offset = ic * BATCH_PACK * 8 + slm_row_offset_6;
-					 act_reg [ ic - 8 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset)) ; 
+					 act_reg [ ic - 8 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset)) ; 
 				}
 				
 				/* Convolve */				
 				
-				out[ phase_offset +6 ] = MMAD_4x8 ( out[ phase_offset +6 ], act_reg[0], weights_reg2 );
-				out[ phase_offset +7 ] = MMAD_4x8 ( out[ phase_offset +7 ], act_reg[1], weights_reg2 );
-				out[ phase_offset + 8 ] = MMAD_4x8 ( out[ phase_offset +8 ], act_reg[2], weights_reg2 );
-				out[ phase_offset +9 ] = MMAD_4x8 ( out[phase_offset + 9 ], act_reg[3], weights_reg2 );
-				out[ phase_offset +10 ] = MMAD_4x8 ( out[ phase_offset +10 ], act_reg[4], weights_reg2 );
-				out[ phase_offset +11 ] = MMAD_4x8 ( out[phase_offset + 11 ], act_reg[5], weights_reg2 );
-				out[ phase_offset +12 ] = MMAD_4x8 ( out[ phase_offset +12 ], act_reg[6], weights_reg2 );
-				out[ phase_offset +13 ] = MMAD_4x8 ( out[ phase_offset +13 ], act_reg[7], weights_reg2 );
+				out[ phase_offset +6 ] = _MMAD_4x8 ( out[ phase_offset +6 ], act_reg[0], weights_reg2 );
+				out[ phase_offset +7 ] = _MMAD_4x8 ( out[ phase_offset +7 ], act_reg[1], weights_reg2 );
+				out[ phase_offset + 8 ] = _MMAD_4x8 ( out[ phase_offset +8 ], act_reg[2], weights_reg2 );
+				out[ phase_offset +9 ] = _MMAD_4x8 ( out[phase_offset + 9 ], act_reg[3], weights_reg2 );
+				out[ phase_offset +10 ] = _MMAD_4x8 ( out[ phase_offset +10 ], act_reg[4], weights_reg2 );
+				out[ phase_offset +11 ] = _MMAD_4x8 ( out[phase_offset + 11 ], act_reg[5], weights_reg2 );
+				out[ phase_offset +12 ] = _MMAD_4x8 ( out[ phase_offset +12 ], act_reg[6], weights_reg2 );
+				out[ phase_offset +13 ] = _MMAD_4x8 ( out[ phase_offset +13 ], act_reg[7], weights_reg2 );
 				
-				out[ phase_offset +7 ] =  MMAD_4x8 ( out[ phase_offset +7 ], act_reg[0], weights_reg1 );
-				out[ phase_offset +8 ] =  MMAD_4x8 ( out[phase_offset + 8 ], act_reg[1], weights_reg1 );
-				out[ phase_offset +9 ] = MMAD_4x8 ( out[ phase_offset +9 ], act_reg[2], weights_reg1 );
-				out[ phase_offset +10 ] = MMAD_4x8 ( out[ phase_offset +10 ], act_reg[3], weights_reg1 );
-				out[ phase_offset +11 ] = MMAD_4x8 ( out[ phase_offset +11 ], act_reg[4], weights_reg1 );
-				out[ phase_offset +12 ] = MMAD_4x8 ( out[ phase_offset +12 ], act_reg[5], weights_reg1 );
-				out[ phase_offset +13 ] = MMAD_4x8 ( out[phase_offset + 13 ], act_reg[6], weights_reg1 );
+				out[ phase_offset +7 ] =  _MMAD_4x8 ( out[ phase_offset +7 ], act_reg[0], weights_reg1 );
+				out[ phase_offset +8 ] =  _MMAD_4x8 ( out[phase_offset + 8 ], act_reg[1], weights_reg1 );
+				out[ phase_offset +9 ] = _MMAD_4x8 ( out[ phase_offset +9 ], act_reg[2], weights_reg1 );
+				out[ phase_offset +10 ] = _MMAD_4x8 ( out[ phase_offset +10 ], act_reg[3], weights_reg1 );
+				out[ phase_offset +11 ] = _MMAD_4x8 ( out[ phase_offset +11 ], act_reg[4], weights_reg1 );
+				out[ phase_offset +12 ] = _MMAD_4x8 ( out[ phase_offset +12 ], act_reg[5], weights_reg1 );
+				out[ phase_offset +13 ] = _MMAD_4x8 ( out[phase_offset + 13 ], act_reg[6], weights_reg1 );
 				
-				out[ phase_offset +8 ] =  MMAD_4x8 ( out[phase_offset + 8 ],  act_reg[0], weights_reg0 );
-				out[ phase_offset +9 ] = MMAD_4x8 ( out[ phase_offset +9 ], act_reg[1], weights_reg0 );
-				out[ phase_offset +10 ] = MMAD_4x8 ( out[ phase_offset +10 ], act_reg[2], weights_reg0 );
-				out[ phase_offset +11 ] = MMAD_4x8 ( out[phase_offset + 11 ], act_reg[3], weights_reg0 );
-				out[ phase_offset +12 ] = MMAD_4x8 ( out[ phase_offset +12 ], act_reg[4], weights_reg0 );
-				out[ phase_offset +13 ] = MMAD_4x8 ( out[phase_offset + 13 ], act_reg[5], weights_reg0 );
+				out[ phase_offset +8 ] =  _MMAD_4x8 ( out[phase_offset + 8 ],  act_reg[0], weights_reg0 );
+				out[ phase_offset +9 ] = _MMAD_4x8 ( out[ phase_offset +9 ], act_reg[1], weights_reg0 );
+				out[ phase_offset +10 ] = _MMAD_4x8 ( out[ phase_offset +10 ], act_reg[2], weights_reg0 );
+				out[ phase_offset +11 ] = _MMAD_4x8 ( out[phase_offset + 11 ], act_reg[3], weights_reg0 );
+				out[ phase_offset +12 ] = _MMAD_4x8 ( out[ phase_offset +12 ], act_reg[4], weights_reg0 );
+				out[ phase_offset +13 ] = _MMAD_4x8 ( out[phase_offset + 13 ], act_reg[5], weights_reg0 );
 			}	
 			
 			// To make sure all threads in WG have finished compute before next depth tile of activation and weights are loaded into SLM
