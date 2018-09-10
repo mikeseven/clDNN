@@ -275,8 +275,8 @@ TEST(convolution_f32_fw_gpu, three_convolutions_same_weights) {
     //  1 
     //  
     //  Output:
-    //  4  4   4  4
-    //  4  4   4  4
+    //  8  8   8  8
+    //  8  8   8  8
 
 
     engine engine;
