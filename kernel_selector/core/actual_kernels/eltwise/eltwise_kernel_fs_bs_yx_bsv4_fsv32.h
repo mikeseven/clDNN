@@ -30,6 +30,6 @@ namespace kernel_selector
         virtual ParamsKey GetSupportedKey() const override;
     protected:
         JitConstants GetJitConstants(const eltwise_params& params) const override;
-        virtual DispatchData SetDefault(const eltwise_params& params) const;
+        virtual DispatchData SetDefault(const eltwise_params& params) const override;
     };
 }
