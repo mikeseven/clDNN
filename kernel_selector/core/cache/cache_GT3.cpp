@@ -21,6 +21,6 @@ namespace kernel_selector
     // KBL GT3e
     void tuning_cache_5927(tuning_data& td)
     {
-        tuning_cache_5927_B1(td);
+        tuning_cache_5927_B1_B16(td);
     }
 }

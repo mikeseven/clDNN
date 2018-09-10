@@ -35,7 +35,7 @@ namespace kernel_selector
     void tuning_cache_1912_B32_B64(tuning_data&);
     //KBL GT3e
     void tuning_cache_5927(tuning_data&);
-    void tuning_cache_5927_B1(tuning_data&);
+    void tuning_cache_5927_B1_B16(tuning_data&);
     //ICL GT2
     void tuning_cache_8A52(tuning_data&);
     void tuning_cache_8A52_B1_B16(tuning_data&);
