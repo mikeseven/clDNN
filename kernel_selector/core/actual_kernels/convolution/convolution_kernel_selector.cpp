@@ -36,6 +36,7 @@
 #include "convolution_kernel_1x1_gemm_MMAD.h"
 #include "convolution_kernel_byxf_af32_depthwise.h"
 #include "convolution_kernel_mmad_batched.h"
+#include "convolution_kernel_bfyx_depthwise.h"
 
 #include <iostream>
  
@@ -52,7 +53,7 @@ namespace kernel_selector
         Attach<ConvolutionKernel_yxfb_yxio_b8>();
         //Attach<ConvolutionKernel_yxfb_yxio_b1_block>(); // TODO: need to finish integration
         Attach<ConvolutionKernel_yxfb_yxio_b1_block_mulitple_x>();
-        Attach<ConvolutionKernel_bfyx_3x3_dw_opt>();
+        //Attach<ConvolutionKernel_bfyx_3x3_dw_opt>();
         Attach<ConvolutionKernel_Winograd_2x3_s1>();
         Attach<ConvolutionKernel_Winograd_2x3_s1_fused>();
         Attach<ConvolutionKernel_Winograd_6x3_s1_fused>();
@@ -63,6 +64,7 @@ namespace kernel_selector
         Attach<ConvolutionKernel_1x1_gemm_MMAD>();
         Attach<ConvolutionKernel_byxf_af32_depthiwise>();
         Attach<ConvolutionKernel_mmad_batched>();
+        Attach<ConvolutionKernel_bfyx_depthwise>();
         //Attach<ConvolutionKernel_Tutorial>(); //In order to use this implementation for tutorial purposes please uncomment this line
     }
 
