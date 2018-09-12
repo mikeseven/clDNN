@@ -956,34 +956,41 @@ __global int8* weights,
 					int4 outvec2 = out_1623[col];
 					int4 outvec3 = out_2431[col];
 					
-					/*TODO - Non-Linear Activation & Quantization  code goes here -  presently applying ReLU and  taking lower 8-bits */
+					/* Non-Linear Activation & Quantization code */
 		
 					uchar8 out_write_N2K4[2];
-					
-					out_write_N2K4[0].s0 = (uchar)(max(outvec0.s0, 0) & 0xFF); //K= lane_id,N=0
-					out_write_N2K4[0].s1 = (uchar)(max(outvec1.s0, 0) & 0xFF); //K= lane_id + 8,N=0
-					out_write_N2K4[0].s2 = (uchar)(max(outvec2.s0, 0) & 0xFF); //K= lane_id + 16,N=0
-					out_write_N2K4[0].s3 = (uchar)(max(outvec3.s0, 0) & 0xFF); //K= lane_id + 24,N=0
-					out_write_N2K4[0].s4 = (uchar)(max(outvec0.s1, 0) & 0xFF); //K= lane_id,N=1
-					out_write_N2K4[0].s5 = (uchar)(max(outvec1.s1, 0) & 0xFF); //K= lane_id + 8,N=1
-					out_write_N2K4[0].s6 = (uchar)(max(outvec2.s1, 0) & 0xFF); //K= lane_id + 16,N=1
-					out_write_N2K4[0].s7 = (uchar)(max(outvec3.s1, 0) & 0xFF); //K= lane_id + 24,N=1
 
-					out_write_N2K4[1].s0 = (uchar)(max(outvec0.s2, 0) & 0xFF); //K= lane_id,N=2
-					out_write_N2K4[1].s1 = (uchar)(max(outvec1.s2, 0) & 0xFF); //K= lane_id + 8,N=2
-					out_write_N2K4[1].s2 = (uchar)(max(outvec2.s2, 0) & 0xFF); //K= lane_id + 16,N=2
-					out_write_N2K4[1].s3 = (uchar)(max(outvec3.s2, 0) & 0xFF); //K= lane_id + 24,N=2
-					out_write_N2K4[1].s4 = (uchar)(max(outvec0.s3, 0) & 0xFF); //K= lane_id,N=3
-					out_write_N2K4[1].s5 = (uchar)(max(outvec1.s3, 0) & 0xFF); //K= lane_id + 8,N=3
-					out_write_N2K4[1].s6 = (uchar)(max(outvec2.s3, 0) & 0xFF); //K= lane_id + 16,N=3
-					out_write_N2K4[1].s7 = (uchar)(max(outvec3.s3, 0) & 0xFF); //K= lane_id + 24,N=3					
+                    const uint _batch = batch * BATCH_PACK;
+                    const uint _feature = output_depth_index * 32 + get_sub_group_local_id();
 
-					intel_sub_group_block_write_uc8 (  output_write_ptr  , out_write_N2K4[0] );
+                    out_write_N2K4[0].s0 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec0.s0) * quantizations[_feature + 0] * I_QF + biases[_feature + 0]) * calibrations[_feature + 0])), NL_M, NL_N)); //K= lane_id,N=0
+                    out_write_N2K4[0].s1 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec1.s0) * quantizations[_feature + 8] * I_QF + biases[_feature + 8]) * calibrations[_feature + 8])), NL_M, NL_N)); //K= lane_id + 8,N=0
+                    out_write_N2K4[0].s2 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec2.s0) * quantizations[_feature + 16] * I_QF + biases[_feature + 16]) * calibrations[_feature + 16])), NL_M, NL_N)); //K= lane_id + 16,N=0
+                    out_write_N2K4[0].s3 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec3.s0) * quantizations[_feature + 24] * I_QF + biases[_feature + 24]) * calibrations[_feature + 24])), NL_M, NL_N)); //K= lane_id + 24,N=0
+                    out_write_N2K4[0].s4 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec0.s1) * quantizations[_feature + 0] * I_QF + biases[_feature + 0]) * calibrations[_feature + 0])), NL_M, NL_N)); //K= lane_id,N=1
+                    out_write_N2K4[0].s5 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec1.s1) * quantizations[_feature + 8] * I_QF + biases[_feature + 8]) * calibrations[_feature + 8])), NL_M, NL_N)); //K= lane_id + 8,N=1
+                    out_write_N2K4[0].s6 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec2.s1) * quantizations[_feature + 16] * I_QF + biases[_feature + 16]) * calibrations[_feature + 16])), NL_M, NL_N)); //K= lane_id + 16,N=1
+                    out_write_N2K4[0].s7 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec3.s1) * quantizations[_feature + 24] * I_QF + biases[_feature + 24]) * calibrations[_feature + 24])), NL_M, NL_N)); //K= lane_id + 24,N=1
+
+                    out_write_N2K4[1].s0 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec0.s2) * quantizations[_feature + 0]  * I_QF + biases[_feature + 0] ) * calibrations[_feature + 0] )), NL_M, NL_N)); //K= lane_id,N=2
+                    out_write_N2K4[1].s1 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec1.s2) * quantizations[_feature + 8]  * I_QF + biases[_feature + 8] ) * calibrations[_feature + 8] )), NL_M, NL_N)); //K= lane_id + 8,N=2
+                    out_write_N2K4[1].s2 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec2.s2) * quantizations[_feature + 16] * I_QF + biases[_feature + 16]) * calibrations[_feature + 16])), NL_M, NL_N)); //K= lane_id + 16,N=2
+                    out_write_N2K4[1].s3 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec3.s2) * quantizations[_feature + 24] * I_QF + biases[_feature + 24]) * calibrations[_feature + 24])), NL_M, NL_N)); //K= lane_id + 24,N=2
+                    out_write_N2K4[1].s4 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec0.s3) * quantizations[_feature + 0]  * I_QF + biases[_feature + 0] ) * calibrations[_feature + 0] )), NL_M, NL_N)); //K= lane_id,N=3
+                    out_write_N2K4[1].s5 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec1.s3) * quantizations[_feature + 8]  * I_QF + biases[_feature + 8] ) * calibrations[_feature + 8] )), NL_M, NL_N)); //K= lane_id + 8,N=3
+                    out_write_N2K4[1].s6 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec2.s3) * quantizations[_feature + 16] * I_QF + biases[_feature + 16]) * calibrations[_feature + 16])), NL_M, NL_N)); //K= lane_id + 16,N=3
+                    out_write_N2K4[1].s7 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec3.s3) * quantizations[_feature + 24] * I_QF + biases[_feature + 24]) * calibrations[_feature + 24])), NL_M, NL_N)); //K= lane_id + 24,N=3
+
+					intel_sub_group_block_write_uc4 (  output_write_ptr  , out_write_N2K4[0].lo );
 					
-					output_write_ptr += 2*32;
+					output_write_ptr += 32;
+					intel_sub_group_block_write_uc4 (  output_write_ptr  , out_write_N2K4[0].hi );
+					output_write_ptr += 32;
+					intel_sub_group_block_write_uc4 (  output_write_ptr  , out_write_N2K4[1].lo );
+					output_write_ptr += 32;
+					intel_sub_group_block_write_uc4 (  output_write_ptr  , out_write_N2K4[1].hi );
+					output_write_ptr += 32;
 										
-					intel_sub_group_block_write_uc8 (  output_write_ptr  , out_write_N2K4[1] );
-					output_write_ptr += 2*32;
 				} // out_block_width-for loop
 		}//lid_z loop
 } //end of kernel
