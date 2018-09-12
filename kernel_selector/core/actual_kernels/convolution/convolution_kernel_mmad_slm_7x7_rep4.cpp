@@ -75,7 +75,8 @@ namespace kernel_selector {
         const size_t out_block_height = 1;
         runInfo.gws0 = arg.output.Feature().v * (arg.output.Batch().v / (rep_count * batch_per_wi)); // number of tiles needed to cover output width
         runInfo.gws1 = ((arg.inputs[0].X().v / arg.stride.x) + (out_block_width - 1)) / out_block_width;
-        runInfo.gws2 = ((arg.inputs[0].Y().v / arg.stride.y) + (out_block_height - 1)) / out_block_height;
+        // since this kernel only apply to 7x7 sizes we need to manually set gws2 to 8
+        runInfo.gws2 = 8;//((arg.inputs[0].Y().v / arg.stride.y) + (out_block_height - 1)) / out_block_height;
 
         runInfo.lws0 = 16; // depth
         runInfo.lws1 = 1; // width
@@ -118,6 +119,6 @@ namespace kernel_selector {
 
     KernelsData ConvolutionKernel_mmad_slm_7x7_rep4::GetKernelsData(const Params& params, const optional_params& options) const
     {
-        return GetCommonKernelsData(params, options);
+        return GetCommonKernelsData(params, options, " -Dcl_intel_subgroups_char");
     }
 }

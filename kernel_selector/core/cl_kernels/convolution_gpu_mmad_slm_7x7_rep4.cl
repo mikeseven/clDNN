@@ -257,16 +257,16 @@ __global int8* weights,
 			int4 act_col_2 =  as_int4( intel_sub_group_block_read4(activation_tile + 2*8*8) );//col 4				
 			int4 act_col_3 =  as_int4( intel_sub_group_block_read4(activation_tile + 3*8*8) );//col 6
 										
-			intel_sub_group_block_write_slm4 ( act_slm_ptr , as_uint4 ( act_col_0 ) );				
-			intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 8*8 ) , as_uint4 ( act_col_1 ) );
-			intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 2*8*8 ) , as_uint4 ( act_col_2 ) );
-			intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 3*8*8 ) , as_uint4 ( act_col_3 ) );
+			SLM_BLOCK_WRITE_4 ( act_slm_ptr , as_uint4 ( act_col_0 ) );				
+			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 8*8 ) , as_uint4 ( act_col_1 ) );
+			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 2*8*8 ) , as_uint4 ( act_col_2 ) );
+			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 3*8*8 ) , as_uint4 ( act_col_3 ) );
 		
 			if ( threadid_mod_2  == 0 )
             {
 				int4 act_col_4 =  as_int4( intel_sub_group_block_read4(activation_tile + 4*8*8) );								
 
-				intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 4*8*8 ) , as_uint4 ( act_col_4 ) );
+				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 4*8*8 ) , as_uint4 ( act_col_4 ) );
 			}
 
 			if ( thread_id >=14)
@@ -279,16 +279,16 @@ __global int8* weights,
 				int4 act_col_11 =  as_int4( intel_sub_group_block_read4(activation_tile + 2*8*8) );				
 				int4 act_col_12 =  as_int4( intel_sub_group_block_read4(activation_tile + 3*8*8) );
 
-				intel_sub_group_block_write_slm4 ( act_slm_ptr  , as_uint4 ( act_col_9 ) );				
-				intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 8*8 )   , as_uint4 ( act_col_10 ) );
-				intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 2*8*8 ) , as_uint4 ( act_col_11 ) );
-				intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 3*8*8 ) , as_uint4 ( act_col_12 ) );
+				SLM_BLOCK_WRITE_4 ( act_slm_ptr  , as_uint4 ( act_col_9 ) );				
+				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 8*8 )   , as_uint4 ( act_col_10 ) );
+				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 2*8*8 ) , as_uint4 ( act_col_11 ) );
+				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 3*8*8 ) , as_uint4 ( act_col_12 ) );
 				
 				if ( threadid_mod_2  == 0 )
                 {
 					int4 act_col_13 =  as_int4( intel_sub_group_block_read4(activation_tile + 4*8*8) );								
 
-					intel_sub_group_block_write_slm4 ( ( act_slm_ptr + 4*8*8 ) , as_uint4 ( act_col_13 ) );
+					SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 4*8*8 ) , as_uint4 ( act_col_13 ) );
 				}
 			}
 
@@ -315,17 +315,17 @@ __global int8* weights,
 			int4 w6 = as_int4 ( intel_sub_group_block_read4( weight_tile + 8*8 ) );	// Pixel2 K=8..15 C=0..15
 			int4 w7 = as_int4 ( intel_sub_group_block_read4( weight_tile + 12*8 ) );// Pixel2 K=8..15 C=16..31
 			
-			intel_sub_group_block_write_slm4 ( wt_slm_ptr, as_uint4 ( w0 ) );
-			intel_sub_group_block_write_slm4 ( ( wt_slm_ptr + 8*8 ) , as_uint4 ( w1 ) );		
-			intel_sub_group_block_write_slm4 ( ( wt_slm_ptr + 64*8 ), as_uint4 ( w2 ) );
-			intel_sub_group_block_write_slm4 ( ( wt_slm_ptr + 64*8 + 8*8 ), as_uint4 ( w3 ) );
+			SLM_BLOCK_WRITE_4 ( wt_slm_ptr, as_uint4 ( w0 ) );
+			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 8*8 ) , as_uint4 ( w1 ) );		
+			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 64*8 ), as_uint4 ( w2 ) );
+			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 64*8 + 8*8 ), as_uint4 ( w3 ) );
 			
 			wt_slm_ptr  += 16*8;
 		
-			intel_sub_group_block_write_slm4 ( wt_slm_ptr , as_uint4 ( w4 ) );
-			intel_sub_group_block_write_slm4 ( ( wt_slm_ptr + 8*8 )   , as_uint4 ( w5 ) );		
-			intel_sub_group_block_write_slm4 ( ( wt_slm_ptr + 64*8 ) , as_uint4 ( w6 ) );
-			intel_sub_group_block_write_slm4 ( ( wt_slm_ptr + 64*8 + 8*8 ) , as_uint4 ( w7 ) );
+			SLM_BLOCK_WRITE_4 ( wt_slm_ptr , as_uint4 ( w4 ) );
+			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 8*8 )   , as_uint4 ( w5 ) );		
+			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 64*8 ) , as_uint4 ( w6 ) );
+			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 64*8 + 8*8 ) , as_uint4 ( w7 ) );
 
 		   if( threadid_mod_8 < 2 )
            {
@@ -342,13 +342,13 @@ __global int8* weights,
 				int4 w4 = as_int4 ( intel_sub_group_block_read4( weight_tile_2 ) );	// Pixel1 K=8..15 C=0..15					
 				int4 w5 = as_int4 ( intel_sub_group_block_read4( weight_tile_2 + 4*8 ) );	// Pixel1 K=8..15 C=16..31		
 		
-				intel_sub_group_block_write_slm4 ( wt_slm_ptr_2, as_uint4 ( w0 ) );
-				intel_sub_group_block_write_slm4 ( ( wt_slm_ptr_2 + 8*8 ) , as_uint4 ( w1 ) );		
+				SLM_BLOCK_WRITE_4 ( wt_slm_ptr_2, as_uint4 ( w0 ) );
+				SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr_2 + 8*8 ) , as_uint4 ( w1 ) );		
 						
 				wt_slm_ptr_2  += 16*8;
    		
-				intel_sub_group_block_write_slm4 ( wt_slm_ptr_2 , as_uint4 ( w4 ) );
-				intel_sub_group_block_write_slm4 ( ( wt_slm_ptr_2 + 8*8 )   , as_uint4 ( w5 ) );		
+				SLM_BLOCK_WRITE_4 ( wt_slm_ptr_2 , as_uint4 ( w4 ) );
+				SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr_2 + 8*8 )   , as_uint4 ( w5 ) );		
 			}
 	}		
 
@@ -376,16 +376,16 @@ __global int8* weights,
 				{
 					 	__local uint *slm_ptrw0  = slm_ptr1;
 						
-					    weights_reg[0].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 ) );
-					    weights_reg[0].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 + 64 ) );
+					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
+					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 						slm_ptrw0   			 += slm_read_pixel_offset;	
 						
-						weights_reg[1].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 ) );
-					    weights_reg[1].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 + 64 ) );
+						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
+					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 						slm_ptrw0   			 += slm_read_pixel_offset;	
 						
-						weights_reg[2].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 ) );
-					    weights_reg[2].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 + 64 ) );
+						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
+					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 				}
 
 			/* load 1Hx9Wx4N inputs, Activation row0   */
@@ -397,7 +397,7 @@ __global int8* weights,
 					 
 					 uint slm_offset = ic * BATCH_PACK * 8 ;
 					 
-    				 act_reg [ ic ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset)) ; 
+    				 act_reg [ ic ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset)) ; 
 				}
 			
 			/* Convolve */ 
@@ -406,94 +406,94 @@ __global int8* weights,
 	
 				/*  Output channels 0-7 */
 	
-				out_07[ 0 ] = DPAS_4x8 ( out_07[ 0 ], act_reg[0], weights_reg[0] );
-				out_07[ 1 ] = DPAS_4x8 ( out_07[ 1 ], act_reg[1], weights_reg[0] );
-				out_07[ 2 ] = DPAS_4x8 ( out_07[ 2 ], act_reg[2], weights_reg[0] );
-				out_07[ 3 ] = DPAS_4x8 ( out_07[ 3 ], act_reg[3], weights_reg[0] );
-				out_07[ 4 ] = DPAS_4x8 ( out_07[ 4 ], act_reg[4], weights_reg[0] );
-				out_07[ 5 ] = DPAS_4x8 ( out_07[ 5 ], act_reg[5], weights_reg[0] );
-				out_07[ 6 ] = DPAS_4x8 ( out_07[ 6 ], act_reg[6], weights_reg[0] );
+				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[0], weights_reg[0] );
+				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[1], weights_reg[0] );
+				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[2], weights_reg[0] );
+				out_07[ 3 ] = _MMAD_4x8 ( out_07[ 3 ], act_reg[3], weights_reg[0] );
+				out_07[ 4 ] = _MMAD_4x8 ( out_07[ 4 ], act_reg[4], weights_reg[0] );
+				out_07[ 5 ] = _MMAD_4x8 ( out_07[ 5 ], act_reg[5], weights_reg[0] );
+				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[6], weights_reg[0] );
 
-				out_07[ 0 ] = DPAS_4x8 ( out_07[ 0 ], act_reg[1], weights_reg[1] );
-				out_07[ 1 ] = DPAS_4x8 ( out_07[ 1 ], act_reg[2], weights_reg[1] );
-				out_07[ 2 ] = DPAS_4x8 ( out_07[ 2 ], act_reg[3], weights_reg[1] );
-				out_07[ 3 ] = DPAS_4x8 ( out_07[ 3 ], act_reg[4], weights_reg[1] );
-				out_07[ 4 ] = DPAS_4x8 ( out_07[ 4 ], act_reg[5], weights_reg[1] );
-				out_07[ 5 ] = DPAS_4x8 ( out_07[ 5 ], act_reg[6], weights_reg[1] );
-				out_07[ 6 ] = DPAS_4x8 ( out_07[ 6 ], act_reg[7], weights_reg[1] );
+				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[1], weights_reg[1] );
+				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[2], weights_reg[1] );
+				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[3], weights_reg[1] );
+				out_07[ 3 ] = _MMAD_4x8 ( out_07[ 3 ], act_reg[4], weights_reg[1] );
+				out_07[ 4 ] = _MMAD_4x8 ( out_07[ 4 ], act_reg[5], weights_reg[1] );
+				out_07[ 5 ] = _MMAD_4x8 ( out_07[ 5 ], act_reg[6], weights_reg[1] );
+				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[7], weights_reg[1] );
 
-				out_07[ 0 ] = DPAS_4x8 ( out_07[ 0 ], act_reg[2], weights_reg[2] );
-				out_07[ 1 ] = DPAS_4x8 ( out_07[ 1 ], act_reg[3], weights_reg[2] );
-				out_07[ 2 ] = DPAS_4x8 ( out_07[ 2 ], act_reg[4], weights_reg[2] );
-				out_07[ 3 ] = DPAS_4x8 ( out_07[ 3 ], act_reg[5], weights_reg[2] );
-				out_07[ 4 ] = DPAS_4x8 ( out_07[ 4 ], act_reg[6], weights_reg[2] );
-				out_07[ 5 ] = DPAS_4x8 ( out_07[ 5 ], act_reg[7], weights_reg[2] );
-				out_07[ 6 ] = DPAS_4x8 ( out_07[ 6 ], act_reg[8], weights_reg[2] );
+				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[2], weights_reg[2] );
+				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[3], weights_reg[2] );
+				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[4], weights_reg[2] );
+				out_07[ 3 ] = _MMAD_4x8 ( out_07[ 3 ], act_reg[5], weights_reg[2] );
+				out_07[ 4 ] = _MMAD_4x8 ( out_07[ 4 ], act_reg[6], weights_reg[2] );
+				out_07[ 5 ] = _MMAD_4x8 ( out_07[ 5 ], act_reg[7], weights_reg[2] );
+				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[8], weights_reg[2] );
 
 		     /* Load weights from SLM into registers - row0, output channels 8..15  */
 				
 				{
 					 	__local uint *slm_ptrw0 = slm_ptr1 + 2*8*8;
 						
-					    weights_reg[0].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 ) );
-					    weights_reg[0].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 + 64 ) );
+					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
+					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 						slm_ptrw0   			 += slm_read_pixel_offset;	
 						
-						weights_reg[1].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 ) );
-					    weights_reg[1].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 + 64 ) );
+						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
+					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 						slm_ptrw0   			 += slm_read_pixel_offset;	
 						
-						weights_reg[2].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 ) );
-					    weights_reg[2].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 + 64 ) );
+						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
+					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 				}
 				
-				out_815[ 0 ] = DPAS_4x8 ( out_815[ 0 ], act_reg[0], weights_reg[0] );
-				out_815[ 1 ] = DPAS_4x8 ( out_815[ 1 ], act_reg[1], weights_reg[0] );
-				out_815[ 2 ] = DPAS_4x8 ( out_815[ 2 ], act_reg[2], weights_reg[0] );
-				out_815[ 3 ] = DPAS_4x8 ( out_815[ 3 ], act_reg[3], weights_reg[0] );
-				out_815[ 4 ] = DPAS_4x8 ( out_815[ 4 ], act_reg[4], weights_reg[0] );
-				out_815[ 5 ] = DPAS_4x8 ( out_815[ 5 ], act_reg[5], weights_reg[0] );
-				out_815[ 6 ] = DPAS_4x8 ( out_815[ 6 ], act_reg[6], weights_reg[0] );
+				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[0], weights_reg[0] );
+				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[1], weights_reg[0] );
+				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[2], weights_reg[0] );
+				out_815[ 3 ] = _MMAD_4x8 ( out_815[ 3 ], act_reg[3], weights_reg[0] );
+				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[4], weights_reg[0] );
+				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[5], weights_reg[0] );
+				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[6], weights_reg[0] );
 				
-				out_815[ 0 ] = DPAS_4x8 ( out_815[ 0 ], act_reg[1], weights_reg[1] );
-				out_815[ 1 ] = DPAS_4x8 ( out_815[ 1 ], act_reg[2], weights_reg[1] );
-				out_815[ 2 ] = DPAS_4x8 ( out_815[ 2 ], act_reg[3], weights_reg[1] );
-				out_815[ 3 ] = DPAS_4x8 ( out_815[ 3 ], act_reg[4], weights_reg[1] );
-				out_815[ 4 ] = DPAS_4x8 ( out_815[ 4 ], act_reg[5], weights_reg[1] );
-				out_815[ 5 ] = DPAS_4x8 ( out_815[ 5 ], act_reg[6], weights_reg[1] );
-				out_815[ 6 ] = DPAS_4x8 ( out_815[ 6 ], act_reg[7], weights_reg[1] );
+				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[1], weights_reg[1] );
+				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[2], weights_reg[1] );
+				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[3], weights_reg[1] );
+				out_815[ 3 ] = _MMAD_4x8 ( out_815[ 3 ], act_reg[4], weights_reg[1] );
+				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[5], weights_reg[1] );
+				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[6], weights_reg[1] );
+				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[7], weights_reg[1] );
 				
-				out_815[ 0 ] = DPAS_4x8 ( out_815[ 0 ], act_reg[2], weights_reg[2] );
-				out_815[ 1 ] = DPAS_4x8 ( out_815[ 1 ], act_reg[3], weights_reg[2] );
-				out_815[ 2 ] = DPAS_4x8 ( out_815[ 2 ], act_reg[4], weights_reg[2] );
-				out_815[ 3 ] = DPAS_4x8 ( out_815[ 3 ], act_reg[5], weights_reg[2] );
-				out_815[ 4 ] = DPAS_4x8 ( out_815[ 4 ], act_reg[6], weights_reg[2] );
-				out_815[ 5 ] = DPAS_4x8 ( out_815[ 5 ], act_reg[7], weights_reg[2] );
-				out_815[ 6 ] = DPAS_4x8 ( out_815[ 6 ], act_reg[8], weights_reg[2] );
+				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[2], weights_reg[2] );
+				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[3], weights_reg[2] );
+				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[4], weights_reg[2] );
+				out_815[ 3 ] = _MMAD_4x8 ( out_815[ 3 ], act_reg[5], weights_reg[2] );
+				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[6], weights_reg[2] );
+				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[7], weights_reg[2] );
+				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[8], weights_reg[2] );
 				
 				/* Load weights from SLM into registers - row0, output channels 16..23  */
 				{
 					 	__local uint *slm_ptrw0 = slm_ptr1 + 4*8*8;
 						
-					    weights_reg[0].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 ) );
-					    weights_reg[0].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 + 64 ) );
+					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
+					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 						slm_ptrw0   			 += slm_read_pixel_offset;	
 						
-						weights_reg[1].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 ) );
-					    weights_reg[1].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 + 64 ) );
+						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
+					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 						slm_ptrw0   			 += slm_read_pixel_offset;	
 						
-						weights_reg[2].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 ) );
-					    weights_reg[2].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 + 64 ) );
+						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
+					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 				}
 				
-				out_1623[ 0 ] = DPAS_4x8 ( out_1623[ 0 ], act_reg[0], weights_reg[0] );
-				out_1623[ 1 ] = DPAS_4x8 ( out_1623[ 1 ], act_reg[1], weights_reg[0] );
-				out_1623[ 2 ] = DPAS_4x8 ( out_1623[ 2 ], act_reg[2], weights_reg[0] );
-				out_1623[ 3 ] = DPAS_4x8 ( out_1623[ 3 ], act_reg[3], weights_reg[0] );
-				out_1623[ 4 ] = DPAS_4x8 ( out_1623[ 4 ], act_reg[4], weights_reg[0] );
-				out_1623[ 5 ] = DPAS_4x8 ( out_1623[ 5 ], act_reg[5], weights_reg[0] );
-				out_1623[ 6 ] = DPAS_4x8 ( out_1623[ 6 ], act_reg[6], weights_reg[0] );
+				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[0], weights_reg[0] );
+				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[1], weights_reg[0] );
+				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[2], weights_reg[0] );
+				out_1623[ 3 ] = _MMAD_4x8 ( out_1623[ 3 ], act_reg[3], weights_reg[0] );
+				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[4], weights_reg[0] );
+				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[5], weights_reg[0] );
+				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[6], weights_reg[0] );
 
 				/* load 1Hx9Wx4N inputs, Activation row1   */
 			
@@ -506,64 +506,64 @@ __global int8* weights,
 					 
 					 uint slm_offset = slm_row_offset_2 + ic * BATCH_PACK * 8 ;
 					 
-    				 act_reg [ ic + 9 ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset)) ; 
+    				 act_reg [ ic + 9 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset)) ; 
 				}
 				
-				out_1623[ 0 ] = DPAS_4x8 ( out_1623[ 0 ], act_reg[1], weights_reg[1] );
-				out_1623[ 1 ] = DPAS_4x8 ( out_1623[ 1 ], act_reg[2], weights_reg[1] );
-				out_1623[ 2 ] = DPAS_4x8 ( out_1623[ 2 ], act_reg[3], weights_reg[1] );
-				out_1623[ 3 ] = DPAS_4x8 ( out_1623[ 3 ], act_reg[4], weights_reg[1] );
-				out_1623[ 4 ] = DPAS_4x8 ( out_1623[ 4 ], act_reg[5], weights_reg[1] );
-				out_1623[ 5 ] = DPAS_4x8 ( out_1623[ 5 ], act_reg[6], weights_reg[1] );
-				out_1623[ 6 ] = DPAS_4x8 ( out_1623[ 6 ], act_reg[7], weights_reg[1] );
+				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[1], weights_reg[1] );
+				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[2], weights_reg[1] );
+				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[3], weights_reg[1] );
+				out_1623[ 3 ] = _MMAD_4x8 ( out_1623[ 3 ], act_reg[4], weights_reg[1] );
+				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[5], weights_reg[1] );
+				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[6], weights_reg[1] );
+				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[7], weights_reg[1] );
 				
-				out_1623[ 0 ] = DPAS_4x8 ( out_1623[ 0 ], act_reg[2], weights_reg[2] );
-				out_1623[ 1 ] = DPAS_4x8 ( out_1623[ 1 ], act_reg[3], weights_reg[2] );
-				out_1623[ 2 ] = DPAS_4x8 ( out_1623[ 2 ], act_reg[4], weights_reg[2] );
-				out_1623[ 3 ] = DPAS_4x8 ( out_1623[ 3 ], act_reg[5], weights_reg[2] );
-				out_1623[ 4 ] = DPAS_4x8 ( out_1623[ 4 ], act_reg[6], weights_reg[2] );
-				out_1623[ 5 ] = DPAS_4x8 ( out_1623[ 5 ], act_reg[7], weights_reg[2] );
-				out_1623[ 6 ] = DPAS_4x8 ( out_1623[ 6 ], act_reg[8], weights_reg[2] );
+				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[2], weights_reg[2] );
+				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[3], weights_reg[2] );
+				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[4], weights_reg[2] );
+				out_1623[ 3 ] = _MMAD_4x8 ( out_1623[ 3 ], act_reg[5], weights_reg[2] );
+				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[6], weights_reg[2] );
+				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[7], weights_reg[2] );
+				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[8], weights_reg[2] );
 				
 				/* Load weights from SLM into registers - row0, output channels 24..31  */
 				{
 					 	__local uint *slm_ptrw0 = slm_ptr1 + 6*8*8;
 						
-					    weights_reg[0].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 ) );
-					    weights_reg[0].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 + 64 ) );
+					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
+					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 						slm_ptrw0   			 += slm_read_pixel_offset;	
 						
-						weights_reg[1].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 ) );
-					    weights_reg[1].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 + 64 ) );
+						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
+					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 						slm_ptrw0   			 += slm_read_pixel_offset;	
 						
-						weights_reg[2].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 ) );
-					    weights_reg[2].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw0 + 64 ) );
+						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
+					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 				}
 				
-				out_2431[ 0 ] = DPAS_4x8 ( out_2431[ 0 ], act_reg[0], weights_reg[0] );
-				out_2431[ 1 ] = DPAS_4x8 ( out_2431[ 1 ], act_reg[1], weights_reg[0] );
-				out_2431[ 2 ] = DPAS_4x8 ( out_2431[ 2 ], act_reg[2], weights_reg[0] );
-				out_2431[ 3 ] = DPAS_4x8 ( out_2431[ 3 ], act_reg[3], weights_reg[0] );
-				out_2431[ 4 ] = DPAS_4x8 ( out_2431[ 4 ], act_reg[4], weights_reg[0] );
-				out_2431[ 5 ] = DPAS_4x8 ( out_2431[ 5 ], act_reg[5], weights_reg[0] );
-				out_2431[ 6 ] = DPAS_4x8 ( out_2431[ 6 ], act_reg[6], weights_reg[0] );
+				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[0], weights_reg[0] );
+				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[1], weights_reg[0] );
+				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[2], weights_reg[0] );
+				out_2431[ 3 ] = _MMAD_4x8 ( out_2431[ 3 ], act_reg[3], weights_reg[0] );
+				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[4], weights_reg[0] );
+				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[5], weights_reg[0] );
+				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[6], weights_reg[0] );
 				
-				out_2431[ 0 ] = DPAS_4x8 ( out_2431[ 0 ], act_reg[1], weights_reg[1] );
-				out_2431[ 1 ] = DPAS_4x8 ( out_2431[ 1 ], act_reg[2], weights_reg[1] );
-				out_2431[ 2 ] = DPAS_4x8 ( out_2431[ 2 ], act_reg[3], weights_reg[1] );
-				out_2431[ 3 ] = DPAS_4x8 ( out_2431[ 3 ], act_reg[4], weights_reg[1] );
-				out_2431[ 4 ] = DPAS_4x8 ( out_2431[ 4 ], act_reg[5], weights_reg[1] );
-				out_2431[ 5 ] = DPAS_4x8 ( out_2431[ 5 ], act_reg[6], weights_reg[1] );
-				out_2431[ 6 ] = DPAS_4x8 ( out_2431[ 6 ], act_reg[7], weights_reg[1] );
+				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[1], weights_reg[1] );
+				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[2], weights_reg[1] );
+				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[3], weights_reg[1] );
+				out_2431[ 3 ] = _MMAD_4x8 ( out_2431[ 3 ], act_reg[4], weights_reg[1] );
+				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[5], weights_reg[1] );
+				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[6], weights_reg[1] );
+				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[7], weights_reg[1] );
 				
-				out_2431[ 0 ] = DPAS_4x8 ( out_2431[ 0 ], act_reg[2], weights_reg[2] );
-				out_2431[ 1 ] = DPAS_4x8 ( out_2431[ 1 ], act_reg[3], weights_reg[2] );
-				out_2431[ 2 ] = DPAS_4x8 ( out_2431[ 2 ], act_reg[4], weights_reg[2] );
-				out_2431[ 3 ] = DPAS_4x8 ( out_2431[ 3 ], act_reg[5], weights_reg[2] );
-				out_2431[ 4 ] = DPAS_4x8 ( out_2431[ 4 ], act_reg[6], weights_reg[2] );
-				out_2431[ 5 ] = DPAS_4x8 ( out_2431[ 5 ], act_reg[7], weights_reg[2] );
-				out_2431[ 6 ] = DPAS_4x8 ( out_2431[ 6 ], act_reg[8], weights_reg[2] );
+				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[2], weights_reg[2] );
+				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[3], weights_reg[2] );
+				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[4], weights_reg[2] );
+				out_2431[ 3 ] = _MMAD_4x8 ( out_2431[ 3 ], act_reg[5], weights_reg[2] );
+				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[6], weights_reg[2] );
+				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[7], weights_reg[2] );
+				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[8], weights_reg[2] );
 
 			/**********************************************************************************************************
 			  Second phase - multiply second row of weights  and second row of activations 
@@ -573,105 +573,105 @@ __global int8* weights,
 				{
 					 	__local uint *slm_ptrw1  = slm_ptr1 + 3*slm_read_pixel_offset;
 						
-					    weights_reg[0].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 ) );
-					    weights_reg[0].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 + 64 ) );
+					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
+					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 						slm_ptrw1   			 += slm_read_pixel_offset;	
 						
-						weights_reg[1].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 ) );
-					    weights_reg[1].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 + 64 ) );
+						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
+					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 						slm_ptrw1  			     += slm_read_pixel_offset;	
 						
-						weights_reg[2].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 ) );
-					    weights_reg[2].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 + 64 ) );
+						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
+					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 				}				
 		
-				out_07[ 0 ] = DPAS_4x8 ( out_07[ 0 ], act_reg[9], weights_reg[0] );
-				out_07[ 1 ] = DPAS_4x8 ( out_07[ 1 ], act_reg[10], weights_reg[0] );
-				out_07[ 2 ] = DPAS_4x8 ( out_07[ 2 ], act_reg[11], weights_reg[0] );
-				out_07[ 3 ] = DPAS_4x8 ( out_07[ 3 ], act_reg[12], weights_reg[0] );
-				out_07[ 4 ] = DPAS_4x8 ( out_07[ 4 ], act_reg[13], weights_reg[0] );
-				out_07[ 5 ] = DPAS_4x8 ( out_07[ 5 ], act_reg[14], weights_reg[0] );
-				out_07[ 6 ] = DPAS_4x8 ( out_07[ 6 ], act_reg[15], weights_reg[0] );
+				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[9], weights_reg[0] );
+				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[10], weights_reg[0] );
+				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[11], weights_reg[0] );
+				out_07[ 3 ] = _MMAD_4x8 ( out_07[ 3 ], act_reg[12], weights_reg[0] );
+				out_07[ 4 ] = _MMAD_4x8 ( out_07[ 4 ], act_reg[13], weights_reg[0] );
+				out_07[ 5 ] = _MMAD_4x8 ( out_07[ 5 ], act_reg[14], weights_reg[0] );
+				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[15], weights_reg[0] );
 				
-				out_07[ 0 ] = DPAS_4x8 ( out_07[ 0 ], act_reg[10], weights_reg[1] );
-				out_07[ 1 ] = DPAS_4x8 ( out_07[ 1 ], act_reg[11], weights_reg[1] );
-				out_07[ 2 ] = DPAS_4x8 ( out_07[ 2 ], act_reg[12], weights_reg[1] );
-				out_07[ 3 ] = DPAS_4x8 ( out_07[ 3 ], act_reg[13], weights_reg[1] );
-				out_07[ 4 ] = DPAS_4x8 ( out_07[ 4 ], act_reg[14], weights_reg[1] );
-				out_07[ 5 ] = DPAS_4x8 ( out_07[ 5 ], act_reg[15], weights_reg[1] );
-				out_07[ 6 ] = DPAS_4x8 ( out_07[ 6 ], act_reg[16], weights_reg[1] );
+				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[10], weights_reg[1] );
+				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[11], weights_reg[1] );
+				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[12], weights_reg[1] );
+				out_07[ 3 ] = _MMAD_4x8 ( out_07[ 3 ], act_reg[13], weights_reg[1] );
+				out_07[ 4 ] = _MMAD_4x8 ( out_07[ 4 ], act_reg[14], weights_reg[1] );
+				out_07[ 5 ] = _MMAD_4x8 ( out_07[ 5 ], act_reg[15], weights_reg[1] );
+				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[16], weights_reg[1] );
 				
-				out_07[ 0 ] = DPAS_4x8 ( out_07[ 0 ], act_reg[11], weights_reg[2] );
-				out_07[ 1 ] = DPAS_4x8 ( out_07[ 1 ], act_reg[12], weights_reg[2] );
-				out_07[ 2 ] = DPAS_4x8 ( out_07[ 2 ], act_reg[13], weights_reg[2] );
-				out_07[ 3 ] = DPAS_4x8 ( out_07[ 3 ], act_reg[14], weights_reg[2] );
-				out_07[ 4 ] = DPAS_4x8 ( out_07[ 4 ], act_reg[15], weights_reg[2] );
-				out_07[ 5 ] = DPAS_4x8 ( out_07[ 5 ], act_reg[16], weights_reg[2] );
-				out_07[ 6 ] = DPAS_4x8 ( out_07[ 6 ], act_reg[17], weights_reg[2] );
+				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[11], weights_reg[2] );
+				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[12], weights_reg[2] );
+				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[13], weights_reg[2] );
+				out_07[ 3 ] = _MMAD_4x8 ( out_07[ 3 ], act_reg[14], weights_reg[2] );
+				out_07[ 4 ] = _MMAD_4x8 ( out_07[ 4 ], act_reg[15], weights_reg[2] );
+				out_07[ 5 ] = _MMAD_4x8 ( out_07[ 5 ], act_reg[16], weights_reg[2] );
+				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[17], weights_reg[2] );
 				
 				    /* Load weights from SLM into registers - row1, output channels 8..15  */
 				{
 					 	__local uint *slm_ptrw1 = slm_ptr1 + 3*slm_read_pixel_offset + 2*8*8;
 						
-					    weights_reg[0].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 ) );
-					    weights_reg[0].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 + 64 ) );
+					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
+					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 						slm_ptrw1   			   += slm_read_pixel_offset;	
 						
-						weights_reg[1].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 ) );
-					    weights_reg[1].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 + 64 ) );
+						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
+					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 						slm_ptrw1   			   += slm_read_pixel_offset;	
 						
-						weights_reg[2].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 ) );
-					    weights_reg[2].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 + 64 ) );
+						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
+					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 				}
 				
-				out_815[ 0 ] = DPAS_4x8 ( out_815[ 0 ], act_reg[9], weights_reg[0] );
-				out_815[ 1 ] = DPAS_4x8 ( out_815[ 1 ], act_reg[10], weights_reg[0] );
-				out_815[ 2 ] = DPAS_4x8 ( out_815[ 2 ], act_reg[11], weights_reg[0] );
-				out_815[ 3 ] = DPAS_4x8 ( out_815[ 3 ], act_reg[12], weights_reg[0] );
-				out_815[ 4 ] = DPAS_4x8 ( out_815[ 4 ], act_reg[13], weights_reg[0] );
-				out_815[ 5 ] = DPAS_4x8 ( out_815[ 5 ], act_reg[14], weights_reg[0] );
-				out_815[ 6 ] = DPAS_4x8 ( out_815[ 6 ], act_reg[15], weights_reg[0] );
+				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[9], weights_reg[0] );
+				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[10], weights_reg[0] );
+				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[11], weights_reg[0] );
+				out_815[ 3 ] = _MMAD_4x8 ( out_815[ 3 ], act_reg[12], weights_reg[0] );
+				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[13], weights_reg[0] );
+				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[14], weights_reg[0] );
+				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[15], weights_reg[0] );
 				
-				out_815[ 0 ] = DPAS_4x8 ( out_815[ 0 ], act_reg[10], weights_reg[1] );
-				out_815[ 1 ] = DPAS_4x8 ( out_815[ 1 ], act_reg[11], weights_reg[1] );
-				out_815[ 2 ] = DPAS_4x8 ( out_815[ 2 ], act_reg[12], weights_reg[1] );
-				out_815[ 3 ] = DPAS_4x8 ( out_815[ 3 ], act_reg[13], weights_reg[1] );
-				out_815[ 4 ] = DPAS_4x8 ( out_815[ 4 ], act_reg[14], weights_reg[1] );
-				out_815[ 5 ] = DPAS_4x8 ( out_815[ 5 ], act_reg[15], weights_reg[1] );
-				out_815[ 6 ] = DPAS_4x8 ( out_815[ 6 ], act_reg[16], weights_reg[1] );
+				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[10], weights_reg[1] );
+				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[11], weights_reg[1] );
+				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[12], weights_reg[1] );
+				out_815[ 3 ] = _MMAD_4x8 ( out_815[ 3 ], act_reg[13], weights_reg[1] );
+				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[14], weights_reg[1] );
+				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[15], weights_reg[1] );
+				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[16], weights_reg[1] );
 				
-				out_815[ 0 ] = DPAS_4x8 ( out_815[ 0 ], act_reg[11], weights_reg[2] );
-				out_815[ 1 ] = DPAS_4x8 ( out_815[ 1 ], act_reg[12], weights_reg[2] );
-				out_815[ 2 ] = DPAS_4x8 ( out_815[ 2 ], act_reg[13], weights_reg[2] );
-				out_815[ 3 ] = DPAS_4x8 ( out_815[ 3 ], act_reg[14], weights_reg[2] );
-				out_815[ 4 ] = DPAS_4x8 ( out_815[ 4 ], act_reg[15], weights_reg[2] );
-				out_815[ 5 ] = DPAS_4x8 ( out_815[ 5 ], act_reg[16], weights_reg[2] );
-				out_815[ 6 ] = DPAS_4x8 ( out_815[ 6 ], act_reg[17], weights_reg[2] );
+				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[11], weights_reg[2] );
+				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[12], weights_reg[2] );
+				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[13], weights_reg[2] );
+				out_815[ 3 ] = _MMAD_4x8 ( out_815[ 3 ], act_reg[14], weights_reg[2] );
+				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[15], weights_reg[2] );
+				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[16], weights_reg[2] );
+				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[17], weights_reg[2] );
 				
 				/* Load weights from SLM into registers - row1, output channels 16..23  */
 				{
 					 	__local uint *slm_ptrw1 = slm_ptr1 + 3*slm_read_pixel_offset + 4*8*8;
 						
-					    weights_reg[0].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 ) );
-					    weights_reg[0].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 + 64 ) );
+					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
+					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 						slm_ptrw1   			   += slm_read_pixel_offset;	
 						
-						weights_reg[1].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 ) );
-					    weights_reg[1].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 + 64 ) );
+						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
+					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 						slm_ptrw1   			   += slm_read_pixel_offset;	
 						
-						weights_reg[2].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 ) );
-					    weights_reg[2].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 + 64 ) );
+						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
+					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 				}
 				
-				out_1623[ 0 ] = DPAS_4x8 ( out_1623[ 0 ], act_reg[9], weights_reg[0] );
-				out_1623[ 1 ] = DPAS_4x8 ( out_1623[ 1 ], act_reg[10], weights_reg[0] );
-				out_1623[ 2 ] = DPAS_4x8 ( out_1623[ 2 ], act_reg[11], weights_reg[0] );
-				out_1623[ 3 ] = DPAS_4x8 ( out_1623[ 3 ], act_reg[12], weights_reg[0] );
-				out_1623[ 4 ] = DPAS_4x8 ( out_1623[ 4 ], act_reg[13], weights_reg[0] );
-				out_1623[ 5 ] = DPAS_4x8 ( out_1623[ 5 ], act_reg[14], weights_reg[0] );
-				out_1623[ 6 ] = DPAS_4x8 ( out_1623[ 6 ], act_reg[15], weights_reg[0] );
+				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[9], weights_reg[0] );
+				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[10], weights_reg[0] );
+				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[11], weights_reg[0] );
+				out_1623[ 3 ] = _MMAD_4x8 ( out_1623[ 3 ], act_reg[12], weights_reg[0] );
+				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[13], weights_reg[0] );
+				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[14], weights_reg[0] );
+				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[15], weights_reg[0] );
 				
 				/* load 1Hx9Wx4N inputs, Activation row2  */
 			
@@ -684,64 +684,64 @@ __global int8* weights,
 					 
 					 uint slm_offset = slm_row_offset_3 + ic * BATCH_PACK * 8 ;
 					 
-    				 act_reg [ ic ] = as_int4 (intel_sub_group_block_read_slm4 (slm_ptr0 + slm_offset)) ; 
+    				 act_reg [ ic ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset)) ; 
 				}
 				
-				out_1623[ 0 ] = DPAS_4x8 ( out_1623[ 0 ], act_reg[10], weights_reg[1] );
-				out_1623[ 1 ] = DPAS_4x8 ( out_1623[ 1 ], act_reg[11], weights_reg[1] );
-				out_1623[ 2 ] = DPAS_4x8 ( out_1623[ 2 ], act_reg[12], weights_reg[1] );
-				out_1623[ 3 ] = DPAS_4x8 ( out_1623[ 3 ], act_reg[13], weights_reg[1] );
-				out_1623[ 4 ] = DPAS_4x8 ( out_1623[ 4 ], act_reg[14], weights_reg[1] );
-				out_1623[ 5 ] = DPAS_4x8 ( out_1623[ 5 ], act_reg[15], weights_reg[1] );
-				out_1623[ 6 ] = DPAS_4x8 ( out_1623[ 6 ], act_reg[16], weights_reg[1] );
+				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[10], weights_reg[1] );
+				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[11], weights_reg[1] );
+				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[12], weights_reg[1] );
+				out_1623[ 3 ] = _MMAD_4x8 ( out_1623[ 3 ], act_reg[13], weights_reg[1] );
+				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[14], weights_reg[1] );
+				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[15], weights_reg[1] );
+				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[16], weights_reg[1] );
 				
-				out_1623[ 0 ] = DPAS_4x8 ( out_1623[ 0 ], act_reg[11], weights_reg[2] );
-				out_1623[ 1 ] = DPAS_4x8 ( out_1623[ 1 ], act_reg[12], weights_reg[2] );
-				out_1623[ 2 ] = DPAS_4x8 ( out_1623[ 2 ], act_reg[13], weights_reg[2] );
-				out_1623[ 3 ] = DPAS_4x8 ( out_1623[ 3 ], act_reg[14], weights_reg[2] );
-				out_1623[ 4 ] = DPAS_4x8 ( out_1623[ 4 ], act_reg[15], weights_reg[2] );
-				out_1623[ 5 ] = DPAS_4x8 ( out_1623[ 5 ], act_reg[16], weights_reg[2] );
-				out_1623[ 6 ] = DPAS_4x8 ( out_1623[ 6 ], act_reg[17], weights_reg[2] );
+				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[11], weights_reg[2] );
+				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[12], weights_reg[2] );
+				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[13], weights_reg[2] );
+				out_1623[ 3 ] = _MMAD_4x8 ( out_1623[ 3 ], act_reg[14], weights_reg[2] );
+				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[15], weights_reg[2] );
+				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[16], weights_reg[2] );
+				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[17], weights_reg[2] );
 				
 				/* Load weights from SLM into registers - row1, output channels 24..31  */
 				{
 					 	__local uint *slm_ptrw1 = slm_ptr1 + 3*slm_read_pixel_offset + 6*8*8;
 						
-					    weights_reg[0].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 ) );
-					    weights_reg[0].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 + 64 ) );
+					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
+					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 						slm_ptrw1   			   += slm_read_pixel_offset;	
 						
-						weights_reg[1].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 ) );
-					    weights_reg[1].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 + 64 ) );
+						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
+					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 						slm_ptrw1   			   += slm_read_pixel_offset;	
 						
-						weights_reg[2].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 ) );
-					    weights_reg[2].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw1 + 64 ) );
+						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
+					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 				}
 				
-				out_2431[ 0 ] = DPAS_4x8 ( out_2431[ 0 ], act_reg[9], weights_reg[0] );
-				out_2431[ 1 ] = DPAS_4x8 ( out_2431[ 1 ], act_reg[10], weights_reg[0] );
-				out_2431[ 2 ] = DPAS_4x8 ( out_2431[ 2 ], act_reg[11], weights_reg[0] );
-				out_2431[ 3 ] = DPAS_4x8 ( out_2431[ 3 ], act_reg[12], weights_reg[0] );
-				out_2431[ 4 ] = DPAS_4x8 ( out_2431[ 4 ], act_reg[13], weights_reg[0] );
-				out_2431[ 5 ] = DPAS_4x8 ( out_2431[ 5 ], act_reg[14], weights_reg[0] );
-				out_2431[ 6 ] = DPAS_4x8 ( out_2431[ 6 ], act_reg[15], weights_reg[0] );
+				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[9], weights_reg[0] );
+				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[10], weights_reg[0] );
+				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[11], weights_reg[0] );
+				out_2431[ 3 ] = _MMAD_4x8 ( out_2431[ 3 ], act_reg[12], weights_reg[0] );
+				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[13], weights_reg[0] );
+				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[14], weights_reg[0] );
+				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[15], weights_reg[0] );
 				
-				out_2431[ 0 ] = DPAS_4x8 ( out_2431[ 0 ], act_reg[10], weights_reg[1] );
-				out_2431[ 1 ] = DPAS_4x8 ( out_2431[ 1 ], act_reg[11], weights_reg[1] );
-				out_2431[ 2 ] = DPAS_4x8 ( out_2431[ 2 ], act_reg[12], weights_reg[1] );
-				out_2431[ 3 ] = DPAS_4x8 ( out_2431[ 3 ], act_reg[13], weights_reg[1] );
-				out_2431[ 4 ] = DPAS_4x8 ( out_2431[ 4 ], act_reg[14], weights_reg[1] );
-				out_2431[ 5 ] = DPAS_4x8 ( out_2431[ 5 ], act_reg[15], weights_reg[1] );
-				out_2431[ 6 ] = DPAS_4x8 ( out_2431[ 6 ], act_reg[16], weights_reg[1] );
+				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[10], weights_reg[1] );
+				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[11], weights_reg[1] );
+				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[12], weights_reg[1] );
+				out_2431[ 3 ] = _MMAD_4x8 ( out_2431[ 3 ], act_reg[13], weights_reg[1] );
+				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[14], weights_reg[1] );
+				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[15], weights_reg[1] );
+				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[16], weights_reg[1] );
 				
-				out_2431[ 0 ] = DPAS_4x8 ( out_2431[ 0 ], act_reg[11], weights_reg[2] );
-				out_2431[ 1 ] = DPAS_4x8 ( out_2431[ 1 ], act_reg[12], weights_reg[2] );
-				out_2431[ 2 ] = DPAS_4x8 ( out_2431[ 2 ], act_reg[13], weights_reg[2] );
-				out_2431[ 3 ] = DPAS_4x8 ( out_2431[ 3 ], act_reg[14], weights_reg[2] );
-				out_2431[ 4 ] = DPAS_4x8 ( out_2431[ 4 ], act_reg[15], weights_reg[2] );
-				out_2431[ 5 ] = DPAS_4x8 ( out_2431[ 5 ], act_reg[16], weights_reg[2] );
-				out_2431[ 6 ] = DPAS_4x8 ( out_2431[ 6 ], act_reg[17], weights_reg[2] );
+				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[11], weights_reg[2] );
+				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[12], weights_reg[2] );
+				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[13], weights_reg[2] );
+				out_2431[ 3 ] = _MMAD_4x8 ( out_2431[ 3 ], act_reg[14], weights_reg[2] );
+				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[15], weights_reg[2] );
+				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[16], weights_reg[2] );
+				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[17], weights_reg[2] );
 		
 			/**********************************************************************************************************
 			  Third phase - multiply third row of weights  and third row of activations 
@@ -751,161 +751,161 @@ __global int8* weights,
 				{
 					 	__local uint *slm_ptrw2  = slm_ptr1 + 6*slm_read_pixel_offset;
 						
-					    weights_reg[0].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 ) );
-					    weights_reg[0].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 + 64 ) );
+					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
+					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 						slm_ptrw2   			   += slm_read_pixel_offset;	
 						
-						weights_reg[1].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 ) );
-					    weights_reg[1].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 + 64 ) );
+						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
+					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 						slm_ptrw2 			     += slm_read_pixel_offset;	
 						
-						weights_reg[2].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 ) );
-					    weights_reg[2].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 + 64 ) );
+						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
+					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 				}				
 			
-				out_07[ 0 ] = DPAS_4x8 ( out_07[ 0 ], act_reg[0], weights_reg[0] );
-				out_07[ 1 ] = DPAS_4x8 ( out_07[ 1 ], act_reg[1], weights_reg[0] );
-				out_07[ 2 ] = DPAS_4x8 ( out_07[ 2 ], act_reg[2], weights_reg[0] );
-				out_07[ 3 ] = DPAS_4x8 ( out_07[ 3 ], act_reg[3], weights_reg[0] );
-				out_07[ 4 ] = DPAS_4x8 ( out_07[ 4 ], act_reg[4], weights_reg[0] );
-				out_07[ 5 ] = DPAS_4x8 ( out_07[ 5 ], act_reg[5], weights_reg[0] );
-				out_07[ 6 ] = DPAS_4x8 ( out_07[ 6 ], act_reg[6], weights_reg[0] );
+				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[0], weights_reg[0] );
+				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[1], weights_reg[0] );
+				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[2], weights_reg[0] );
+				out_07[ 3 ] = _MMAD_4x8 ( out_07[ 3 ], act_reg[3], weights_reg[0] );
+				out_07[ 4 ] = _MMAD_4x8 ( out_07[ 4 ], act_reg[4], weights_reg[0] );
+				out_07[ 5 ] = _MMAD_4x8 ( out_07[ 5 ], act_reg[5], weights_reg[0] );
+				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[6], weights_reg[0] );
 				
-				out_07[ 0 ] = DPAS_4x8 ( out_07[ 0 ], act_reg[1], weights_reg[1] );
-				out_07[ 1 ] = DPAS_4x8 ( out_07[ 1 ], act_reg[2], weights_reg[1] );
-				out_07[ 2 ] = DPAS_4x8 ( out_07[ 2 ], act_reg[3], weights_reg[1] );
-				out_07[ 3 ] = DPAS_4x8 ( out_07[ 3 ], act_reg[4], weights_reg[1] );
-				out_07[ 4 ] = DPAS_4x8 ( out_07[ 4 ], act_reg[5], weights_reg[1] );
-				out_07[ 5 ] = DPAS_4x8 ( out_07[ 5 ], act_reg[6], weights_reg[1] );
-				out_07[ 6 ] = DPAS_4x8 ( out_07[ 6 ], act_reg[7], weights_reg[1] );
+				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[1], weights_reg[1] );
+				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[2], weights_reg[1] );
+				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[3], weights_reg[1] );
+				out_07[ 3 ] = _MMAD_4x8 ( out_07[ 3 ], act_reg[4], weights_reg[1] );
+				out_07[ 4 ] = _MMAD_4x8 ( out_07[ 4 ], act_reg[5], weights_reg[1] );
+				out_07[ 5 ] = _MMAD_4x8 ( out_07[ 5 ], act_reg[6], weights_reg[1] );
+				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[7], weights_reg[1] );
 				
-				out_07[ 0 ] = DPAS_4x8 ( out_07[ 0 ], act_reg[2], weights_reg[2] );
-				out_07[ 1 ] = DPAS_4x8 ( out_07[ 1 ], act_reg[3], weights_reg[2] );
-				out_07[ 2 ] = DPAS_4x8 ( out_07[ 2 ], act_reg[4], weights_reg[2] );
-				out_07[ 3 ] = DPAS_4x8 ( out_07[ 3 ], act_reg[5], weights_reg[2] );
-				out_07[ 4 ] = DPAS_4x8 ( out_07[ 4 ], act_reg[6], weights_reg[2] );
-				out_07[ 5 ] = DPAS_4x8 ( out_07[ 5 ], act_reg[7], weights_reg[2] );
-				out_07[ 6 ] = DPAS_4x8 ( out_07[ 6 ], act_reg[8], weights_reg[2] );
+				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[2], weights_reg[2] );
+				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[3], weights_reg[2] );
+				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[4], weights_reg[2] );
+				out_07[ 3 ] = _MMAD_4x8 ( out_07[ 3 ], act_reg[5], weights_reg[2] );
+				out_07[ 4 ] = _MMAD_4x8 ( out_07[ 4 ], act_reg[6], weights_reg[2] );
+				out_07[ 5 ] = _MMAD_4x8 ( out_07[ 5 ], act_reg[7], weights_reg[2] );
+				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[8], weights_reg[2] );
 
 				     /* Load weights from SLM into registers - row2, output channels 8..15  */
 				{
 					 	__local uint *slm_ptrw2 = slm_ptr1 + 6*slm_read_pixel_offset + 2*8*8;
 						
-					    weights_reg[0].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 ) );
-					    weights_reg[0].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 + 64 ) );
+					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
+					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 						slm_ptrw2   			   += slm_read_pixel_offset;	
 						
-						weights_reg[1].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 ) );
-					    weights_reg[1].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 + 64 ) );
+						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
+					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 						slm_ptrw2   			   += slm_read_pixel_offset;	
 						
-						weights_reg[2].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 ) );
-					    weights_reg[2].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 + 64 ) );
+						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
+					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 				}
 				
-				out_815[ 0 ] = DPAS_4x8 ( out_815[ 0 ], act_reg[0], weights_reg[0] );
-				out_815[ 1 ] = DPAS_4x8 ( out_815[ 1 ], act_reg[1], weights_reg[0] );
-				out_815[ 2 ] = DPAS_4x8 ( out_815[ 2 ], act_reg[2], weights_reg[0] );
-				out_815[ 3 ] = DPAS_4x8 ( out_815[ 3 ], act_reg[3], weights_reg[0] );
-				out_815[ 4 ] = DPAS_4x8 ( out_815[ 4 ], act_reg[4], weights_reg[0] );
-				out_815[ 5 ] = DPAS_4x8 ( out_815[ 5 ], act_reg[5], weights_reg[0] );
-				out_815[ 6 ] = DPAS_4x8 ( out_815[ 6 ], act_reg[6], weights_reg[0] );
+				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[0], weights_reg[0] );
+				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[1], weights_reg[0] );
+				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[2], weights_reg[0] );
+				out_815[ 3 ] = _MMAD_4x8 ( out_815[ 3 ], act_reg[3], weights_reg[0] );
+				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[4], weights_reg[0] );
+				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[5], weights_reg[0] );
+				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[6], weights_reg[0] );
 							
-				out_815[ 0 ] = DPAS_4x8 ( out_815[ 0 ], act_reg[1], weights_reg[1] );
-				out_815[ 1 ] = DPAS_4x8 ( out_815[ 1 ], act_reg[2], weights_reg[1] );
-				out_815[ 2 ] = DPAS_4x8 ( out_815[ 2 ], act_reg[3], weights_reg[1] );
-				out_815[ 3 ] = DPAS_4x8 ( out_815[ 3 ], act_reg[4], weights_reg[1] );
-				out_815[ 4 ] = DPAS_4x8 ( out_815[ 4 ], act_reg[5], weights_reg[1] );
-				out_815[ 5 ] = DPAS_4x8 ( out_815[ 5 ], act_reg[6], weights_reg[1] );
-				out_815[ 6 ] = DPAS_4x8 ( out_815[ 6 ], act_reg[7], weights_reg[1] );			
+				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[1], weights_reg[1] );
+				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[2], weights_reg[1] );
+				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[3], weights_reg[1] );
+				out_815[ 3 ] = _MMAD_4x8 ( out_815[ 3 ], act_reg[4], weights_reg[1] );
+				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[5], weights_reg[1] );
+				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[6], weights_reg[1] );
+				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[7], weights_reg[1] );			
 			
-				out_815[ 0 ] = DPAS_4x8 ( out_815[ 0 ], act_reg[2], weights_reg[2] );
-				out_815[ 1 ] = DPAS_4x8 ( out_815[ 1 ], act_reg[3], weights_reg[2] );
-				out_815[ 2 ] = DPAS_4x8 ( out_815[ 2 ], act_reg[4], weights_reg[2] );
-				out_815[ 3 ] = DPAS_4x8 ( out_815[ 3 ], act_reg[5], weights_reg[2] );
-				out_815[ 4 ] = DPAS_4x8 ( out_815[ 4 ], act_reg[6], weights_reg[2] );
-				out_815[ 5 ] = DPAS_4x8 ( out_815[ 5 ], act_reg[7], weights_reg[2] );
-				out_815[ 6 ] = DPAS_4x8 ( out_815[ 6 ], act_reg[8], weights_reg[2] );	
+				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[2], weights_reg[2] );
+				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[3], weights_reg[2] );
+				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[4], weights_reg[2] );
+				out_815[ 3 ] = _MMAD_4x8 ( out_815[ 3 ], act_reg[5], weights_reg[2] );
+				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[6], weights_reg[2] );
+				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[7], weights_reg[2] );
+				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[8], weights_reg[2] );	
 
 				/* Load weights from SLM into registers - row2, output channels 16..23  */
 				{
 					 	__local uint *slm_ptrw2 = slm_ptr1 + 6*slm_read_pixel_offset + 4*8*8;
 						
-					    weights_reg[0].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 ) );
-					    weights_reg[0].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 + 64 ) );
+					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
+					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 						slm_ptrw2   			   += slm_read_pixel_offset;	
 						
-						weights_reg[1].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 ) );
-					    weights_reg[1].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 + 64 ) );
+						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
+					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 						slm_ptrw2   			   += slm_read_pixel_offset;	
 						
-						weights_reg[2].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 ) );
-					    weights_reg[2].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 + 64 ) );
+						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
+					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 				}
 				
-				out_1623[ 0 ] = DPAS_4x8 ( out_1623[ 0 ], act_reg[0], weights_reg[0] );
-				out_1623[ 1 ] = DPAS_4x8 ( out_1623[ 1 ], act_reg[1], weights_reg[0] );
-				out_1623[ 2 ] = DPAS_4x8 ( out_1623[ 2 ], act_reg[2], weights_reg[0] );
-				out_1623[ 3 ] = DPAS_4x8 ( out_1623[ 3 ], act_reg[3], weights_reg[0] );
-				out_1623[ 4 ] = DPAS_4x8 ( out_1623[ 4 ], act_reg[4], weights_reg[0] );
-				out_1623[ 5 ] = DPAS_4x8 ( out_1623[ 5 ], act_reg[5], weights_reg[0] );
-				out_1623[ 6 ] = DPAS_4x8 ( out_1623[ 6 ], act_reg[6], weights_reg[0] );
+				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[0], weights_reg[0] );
+				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[1], weights_reg[0] );
+				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[2], weights_reg[0] );
+				out_1623[ 3 ] = _MMAD_4x8 ( out_1623[ 3 ], act_reg[3], weights_reg[0] );
+				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[4], weights_reg[0] );
+				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[5], weights_reg[0] );
+				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[6], weights_reg[0] );
 							
-				out_1623[ 0 ] = DPAS_4x8 ( out_1623[ 0 ], act_reg[1], weights_reg[1] );
-				out_1623[ 1 ] = DPAS_4x8 ( out_1623[ 1 ], act_reg[2], weights_reg[1] );
-				out_1623[ 2 ] = DPAS_4x8 ( out_1623[ 2 ], act_reg[3], weights_reg[1] );
-				out_1623[ 3 ] = DPAS_4x8 ( out_1623[ 3 ], act_reg[4], weights_reg[1] );
-				out_1623[ 4 ] = DPAS_4x8 ( out_1623[ 4 ], act_reg[5], weights_reg[1] );
-				out_1623[ 5 ] = DPAS_4x8 ( out_1623[ 5 ], act_reg[6], weights_reg[1] );
-				out_1623[ 6 ] = DPAS_4x8 ( out_1623[ 6 ], act_reg[7], weights_reg[1] );			
+				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[1], weights_reg[1] );
+				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[2], weights_reg[1] );
+				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[3], weights_reg[1] );
+				out_1623[ 3 ] = _MMAD_4x8 ( out_1623[ 3 ], act_reg[4], weights_reg[1] );
+				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[5], weights_reg[1] );
+				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[6], weights_reg[1] );
+				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[7], weights_reg[1] );			
 			
-				out_1623[ 0 ] = DPAS_4x8 ( out_1623[ 0 ], act_reg[2], weights_reg[2] );
-				out_1623[ 1 ] = DPAS_4x8 ( out_1623[ 1 ], act_reg[3], weights_reg[2] );
-				out_1623[ 2 ] = DPAS_4x8 ( out_1623[ 2 ], act_reg[4], weights_reg[2] );
-				out_1623[ 3 ] = DPAS_4x8 ( out_1623[ 3 ], act_reg[5], weights_reg[2] );
-				out_1623[ 4 ] = DPAS_4x8 ( out_1623[ 4 ], act_reg[6], weights_reg[2] );
-				out_1623[ 5 ] = DPAS_4x8 ( out_1623[ 5 ], act_reg[7], weights_reg[2] );
-				out_1623[ 6 ] = DPAS_4x8 ( out_1623[ 6 ], act_reg[8], weights_reg[2] );	
+				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[2], weights_reg[2] );
+				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[3], weights_reg[2] );
+				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[4], weights_reg[2] );
+				out_1623[ 3 ] = _MMAD_4x8 ( out_1623[ 3 ], act_reg[5], weights_reg[2] );
+				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[6], weights_reg[2] );
+				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[7], weights_reg[2] );
+				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[8], weights_reg[2] );	
 				
 				/* Load weights from SLM into registers - row3, output channels 24..31  */
 				{
 					 	__local uint *slm_ptrw2 = slm_ptr1 + 6*slm_read_pixel_offset + 6*8*8;
 						
-					    weights_reg[0].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 ) );
-					    weights_reg[0].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 + 64 ) );
+					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
+					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 						slm_ptrw2   			   += slm_read_pixel_offset;	
 						
-						weights_reg[1].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 ) );
-					    weights_reg[1].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 + 64 ) );
+						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
+					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 						slm_ptrw2   			   += slm_read_pixel_offset;	
 						
-						weights_reg[2].s0123     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 ) );
-					    weights_reg[2].s4567     = as_int4 ( intel_sub_group_block_read_slm4 ( slm_ptrw2 + 64 ) );
+						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
+					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 				}
 				
-				out_2431[ 0 ] = DPAS_4x8 ( out_2431[ 0 ], act_reg[0], weights_reg[0] );
-				out_2431[ 1 ] = DPAS_4x8 ( out_2431[ 1 ], act_reg[1], weights_reg[0] );
-				out_2431[ 2 ] = DPAS_4x8 ( out_2431[ 2 ], act_reg[2], weights_reg[0] );
-				out_2431[ 3 ] = DPAS_4x8 ( out_2431[ 3 ], act_reg[3], weights_reg[0] );
-				out_2431[ 4 ] = DPAS_4x8 ( out_2431[ 4 ], act_reg[4], weights_reg[0] );
-				out_2431[ 5 ] = DPAS_4x8 ( out_2431[ 5 ], act_reg[5], weights_reg[0] );
-				out_2431[ 6 ] = DPAS_4x8 ( out_2431[ 6 ], act_reg[6], weights_reg[0] );
+				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[0], weights_reg[0] );
+				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[1], weights_reg[0] );
+				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[2], weights_reg[0] );
+				out_2431[ 3 ] = _MMAD_4x8 ( out_2431[ 3 ], act_reg[3], weights_reg[0] );
+				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[4], weights_reg[0] );
+				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[5], weights_reg[0] );
+				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[6], weights_reg[0] );
 							
-				out_2431[ 0 ] = DPAS_4x8 ( out_2431[ 0 ], act_reg[1], weights_reg[1] );
-				out_2431[ 1 ] = DPAS_4x8 ( out_2431[ 1 ], act_reg[2], weights_reg[1] );
-				out_2431[ 2 ] = DPAS_4x8 ( out_2431[ 2 ], act_reg[3], weights_reg[1] );
-				out_2431[ 3 ] = DPAS_4x8 ( out_2431[ 3 ], act_reg[4], weights_reg[1] );
-				out_2431[ 4 ] = DPAS_4x8 ( out_2431[ 4 ], act_reg[5], weights_reg[1] );
-				out_2431[ 5 ] = DPAS_4x8 ( out_2431[ 5 ], act_reg[6], weights_reg[1] );
-				out_2431[ 6 ] = DPAS_4x8 ( out_2431[ 6 ], act_reg[7], weights_reg[1] );			
+				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[1], weights_reg[1] );
+				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[2], weights_reg[1] );
+				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[3], weights_reg[1] );
+				out_2431[ 3 ] = _MMAD_4x8 ( out_2431[ 3 ], act_reg[4], weights_reg[1] );
+				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[5], weights_reg[1] );
+				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[6], weights_reg[1] );
+				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[7], weights_reg[1] );			
 			
-				out_2431[ 0 ] = DPAS_4x8 ( out_2431[ 0 ], act_reg[2], weights_reg[2] );
-				out_2431[ 1 ] = DPAS_4x8 ( out_2431[ 1 ], act_reg[3], weights_reg[2] );
-				out_2431[ 2 ] = DPAS_4x8 ( out_2431[ 2 ], act_reg[4], weights_reg[2] );
-				out_2431[ 3 ] = DPAS_4x8 ( out_2431[ 3 ], act_reg[5], weights_reg[2] );
-				out_2431[ 4 ] = DPAS_4x8 ( out_2431[ 4 ], act_reg[6], weights_reg[2] );
-				out_2431[ 5 ] = DPAS_4x8 ( out_2431[ 5 ], act_reg[7], weights_reg[2] );
-				out_2431[ 6 ] = DPAS_4x8 ( out_2431[ 6 ], act_reg[8], weights_reg[2] );	
+				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[2], weights_reg[2] );
+				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[3], weights_reg[2] );
+				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[4], weights_reg[2] );
+				out_2431[ 3 ] = _MMAD_4x8 ( out_2431[ 3 ], act_reg[5], weights_reg[2] );
+				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[6], weights_reg[2] );
+				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[7], weights_reg[2] );
+				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[8], weights_reg[2] );	
 		}	
 
 			// To make sure all threads in WG have finished compute before next depth tile of activation and weights are loaded into SLM
