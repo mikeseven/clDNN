@@ -73,13 +73,6 @@
 #include <sstream>
 #include <iomanip>
 
-namespace cldnn
-{
-
-    CLDNN_DEFINE_INTERNAL_PRIM(connector)
-        CLDNN_DEFINE_SIMPLE_PRIM_INST(connector)
-
-}
 
 namespace {
 
@@ -359,9 +352,7 @@ std::list<std::shared_ptr<program_node>> program_impl::get_nodes() const
     std::list<std::shared_ptr<program_node>> ret;
 
     for (auto& node : processing_order)
-        if (!node->is_type<connector>())
-            ret.push_back(nodes_map.at(node->id()));
-
+        ret.push_back(nodes_map.at(node->id()));
     return ret;
 }
 
@@ -411,21 +402,14 @@ void program_impl::init_graph(topology_impl const& topology)
     calc_prior_boxes(); dump_program("1_calculated_prior_boxes", true);
     mark_constants();
     mark_data_flow();
-    calc_dominators();
-
     dump_program("2_analyzed_graph", true);
 }
 
 void program_impl::pre_optimize_graph()
 {
     trim_to_outputs(); dump_program("3_trimmed", true);
-
-    // TODO: uncomment as soon as IE will enable OOOQ by default
-    //if (get_engine().configuration().enable_parallelisation)
-    reorder_nodes_for_parallel_execution();
-
+    calculate_BFS_processing_order();
     analyze_output_size_handling_need();
-
     for (auto& node : processing_order)
     {
         if (!node->is_type<internal_primitive>() && !node->is_type<data>())
@@ -480,7 +464,7 @@ void program_impl::post_optimize_graph()
     remove_redundant_reorders(); dump_program("10_removed_redundant_reorders", true); //TODO: do we need it at this place also?
     propagate_constants(); dump_program("11_propagated_constants", true);
     prep_opt_depthwise_sep_post();
-    update_processing_order(); dump_program("12_validated_processing_order", true);
+    update_processing_numbers(); dump_program("12_validated_processing_order", true);
     prepare_memory_dependencies();
 }
 
@@ -489,10 +473,6 @@ void program_impl::cleanup()
     for (auto& node : processing_order)
         if (!node->is_type<internal_primitive>())
             node->get_output_layout();
-
-    for (auto& input : inputs)
-        if (input->dependencies.size() == 1 && input->get_dependency(0).is_type<connector>())
-            input->dependencies.clear();
 
     //in debug build, at the end, mark all nodes as outputs so user can query for buffers of all not-optimized nodes, including internal ones etc.
     if (is_debug_build())
@@ -889,7 +869,6 @@ void program_impl::handle_lstm()
                     if (dir > 0) {
                         input_idx = input_dependencies > sequence_len ? dir * sequence_len + i : sequence_len - i - 1;
                     }
-
                     primitive_id lstm_gemm_input_id = node->get_dependency(input_idx).get_org_primitive_id();
 
                     auto lstm_gemm_node = std::make_shared<lstm_gemm>(lstm_gemm_id, lstm_gemm_input_id, weights_id, recurrent_id, bias_id, hidden_id, (uint32_t)dir);
@@ -912,8 +891,8 @@ void program_impl::handle_lstm()
                     //adding cell and hiddens as dependencies
                     if (i > 0)
                     {
-                        add_connection(*cell_list[size_t(i-1) * directions + dir], n2);
-                        add_connection(*(concat_depends[size_t(i-1) * directions + dir]), n1);
+                        add_connection(*cell_list[size_t(i - 1) * directions + dir], n2);
+                        add_connection(*(concat_depends[size_t(i - 1) * directions + dir]), n1);
                     }
                     //if initial values are present
                     else
@@ -1052,19 +1031,19 @@ void program_impl::calc_processing_order()
     }
 }
 
-void program_impl::update_processing_order()
+void program_impl::update_processing_numbers()
 {
     uint32_t idx = 0;
     for (auto& node : processing_order)
     {
         node->processing_num = ++idx;
     }
-    // TODO: REMOVE BELOW, AFTER 847 FIX
+
     for (auto& node : processing_order)
     {
-        if(!processing_order_is_correct(node))
+        if (!processing_order_is_correct(node))
         {
-            engine->set_mem_pool(false);
+            CLDNN_ERROR_MESSAGE(node->id(), "Incorrect processing order");
             return;
         }
     }
@@ -1092,6 +1071,8 @@ void program_impl::calc_prior_boxes()
         replace(pb_node, data_node, false, false);
     }
 }
+
+
 
 void program_impl::mark_constants()
 {
@@ -1162,192 +1143,8 @@ void program_impl::mark_data_flow()
 
     for (auto& node : processing_order)
     {
-        node->main_branch = node->data_flow;
         assert(!node->constant || !node->data_flow); //node which is constant cannot be marked as data flow
         node->unmark();
-    }
-}
-
-void program_impl::calc_dominators()
-{
-    if (nodes_map.empty())
-        return;
-
-    //Algorithm per: Keith D. Cooper, Timothy J. Harvey, and Ken Kennedy "A Simple, Fast Dominance Algorithm"
-    //url: http://www.hipersoft.rice.edu/grads/publications/dom14.pdf
-
-    //Please note that in our representation we only care for immidiate dominators which are not direct predecessors.
-
-    //firstly find all in-data-flow inputs and create super-source if necessary
-    {
-        std::list<program_node*> data_inputs;
-        for (auto const& input : inputs)
-            if (input->is_in_data_flow())
-                data_inputs.push_back(input);
-
-        if (data_inputs.size() > 1)
-        {
-            std::shared_ptr<program_node> node = std::make_shared<connector_node>(*this);
-            node->data_flow = true;
-            nodes_map.insert(std::make_pair(node->id(), node));
-
-            for (auto const& input : data_inputs)
-            {
-                input->dependencies.push_back(node.get());
-                node->users.push_back(input);
-            }
-
-            node->processing_itr = processing_order.insert(processing_order.begin(), node.get());
-            node->processing_num = 0;
-        }
-    }
-
-    //...then create super-sink, find all endpoints
-    {
-        std::list<program_node*> endpoints;
-        for (auto const& node : processing_order)
-            if (node->is_endpoint())
-                endpoints.push_back(node);
-
-        assert(endpoints.size() > 0 && "Network without endpoints?");
-
-        //if more than one endpoint, create sink
-        if (endpoints.size() > 1)
-        {
-            std::shared_ptr<program_node> node = std::make_shared<connector_node>(*this);
-            node->data_flow = true;
-            nodes_map.insert(std::make_pair(node->id(), node));
-
-            for (auto const& endpoint : endpoints)
-            {
-                endpoint->users.push_back(node.get());
-                node->dependencies.push_back(endpoint);
-            }
-
-            node->processing_itr = processing_order.insert(processing_order.end(), node.get());
-            node->processing_num = static_cast<uint32_t>(processing_order.size()) + 1;
-        }
-    }
-
-    //As mentioned, we want to find 'first' node with at least two users, where by 'first' we meant such node that every other can be reached from it (except for w/b),
-    //the first one from the set of topologically sorted nodes should have this property.
-    //Also, we take iterator to it rather than a node itself since, accoring to the algorithm, we will need to process nodes in reversed-postorder, which is equivalent for ordering produced by
-    //topological sorting.
-    auto root_itr = processing_order.begin();
-    while (root_itr != processing_order.end())
-    {
-        if ((*root_itr)->is_in_data_flow() && (*root_itr)->get_users().size() > 1)
-            break;
-
-        ++root_itr;
-    }
-
-    //there are no splits so simply end (for each n, idom(n) e { dpred(n) })
-    if (root_itr == processing_order.end())
-        return;
-
-    auto root = *root_itr;
-    root->dominator = root; //its not valid accordingly to the definition of 'program_node::dominator' field, but it's required by the algorithm - at the end this field should be reverted to nullptr
-    bool changed = true;
-
-    const auto intersects = [](program_node* n1, program_node* n2) -> program_node*
-    {
-        assert(n1 != nullptr);
-        assert(n2 != nullptr);
-        while (n1->processing_num != n2->processing_num)
-        {
-            //please note: we use reverse-postorder numbering so conditions are swapped in regard to the original algorithm (which uses postorder here)
-            while (n1->processing_num > n2->processing_num)
-            {
-                n1 = n1->dominator;
-                assert(n1 != nullptr);
-            }
-            while (n1->processing_num < n2->processing_num)
-            {
-                n2 = n2->dominator;
-                assert(n2 != nullptr);
-            }
-        }
-
-        return n1;
-    };
-
-    while (changed)
-    {
-        changed = false;
-
-        //for all nodes, in reverse postorder (except root)
-        auto itr = root_itr;
-        ++itr;
-        while (itr != processing_order.end())
-        {
-            auto node = *(itr++);
-            if (!node->is_in_data_flow()) //eliminate helper nodes  || node->get_dependencies().size() == 0
-                continue;
-
-            //pick first (processed) predecessor
-            auto pred_itr = node->get_dependencies().begin();
-            while (pred_itr != node->get_dependencies().end() && (*pred_itr)->dominator == nullptr)
-                ++pred_itr;
-            assert(pred_itr != node->get_dependencies().end()); //we are processing nodes in reverse postorder, so at least one our predecessor should have been processed at this point
-
-            auto new_idom = *pred_itr;
-
-            //new_idom <- first predecessor
-            //for all other predecessors of node (note: it's not clear if authors mean DIRECT predecessors but I've assumed so, I makes more sense when looking at the examples)
-            pred_itr = node->get_dependencies().begin();
-            while (pred_itr != node->get_dependencies().end())
-            {
-                auto pred = *(pred_itr++);
-                if (pred->dominator != nullptr) //doms[pred] already calculated
-                    new_idom = intersects(pred, new_idom);
-            }
-
-            if (node->dominator != new_idom)
-            {
-                node->dominator = new_idom;
-                changed = true;
-            }
-        }
-    }
-
-    //change meaningless idoms to nullptr (i.e. idom(node) == node or idom(node) e { dpred(node) })
-    //process items in reverse order to guarantee not-null dominators when checking node's predecessors (needed for dominance frontier)
-    auto ritr = processing_order.rbegin();
-    while (ritr != processing_order.rend())
-    {
-        auto node = *(ritr++);
-        if (!node->dominator)
-            continue;
-        else if (!node->is_in_data_flow())
-            continue;
-        else if (node->dominator == node)
-            node->dominator = nullptr;
-        else if (node->get_dependencies().size() == 1)
-            node->dominator = nullptr;
-        else if (std::find(node->get_dependencies().begin(), node->get_dependencies().end(), node->dominator) != node->get_dependencies().end())
-            node->dominator = nullptr;
-        else //if dominator's not trivial, check its frontier to determinate if it lies on a 'main' branch
-        {
-            if (!node->dominator->joint)
-                node->dominator->joint = node;
-
-            for (auto dep : node->get_dependencies())
-            {
-                while (dep != node->dominator)
-                {
-                    if (!dep->data_flow)
-                        break;
-
-                    dep->main_branch = false;
-                    dep = dep->dominator;
-                    assert(dep != nullptr);
-                }
-            }
-        }
-
-        if (node == root)
-            break;
     }
 }
 
@@ -1356,11 +1153,6 @@ void program_impl::trim_to_outputs()
     size_t actual_nodes = processing_order.size();
     if (!actual_nodes) //degenerated case but can happen
         return;
-
-    if (processing_order.front()->is_type<connector>())
-        --actual_nodes;
-    if (processing_order.back()->is_type<connector>())
-        --actual_nodes;
 
     if (outputs.size() == actual_nodes)
         return;
@@ -1382,10 +1174,6 @@ void program_impl::trim_to_outputs()
             }
         }
     }
-
-    //mark connector at the end so it won't be removed
-    if (processing_order.back()->is_type<connector>())
-        processing_order.back()->mark();
 
     //all not-marked nodes should be removed
     std::list<program_node*> to_rem;
@@ -1655,83 +1443,56 @@ void program_impl::remove_redundant_reorders()
     }
 }
 
-void program_impl::reorder_nodes_for_parallel_execution()
-{
-    if (processing_order.empty())
-        return;
+/*
+    recalculate processing_order
+    algorithm based on: CLRS 24.5 (critical path in DAG)
+    modifications: adjust for multiple inputs
+    input: any topological order in processing order
+    output: BFS topological order.
+*/
 
-    //note: during computations perfomed by this function, both program_node::processing_itr and program_node::processing_num might be invalidated
-
-    //firstly, move all helpers at the beginning of processing queue to prevent them from being parallelised
-    std::list<program_node*> old_order;
-    std::swap(old_order, processing_order);
-    assert(processing_order.empty() && !old_order.empty());
-
-    const auto push_back = [this](program_node* node)
+void program_impl::calculate_BFS_processing_order() {
+    std::map<program_node*, int> distances;
+    for (auto itr : processing_order)
     {
-        processing_order.push_back(node);
-        node->processing_itr = --processing_order.end();
-        node->processing_num = static_cast<uint32_t>(processing_order.size());
-    };
-
-    auto itr = old_order.begin();
-    while (itr != old_order.end())
+        distances[itr] = -1;
+    }
+    int max_distance = 0;
+    for (auto itr : processing_order)
     {
-        auto* node = (*itr);
-        node->processing_num = 0;
-        if (!node->is_in_data_flow())
-        {
-            push_back(node);
-            itr = old_order.erase(itr);
+        //Init
+        if (distances[itr] == -1) {     // this must be an input
+            distances[itr] = 0;         // initialize input
         }
-        else
-            ++itr;
+        // RELAX
+        for (auto& user : itr->get_users())
+        {
+            distances[user] = std::max(distances[user], distances[itr] + 1);
+            max_distance = std::max(max_distance, distances[user]);
+        }
     }
 
-    //now identify all splits and try to reorder nodes
-    itr = old_order.begin();
-    while (itr != old_order.end())
+    //bucket sort nodes based on their max distance from input
+    std::vector<std::vector<program_node*>> dist_lists;
+    dist_lists.resize(max_distance + 1);
+    for (auto itr : processing_order)
     {
-        auto* split = (*itr);
-        if (!split->is_split_point())
-        {
-            push_back(split);
-            ++itr;
-            continue;
-        }
-
-        //the node is a split point, reorder all nodes between node and node->get_joint() in queue so they can be run in a parallel way
-        auto joint = split->get_joint();
-
-        //a nice thing: we can use already topologically sorted nodes to calculated maximum distance from the source for each node in a range (split, joint)
-        //then we can simply sort them so nodes which are in the same distance will be next to each other in the resulting list
-        auto sub_itr = itr;
-        while (*sub_itr != joint)
-        {
-            auto node = (*sub_itr++);
-            for (auto& user : node->get_users())
-                user->processing_num = std::max(user->processing_num, node->processing_num + 1);
-        }
-
-        //bucket sort nodes basing on their distance from source
-        std::vector<std::list<program_node*>> dist_map;
-        dist_map.resize(joint->processing_num);
-        sub_itr = itr;
-        while (*sub_itr != joint)
-        {
-            auto node = (*sub_itr++);
-            dist_map[node->processing_num].push_back(node);
-        }
-
-        //insert sorted nodes to a resulting list in order of their distance
-        for (auto& dist : dist_map)
-            for (auto& node : dist)
-                push_back(node);
-
-        itr = sub_itr;
-        assert(*itr == joint);
-        joint->processing_num = 0;
+        dist_lists[distances[itr]].push_back(itr);
     }
+
+    //replace the old processing order by the new one, still topological.
+    processing_order.clear();
+    for (auto& dist : dist_lists)
+    {
+        for (auto& node : dist)
+        {
+            processing_order.push_back(node);
+            node->processing_itr = processing_order.end();
+            node->processing_itr--;
+        }
+    }
+    update_processing_numbers();
+    return;
 }
 
 void program_impl::reorder_inputs(layout_optimizer& lo)
@@ -2609,10 +2370,6 @@ void program_impl::prepare_buffer_fusing()
             if (node.is_output() && !is_debug)
                 return;
 
-            //connector mights have been added at the end of the network, if that is a case ignore it
-            if (node.get_users().size() == 1 && node.get_users().front()->is_type<connector>())
-                return;
-
             //do not optimize when next node is concatenation which is not output
             if (node.get_users().size() == 1 && node.get_users().front()->is_type<concatenation>() && !node.get_users().front()->is_output())
                 return;
@@ -2890,7 +2647,6 @@ void program_impl::add_intermediate(program_node& node, program_node& next, size
     next.replace_dependency(prev_idx, node);
     node.constant = prev.constant;
     node.data_flow = prev.data_flow;
-    node.main_branch = prev.main_branch;
     if (prev.constant_frontier)
     {
         node.constant_frontier = true;
@@ -2943,7 +2699,7 @@ void program_impl::replace_all_usages(program_node & old_node, program_node & ne
 
 void program_impl::replace(program_node& old_node, program_node& new_node, bool replace_whole_branch, bool check_output_layouts_integrity)
 {
-    if ((!new_node.dependencies.empty() && !replace_whole_branch) || !new_node.users.empty() || new_node.dominator || new_node.joint)
+    if ((!new_node.dependencies.empty() && !replace_whole_branch) || !new_node.users.empty())
         throw std::invalid_argument("Node which is about to replace other node should be detached");
 
     if (new_node.is_output())
@@ -2996,15 +2752,6 @@ void program_impl::replace(program_node& old_node, program_node& new_node, bool 
     if (old_node.is_input())
         inputs.remove(&old_node);
 
-    new_node.dominator = old_node.dominator;
-    if (old_node.dominator && old_node.dominator->joint == &old_node)
-        old_node.dominator->joint = &new_node;
-    new_node.joint = old_node.joint;
-    if (old_node.joint && old_node.joint->dominator == &old_node)
-        old_node.joint->dominator = &new_node;
-
-    new_node.data_flow = old_node.data_flow;
-    new_node.main_branch = old_node.main_branch;
     new_node.constant = old_node.constant;
     new_node.constant_frontier = old_node.constant_frontier;
     new_node.user_mark = old_node.user_mark;
@@ -3140,70 +2887,6 @@ void program_impl::replace_data_with_optimized(std::map<primitive_id, memory_imp
         assert(node.is_type<data>() && "Optimized primitive is not a cldnn::data");
         assert(result.second != nullptr && "Memory which handles result of optimization should not be nullptr");
         node.as<data>().attach_memory(*result.second, false);
-    }
-}
-
-void program_impl::forward_bfs(std::function<void(program_node&)> const& mark_func, std::function<void(program_node&)> const& unmark_func) const
-{
-    if (!mark_func && !unmark_func)
-        return;
-
-    std::list<const std::list<program_node*>*> stack = { &inputs };
-    while (!stack.empty())
-    {
-        auto nodes_list = stack.front();
-        stack.pop_front();
-
-        for (auto node : *nodes_list)
-        {
-            if (!node->is_marked())
-            {
-                node->mark();
-                if (mark_func)
-                    mark_func(*node);
-                if (!node->get_users().empty())
-                    stack.push_back(&node->get_users());
-            }
-        }
-    }
-
-    for (auto& node : nodes_map)
-    {
-        if (unmark_func)
-            unmark_func(*node.second);
-        node.second->unmark();
-    }
-}
-
-void program_impl::backward_bfs(std::function<void(program_node&)> const& mark_func, std::function<void(program_node&)> const& unmark_func) const
-{
-    if (!mark_func && !unmark_func)
-        return;
-
-    std::list<const std::vector<program_node*>*> stack = { &outputs };
-    while (!stack.empty())
-    {
-        auto nodes_list = stack.front();
-        stack.pop_front();
-
-        for (auto node : *nodes_list)
-        {
-            if (!node->is_marked())
-            {
-                node->mark();
-                if (mark_func)
-                    mark_func(*node);
-                if (!node->get_dependencies().empty())
-                    stack.push_back(&node->get_dependencies());
-            }
-        }
-    }
-
-    for (auto& node : nodes_map)
-    {
-        if (unmark_func)
-            unmark_func(*node.second);
-        node.second->unmark();
     }
 }
 

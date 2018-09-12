@@ -41,7 +41,6 @@ uint32_t primitive_inst::get_network_id() const
 event_impl::ptr primitive_inst::execute(const std::vector<event_impl::ptr>& events)
 {
     CLDNN_ERROR_BOOL(id(), "Invalid/unset input", !_has_valid_input, "Cannot execute primitive " + id() + " with invalid/unset input");
-
     on_execute();
 
     if (_exec_deps.size() == 0)
@@ -49,12 +48,19 @@ event_impl::ptr primitive_inst::execute(const std::vector<event_impl::ptr>& even
 
     std::vector<event_impl::ptr> dependencies;
     dependencies.reserve(_exec_deps.size());
-
     for (auto& input : _exec_deps)
     {
-        dependencies.emplace_back(get_network().execute_primitive(input, events));
+        auto id = input->id();
+        try {
+            // if the requested event deos not exits it means that it has not been executed, so the processing_order is wrong or synchronization failed.
+            auto ev = get_network().get_primitive_event(id); 
+            dependencies.emplace_back(ev);
+        }
+        catch (const std::out_of_range& oor) {
+            std::string temp = std::string("internal CLDNN error: execution order corrupted.") + std::string("\n") +  std::string(oor.what() + std::string("\n"));
+            CLDNN_ERROR_MESSAGE(id, temp);
+        }
     }
-
     return _impl->execute(dependencies, *this);  
 }
 
@@ -128,13 +134,13 @@ memory_impl::ptr primitive_inst::allocate_output()
     return get_network().get_engine().allocate_memory(layout, _node.id(), get_network_id(), _node.get_memory_dependencies(), true);
 }
 
-std::vector<std::shared_ptr<primitive_inst>> primitive_inst::build_exec_deps(std::vector<std::shared_ptr<primitive_inst>> const& mem_deps)
+std::vector<std::shared_ptr<primitive_inst>> primitive_inst::build_exec_deps(std::vector<std::shared_ptr<primitive_inst>> const& deps)
 {
     std::vector<std::shared_ptr<primitive_inst>> exec_deps;
-    exec_deps.reserve(mem_deps.size());
-    for (auto& mem_dep : mem_deps)
-        if (mem_dep->get_impl() != nullptr)
-            exec_deps.push_back(mem_dep);
+    exec_deps.reserve(deps.size());
+    for (auto& dep : deps)
+        if (dep->get_impl() != nullptr)
+            exec_deps.push_back(dep);
 
     return exec_deps;
 }

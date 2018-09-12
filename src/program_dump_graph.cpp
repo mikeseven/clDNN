@@ -288,8 +288,6 @@ namespace cldnn
                 graph << ", shape=box";
             if (node->is_type<internal_primitive>())
                 graph << ", color=blue";
-            if (node->is_in_data_flow())
-                graph << ", group=data_flow";
             if (node->is_reusing_memory())
             {
                 graph << ", fillcolor=\"" << colors[node->get_reused_memory_color() % colors.size()] << "\" ";
@@ -306,16 +304,15 @@ namespace cldnn
                 bool doubled = true;
                 if (std::find(user->get_dependencies().begin(), user->get_dependencies().end(), node.get()) == user->get_dependencies().end())
                     doubled = false;
-
                 graph << "    " << get_node_id(node.get()) << " -> " << get_node_id(user);
 
                 bool data_flow = node->is_in_data_flow() && user->is_in_data_flow();
                 if (data_flow)
                 {
                     if (doubled)
-                        graph << " [color=red]";
+                       graph << " [color=red]";
                     else
-                        graph << " [color=red, style=dashed, label=\"usr\"]";
+                       graph << " [color=red, style=dashed, label=\"usr\"]";
                 }
                 else
                 {
@@ -339,11 +336,6 @@ namespace cldnn
 
                 graph << "   " << get_node_id(node.get()) << " -> " << get_node_id(dep) << " [style=dashed, label=\"dep\", constraint=false];\n";
             }
-
-            if (node->get_dominator() && (!filter || filter(*node->get_dominator())))
-                graph << "    " << get_node_id(node.get()) << " -> " << get_node_id(node->get_dominator()) << " [style=dotted, label=\"dom\", constraint=false];\n";
-            if (node->get_joint() && (!filter || filter(*node->get_joint())))
-                graph << "    " << get_node_id(node.get()) << " -> " << get_node_id(node->get_joint()) << " [style=dotted, label=\"p-dom\", constraint=false];\n";
         }
         graph << "}\n";
         close_stream(graph);
