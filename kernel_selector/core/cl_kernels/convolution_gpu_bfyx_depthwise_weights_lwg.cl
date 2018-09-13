@@ -1,4 +1,4 @@
-// Copyright (c) 2016-2017 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -24,7 +24,7 @@
 
 __attribute__((intel_reqd_sub_group_size(16)))
 __attribute__((reqd_work_group_size(16, 1, 1)))
-KERNEL(convolution)(
+KERNEL(convolution_depthwise_weights_lwg)(
     __global INPUT0_TYPE* input, 
     __global OUTPUT_TYPE* output, 
     __global FILTER_TYPE* weights, 
@@ -65,7 +65,7 @@ KERNEL(convolution)(
     for (uint j = 0; j < FILTER_SIZE_Y ; ++j)
     {
         const int input_offset_y = input_y + j * DILATION_SIZE_Y;
-#if BOUNDRY_CHECK
+#if BOUNDARY_CHECK
         const bool zero_y = input_offset_y >= INPUT0_SIZE_Y || input_offset_y < 0;
 
         if(!zero_y)
@@ -75,7 +75,7 @@ KERNEL(convolution)(
             for (uint i = 0; i < FILTER_SIZE_X ; ++i)
             {
                 const int input_offset_x = input_x + i * DILATION_SIZE_X;
-#if BOUNDRY_CHECK
+#if BOUNDARY_CHECK
                 const bool zero_x = input_offset_x >= INPUT0_SIZE_X || input_offset_x < 0;
 
                 if(!zero_x)
@@ -85,7 +85,7 @@ KERNEL(convolution)(
                                   intel_sub_group_shuffle( w, j*FILTER_Y_PITCH + i*FILTER_X_PITCH), dotProd);
                 }
             }
-#if BOUNDRY_CHECK
+#if BOUNDARY_CHECK
         }
     }
 #endif

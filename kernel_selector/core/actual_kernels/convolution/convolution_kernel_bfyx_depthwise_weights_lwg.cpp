@@ -1,5 +1,5 @@
 ﻿/*
-// Copyright (c) 2017 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "convolution_kernel_bfyx_depthwise.h"
+#include "convolution_kernel_bfyx_depthwise_weights_lwg.h"
 #include "kernel_selector_utils.h"
  
 namespace kernel_selector 
 {
-    ParamsKey ConvolutionKernel_bfyx_depthwise::GetSupportedKey() const
+    ParamsKey ConvolutionKernel_bfyx_depthwise_weights_lwg::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F32);
@@ -42,7 +42,7 @@ namespace kernel_selector
         return k;
     }
 
-    bool ConvolutionKernel_bfyx_depthwise::Validate(const Params& p, const optional_params& o) const
+    bool ConvolutionKernel_bfyx_depthwise_weights_lwg::Validate(const Params& p, const optional_params& o) const
     {
         if (!ConvolutionKernelBase::Validate(p, o) ||
             !CovolutionCheckInput(p, o))
@@ -64,7 +64,7 @@ namespace kernel_selector
         return true;
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_depthwise::SetDefault(const convolution_params& params, int) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_bfyx_depthwise_weights_lwg::SetDefault(const convolution_params& params, int) const
     {
         DispatchData runInfo = Parent::SetDefault(params);
         const auto& out = params.output;
@@ -83,17 +83,17 @@ namespace kernel_selector
         return runInfo;
     }
 
-    JitConstants ConvolutionKernel_bfyx_depthwise::GetJitConstants(const convolution_params& params, const DispatchData& kd) const
+    JitConstants ConvolutionKernel_bfyx_depthwise_weights_lwg::GetJitConstants(const convolution_params& params, const DispatchData& kd) const
     {
         auto mem_consts = ConvolutionKernelBase::GetJitConstants(params, kd);
 
         if(params.padding.x != 0 || params.padding.y != 0)
-            mem_consts.AddConstant(MakeJitConstant("BOUNDRY_CHECK", 1));
+            mem_consts.AddConstant(MakeJitConstant("BOUNDARY_CHECK", 1));
 
         return mem_consts;
     }
 
-    KernelsData ConvolutionKernel_bfyx_depthwise::GetKernelsData(const Params& params, const optional_params& options) const
+    KernelsData ConvolutionKernel_bfyx_depthwise_weights_lwg::GetKernelsData(const Params& params, const optional_params& options) const
     {
         return GetCommonKernelsData(params, options);
     }

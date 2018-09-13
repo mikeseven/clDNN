@@ -1,5 +1,5 @@
 ﻿/*
-// Copyright (c) 2017 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -20,12 +20,12 @@
  
 namespace kernel_selector 
 {    
-    class ConvolutionKernel_bfyx_depthwise : public ConvolutionKernelBase
+    class ConvolutionKernel_bfyx_depthwise_weights_lwg : public ConvolutionKernelBase
     {
     public:
         using Parent = ConvolutionKernelBase;
-        ConvolutionKernel_bfyx_depthwise() : ConvolutionKernelBase("convolution_gpu_bfyx_depthwise") {}
-        virtual ~ConvolutionKernel_bfyx_depthwise() {}
+        ConvolutionKernel_bfyx_depthwise_weights_lwg() : ConvolutionKernelBase("convolution_gpu_bfyx_depthwise_weights_lwg") {}
+        virtual ~ConvolutionKernel_bfyx_depthwise_weights_lwg() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;
