@@ -36,68 +36,41 @@ KERNEL(convolution)(
     const uint x = get_global_id(1);
     const uint y = get_global_id(2);
 
-#if QUANTIZATION_TERM
     int dotProd = 0;
-#else
-    UNIT_TYPE dotProd = UNIT_VAL_ZERO;
-#endif
+
     const int input_x = x * STRIDE_SIZE_X - PADDING_SIZE_X;
     const int input_y = y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
 
     const uint filter_offset = f*FILTER_OFM_PITCH;
     const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET;
 
-    for (uint k = 0; k < FILTER_IFM_NUM; ++k)
+    for (uint j = 0; j < FILTER_SIZE_Y ; ++j)
     {
-        for (uint j = 0; j < FILTER_SIZE_Y ; ++j)
+        const int input_offset_y = input_y + j * DILATION_SIZE_Y;
+        for (uint i = 0; i < FILTER_SIZE_X ; ++i)
         {
-            const int input_offset_y = input_y + j * DILATION_SIZE_Y;
-            const bool zero_y = input_offset_y >= INPUT0_SIZE_Y || input_offset_y < 0;
-
+            const int input_offset_x = input_x + i * DILATION_SIZE_X;
+            uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH;
+            uint filter_idx = filter_offset + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
+            for (uint k = 0; k < FILTER_IFM_NUM; ++k)
             {
-                for (uint i = 0; i < FILTER_SIZE_X ; ++i)
-                {
-                    const int input_offset_x = input_x + i * DILATION_SIZE_X;
-                    const bool zero_x = input_offset_x >= INPUT0_SIZE_X || input_offset_x < 0;
-
-                    {
-                        uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH + k*INPUT0_FEATURE_PITCH;
-                        uint filter_idx = filter_offset + k*FILTER_IFM_PITCH + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
-#if QUANTIZATION_TERM
-                        dotProd += (int)input[input_idx] * (int)weights[filter_idx];
-#else
-                        dotProd += input[input_idx] * weights[filter_idx];
-#endif                     
-                    }
-                }
+                dotProd += (int)input[input_idx] * (int)weights[filter_idx];
+                input_idx += INPUT0_FEATURE_PITCH;
+                filter_idx += FILTER_IFM_PITCH;
             }
         }
     }
 
 #if BIAS_TERM
-#if   BIAS_PER_OUTPUT
-    const uint bias_index = GET_DATA_INDEX(BIAS, b, f, y, x);
-#elif BIAS_PER_OFM
     const uint bias_index = f;
-#endif
-#if QUANTIZATION_TERM
 #if CALIBRATION_TERM
 
     dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
 #else  // CALIBRATION_TERM
     dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * O_QF);
 #endif // CALIBRATION_TERM
-#else  // QUANTIZATION_TERM
-    dotProd += (UNIT_TYPE)biases[bias_index];
-#endif // QUANTIZATION_TERM
 #endif
 
     const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b, f, y, x);
-
-#if QUANTIZATION_TERM
     output[dst_index] = ACTIVATION(convert_char(dotProd), NL_M, NL_N);
-#else
-    output[dst_index] = ACTIVATION(dotProd, NL_M, NL_N);
-#endif   
-    
 }

@@ -29,9 +29,7 @@ namespace kernel_selector {
         k.EnableOutputLayout(DataLayout::fs_bs_yx_bsv4_fsv32);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
-        k.EnableDilation();
         k.EnableBiasPerFeature();
-        k.EnableBiasPerOutput();
         k.EnableNonBiasTerm();
         k.EnableBatching();
         k.EnableInt8Quantization();
@@ -50,8 +48,8 @@ namespace kernel_selector {
         runInfo.effiency = FORCE_PRIORITY_1;
 
         runInfo.gws0 = arg.output.Batch().v * arg.output.Feature().v;
-        runInfo.gws1 = arg.output.Y().v;
-        runInfo.gws2 = arg.output.X().v;
+        runInfo.gws1 = arg.output.X().v / 1;
+        runInfo.gws2 = arg.output.Y().v;
 
         runInfo.lws0 = 8;
         runInfo.lws1 = 1;
