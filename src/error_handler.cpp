@@ -151,6 +151,41 @@ void error_on_tensor_dims_greater_than_other_tensor_dims(const std::string& file
     }
 }
 
+void error_on_tensor_dims_not_dividable_by_other_tensor_dims(const std::string& file, int line, const std::string& instance_id, const std::string& tensor_id, const tensor& tens, const std::string& tensor_to_compare_to_id, const tensor& tens_to_compre, const std::string& additional_message)
+{
+    std::vector<std::string> errors;
+    if (tens.batch[0] % tens_to_compre.batch[0] != 0)
+    {
+        errors.push_back("Batch");
+    }
+    if (tens.feature[0] % tens_to_compre.feature[0] != 0)
+    {
+        errors.push_back("Feature");
+    }
+    if (tens.spatial[0] % tens_to_compre.spatial[0] != 0)
+    {
+        errors.push_back("Spatial x");
+    }
+    if (tens.spatial[1] % tens_to_compre.spatial[1] != 0)
+    {
+        errors.push_back("Spatial y");
+    }
+
+    std::stringstream error_msg;
+    if (!errors.empty())
+    {
+        error_msg << tensor_id << " sizes: " << tens << std::endl;
+        error_msg << tensor_to_compare_to_id << " sizes: " << tens_to_compre << std::endl;
+        error_msg << "All " << tensor_id << " dimensions must be dividable by corresponding dimensions from " << tensor_to_compare_to_id << std::endl;
+        error_msg << "Mismatching dimensions: ";
+        for (size_t i = 0; i < errors.size(); i++)
+        {
+            error_msg << errors.at(i) << std::endl;
+        }
+        err_details::cldnn_print_error_message(file, line, instance_id, error_msg, additional_message);
+    }
+}
+
 void error_on_mismatch_layout(const std::string& file, int line, const std::string& instance_id, const std::string& layout_1_id, const layout& layout_1, const std::string& layout_2_id, const layout& layout_2, const std::string& additional_message)
 {
     if (layout_1 != layout_2)
