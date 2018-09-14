@@ -14,6 +14,7 @@
 
 #include "include/include_all.cl"
 
+#define OBS 1
 __attribute__((intel_reqd_sub_group_size(8)))
 KERNEL(convolution)(
     __global INPUT0_TYPE* input, 
@@ -33,10 +34,10 @@ KERNEL(convolution)(
     const uint f = get_global_id(0) % OUTPUT_FEATURE_NUM;
     const uint b = get_global_id(0) / OUTPUT_FEATURE_NUM;
 
-    const uint x = get_global_id(1);
+    const uint x = get_global_id(1) * OBS;
     const uint y = get_global_id(2);
 
-    int dotProd = 0;
+    int dotProd[OBS] = { 0 };
 
     const int input_x = x * STRIDE_SIZE_X - PADDING_SIZE_X;
     const int input_y = y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
@@ -46,31 +47,38 @@ KERNEL(convolution)(
 
     for (uint j = 0; j < FILTER_SIZE_Y ; ++j)
     {
-        const int input_offset_y = input_y + j * DILATION_SIZE_Y;
+        const int input_offset_y = input_y + j;
         for (uint i = 0; i < FILTER_SIZE_X ; ++i)
         {
-            const int input_offset_x = input_x + i * DILATION_SIZE_X;
+            const int input_offset_x = input_x + i;
             uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH;
             uint filter_idx = filter_offset + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
             for (uint k = 0; k < FILTER_IFM_NUM; ++k)
             {
-                dotProd += (int)input[input_idx] * (int)weights[filter_idx];
-                input_idx += INPUT0_FEATURE_PITCH;
-                filter_idx += FILTER_IFM_PITCH;
+                for(uint r = 0; r < OBS; r++)
+                {
+                    dotProd[r] += (int)input[input_idx] * (int)weights[filter_idx];
+                    input_idx += INPUT0_FEATURE_PITCH;
+                    filter_idx += FILTER_IFM_PITCH;
+                }
             }
         }
     }
 
+for(uint r = 0; r < OBS; r++)
+{
 #if BIAS_TERM
     const uint bias_index = f;
 #if CALIBRATION_TERM
 
-    dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
+    dotProd[r] = (UNIT_TYPE)round(((float)dotProd[r] * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
 #else  // CALIBRATION_TERM
-    dotProd = (UNIT_TYPE)round(((float)dotProd * quantizations[f] * I_QF + biases[bias_index]) * O_QF);
+    dotProd[r] = (UNIT_TYPE)round(((float)dotProd[r] * quantizations[f] * I_QF + biases[bias_index]) * O_QF);
 #endif // CALIBRATION_TERM
 #endif
 
     const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b, f, y, x);
-    output[dst_index] = ACTIVATION(convert_char(dotProd), NL_M, NL_N);
+    output[dst_index] = ACTIVATION(convert_char(dotProd[r]), NL_M, NL_N);
+}
+
 }
