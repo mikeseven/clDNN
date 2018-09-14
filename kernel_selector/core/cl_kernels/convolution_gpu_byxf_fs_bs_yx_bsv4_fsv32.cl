@@ -14,7 +14,7 @@
 
 #include "include/include_all.cl"
 
-#define OBS 1
+#define OBS 8
 __attribute__((intel_reqd_sub_group_size(8)))
 KERNEL(convolution)(
     __global INPUT0_TYPE* input, 
@@ -57,10 +57,10 @@ KERNEL(convolution)(
             {
                 for(uint r = 0; r < OBS; r++)
                 {
-                    dotProd[r] += (int)input[input_idx] * (int)weights[filter_idx];
-                    input_idx += INPUT0_FEATURE_PITCH;
-                    filter_idx += FILTER_IFM_PITCH;
+                    dotProd[r] += (int)input[input_idx + INPUT0_X_PITCH * STRIDE_SIZE_X * r] * (int)weights[filter_idx];
                 }
+                input_idx += INPUT0_FEATURE_PITCH;
+                filter_idx += FILTER_IFM_PITCH;
             }
         }
     }
@@ -77,7 +77,7 @@ for(uint r = 0; r < OBS; r++)
 #endif // CALIBRATION_TERM
 #endif
 
-    const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b, f, y, x);
+    const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b, f, y, x + r);
     output[dst_index] = ACTIVATION(convert_char(dotProd[r]), NL_M, NL_N);
 }
 
