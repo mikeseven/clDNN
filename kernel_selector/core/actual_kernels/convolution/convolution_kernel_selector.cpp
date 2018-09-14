@@ -40,6 +40,7 @@
 #include "convolution_kernel_gemm_mmad8_32x3sg_128x128wg_slm_int8.h"
 #include "convolution_kernel_mmad_slm_2x14_rep4.h"
 #include "convolution_kernel_mmad_slm_7x7_rep4.h"
+#include "convolution_kernel_byxf_fs_bs_yx_bsv4_fsv32.h"
 
 namespace kernel_selector 
 {
@@ -68,8 +69,9 @@ namespace kernel_selector
         Attach<ConvolutionKernel_bfyx_depthwise_weights_lwg>();
         Attach<convolution_kernel_gemm_mmad8_32x3sg_128x128wg_slm_int8>();
 //        Attach<convolution_kernel_gemm_mmad8_32x3sg_128x128wg_slm_int8>();
-        Attach<ConvolutionKernel_mmad_slm_2x14_rep4>();
-        Attach<ConvolutionKernel_mmad_slm_7x7_rep4>();
+//        Attach<ConvolutionKernel_mmad_slm_2x14_rep4>();
+//        Attach<ConvolutionKernel_mmad_slm_7x7_rep4>();
+        Attach<ConvolutionKernel_byxf_fs_bs_yx_bsv4_fsv32>();
         //Attach<ConvolutionKernel_Tutorial>(); //In order to use this implementation for tutorial purposes please uncomment this line
     }
 
