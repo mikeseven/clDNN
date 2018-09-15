@@ -38,6 +38,7 @@ KERNEL(convolution)(
     const uint y = get_global_id(2);
 
     int dotProd[OBS] = { 0 };
+    int dotProd2[OBS] = { 0 };
 
     const int input_x = x * STRIDE_SIZE_X - PADDING_SIZE_X;
     const int input_y = y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
@@ -45,22 +46,36 @@ KERNEL(convolution)(
     const uint filter_offset = f*FILTER_OFM_PITCH;
     const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET;
 
+
     for (uint j = 0; j < FILTER_SIZE_Y ; ++j)
     {
         const int input_offset_y = input_y + j;
         for (uint i = 0; i < FILTER_SIZE_X ; ++i)
         {
-            const int input_offset_x = input_x + i;
+            const int input_offset_x = input_x + i + STRIDE_SIZE_X * get_sub_group_local_id();
             uint input_idx = input_offset + (uint)input_offset_x*INPUT0_X_PITCH + (uint)input_offset_y*INPUT0_Y_PITCH;
             uint filter_idx = filter_offset + j*FILTER_Y_PITCH + i*FILTER_X_PITCH;
+
+            char input_data[3];
+            char2 _i = vload2(0, input + input_idx);
+            input_data[0] = _i.s0;
+            input_data[1] = _i.s1;
+            input_data[2] = input[input_idx + 2];
+
+            char weights_data[3];
+            char2 w = vload2(0, weights + filter_idx);
+            weights_data[0] = w.s0;
+            weights_data[1] = w.s1;
+            weights_data[2] = weights[filter_idx + 2];
+
             for (uint k = 0; k < FILTER_IFM_NUM; ++k)
             {
+                char w_data = weights[filter_idx];
                 for(uint r = 0; r < OBS; r++)
                 {
-                    dotProd[r] += (int)input[input_idx + INPUT0_X_PITCH * STRIDE_SIZE_X * r] * (int)weights[filter_idx];
+                    char in = intel_sub_group_shuffle(input_data[k], r);
+                    dotProd[r] += (int)in * weights_data[k];
                 }
-                input_idx += INPUT0_FEATURE_PITCH;
-                filter_idx += FILTER_IFM_PITCH;
             }
         }
     }
