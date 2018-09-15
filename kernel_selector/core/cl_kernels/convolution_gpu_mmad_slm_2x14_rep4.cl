@@ -102,20 +102,7 @@ __global int8* weights,
 	/* 32-bit signed accumulator for 4 mini-batches , for a thread OUT_BLOCK_WIDTH*HEIGHT*4 registers are used
 	   Will be converted to 8-bits before final write														*/
 	 
-	int4 out[ OUT_BLOCK_HEIGHT * OUT_BLOCK_WIDTH ];
-
-    __attribute__((opencl_unroll_hint( OUT_BLOCK_HEIGHT )))	
-	for ( int j=0;j< OUT_BLOCK_HEIGHT;j++) {
-	
-	    __attribute__((opencl_unroll_hint( OUT_BLOCK_WIDTH )))	
-		for( int k=0;k<OUT_BLOCK_WIDTH;k++) { 
-	
-			out[j*OUT_BLOCK_WIDTH + k].s0 = 0;
-		    out[j*OUT_BLOCK_WIDTH + k].s1 = 0;
-			out[j*OUT_BLOCK_WIDTH + k].s2 = 0;
-		    out[j*OUT_BLOCK_WIDTH + k].s3 = 0;
-		}
-	}
+	int4 out[ OUT_BLOCK_HEIGHT * OUT_BLOCK_WIDTH ] = { 0 } ;
 	
 	/* Account for batching */
 
@@ -271,7 +258,7 @@ __global int8* weights,
 			int4 act_col_5 =  as_int4( intel_sub_group_block_read4(activation_tile + 5*8*8) );								
 			int4 act_col_6 =  as_int4( intel_sub_group_block_read4(activation_tile + 6*8*8) );				
 			int4 act_col_7 =  as_int4( intel_sub_group_block_read4(activation_tile + 7*8*8) );				
-				
+
 			SLM_BLOCK_WRITE_4 ( act_slm_ptr , as_uint4 ( act_col_0 ) );				
 			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 8*8 ) , as_uint4 ( act_col_1 ) );
 			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 2*8*8 ) , as_uint4 ( act_col_2 ) );

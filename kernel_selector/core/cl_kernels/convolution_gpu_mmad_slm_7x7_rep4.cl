@@ -403,9 +403,9 @@ __global int8* weights,
 			/* Convolve */ 
 			
 			   /* order the dpas instructions to minimize dependency on src0,dst - also try to maximise reuse of weights-reg*/
-	
+
 				/*  Output channels 0-7 */
-	
+
 				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[0], weights_reg[0] );
 				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[1], weights_reg[0] );
 				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[2], weights_reg[0] );
@@ -431,7 +431,7 @@ __global int8* weights,
 				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[8], weights_reg[2] );
 
 		     /* Load weights from SLM into registers - row0, output channels 8..15  */
-				
+
 				{
 					 	__local uint *slm_ptrw0 = slm_ptr1 + 2*8*8;
 						
@@ -446,7 +446,7 @@ __global int8* weights,
 						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
 					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 				}
-				
+
 				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[0], weights_reg[0] );
 				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[1], weights_reg[0] );
 				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[2], weights_reg[0] );
@@ -454,7 +454,7 @@ __global int8* weights,
 				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[4], weights_reg[0] );
 				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[5], weights_reg[0] );
 				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[6], weights_reg[0] );
-				
+
 				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[1], weights_reg[1] );
 				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[2], weights_reg[1] );
 				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[3], weights_reg[1] );
@@ -462,7 +462,7 @@ __global int8* weights,
 				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[5], weights_reg[1] );
 				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[6], weights_reg[1] );
 				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[7], weights_reg[1] );
-				
+
 				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[2], weights_reg[2] );
 				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[3], weights_reg[2] );
 				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[4], weights_reg[2] );
@@ -470,7 +470,7 @@ __global int8* weights,
 				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[6], weights_reg[2] );
 				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[7], weights_reg[2] );
 				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[8], weights_reg[2] );
-				
+
 				/* Load weights from SLM into registers - row0, output channels 16..23  */
 				{
 					 	__local uint *slm_ptrw0 = slm_ptr1 + 4*8*8;
