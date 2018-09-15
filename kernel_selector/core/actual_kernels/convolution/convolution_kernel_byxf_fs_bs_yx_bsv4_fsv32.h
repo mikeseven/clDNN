@@ -34,7 +34,7 @@ namespace kernel_selector {
         virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&) const override
         {
             return{
-                WeightsLayout::oyxi
+                WeightsLayout::yxio
             };
         }
     };
