@@ -76,7 +76,12 @@ KERNEL(convolution)(
         }
     }
 
+
 const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b, f_pack, y, x + get_sub_group_local_id());
+const uint _f_idx = f_pack + get_sub_group_local_id() * 4;
+float4 quants = vload4(0, quantizations + _f_idx );
+float4 calibs = vload4(0, calibrations + _f_idx );
+float4 bias = vload4(0, biases + _f_idx );
 for(uint r = 0; r < OBS; r++)
 {
     char4 char_output;
@@ -86,9 +91,9 @@ for(uint r = 0; r < OBS; r++)
     #if BIAS_TERM
         const uint bias_index = f_idx;
     #if CALIBRATION_TERM
-        dotProd[r][c] = (UNIT_TYPE)round(((float)dotProd[r][c] * quantizations[f_idx] * I_QF + biases[bias_index]) * calibrations[f_idx]);
+        dotProd[r][c] = (UNIT_TYPE)round(((float)dotProd[r][c] * quants[c] * I_QF + bias[c]) * calibs[c]);
     #else  // CALIBRATION_TERM
-        dotProd[r][c] = (UNIT_TYPE)round(((float)dotProd[r][c] * quantizations[f_idx] * I_QF + biases[bias_index]) * O_QF);
+        dotProd[r][c] = (UNIT_TYPE)round(((float)dotProd[r][c] * quants[c] * I_QF + bias[c]) * O_QF);
     #endif // CALIBRATION_TERM
     #endif
         char_output[c] = ACTIVATION(convert_char(dotProd[r][c]), NL_M, NL_N);
