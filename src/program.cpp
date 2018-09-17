@@ -829,34 +829,34 @@ void program_impl::handle_lstm()
             std::vector<primitive_id> output_ids_offsets(directions * sequence_len);
 
             primitive_id hidden_fwd_id = initial_hidden_id;
-            primitive_id hidden_bck_id = initial_hidden_id;
+            primitive_id hidden_bwd_id = initial_hidden_id;
             primitive_id cell_fwd_id = initial_cell_id;
-            primitive_id cell_bck_id = initial_cell_id;
+            primitive_id cell_bwd_id = initial_cell_id;
 
-            auto split_direction = [&](const std::string gate, bool initial_term, primitive_id& fwd_id, primitive_id& bck_id) {
+            auto split_direction = [&](const std::string gate, bool initial_term, primitive_id& fwd_id, primitive_id& bwd_id) {
                 if (initial_term) {
                     primitive_id initial_id = fwd_id;
                     fwd_id = node->id() + ":" + gate + "_fwd";
                     auto fwd_node = std::make_shared<crop>(fwd_id, initial_id, hidden_size, tensor{ 0,0,0,0 });
                     auto &n1 = get_or_create(fwd_node);
                     add_connection(*nodes_map.at(initial_id), n1);
-                    bck_id = node->id() + ":" + gate + "_bck";
-                    auto bck_node = std::make_shared<crop>(bck_id, initial_id, hidden_size, tensor{ 0,1,0,0 });
-                    auto &n2 = get_or_create(bck_node);
+                    bwd_id = node->id() + ":" + gate + "_bwd";
+                    auto bwd_node = std::make_shared<crop>(bwd_id, initial_id, hidden_size, tensor{ 0,1,0,0 });
+                    auto &n2 = get_or_create(bwd_node);
                     add_connection(*nodes_map.at(initial_id), n2);
                 }
             };
 
             //if bidirectional lstm then initial_hidden and initial_cell terms need to be split
             if (directions > 1) {
-                split_direction("hidden", initial_hidden_term, hidden_fwd_id, hidden_bck_id);
-                split_direction("cell", initial_cell_term, cell_fwd_id, cell_bck_id);
+                split_direction("hidden", initial_hidden_term, hidden_fwd_id, hidden_bwd_id);
+                split_direction("cell", initial_cell_term, cell_fwd_id, cell_bwd_id);
             }
 
             //lstm expanding
             for (size_t dir = 0; dir < directions; ++dir) {
-                auto hidden_id = dir == 0 ? hidden_fwd_id : hidden_bck_id;
-                auto cell_id = dir == 0 ? cell_fwd_id : cell_bck_id;
+                auto hidden_id = dir == 0 ? hidden_fwd_id : hidden_bwd_id;
+                auto cell_id = dir == 0 ? cell_fwd_id : cell_bwd_id;
                 for (size_t i = 0; i < sequence_len; ++i) {
                     size_t idx = i + dir * sequence_len;
                     primitive_id lstm_gemm_id = node->id() + ":lstm_gemm" + get_id_string(idx);
@@ -864,10 +864,18 @@ void program_impl::handle_lstm()
                     primitive_id crop_id = node->id() + ":crop" + get_id_string(idx);
 
                     size_t input_idx = i;
-                    //for bidirectional lstms, if first LSTM layer then scrambled the input
-                    //for subsequent stacked layers the input is strided
-                    if (dir > 0) {
-                        input_idx = input_dependencies > sequence_len ? dir * sequence_len + i : sequence_len - i - 1;
+                    //for bidirectional lstms, if first LSTM layer then reverse input
+                    //for subsequent stacked layers the input is strided on the dir dimension
+                    if (directions > 0) {
+                        if (input_dependencies > sequence_len) { // stacked layer
+                            input_idx = dir * sequence_len + i;
+                        }
+                        else
+                        {
+                            if (dir > 0) { // first layer
+                                input_idx = sequence_len - i - 1;
+                            }
+                        }
                     }
                     primitive_id lstm_gemm_input_id = node->get_dependency(input_idx).get_org_primitive_id();
 
@@ -932,20 +940,30 @@ void program_impl::handle_lstm()
                 }
             }
 
-            //if theres no next lstm, concatenation is created
+            //if there is no next lstm, concatenation is created
             if (!has_lstm_children)
             {
                 primitive_id original_id = node->id();
                 primitive_id concatenation_id = original_id + ":concat";
-                auto concatenation_node = std::make_shared<concatenation>(concatenation_id, output_ids_offsets, concatenation::along_f);
-                auto &n5 = get_or_create(concatenation_node);
-                for (auto concat_dependency : concat_depends)
+                auto concatenation_primitive = std::make_shared<concatenation>(concatenation_id, output_ids_offsets, concatenation::along_f);
+                auto &concatenation_node = get_or_create(concatenation_primitive);
+                for (auto sub_dependency : concat_depends)
                 {
-                    add_connection(*concat_dependency, n5);
+                    add_connection(*sub_dependency, concatenation_node);
                 }
-                for (auto& user : node->get_users())
-                {
-                    add_connection(n5, *user);
+                if (directions == 2) {
+                    // bidirectional support requires concatenations along the direction and sequence axis
+                    // instead we can concatenate along the sequence axis and reshape the tensor to the account
+                    // for the direction
+                    tensor output_size {input_size.batch[0], (int32_t)sequence_len, hidden_size.spatial[0], (int32_t)directions};
+                    primitive_id reshape_id = original_id + ":reshape";
+                    auto reshape_primitive = std::make_shared<reshape>(reshape_id, concatenation_id, output_size);
+                    auto &reshape_node = get_or_create(reshape_primitive);
+                    add_connection(concatenation_node, reshape_node);
+                    for (auto& user : node->get_users())
+                    {
+                        add_connection(reshape_node, *user);
+                    }
                 }
             }
 
