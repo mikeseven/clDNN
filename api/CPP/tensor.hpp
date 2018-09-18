@@ -845,6 +845,26 @@ inline tensor operator*(const tensor& lhs, tensor::value_type rhs) { return lhs.
 /// @brief Divides a @p tensor by a @p scalar
 inline tensor operator/(const tensor& lhs, tensor::value_type rhs) { return lhs.div(rhs); }
 
+///
+/// \brief Converts C API tensor_array to std::vector<tensor>
+///
+inline std::vector<tensor> tensor_arr_to_vector(const cldnn_tensor_arr& arr)
+{
+    std::vector<tensor> result(arr.size);
+    for (size_t i = 0; i < arr.size; i++)
+        result[i] = arr.data[i];
+
+    return result;
+}
+
+///
+/// \brief Converts std::vector<tensor> to std::vector of C API tensor
+///
+inline std::vector<cldnn_tensor> tensor_vector_to_cldnn_vector(const std::vector<tensor>& stor)
+{
+    return std::vector<cldnn_tensor>(stor.begin(), stor.end());
+}
+
 /// @}
 /// @}
 }
