@@ -79,6 +79,7 @@ namespace kernel_selector
             image_2d_weights_winograd_6x3_s1_fbxyb, // image 2d winograd convolution weights for fused kernel, F(2, 3) --filter 3x3 with stride 1
             image_2d_weights_winograd_6x3_s1_xfbyb, // image 2d winograd convolution weights for fused kernel, F(2, 3) --filter 3x3 with stride 1
             os_is_yx_isa8_osv8_isv4, // for MMAD convolution
+            bf_lyx_yx,               // local convolution
             WeightsLayoutCount // NMBER OF ELEMENTS IN ENUM
         };
 
@@ -125,6 +126,8 @@ namespace kernel_selector
             Y   = 1,
             IFM = 2,
             OFM = 3,
+            LX = 4,
+            LY = 5,
         };
 
         inline bool SimpleLayout(WeightsLayout l)
@@ -494,6 +497,8 @@ namespace kernel_selector
             Dim Y()   const { return Extract(layout, WeightsChannelName::Y, dims); }
             Dim IFM() const { return Extract(layout, WeightsChannelName::IFM, dims); }
             Dim OFM() const { return Extract(layout, WeightsChannelName::OFM, dims); }
+            Dim LX()  const { return Extract(layout, WeightsChannelName::LX, dims); }
+            Dim LY()  const { return Extract(layout, WeightsChannelName::LY, dims); }
 
             static inline Dim Extract(WeightsLayout l, WeightsChannelName channel, const NDims& d)
             {
@@ -511,7 +516,7 @@ namespace kernel_selector
             }
         private:
             static NDims GetSimpleDims(const std::vector<size_t>& d, WeightsLayout l);
-            static std::array<std::array<int, 4>, WeightsLayout::WeightsLayoutCount> weightsChannelArray;
+            static std::array<std::array<int, 6>, WeightsLayout::WeightsLayoutCount> weightsChannelArray;
         };
     }
 }

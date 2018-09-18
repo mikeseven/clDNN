@@ -41,7 +41,7 @@ namespace kernel_selector {
         k.EnableNonBiasTerm();
         k.EnableBatching();
         k.EnableSplitSupport();
-        k.EnableDepthwiseSeparableOpt();
+        k.Enabledepthwise_separable_opt();
         return k;
     }
 

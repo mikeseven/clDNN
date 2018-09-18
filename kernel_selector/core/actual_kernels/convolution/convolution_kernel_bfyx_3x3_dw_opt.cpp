@@ -57,7 +57,7 @@ namespace kernel_selector
         k.EnableSplitSupport();
         k.EnableSubGroup();
         k.EnableSubGroupShort();
-        k.EnableDepthwiseSeparableOpt();
+        k.Enabledepthwise_separable_opt();
         return k;
     }
 

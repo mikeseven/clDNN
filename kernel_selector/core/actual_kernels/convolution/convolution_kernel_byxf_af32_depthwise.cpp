@@ -37,7 +37,7 @@ namespace kernel_selector {
         k.EnableSplitSupport();
         k.EnableInt8Quantization();
         k.EnableOutputCalibration();
-        k.EnableDepthwiseSeparableOpt();
+        k.Enabledepthwise_separable_opt();
         k.DisableTuning();
         return k;
     }
@@ -52,7 +52,7 @@ namespace kernel_selector {
         const convolution_params& params = static_cast<const convolution_params&>(p);
 
         // this kernel is designed for quantization use case
-        if (!params.depthwiseSeparableOpt)
+        if (!params.depthwise_separable_opt)
             return false;
 
         return true;
