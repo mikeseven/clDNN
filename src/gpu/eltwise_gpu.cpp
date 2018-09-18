@@ -95,8 +95,14 @@ public:
         }
 
         // check if strides are the same
+        if(!ew_params.eltwiseParams.stride.empty())
         {
-
+            const auto& stride = ew_params.eltwiseParams.stride[0];
+            for (int i = 1; i < ew_params.eltwiseParams.stride.size(); i++)
+            {
+                if (stride.x != ew_params.eltwiseParams.stride[i].x || stride.y != ew_params.eltwiseParams.stride[i].y)
+                    ew_params.eltwiseParams.layoutBased = true;
+            }
         }
 
         if (primitive->output_calibration_factors.size() > 0 || primitive->output_quantization_factor != 1.0f)
