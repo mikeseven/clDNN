@@ -152,6 +152,38 @@ void network_impl::execute(const std::vector<refcounted_obj_ptr<event_impl>>& ev
         }
     }
 
+    for (auto& inst : _program->get_processing_order())
+    {
+        //Special handling for mutable data. The event should be the same as the user or dependency with highest processing_num as
+        //the mutable_data can be updated when is both user or dependency.
+        if (inst->is_type<mutable_data>())
+        {
+            decltype(inst->get_processing_num()) proc_num = 0;
+            for (auto& user : inst->get_users())
+            {
+                auto user_proc_num = user->get_processing_num();
+                if (user_proc_num > proc_num)
+                {
+                    _events[inst->id()] = _events[user->id()];
+                    proc_num = user_proc_num;
+                }
+            }
+
+            if (!inst->get_dependencies().empty())
+            {
+                for (auto& dep : inst->get_dependencies())
+                {
+                    auto dep_proc_num = dep->get_processing_num();
+                    if (dep_proc_num > proc_num)
+                    {
+                        _events[inst->id()] = _events[dep->id()];
+                        proc_num = dep_proc_num;
+                    }
+                }
+            }
+        }
+    }
+
     for (auto& dout : _data_outputs) //data primitives are not executed so if they are marked as output we need to add them valid events manually
     {
         _events[dout->id()] = get_engine().create_user_event(true);
