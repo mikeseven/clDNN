@@ -41,6 +41,22 @@ namespace kernel_selector
         }
     }
 
+    ParamsKey eltwise_params::GetParamsKey() const
+    {
+        ParamsKey k = base_params::GetParamsKey();
+        if (int8_quantization)
+        {
+            k.EnableInt8Quantization();
+        }
+
+        if (output_calibration)
+        {
+            k.EnableOutputCalibration();
+        }
+
+        return k;
+    }
+
     bool EltwiseKernelBase::Validate(const Params& p, const optional_params& o) const
     {
         if (p.GetType() != KernelType::ELTWISE ||
@@ -56,7 +72,7 @@ namespace kernel_selector
             return false;
         }
 
-        auto& operations = params.eltwiseParams.operations;
+        auto& operations = params.operations;
 
         if (operations.size() == 0)
         {
@@ -91,24 +107,24 @@ namespace kernel_selector
         JitConstants jit = MakeBaseParamsJitConstants(params);
 
         jit.AddConstants({
-            MakeJitConstant("ELTWISE_LAYOUT_BASED", params.eltwiseParams.layoutBased),
-            MakeJitConstant("QUANTIZATION_TERM",    params.eltwiseParams.int8_quantization),
+            MakeJitConstant("ELTWISE_LAYOUT_BASED", params.layoutBased),
+            MakeJitConstant("QUANTIZATION_TERM",    params.int8_quantization),
         });
 
-        if (params.eltwiseParams.int8_quantization)
+        if (params.int8_quantization)
         {
-            if (params.eltwiseParams.output_calibration)
+            if (params.output_calibration)
             {
-                jit.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.eltwiseParams.output_calibration));
+                jit.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.output_calibration));
                 jit.AddConstant(MakeJitConstant("O_QF", params.output_calibration_factors[0]));
 
             }
             else
-                jit.AddConstants({ MakeJitConstant("O_QF",       params.eltwiseParams.output_quantization_factor) });
+                jit.AddConstants({ MakeJitConstant("O_QF",       params.output_quantization_factor) });
         }
 
         std::string inputs_decls, vload_decls;
-        auto& updateInputs = params.eltwiseParams.updateInputIds;
+        auto& updateInputs = params.updateInputIds;
 
         for (size_t i = 0; i < params.inputs.size(); i++)
         {
@@ -143,8 +159,8 @@ namespace kernel_selector
 
         std::string do_eltwise;
 
-        auto& operations   = params.eltwiseParams.operations;
-        auto& coefficients = params.eltwiseParams.coefficients;
+        auto& operations   = params.operations;
+        auto& coefficients = params.coefficients;
 
         for (size_t op_num = 0; op_num < operations.size(); op_num++)
         {
@@ -187,7 +203,7 @@ namespace kernel_selector
                 cast_type = "(MAKE_VECTOR_TYPE(UNIT_TYPE, 8))";
                 op = "const MAKE_VECTOR_TYPE(UNIT_TYPE, 8) tmp" + op_num_str + " = ";
             }
-            else if(params.eltwiseParams.int8_quantization)
+            else if(params.int8_quantization)
             {
                 cast_type = "(int)";
                 op = "const int tmp" + op_num_str + " = ";
@@ -251,7 +267,7 @@ namespace kernel_selector
 
         jit.AddConstant(MakeJitConstant("DO_ELTWISE", do_eltwise));
 
-        if (params.eltwiseParams.layoutBased || params.eltwiseParams.int8_quantization)
+        if (params.layoutBased || params.int8_quantization)
         {
             jit.Merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
         }
@@ -268,7 +284,7 @@ namespace kernel_selector
     {
         DispatchData kd;
 
-        if (params.eltwiseParams.layoutBased || params.eltwiseParams.int8_quantization)
+        if (params.layoutBased || params.int8_quantization)
         {
             auto global = GetTensorFriendlyWorkGroups(params.inputs[0]);
             kd.gws0 = global[0];
@@ -331,7 +347,7 @@ namespace kernel_selector
         kernel.workGroups.local = { runInfo.lws0, runInfo.lws1, runInfo.lws2 };
 
         kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
-        kernel.arguments = GetArgsDesc((uint32_t)newParams.inputs.size(), false, false, newParams.eltwiseParams.int8_quantization, newParams.eltwiseParams.output_calibration);
+        kernel.arguments = GetArgsDesc((uint32_t)newParams.inputs.size(), false, false, newParams.int8_quantization, newParams.output_calibration);
 
         kd.estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 

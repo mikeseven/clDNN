@@ -71,16 +71,16 @@ namespace kernel_selector {
 
         //TODO: add support to this implementation when user requests input values updates
         bool bCheckUpdateInput = true;
-        if (!ewParams.eltwiseParams.updateInputIds.empty())
+        if (!ewParams.updateInputIds.empty())
             bCheckUpdateInput = false;
 
         //TODO: add support for reading from output buffer and using its values in computation
         bool bCheckUseOutput = true;
-        for (size_t op = 0; op < ewParams.eltwiseParams.operations.size(); op++)
+        for (size_t op = 0; op < ewParams.operations.size(); op++)
         {
-            for (size_t input_idx = 0; input_idx < ewParams.eltwiseParams.operations[op].inputs.size(); input_idx++)
+            for (size_t input_idx = 0; input_idx < ewParams.operations[op].inputs.size(); input_idx++)
             {
-                if (ewParams.eltwiseParams.operations[op].inputs[input_idx].mode == EltwiseInputMode::OUTPUT_BUFFER)
+                if (ewParams.operations[op].inputs[input_idx].mode == EltwiseInputMode::OUTPUT_BUFFER)
                 {
                     bCheckUseOutput = false;
                     break;
