@@ -94,6 +94,11 @@ public:
                 ew_params.layoutBased = true;
         }
 
+        // check if strides are the same
+        {
+
+        }
+
         if (primitive->output_calibration_factors.size() > 0 || primitive->output_quantization_factor != 1.0f)
         {
             ew_params.int8_quantization = true;
@@ -105,6 +110,17 @@ public:
             }
             else
                 ew_params.output_quantization_factor = arg.get_output_qf();
+        }
+
+        // stride
+        if (!primitive->stride.empty())
+        {
+            const auto& stride = primitive->stride;
+            ew_params.eltwiseParams.stride.resize(stride.size());
+            for (int i = 0; i < primitive->stride.size(); i++)
+            {
+                ew_params.eltwiseParams.stride[i] = { (uint32_t)stride[i].spatial[0], (uint32_t)stride[i].spatial[1] };
+            }
         }
 
         auto& kernel_selector = kernel_selector::eltwise_kernel_selector::Instance();

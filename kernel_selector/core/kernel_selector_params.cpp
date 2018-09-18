@@ -345,6 +345,11 @@ namespace kernel_selector {
         }
     }
 
+    void ParamsKey::EnableEltwiseStride()
+    {
+        key.restrict.val.dedicated.eltwise.stride = 1;
+    }
+
     void ParamsKey::EnableArgMaxMinAxis(ArgMaxMinAxis a)
     {
         switch (a)

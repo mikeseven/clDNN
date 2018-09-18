@@ -89,6 +89,36 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
 
     /// @brief Constructs eltwise primitive.
     /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param input2 Second input primitive id with values needed for eltwise computation.
+    /// @param stride Defines shift in input buffers between adjacent calculations of output values.
+    /// @param mode Eltwise mode.
+    /// @param with_activation Enables Relu activation.
+    /// @param activation_slp Relu activation slope.
+    eltwise(
+        const primitive_id& id,
+        const primitive_id& input,
+        const primitive_id& input2,
+        std::vector<tensor> stride,
+        eltwise_mode mode,
+        bool with_activation = false,
+        float activation_slp = 0.0f,
+        const padding& output_padding = padding()
+    )
+        :primitive_base(id, { input, input2 }, output_padding)
+        , output_calibration_factors("")
+        , output_quantization_factor(1.0f)
+        , mode(mode)
+        , coefficients(std::vector<float>(0))
+        , with_activation(with_activation)
+        , activation_negative_slope(activation_slp)
+        , stride(stride)
+        , _stride(tensor_vector_to_cldnn_vector(stride))
+    {
+    }
+
+    /// @brief Constructs eltwise primitive.
+    /// @param id This primitive id.
     /// @param inputs Input primitives ids.
     /// @param mode Eltwise mode.
     /// @param with_activation Enables Relu activation.

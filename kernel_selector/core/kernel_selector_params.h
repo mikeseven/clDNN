@@ -171,6 +171,10 @@ namespace kernel_selector
                         {
                             uint32_t winograd : 1;
                         } reorder;
+                        struct eltwise_t
+                        {
+                            uint32_t stride : 1;
+                        } eltwise;
                         struct lstm_gemm_t {
                             uint32_t bias : 1;
                             uint32_t hidden : 1;
@@ -272,6 +276,7 @@ namespace kernel_selector
         void EnableSoftmaxDim(SoftmaxDim d);
         void EnableConcatAxis(ConcatAxis a);
         void EnableUpSamplingSampleType(SampleType a);
+        void EnableEltwiseStride();
         void EnableLSTMGEMMBias() { key.restrict.val.dedicated.lstm_gemm.bias = 1; }
         void EnableLSTMGEMMHidden() { key.restrict.val.dedicated.lstm_gemm.hidden = 1; }
         void EnableLSTMEltCell() { key.restrict.val.dedicated.lstm_elt.cell = 1; }
