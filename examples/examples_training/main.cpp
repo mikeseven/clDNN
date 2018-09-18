@@ -227,6 +227,9 @@ void run_topology(const execution_params &ep)
     else
         throw std::runtime_error("Topology \"" + ep.topology_name + "\" not implemented!");
 
+    //load images in fp32 and convert them in topology
+    input_layout.data_type = cldnn::data_types::f32;
+
     auto build_time = timer_build.uptime();
 
     if (ep.print_type == Verbose)
@@ -276,15 +279,7 @@ void run_topology(const execution_params &ep)
             // load croped and resized images into input
             if (ep.topology_name != "lenet" && ep.topology_name != "lenet_train" && ep.topology_name != "vgg16_train" && ep.topology_name != "vgg16_test" && ep.topology_name != "resnet50_train")
             {
-                if (ep.use_half)
-                {
-                    load_images_from_file_list<half_t>(input_files_in_batch, input);
-                }
-                else
-                {
-                    load_images_from_file_list(input_files_in_batch, input);
-                }
-
+                load_images_from_file_list(input_files_in_batch, input);
             }
             else if (ep.topology_name == "lenet")
             {
@@ -293,13 +288,11 @@ void run_topology(const execution_params &ep)
 
                 float acc = 0;
                 uint32_t labels_num = 10;
-                auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
+                auto labels = cldnn::memory::allocate(engine, { cldnn::data_types::f32, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
                 for (uint32_t i = ep.image_offset; i < ep.image_number + ep.image_offset; i += batch_size)
                 {
-                    if (ep.use_half)
-                        load_data_from_file_list_lenet<half_t>(input_list, input, i, batch_size, false, labels);
-                    else
-                        load_data_from_file_list_lenet(input_list, input, i, batch_size, false, labels);
+                    load_data_from_file_list_lenet(input_list, input, i, batch_size, false, labels);
+
                     network.set_input_data("input", input);
                     auto outputs = network.execute();
                     auto o = outputs.at("output").get_memory().pointer<float>();
@@ -331,7 +324,7 @@ void run_topology(const execution_params &ep)
                     throw std::runtime_error("Lenet only support mnist images. Please use --image_set=mnist!");
 
                 uint32_t labels_num = 10;
-                auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
+                auto labels = cldnn::memory::allocate(engine, { cldnn::data_types::f32, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
                 float base_learning_rate = ep.learning_rate;
                 float learning_rate = base_learning_rate;
                 for (uint32_t epoch_it = 0; epoch_it < ep.epoch_number; epoch_it++)
@@ -345,10 +338,7 @@ void run_topology(const execution_params &ep)
                         loss = 0;
                         network.set_learning_rate(learning_rate);
 
-                        if (ep.use_half)
-                            load_data_from_file_list_lenet<half_t>(input_list, input, learn_it, batch_size, true, labels);
-                        else
-                            load_data_from_file_list_lenet(input_list, input, learn_it, batch_size, true, labels);
+                        load_data_from_file_list_lenet(input_list, input, learn_it, batch_size, true, labels);
 
                         network.set_input_data("input", input);
                         network.set_input_data("labels", labels);
@@ -378,7 +368,7 @@ void run_topology(const execution_params &ep)
                     throw std::runtime_error("Vgg16 and resnet50 support only imagenet images!");
 
                 float acc = 0;
-                auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
+                auto labels = cldnn::memory::allocate(engine, { cldnn::data_types::f32, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
                 auto fc6_dropout_mem = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,4096,1 } });
                 auto fc7_dropout_mem = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,4096,1 } });
                 float base_learning_rate = ep.learning_rate;
@@ -401,10 +391,7 @@ void run_topology(const execution_params &ep)
                         }
                         network.set_learning_rate(learning_rate);
 
-                        if (ep.use_half)
-                            load_data_from_file_list_imagenet<half_t>(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
-                        else
-                            load_data_from_file_list_imagenet(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
+                        load_data_from_file_list_imagenet(input_list, ep.input_dir, input, learn_it, batch_size, true, labels);
 
                         //add dropout layers to VGG16
                         if (ep.topology_name == "vgg16_train")
@@ -461,7 +448,7 @@ void run_topology(const execution_params &ep)
 
                 float acc = 0;
                 uint32_t labels_num = 1000;
-                auto labels = cldnn::memory::allocate(engine, { input_layout.data_type, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
+                auto labels = cldnn::memory::allocate(engine, { cldnn::data_types::f32, cldnn::format::bfyx,{ input_layout.size.batch[0],1,1,1 } });
                 for (uint32_t learn_it = ep.image_offset; learn_it < ep.image_number + ep.image_offset; learn_it += batch_size)
                 {
                     if (ep.use_half)
