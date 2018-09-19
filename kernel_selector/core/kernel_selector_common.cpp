@@ -70,6 +70,7 @@ namespace kernel_selector
         case ActivationFunction::ACOS:                  method = "ACOS"; break;
         case ActivationFunction::COSH:                  method = "COSH"; break;
         case ActivationFunction::LOG:                   method = "LOG"; break;
+		case ActivationFunction::LOG2:                  method = "LOG2"; break;
         case ActivationFunction::EXP:                   method = "EXP"; break;
         case ActivationFunction::NONE:                  method = "NONE"; break;
         case ActivationFunction::NONE_GRAD:             method = "NONE_GRAD"; break;

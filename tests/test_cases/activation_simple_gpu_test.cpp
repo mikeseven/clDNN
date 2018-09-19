@@ -246,7 +246,8 @@ TEST(activation_f32_fw_gpu, basic_yxfb_asin_acos_log)
     std::vector<cldnn_activation_func> funcs = {
         activation_asin,
         activation_acos,
-        activation_log
+        activation_log,
+		activation_log2
     };
 
     for (auto func : funcs)
@@ -288,6 +289,9 @@ TEST(activation_f32_fw_gpu, basic_yxfb_asin_acos_log)
             case activation_log:
                 EXPECT_FLOAT_EQ(std::log((float)input_ptr[i]), output_ptr[i]);
                 break;
+			case activation_log2:
+				EXPECT_FLOAT_EQ(std::log2((float)input_ptr[i]), output_ptr[i]);
+				break;
             default:
                 break;
             }

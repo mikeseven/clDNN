@@ -431,6 +431,7 @@ typedef enum cldnn_activation_func_t
     activation_acos,                    // acos(val)
     activation_cosh,                    // cosh(val)
     activation_log,                     // log(val)
+	activation_log2,					// log2(val)
     activation_exp,                     // exp(val)
 } cldnn_activation_func;
 

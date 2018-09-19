@@ -301,6 +301,8 @@ kernel_selector::activation_function get_kernel_selector_activation_param(cldnn_
         return kernel_selector::activation_function::COSH;
     case activation_log:
         return kernel_selector::activation_function::LOG;
+	case activation_log2:
+		return kernel_selector::activation_function::LOG2;
     case activation_exp:
         return kernel_selector::activation_function::EXP;
     default:

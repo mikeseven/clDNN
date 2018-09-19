@@ -115,6 +115,7 @@ namespace kernel_selector
         ACOS,
         COSH,
         LOG,
+		LOG2,
         EXP,
         NONE,
         NONE_GRAD
