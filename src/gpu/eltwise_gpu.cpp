@@ -26,7 +26,7 @@ namespace cldnn { namespace gpu {
 
 namespace
 {
-    inline kernel_selector::eltwise_mode convect_to_eltwise_mode(eltwise_mode mode)
+    inline kernel_selector::eltwise_mode convert_to_eltwise_mode(eltwise_mode mode)
     {
         switch (mode)
         {
@@ -74,13 +74,13 @@ public:
 
         ew_params.operations.push_back({ 
             { kernel_selector::eltwise_params::InputType::Buffer(0), kernel_selector::eltwise_params::InputType::Buffer(1) },
-            convect_to_eltwise_mode(primitive->mode) });
+            convert_to_eltwise_mode(primitive->mode) });
 
         for (uint32_t i = 2; i < static_cast<uint32_t>(arg.inputs_count()); i++)
         {
             ew_params.operations.push_back({{ kernel_selector::eltwise_params::InputType::Intermediate(i-2),
                                                             kernel_selector::eltwise_params::InputType::Buffer(i) },
-                                                            convect_to_eltwise_mode(primitive->mode) });
+                                                            convert_to_eltwise_mode(primitive->mode) });
         }
 
         if (primitive->mode == eltwise_mode::sum)
@@ -99,7 +99,7 @@ public:
         {
             const auto& stride = primitive->stride;
             ew_params.stride.resize(stride.size());
-            for (int i = 0; i < primitive->stride.size(); i++)
+            for (size_t i = 0; i < primitive->stride.size(); i++)
             {
                 ew_params.stride[i] = { (uint32_t)stride[i].spatial[0], (uint32_t)stride[i].spatial[1] };
             }
@@ -109,7 +109,7 @@ public:
         if(!ew_params.stride.empty())
         {
             const auto& stride = ew_params.stride[0];
-            for (int i = 1; i < ew_params.stride.size(); i++)
+            for (size_t i = 1; i < ew_params.stride.size(); i++)
             {
                 if (stride.x != ew_params.stride[i].x || stride.y != ew_params.stride[i].y)
                     ew_params.layoutBased = true;

@@ -152,8 +152,8 @@ eltwise_inst::typed_primitive_inst(network_impl& network, eltwise_node const& no
 
         const auto out_x = node.get_output_layout().size.spatial[0];
         const auto out_y = node.get_output_layout().size.spatial[1];
-        // check if strides are correctly set. I.e INPUT_SIZE_X * STRIDE_X = OUTPUT_SIZE_X, same for Y dimension
-        for (int i = 0; i < node.inputs_count(); i++)
+        // check if strides are correctly set. I.e INPUT_SIZE_X / STRIDE_X = OUTPUT_SIZE_X, same for Y dimension
+        for (size_t i = 0; i < node.inputs_count(); i++)
         {
             const auto& in_layout = node.input(i).get_output_layout();
             auto stride = prim->stride[i];
