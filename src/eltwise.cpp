@@ -142,5 +142,30 @@ eltwise_inst::typed_primitive_inst(network_impl& network, eltwise_node const& no
     {
         CLDNN_ERROR_NOT_EQUAL(node.id(), "Eltwise feature size", feature_size, "input feature size", input_feature_size, "");
     }
+
+    // check for stride
+    auto prim = node.get_primitive();
+    if (!prim->stride.empty())
+    {
+        // number of strides must match number of inputs
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "Eltwise inputs count", node.inputs_count(), "Eltwise strides count", prim->stride.size(), "");
+
+        const auto out_x = node.get_output_layout().size.spatial[0];
+        const auto out_y = node.get_output_layout().size.spatial[1];
+        // check if strides are correctly set. I.e INPUT_SIZE_X * STRIDE_X = OUTPUT_SIZE_X, same for Y dimension
+        for (int i = 0; i < node.inputs_count(); i++)
+        {
+            const auto& in_layout = node.input(i).get_output_layout();
+            auto stride = prim->stride[i];
+
+            const auto in_x_div_stride_x = in_layout.size.spatial[0] / stride.spatial[0];
+            if(in_x_div_stride_x != out_x)
+                CLDNN_ERROR_NOT_EQUAL(node.id(), "Eltwise input_x / stride_x", in_x_div_stride_x, "Eltwise output_x", out_x, "");
+
+            const auto in_y_div_stride_y = in_layout.size.spatial[1] / stride.spatial[1];
+            if(in_y_div_stride_y != out_y)
+                CLDNN_ERROR_NOT_EQUAL(node.id(), "Eltwise inputyx / stride_y", in_y_div_stride_y, "Eltwise output_y", out_y, "");
+        }
+    }
 }
 }
