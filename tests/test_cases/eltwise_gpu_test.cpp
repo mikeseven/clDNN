@@ -890,10 +890,10 @@ TEST(eltwise_gpu_f32, stride_test_2x2) {
 
     //
     //  Output:
-    //  f0: b0: 1  3    b1:  17  19       
-    //  f0: b0: 9  11   b1:  25  27    
-    //  f1: b0: 33 35   b1:  49  51     
-    //  f1: b0: 41 43   b1:  57  59     
+    //  f0: b0: 1  3    b1:  17  19
+    //  f0: b0: 9  11   b1:  25  27
+    //  f1: b0: 33 35   b1:  49  51
+    //  f1: b0: 41 43   b1:  57  59
     //
     engine engine;
 
@@ -912,7 +912,7 @@ TEST(eltwise_gpu_f32, stride_test_2x2) {
         4.f,  -0.5f, 8.f,  8.f
         });
 
-    set_values(input2, {
+    set_values<float>(input2, {
         1,  17, 33, 49,
         2,  18, 33, 50,
         3,  19, 35, 51,

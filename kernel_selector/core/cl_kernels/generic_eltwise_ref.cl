@@ -16,13 +16,25 @@
 
 #include "include/include_all.cl"
 
+
+#ifdef INPUT_STRIDED
+
+#define GET_INDEX(prefix, num) \
+    CAT(CAT(prefix, num), _OFFSET) + \
+    ((d1 * CAT(CAT(prefix, num), _STRIDE_X)) % CAT(CAT(prefix, num), _SIZE_X))*CAT(CAT(prefix, num), _X_PITCH) +\
+    ((d2 * CAT(CAT(prefix, num), _STRIDE_Y)) % CAT(CAT(prefix, num), _SIZE_Y))*CAT(CAT(prefix, num), _Y_PITCH) +\
+    (d3 % CAT(CAT(prefix, num), _FEATURE_NUM))*CAT(CAT(prefix, num), _FEATURE_PITCH) + \
+    (d4 % CAT(CAT(prefix, num), _BATCH_NUM  ))*CAT(CAT(prefix, num), _BATCH_PITCH)
+
+#else
+
 #if ELTWISE_LAYOUT_BASED || QUANTIZATION_TERM
 
 #define GET_INDEX(prefix, num)                                                          \
     CAT(CAT(prefix, num), _OFFSET) +                                                    \
-    (d1 % CAT(CAT(prefix, num), _SIZE_X     ))*CAT(CAT(prefix, num), _X_PITCH) +         \
-    (d2 % CAT(CAT(prefix, num), _SIZE_Y     ))*CAT(CAT(prefix, num), _Y_PITCH) +         \
-    (d3 % CAT(CAT(prefix, num), _FEATURE_NUM))*CAT(CAT(prefix, num), _FEATURE_PITCH) +   \
+    (d1 % CAT(CAT(prefix, num), _SIZE_X     ))*CAT(CAT(prefix, num), _X_PITCH) +        \
+    (d2 % CAT(CAT(prefix, num), _SIZE_Y     ))*CAT(CAT(prefix, num), _Y_PITCH) +        \
+    (d3 % CAT(CAT(prefix, num), _FEATURE_NUM))*CAT(CAT(prefix, num), _FEATURE_PITCH) +  \
     (d4 % CAT(CAT(prefix, num), _BATCH_NUM  ))*CAT(CAT(prefix, num), _BATCH_PITCH)
 
 #elif ELTWISE_NO_PITCH_SAME_DIMS
@@ -37,6 +49,8 @@
     (d2 % CAT(CAT(prefix, num), _SIZES)[1])*CAT(CAT(prefix, num), _PITCHES)[1] +    \
     (d3 % CAT(CAT(prefix, num), _SIZES)[2])*CAT(CAT(prefix, num), _PITCHES)[2] +    \
     (d4 % CAT(CAT(prefix, num), _SIZES)[3])*CAT(CAT(prefix, num), _PITCHES)[3]
+
+#endif
 
 #endif
 

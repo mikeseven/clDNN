@@ -94,14 +94,25 @@ public:
                 ew_params.layoutBased = true;
         }
 
-        // check if strides are the same
-        if(!ew_params.eltwiseParams.stride.empty())
+        // stride
+        if (!primitive->stride.empty())
         {
-            const auto& stride = ew_params.eltwiseParams.stride[0];
-            for (int i = 1; i < ew_params.eltwiseParams.stride.size(); i++)
+            const auto& stride = primitive->stride;
+            ew_params.stride.resize(stride.size());
+            for (int i = 0; i < primitive->stride.size(); i++)
             {
-                if (stride.x != ew_params.eltwiseParams.stride[i].x || stride.y != ew_params.eltwiseParams.stride[i].y)
-                    ew_params.eltwiseParams.layoutBased = true;
+                ew_params.stride[i] = { (uint32_t)stride[i].spatial[0], (uint32_t)stride[i].spatial[1] };
+            }
+        }
+
+        // check if strides are the same
+        if(!ew_params.stride.empty())
+        {
+            const auto& stride = ew_params.stride[0];
+            for (int i = 1; i < ew_params.stride.size(); i++)
+            {
+                if (stride.x != ew_params.stride[i].x || stride.y != ew_params.stride[i].y)
+                    ew_params.layoutBased = true;
             }
         }
 
@@ -116,17 +127,6 @@ public:
             }
             else
                 ew_params.output_quantization_factor = arg.get_output_qf();
-        }
-
-        // stride
-        if (!primitive->stride.empty())
-        {
-            const auto& stride = primitive->stride;
-            ew_params.eltwiseParams.stride.resize(stride.size());
-            for (int i = 0; i < primitive->stride.size(); i++)
-            {
-                ew_params.eltwiseParams.stride[i] = { (uint32_t)stride[i].spatial[0], (uint32_t)stride[i].spatial[1] };
-            }
         }
 
         auto& kernel_selector = kernel_selector::eltwise_kernel_selector::Instance();

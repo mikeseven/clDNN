@@ -304,7 +304,7 @@ struct eltwise : public primitive_base<eltwise, CLDNN_PRIMITIVE_DESC(eltwise)>
         , coefficients(float_arr_to_vector(dto->coefficients))
         , with_activation(dto->with_activation != 0)
         , activation_negative_slope(dto->activation_negative_slope)
-        , stride(std::vector<tensor>(0))
+        , stride(tensor_arr_to_vector(dto->stride))
         , _stride(tensor_vector_to_cldnn_vector(stride))
     {
         if (dto->input.size < 2)
