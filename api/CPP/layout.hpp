@@ -42,20 +42,20 @@ enum class data_types : size_t
 /// Converts C++ type to @ref data_types .
 template <typename T> struct type_to_data_type;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-template<> struct type_to_data_type  <int8_t> { static const data_types value = data_types::i8; };
-template<> struct type_to_data_type <uint8_t> { static const data_types value = data_types::u8; };
-template<> struct type_to_data_type  <int32_t> { static const data_types value = data_types::i32; };
-template<> struct type_to_data_type  <int64_t> { static const data_types value = data_types::i64; };
-template<> struct type_to_data_type  <half_t> { static const data_types value = data_types::f16; };
-template<> struct type_to_data_type   <float> { static const data_types value = data_types::f32; };
+template<> struct type_to_data_type<int8_t>  { static const data_types value = data_types::i8; };
+template<> struct type_to_data_type<uint8_t> { static const data_types value = data_types::u8; };
+template<> struct type_to_data_type<int32_t> { static const data_types value = data_types::i32; };
+template<> struct type_to_data_type<int64_t> { static const data_types value = data_types::i64; };
+template<> struct type_to_data_type<half_t>  { static const data_types value = data_types::f16; };
+template<> struct type_to_data_type<float>   { static const data_types value = data_types::f32; };
 #endif
 
 /// Converts @ref data_types to C++ type.
 template<data_types Data_Type> struct data_type_to_type;
 #ifndef DOXYGEN_SHOULD_SKIP_THIS
-template<> struct data_type_to_type <data_types::i8> { typedef int8_t type; };
-template<> struct data_type_to_type <data_types::i32> { typedef int32_t type; };
-template<> struct data_type_to_type <data_types::i64> { typedef int64_t type; };
+template<> struct data_type_to_type<data_types::i8>  { typedef int8_t type; };
+template<> struct data_type_to_type<data_types::i32> { typedef int32_t type; };
+template<> struct data_type_to_type<data_types::i64> { typedef int64_t type; };
 template<> struct data_type_to_type<data_types::f16> { typedef half_t type; };
 template<> struct data_type_to_type<data_types::f32> { typedef float type; };
 #endif
