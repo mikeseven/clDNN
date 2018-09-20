@@ -129,7 +129,8 @@ TEST(activation_f32_fw_gpu, basic_yxfb_all_functions)
         activation_sinh,
         activation_cos,
         activation_cosh,
-        activation_exp
+        activation_exp,
+		activation_log2,
     };
 
     cldnn_activation_additional_params params = { 0.5f, 2.5f };
@@ -228,6 +229,9 @@ TEST(activation_f32_fw_gpu, basic_yxfb_all_functions)
                 case activation_exp:
                     EXPECT_FLOAT_EQ(std::exp((float)input_ptr[i]), output_ptr[i]);
                     break;
+				case activation_log2:
+					EXPECT_FLOAT_EQ(std::log2((float)input_ptr[i]), output_ptr[i]);
+					break;
                 default:
                     break;
                 }
