@@ -70,11 +70,6 @@ KERNEL(convolution_grad_weights_gpu_7x7)(
                     if(!zero_x && !zero_y)
                     {
                         const float delta_f = input[input_idx] * lr * grad;
-#if MOMENTUM
-                        float dw = prev_grad_w[weights_idx + x_filter];
-                        const float delta_f_m = MOMENTUM_FACTOR * dw;
-                        grad_w[y_filter] += delta_f_m;
-#endif
                         grad_w[y_filter] += delta_f;
                     }
                 } 
@@ -87,16 +82,19 @@ KERNEL(convolution_grad_weights_gpu_7x7)(
     for(uint y_filter = 0; y_filter < 7; y_filter++)
     {
         uint address = weights_idx + 48 - (7 * (6 - y_filter) + (6 - x_filter));
-        filter[address] -= grad_w[y_filter];
 #if MOMENTUM
+        float dw = prev_grad_w[address];
+        const float delta_f_m = MOMENTUM_FACTOR * dw;
+        grad_w[y_filter] += delta_f_m;
         prev_grad_w[address] = grad_w[y_filter];
 #endif
+        filter[address] -= grad_w[y_filter];
     }
 #if BIAS_TERM
     if(ifm == 0 && x_filter == 0)
     {
 #if MOMENTUM
-        UNIT_TYPE update_gradient_b = lr * (prev_grad_b[ofm] * MOMENTUM_FACTOR + grad_b);
+        UNIT_TYPE update_gradient_b = lr * grad_b + prev_grad_b[ofm] * MOMENTUM_FACTOR;
         bias[ofm] -= update_gradient_b;
         prev_grad_b[ofm] = update_gradient_b;
 #else

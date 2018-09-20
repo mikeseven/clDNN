@@ -124,7 +124,7 @@ KERNEL(convolution_grad_weights_gpu_1x1)(
         if(ifm == 0)
         {
 #if MOMENTUM
-            UNIT_TYPE update_gradient_b = lr * (prev_grad_b[ofm] * MOMENTUM_FACTOR + grad_b);
+            UNIT_TYPE update_gradient_b = lr * grad_b + prev_grad_b[ofm] * MOMENTUM_FACTOR;
             bias[ofm] -= update_gradient_b;
             prev_grad_b[ofm] = update_gradient_b;
 #else
