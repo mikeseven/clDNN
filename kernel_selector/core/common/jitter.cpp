@@ -39,6 +39,7 @@ namespace kernel_selector {
         case Datatype::UINT16:  return GetTypeName<uint16_t>();
         case Datatype::INT32:   return GetTypeName<int32_t>();
         case Datatype::UINT32:  return GetTypeName<uint32_t>();
+        case Datatype::INT64:   return GetTypeName<int64_t>();
         case Datatype::F16:     return "half";
         case Datatype::F32:     return GetTypeName<float>();
         default: return "";
@@ -126,12 +127,25 @@ namespace kernel_selector {
     {
         bool bFP16Used = params.output.GetDType() == Datatype::F16;
         bool bInt8Used = params.output.GetDType() == Datatype::INT8;
+        bool bInt32Used = params.output.GetDType() == Datatype::INT32;
+        bool bInt64Used = params.output.GetDType() == Datatype::INT64;
         for (const auto& i : params.inputs)
         {
             bFP16Used |= i.GetDType() == Datatype::F16;
             bInt8Used |= i.GetDType() == Datatype::INT8;
-
+            bInt32Used |= i.GetDType() == Datatype::INT32;
+            bInt64Used |= i.GetDType() == Datatype::INT64;
         }
+
+        std::string unit_type = "float";
+        if (bInt8Used)
+            unit_type = "char";
+        else if (bFP16Used)
+            unit_type = "half";
+        else if (bInt32Used)
+            unit_type = "int";
+        else if (bInt64Used)
+            unit_type = "long";
 
         JitConstants jit{
             MakeJitConstant("OUTPUT",               params.output),
@@ -141,7 +155,9 @@ namespace kernel_selector {
             MakeJitConstant("MMAD_SUPPORTED",       params.engineInfo.bIMMADSupport),
             MakeJitConstant("FP16_UNIT_USED",       bFP16Used),
             MakeJitConstant("INT8_UNIT_USED",       bInt8Used),
-            MakeJitConstant("UNIT_TYPE",            bInt8Used ? "char" : bFP16Used ? "half" : "float"),
+            MakeJitConstant("INT32_UNIT_USED",      bInt32Used),
+            MakeJitConstant("INT64_UNIT_USED",      bInt64Used),
+            MakeJitConstant("UNIT_TYPE",            unit_type),
             MakeJitConstant("NL_M",                 params.activationParams.m),
             MakeJitConstant("NL_N",                 params.activationParams.n),
             MakeJitConstant("ACTIVATION_FUNCTION_" + toString(params.activationFunc), ""),

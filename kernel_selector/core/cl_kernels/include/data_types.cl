@@ -52,6 +52,32 @@
     #define UNIT_MAX_FUNC max
     #define UNIT_MIN_FUNC min
 
+#elif INT32_UNIT_USED
+    #ifndef UNIT_TYPE
+    #define UNIT_TYPE int
+    #endif
+
+    #define UNIT_VAL_MAX INT_MAX
+    #define UNIT_VAL_MIN -UNIT_VAL_MAX
+    #define UNIT_VAL_ONE (int) 1
+    #define UNIT_VAL_ZERO (int) 0
+    #define TO_UNIT_TYPE(v) convert_int(v)
+    #define UNIT_MAX_FUNC max
+    #define UNIT_MIN_FUNC min
+
+#elif INT64_UNIT_USED
+    #ifndef UNIT_TYPE
+    #define UNIT_TYPE long
+    #endif
+
+    #define UNIT_VAL_MAX LONG_MAX
+    #define UNIT_VAL_MIN -UNIT_VAL_MAX
+    #define UNIT_VAL_ONE (long) 1
+    #define UNIT_VAL_ZERO (long) 0
+    #define TO_UNIT_TYPE(v) convert_long(v)
+    #define UNIT_MAX_FUNC max
+    #define UNIT_MIN_FUNC min
+
 #else
     #ifndef UNIT_TYPE
     #define UNIT_TYPE float
