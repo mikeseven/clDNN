@@ -145,7 +145,7 @@ namespace kernel_selector
         return args;
     }
 
-    std::shared_ptr<KernelString> common_kernel_base::GetKernelString(const std::string& name, const std::string& jit, const std::string& entry_point, const std::string& exe_mode) const
+    std::shared_ptr<KernelString> common_kernel_base::GetKernelString(const std::string& name, const std::string& jit, const std::string& entry_point, const EngineInfo& engine_info, const std::string& exe_mode) const
     {
         std::shared_ptr<KernelString> kernel_string = std::make_shared<KernelString>();
 
@@ -156,6 +156,10 @@ namespace kernel_selector
             kernel_string->str = codes[0];
             kernel_string->jit = jit;
             kernel_string->options = exe_mode + " -cl-mad-enable";
+            if (engine_info.bIMMADSupport)
+                kernel_string->options += "-DMMAD_SUPPORTED=1";
+            if (engine_info.bIMADSupport)
+                kernel_string->options += "-DIMAD_SUPPORTED=1";
             kernel_string->entry_point = entry_point;
             kernel_string->batch_compilation = true;
         }
@@ -187,13 +191,13 @@ namespace kernel_selector
         }
     }
 
-   void common_kernel_base::FillCLKernelData(clKernelData& kernel, const CommonDispatchData& runInfo,
+   void common_kernel_base::FillCLKernelData(clKernelData& kernel, const CommonDispatchData& runInfo, const EngineInfo& engine_info,
         const std::string& kernelMapName, const std::string& jit, const std::string& entryPoint, const std::string& exeMode, bool weights, bool bias, int number_of_inputs, bool quantization, bool calibration) const
     {
         Check_RunInfoData(kernelMapName, runInfo);
         kernel.workGroups.global = { runInfo.gws0, runInfo.gws1, runInfo.gws2 };
         kernel.workGroups.local = { runInfo.lws0, runInfo.lws1, runInfo.lws2 };
-        kernel.kernelString = GetKernelString(kernelMapName, jit, entryPoint, exeMode);
+        kernel.kernelString = GetKernelString(kernelMapName, jit, entryPoint, engine_info, exeMode);
         kernel.arguments = GetArgsDesc(number_of_inputs, weights, bias, quantization, calibration);
     }
 }
