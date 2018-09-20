@@ -157,9 +157,9 @@ namespace kernel_selector
             kernel_string->jit = jit;
             kernel_string->options = exe_mode + " -cl-mad-enable";
             if (engine_info.bIMMADSupport)
-                kernel_string->options += "-DMMAD_SUPPORTED=1";
+                kernel_string->options += " -DMMAD_SUPPORTED=1";
             if (engine_info.bIMADSupport)
-                kernel_string->options += "-DIMAD_SUPPORTED=1";
+                kernel_string->options += " -DIMAD_SUPPORTED=1";
             kernel_string->entry_point = entry_point;
             kernel_string->batch_compilation = true;
         }
