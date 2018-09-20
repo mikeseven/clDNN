@@ -62,6 +62,7 @@ namespace kernel_selector
         TILE,
         SELECT,
         BROADCAST,
+        GEMM,
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -386,7 +387,7 @@ namespace kernel_selector
     {
         TUNING_DISABLED,        // Tuning is disabled.
         TUNING_USE_CACHE,       // Tuning using the cached data (no on-line tuning for non-existing data).
-        TUNING_TUNE_AND_CACHE   // Tuning using the cached data if exist, tune and update cache otherwise.
+        TUNING_TUNE_AND_CACHE   // Tuning using the cached data if exist, tune and update cache otherwise.attention_params
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
