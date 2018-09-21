@@ -249,12 +249,6 @@ bool program_node::is_detached(bool whole_branch)
     return true;
 }
 
-bool program_node::has_next() const
-{
-    auto itr = processing_itr;
-    return (++itr == myprog.processing_order.end());
-}
-
 layout program_node::calc_output_layout() const
 {
     return type()->calc_output_layout(*this);

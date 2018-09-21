@@ -327,7 +327,9 @@ typedef enum /*:size_t*/
 	cldnn_i8  = sizeof(int8_t),
     cldnn_f16 = sizeof(int16_t) | CLDNN_FLOAT_TYPE_MASK,
     cldnn_f32 = sizeof(float) | CLDNN_FLOAT_TYPE_MASK,
-    cldnn_u8  = sizeof(uint8_t) | CLDNN_UINT_TYPE_MASK // TODO: move to top of list and re-compile inference engine
+    cldnn_u8  = sizeof(uint8_t) | CLDNN_UINT_TYPE_MASK, // TODO: move to top of list and re-compile inference engine
+    cldnn_i32 = sizeof(int32_t),
+    cldnn_i64 = sizeof(int64_t)
 
 } cldnn_data_type;
 

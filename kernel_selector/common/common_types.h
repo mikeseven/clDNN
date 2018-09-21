@@ -75,6 +75,7 @@ namespace kernel_selector
         UINT16,
         INT32,
         UINT32,
+        INT64,
         F16,
         F32,
     };

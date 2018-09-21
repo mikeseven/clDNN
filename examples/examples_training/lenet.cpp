@@ -41,24 +41,29 @@ using namespace cldnn;
 cldnn::topology build_lenet(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)
 {
     input_layout.size = { batch_size, 1, 28, 28 };
-    auto input = cldnn::input_layout("input", input_layout);
+    auto input = cldnn::input_layout("input", { data_types::f32, input_layout.format, input_layout.size });
 
     auto reordered_input = reorder(
         "reorder",
         input,
         { input_layout.data_type, format::bfyx, input_layout.size });
 
-    auto scale_val = memory::allocate(engine, { input_layout.data_type, format::bfyx,{ 1, 1, 1, 1 } });
+    auto scale_val = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 1, 1 } });
     auto scale_factor = cldnn::data("scale_factor_val", scale_val);
     
     auto ptr = scale_val.pointer<float>();
     ptr[0] = 0.00390625f;
 
+    auto reordered_scale = reorder(
+        "reorder_scale",
+        scale_factor,
+        { input_layout.data_type, format::bfyx, input_layout.size });
+
     // scale input data
     auto scale_input = scale(
         "scale_input",
         reordered_input,
-        scale_factor
+        reordered_scale
         );
 
     auto conv1_w = file::create({ engine, join_path(weights_dir, "conv1_weights.nnd")});
@@ -117,17 +122,23 @@ cldnn::topology build_lenet(const std::string& weights_dir, const cldnn::engine&
     );
 
     auto softmax = cldnn::softmax(
-        "output",
+        "softmax",
         ip2);
 
+    //reorder to fp32 for training loss computation
+    auto reordered_output = reorder(
+        "output",
+        softmax,
+        { data_types::f32, format::bfyx, input_layout.size });
+
     return topology(
-        input, reordered_input,
+        input, reordered_input, reordered_scale,
         scale_factor, scale_input,
         conv1, conv1_w, conv1_b, pool1,
         conv2, conv2_w, conv2_b, pool2,
         ip1, ip1_w, ip1_b,
         ip2, ip2_w, ip2_b,
-        softmax
+        softmax, reordered_output
         );
 }
 
@@ -136,24 +147,34 @@ cldnn::topology build_lenet(const std::string& weights_dir, const cldnn::engine&
 cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, bool use_existing_weights, std::vector<cldnn::primitive_id>& outputs)
 {
     input_layout.size = { batch_size, 1, 28, 28 };
-    auto input = cldnn::input_layout("input", input_layout);
-    auto labels = cldnn::input_layout("labels", { input_layout.data_type, format::bfyx,{ batch_size, 1, 1, 1 } });
+    auto input = cldnn::input_layout("input", { data_types::f32, input_layout.format, input_layout.size });
+    auto labels = cldnn::input_layout("labels", { data_types::f32, format::bfyx,{ batch_size, 1, 1, 1 } });
 
     auto reordered_input = reorder(
         "reorder",
         input,
         { input_layout.data_type, format::bfyx, input_layout.size });
 
-    auto scale_val = memory::allocate(engine, { input_layout.data_type, format::bfyx,{ 1, 1, 1, 1 } });
+    auto reordered_labels = reorder(
+        "reorder_labels",
+        labels,
+        { input_layout.data_type, format::bfyx,{ batch_size, 1, 1, 1 } });
+
+    auto scale_val = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 1, 1 } });
     auto scale_factor = cldnn::data("scale_factor_val", scale_val);
     auto ptr = scale_val.pointer<float>();
     ptr[0] = 0.00390625f;
+
+    auto reordered_scale = reorder(
+        "reorder_scale",
+        scale_factor,
+        { input_layout.data_type, format::bfyx, input_layout.size });
 
     // scale input data
     auto scale_input = scale(
         "scale_input",
         reordered_input,
-        scale_factor
+        reordered_scale
     );
 
     auto conv1_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 20, 1, 5, 5 } };
@@ -246,12 +267,18 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
     auto softmax = cldnn::softmax(
         "softmax",
         ip2);
-    outputs.push_back("softmax");
+
+    //reorder to fp32 for training loss computation
+    auto reordered_output = reorder(
+        "softmax_fp32",
+        softmax,
+        { data_types::f32, format::bfyx, input_layout.size });
+    outputs.push_back("softmax_fp32");
 
     auto softmax_loss_grad = cldnn::softmax_loss_grad(
         "softmax_loss_grad",
         softmax,
-        labels);
+        reordered_labels);
 
     auto ip2_grad_input = fully_connected_grad_input("ip2_grad_input",
         softmax_loss_grad,
@@ -359,7 +386,7 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
     outputs.push_back("output");
 
     return topology(
-        input, reordered_input,
+        input, reordered_input, reordered_scale,
         scale_factor, scale_input,
         conv1, conv1_w, conv1_b,
         pool1_argmax, pool1,
@@ -368,7 +395,7 @@ cldnn::topology build_lenet_train(const std::string& weights_dir, const cldnn::e
         ip1, ip1_w, ip1_b,
         ip1_relu,
         ip2, ip2_w, ip2_b,
-        softmax,
+        softmax, reordered_output, reordered_labels,
         //backward pass
         softmax_loss_grad, labels,
         ip2_grad_input, 

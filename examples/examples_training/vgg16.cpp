@@ -41,7 +41,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
 {
     // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
     input_layout.size = { batch_size, 3, 224, 224 };
-    auto input = cldnn::input_layout("input", input_layout);
+    auto input = cldnn::input_layout("input", { data_types::f32, input_layout.format, input_layout.size });
 
     // subtract mean values
     auto reorder_mean = file::create({ engine, join_path(weights_dir, "imagenet_mean.nnd")});
@@ -261,8 +261,13 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
     );
 
     auto softmax = cldnn::softmax(
-        "output",
+        "softmax",
         fc8);
+
+    auto reordered_output = reorder(
+        "output",
+        softmax,
+        { data_types::f32, format::bfyx, input_layout.size });
 
     cldnn::topology topology{
         input,
@@ -293,7 +298,7 @@ cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine&
         fc6, fc6_w, fc6_b,
         fc7, fc7_w, fc7_b,
         fc8, fc8_w, fc8_b,
-        softmax);
+        softmax, reordered_output);
 
     return topology;
 }
@@ -439,8 +444,8 @@ cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::e
 {
     // [224x224x3xB] convolution->relu->pooling->lrn [1000xB]
     input_layout.size = { batch_size, 3, 224, 224 };
-    auto input = cldnn::input_layout("input", input_layout);
-    auto labels = cldnn::input_layout("labels", { input_layout.data_type, format::bfyx,{ batch_size, 1, 1, 1 } });
+    auto input = cldnn::input_layout("input", { data_types::f32, input_layout.format, input_layout.size });
+    auto labels = cldnn::input_layout("labels", { data_types::f32, format::bfyx,{ batch_size, 1, 1, 1 } });
 
     topology topology_inst{ input, labels };
 
@@ -451,6 +456,11 @@ cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::e
         input,
         { input_layout.data_type, cldnn::format::bfyx, input_layout.size },
         reorder_mean);
+
+    auto reordered_labels = reorder(
+        "reorder_labels",
+        labels,
+        { input_layout.data_type, format::bfyx,{ batch_size, 1, 1, 1 } });
 
     auto conv1_1_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 64, 3, 3, 3 } };
     auto conv1_1_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 64, 1 } };
@@ -630,12 +640,18 @@ cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::e
     auto softmax = cldnn::softmax(
         "softmax",
         fc8_relu);
-    outputs.push_back("softmax");
+
+    //reorder to fp32 for training loss computation
+    auto reordered_output = reorder(
+        "softmax_fp32",
+        softmax,
+        { data_types::f32, format::bfyx, input_layout.size });
+    outputs.push_back("softmax_fp32");
 
     auto softmax_loss_grad = cldnn::softmax_loss_grad(
         "softmax_loss_grad",
         softmax,
-        labels);
+        reordered_labels);
 
     auto fc8_grad_relu = add_relu_grad("fc8_grad_relu", softmax_loss_grad, fc8, topology_inst);
 
@@ -778,7 +794,7 @@ cldnn::topology build_vgg16_train(const std::string& weights_dir, const cldnn::e
         pool5, pool5_argmax,
         fc6_dropout, fc6_dropout_mask,
         fc7_dropout, fc7_dropout_mask,
-        softmax, softmax_loss_grad,
+        softmax, reordered_output, softmax_loss_grad, reordered_labels,
         fc7_dropout_grad, fc6_dropout_grad,
         pool1_grad, pool2_grad, pool3_grad,
         pool4_grad, pool5_grad,
