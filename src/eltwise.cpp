@@ -30,6 +30,12 @@ primitive_type_id eltwise_type_id()
 
 layout eltwise_inst::calc_output_layout(eltwise_node const& node)
 {
+    //list of operations supported for integer types
+    auto mode = node.get_primitive()->mode;
+    std::vector<eltwise_mode> eltwise_int_modes = { eltwise_mode::sum, eltwise_mode::sub, eltwise_mode::prod, eltwise_mode::div };
+    if (std::find(eltwise_int_modes.begin(), eltwise_int_modes.end(), mode) == eltwise_int_modes.end())
+        CLDNN_ERROR_MESSAGE(node.id(), "Requested eltwise mode is not supported for integer types.");
+
     return node.input().get_non_padded_output_layout();
 }
 

@@ -21,8 +21,10 @@ namespace kernel_selector {
     ParamsKey UpSamplingKernelRef::GetSupportedKey() const
     {
         ParamsKey k;
-        k.EnableAllInputDataType();
-        k.EnableAllOutputDataType();
+        k.EnableInputDataType(Datatype::F16);
+        k.EnableInputDataType(Datatype::F32);
+        k.EnableOutputDataType(Datatype::F16);
+        k.EnableOutputDataType(Datatype::F32);
         k.EnableDifferentTypes();
         k.EnableAllInputLayout();
         k.EnableAllOutputLayout();
