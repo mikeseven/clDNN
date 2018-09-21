@@ -142,6 +142,7 @@ namespace kernel_selector
         case KernelType::REORG_YOLO:        return "REORG_YOLO";
         case KernelType::ELTWISE:           return "ELTWISE";
         case KernelType::REORDER:           return "REORDER";
+        case KernelType::SELECT:            return "SELECT";
         default:
             return "";
         }
