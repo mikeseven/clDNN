@@ -30,13 +30,19 @@ primitive_type_id eltwise_type_id()
 
 layout eltwise_inst::calc_output_layout(eltwise_node const& node)
 {
+    auto input_node_layout = node.input().get_non_padded_output_layout();
     //list of operations supported for integer types
-    auto mode = node.get_primitive()->mode;
-    std::vector<eltwise_mode> eltwise_int_modes = { eltwise_mode::sum, eltwise_mode::sub, eltwise_mode::prod, eltwise_mode::div };
-    if (std::find(eltwise_int_modes.begin(), eltwise_int_modes.end(), mode) == eltwise_int_modes.end())
-        CLDNN_ERROR_MESSAGE(node.id(), "Requested eltwise mode is not supported for integer types.");
+    if (input_node_layout.data_type == data_types::i8 ||
+        input_node_layout.data_type == data_types::i32 ||
+        input_node_layout.data_type == data_types::i64)
+    {
+        auto mode = node.get_primitive()->mode;
+        std::vector<eltwise_mode> eltwise_int_modes = { eltwise_mode::sum, eltwise_mode::sub, eltwise_mode::prod, eltwise_mode::div };
+        if (std::find(eltwise_int_modes.begin(), eltwise_int_modes.end(), mode) == eltwise_int_modes.end())
+            CLDNN_ERROR_MESSAGE(node.id(), "Requested eltwise mode is not supported for integer types.");
+    }
 
-    return node.input().get_non_padded_output_layout();
+    return input_node_layout;
 }
 
 static inline std::string stringify_vector(std::vector<float> v)
