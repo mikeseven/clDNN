@@ -45,6 +45,9 @@ namespace kernel_selector {
         case Datatype::UINT32:
             key.inputType.val.uint32 = 1;
             break;
+        case Datatype::INT64:
+            key.inputType.val.int64 = 1;
+            break;
         case Datatype::F16:
             key.inputType.val.F16 = 1;
             break;
@@ -82,6 +85,9 @@ namespace kernel_selector {
             break;
         case Datatype::UINT32:
             key.outputType.val.uint32 = 1;
+            break;
+        case Datatype::INT64:
+            key.outputType.val.int64 = 1;
             break;
         case Datatype::F16:
             key.outputType.val.F16 = 1;

@@ -67,24 +67,24 @@ namespace kernel_selector {
 
         ///////////////
         jit.AddConstants({
-            MakeJitConstant("ELTWISE_LAYOUT_BASED", params.eltwiseParams.layoutBased),
-            MakeJitConstant("QUANTIZATION_TERM",    params.eltwiseParams.int8_quantization),
+            MakeJitConstant("ELTWISE_LAYOUT_BASED", params.layoutBased),
+            MakeJitConstant("QUANTIZATION_TERM",    params.int8_quantization),
             });
 
-        if (params.eltwiseParams.int8_quantization)
+        if (params.int8_quantization)
         {
-            if (params.eltwiseParams.output_calibration)
+            if (params.output_calibration)
             {
-                jit.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.eltwiseParams.output_calibration));
+                jit.AddConstant(MakeJitConstant("CALIBRATION_TERM", params.output_calibration));
                 jit.AddConstant(MakeJitConstant("O_QF", params.output_calibration_factors[0]));
 
             }
             else
-                jit.AddConstants({ MakeJitConstant("O_QF",       params.eltwiseParams.output_quantization_factor) });
+                jit.AddConstants({ MakeJitConstant("O_QF",       params.output_quantization_factor) });
         }
 
         std::string inputs_decls;
-        auto& updateInputs = params.eltwiseParams.updateInputIds;
+        auto& updateInputs = params.updateInputIds;
 
         for (size_t i = 0; i < params.inputs.size(); i++)
         {
@@ -107,8 +107,8 @@ namespace kernel_selector {
 
         std::string do_eltwise;
 
-        auto& operations = params.eltwiseParams.operations;
-        auto& coefficients = params.eltwiseParams.coefficients;
+        auto& operations = params.operations;
+        auto& coefficients = params.coefficients;
 
         for (size_t op_num = 0; op_num < operations.size(); op_num++)
         {
@@ -142,7 +142,7 @@ namespace kernel_selector {
             }
             std::string input0_str, input1_str, cast_type, op;
 
-            if (params.eltwiseParams.int8_quantization)
+            if (params.int8_quantization)
             {
                 cast_type = "(int16)";
                 op = "const int16 tmp" + op_num_str + " = ";
@@ -206,7 +206,7 @@ namespace kernel_selector {
 
         jit.AddConstant(MakeJitConstant("DO_ELTWISE", do_eltwise));
 
-        if (params.eltwiseParams.layoutBased || params.eltwiseParams.int8_quantization)
+        if (params.layoutBased || params.int8_quantization)
         {
             jit.Merge(GetTensorFriendlyWorkGroupsJit(params.inputs[0]));
         }

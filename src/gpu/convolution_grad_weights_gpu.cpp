@@ -39,7 +39,7 @@ protected:
         // Check whether all memory elements use the same unit type (FP16 or FP32).
         CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input grad memory", instance.input_memory().get_layout().data_type, "output memory", instance.output_memory().get_layout().data_type, "");
         CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory(1).get_layout().data_type, "output memory", instance.output_memory().get_layout().data_type, "");
-        CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Input memory", instance.input_memory().get_layout().data_type, "filter memory", instance.weights_memory(0).get_layout().data_type, "");
+        CLDNN_ERROR_DATA_TYPES_MISMATCH(_outer.id(), "Fp32", data_types::f32, "filter memory", instance.weights_memory(0).get_layout().data_type, "");
 
         if (instance.use_momentum())
         {

@@ -60,6 +60,7 @@ namespace kernel_selector
         SOFT_MAX_LOSS_GRAD,
         BORDER,
         TILE,
+        BROADCAST,
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -74,6 +75,7 @@ namespace kernel_selector
         UINT16,
         INT32,
         UINT32,
+        INT64,
         F16,
         F32,
     };
@@ -114,6 +116,7 @@ namespace kernel_selector
         ACOS,
         COSH,
         LOG,
+		LOG2,
         EXP,
         NONE,
         NONE_GRAD

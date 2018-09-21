@@ -2519,8 +2519,26 @@ void program_impl::fuse_skip_layers(program_node* node)
         auto& to_fuse_with = node.input(index);
         int to_fuse_index = index == 0 ? 1 : 0;
 
+        //remove dependencies and users of elwtise that is going to be extracted
         add_connection(node.input(to_fuse_index), to_fuse_with);
         remove_connection(node.input(to_fuse_index), node);
+
+        //replace processing_num of the node where fusing take place and eltwise
+        auto new_processing_num = node.processing_num;
+        processing_order.erase(to_fuse_with.processing_itr);
+        to_fuse_with.processing_itr = processing_order.insert(node.processing_itr, &to_fuse_with);
+        to_fuse_with.processing_num = new_processing_num;
+
+        //make sure that new fused node's users have higher processing_num than fused node
+        for (auto user : to_fuse_with.get_users())
+        {
+            if (user->processing_num < new_processing_num)
+            {
+                processing_order.erase(user->processing_itr);
+                user->processing_itr = processing_order.insert(std::next(to_fuse_with.processing_itr), user);
+                user->processing_num = new_processing_num + 1;
+            }
+        }
 
         if (node.get_fused_activation_func() != activation_none)
             to_fuse_with.set_fused_activation(node.get_fused_activation_func(), node.get_fused_activation_params());

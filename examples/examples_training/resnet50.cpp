@@ -297,8 +297,8 @@ static primitive_id add_residual_layers_backward(const string& weights_dir, cons
 cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, const bool mean_subtract, bool use_existing_weights, std::vector<cldnn::primitive_id>& outputs)
 {
     input_layout.size = { batch_size, 3, 224, 224 };
-    auto input = cldnn::input_layout("input", input_layout);
-    auto labels = cldnn::input_layout("labels", { input_layout.data_type, format::bfyx,{ batch_size, 1, 1, 1 } });
+    auto input = cldnn::input_layout("input", { data_types::f32, input_layout.format, input_layout.size });
+    auto labels = cldnn::input_layout("labels", { data_types::f32, format::bfyx,{ batch_size, 1, 1, 1 } });
     topology topology_inst{ input };
 
     primitive_id corrected_input = input;
@@ -323,6 +323,11 @@ cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn
         topology_inst.add(reordered_input);
         corrected_input = reordered_input;
     }
+
+    auto reordered_labels = reorder(
+        "reorder_labels",
+        labels,
+        { input_layout.data_type, format::bfyx,{ batch_size, 1, 1, 1 } });
 
     auto conv1_w_mem_layout = layout{ data_types::f32, format::bfyx,{ 64, 3, 7, 7 } };
     auto conv1_b_mem_layout = layout{ data_types::f32, format::bfyx,{ 1, 1, 64, 1 } };
@@ -406,18 +411,24 @@ cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn
     auto softmax = cldnn::softmax(
         "softmax",
         fc1000);
-    outputs.push_back("softmax");
+
+    //reorder to fp32 for training loss computation
+    auto reordered_output = reorder(
+        "softmax_fp32",
+        softmax,
+        { data_types::f32, format::bfyx, input_layout.size });
+    outputs.push_back("softmax_fp32");
 
     topology_inst.add(pool5,
         fc1000_weights_data, fc1000_bias_data, fc1000,
-        softmax);
+        softmax, reordered_output);
 
     //backward pass
 
     auto softmax_loss_grad = cldnn::softmax_loss_grad(
         "softmax_loss_grad",
         softmax,
-        labels
+        reordered_labels
     );
 
     auto fc1000_grad_input = fully_connected_grad_input(
@@ -508,7 +519,7 @@ cldnn::topology build_resnet50_train(const std::string& weights_dir, const cldnn
     );
     outputs.push_back("output");
 
-    topology_inst.add(softmax_loss_grad, labels,
+    topology_inst.add(softmax_loss_grad, labels, reordered_labels,
         fc1000_grad_input,
         fc1000_grad_weights, fc1000_weights_data_prev, fc1000_bias_data_prev,
         pool5_grad,

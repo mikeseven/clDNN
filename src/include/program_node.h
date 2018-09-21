@@ -110,10 +110,6 @@ public:
     // for const method, add const to stored successors/predecessors
     auto const& get_users() const { return reinterpret_cast<const std::list<const program_node*>&>(users); }
 
-    bool has_next() const;
-    program_node* get_next() { auto itr = processing_itr; return (*++itr); }
-    const program_node* get_next() const { auto itr = processing_itr; return (*++itr); }
-
     std::unique_ptr<json_composite> desc_to_json() const;
 	std::unique_ptr<xml_composite> desc_to_xml() const;
     //do not modify primitive directly to keep synchronisation wit graph

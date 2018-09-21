@@ -198,6 +198,7 @@ namespace kernel_selector
                     uint32_t uint16 : 1;
                     uint32_t int32 : 1;
                     uint32_t uint32 : 1;
+                    uint32_t int64 : 1;
                     uint32_t F16 : 1;
                     uint32_t F32 : 1;
                 } val;

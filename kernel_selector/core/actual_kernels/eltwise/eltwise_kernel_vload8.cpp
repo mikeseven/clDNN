@@ -71,16 +71,16 @@ namespace kernel_selector {
 
         //TODO: add support to this implementation when user requests input values updates
         bool bCheckUpdateInput = true;
-        if (!ewParams.eltwiseParams.updateInputIds.empty())
+        if (!ewParams.updateInputIds.empty())
             bCheckUpdateInput = false;
 
         //TODO: add support for reading from output buffer and using its values in computation
         bool bCheckUseOutput = true;
-        for (size_t op = 0; op < ewParams.eltwiseParams.operations.size(); op++)
+        for (size_t op = 0; op < ewParams.operations.size(); op++)
         {
-            for (size_t input_idx = 0; input_idx < ewParams.eltwiseParams.operations[op].inputs.size(); input_idx++)
+            for (size_t input_idx = 0; input_idx < ewParams.operations[op].inputs.size(); input_idx++)
             {
-                if (ewParams.eltwiseParams.operations[op].inputs[input_idx].mode == EltwiseInputMode::OUTPUT_BUFFER)
+                if (ewParams.operations[op].inputs[input_idx].mode == EltwiseInputMode::OUTPUT_BUFFER)
                 {
                     bCheckUseOutput = false;
                     break;
@@ -123,7 +123,7 @@ namespace kernel_selector {
         auto& kernel = kd.kernels[0];
         kernel.workGroups.global = { std::max(newParams.inputs[0].LogicalSize()/8, (size_t)1), 1, 1 };
         kernel.workGroups.local = GetOptimalLocalWorkGroupSizes(kernel.workGroups.global);
-        kernel.kernelString = GetKernelString(kernelName, jit, entry_point, ROUND_ROBIN);
+        kernel.kernelString = GetKernelString(kernelName, jit, entry_point, params.engineInfo, ROUND_ROBIN);
         kernel.arguments = GetArgsDesc((uint32_t)newParams.inputs.size(), false, false);
 
         kd.estimatedTime = FORCE_PRIORITY_8;
