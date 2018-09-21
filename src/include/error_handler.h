@@ -148,7 +148,11 @@ void error_on_mismatching_data_types(const std::string& file, int line, const st
 void error_on_tensor_dims_less_than_other_tensor_dims(const std::string& file, int line, const std::string& instance_id, const std::string& tensor_id, const tensor& tens, const std::string& tensor_to_compare_to_id, const tensor& tens_to_compre, const std::string& additional_message = "");
 #define CLDNN_ERROR_TENSOR_SIZES_LESS_THAN(instance_id, tensor_id, tensor_1, compare_to_id, tensor_to_compare_to, ...) error_on_tensor_dims_less_than_other_tensor_dims(__FILE__, __LINE__, instance_id, tensor_id, tensor_1, compare_to_id, tensor_to_compare_to, __VA_ARGS__)
 
-void error_on_tensor_dims_greater_than_other_tensor_dims(const std::string& file, int line, const std::string& instance_id, const std::string& tensor_id, const tensor& tens, const std::string& tensor_to_compare_to, const tensor& tens_to_compre, const std::string& additional_message = "");
+void error_on_tensor_dims_greater_than_other_tensor_dims(const std::string& file, int line, const std::string& instance_id, const std::string& tensor_id, const tensor& tens, const std::string& tensor_to_compare_to_id, const tensor& tens_to_compre, const std::string& additional_message = "");
 #define CLDNN_ERROR_TENSOR_SIZES_GREATER_THAN(instance_id, tensor_id, tensor_1, compare_to_id, tensor_to_compare_to, ...) error_on_tensor_dims_greater_than_other_tensor_dims(__FILE__, __LINE__, instance_id, tensor_id, tensor_1, compare_to_id, tensor_to_compare_to, __VA_ARGS__)
+
+void error_on_tensor_dims_not_dividable_by_other_tensor_dims(const std::string& file, int line, const std::string& instance_id, const std::string& tensor_id, const tensor& tens, const std::string& tensor_to_compare_to_id, const tensor& tens_to_compre, const std::string& additional_message = "");
+#define CLDNN_ERROR_TENSOR_SIZES_NOT_DIVIDABLE(instance_id, tensor_id, tensor_1, compare_to_id, tensor_to_compare_to, ...) error_on_tensor_dims_not_dividable_by_other_tensor_dims(__FILE__, __LINE__, instance_id, tensor_id, tensor_1, compare_to_id, tensor_to_compare_to, __VA_ARGS__)
+
 
 }

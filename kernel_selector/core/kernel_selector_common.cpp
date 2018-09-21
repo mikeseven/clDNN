@@ -70,6 +70,7 @@ namespace kernel_selector
         case ActivationFunction::ACOS:                  method = "ACOS"; break;
         case ActivationFunction::COSH:                  method = "COSH"; break;
         case ActivationFunction::LOG:                   method = "LOG"; break;
+		case ActivationFunction::LOG2:                  method = "LOG2"; break;
         case ActivationFunction::EXP:                   method = "EXP"; break;
         case ActivationFunction::NONE:                  method = "NONE"; break;
         case ActivationFunction::NONE_GRAD:             method = "NONE_GRAD"; break;
@@ -109,6 +110,7 @@ namespace kernel_selector
         case Datatype::UINT16:  return "UINT16";
         case Datatype::INT32:   return "INT32";
         case Datatype::UINT32:  return "UINT32";
+        case Datatype::INT64:   return "INT64";
         case Datatype::F16:     return "F16";
         case Datatype::F32:     return "F32";
         default: return "";

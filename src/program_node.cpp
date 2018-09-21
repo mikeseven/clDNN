@@ -104,11 +104,8 @@ std::unique_ptr<xml_composite> program_node::desc_to_xml() const
     output_layout_info.add("padding_info", padding_info);
 
     node_info->add("output_layout", output_layout_info);
-
     node_info->add("processing_number", processing_num);
     node_info->add("constant", bool_to_str(constant));
-    node_info->add("dominator", std::to_string(reinterpret_cast<uintptr_t>(dominator)));
-    node_info->add("joint", std::to_string(reinterpret_cast<uintptr_t>(joint)));
     node_info->add("output", bool_to_str(output));
 
     std::vector<std::string> deps_ptrs;
@@ -173,13 +170,11 @@ std::unique_ptr<json_composite> program_node::desc_to_json() const
     node_info->add("output layout", output_layout_info);
 
     node_info->add("processing number", processing_num);
-    node_info->add("constant", bool_to_str(constant));
-
     node_info->add("in data flow", bool_to_str(data_flow));
-    node_info->add("main branch", bool_to_str(main_branch));
-    node_info->add("dominator", std::to_string(reinterpret_cast<uintptr_t>(dominator)));
-    node_info->add("joint", std::to_string(reinterpret_cast<uintptr_t>(joint)));
+    node_info->add("constant", bool_to_str(constant));
+    node_info->add("in data flow", bool_to_str(data_flow));
     node_info->add("output", bool_to_str(output));
+
 
     std::vector<std::string> deps_ptrs;
     {
@@ -251,16 +246,7 @@ bool program_node::is_detached(bool whole_branch)
         return false;
     if (!whole_branch && !dependencies.empty())
         return false;
-    if (joint != nullptr || dominator != nullptr)
-        return false;
-
     return true;
-}
-
-bool program_node::has_next() const
-{
-    auto itr = processing_itr;
-    return (++itr == myprog.processing_order.end());
 }
 
 layout program_node::calc_output_layout() const

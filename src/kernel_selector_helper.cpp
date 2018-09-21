@@ -20,6 +20,8 @@ kernel_selector::data_type to_data_type(data_types dt)
     {
     case cldnn::data_types::i8:     return kernel_selector::data_type::INT8;
     case cldnn::data_types::u8:     return kernel_selector::data_type::UINT8;
+    case cldnn::data_types::i32:     return kernel_selector::data_type::INT32;
+    case cldnn::data_types::i64:     return kernel_selector::data_type::INT64;
     case cldnn::data_types::f16:    return kernel_selector::data_type::F16;
     case cldnn::data_types::f32:    return kernel_selector::data_type::F32;
     default:
@@ -34,6 +36,8 @@ data_types from_data_type(kernel_selector::data_type dt)
     {
     case kernel_selector::data_type::INT8:   return cldnn::data_types::i8;
     case kernel_selector::data_type::UINT8:   return cldnn::data_types::u8;
+    case kernel_selector::data_type::INT32:   return cldnn::data_types::i32;
+    case kernel_selector::data_type::INT64:   return cldnn::data_types::i64;
     case kernel_selector::data_type::F16:    return cldnn::data_types::f16;
     case kernel_selector::data_type::F32:    return cldnn::data_types::f32;
     default:
@@ -301,6 +305,8 @@ kernel_selector::activation_function get_kernel_selector_activation_param(cldnn_
         return kernel_selector::activation_function::COSH;
     case activation_log:
         return kernel_selector::activation_function::LOG;
+	case activation_log2:
+		return kernel_selector::activation_function::LOG2;
     case activation_exp:
         return kernel_selector::activation_function::EXP;
     default:

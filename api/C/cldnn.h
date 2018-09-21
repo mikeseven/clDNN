@@ -208,11 +208,11 @@ typedef enum /*:int32_t*/
     cldnn_build_option_optimize_data,           ///< Enable implicit reordering for user input.
     cldnn_build_option_debug,                   ///< Enable debug mode.
     cldnn_build_option_outputs,                 ///< User selected list of network outputs.
-	cldnn_build_option_learning_config,         ///< User defined learning parameters.
     cldnn_build_option_tuning_config,           ///< Tuning config.
     cldnn_build_option_graph_dumps_dir,         ///< Specifies a directory to which stages of network compilation should be dumped.
     cldnn_build_option_serialization,           ///< Specifies a name of files to which serialization should be dumped.
-    cldnn_build_option_load_program             ///< Specifies a name of load_program process.
+    cldnn_build_option_load_program,            ///< Specifies a name of load_program process.
+    cldnn_build_option_learning_config          ///< User defined learning parameters.
 } cldnn_build_option_type;
 
 /// @brief Tuning modes.
@@ -327,7 +327,9 @@ typedef enum /*:size_t*/
 	cldnn_i8  = sizeof(int8_t),
     cldnn_f16 = sizeof(int16_t) | CLDNN_FLOAT_TYPE_MASK,
     cldnn_f32 = sizeof(float) | CLDNN_FLOAT_TYPE_MASK,
-    cldnn_u8  = sizeof(uint8_t) | CLDNN_UINT_TYPE_MASK // TODO: move to top of list and re-compile inference engine
+    cldnn_u8  = sizeof(uint8_t) | CLDNN_UINT_TYPE_MASK, // TODO: move to top of list and re-compile inference engine
+    cldnn_i32 = sizeof(int32_t),
+    cldnn_i64 = sizeof(int64_t)
 
 } cldnn_data_type;
 
@@ -431,6 +433,7 @@ typedef enum cldnn_activation_func_t
     activation_acos,                    // acos(val)
     activation_cosh,                    // cosh(val)
     activation_log,                     // log(val)
+	activation_log2,					// log2(val)
     activation_exp,                     // exp(val)
 } cldnn_activation_func;
 

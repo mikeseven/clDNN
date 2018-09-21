@@ -800,7 +800,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
     cldnn::build_options options;
 
     //TODO set proper network build options
-    if(ep.topology_name == "vgg16_train" || ep.topology_name == "resnet50_train")
+    if(ep.topology_name == "vgg16_train")
         options.set_option(cldnn::build_option::optimize_data(false));
     else
         options.set_option(cldnn::build_option::optimize_data(true));
@@ -1067,7 +1067,7 @@ std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& tim
             lr_string = lr_string.substr(lr_string.find_last_of(".") + 1);
             file::save_train_iteration(join_path(ep.weights_dir, "train_iteration.txt"), iteration);
         }
-        output = outputs.at("softmax").get_memory();
+        output = outputs.at("softmax_fp32").get_memory();
     }
 
     auto execution_time(timer_execution.uptime());
