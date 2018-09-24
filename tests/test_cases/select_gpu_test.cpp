@@ -203,7 +203,7 @@ TEST(select_gpu_f32, select_basic_error_input_sizes) {
 	topology.add(input_layout("mask", mask.get_layout()));
 	topology.add(select("select", "input", "input2", "mask"));
 
-	EXPECT_THROW(network(engine, topology), std::invalid_argument);
+	EXPECT_ANY_THROW(network(engine, topology));
 }
 
 TEST(select_gpu_f32, select_basic_error_mask_sizes) {
@@ -219,7 +219,7 @@ TEST(select_gpu_f32, select_basic_error_mask_sizes) {
 	topology.add(input_layout("mask", mask.get_layout()));
 	topology.add(select("select", "input", "input2", "mask"));
 
-	EXPECT_THROW(network(engine, topology), std::invalid_argument);
+	EXPECT_ANY_THROW(network(engine, topology));
 }
 
 TEST(select_gpu_f32, select_basic_error_input_types) {
@@ -234,7 +234,7 @@ TEST(select_gpu_f32, select_basic_error_input_types) {
 	topology.add(input_layout("input2", input2.get_layout()));
 	topology.add(input_layout("mask", mask.get_layout()));
 	topology.add(select("select", "input", "input2", "mask"));
-	EXPECT_THROW(network(engine, topology), std::invalid_argument);
+	EXPECT_ANY_THROW(network(engine, topology));
 }
 
 TEST(select_gpu_f32, select_basic_error_input_formats) {
@@ -250,7 +250,7 @@ TEST(select_gpu_f32, select_basic_error_input_formats) {
 	topology.add(input_layout("mask", mask.get_layout()));
 	topology.add(select("select", "input", "input2", "mask"));
 
-	EXPECT_THROW(network(engine, topology), std::invalid_argument);
+	EXPECT_ANY_THROW(network(engine, topology));
 }
 
 TEST(select_gpu_f32, select_basic_byxf) {

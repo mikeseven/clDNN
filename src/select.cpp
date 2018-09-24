@@ -57,7 +57,7 @@ select_inst::typed_primitive_inst(network_impl& network, select_node const& node
 {
 	auto& deps = node.get_dependencies();
 
-	for (int i = 0; i < deps.size() - 1; i++)
+	for (size_t i = 0; i < deps.size() - 1; i++)
 	{
 		auto batch1 = deps[i]->get_output_layout().size.batch[0];
 		auto batch2 = deps[i+1]->get_output_layout().size.batch[0];
