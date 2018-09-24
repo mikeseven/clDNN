@@ -41,7 +41,7 @@ KERNEL(convolution_grad_weights_gpu_7x7)(
     const int in_x = -PADDING_SIZE_X;
     const int in_y = -PADDING_SIZE_Y;
 
-    ACCUMULATOR_TYPE grad_w[7] = {};
+    ACCUMULATOR_TYPE grad_w[7] = { 0, 0, 0, 0, 0, 0, 0 };
 #if BIAS_TERM
     ACCUMULATOR_TYPE grad_b = UNIT_VAL_ZERO;
 #endif
