@@ -298,7 +298,7 @@ void permute_test_with_reorder()
     network.set_input_data("input", input);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), size_t(1));
+    ASSERT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "reorder_out");
 
     auto output = outputs.begin()->second.get_memory();

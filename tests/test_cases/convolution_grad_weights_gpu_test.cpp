@@ -851,7 +851,7 @@ TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz7x7_in2x1x7x7_bfyx_stride1_p
     network.set_input_data("input_grad", input_grad);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), size_t(1));
+    ASSERT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "conv_grad_weights");
 
     auto output_prim = outputs.begin()->second.get_memory();
@@ -1001,7 +1001,7 @@ TEST(convolution_grad_weights_f32_fw_gpu, basic_wsiz7x7_in2x1x7x7_bfyx_stride1_p
     network.set_input_data("input_grad", input_grad);
 
     auto outputs = network.execute();
-    EXPECT_EQ(outputs.size(), size_t(1));
+    ASSERT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "conv_grad_weights");
 
     auto output_prim = outputs.begin()->second.get_memory();
