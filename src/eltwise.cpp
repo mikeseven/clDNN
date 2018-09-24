@@ -42,10 +42,17 @@ layout eltwise_inst::calc_output_layout(eltwise_node const& node)
             CLDNN_ERROR_MESSAGE(node.id(), "Requested eltwise mode is not supported for integer types.");
     }
 
+    auto eltw = std::static_pointer_cast<const eltwise>((node.get_primitive()));
+    if (!eltw->stride.empty())
+    {
+        // we can safely use only first stride, since we're using first input, and input / stride should give exact same value for every input
+        input_node_layout.size.spatial[0] /= eltw->stride[0].spatial[0];
+        input_node_layout.size.spatial[1] /= eltw->stride[0].spatial[1];
+    }
     return input_node_layout;
 }
 
-static inline std::string stringify_vector(std::vector<float> v)
+static inline std::string stringify_vector(const std::vector<float>& v)
 {
     std::stringstream s;
 

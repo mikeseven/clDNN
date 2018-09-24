@@ -305,6 +305,11 @@ namespace kernel_selector
             kd.gws0 = global[0];
             kd.gws1 = global[1];
             kd.gws2 = global[2];
+            if (!params.stride.empty())
+            {
+                global[0] /= params.stride[0].x;
+                global[0] /= params.stride[0].y;
+            }
         }
         else if (CheckInputsOutputNoPitchSameDims(params))
         {

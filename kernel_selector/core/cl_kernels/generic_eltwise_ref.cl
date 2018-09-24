@@ -63,8 +63,8 @@ KERNEL(eltwise)(
     )
 {
 #if ELTWISE_LAYOUT_BASED || QUANTIZATION_TERM
-    const uint d1 = get_global_id(GWS_YX) % INPUT0_SIZE_X;   // X
-    const uint d2 = get_global_id(GWS_YX) / INPUT0_SIZE_X;   // Y
+    const uint d1 = get_global_id(GWS_YX) % OUTPUT_SIZE_X;  // X
+    const uint d2 = get_global_id(GWS_YX) / OUTPUT_SIZE_X;  // Y
     const uint d3 = get_global_id(GWS_FEATURE);             // Feature
     const uint d4 = get_global_id(GWS_BATCH);               // Batch
 
