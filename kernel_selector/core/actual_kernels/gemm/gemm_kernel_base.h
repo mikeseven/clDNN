@@ -32,11 +32,6 @@ namespace kernel_selector
         bool transpose_input1;
         bool transpose_input2;
 
-        ParamsKey GetParamsKey() const override
-        {
-            ParamsKey k = base_params::GetParamsKey();
-            return k;
-        }
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////

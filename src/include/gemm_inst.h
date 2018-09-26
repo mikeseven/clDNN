@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -28,10 +28,6 @@ struct typed_program_node<gemm> : public typed_program_node_base<gemm>
 
 public:
     using parent::parent;
-
-    decltype(auto) input1() const { return get_dependency(0); }
-    decltype(auto) input2() const { return get_dependency(1); }
-    decltype(auto) out_bias() const { return get_dependency(2); }
 
     decltype(auto) input(size_t idx = 0) const { return get_dependency(idx); }
     size_t inputs_count() const { return get_dependencies().size(); }

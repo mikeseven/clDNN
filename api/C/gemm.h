@@ -34,13 +34,19 @@ extern "C" {
 /// @brief Performs forward attention layer.
 
 CLDNN_BEGIN_PRIMITIVE_DESC(gemm)
-/// @brief Array of primitive ids containing weight matrices for input, input2, out_bias and other params.
+/// @brief Primitive id containing first matrix
 cldnn_primitive_id input1;
+/// @brief Primitive id containing second matrix
 cldnn_primitive_id input2;
+/// @brief Primitive id containing output matrix bias
 cldnn_primitive_id out_bias;
+/// @brief Variable containing ALPHA parameter
 float alpha;
+/// @brief Variable containing BETA parameter
 float beta;
+/// @brief Flag for transposing first input matrix
 bool transpose_input1;
+/// @brief Flag for transposing second input matrix
 bool transpose_input2;
 // NOT SUPPORTED YET
 // /// @brief The sequence output for the hidden. This is not clearly specified in the ONNX definition.

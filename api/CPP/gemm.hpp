@@ -46,9 +46,13 @@ struct gemm : public primitive_base<gemm, CLDNN_PRIMITIVE_DESC(gemm)>
 {
     CLDNN_DECLARE_PRIMITIVE(gemm)
 
-        /// @brief Constructs lstm layer.
-        /// @param id This primitive id.
-        /// @param input Vector of primitive id.
+        /// @brief Constructs gemm layer.
+        /// @brief Primitive id containing first matrix
+        /// @brief Primitive id containing second matrix
+        /// @brief Variable containing ALPHA parameter
+        /// @brief Variable containing BETA parameter
+        /// @brief Flag for transposing first input matrix
+        /// @brief Flag for transposing second input matrix
 
         gemm(
             const primitive_id& id,
@@ -67,7 +71,14 @@ struct gemm : public primitive_base<gemm, CLDNN_PRIMITIVE_DESC(gemm)>
         , beta(beta)
     {
     }
-
+        /// @brief Constructs gemm layer.
+        /// @brief Primitive id containing first matrix
+        /// @brief Primitive id containing second matrix
+        /// @brief Primitive id containing output matrix bias
+        /// @brief Variable containing ALPHA parameter
+        /// @brief Variable containing BETA parameter
+        /// @brief Flag for transposing first input matrix
+        /// @brief Flag for transposing second input matrix
         gemm(
             const primitive_id& id,
             const primitive_id& input,
@@ -88,13 +99,16 @@ struct gemm : public primitive_base<gemm, CLDNN_PRIMITIVE_DESC(gemm)>
     {
     }
 
+    /// @brief Flag for transposing first input matrix
     bool transpose_input1;
+    /// @brief Flag for transposing second input matrix
     bool transpose_input2;
+    /// @brief Variable containing ALPHA parameter
     float alpha;
+    /// @brief Variable containing BETA parameter
     float beta;
 
     /// @brief Constructs a copy from basic C API @CLDNN_PRIMITIVE_DESC{gemm}
-
     gemm(const dto* dto)
         : primitive_base(dto)
         , transpose_input1 (dto->transpose_input1)
@@ -104,6 +118,7 @@ struct gemm : public primitive_base<gemm, CLDNN_PRIMITIVE_DESC(gemm)>
     {
     }
 
+protected:
     void update_dto(dto& dto) const override
     {
         dto.transpose_input1 = transpose_input1;
