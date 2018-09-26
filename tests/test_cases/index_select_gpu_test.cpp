@@ -28,35 +28,10 @@
 #include "test_utils/test_utils.h"
 
 #include <vector>
-#include <iostream> //TODO: remove before pushing to master
-#include <stdexcept>
 #include <algorithm>
 
 using namespace cldnn;
 using namespace tests;
-
-
-//void print_bfyx(const std::vector<float>& vector, size_t batch, size_t feature, size_t x_size, size_t y_size)
-//{
-//    for (size_t b = 0; b < batch; b++)
-//    {
-//        std::cout << "BATCH: " << b << std::endl;
-//        for (size_t f = 0; f < feature; f++)
-//        {
-//            for (size_t y = 0; y < y_size; y++)
-//            {
-//                for (size_t x = 0; x < x_size; x++)
-//                {
-//                    size_t index = b * feature*y_size*x_size + f * y_size*x_size + y * x_size + x;
-//                    std::cout << vector.at(index) << ", ";
-//                }
-//                std::cout << std::endl;
-//            }
-//            std::cout << std::endl;
-//        }
-//        std::cout << std::endl;
-//    }
-//}
 
 std::vector<float> generate_reference(const std::vector<float>& input, const std::vector<int32_t>& indices, index_select_axis_name axis, const size_t b_size, const size_t f_size,
     const size_t y_size, const size_t x_size)

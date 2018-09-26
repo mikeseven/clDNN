@@ -68,6 +68,9 @@ namespace {
             auto val_fw = index_select_gpu::create;
             implementation_map<index_select>::add(std::make_tuple(engine_types::ocl, data_types::f32, format::bfyx), val_fw);
             implementation_map<index_select>::add(std::make_tuple(engine_types::ocl, data_types::f16, format::bfyx), val_fw);
+            implementation_map<index_select>::add(std::make_tuple(engine_types::ocl, data_types::i8, format::bfyx), val_fw);
+            implementation_map<index_select>::add(std::make_tuple(engine_types::ocl, data_types::u8, format::bfyx), val_fw);
+            implementation_map<index_select>::add(std::make_tuple(engine_types::ocl, data_types::i32, format::bfyx), val_fw);
         }
         ~attach() = default;
     };
