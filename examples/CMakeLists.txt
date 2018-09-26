@@ -17,11 +17,19 @@
 
 set(__CLDNN_FindLibSuffixes ${CMAKE_FIND_LIBRARY_SUFFIXES})
 set(CMAKE_FIND_LIBRARY_SUFFIXES "${CMAKE_SHARED_LIBRARY_SUFFIX}")
+
 find_library(CLDNN_FIND__FREEIMAGE_SHLPATH
   NAMES FreeImage
   PATHS ${CLDNN__FREEIMAGE_LIBDIRS}
   NO_CMAKE_FIND_ROOT_PATH
 )
+
+find_library(CLDNN_FIND__FREEIMAGEPLUS_SHLPATH
+  NAMES FreeImagePlus
+  PATHS ${CLDNN__FREEIMAGE_LIBDIRS}
+  NO_CMAKE_FIND_ROOT_PATH
+)
+
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${__CLDNN_FindLibSuffixes})
 
 # =================================== Link targets and dependencies ====================================
@@ -29,11 +37,13 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES ${__CLDNN_FindLibSuffixes})
 add_subdirectory(common)
 add_subdirectory(examples)
 add_subdirectory(examples_training)
+add_subdirectory(examples_transform)
 add_subdirectory(microbench)
 
 # =================================== Custom pre- and post-steps =======================================
 
 unset(CLDNN_FIND__FREEIMAGE_SHLPATH CACHE)
+unset(CLDNN_FIND__FREEIMAGEPLUS_SHLPATH CACHE)
 unset(__CLDNN_FindLibSuffixes)
 
 # ======================================================================================================

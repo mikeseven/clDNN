@@ -35,6 +35,24 @@
 #include <sstream>
 #include <type_traits>
 
+using namespace cldnn::utils::examples;
+using namespace cldnn::utils::examples::cmdline;
+
+
+namespace cldnn
+{
+namespace utils
+{
+namespace examples
+{
+namespace cmdline
+{
+    const unsigned long app_version = 0x10000L;
+} // namespace cmdline
+} // namespace examples
+} // namespace utils
+} // namespace cldnn
+
 
   /// Prepares command-line options for current application.
   ///
@@ -47,9 +65,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
 
     // ----------------------------------------------------------------------------------------------------------------
     // Standard options.
-    bpo::options_description standard_cmdline_options("Standard options");
-    add_base_options(standard_cmdline_options);
-    standard_cmdline_options.add_options()
+    auto standard_cmdline_options = cmdline_options::create_group("Standard options");
+    standard_cmdline_options->add_options()
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("microbench_conv"),
             "Name of a neural network model that is used for classification.\n"
             "It can be one of:\n  \tmicrobench_conv, microbench_lstm.")
@@ -68,19 +85,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
         ("lstm_initial_cell", bpo::bool_switch(),
             "LSTM use initial cell tensor.");
 
-    // All options.
-    bpo::options_description all_cmdline_options;
-    all_cmdline_options.add(standard_cmdline_options);
-    // All visible options.
-    bpo::options_description all_visible_cmdline_options;
-    all_visible_cmdline_options.add(standard_cmdline_options);
-
-    auto version_msg_out = print_version_message(exec_info);
-
-    auto help_msg_out = print_help_message(exec_info);
-    help_msg_out << all_visible_cmdline_options;
-
-    return {all_cmdline_options, help_msg_out.str(), version_msg_out.str()};
+    return {exec_info, standard_cmdline_options};
 }
 
 void run_topology(const execution_params &ep)
@@ -146,11 +151,11 @@ void run_topology(const execution_params &ep)
 
     cldnn::topology primitives;
 
-    if (ep.print_type == Verbose)
+    if (ep.print_type == print_type::verbose)
     {
         std::cout << "Building " << ep.topology_name << " started" << std::endl;
     }
-    else if (ep.print_type == ExtendedTesting)
+    else if (ep.print_type == print_type::extended_testing)
     {
         std::cout << "Extended testing of " << ep.topology_name << std::endl;
     }
@@ -171,7 +176,7 @@ void run_topology(const execution_params &ep)
 
     auto build_time = timer_build.uptime();
 
-    if (ep.print_type == Verbose)
+    if (ep.print_type == print_type::verbose)
     {
         std::cout << "Building " << ep.topology_name << " finished in " << instrumentation::to_string(build_time) << std::endl;
     }
@@ -210,7 +215,7 @@ void run_topology(const execution_params &ep)
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
         if (time_in_sec != 0.0)
         {
-            if (ep.print_type != ExtendedTesting)
+            if (ep.print_type != print_type::extended_testing)
             {
                 std::cout << "Frames per second:" << (double)(ep.loop * batch_size) / time_in_sec << std::endl;
 
@@ -235,7 +240,7 @@ void run_topology(const execution_params &ep)
         auto time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
         if (time_in_sec != 0.0)
         {
-            if (ep.print_type != ExtendedTesting)
+            if (ep.print_type != print_type::extended_testing)
             {
                 std::cout << "Frames per second:" << (double)(ep.loop * batch_size) / time_in_sec << std::endl;
 
@@ -271,7 +276,7 @@ int main(int argc, char* argv[])
         microbench_conv = parsed_args["model"].as<std::string>() == "microbench_conv";
         microbench_lstm = parsed_args["model"].as<std::string>() == "microbench_lstm";
 
-        if (parse_help_version(parsed_args, options))
+        if (parse_version_help_options(parsed_args, options))
             return 0;
     }
     catch (const std::exception& ex)
@@ -286,14 +291,11 @@ int main(int argc, char* argv[])
     {
         // Execute network otherwise.
         execution_params ep;
-        parse_common_args(parsed_args, ep);
+        parse_common_options(parsed_args, ep);
         ep.input_dir = "NA";
         ep.weights_dir = "NA";
 
         ep.topology_name = parsed_args["model"].as<std::string>();
-
-        std::uint32_t print = parsed_args["print_type"].as<std::uint32_t>();
-        ep.print_type = (PrintType)((print >= (std::uint32_t)PrintType::PrintType_count) ? 0 : print);
 
         if (microbench_lstm) {
             ep.lstm_ep.lstm_input_size = parsed_args["lstm_input_size"].as<std::uint32_t>();

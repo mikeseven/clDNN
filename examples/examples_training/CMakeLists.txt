@@ -61,21 +61,11 @@ set_property(TARGET "${CLDNN_BUILD__PROJ}" PROPERTY OUTPUT_NAME   "${CLDNN_BUILD
 target_link_libraries("${CLDNN_BUILD__PROJ}"
     "${CLDNN_BUILD__PROJ__clDNN}"
     "${CLDNN_BUILD__PROJ_examples_common}"
-    FreeImage
     Boost::filesystem
     Boost::program_options
     Boost::system
     power_measurement_util
   )
 target_link_libraries("${CLDNN_BUILD__PROJ}" ${CLDNN__SYSTEM_LINK_LIBRARIES})
-
-# =================================== Custom pre- and post-steps =======================================
-
-if(CLDNN_FIND__FREEIMAGE_SHLPATH)
-  add_custom_command(TARGET "${CLDNN_BUILD__PROJ}" POST_BUILD
-      COMMAND "${CMAKE_COMMAND}" -E copy_if_different "${CLDNN_FIND__FREEIMAGE_SHLPATH}" "${CMAKE_LIBRARY_OUTPUT_DIRECTORY}/${CMAKE_CFG_INTDIR}/"
-      COMMENT "Copying FreeImage shared library to output..."
-    )
-endif()
 
 # ======================================================================================================

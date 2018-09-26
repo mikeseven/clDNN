@@ -15,6 +15,8 @@
 #include <api/CPP/data.hpp>
 #include <api/CPP/reorder.hpp>
 
+using namespace cldnn::utils::examples;
+
 // returns a vector with size equal to number of images in batch and each subvector contains sorted pairs of 
 // values specifying match percentage and category number
 std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldnn::memory& input_mem)
@@ -141,7 +143,7 @@ html::html(const std::string & file_name, const std::string & title)
     }
 }
 
-void html::batch(const cldnn::memory& mem_primitive, const std::string& categories_file, const std::vector<std::string>& image_names, PrintType printType)
+void html::batch(const cldnn::memory& mem_primitive, const std::string& categories_file, const std::vector<std::string>& image_names, print_type printType)
 {
     auto batch = read_output(mem_primitive);
     auto categories = load_category_names(categories_file);
@@ -187,7 +189,7 @@ void html::batch(const cldnn::memory& mem_primitive, const std::string& categori
 
             switch(printType)
             {
-            case PrintType::ExtendedTesting:
+            case print_type::extended_testing:
             {
                 bool correct = img_dir.compare(category) == 0;
                 std::cout //<< "    " 
@@ -199,7 +201,7 @@ void html::batch(const cldnn::memory& mem_primitive, const std::string& categori
                     << std::endl;
             }
             break;
-            case PrintType::Verbose:
+            case print_type::verbose:
             {
                 std::cout << "    " << img_file << " ";
                 std::cout << std::setprecision(2) << std::fixed << batch[img_idx][0].first * 100 << "%"<<" ";
