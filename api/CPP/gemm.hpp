@@ -73,42 +73,25 @@ struct gemm : public primitive_base<gemm, CLDNN_PRIMITIVE_DESC(gemm)>
             const primitive_id& input,
             const primitive_id& input2,
             const primitive_id& out_bias,
-            const float alpha,
-            const float beta,
-            const padding& output_padding = padding()
-        )
-        : primitive_base(id, { input, input2, out_bias }, output_padding)
-        , alpha(alpha)
-        , beta(beta)
-
-    {
-    }
-
-        gemm(
-            const primitive_id& id,
-            const primitive_id& input,
-            const primitive_id& input2,
-            const primitive_id& out_bias,
-            const float alpha,
-            const float beta,
             const bool transpose_input1 = false,
             const bool transpose_input2 = false,
+            const float alpha = 1.f,
+            const float beta = 0.f,
             const padding& output_padding = padding()
         )
         : primitive_base(id, { input, input2, out_bias }, output_padding)
-        , alpha(alpha)
-        , beta(beta)
         , transpose_input1(transpose_input1)
         , transpose_input2(transpose_input2)
+        , alpha(alpha)
+        , beta(beta)
 
     {
     }
 
-
-    float alpha;
-    float beta;
     bool transpose_input1;
     bool transpose_input2;
+    float alpha;
+    float beta;
 
     /// @brief Constructs a copy from basic C API @CLDNN_PRIMITIVE_DESC{gemm}
 
@@ -123,10 +106,10 @@ struct gemm : public primitive_base<gemm, CLDNN_PRIMITIVE_DESC(gemm)>
 
     void update_dto(dto& dto) const override
     {
-        dto.alpha = alpha;
-        dto.beta = beta;
         dto.transpose_input1 = transpose_input1;
         dto.transpose_input2 = transpose_input2;
+        dto.alpha = alpha;
+        dto.beta = beta;
     }
 };
 

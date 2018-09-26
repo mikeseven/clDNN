@@ -232,7 +232,7 @@ TEST(gemm_gpu, basic_out_bias) {
         input_layout("outbias", outbias.get_layout())
     );
     topology.add(
-        gemm("output", "input", "input2", "outbias", alpha, beta, 0, 0)
+        gemm("output", "input", "input2", "outbias",  false, false, alpha, beta)
     );
 
     network network(engine, topology);
@@ -296,7 +296,7 @@ TEST(gemm_gpu, basic_out_bias_t1t2) {
         input_layout("outbias", outbias.get_layout())
     );
     topology.add(
-        gemm("output", "input", "input2", "outbias", alpha, beta, true, true)
+        gemm("output", "input", "input2", "outbias", true, true, alpha, beta)
     );
 
     network network(engine, topology);
