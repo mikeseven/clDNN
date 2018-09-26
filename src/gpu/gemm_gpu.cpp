@@ -43,7 +43,8 @@ public:
         auto desc = arg.get_primitive();
         gemm_params.alpha = desc->alpha;
         gemm_params.beta = desc->beta;
-        gemm_params.transpose = desc->transpose;
+        gemm_params.transpose_input1 = desc->transpose_input1;
+        gemm_params.transpose_input2 = desc->transpose_input2;
 
 
         auto& kernel_selector = kernel_selector::gemm_kernel_selector::Instance();

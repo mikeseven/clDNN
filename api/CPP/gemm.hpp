@@ -54,7 +54,8 @@ struct gemm : public primitive_base<gemm, CLDNN_PRIMITIVE_DESC(gemm)>
             const primitive_id& id,
             const primitive_id& input,
             const primitive_id& input2,
-            bool transpose = false,
+            bool transpose_input1 = false,
+            bool transpose_input2 = false,
             float alpha = 1.0f,
             float beta = 0.0f,
             const padding& output_padding = padding()
@@ -62,7 +63,8 @@ struct gemm : public primitive_base<gemm, CLDNN_PRIMITIVE_DESC(gemm)>
         : primitive_base(id, { input, input2 }, output_padding)
         , alpha(alpha)
         , beta(beta)
-        , transpose(transpose)
+        , transpose_input1(transpose_input1)
+        , transpose_input2(transpose_input2)
     {
     }
 
@@ -73,24 +75,29 @@ struct gemm : public primitive_base<gemm, CLDNN_PRIMITIVE_DESC(gemm)>
             const primitive_id& out_bias,
             const float alpha,
             const float beta,
-            const bool transpose = false,
+            const bool transpose_input1 = false,
+            const bool transpose_input2 = false,
             const padding& output_padding = padding()
         )
         : primitive_base(id, { input, input2, out_bias }, output_padding)
         , alpha(alpha)
         , beta(beta)
-        , transpose(transpose)
+        , transpose_input1(transpose_input1)
+        , transpose_input2(transpose_input2)
     {
     }
 
     float alpha;
     float beta;
-    bool transpose;
+    bool transpose_input1;
+    bool transpose_input2;
+
     /// @brief Constructs a copy from basic C API @CLDNN_PRIMITIVE_DESC{gemm}
 
     gemm(const dto* dto)
         : primitive_base(dto)
-        , transpose (dto->transpose)
+        , transpose_input1 (dto->transpose_input1)
+        , transpose_input2(dto->transpose_input2)
         , alpha (dto->alpha)
         , beta (dto->beta)
     {
@@ -100,7 +107,8 @@ struct gemm : public primitive_base<gemm, CLDNN_PRIMITIVE_DESC(gemm)>
     {
         dto.alpha = alpha;
         dto.beta = beta;
-        dto.transpose = transpose;
+        dto.transpose_input1 = transpose_input1;
+        dto.transpose_input2 = transpose_input2;
     }
 };
 

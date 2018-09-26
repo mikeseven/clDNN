@@ -40,7 +40,8 @@ cldnn_primitive_id input2;
 cldnn_primitive_id out_bias;
 float alpha;
 float beta;
-bool transpose;
+bool transpose_input1;
+bool transpose_input2;
 // NOT SUPPORTED YET
 // /// @brief The sequence output for the hidden. This is not clearly specified in the ONNX definition.
 // uint32_t output_sequence;

@@ -31,19 +31,38 @@ KERNEL(gemm_ref)
 	uint in1_idx=0;
 	float value = 0;
 	
+#if TRANSPOSE_INPUT1
+for (uint i = 0; i < Y1; ++i)
+	{
+		in0_idx = i * X1 + x + b * X1 * Y1; 
+#else
 	for (uint i = 0; i < X1; ++i)
 	{
 		in0_idx = x * X1 + i + b * X1 * Y1; 
-		in1_idx = i * X2 + y + b * X2 * Y2;
+#endif
+
+#if TRANSPOSE_INPUT2
+	in1_idx = y * X2 + i + b * X2 * Y2;
+#else
+	in1_idx = i * X2 + y + b * X2 * Y2;
+#endif
+
 		value = fma(input0[in0_idx], input1[in1_idx], value);
 	}
-
+#if TRANSPOSE_INPUT1 && TRANSPOSE_INPUT2
+	uint out_idx = y * X1 + x + b * X1 * Y2;
+#elif TRANSPOSE_INPUT1
+	uint out_idx = x * X2 + y + b * X1 * Y1;
+#elif TRANSPOSE_INPUT2
+	uint out_idx = x * Y2 + y + b * X2 * Y2;
+#else
 	uint out_idx = x * X2 + y + b * X2 * Y1;
+#endif
+	
 	float beta_out = 0;
 #if OUT_BIAS_TERM
 	beta_out = BETA * outbias[out_idx];
 #endif
 	output[out_idx] = fma(ALPHA, value, beta_out);
-	//output[out_idx] = value;
 }
 	

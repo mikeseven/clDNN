@@ -31,6 +31,162 @@
 using namespace cldnn;
 using namespace ::tests;
 
+TEST(gemm_gpu, basic_bfyx_t1) {
+    engine engine;
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 3, 4 } });
+    auto input2 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 1, 4 } });
+
+    std::vector<float> input_data = {
+        1.f, -2.f,  3.f,  
+        -4.f, 5.f,  6.f, 
+        1.f, 2.f, 3.f, 
+        3.f, 2.f, -1.f,
+
+    };
+
+    std::vector<float> input_data2 = {
+        2.f,
+        5.f,
+        -4.f,
+        -7.f,
+    };
+    set_values(input, input_data);
+    set_values(input2, input_data2);
+
+    std::vector<float> out_data = {
+        -43.f, -1.f, 31.f
+    };
+
+    topology topology;
+    topology.add(
+        input_layout("input", input.get_layout())
+    );
+    topology.add(
+        input_layout("input2", input2.get_layout())
+    );
+    topology.add(
+        gemm("output", "input", "input2",true,false)
+    );
+
+    network network(engine, topology);
+    network.set_input_data("input", input);
+    network.set_input_data("input2", input2);
+    auto outputs = network.execute();
+
+    auto output = outputs.at("output").get_memory();
+    auto output_ptr = output.pointer<float>();
+
+
+    EXPECT_EQ(output_ptr.size(), 3);
+    for (auto i = 0; i < out_data.size(); ++i) {
+        EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
+    }
+}
+TEST(gemm_gpu, basic_bfyx_t2) {
+    engine engine;
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 4, 3 } });
+    auto input2 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 4, 1 } });
+
+    std::vector<float> input_data = {
+        1.f, -2.f,  3.f, -4.f, 
+        5.f,  6.f, 1.f, 2.f, 
+        3.f, 3.f, 2.f, -1.f,
+
+    };
+
+    std::vector<float> input_data2 = {
+        2.f, 5.f, -4.f, -7.f,
+    };
+    set_values(input, input_data);
+    set_values(input2, input_data2);
+
+    std::vector<float> out_data = {
+        8.f, 22.f, 20.f
+    };
+
+    topology topology;
+    topology.add(
+        input_layout("input", input.get_layout())
+    );
+    topology.add(
+        input_layout("input2", input2.get_layout())
+    );
+    topology.add(
+        gemm("output", "input", "input2", false, true)
+    );
+
+    network network(engine, topology);
+    network.set_input_data("input", input);
+    network.set_input_data("input2", input2);
+    auto outputs = network.execute();
+
+    auto output = outputs.at("output").get_memory();
+    auto output_ptr = output.pointer<float>();
+
+
+    EXPECT_EQ(output_ptr.size(), 3);
+    for (auto i = 0; i < out_data.size(); ++i) {
+        EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
+    }
+}
+
+TEST(gemm_gpu, basic_bfyx_t1t2) {
+    engine engine;
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 2, 1, 3, 4 } });
+    auto input2 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 2, 1, 4, 1 } });
+
+    std::vector<float> input_data = {
+        1.f, -2.f,  3.f, 
+        -4.f, 5.f,  6.f, 
+        1.f, 2.f, 3.f, 
+        3.f, 2.f, -1.f,
+
+        1.f, -2.f,  3.f,
+        -4.f, 5.f,  6.f,
+        1.f, 2.f, 3.f,
+        3.f, 2.f, -1.f,
+
+    };
+
+    std::vector<float> input_data2 = {
+        2.f, 5.f, -4.f, -7.f,
+
+        2.f, 5.f, -4.f, -7.f,
+    };
+    set_values(input, input_data);
+    set_values(input2, input_data2);
+
+    std::vector<float> out_data = {
+        -43.f, -1.f, 31.f,
+        -43.f, -1.f, 31.f
+    };
+
+    topology topology;
+    topology.add(
+        input_layout("input", input.get_layout())
+    );
+    topology.add(
+        input_layout("input2", input2.get_layout())
+    );
+    topology.add(
+        gemm("output", "input", "input2", true, true)
+    );
+
+    network network(engine, topology);
+    network.set_input_data("input", input);
+    network.set_input_data("input2", input2);
+    auto outputs = network.execute();
+
+    auto output = outputs.at("output").get_memory();
+    auto output_ptr = output.pointer<float>();
+
+
+    EXPECT_EQ(output_ptr.size(), 6);
+    for (auto i = 0; i < out_data.size(); ++i) {
+        EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
+    }
+}
+
 TEST(gemm_gpu, basic_out_bias) {
     engine engine;
     auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 3, 2 } });
@@ -76,7 +232,7 @@ TEST(gemm_gpu, basic_out_bias) {
         input_layout("outbias", outbias.get_layout())
     );
     topology.add(
-        gemm("output", "input", "input2", "outbias", alpha, beta, 0)
+        gemm("output", "input", "input2", "outbias", alpha, beta, 0, 0)
     );
 
     network network(engine, topology);
@@ -88,9 +244,73 @@ TEST(gemm_gpu, basic_out_bias) {
     auto output = outputs.at("output").get_memory();
     auto output_ptr = output.pointer<float>();
 
-
+    EXPECT_EQ(output_ptr.size(), 4);
 
     for (auto i = 0; i < out_data.size(); ++i) {         
+        EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
+    }
+}
+
+TEST(gemm_gpu, basic_out_bias_t1t2) {
+    engine engine;
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 4, 3 } });
+    auto input2 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 3, 2 } });
+    auto outbias = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 4, 2 } });
+    float alpha = 2.f;
+    float beta = 3.f;
+
+
+    std::vector<float> input_data = {
+        1.0f, 2.0f, 3.0f, 4.0f,
+        1.0f, 0.0f, 1.0f, 0.0f,
+        0.0f, 0.0f, 0.0f, 0.0f
+    };
+
+    std::vector<float> input_data2 = {
+        3.0f, 3.0f, 1.0f, 
+        2.0f, 1.0f, 2.0f,
+    };
+
+    std::vector<float> out_bias_data = {
+        1.0f, 0.0f, 1.0f, 0.0f,
+        2.0f, 2.0f, 1.0f, 1.0f,
+    };
+
+    set_values(input, input_data);
+    set_values(input2, input_data2);
+    set_values(outbias, out_bias_data);
+
+    std::vector<float> out_data = {
+        15.0f, 12.0f, 27.0f, 24.0f,
+        12.0f, 14.0f, 17.0f, 19.0f,
+    };
+
+    topology topology;
+    topology.add(
+        input_layout("input", input.get_layout())
+    );
+    topology.add(
+        input_layout("input2", input2.get_layout())
+    );
+    topology.add(
+        input_layout("outbias", outbias.get_layout())
+    );
+    topology.add(
+        gemm("output", "input", "input2", "outbias", alpha, beta, true, true)
+    );
+
+    network network(engine, topology);
+    network.set_input_data("input", input);
+    network.set_input_data("input2", input2);
+    network.set_input_data("outbias", outbias);
+    auto outputs = network.execute();
+
+    auto output = outputs.at("output").get_memory();
+    auto output_ptr = output.pointer<float>();
+
+    EXPECT_EQ(output_ptr.size(), 8);
+
+    for (auto i = 0; i < out_data.size(); ++i) {
         EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }
 }
@@ -134,7 +354,7 @@ TEST(gemm_gpu, basic_bfyx) {
         input_layout("input2", input2.get_layout())
     );
     topology.add(
-        gemm("output", "input", "input2", 0)
+        gemm("output", "input", "input2")
     );
 
     network network(engine, topology);
@@ -146,12 +366,10 @@ TEST(gemm_gpu, basic_bfyx) {
     auto output_ptr = output.pointer<float>();
 
     
-
+    EXPECT_EQ(output_ptr.size(), 6);
     for (auto i = 0; i < out_data.size(); ++i) {
             EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }
-
-
 
 }
 
@@ -2740,7 +2958,7 @@ TEST(gemm_gpu, basic3_bfyx) {
         input_layout("input2", input2.get_layout())
     );
     topology.add(
-        gemm("output", "input", "input2", 0)
+        gemm("output", "input", "input2")
     );
 
     network network(engine, topology);
@@ -2752,7 +2970,7 @@ TEST(gemm_gpu, basic3_bfyx) {
     auto output_ptr = output.pointer<float>();
 
 
-
+    EXPECT_EQ(output_ptr.size(), 45);
     for (auto  i = 0; i < out_data.size(); ++i) {
         EXPECT_NEAR(output_ptr[i], out_data[i], 0.0001);
     }
@@ -2802,7 +3020,7 @@ TEST(gemm_gpu, basic_smarcink2) {
         input_layout("input2", input2.get_layout())
     );
     topology.add(
-        gemm("output", "input", "input2",0)
+        gemm("output", "input", "input2")
     );
 
     network network(engine, topology);
@@ -2814,7 +3032,7 @@ TEST(gemm_gpu, basic_smarcink2) {
     auto output_ptr = output.pointer<float>();
 
 
-
+    EXPECT_EQ(output_ptr.size(), 8);
     for (auto i = 0; i < out_data.size(); ++i) {         
         EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }

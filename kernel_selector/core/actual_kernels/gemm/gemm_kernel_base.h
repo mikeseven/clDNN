@@ -29,7 +29,8 @@ namespace kernel_selector
 
         float alpha;
         float beta;
-        bool transpose;
+        bool transpose_input1;
+        bool transpose_input2;
 
         ParamsKey GetParamsKey() const override
         {

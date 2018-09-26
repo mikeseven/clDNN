@@ -33,10 +33,22 @@ layout gemm_inst::calc_output_layout(gemm_node const& node)
 {
     auto input1_layout = node.input(0).get_output_layout();
     auto input2_layout = node.input(1).get_output_layout();
+    bool transpose_input1 = node.get_primitive()->transpose_input1;
+    bool transpose_input2 = node.get_primitive()->transpose_input2;
 
-	auto result = layout(input1_layout.data_type, format::bfyx,
-                  tensor(input1_layout.size.batch[0]  , 1, input1_layout.size.spatial[0], input2_layout.size.spatial[1]));
-    return result;
+    if (!transpose_input1 && !transpose_input2)
+        return layout(input1_layout.data_type, format::bfyx, tensor(input1_layout.size.batch[0],  1, 
+                      input2_layout.size.spatial[0], input1_layout.size.spatial[1]));
+    else if (!transpose_input1 && transpose_input2)
+        return layout(input1_layout.data_type, format::bfyx, tensor(input1_layout.size.batch[0], 1,
+            input2_layout.size.spatial[1], input1_layout.size.spatial[1]));
+    else if (transpose_input1 && !transpose_input2)
+        return layout(input1_layout.data_type, format::bfyx, tensor(input1_layout.size.batch[0], 1,
+            input2_layout.size.spatial[0], input1_layout.size.spatial[0]));
+    else
+        return layout(input1_layout.data_type, format::bfyx, tensor(input1_layout.size.batch[0], 1,
+            input2_layout.size.spatial[1], input1_layout.size.spatial[0]));
+    
 }
 
 std::string gemm_inst::to_string(gemm_node const& node)
@@ -45,7 +57,8 @@ std::string gemm_inst::to_string(gemm_node const& node)
     auto node_info = node.desc_to_json();
     auto alpha = desc->alpha;
     auto beta = desc->beta;
-    auto transpose = desc->transpose ? " true" : "false";
+    auto transpose_input1 = desc->transpose_input1 ? " true" : "false";
+    auto transpose_input2 = desc->transpose_input2 ? " true" : "false";
     std::stringstream primitive_description;
 
     json_composite gemm_info;
@@ -55,7 +68,8 @@ std::string gemm_inst::to_string(gemm_node const& node)
     }
     gemm_info.add("alpha", alpha);
     gemm_info.add("beta", beta);
-    gemm_info.add("tranpose", transpose);
+    gemm_info.add("trasnpose_input1", transpose_input1);
+    gemm_info.add("transpose_input2", transpose_input2);
     node_info->dump(primitive_description);
 
     return primitive_description.str();
@@ -66,13 +80,50 @@ gemm_inst::typed_primitive_inst(network_impl& network, gemm_node const& node)
 {
     auto input_layout = node.input(0).get_output_layout();
     auto input2_layout = node.input(1).get_output_layout();
+    bool transpose_input1 = node.get_primitive()->transpose_input1;
+    bool transpose_input2 = node.get_primitive()->transpose_input2;
 
-    CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input_layout.size.spatial[0] , "Input2 Rows count", input2_layout.size.spatial[1], "");
-    if (node.inputs_count() > 2)
+    if (!transpose_input1 && !transpose_input2)
     {
-        auto out_bias_layout = node.input(2).get_output_layout();
-        CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[0], "Input2 Rows count", input_layout.size.spatial[1], "");
-        CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[0], "");
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input_layout.size.spatial[0], "Input2 Rows count", input2_layout.size.spatial[1], "");
+        if (node.inputs_count() > 2)
+        {
+            auto out_bias_layout = node.input(2).get_output_layout();
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[0], "Input2 Rows count", input_layout.size.spatial[1], "");
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[0], "");
+        }
     }
+
+    else if (!transpose_input1 && transpose_input2)
+    {
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input_layout.size.spatial[0], "Input2 Rows count", input2_layout.size.spatial[0], "");
+        if (node.inputs_count() > 2)
+        {
+            auto out_bias_layout = node.input(2).get_output_layout();
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[0], "Input2 Rows count", input_layout.size.spatial[0], "");
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[0], "");
+        }
+    }
+    else if (transpose_input1 && !transpose_input2)
+    {
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[1], "");
+        if (node.inputs_count() > 2)
+        {
+            auto out_bias_layout = node.input(2).get_output_layout();
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[0], "Input2 Rows count", input_layout.size.spatial[1], "");
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[1], "");
+        }
+    }
+    else
+    {
+        CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[0], "");
+        if (node.inputs_count() > 2)
+        {
+            auto out_bias_layout = node.input(2).get_output_layout();
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[0], "Input2 Rows count", input_layout.size.spatial[0], "");
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[1], "");
+        }
+    }
+
 }
 }

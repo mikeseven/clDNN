@@ -26,14 +26,14 @@ namespace kernel_selector
         JitConstants jit = MakeBaseParamsJitConstants(params);
 
         jit.AddConstants({
-            MakeJitConstant("X1",             params.inputs[0].X().v),
-            MakeJitConstant("Y1",             params.inputs[0].Y().v),
-            MakeJitConstant("X2",             params.inputs[1].X().v),
-            MakeJitConstant("Y2",             params.inputs[1].Y().v),
-            MakeJitConstant("TRANSPOSE",      params.transpose),
-
+            MakeJitConstant("X1", params.inputs[0].X().v),
+            MakeJitConstant("Y1", params.inputs[0].Y().v),
+            MakeJitConstant("X2", params.inputs[1].X().v),
+            MakeJitConstant("Y2", params.inputs[1].Y().v),
             MakeJitConstant("ALPHA", params.alpha),
             MakeJitConstant("BETA", params.beta),
+            MakeJitConstant("TRANSPOSE_INPUT1", params.transpose_input1),
+            MakeJitConstant("TRANSPOSE_INPUT2", params.transpose_input2),
             });
 
         if (params.inputs.size() > 2)
@@ -51,10 +51,17 @@ namespace kernel_selector
         const auto& output = params.output;
 
         DispatchData kd;
-
+        
         kd.fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
+        std::vector<size_t> global{ params.inputs[0].Y().v, params.inputs[1].X().v, output.Batch().v };
 
-        std::vector<size_t> global{ params.inputs[0].Y().v, params.inputs[1].X().v, output.Batch().v};
+        if (params.transpose_input1 && params.transpose_input2)
+            global ={ params.inputs[0].X().v, params.inputs[1].Y().v, output.Batch().v };
+        else if(params.transpose_input1)
+           global = { params.inputs[0].X().v, params.inputs[1].X().v, output.Batch().v };
+        else if (params.transpose_input2)
+            global = { params.inputs[0].Y().v, params.inputs[1].Y().v, output.Batch().v };
+
         const auto& local = GetOptimalLocalWorkGroupSizes(global);
 
         kd.gws0 = global[0];
