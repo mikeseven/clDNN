@@ -30,7 +30,8 @@
 extern "C" {
 #endif
 
-typedef enum
+/// @brief Axis which index_select primitive will index.
+typedef enum /*:int32_t*/
 {
     cldnn_along_b,
     cldnn_along_f,
@@ -38,8 +39,31 @@ typedef enum
     cldnn_along_y,
 } cldnn_index_select_axis;
 
+/// @brief Select index, which will be copied to the output..
+///
+/// @details Applies index selecting along specified dimension. The indices, which will be copied are specifed by 
+///          by @c indices.
+/// @n
+/// @n Example:
+/// @n      <tt>input_sizes  = (1, 2, 4, 2)</tt>
+/// @n      <tt>input_values = (a, b, c, d)</tt>
+/// @n      <tt>               (e, f, g, h)</tt>
+/// @n      <tt>indices_sizes  = (1, 1, 6, 1)</tt>
+/// @n      <tt>indices_values = {0, 0, 1, 1, 3, 3}</tt>                  
+/// @n  For axis: along_x:
+/// @n      <tt>output_sizes  = (1, 2, 6, 2)</tt>
+/// @n      <tt>output_values = (a, a, b, b, d, d)</tt>
+/// @n      <tt>                (e, e, f, f, h, h)</tt>
+/// @n
+/// @n The resulting output will have sizes equal to input_size with changed concrete tensor size to inidices x size.
+/// @n
+/// @n@b Requirements:
+/// @n - @c indices must be a valid primitive_id, which output's layout is: (bfyx, i32, {1, 1, indicies_size, 1})
+/// @n - @c axis - valid index_select_axis_name instance. 
+/// @n Breaking any of this conditions will cause exeption throw.
 CLDNN_BEGIN_PRIMITIVE_DESC(index_select)
 
+/// @brief Axis of index selecting.
 cldnn_index_select_axis axis;
 
 CLDNN_END_PRIMITIVE_DESC(index_select)
