@@ -78,7 +78,7 @@ TEST(gemm_gpu, basic_bfyx_t1) {
 
 
     EXPECT_EQ(output_ptr.size(), 3);
-    for (auto i = 0; i < out_data.size(); ++i) {
+    for (uint32_t i = 0; i < out_data.size(); ++i) {
         EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }
 }
@@ -125,7 +125,7 @@ TEST(gemm_gpu, basic_bfyx_t2) {
 
 
     EXPECT_EQ(output_ptr.size(), 3);
-    for (auto i = 0; i < out_data.size(); ++i) {
+    for (uint32_t i = 0; i < out_data.size(); ++i) {
         EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }
 }
@@ -182,7 +182,7 @@ TEST(gemm_gpu, basic_bfyx_t1t2) {
 
 
     EXPECT_EQ(output_ptr.size(), 6);
-    for (auto i = 0; i < out_data.size(); ++i) {
+    for (uint32_t i = 0; i < out_data.size(); ++i) {
         EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }
 }
@@ -246,7 +246,7 @@ TEST(gemm_gpu, basic_out_bias) {
 
     EXPECT_EQ(output_ptr.size(), 4);
 
-    for (auto i = 0; i < out_data.size(); ++i) {         
+    for (uint32_t i = 0; i < out_data.size(); ++i) {         
         EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }
 }
@@ -310,7 +310,7 @@ TEST(gemm_gpu, basic_out_bias_t1t2) {
 
     EXPECT_EQ(output_ptr.size(), 8);
 
-    for (auto i = 0; i < out_data.size(); ++i) {
+    for (uint32_t i = 0; i < out_data.size(); ++i) {
         EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }
 }
@@ -367,10 +367,9 @@ TEST(gemm_gpu, basic_bfyx) {
 
     
     EXPECT_EQ(output_ptr.size(), 6);
-    for (auto i = 0; i < out_data.size(); ++i) {
+    for (uint32_t i = 0; i < out_data.size(); ++i) {
             EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }
-
 }
 
 TEST(gemm_gpu, basic3_bfyx) {
@@ -2971,7 +2970,7 @@ TEST(gemm_gpu, basic3_bfyx) {
 
 
     EXPECT_EQ(output_ptr.size(), 45);
-    for (auto  i = 0; i < out_data.size(); ++i) {
+    for (uint32_t  i = 0; i < out_data.size(); ++i) {
         EXPECT_NEAR(output_ptr[i], out_data[i], 0.0001);
     }
 
@@ -3033,7 +3032,7 @@ TEST(gemm_gpu, basic_smarcink2) {
 
 
     EXPECT_EQ(output_ptr.size(), 8);
-    for (auto i = 0; i < out_data.size(); ++i) {         
+    for (uint32_t i = 0; i < out_data.size(); ++i) {         
         EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }
 }
