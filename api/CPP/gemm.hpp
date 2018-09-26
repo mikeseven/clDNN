@@ -54,17 +54,33 @@ struct gemm : public primitive_base<gemm, CLDNN_PRIMITIVE_DESC(gemm)>
             const primitive_id& id,
             const primitive_id& input,
             const primitive_id& input2,
-            bool transpose_input1 = false,
-            bool transpose_input2 = false,
-            float alpha = 1.0f,
-            float beta = 0.0f,
+            const bool transpose_input1 = false,
+            const bool transpose_input2 = false,
+            const float alpha = 1.0f,
+            const float beta = 0.0f,
             const padding& output_padding = padding()
         )
         : primitive_base(id, { input, input2 }, output_padding)
-        , alpha(alpha)
-        , beta(beta)
         , transpose_input1(transpose_input1)
         , transpose_input2(transpose_input2)
+        , alpha(alpha)
+        , beta(beta)
+    {
+    }
+
+        gemm(
+            const primitive_id& id,
+            const primitive_id& input,
+            const primitive_id& input2,
+            const primitive_id& out_bias,
+            const float alpha,
+            const float beta,
+            const padding& output_padding = padding()
+        )
+        : primitive_base(id, { input, input2, out_bias }, output_padding)
+        , alpha(alpha)
+        , beta(beta)
+
     {
     }
 
@@ -84,8 +100,10 @@ struct gemm : public primitive_base<gemm, CLDNN_PRIMITIVE_DESC(gemm)>
         , beta(beta)
         , transpose_input1(transpose_input1)
         , transpose_input2(transpose_input2)
+
     {
     }
+
 
     float alpha;
     float beta;
