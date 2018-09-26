@@ -30,12 +30,15 @@
 
 #include "activation_inst.h"
 #include "batch_norm_inst.h"
+#include "batch_norm_grad_inst.h"
 #include "internal_primitive.h"
 #include "internal_primitive_type_base.h"
 #include "convolution_inst.h"
 #include "concatenation_inst.h"
 #include "crop_inst.h"
 #include "data_inst.h"
+#include "eltwise_inst.h"
+#include "fully_connected_inst.h"
 #include "mutable_data_inst.h"
 #include "deconvolution_inst.h"
 #include "detection_output_inst.h"
@@ -50,14 +53,12 @@
 #include "softmax_inst.h"
 #include "split_inst.h"
 #include "program_dump_graph.h"
+#include "scale_grad_weights_inst.h"
 #include "upsampling_inst.h"
-#include "eltwise_inst.h"
-#include "fully_connected_inst.h"
 #include "mvn_inst.h"
 #include "lstm_inst.h"
 #include "lstm_gemm_inst.h"
 #include "lstm_elt_inst.h"
-#include "embed_inst.h"
 
 #include "network_impl.h"
 #include "kernel_selector_helper.h"
@@ -2023,11 +2024,126 @@ void program_impl::fuse_skip_layers(program_node* node)
     });
 }
 
+void program_impl::fuse_conv_bn_scale(program_node* node)
+{
+    do_for_types<convolution>(*node, [this](convolution_node& node)
+    {
+        if (node.users.size() > 2)
+            return;
+
+        auto found_bn = std::find_if(node.users.begin(), node.users.end(), [](program_node* n) { return n->is_type<batch_norm>(); });
+        auto bn_node = found_bn != node.users.end() ? *found_bn : nullptr;
+        if (bn_node != nullptr)
+        {
+            if (bn_node->users.size() > 2)
+                return;
+
+            auto found_scale = std::find_if(bn_node->users.begin(), bn_node->users.end(), [](program_node* n) { return n->is_type<scale>(); });
+            auto sc_node = found_bn != node.users.end() ? *found_scale : nullptr;
+            if (sc_node != nullptr)
+            {
+                int bn_index = int(std::distance(node.users.begin(), found_bn));
+                int sc_index = int(std::distance(bn_node->users.begin(), found_scale));
+                auto scale_prim = std::static_pointer_cast<const scale>(sc_node->get_primitive());
+                auto bn_prim = std::static_pointer_cast<const batch_norm>(bn_node->get_primitive());
+                auto prim = node.get_primitive();
+                bool training = false;
+
+                if (node.users.size() == 2)
+                {
+                    training = true;
+                    float zero = 0.0f;
+                    layout dummy_layout(data_types::f32, format::bfyx, tensor(1, 1, 1, 1));
+
+                    auto bn_backw = node.users.begin();
+                    std::advance(bn_backw, bn_index == 0 ? 1 : 0);
+                    if (!(*bn_backw)->is_type<batch_norm_grad>())
+                        return;
+                    auto sc_backw = bn_node->users.begin();
+                    std::advance(sc_backw, sc_index == 0 ? 1 : 0);
+                    if (!(*sc_backw)->is_type<scale_grad_weights>())
+                        return;
+
+                    auto conv_out_prim = std::make_shared<mutable_data>(prim->id + "_fused_conv_out", memory::attach(dummy_layout, &zero, 1));
+                    auto& conv_out_node = get_or_create(conv_out_prim);
+                    auto conv_out_mem = engine->allocate_memory(node.get_output_layout());
+                    conv_out_node.as<mutable_data>().attach_memory(*conv_out_mem, false);
+                    add_intermediate(conv_out_node, **bn_backw, 1, true);
+
+                    auto bn_out_prim = std::make_shared<mutable_data>(prim->id + "_fused_bn_out", memory::attach(dummy_layout, &zero, 1));
+                    auto& bn_out_node = get_or_create(bn_out_prim);
+                    auto bn_out_mem = engine->allocate_memory(bn_node->get_output_layout());
+                    bn_out_node.as<mutable_data>().attach_memory(*bn_out_mem, false);
+                    add_intermediate(bn_out_node, **sc_backw, 0, true);
+                }
+
+                auto new_conv = std::make_shared<convolution>(prim->id + "_fused", prim->input[0], prim->weights.ref(), prim->bias.ref(), bn_prim->epsilon,
+                                                        scale_prim->input[1], scale_prim->bias, prim->stride, prim->input_offset, prim->dilation,
+                                                        bn_prim->inv_variance, prim->with_activation, prim->activation_negative_slope, prim->output_padding);
+                auto& new_node = get_or_create(new_conv);
+                replace(node, new_node, false, false);
+
+                while (sc_node->get_dependencies().size() > 1)
+                {
+                    auto& dep = sc_node->get_dependency(sc_node->get_dependencies().size() - 1);
+                    remove_connection(dep, *sc_node);
+                    dep.users.push_back(&new_node);
+                    if (sc_node->get_dependencies().size() == 1)
+                        new_node.dependencies.insert(new_node.dependencies.begin() + 1, &dep);
+                    else
+                        new_node.dependencies.push_back(&dep);
+                }
+                extract_and_remove(*sc_node);
+                while (bn_node->get_dependencies().size() > 1)
+                {
+                    auto& dep = bn_node->get_dependency(bn_node->get_dependencies().size() - 1);
+                    remove_connection(dep, *bn_node);
+                    new_node.dependencies.push_back(&dep);
+                }
+                extract_and_remove(*bn_node);
+                auto inv_var_node = std::find_if(new_node.dependencies.begin(), new_node.dependencies.end(), 
+                                                [&new_conv](auto& node){ return node->id().find(new_conv->inv_variance) != std::string::npos; });
+                (*inv_var_node)->users.push_back(&new_node);
+
+                if (training)
+                {
+                    auto user = std::find_if(new_node.users.begin(), new_node.users.end(), [](auto& node){ return node->id().find("_fused_conv_out") != std::string::npos; });
+                    reverse_connection(new_node, **user);
+                    user = std::find_if(new_node.users.begin(), new_node.users.end(), [](auto& node){ return node->id().find("_fused_bn_out") != std::string::npos; });
+                    reverse_connection(new_node, **user);
+                    auto new_node_itr = std::find(this->processing_order.begin(), this->processing_order.end(), &new_node);
+                    auto swap_itr = new_node_itr;
+                    std::advance(swap_itr, 2);
+                    std::swap(*new_node_itr, *swap_itr);
+                    new_node.processing_num += 2;
+                }
+            }
+        }
+    });
+}
+
 void program_impl::prepare_primitive_fusing()
 {
     bool is_debug = options.get<build_option_type::debug>()->enabled();
 
+    std::list<program_node*> conv_nodes;
     auto itr = processing_order.begin(); //note we need to use iterators since currently processed element can be removed
+    while (itr != processing_order.end()) 
+    {
+        auto node_itr = itr++;
+        if ((*node_itr)->is_type<convolution>())
+            conv_nodes.push_back(*node_itr);
+    }
+    itr = conv_nodes.begin();
+    while (itr != conv_nodes.end())
+    {
+        auto node_itr = itr++;
+        auto& node = (*node_itr);
+
+        fuse_conv_bn_scale(node);
+    }
+
+    itr = processing_order.begin(); 
     while (itr != processing_order.end())
     {
         auto node_itr = itr++;
@@ -2067,7 +2183,7 @@ void program_impl::prepare_primitive_fusing()
         });
     }
 
-    //Second loop tries fusing several reorders one by one (if present) into one reorder
+    //This loop tries fusing several reorders one by one (if present) into one reorder
     itr = processing_order.begin();
     while (itr != processing_order.end())
     {
@@ -2096,7 +2212,7 @@ void program_impl::prepare_primitive_fusing()
             extract_and_remove(node);
         });
     }
-    //Third loop tries fusing eltwise (sum) with deconvolution
+    //This loop tries fusing eltwise (sum) with deconvolution
     itr = processing_order.begin();
     while (itr != processing_order.end())
     {
@@ -2105,6 +2221,17 @@ void program_impl::prepare_primitive_fusing()
 
         fuse_skip_layers(node);
     }
+}
+
+void program_impl::reverse_connection(program_node& dep_node, program_node& user_node)
+{
+    if (std::find(dep_node.users.begin(), dep_node.users.end(), &user_node) != dep_node.users.end())
+    {
+        remove_connection(dep_node, user_node);
+        add_connection(user_node, dep_node);
+    }
+    else
+        throw std::runtime_error("Trying to reverse connection, but nodes are wrongly or not connected.");
 }
 
 program_node& program_impl::get_or_create(std::shared_ptr<primitive> prim)
@@ -2210,7 +2337,7 @@ void program_impl::replace(program_node& old_node, program_node& new_node, bool 
         //copy old's dependencies
         while (!old_node.dependencies.empty())
         {
-            auto& dep = old_node.dependencies.back();
+            auto& dep = old_node.dependencies.front();
             add_connection(*dep, new_node);
             remove_connection(*dep, old_node);
         }
@@ -2401,7 +2528,7 @@ void program_impl::dump_memory_pool() const
 //TODO: break this function into number of smaller ones + add per-primitive fields (possibly use primitive_inst::to_string?)
 void program_impl::dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter) const
 {
-    auto path = get_dir_path(options);
+    std::string path = "C:\\graphs\\";//get_dir_path(options);
     if (path.empty())
     {
         return;

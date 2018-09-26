@@ -159,6 +159,8 @@ private:
     void prepare_padding();
     void prepare_buffer_fusing();
     void fuse_skip_layers(program_node* node);
+
+    void fuse_conv_bn_scale(program_node* node);
     void prepare_primitive_fusing();
     void prepare_depthwise_sep_opt();
     void prep_opt_depthwise_sep_post();
@@ -175,6 +177,9 @@ private:
     /*
     ** Utilities
     */
+
+    //Reverses connection - user becomes dependency.
+    void reverse_connection(program_node& dep_node, program_node& user_node);
 
     //returns already existing program_node for given primitive 'prim' (lookup in 'nodes_map')
     //if it was previously created, otherwise creates and then returns program_node

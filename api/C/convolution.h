@@ -64,6 +64,14 @@ cldnn_primitive_id_arr output_calibration_factors;
 float input_quantization_factor;
 /// @brief Output quantization factor
 float output_quantization_factor;
+/// @brief Primitive id containing scale bias data for fused convolution.
+cldnn_primitive_id scale_bias;
+/// @brief Primitive id containing inverted variance used in future gradient computing for fused convolution.
+cldnn_primitive_id inv_variance;
+/// @brief Epsilon for fused convolution.
+float epsilon;
+/// @brief Indicates that primitive is fused with batch norm and scale.
+uint32_t fused_batch_norm_scale;
 
 CLDNN_END_PRIMITIVE_DESC(convolution)
 

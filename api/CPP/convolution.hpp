@@ -72,6 +72,10 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , with_activation(with_activation)
         , activation_negative_slope(activation_slp)
         , with_output_size(false)
+        , scale_bias("")
+        , inv_variance("")
+        , epsilon(0.f)
+        , fused_batch_norm_scale(false)
         , _weights(weights)
         , _bias(bias)
         , _weights_quantization_factors(std::vector<primitive_id>(0))
@@ -125,6 +129,10 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , with_activation(with_activation)
         , activation_negative_slope(activation_slp)
         , with_output_size(false)
+        , scale_bias("")
+        , inv_variance("")
+        , epsilon(0.f)
+        , fused_batch_norm_scale(false)
         , _weights(weights)
         , _bias(bias)
         , _weights_quantization_factors(w_quantization_factor)
@@ -180,6 +188,10 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , with_activation(with_activation)
         , activation_negative_slope(activation_slp)
         , with_output_size(false)
+        , scale_bias("")
+        , inv_variance("")
+        , epsilon(0.f)
+        , fused_batch_norm_scale(false)
         , _weights(weights)
         , _bias(bias)
         , _weights_quantization_factors(w_quantization_factor)
@@ -227,6 +239,10 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , with_activation(with_activation)
         , activation_negative_slope(activation_slp)
         , with_output_size(false)
+        , scale_bias("")
+        , inv_variance("")
+        , epsilon(0.f)
+        , fused_batch_norm_scale(false)
         , _weights(weights)
         , _bias(std::vector<primitive_id>(0))
         , _weights_quantization_factors(std::vector<primitive_id>(0))
@@ -274,6 +290,10 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , activation_negative_slope(activation_slp)
         , with_output_size(true)
         , output_size(output_size)
+        , scale_bias("")
+        , inv_variance("")
+        , epsilon(0.f)
+        , fused_batch_norm_scale(false)
         , _weights(weights)
         , _bias(bias)
         , _weights_quantization_factors(std::vector<primitive_id>(0))
@@ -321,6 +341,10 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , activation_negative_slope(activation_slp)
         , with_output_size(true)
         , output_size(output_size)
+        , scale_bias("")
+        , inv_variance("")
+        , epsilon(0.f)
+        , fused_batch_norm_scale(false)
         , _weights(weights)
         , _bias(std::vector<primitive_id>(0))
         , _weights_quantization_factors(std::vector<primitive_id>(0))
@@ -344,6 +368,10 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
         , activation_negative_slope(dto->activation_negative_slope)
         , with_output_size(dto->with_output_size != 0)
         , output_size(dto->output_size)
+        , scale_bias(dto->scale_bias)
+        , inv_variance(dto->inv_variance)
+        , epsilon(dto->epsilon)
+        , fused_batch_norm_scale(false)
         , _weights(dto->weights)
         , _bias(dto->bias)
         , _weights_quantization_factors(dto->weights_quantization_factors)
@@ -415,6 +443,64 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
             activation_slp, output_size, output_padding);
     }
 
+    /// @brief Constructs convolution primitive fused with batch norm and scale for ResNet.
+    /// @param id This primitive id.
+    /// @param input Input primitive id.
+    /// @param weights List of primitive ids containing weights data.
+    /// @param bias List of primitive ids containing bias data.
+    /// @param epsilon Small number to protect from 0 dividing.
+    /// @param scale_input Scale input primitive id with values needed for product computation. Used in fused scale part.
+    /// @param scale_bias Primitive id containing bias data for fused scale part.
+    /// @param input_offset Defines a shift, relative to (0,0) position of the input buffer, where (0,0) point of the convolution window should start calculations.
+    /// @param stride Defines shift in input buffer between adjacent calculations of output values.
+    /// @param dilation Defines gaps in the input - dilation rate k=1 is normal convolution, k=2 means skipping one pixel per input, k=4 means skipping 3 pixels.
+    /// As an example in one dimension, a filter w of size 3 would compute over input x the following: w[0]*x[0] + w[1]*x[1] + w[2]*x[2] for dilation of 1.
+    /// For dilation 2 the filter would instead compute w[0]*x[0] + w[1]*x[2] + w[2]*x[4].
+    /// @param inv_variance Primitive id containing inverted variance calculated in this primitive. Used in fused batch norm part.
+    /// @param with_activation Enable Relu activation.
+    /// @param activation_slp Relu activation slope.
+    convolution(
+        const primitive_id& id,
+        const primitive_id& input,
+        const std::vector<primitive_id>& weights,
+        const std::vector<primitive_id>& bias,
+        float epsilon,
+        const primitive_id& scale_input,
+        const primitive_id& scale_bias = "",
+        tensor stride = { 1, 1, 1, 1 },
+        tensor input_offset = { 0,0,0,0 },
+        tensor dilation = { 1, 1, 1, 1 },
+        const primitive_id& inv_variance = "",
+        bool with_activation = false,
+        float activation_slp = 0.0f,
+        const padding& output_padding = padding()
+    )
+        :primitive_base(id, { input, scale_input }, output_padding)
+        , weights(_weights.cpp_ids)
+        , bias(_bias.cpp_ids)
+        , weights_quantization_factors(_weights_quantization_factors.cpp_ids)
+        , output_calibration_factors(_output_calibration_factors.cpp_ids)
+        , input_quantization_factor(1.0f)
+        , output_quantization_factor(1.0f)
+        , input_offset(input_offset)
+        , stride(stride)
+        , dilation(dilation)
+        , with_activation(with_activation)
+        , activation_negative_slope(activation_slp)
+        , with_output_size(false)
+        , scale_bias(scale_bias)
+        , inv_variance(inv_variance)
+        , epsilon(epsilon)
+        , fused_batch_norm_scale(true)
+        , _weights(weights)
+        , _bias(bias)
+        , _weights_quantization_factors(std::vector<primitive_id>(0))
+        , _output_calibration_factors(std::vector<primitive_id>(0))
+    {
+        if ((bias.size() != 0) && (weights.size() != bias.size()))
+            throw std::runtime_error("convolution's weights/bias count does not match");
+    }
+
     /// @brief List of primitive ids containing weights data.
     fixed_size_vector_ref weights;
     /// @brief List of primitive ids containing bias data.
@@ -443,7 +529,14 @@ struct convolution : public primitive_base<convolution, CLDNN_PRIMITIVE_DESC(con
     bool with_output_size;
     /// @brief User-defined output data size of the primitive (w/o padding).
     tensor output_size;
-
+    /// @brief Primitive id containing scale bias data for fused convolution.
+    primitive_id scale_bias;
+    /// @brief Primitive id containing inverted variance used in future gradient computing for fused convolution.
+    primitive_id inv_variance;
+    /// @brief Epsilon for fused convolution.
+    float epsilon;
+    /// @brief Indicates that primitive is fused with batch norm and scale.
+    bool fused_batch_norm_scale;
     /// @brief On how many cards split the computation to.
     int32_t split() const { return static_cast<int32_t>(weights.size()); }
 
@@ -456,7 +549,7 @@ protected:
     std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override
     {
         std::vector<std::reference_wrapper<const primitive_id>> ret;
-        ret.reserve(weights.size() + bias.size() + weights_quantization_factors.size() + output_calibration_factors.size());
+        ret.reserve(weights.size() + bias.size() + weights_quantization_factors.size() + output_calibration_factors.size() + !scale_bias.empty() + !inv_variance.empty());
         for (auto& w : weights)
             ret.push_back(w);
         for (auto& b : bias)
@@ -465,6 +558,10 @@ protected:
             ret.push_back(q);
         for (auto& q : output_calibration_factors)
             ret.push_back(q);
+        if (!scale_bias.empty())
+            ret.push_back(scale_bias);
+        if (!inv_variance.empty())
+            ret.push_back(inv_variance);
         return ret;
     }
 
@@ -484,7 +581,9 @@ protected:
         dto.dilation = dilation;
         dto.with_output_size = with_output_size;
         dto.output_size = output_size;
-        
+        dto.epsilon = epsilon;
+        dto.inv_variance = inv_variance.c_str();
+        dto.scale_bias = scale_bias.c_str();
     }
 };
 /// @}
