@@ -77,7 +77,7 @@ TEST(gemm_gpu, basic_bfyx_t1) {
     auto output_ptr = output.pointer<float>();
 
 
-    EXPECT_EQ(output_ptr.size(), 3);
+    EXPECT_EQ(output_ptr.size(), (uint32_t)3);
     for (uint32_t i = 0; i < out_data.size(); ++i) {
         EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }
@@ -124,7 +124,7 @@ TEST(gemm_gpu, basic_bfyx_t2) {
     auto output_ptr = output.pointer<float>();
 
 
-    EXPECT_EQ(output_ptr.size(), 3);
+    EXPECT_EQ(output_ptr.size(), (uint32_t)3);
     for (uint32_t i = 0; i < out_data.size(); ++i) {
         EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }
@@ -181,7 +181,7 @@ TEST(gemm_gpu, basic_bfyx_t1t2) {
     auto output_ptr = output.pointer<float>();
 
 
-    EXPECT_EQ(output_ptr.size(), 6);
+    EXPECT_EQ(output_ptr.size(), (uint32_t)6);
     for (uint32_t i = 0; i < out_data.size(); ++i) {
         EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }
@@ -244,7 +244,7 @@ TEST(gemm_gpu, basic_out_bias) {
     auto output = outputs.at("output").get_memory();
     auto output_ptr = output.pointer<float>();
 
-    EXPECT_EQ(output_ptr.size(), 4);
+    EXPECT_EQ(output_ptr.size(), (uint32_t)4);
 
     for (uint32_t i = 0; i < out_data.size(); ++i) {         
         EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
@@ -308,7 +308,7 @@ TEST(gemm_gpu, basic_out_bias_t1t2) {
     auto output = outputs.at("output").get_memory();
     auto output_ptr = output.pointer<float>();
 
-    EXPECT_EQ(output_ptr.size(), 8);
+    EXPECT_EQ(output_ptr.size(), (uint32_t)8);
 
     for (uint32_t i = 0; i < out_data.size(); ++i) {
         EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
@@ -366,7 +366,7 @@ TEST(gemm_gpu, basic_bfyx) {
     auto output_ptr = output.pointer<float>();
 
     
-    EXPECT_EQ(output_ptr.size(), 6);
+    EXPECT_EQ(output_ptr.size(), (uint32_t)6);
     for (uint32_t i = 0; i < out_data.size(); ++i) {
             EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }
@@ -2969,7 +2969,7 @@ TEST(gemm_gpu, basic3_bfyx) {
     auto output_ptr = output.pointer<float>();
 
 
-    EXPECT_EQ(output_ptr.size(), 45);
+    EXPECT_EQ(output_ptr.size(), (uint32_t)45);
     for (uint32_t  i = 0; i < out_data.size(); ++i) {
         EXPECT_NEAR(output_ptr[i], out_data[i], 0.0001);
     }
@@ -3031,7 +3031,7 @@ TEST(gemm_gpu, basic_smarcink2) {
     auto output_ptr = output.pointer<float>();
 
 
-    EXPECT_EQ(output_ptr.size(), 8);
+    EXPECT_EQ(output_ptr.size(), (uint32_t)8);
     for (uint32_t i = 0; i < out_data.size(); ++i) {         
         EXPECT_FLOAT_EQ(output_ptr[i], out_data[i]);
     }
