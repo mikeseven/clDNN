@@ -165,6 +165,10 @@ private:
     void prepare_depthwise_sep_opt();
     void prep_opt_depthwise_sep_post();
 
+    void eltwise_shrinking_pass();
+    void eltwise_remove_stride_pass();
+    void conv_stride_extend(program_node& node, cldnn::tensor& tensor);
+
     /*
     ** Memory pool functions
     */

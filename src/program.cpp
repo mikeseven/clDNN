@@ -319,6 +319,11 @@ void program_impl::pre_optimize_graph()
             node->get_output_layout();
     }
 
+    // shrinking eltwise if users are conv 1x1 with stride > 1 optimization
+    eltwise_shrinking_pass();
+    // trying to set stride to 1x1 by shrinking convolutions before eltwise if doable
+    eltwise_remove_stride_pass();
+
     if (options.get<build_option_type::optimize_data>()->enabled())
     {
         prepare_primitive_fusing();
@@ -346,6 +351,157 @@ void program_impl::pre_optimize_graph()
     }
 
     dump_program("7_pre_optimized", true);
+}
+
+void program_impl::eltwise_shrinking_pass()
+{
+    std::vector<program_node*> convs_to_shrink;
+
+    for (auto& node : processing_order)
+    {
+        if (node->is_type<eltwise>())
+        {
+            const auto eltw = std::static_pointer_cast<const eltwise>(node->get_primitive());
+            // TODO: support cases which already have stride!
+            if (eltw->stride.empty())
+            {
+                bool can_shrink = true;
+                int32_t stride_x = 0;
+                int32_t stride_y = 0;
+                convs_to_shrink.clear();
+                auto users = node->get_users();
+                for (auto user : users)
+                {
+                    // currently we can shrink only if users are convolutions
+                    if (!user->is_type<convolution>())
+                    {
+                        can_shrink = false;
+                        break;
+                    }
+
+                    const auto conv = std::static_pointer_cast<const convolution>(user->get_primitive());
+                    if (conv->weights.size() != 1)
+                    {
+                        can_shrink = false;
+                        break;
+                    }
+
+                    auto weights_node_ptr = nodes_map.find(conv->weights[0])->second;
+                    auto filter_size = weights_node_ptr->get_output_layout().size;
+                    // make sure this is conv 1x1
+                    if (filter_size.spatial[0] != 1 || filter_size.spatial[1] != 1)
+                    {
+                        can_shrink = false;
+                        break;
+                    }
+
+                    // make sure convolution can accept shrinked input by modifying stride
+                    if (conv->stride.spatial[0] > 1 || conv->stride.spatial[1] > 1)
+                    {
+                        if (stride_x == 0)
+                            stride_x = conv->stride.spatial[0];
+                        if (stride_y == 0)
+                            stride_y = conv->stride.spatial[1];
+
+                        // make sure stride across all eltwise's convolution users is the same
+                        if (conv->stride.spatial[0] != stride_x || conv->stride.spatial[1] != stride_y)
+                        {
+                            can_shrink = false;
+                            break;
+                        }
+                        convs_to_shrink.push_back(user);
+                    }
+                    else
+                    {
+                        can_shrink = false;
+                        break;
+                    }
+                }
+                if (can_shrink)
+                {
+                    // change stride on every convolution
+                    for (size_t i = 0; i < convs_to_shrink.size(); i++)
+                    {
+                        const auto conv = std::static_pointer_cast<const convolution>(convs_to_shrink[i]->get_primitive());
+                        auto c = const_cast<convolution*>(&(*conv));
+                        c->stride.spatial[0] = 1;
+                        c->stride.spatial[1] = 1;
+                        convs_to_shrink[i]->recalc_output_layout();
+                    }
+                    // add stride for every eltwise's inputs to have shrinked output
+                    auto e = const_cast<eltwise*>(&(*eltw));
+                    for (size_t user = 0; user < node->get_users().size(); user++)
+                    {
+                        e->stride.push_back({ 0,0,stride_x,stride_y });
+                    }
+                    node->recalc_output_layout();
+                }
+            }
+        }
+    }
+}
+
+void program_impl::conv_stride_extend(program_node& node, cldnn::tensor &tensor)
+{
+    // make sure we have only 1 user
+    if (node.get_users().size() > 1)
+        return;
+
+    const auto conv = std::static_pointer_cast<const convolution>(node.get_primitive());
+    auto weights_node_ptr = nodes_map.find(conv->weights[0])->second;
+    auto filter_size = weights_node_ptr->get_output_layout().size;
+    // make sure this is conv 1x1
+    if (filter_size.spatial[0] == 1 && filter_size.spatial[1] == 1)
+    {
+        auto deps = node.get_dependencies();
+        for (auto dep : deps)
+        {
+            if (dep->is_type<convolution>())
+            {
+                conv_stride_extend(*dep, tensor);
+                break;
+            }
+        }
+    }
+    else
+    {
+        bool can_shrink_x = (filter_size.spatial[0] - (conv->stride.spatial[0] + (tensor.spatial[0] - 1))) >= 0;
+        bool can_shrink_y = (filter_size.spatial[1] - (conv->stride.spatial[1] + (tensor.spatial[1] - 1))) >= 0;
+        if (can_shrink_x && can_shrink_y)
+        {
+            auto c = const_cast<convolution*>(&(*conv));
+            c->stride.spatial[0] += tensor.spatial[0] - 1;
+            c->stride.spatial[1] += tensor.spatial[1] - 1;
+            node.recalc_output_layout();
+            tensor.spatial[0] = 1;
+            tensor.spatial[1] = 1;
+        }
+    }
+}
+
+void program_impl::eltwise_remove_stride_pass()
+{
+    for (auto& node : processing_order)
+    {
+        if (node->is_type<eltwise>())
+        {
+            const auto eltw = std::static_pointer_cast<const eltwise>(node->get_primitive());
+            if (!eltw->stride.empty())
+            {
+                auto deps = node->get_dependencies();
+                for (size_t i = 0; i < deps.size(); i++)
+                {
+                    auto dep = deps[i];
+                    // TODO: add other primitives beside convolution here
+                    if (dep->is_type<convolution>())
+                    {
+                        auto e = const_cast<eltwise*>(&(*eltw));
+                        conv_stride_extend(*dep, e->stride[i]);
+                    }
+                }
+            }
+        }
+    }
 }
 
 void program_impl::compile_graph()
@@ -1889,8 +2045,8 @@ void program_impl::prepare_buffer_fusing()
                     //  |_low_pad_|__data_size__|___|<-upper pad
 
                     node.set_output_padding(padding(
-                    { out_padd.lower_size().batch[0], crop_prim->offsets.feature[0], out_padd.lower_size().spatial[0], out_padd.lower_size().spatial[1] },
-                    { out_padd.upper_size().batch[0], input_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_prim->reference_input.feature[0],
+                        { out_padd.lower_size().batch[0], crop_prim->offsets.feature[0], out_padd.lower_size().spatial[0], out_padd.lower_size().spatial[1] },
+                        { out_padd.upper_size().batch[0], input_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_prim->reference_input.feature[0],
                         out_padd.upper_size().spatial[0], out_padd.upper_size().spatial[1] }));
                     node.can_be_optimized(true);
                 }
