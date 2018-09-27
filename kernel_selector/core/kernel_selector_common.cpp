@@ -373,6 +373,18 @@ namespace kernel_selector
         }
     }
 
+    std::string toString(const IndexSelectAxis& axis)
+    {
+        switch (axis)
+        {
+        case IndexSelectAxis::BATCH:       return "INDEX_SELECT_AXIS_BATCH";
+        case IndexSelectAxis::FEATURE:     return "INDEX_SELECT_AXIS_FEATURE";
+        case IndexSelectAxis::X:           return "INDEX_SELECT_AXIS_X";
+        case IndexSelectAxis::Y:           return "INDEX_SELECT_AXIS_Y";
+        default:                           return "";
+        }
+    }
+
     std::string toString(NonLinearParams params)
     {
         std::stringstream s;

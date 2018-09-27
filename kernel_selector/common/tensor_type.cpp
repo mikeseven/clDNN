@@ -216,7 +216,8 @@ namespace kernel_selector
 
                 // TODO: [FUTURE] Use C++17 [[fallthrough]] instead of code duplication to get portable warning avoidance.
                 if ((x.pitch == f.pitch && y.pitch == x.v*x.pitch) ||                   // YX - no Features (val/pitch)
-                    (y.v == 1 && x.v == 1 && x.pitch == f.pitch && y.pitch == f.pitch)) // Feature only
+                    (y.v == 1 && x.v == 1 && x.pitch == f.pitch && y.pitch == f.pitch) || // Feature only
+                    (f.v * f.pitch == x.pitch && f.v * f.pitch == y.pitch && y.v == 1 && x.v == 1)) // Feature only
                 {
                     l = targetLayout;
                     break;
@@ -225,7 +226,8 @@ namespace kernel_selector
 
             case Tensor::byxf:
                 if ((x.pitch == f.pitch && y.pitch == x.v*x.pitch) ||                   // YX - no Features (val/pitch)
-                    (y.v == 1 && x.v == 1 && x.pitch == f.pitch && y.pitch == f.pitch)) // Feature only
+                    (y.v == 1 && x.v == 1 && x.pitch == f.pitch && y.pitch == f.pitch) || // Feature only
+                    (f.v * f.pitch == x.pitch && f.v * f.pitch == y.pitch && y.v == 1 && x.v == 1)) // Feature only
                 {
                     l = targetLayout;
                     break;

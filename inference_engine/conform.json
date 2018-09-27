@@ -126,8 +126,8 @@
             "proposal": "0xCEAD295012CD08023813A53541976E54"
         },
         "Perc_ZF_fasterRCNN_fp32": {
-            "bbox_pred": "0x04E851F87100FF7B8F646CD0256ED91C",
-            "loss_cls": "0x4D858FCA367626D4735030F76CF939F8",
+            "bbox_pred": "0xD072E13E79CAA17AEB152851FE752C6F",
+            "loss_cls": "0x73AB7DF50B024CDDB929D4DB20F10044",
             "proposal": "0x4EE01CCC6653A27EE1EE05B57F92B9DB"
         },
         "ResNet-101_fp16": {
