@@ -58,7 +58,8 @@ typedef enum /*:int32_t*/
 /// @n The resulting output will have sizes equal to input_size with changed concrete tensor size to inidices x size.
 /// @n
 /// @n@b Requirements:
-/// @n - @c indices must be a valid primitive_id, which output's layout is: (bfyx, i32, {1, 1, indicies_size, 1})
+/// @n - @c input must be a valid primitive_id, which output's format is bfyx/yxfb;
+/// @n - @c indices must be a valid primitive_id, which output's layout is: (bfyx/yxfb, i32, {1, 1, indicies_size, 1})
 /// @n - @c axis - valid index_select_axis_name instance. 
 /// @n Breaking any of this conditions will cause exeption throw.
 CLDNN_BEGIN_PRIMITIVE_DESC(index_select)

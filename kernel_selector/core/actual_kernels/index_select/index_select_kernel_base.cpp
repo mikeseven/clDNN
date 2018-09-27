@@ -40,7 +40,7 @@ namespace kernel_selector
         std::vector<size_t> global;
         if (params.axis == IndexSelectAxis::BATCH)
         {
-            global = { 1, indices.X().v, 1 };
+            global = { 1, indices.X().v, output.Feature().v };
         }
         else if (params.axis == IndexSelectAxis::X || params.axis == IndexSelectAxis::Y)
         {
@@ -48,7 +48,7 @@ namespace kernel_selector
         }
         else if(params.axis == IndexSelectAxis::FEATURE)
         {
-            global = { output.Batch().v, indices.X().v, 1 };
+            global = { output.Batch().v, indices.X().v, output.Y().v };
         }
         const auto& local = GetOptimalLocalWorkGroupSizes(global);
 

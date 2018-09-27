@@ -33,7 +33,7 @@
 using namespace cldnn;
 using namespace tests;
 
-std::vector<float> generate_reference(const std::vector<float>& input, const std::vector<int32_t>& indices, index_select_axis_name axis, const size_t b_size, const size_t f_size,
+std::vector<float> generate_reference_bfyx(const std::vector<float>& input, const std::vector<int32_t>& indices, index_select_axis_name axis, const size_t b_size, const size_t f_size,
     const size_t y_size, const size_t x_size)
 {
 
@@ -134,7 +134,89 @@ std::vector<float> generate_reference(const std::vector<float>& input, const std
 }
 
 
-TEST(index_select_gpu, basic_along_b_3_executes)
+std::vector<float> generate_reference_yxfb(const std::vector<float>& input, const std::vector<int32_t>& indices, index_select_axis_name axis, const cldnn::layout& input_lay)
+{
+    auto memory_desc_inp = generic_test::get_linear_memory_desc(input_lay);
+
+    std::vector<float> ret;
+    switch (axis)
+    {
+    case index_select_axis_name::along_b:
+ 
+        for (size_t y = 0; y < input_lay.size.spatial[1]; y++)
+        {
+            for (size_t x = 0; x < input_lay.size.spatial[0]; x++)
+            {
+                for (size_t f = 0; f < input_lay.size.feature[0]; f++)
+                {
+                    for (auto const& ind : indices)
+                    {
+
+                        size_t index = generic_test::get_linear_index(input_lay, ind, f, y, x, memory_desc_inp);
+                        ret.push_back(input.at(index));
+                    }
+
+                }
+            }
+        }
+        return ret;
+    case index_select_axis_name::along_f:
+        for (size_t y = 0; y < input_lay.size.spatial[1]; y++)
+        {
+            for (size_t x = 0; x < input_lay.size.spatial[0]; x++)
+            {
+                for (auto const& ind : indices)
+                {
+                    for (size_t b = 0; b < input_lay.size.batch[0]; b++)
+                    {
+                    size_t index = generic_test::get_linear_index(input_lay, b, ind, y, x, memory_desc_inp);
+                    ret.push_back(input.at(index));
+                    }
+                }
+            }
+        }
+        return ret;
+    case index_select_axis_name::along_x:
+        for (size_t y = 0; y < input_lay.size.spatial[1]; y++)
+        {
+            for (auto const& ind : indices)
+            {
+                for (size_t f = 0; f < input_lay.size.feature[0]; f++)
+                {
+                    for (size_t b = 0; b < input_lay.size.batch[0]; b++)
+                    {
+                        size_t index = generic_test::get_linear_index(input_lay, b, f, y, ind, memory_desc_inp);
+                        ret.push_back(input.at(index));
+                    }
+                }
+            }
+        }
+        return ret;
+    case index_select_axis_name::along_y:
+
+        for (auto const& ind : indices)
+        {
+            for (size_t x = 0; x < input_lay.size.spatial[0]; x++)
+            {
+                for (size_t f = 0; f < input_lay.size.feature[0]; f++)
+                {
+                    for (size_t b = 0; b < input_lay.size.batch[0]; b++)
+                    {
+                        size_t index = generic_test::get_linear_index(input_lay, b, f, ind, x, memory_desc_inp);
+                        ret.push_back(input.at(index));
+                    }
+                }
+            }
+        }
+        return ret;
+    default:
+        throw std::runtime_error("Unknown index_select axis!");
+        break;
+    }
+}
+
+
+TEST(index_select_gpu, basic_along_b_3_executes_bfyx)
 {
     /*
     input: {5, 2, 3, 4}
@@ -200,7 +282,7 @@ TEST(index_select_gpu, basic_along_b_3_executes)
         EXPECT_EQ(x_size, in_size_x);
         EXPECT_EQ(y_size, in_size_y);
         
-        auto ref = generate_reference(input_data, id, axis, in_size_b, in_size_f, in_size_y, in_size_x);
+        auto ref = generate_reference_bfyx(input_data, id, axis, in_size_b, in_size_f, in_size_y, in_size_x);
 
         auto output_ptr = output_mem.pointer<float>();
         for (size_t i = 0; i < output_ptr.size(); i++)
@@ -210,7 +292,7 @@ TEST(index_select_gpu, basic_along_b_3_executes)
     }
 }
 
-TEST(index_select_gpu, basic_along_f_3_executes)
+TEST(index_select_gpu, basic_along_f_3_executes_bfyx)
 {
     /*
     input: {2, 5, 3, 3}
@@ -276,7 +358,7 @@ TEST(index_select_gpu, basic_along_f_3_executes)
         EXPECT_EQ(x_size, in_size_x);
         EXPECT_EQ(y_size, in_size_y);
 
-        auto ref = generate_reference(input_data, id, axis, in_size_b, in_size_f, in_size_y, in_size_x);
+        auto ref = generate_reference_bfyx(input_data, id, axis, in_size_b, in_size_f, in_size_y, in_size_x);
 
         auto output_ptr = output_mem.pointer<float>();
         for (size_t i = 0; i < output_ptr.size(); i++)
@@ -286,7 +368,7 @@ TEST(index_select_gpu, basic_along_f_3_executes)
     }
 }
 
-TEST(index_select_gpu, basic_along_x_3_executes)
+TEST(index_select_gpu, basic_along_x_3_executes_bfyx)
 {
     /*
     input: {3, 4, 6, 5}
@@ -352,7 +434,7 @@ TEST(index_select_gpu, basic_along_x_3_executes)
         EXPECT_EQ(x_size, new_indicies_size);
         EXPECT_EQ(y_size, in_size_y);
 
-        auto ref = generate_reference(input_data, id, axis, in_size_b, in_size_f, in_size_y, in_size_x);
+        auto ref = generate_reference_bfyx(input_data, id, axis, in_size_b, in_size_f, in_size_y, in_size_x);
 
         auto output_ptr = output_mem.pointer<float>();
         for (size_t i = 0; i < output_ptr.size(); i++)
@@ -362,7 +444,7 @@ TEST(index_select_gpu, basic_along_x_3_executes)
     }
 }
 
-TEST(index_select_gpu, basic_along_y_3_executes)
+TEST(index_select_gpu, basic_along_y_3_executes_bfyx)
 {
     /*
     input: {2, 4, 4, 3}
@@ -428,7 +510,314 @@ TEST(index_select_gpu, basic_along_y_3_executes)
         EXPECT_EQ(x_size, x_size);
         EXPECT_EQ(y_size, new_indicies_size);
 
-        auto ref = generate_reference(input_data, id, axis, in_size_b, in_size_f, in_size_y, in_size_x);
+        auto ref = generate_reference_bfyx(input_data, id, axis, in_size_b, in_size_f, in_size_y, in_size_x);
+
+        auto output_ptr = output_mem.pointer<float>();
+        for (size_t i = 0; i < output_ptr.size(); i++)
+        {
+            EXPECT_EQ(output_ptr[i], ref[i]);
+        }
+    }
+}
+
+TEST(index_select_gpu, basic_along_b_3_executes_yxfb)
+{
+    /*
+    input: {5, 2, 3, 4}
+    indices: {1, 1, 4, 1}
+    output: {4, 2, 3, 4}
+    */
+    engine engine;
+    constexpr auto in_size_b = 5;
+    constexpr auto in_size_f = 2;
+    constexpr auto in_size_x = 3;
+    constexpr auto in_size_y = 4;
+    constexpr auto count = in_size_b * in_size_f * in_size_x * in_size_y;
+    constexpr auto new_indicies_size = 4;
+    constexpr auto axis = index_select_axis_name::along_b;
+    auto input_lay= cldnn::layout(data_types::f32, format::yxfb,{ in_size_b, in_size_f, in_size_x, in_size_y });
+    auto input = memory::allocate(engine, input_lay);
+    auto indices = memory::allocate(engine, { data_types::i32, format::yxfb, { 1, 1, new_indicies_size, 1 } });
+
+    auto input_data = generate_random_1d<float>(count, 0, 10);
+    set_values(input, input_data);
+
+    /*
+    Network will be executed 3 times (for 3 different indicies_data).
+    */
+    std::vector<std::vector<int32_t>> indices_data =
+    {
+        { 0, 1, 1, 1 }, //for run: 0
+        { 0, 1, 2, 3 }, //for run: 1
+        { 4, 3, 2, 1 } // for run: 2
+    };
+
+    topology topo;
+    topo.add(
+        input_layout("input", input.get_layout())
+    );
+    topo.add(
+        input_layout("indices", indices.get_layout())
+    );
+    topo.add(
+        index_select("index_select", "input", "indices", axis)
+    );
+
+    network net(engine, topo);
+    net.set_input_data("input", input);
+    for (auto const& id : indices_data)
+    {
+        set_values(indices, id);
+        net.set_input_data("indices", indices);
+        auto outputs = net.execute();
+
+        EXPECT_EQ(outputs.size(), size_t(1));
+        EXPECT_EQ(outputs.begin()->first, "index_select");
+
+        auto output_mem = outputs.at("index_select").get_memory();
+        auto output_layout = output_mem.get_layout();
+
+        int b_size = output_layout.size.batch[0];
+        int f_size = output_layout.size.feature[0];
+        int x_size = output_layout.size.spatial[0];
+        int y_size = output_layout.size.spatial[1];
+        EXPECT_EQ(output_layout.format, format::yxfb);
+        EXPECT_EQ(b_size, new_indicies_size);
+        EXPECT_EQ(f_size, in_size_f);
+        EXPECT_EQ(x_size, in_size_x);
+        EXPECT_EQ(y_size, in_size_y);
+
+        auto ref = generate_reference_yxfb(input_data, id, axis, input_lay);
+
+        auto output_ptr = output_mem.pointer<float>();
+        for (size_t i = 0; i < output_ptr.size(); i++)
+        {
+            EXPECT_EQ(output_ptr[i], ref[i]);
+        }
+    }
+}
+
+TEST(index_select_gpu, basic_along_f_3_executes_yxfb)
+{
+    /*
+    input: {2, 5, 3, 3}
+    indices: {1, 1, 10, 1}
+    output: {2, 10, 3, 3}
+    */
+    engine engine;
+    constexpr auto in_size_b = 2;
+    constexpr auto in_size_f = 5;
+    constexpr auto in_size_x = 3;
+    constexpr auto in_size_y = 3;
+    constexpr auto count = in_size_b * in_size_f * in_size_x * in_size_y;
+    constexpr auto new_indicies_size = 10;
+    constexpr auto axis = index_select_axis_name::along_f;
+    auto input_lay = cldnn::layout(data_types::f32, format::yxfb, { in_size_b, in_size_f, in_size_x, in_size_y });
+    auto input = memory::allocate(engine, input_lay);
+    auto indices = memory::allocate(engine, { data_types::i32, format::yxfb,{ 1, 1, new_indicies_size, 1 } });
+
+    auto input_data = generate_random_1d<float>(count, 0, 10);
+    set_values(input, input_data);
+
+    /*
+    Network will be executed 3 times (for 3 different indicies_data).
+    */
+    std::vector<std::vector<int32_t>> indices_data =
+    {
+        { 0, 1, 2, 3, 4, 0, 1, 2, 3, 4 }, //for run: 0
+    { 1, 1, 3, 3, 2, 2, 4, 4, 0, 0 }, //for run: 1
+    { 0, 0, 0, 0, 0, 4, 3, 2, 1, 0 } // for run: 2
+    };
+
+    topology topo;
+    topo.add(
+        input_layout("input", input.get_layout())
+    );
+    topo.add(
+        input_layout("indices", indices.get_layout())
+    );
+    topo.add(
+        index_select("index_select", "input", "indices", axis)
+    );
+
+    network net(engine, topo);
+    net.set_input_data("input", input);
+    for (auto const& id : indices_data)
+    {
+        set_values(indices, id);
+        net.set_input_data("indices", indices);
+        auto outputs = net.execute();
+
+        EXPECT_EQ(outputs.size(), size_t(1));
+        EXPECT_EQ(outputs.begin()->first, "index_select");
+
+        auto output_mem = outputs.at("index_select").get_memory();
+        auto output_layout = output_mem.get_layout();
+
+        int b_size = output_layout.size.batch[0];
+        int f_size = output_layout.size.feature[0];
+        int x_size = output_layout.size.spatial[0];
+        int y_size = output_layout.size.spatial[1];
+        EXPECT_EQ(output_layout.format, format::yxfb);
+        EXPECT_EQ(b_size, in_size_b);
+        EXPECT_EQ(f_size, new_indicies_size);
+        EXPECT_EQ(x_size, in_size_x);
+        EXPECT_EQ(y_size, in_size_y);
+
+        auto ref = generate_reference_yxfb(input_data, id, axis, input_lay);
+
+        auto output_ptr = output_mem.pointer<float>();
+        for (size_t i = 0; i < output_ptr.size(); i++)
+        {
+            EXPECT_EQ(output_ptr[i], ref[i]);
+        }
+    }
+}
+
+TEST(index_select_gpu, basic_along_x_3_executes_yxfb)
+{
+    /*
+    input: {3, 4, 6, 5}
+    indices: {1, 1, 3, 1}
+    output: {3, 4, 3, 5}
+    */
+    engine engine;
+    constexpr auto in_size_b = 3;
+    constexpr auto in_size_f = 4;
+    constexpr auto in_size_x = 6;
+    constexpr auto in_size_y = 5;
+    constexpr auto count = in_size_b * in_size_f * in_size_x * in_size_y;
+    constexpr auto new_indicies_size = 3;
+    constexpr auto axis = index_select_axis_name::along_x;
+    auto input_lay = cldnn::layout(data_types::f32, format::yxfb, { in_size_b, in_size_f, in_size_x, in_size_y });
+    auto input = memory::allocate(engine, input_lay);
+    auto indices = memory::allocate(engine, { data_types::i32, format::yxfb,{ 1, 1, new_indicies_size, 1 } });
+
+    auto input_data = generate_random_1d<float>(count, 0, 10);
+    set_values(input, input_data);
+
+    /*
+    Network will be executed 3 times (for 3 different indicies_data).
+    */
+    std::vector<std::vector<int32_t>> indices_data =
+    {
+        { 2, 1, 0 }, //for run: 0
+        { 0, 0, 0 }, //for run: 1
+        { 1, 1, 0 } // for run: 2
+    };
+
+    topology topo;
+    topo.add(
+        input_layout("input", input.get_layout())
+    );
+    topo.add(
+        input_layout("indices", indices.get_layout())
+    );
+    topo.add(
+        index_select("index_select", "input", "indices", axis)
+    );
+
+    network net(engine, topo);
+    net.set_input_data("input", input);
+    for (auto const& id : indices_data)
+    {
+        set_values(indices, id);
+        net.set_input_data("indices", indices);
+        auto outputs = net.execute();
+
+        EXPECT_EQ(outputs.size(), size_t(1));
+        EXPECT_EQ(outputs.begin()->first, "index_select");
+
+        auto output_mem = outputs.at("index_select").get_memory();
+        auto output_layout = output_mem.get_layout();
+
+        int b_size = output_layout.size.batch[0];
+        int f_size = output_layout.size.feature[0];
+        int x_size = output_layout.size.spatial[0];
+        int y_size = output_layout.size.spatial[1];
+        EXPECT_EQ(output_layout.format, format::yxfb);
+        EXPECT_EQ(b_size, in_size_b);
+        EXPECT_EQ(f_size, in_size_f);
+        EXPECT_EQ(x_size, new_indicies_size);
+        EXPECT_EQ(y_size, in_size_y);
+
+        auto ref = generate_reference_yxfb(input_data, id, axis, input_lay);
+
+        auto output_ptr = output_mem.pointer<float>();
+        for (size_t i = 0; i < output_ptr.size(); i++)
+        {
+            EXPECT_EQ(output_ptr[i], ref[i]);
+        }
+    }
+}
+TEST(index_select_gpu, basic_along_y_3_executes_yxfb)
+{
+    /*
+    input: {2, 4, 4, 3}
+    indices: {1, 1, 5, 1}
+    output: {2, 4, 4, 5}
+    */
+    engine engine;
+    constexpr auto in_size_b = 2;
+    constexpr auto in_size_f = 4;
+    constexpr auto in_size_x = 4;
+    constexpr auto in_size_y = 3;
+    constexpr auto count = in_size_b * in_size_f * in_size_x * in_size_y;
+    constexpr auto new_indicies_size = 5;
+    constexpr auto axis = index_select_axis_name::along_y;
+    auto input_lay = cldnn::layout(data_types::f32, format::yxfb, { in_size_b, in_size_f, in_size_x, in_size_y });
+    auto input = memory::allocate(engine, input_lay);
+    auto indices = memory::allocate(engine, { data_types::i32, format::yxfb,{ 1, 1, new_indicies_size, 1 } });
+
+    auto input_data = generate_random_1d<float>(count, 0, 10);
+    set_values(input, input_data);
+
+    /*
+    Network will be executed 3 times (for 3 different indicies_data).
+    */
+    std::vector<std::vector<int32_t>> indices_data =
+    {
+        { 0, 1, 2, 2, 1 }, //for run: 0
+        { 2, 2, 1, 0, 1 }, //for run: 1
+        { 1, 1, 2, 1, 0 } // for run: 2
+    };
+
+    topology topo;
+    topo.add(
+        input_layout("input", input.get_layout())
+    );
+    topo.add(
+        input_layout("indices", indices.get_layout())
+    );
+    topo.add(
+        index_select("index_select", "input", "indices", axis)
+    );
+
+    network net(engine, topo);
+    net.set_input_data("input", input);
+    for (auto const& id : indices_data)
+    {
+        set_values(indices, id);
+        net.set_input_data("indices", indices);
+        auto outputs = net.execute();
+
+        EXPECT_EQ(outputs.size(), size_t(1));
+        EXPECT_EQ(outputs.begin()->first, "index_select");
+
+        auto output_mem = outputs.at("index_select").get_memory();
+        auto output_layout = output_mem.get_layout();
+
+        int b_size = output_layout.size.batch[0];
+        int f_size = output_layout.size.feature[0];
+        int x_size = output_layout.size.spatial[0];
+        int y_size = output_layout.size.spatial[1];
+        EXPECT_EQ(output_layout.format, format::yxfb);
+        EXPECT_EQ(b_size, in_size_b);
+        EXPECT_EQ(f_size, in_size_f);
+        EXPECT_EQ(x_size, x_size);
+        EXPECT_EQ(y_size, new_indicies_size);
+
+        auto ref = generate_reference_yxfb(input_data, id, axis, input_lay);
 
         auto output_ptr = output_mem.pointer<float>();
         for (size_t i = 0; i < output_ptr.size(); i++)
