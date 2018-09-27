@@ -412,7 +412,7 @@ TEST(eltwise_gpu_int, basic_in4x4x4x4) {
             network.set_input_data("input2", input2);
             auto outputs = network.execute();
 
-            EXPECT_EQ(outputs.size(), size_t(1));
+            ASSERT_EQ(outputs.size(), size_t(1));
             EXPECT_EQ(outputs.begin()->first, "eltwise_reorder");
 
             auto output = outputs.at("eltwise_reorder").get_memory();

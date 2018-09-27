@@ -66,8 +66,6 @@ public:
         const auto& primitive       = arg.get_primitive();
         const auto& input_layout    = arg.input().get_output_layout();
         const auto& weights_layout  = arg.weights(0).get_output_layout();
-
-        const auto& input_size      = input_layout.size;
         const auto& weights_size    = weights_layout.size;
 
         const auto& split           = primitive->split();
@@ -110,12 +108,12 @@ public:
         };
 
         conv_params.stride = {
-            (uint32_t)std::min(stride.spatial[0], input_size.spatial[0]),
-            (uint32_t)std::min(stride.spatial[1], input_size.spatial[1])
+            (uint32_t)stride.spatial[0],
+            (uint32_t)stride.spatial[1]
         };
         conv_params.dilation = {
-            (uint32_t)std::min(dilation.spatial[0], input_size.spatial[0]),
-            (uint32_t)std::min(dilation.spatial[1], input_size.spatial[1])
+            (uint32_t)dilation.spatial[0],
+            (uint32_t)dilation.spatial[1]
         };
         
         if (primitive->weights_quantization_factors.size() > 0)

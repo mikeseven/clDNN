@@ -144,6 +144,7 @@ namespace kernel_selector
         case KernelType::REORG_YOLO:        return "REORG_YOLO";
         case KernelType::ELTWISE:           return "ELTWISE";
         case KernelType::REORDER:           return "REORDER";
+        case KernelType::SELECT:            return "SELECT";
         default:
             return "";
         }
@@ -369,6 +370,18 @@ namespace kernel_selector
         case BorderType::MIRROR:     return "BORDER_TYPE_MIRROR";
         case BorderType::MIRROR_101: return "BORDER_TYPE_MIRROR_101";
         default:                     return "";
+        }
+    }
+
+    std::string toString(const IndexSelectAxis& axis)
+    {
+        switch (axis)
+        {
+        case IndexSelectAxis::BATCH:       return "INDEX_SELECT_AXIS_BATCH";
+        case IndexSelectAxis::FEATURE:     return "INDEX_SELECT_AXIS_FEATURE";
+        case IndexSelectAxis::X:           return "INDEX_SELECT_AXIS_X";
+        case IndexSelectAxis::Y:           return "INDEX_SELECT_AXIS_Y";
+        default:                           return "";
         }
     }
 
