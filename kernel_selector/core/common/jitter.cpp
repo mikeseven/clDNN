@@ -105,7 +105,7 @@ namespace kernel_selector {
         JitDefinitions baseDefinitions = TensorBaseTJitConstant::GetDefinitions(_tensor);
 
         JitDefinitions definitions{
-            { _name + "_SIZE_X",        toCodeString(_tensor.X().v) },
+        { _name + "_SIZE_X",        toCodeString(_tensor.X().v) },
         { _name + "_SIZE_Y",        toCodeString(_tensor.Y().v) },
         { _name + "_IFM_NUM",       toCodeString(_tensor.IFM().v) },
         { _name + "_OFM_NUM",       toCodeString(_tensor.OFM().v) },
@@ -118,6 +118,66 @@ namespace kernel_selector {
         definitions.insert(definitions.end(), baseDefinitions.begin(), baseDefinitions.end());
 
         return definitions;
+    }
+
+    std::shared_ptr<JitConstant> MakeActivationJitConstants(ActivationFunction activation_function)
+    {
+        // TODO: use native_exp and use cast for APL
+        switch (activation_function)
+        {
+        case ActivationFunction::LOGISTIC:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(UNIT_VAL_ONE/(UNIT_VAL_ONE + exp(-input)))");
+        case ActivationFunction::HYPERBOLIC_TAN:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(tanh(input))");
+        case ActivationFunction::RELU:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(UNIT_MAX_FUNC(UNIT_VAL_ZERO, input))");
+        case ActivationFunction::RELU_NEGATIVE_SLOPE:
+            return MakeJitConstant("ACTIVATION(input, slope, n)", "isinf(TO_UNIT_TYPE(slope)) ? ((input >= UNIT_VAL_ZERO) ? \
+                                                        input : -TO_UNIT_TYPE(slope)) : \
+                                                        (UNIT_MAX_FUNC(input, UNIT_VAL_ZERO) + TO_UNIT_TYPE(slope) * UNIT_MIN_FUNC(input, UNIT_VAL_ZERO))");
+        case ActivationFunction::ELU:
+            return MakeJitConstant("ACTIVATION(input, alpha, n)", "(UNIT_MAX_FUNC(input, UNIT_VAL_ZERO) +  \
+                                                        TO_UNIT_TYPE(alpha) * (exp(UNIT_MIN_FUNC(input, UNIT_VAL_ZERO)) - UNIT_VAL_ONE));");
+        case ActivationFunction::CLAMP:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(UNIT_MAX_FUNC(TO_UNIT_TYPE(m), UNIT_MIN_FUNC(TO_UNIT_TYPE(n), input)))");
+        case ActivationFunction::SOFTRELU:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(log(UNIT_VAL_ONE + exp(input)))");
+        case ActivationFunction::ABS:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(fabs(input))");
+        case ActivationFunction::LINEAR:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(m*input + n)");
+        case ActivationFunction::SQUARE:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(input*input)");
+        case ActivationFunction::SQRT:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(sqrt(input))");
+        case ActivationFunction::SIN:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(sin(input))");
+        case ActivationFunction::ASIN:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(asin(input))");
+        case ActivationFunction::SINH:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(sinh(input))");
+        case ActivationFunction::COS:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(cos(input))");
+        case ActivationFunction::ACOS:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(acos(input))");
+        case ActivationFunction::COSH:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(cosh(input))");
+        case ActivationFunction::LOG:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(log(input))");
+        case ActivationFunction::LOG2:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(log2(input))");
+        case ActivationFunction::EXP:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "(exp(input))");
+        case ActivationFunction::RELU_GRAD:
+            return MakeJitConstant("ACTIVATION(input_grad, input, m, n)", "(input_grad * (input > UNIT_VAL_ZERO ? TO_UNIT_TYPE(1) : TO_UNIT_TYPE(0)))");
+        case ActivationFunction::RELU_NEGATIVE_SLOPE_GRAD:
+            return MakeJitConstant("ACTIVATION(input_grad, input, slope, n)", "(input_grad * ((input > UNIT_VAL_ZERO ? TO_UNIT_TYPE(1) : TO_UNIT_TYPE(0)) + TO_UNIT_TYPE(slope) * (input <= 0 ? TO_UNIT_TYPE(1) : TO_UNIT_TYPE(0))))");
+        case ActivationFunction::NONE_GRAD:
+            return MakeJitConstant("ACTIVATION(input_grad, input, m, n)", "input_grad");
+        case ActivationFunction::NONE:
+        default:
+            return MakeJitConstant("ACTIVATION(input, m, n)", "input");
+        }
     }
 
     JitConstants MakeUnitTypeJitConstants(Datatype dataType)
@@ -221,11 +281,15 @@ namespace kernel_selector {
             MakeJitConstant("INT8_UNIT_USED",       bInt8Used),
             MakeJitConstant("INT32_UNIT_USED",      bInt32Used),
             MakeJitConstant("INT64_UNIT_USED",      bInt64Used),
-            MakeJitConstant("NL_M",                 params.activationParams.m),
-            MakeJitConstant("NL_N",                 params.activationParams.n),
-            MakeJitConstant("ACTIVATION_FUNCTION_" + toString(params.activationFunc), ""),
             MakeJitConstant("GRADIENT",             params.gradient),
         };
+
+        // for activation function
+        jit.AddConstants({
+            MakeJitConstant("NL_M",                 params.activationParams.m),
+            MakeJitConstant("NL_N",                 params.activationParams.n),
+            MakeActivationJitConstants(params.activationFunc),
+            });
 
         if (bInt8Used)
         {
