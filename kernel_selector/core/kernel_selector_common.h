@@ -28,7 +28,8 @@
 #include <vector>
 
 #define AGE_BASED "-cl-no-subgroup-ifp"
-#define ROUND_ROBIN ""
+#define DEFAULT ""
+#define NO_PRERA_SCH "-cl-intel-no-prera-scheduling"
 
 namespace kernel_selector {
 
