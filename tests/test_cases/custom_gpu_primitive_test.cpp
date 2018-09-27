@@ -216,7 +216,7 @@ void add_basic_in2x2x2x2_with_reorder()
     network.set_input_data("input2", input2);
     auto outputs = network.execute();
 
-    EXPECT_EQ(outputs.size(), size_t(1));
+    ASSERT_EQ(outputs.size(), size_t(1));
     EXPECT_EQ(outputs.begin()->first, "to_float");
 
     auto output = outputs.at("to_float").get_memory();
