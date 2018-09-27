@@ -1847,51 +1847,82 @@ void program_impl::handle_reshape()
                     reorder_node_to_split.push_back(user);
             }
 
-            if (reorder_node_to_split.empty())
-                continue;
-
-            auto& prim_node = node->as<reshape>();
-            const auto& prim = prim_node.get_primitive();
-            auto output_shape = prim->output_shape;
-
-            //vector for storing reshape nodes to connect to new reorder nodes (if needed)
-            std::vector<program_node*> reorder_reshape_nodes;
-
-            bool skip_first_user = false;
-            auto reshape_users = node->get_users();
-            for (const auto& user : reshape_users)
+            if (!reorder_node_to_split.empty())
             {
-                //reshape node for first user will be the orginal reshape from the graph
-                if (!skip_first_user)
+                auto& prim_node = node->as<reshape>();
+                const auto& prim = prim_node.get_primitive();
+                auto output_shape = prim->output_shape;
+
+                //vector for storing reshape nodes to connect to new reorder nodes (if needed)
+                std::vector<program_node*> reorder_reshape_nodes;
+
+                bool skip_first_user = false;
+                auto reshape_users = node->get_users();
+                for (const auto& user : reshape_users)
                 {
+                    //reshape node for first user will be the orginal reshape from the graph
+                    if (!skip_first_user)
+                    {
+                        if (std::find(reorder_node_to_split.begin(), reorder_node_to_split.end(), user) != reorder_node_to_split.end())
+                            reorder_reshape_nodes.push_back(node);
+                        skip_first_user = true;
+                        continue;
+                    }
+
+                    //other reshapes will be clones of the orginal one connected to reshape->reorder sequences
                     if (std::find(reorder_node_to_split.begin(), reorder_node_to_split.end(), user) != reorder_node_to_split.end())
-                        reorder_reshape_nodes.push_back(node);
-                    skip_first_user = true;
-                    continue;
+                    {
+                        auto new_reshape = std::make_shared<reshape>("_reshape_split_" + user->id() + "_" + node->id(), input_node.id(), output_shape);
+                        auto& new_reshape_node = get_or_create(new_reshape);
+                        add_connection(input_node, new_reshape_node);
+                        user->replace_dependency(0, new_reshape_node);
+                        new_reshape_node.processing_itr = processing_order.insert(std::next(input_node.processing_itr), &new_reshape_node);
+                        reorder_reshape_nodes.push_back(&new_reshape_node);
+                    }
                 }
 
-                //other reshapes will be clones of the orginal one connected to reshape->reorder sequences
-                if (std::find(reorder_node_to_split.begin(), reorder_node_to_split.end(), user) != reorder_node_to_split.end())
+                //add new reorder nodes to proper reshape node
+                auto reshape_reorder_id = 0;
+                for (const auto& reorder_node : reorder_node_to_split)
                 {
-                    auto new_reshape = std::make_shared<reshape>("_reshape_split_" + user->id() + "_" + node->id(), input_node.id(), output_shape);
-                    auto& new_reshape_node = get_or_create(new_reshape);
-                    add_connection(input_node, new_reshape_node);
-                    user->replace_dependency(0, new_reshape_node);
-                    new_reshape_node.processing_itr = processing_order.insert(std::next(input_node.processing_itr), &new_reshape_node);
-                    reorder_reshape_nodes.push_back(&new_reshape_node);
+                    auto& reorder_reshape_node = reorder_reshape_nodes[reshape_reorder_id];
+                    auto reshape_in_layout = reorder_node->get_output_layout();
+                    auto reshape_input = std::make_shared<reorder>("_reshape_input_" + reorder_node->id() + "_" + reorder_reshape_node->id(), input_node.id(), reshape_in_layout.format, reshape_in_layout.data_type);
+                    auto& reshape_input_node = get_or_create(reshape_input);
+                    add_intermediate(reshape_input_node, *reorder_reshape_node, 0, reshape_input_node.dependencies.empty());
+                    reshape_reorder_id++;
                 }
             }
 
-            //add new reorder nodes to proper reshape node
-            auto reshape_reorder_id = 0;
-            for (const auto& reorder_node : reorder_node_to_split)
+            auto reshape_layout = node->get_output_layout();
+            if (!(node->is_output()) && (reshape_layout.format != cldnn::format::bfyx))
             {
-                auto& reorder_reshape_node = reorder_reshape_nodes[reshape_reorder_id];
-                auto reshape_in_layout = reorder_node->get_output_layout();
-                auto reshape_input = std::make_shared<reorder>("_reshape_input_" + reorder_node->id() + "_" + reorder_reshape_node->id(), input_node.id(), reshape_in_layout.format, reshape_in_layout.data_type);
-                auto& reshape_input_node = get_or_create(reshape_input);
-                add_intermediate(reshape_input_node, *reorder_reshape_node, 0, reshape_input_node.dependencies.empty());
-                reshape_reorder_id++;
+                auto bfyx_layout = layout({ reshape_layout.data_type, cldnn::format::bfyx, reshape_layout.size });
+                //when some primitive does an implicit reorder to some other format then we lose the info about pitches in reshape stage
+                //we assume user provides the input vector in bfyx
+                if (!are_layouts_identical(reshape_layout, bfyx_layout).second)
+                {
+                    auto reshape_input = std::make_shared<reorder>("_reshape_input_" + node->id(), input_node.id(), cldnn::format::bfyx, reshape_layout.data_type);
+                    auto& reshape_input_node = get_or_create(reshape_input);
+                    add_intermediate(reshape_input_node, *node, 0, reshape_input_node.dependencies.empty());
+
+                    auto reshape_users = node->get_users();
+                    for (const auto& user : reshape_users)
+                    {
+                        size_t idx = 0;
+                        for (size_t i = 0; i < user->get_dependencies().size(); i++)
+                        {
+                            auto& input = user->get_dependency(i);
+                            if (input.id() == node->id()) {
+                                idx = i;
+                                break;
+                            }
+                        }
+                        auto reshape_output = std::make_shared<reorder>("_reshape_output_" + node->id(), user->id(), reshape_layout.format, reshape_layout.data_type);
+                        auto& reshape_output_node = get_or_create(reshape_output);
+                        add_intermediate(reshape_output_node, *user, idx, reshape_output_node.dependencies.empty());
+                    }
+                }
             }
         }
     }
@@ -2568,8 +2599,8 @@ void program_impl::prepare_primitive_fusing()
             // - primitives input cannot be output
             // - no activation additional input
             // - input was optimized
-            if (node.has_padded_dependency() || (input.is_output() && !is_debug) || node.is_output() || 
-                node.get_dependencies().size() != 1 ||  input.can_be_optimized())
+            if (node.has_padded_dependency() || (input.is_output() && !is_debug) || node.is_output() ||
+                node.get_dependencies().size() != 1 || input.can_be_optimized())
                 return;
 
             // - check if there is no activation fused already
