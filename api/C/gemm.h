@@ -39,7 +39,7 @@ cldnn_primitive_id input1;
 /// @brief Primitive id containing second matrix
 cldnn_primitive_id input2;
 /// @brief Primitive id containing output matrix bias
-cldnn_primitive_id out_bias;
+cldnn_primitive_id input3;
 /// @brief Variable containing ALPHA parameter
 float alpha;
 /// @brief Variable containing BETA parameter

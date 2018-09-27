@@ -37,8 +37,8 @@ namespace cldnn
     /// @n@b Requirements:
     /// @n - @c input - first matrix
     /// @n - @c input2 - second matrix
-    /// @n - @c optional: out_bias matrix, alpha, beta, transpose
-    /// @n - @c computations with optional params: output = alpha x (outbias x beta + input x input2) 
+    /// @n - @c optional: input3 matrix, alpha, beta, transpose
+    /// @n - @c computations with optional params: output = alpha x (input3 x beta + input x input2) 
     /// @n - @c transpose params tranposing second matrix <-TODO
 
 
@@ -74,7 +74,7 @@ struct gemm : public primitive_base<gemm, CLDNN_PRIMITIVE_DESC(gemm)>
         /// @brief Constructs gemm layer.
         /// @brief Primitive id containing first matrix
         /// @brief Primitive id containing second matrix
-        /// @brief Primitive id containing output matrix bias
+        /// @brief Primitive id containing third matrix 
         /// @brief Variable containing ALPHA parameter
         /// @brief Variable containing BETA parameter
         /// @brief Flag for transposing first input matrix
@@ -83,14 +83,14 @@ struct gemm : public primitive_base<gemm, CLDNN_PRIMITIVE_DESC(gemm)>
             const primitive_id& id,
             const primitive_id& input,
             const primitive_id& input2,
-            const primitive_id& out_bias,
+            const primitive_id& input3,
             const bool transpose_input1 = false,
             const bool transpose_input2 = false,
             const float alpha = 1.f,
             const float beta = 0.f,
             const padding& output_padding = padding()
         )
-        : primitive_base(id, { input, input2, out_bias }, output_padding)
+        : primitive_base(id, { input, input2, input3 }, output_padding)
         , transpose_input1(transpose_input1)
         , transpose_input2(transpose_input2)
         , alpha(alpha)

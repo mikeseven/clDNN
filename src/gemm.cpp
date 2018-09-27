@@ -88,9 +88,9 @@ gemm_inst::typed_primitive_inst(network_impl& network, gemm_node const& node)
         CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input_layout.size.spatial[0], "Input2 Rows count", input2_layout.size.spatial[1], "");
         if (node.inputs_count() > 2)
         {
-            auto out_bias_layout = node.input(2).get_output_layout();
-            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[0], "Input2 Rows count", input_layout.size.spatial[1], "");
-            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[0], "");
+            auto input3_layout = node.input(2).get_output_layout();
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input3_layout.size.spatial[0], "Input2 Rows count", input_layout.size.spatial[1], "");
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input3_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[0], "");
         }
     }
 
@@ -99,9 +99,9 @@ gemm_inst::typed_primitive_inst(network_impl& network, gemm_node const& node)
         CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input_layout.size.spatial[0], "Input2 Rows count", input2_layout.size.spatial[0], "");
         if (node.inputs_count() > 2)
         {
-            auto out_bias_layout = node.input(2).get_output_layout();
-            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[0], "Input2 Rows count", input_layout.size.spatial[0], "");
-            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[0], "");
+            auto input3_layout = node.input(2).get_output_layout();
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input3_layout.size.spatial[0], "Input2 Rows count", input_layout.size.spatial[0], "");
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input3_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[0], "");
         }
     }
     else if (transpose_input1 && !transpose_input2)
@@ -109,9 +109,9 @@ gemm_inst::typed_primitive_inst(network_impl& network, gemm_node const& node)
         CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[1], "");
         if (node.inputs_count() > 2)
         {
-            auto out_bias_layout = node.input(2).get_output_layout();
-            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[0], "Input2 Rows count", input_layout.size.spatial[1], "");
-            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[1], "");
+            auto input3_layout = node.input(2).get_output_layout();
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input3_layout.size.spatial[0], "Input2 Rows count", input_layout.size.spatial[1], "");
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input3_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[1], "");
         }
     }
     else
@@ -119,9 +119,9 @@ gemm_inst::typed_primitive_inst(network_impl& network, gemm_node const& node)
         CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[0], "");
         if (node.inputs_count() > 2)
         {
-            auto out_bias_layout = node.input(2).get_output_layout();
-            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[0], "Input2 Rows count", input_layout.size.spatial[0], "");
-            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", out_bias_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[1], "");
+            auto input3_layout = node.input(2).get_output_layout();
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input3_layout.size.spatial[0], "Input2 Rows count", input_layout.size.spatial[0], "");
+            CLDNN_ERROR_NOT_EQUAL(node.id(), "Input1 Columns count", input3_layout.size.spatial[1], "Input2 Rows count", input2_layout.size.spatial[1], "");
         }
     }
 

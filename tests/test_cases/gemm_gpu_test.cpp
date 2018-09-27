@@ -187,11 +187,11 @@ TEST(gemm_gpu, basic_bfyx_t1t2) {
     }
 }
 
-TEST(gemm_gpu, basic_out_bias) {
+TEST(gemm_gpu, basic_input3) {
     engine engine;
     auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 3, 2 } });
     auto input2 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 3 } });
-    auto outbias = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 2 } });
+    auto input3 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 2, 2 } });
     float alpha = 2.f;
     float beta = 10.f;
 
@@ -207,14 +207,14 @@ TEST(gemm_gpu, basic_out_bias) {
         1.0f, 2.0f,
     };
 
-    std::vector<float> out_bias_data = { 
+    std::vector<float> input3_data = {
         1.0f, 0.0f,
         2.0f, 0.0f,
     };
 
     set_values(input, input_data);
     set_values(input2, input_data2);
-    set_values(outbias, out_bias_data);
+    set_values(input3, input3_data);
 
     std::vector<float> out_data = {
         26.0f, 26.0f,
@@ -229,16 +229,16 @@ TEST(gemm_gpu, basic_out_bias) {
         input_layout("input2", input2.get_layout())
     );
     topology.add(
-        input_layout("outbias", outbias.get_layout())
+        input_layout("input3", input3.get_layout())
     );
     topology.add(
-        gemm("output", "input", "input2", "outbias",  false, false, alpha, beta)
+        gemm("output", "input", "input2", "input3",  false, false, alpha, beta)
     );
 
     network network(engine, topology);
     network.set_input_data("input", input);
     network.set_input_data("input2", input2);
-    network.set_input_data("outbias", outbias);
+    network.set_input_data("input3", input3);
     auto outputs = network.execute();
 
     auto output = outputs.at("output").get_memory();
@@ -251,11 +251,11 @@ TEST(gemm_gpu, basic_out_bias) {
     }
 }
 
-TEST(gemm_gpu, basic_out_bias_t1t2) {
+TEST(gemm_gpu, basic_input3_t1t2) {
     engine engine;
     auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 4, 3 } });
     auto input2 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 3, 2 } });
-    auto outbias = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 4, 2 } });
+    auto input3 = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 4, 2 } });
     float alpha = 2.f;
     float beta = 3.f;
 
@@ -271,14 +271,14 @@ TEST(gemm_gpu, basic_out_bias_t1t2) {
         2.0f, 1.0f, 2.0f,
     };
 
-    std::vector<float> out_bias_data = {
+    std::vector<float> input3_data = {
         1.0f, 0.0f, 1.0f, 0.0f,
         2.0f, 2.0f, 1.0f, 1.0f,
     };
 
     set_values(input, input_data);
     set_values(input2, input_data2);
-    set_values(outbias, out_bias_data);
+    set_values(input3, input3_data);
 
     std::vector<float> out_data = {
         15.0f, 12.0f, 27.0f, 24.0f,
@@ -293,16 +293,16 @@ TEST(gemm_gpu, basic_out_bias_t1t2) {
         input_layout("input2", input2.get_layout())
     );
     topology.add(
-        input_layout("outbias", outbias.get_layout())
+        input_layout("input3", input3.get_layout())
     );
     topology.add(
-        gemm("output", "input", "input2", "outbias", true, true, alpha, beta)
+        gemm("output", "input", "input2", "input3", true, true, alpha, beta)
     );
 
     network network(engine, topology);
     network.set_input_data("input", input);
     network.set_input_data("input2", input2);
-    network.set_input_data("outbias", outbias);
+    network.set_input_data("input3", input3);
     auto outputs = network.execute();
 
     auto output = outputs.at("output").get_memory();

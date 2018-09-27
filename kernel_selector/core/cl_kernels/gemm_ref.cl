@@ -20,7 +20,7 @@ KERNEL(gemm_ref)
 	(const __global UNIT_TYPE* input0,
 	const __global UNIT_TYPE* input1,
 #if OUT_BIAS_TERM
-	const __global UNIT_TYPE* outbias,
+	const __global UNIT_TYPE* input2,
 #endif
 	__global UNIT_TYPE* output)
 {
@@ -61,7 +61,7 @@ for (uint i = 0; i < Y1; ++i)
 	
 	float beta_out = 0;
 #if OUT_BIAS_TERM
-	beta_out = BETA * outbias[out_idx];
+	beta_out = BETA * input2[out_idx];
 #endif
 	output[out_idx] = fma(ALPHA, value, beta_out);
 }
