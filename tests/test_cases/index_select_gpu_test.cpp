@@ -143,11 +143,11 @@ std::vector<float> generate_reference_yxfb(const std::vector<float>& input, cons
     {
     case index_select_axis_name::along_b:
  
-        for (size_t y = 0; y < input_lay.size.spatial[1]; y++)
+        for (auto y = 0; y < input_lay.size.spatial[1]; y++)
         {
-            for (size_t x = 0; x < input_lay.size.spatial[0]; x++)
+            for (auto x = 0; x < input_lay.size.spatial[0]; x++)
             {
-                for (size_t f = 0; f < input_lay.size.feature[0]; f++)
+                for (auto f = 0; f < input_lay.size.feature[0]; f++)
                 {
                     for (auto const& ind : indices)
                     {
@@ -161,13 +161,13 @@ std::vector<float> generate_reference_yxfb(const std::vector<float>& input, cons
         }
         return ret;
     case index_select_axis_name::along_f:
-        for (size_t y = 0; y < input_lay.size.spatial[1]; y++)
+        for (auto y = 0; y < input_lay.size.spatial[1]; y++)
         {
-            for (size_t x = 0; x < input_lay.size.spatial[0]; x++)
+            for (auto x = 0; x < input_lay.size.spatial[0]; x++)
             {
                 for (auto const& ind : indices)
                 {
-                    for (size_t b = 0; b < input_lay.size.batch[0]; b++)
+                    for (auto b = 0; b < input_lay.size.batch[0]; b++)
                     {
                     size_t index = generic_test::get_linear_index(input_lay, b, ind, y, x, memory_desc_inp);
                     ret.push_back(input.at(index));
@@ -177,13 +177,13 @@ std::vector<float> generate_reference_yxfb(const std::vector<float>& input, cons
         }
         return ret;
     case index_select_axis_name::along_x:
-        for (size_t y = 0; y < input_lay.size.spatial[1]; y++)
+        for (auto y = 0; y < input_lay.size.spatial[1]; y++)
         {
             for (auto const& ind : indices)
             {
-                for (size_t f = 0; f < input_lay.size.feature[0]; f++)
+                for (auto f = 0; f < input_lay.size.feature[0]; f++)
                 {
-                    for (size_t b = 0; b < input_lay.size.batch[0]; b++)
+                    for (auto b = 0; b < input_lay.size.batch[0]; b++)
                     {
                         size_t index = generic_test::get_linear_index(input_lay, b, f, y, ind, memory_desc_inp);
                         ret.push_back(input.at(index));
@@ -196,11 +196,11 @@ std::vector<float> generate_reference_yxfb(const std::vector<float>& input, cons
 
         for (auto const& ind : indices)
         {
-            for (size_t x = 0; x < input_lay.size.spatial[0]; x++)
+            for (auto x = 0; x < input_lay.size.spatial[0]; x++)
             {
-                for (size_t f = 0; f < input_lay.size.feature[0]; f++)
+                for (auto f = 0; f < input_lay.size.feature[0]; f++)
                 {
-                    for (size_t b = 0; b < input_lay.size.batch[0]; b++)
+                    for (auto b = 0; b < input_lay.size.batch[0]; b++)
                     {
                         size_t index = generic_test::get_linear_index(input_lay, b, f, ind, x, memory_desc_inp);
                         ret.push_back(input.at(index));
