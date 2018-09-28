@@ -26,7 +26,10 @@
 // each SIMD process 4 batches and 8 output features
 
 #define OBS 2
+#define OBH 2
 #define NEEDED_INPUT_X ((OBS-1) * (STRIDE_SIZE_X) + (3 - 1) + 1)
+#define NEEDED_INPUT_Y ((OBH-1) * (STRIDE_SIZE_Y) + (3 - 1) + 1)
+
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
 KERNEL(convolution_mmad_batched)(
     __global INPUT0_TYPE* input, 
@@ -42,14 +45,14 @@ KERNEL(convolution_mmad_batched)(
     uint split_idx)
 {
     const uint x = get_global_id(0) * OBS;
-    const uint y = get_global_id(1);
+    const uint y = get_global_id(1) * OBH;
 
     const uint f = get_global_id(2) % FILTER_OFM_ALIGNED;
     const uint b_block = get_global_id(2) / FILTER_OFM_ALIGNED;
     const uint f_block = f / 32;
 
-    int4 preloaded_input[NEEDED_INPUT_X];
-    int4 dotProd[OBS] = { 0 };
+    int4 preloaded_input[NEEDED_INPUT_X * NEEDED_INPUT_Y];
+    int4 dotProd[OBS * OBH] = { 0 };
 
     const int input_x = x * STRIDE_SIZE_X - PADDING_SIZE_X;
     const int input_y = y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
@@ -60,32 +63,35 @@ KERNEL(convolution_mmad_batched)(
     uint filter_idx = filter_offset;
     for (uint k = 0; k < FILTER_IFM_MMAD_NUM; ++k)
     {
+        // preloading data
+        for(int h = 0; h < NEEDED_INPUT_Y; h++)
+        for(int p = 0; p < NEEDED_INPUT_X; p++)
+        {
+            const int input_offset_y = input_y + h;
+            const int input_offset_x = input_x + p;
+
+            uint input_idx = input_offset + input_offset_y * IN_Y_PITCH + input_offset_x * IN_X_PITCH + k * IN_F_BLOCK_PITCH;
+            preloaded_input[p + h * NEEDED_INPUT_X] = as_int4(intel_sub_group_block_read4((const __global uint*)(input + input_idx)));
+        }
+
         __attribute__((opencl_unroll_hint(FILTER_SIZE_Y)))
         for (uint j = 0; j < FILTER_SIZE_Y; ++j)
         {
-            const int input_offset_y = input_y + j * DILATION_SIZE_Y;
-
-            // preloading data
-            for(int p = 0; p < NEEDED_INPUT_X; p++)
-            {
-                const int input_offset_x = input_x + p;
-                uint input_idx = input_offset + input_offset_y * IN_Y_PITCH + input_offset_x * IN_X_PITCH + k * IN_F_BLOCK_PITCH;
-                preloaded_input[p] = as_int4(intel_sub_group_block_read4((const __global uint*)(input + input_idx)));
-            }
-            //
             __attribute__((opencl_unroll_hint(FILTER_SIZE_X)))
             for (uint i = 0; i < FILTER_SIZE_X; ++i)
             {
                 int8 weights_data = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
+                for(uint h = 0; h < OBH; h++)
                 for(uint o = 0; o < OBS; o++)
                 {
-                    dotProd[o] = MMAD_4x8(preloaded_input[o * STRIDE_SIZE_X + i], weights_data, dotProd[o]);
+                    dotProd[o + h * OBS] = MMAD_4x8(preloaded_input[o * STRIDE_SIZE_X + i + NEEDED_INPUT_X * (h * STRIDE_SIZE_Y + j)], weights_data, dotProd[o + h * OBS]);
                 }
                 filter_idx += FILTER_X_PITCH;
             }
         }
     }
 
+for(uint h = 0; h < OBH; h++)
 for(uint o = 0; o < OBS; o++)
 {
     for(uint b = 0; b < 4; b++)
@@ -94,14 +100,14 @@ for(uint o = 0; o < OBS; o++)
     #if BIAS_TERM
         const uint bias_index = f;
     #if CALIBRATION_TERM
-        dotProd[o][b] = (UNIT_TYPE)round(((float)dotProd[o][b] * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
+        dotProd[h * OBS + o][b] = (UNIT_TYPE)round(((float)dotProd[h * OBS + o][b] * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
     #else  // CALIBRATION_TERM
-        dotProd[o][b] = (UNIT_TYPE)round(((float)dotProd[o][b] * quantizations[f] * I_QF + biases[bias_index]) * O_QF);
+        dotProd[h * OBS + o][b] = (UNIT_TYPE)round(((float)dotProd[h * OBS + o][b] * quantizations[f] * I_QF + biases[bias_index]) * O_QF);
     #endif // CALIBRATION_TERM
     #endif // BIAS_TERM
 
-        const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4 + b, f, y, x + o);
-        output[dst_index] = ACTIVATION(convert_char(dotProd[o][b]), NL_M, NL_N);
+        const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4 + b, f, y + h, x + o);
+        output[dst_index] = ACTIVATION(convert_char(dotProd[h * OBS + o][b]), NL_M, NL_N);
     }
 }
 }

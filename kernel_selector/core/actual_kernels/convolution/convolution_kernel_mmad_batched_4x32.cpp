@@ -67,7 +67,7 @@ namespace kernel_selector {
         runInfo.effiency = FORCE_PRIORITY_2;
 
         runInfo.gws0 = arg.output.X().v / 2;
-        runInfo.gws1 = arg.output.Y().v;
+        runInfo.gws1 = arg.output.Y().v / 2;
         runInfo.gws2 = (arg.output.Feature().v) * ((arg.output.Batch().v+3) / 4);
 
         runInfo.lws0 = 1;
