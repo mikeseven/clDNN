@@ -26,7 +26,7 @@
 // each SIMD process 4 batches and 8 output features
 
 #define OBS 2
-
+#define NEEDED_INPUT_X ((OBS-1) * (STRIDE_SIZE_X) + (3 - 1) + 1)
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
 KERNEL(convolution_mmad_batched)(
     __global INPUT0_TYPE* input, 
@@ -48,6 +48,7 @@ KERNEL(convolution_mmad_batched)(
     const uint b_block = get_global_id(2) / FILTER_OFM_ALIGNED;
     const uint f_block = f / 32;
 
+    int4 preloaded_input[NEEDED_INPUT_X];
     int4 dotProd[OBS] = { 0 };
 
     const int input_x = x * STRIDE_SIZE_X - PADDING_SIZE_X;
@@ -64,16 +65,21 @@ KERNEL(convolution_mmad_batched)(
         {
             const int input_offset_y = input_y + j * DILATION_SIZE_Y;
 
+            // preloading data
+            for(int p = 0; p < NEEDED_INPUT_X; p++)
+            {
+                const int input_offset_x = input_x + p;
+                uint input_idx = input_offset + input_offset_y * IN_Y_PITCH + input_offset_x * IN_X_PITCH + k * IN_F_BLOCK_PITCH;
+                preloaded_input[p] = as_int4(intel_sub_group_block_read4((const __global uint*)(input + input_idx)));
+            }
+            //
             __attribute__((opencl_unroll_hint(FILTER_SIZE_X)))
             for (uint i = 0; i < FILTER_SIZE_X; ++i)
             {
                 int8 weights_data = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
                 for(uint o = 0; o < OBS; o++)
                 {
-                    const int input_offset_x = input_x + i * DILATION_SIZE_X + o * STRIDE_SIZE_X;
-                    uint input_idx = input_offset + input_offset_y * IN_Y_PITCH + input_offset_x * IN_X_PITCH + k * IN_F_BLOCK_PITCH;
-                    int4 input_data = as_int4(intel_sub_group_block_read4((const __global uint*)(input + input_idx)));
-                    dotProd[o] = MMAD_4x8(input_data, weights_data, dotProd[o]);
+                    dotProd[o] = MMAD_4x8(preloaded_input[o * STRIDE_SIZE_X + i], weights_data, dotProd[o]);
                 }
                 filter_idx += FILTER_X_PITCH;
             }
