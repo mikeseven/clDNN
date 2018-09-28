@@ -29,7 +29,7 @@
 #define OBH 2
 #define NEEDED_INPUT_X ((OBS-1) * (STRIDE_SIZE_X) + (3 - 1) + 1)
 #define NEEDED_INPUT_Y ((OBH-1) * (STRIDE_SIZE_Y) + (3 - 1) + 1)
-#define WEIGHTS_PER_WORKITEM 4
+#define WEIGHTS_PER_WORKITEM 4 // mmust be 4!
 
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
 KERNEL(convolution_mmad_batched)(
@@ -104,7 +104,7 @@ KERNEL(convolution_mmad_batched)(
         }
     }
 
-for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
+/*for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
 for(uint h = 0; h < OBH; h++)
 for(uint o = 0; o < OBS; o++)
 {
@@ -124,54 +124,50 @@ for(uint o = 0; o < OBS; o++)
         const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4 + b, f + w * 8, y + h, x + o);
         output[dst_index] = ACTIVATION(convert_char(dotProd[out_idx][b]), NL_M, NL_N);
     }
-}
+}*/
 
-/*
-char4 out_char_b0[OBS * OBH];
-char4 out_char_b1[OBS * OBH];
-char4 out_char_b2[OBS * OBH];
-char4 out_char_b3[OBS * OBH];
 
-float4 q_factors = as_float4(intel_sub_group_block_read4((__global uint*)(quantizations + f)));
-for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
-for(uint h = 0; h < OBH; h++)
-for(uint o = 0; o < OBS; o++)
-{
-    const uint out_idx = o + OBS * (h + w * OBH);
-
-    const uint bias_index = f + w * 8;
-#if CALIBRATION_TERM
-    dotProd[out_idx][0] = (UNIT_TYPE)round(((float)dotProd[out_idx][0] * q_factors[w] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
-    dotProd[out_idx][1] = (UNIT_TYPE)round(((float)dotProd[out_idx][1] * q_factors[w] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
-    dotProd[out_idx][2] = (UNIT_TYPE)round(((float)dotProd[out_idx][2] * q_factors[w] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
-    dotProd[out_idx][3] = (UNIT_TYPE)round(((float)dotProd[out_idx][3] * q_factors[w] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
-
-#else  // CALIBRATION_TERM
-    dotProd[out_idx][0] = (UNIT_TYPE)round(((float)dotProd[out_idx][0] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
-    dotProd[out_idx][1] = (UNIT_TYPE)round(((float)dotProd[out_idx][1] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
-    dotProd[out_idx][2] = (UNIT_TYPE)round(((float)dotProd[out_idx][2] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
-    dotProd[out_idx][3] = (UNIT_TYPE)round(((float)dotProd[out_idx][3] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
-#endif // CALIBRATION_TERM
-
-    out_char_b0[o + OBS *h][w] = ACTIVATION(convert_char(dotProd[out_idx][0]), NL_M, NL_N);
-    out_char_b1[o + OBS *h][w] = ACTIVATION(convert_char(dotProd[out_idx][1]), NL_M, NL_N);
-    out_char_b2[o + OBS *h][w] = ACTIVATION(convert_char(dotProd[out_idx][2]), NL_M, NL_N);
-    out_char_b3[o + OBS *h][w] = ACTIVATION(convert_char(dotProd[out_idx][3]), NL_M, NL_N);
-}
 
 for(uint h = 0; h < OBH; h++)
 for(uint o = 0; o < OBS; o++)
 {
+    char4 out_char_b0;
+    char4 out_char_b1;
+    char4 out_char_b2;
+    char4 out_char_b3;
+
+    for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
+    {
+        const uint out_idx = o + OBS * (h + w * OBH);
+
+        const uint bias_index = f + w * 8;
+    #if CALIBRATION_TERM
+        dotProd[out_idx][0] = (UNIT_TYPE)round(((float)dotProd[out_idx][0] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
+        dotProd[out_idx][1] = (UNIT_TYPE)round(((float)dotProd[out_idx][1] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
+        dotProd[out_idx][2] = (UNIT_TYPE)round(((float)dotProd[out_idx][2] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
+        dotProd[out_idx][3] = (UNIT_TYPE)round(((float)dotProd[out_idx][3] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
+    #else  // CALIBRATION_TERM
+        dotProd[out_idx][0] = (UNIT_TYPE)round(((float)dotProd[out_idx][0] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
+        dotProd[out_idx][1] = (UNIT_TYPE)round(((float)dotProd[out_idx][1] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
+        dotProd[out_idx][2] = (UNIT_TYPE)round(((float)dotProd[out_idx][2] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
+        dotProd[out_idx][3] = (UNIT_TYPE)round(((float)dotProd[out_idx][3] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
+    #endif // CALIBRATION_TERM
+
+        out_char_b0[w] = ACTIVATION(convert_char(dotProd[out_idx][0]), NL_M, NL_N);
+        out_char_b1[w] = ACTIVATION(convert_char(dotProd[out_idx][1]), NL_M, NL_N);
+        out_char_b2[w] = ACTIVATION(convert_char(dotProd[out_idx][2]), NL_M, NL_N);
+        out_char_b3[w] = ACTIVATION(convert_char(dotProd[out_idx][3]), NL_M, NL_N);
+    }
     uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4, f, y + h, x + o);
-    intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index), as_uchar4(out_char_b0[o + OBS*h]));
+    intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index), as_uchar4(out_char_b0));
     dst_index += 32;
-    intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index), as_uchar4(out_char_b1[o + OBS*h]));
+    intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index), as_uchar4(out_char_b1));
     dst_index += 32;
-    intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index), as_uchar4(out_char_b2[o + OBS*h]));
+    intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index), as_uchar4(out_char_b2));
     dst_index += 32;
-    intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index), as_uchar4(out_char_b3[o + OBS*h]));
+    intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index), as_uchar4(out_char_b3));
 }
-*/
+
 }
 
 #undef FILTER_IFM_MMAD_NUM
