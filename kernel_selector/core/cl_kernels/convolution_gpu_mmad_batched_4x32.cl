@@ -25,6 +25,8 @@
 // input data is in blocks 4batch x 32 features
 // each SIMD process 4 batches and 8 output features
 
+#define OBS 2
+
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
 KERNEL(convolution_mmad_batched)(
     __global INPUT0_TYPE* input, 
@@ -33,22 +35,20 @@ KERNEL(convolution_mmad_batched)(
 #if BIAS_TERM
     __global BIAS_TYPE* biases,
 #endif
-#if QUANTIZATION_TERM
     const __global float* quantizations,
-#endif
 #if CALIBRATION_TERM
     const __global float* calibrations,
 #endif
     uint split_idx)
 {
-    const uint x = get_global_id(0);
+    const uint x = get_global_id(0) * OBS;
     const uint y = get_global_id(1);
 
     const uint f = get_global_id(2) % FILTER_OFM_ALIGNED;
     const uint b_block = get_global_id(2) / FILTER_OFM_ALIGNED;
     const uint f_block = f / 32;
 
-    int4 dotProd = 0;
+    int4 dotProd[OBS] = { 0 };
 
     const int input_x = x * STRIDE_SIZE_X - PADDING_SIZE_X;
     const int input_y = y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
@@ -60,48 +60,43 @@ KERNEL(convolution_mmad_batched)(
     for (uint k = 0; k < FILTER_IFM_MMAD_NUM; ++k)
     {
         __attribute__((opencl_unroll_hint(FILTER_SIZE_Y)))
-        for (uint j = 0; j < FILTER_SIZE_Y ; ++j)
+        for (uint j = 0; j < FILTER_SIZE_Y; ++j)
         {
             const int input_offset_y = input_y + j * DILATION_SIZE_Y;
 
             __attribute__((opencl_unroll_hint(FILTER_SIZE_X)))
-            for (uint i = 0; i < FILTER_SIZE_X ; ++i)
+            for (uint i = 0; i < FILTER_SIZE_X; ++i)
             {
-                const int input_offset_x = input_x + i * DILATION_SIZE_X;
-
-                uint input_idx = input_offset + input_offset_y * IN_Y_PITCH + input_offset_x * IN_X_PITCH + k * IN_F_BLOCK_PITCH;
-
-                int4 input_data = as_int4(intel_sub_group_block_read4((const __global uint*)(input + input_idx)));
                 int8 weights_data = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
-
-                dotProd = MMAD_4x8(input_data, weights_data, dotProd);
+                for(uint o = 0; o < OBS; o++)
+                {
+                    const int input_offset_x = input_x + i * DILATION_SIZE_X + o * STRIDE_SIZE_X;
+                    uint input_idx = input_offset + input_offset_y * IN_Y_PITCH + input_offset_x * IN_X_PITCH + k * IN_F_BLOCK_PITCH;
+                    int4 input_data = as_int4(intel_sub_group_block_read4((const __global uint*)(input + input_idx)));
+                    dotProd[o] = MMAD_4x8(input_data, weights_data, dotProd[o]);
+                }
                 filter_idx += FILTER_X_PITCH;
             }
         }
     }
 
-for(uint b = 0; b < 4; b++)
+for(uint o = 0; o < OBS; o++)
 {
+    for(uint b = 0; b < 4; b++)
+    {
 
-#if BIAS_TERM
-    const uint bias_index = f;
-#if QUANTIZATION_TERM
-#if CALIBRATION_TERM
-    dotProd[b] = (UNIT_TYPE)round(((float)dotProd[b] * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
-#else  // CALIBRATION_TERM
-    dotProd[b] = (UNIT_TYPE)round(((float)dotProd[b] * quantizations[f] * I_QF + biases[bias_index]) * O_QF);
-#endif // CALIBRATION_TERM
-#else // QUANTIZATION_TERM
-    dotProd[b] += (UNIT_TYPE)biases[bias_index];
-#endif // QUANTIZATION_TERM
-#endif // BIAS_TERM
+    #if BIAS_TERM
+        const uint bias_index = f;
+    #if CALIBRATION_TERM
+        dotProd[o][b] = (UNIT_TYPE)round(((float)dotProd[o][b] * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
+    #else  // CALIBRATION_TERM
+        dotProd[o][b] = (UNIT_TYPE)round(((float)dotProd[o][b] * quantizations[f] * I_QF + biases[bias_index]) * O_QF);
+    #endif // CALIBRATION_TERM
+    #endif // BIAS_TERM
 
-    const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4 + b, f, y, x);
-#if QUANTIZATION_TERM
-    output[dst_index] = ACTIVATION(convert_char(dotProd[b]), NL_M, NL_N);
-#else
-    output[dst_index] = ACTIVATION(dotProd[b], NL_M, NL_N);
-#endif  
+        const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4 + b, f, y, x + o);
+        output[dst_index] = ACTIVATION(convert_char(dotProd[o][b]), NL_M, NL_N);
+    }
 }
 }
 

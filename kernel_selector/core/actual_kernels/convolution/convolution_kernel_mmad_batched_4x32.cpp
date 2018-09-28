@@ -40,6 +40,21 @@ namespace kernel_selector {
         return k;
     }
 
+    bool ConvolutionKernel_mmad_batched_4x32::Validate(const Params& p, const optional_params& o) const
+    {
+        if (!ConvolutionKernelBase::Validate(p, o) ||
+            !CovolutionCheckInput(p, o))
+        {
+            return false;
+        }
+        const convolution_params& cp = static_cast<const convolution_params&>(p);
+
+        if (cp.output.X().v % 2 != 0)
+            return false;
+
+        return true;
+    }
+
     ConvolutionKernelBase::DispatchData ConvolutionKernel_mmad_batched_4x32::SetDefault(const convolution_params& arg, int) const
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
@@ -51,7 +66,7 @@ namespace kernel_selector {
 
         runInfo.effiency = FORCE_PRIORITY_2;
 
-        runInfo.gws0 = arg.output.X().v;
+        runInfo.gws0 = arg.output.X().v / 2;
         runInfo.gws1 = arg.output.Y().v;
         runInfo.gws2 = (arg.output.Feature().v) * ((arg.output.Batch().v+3) / 4);
 
