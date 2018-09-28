@@ -17,7 +17,6 @@
  */
 
 #include "include/data_types.cl"
-#include "include/activation_functions.cl"
 #include "include/mmad.cl"
 
 // mapping to clDNN
