@@ -90,9 +90,14 @@ KERNEL(convolution_mmad_batched)(
                 for(uint h = 0; h < OBH; h++)
                 for(uint o = 0; o < OBS; o++)
                 {
-                    const uint out_idx = o + OBS * (h + w * OBH);
+                    const uint w_idx = (o + h * OBS + w) % WEIGHTS_PER_WORKITEM;
+                    const uint out_idx = o + OBS * (h + w_idx * OBH);
                     const uint preloaded_idx =o * STRIDE_SIZE_X + i + NEEDED_INPUT_X * (h * STRIDE_SIZE_Y + j);
-                    dotProd[out_idx] = MMAD_4x8(preloaded_input[preloaded_idx], weights_data[w], dotProd[out_idx]);
+                    dotProd[out_idx] = MMAD_4x8(preloaded_input[preloaded_idx], weights_data[w_idx], dotProd[out_idx]);
+
+                    //const uint out_idx = o + OBS * (h + w * OBH);
+                    //const uint preloaded_idx =o * STRIDE_SIZE_X + i + NEEDED_INPUT_X * (h * STRIDE_SIZE_Y + j);
+                    //dotProd[out_idx] = MMAD_4x8(preloaded_input[preloaded_idx], weights_data[w], dotProd[out_idx]);
                 }
                 filter_idx += FILTER_X_PITCH;
             }
