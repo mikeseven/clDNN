@@ -30,7 +30,6 @@ namespace kernel_selector {
         k.EnableTensorOffset();
         k.EnableTensorPitches();
         k.EnableBiasPerFeature();
-        k.EnableNonBiasTerm();
         k.EnableBatching();
         k.EnableSplitSupport();
         k.EnableInt8Quantization();
@@ -103,7 +102,7 @@ namespace kernel_selector {
 
     KernelsData ConvolutionKernel_mmad_batched_4x32::GetKernelsData(const Params& params, const optional_params& options) const
     {
-        KernelsData kd = GetCommonKernelsData(params, options);
+        KernelsData kd = GetCommonKernelsData(params, options, " -Dcl_intel_subgroups_char");
         if(!kd.empty())
             kd[0].estimatedTime = FORCE_PRIORITY_2;
         return kd;
