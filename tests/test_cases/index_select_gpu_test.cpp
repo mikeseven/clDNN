@@ -266,7 +266,7 @@ TEST(index_select_gpu, basic_along_b_3_executes_bfyx)
         net.set_input_data("indices", indices);
         auto outputs = net.execute();
 
-        EXPECT_EQ(outputs.size(), size_t(1));
+		ASSERT_EQ(outputs.size(), size_t(1));
         EXPECT_EQ(outputs.begin()->first, "index_select");
 
         auto output_mem = outputs.at("index_select").get_memory();
@@ -342,7 +342,7 @@ TEST(index_select_gpu, basic_along_f_3_executes_bfyx)
         net.set_input_data("indices", indices);
         auto outputs = net.execute();
 
-        EXPECT_EQ(outputs.size(), size_t(1));
+		ASSERT_EQ(outputs.size(), size_t(1));
         EXPECT_EQ(outputs.begin()->first, "index_select");
 
         auto output_mem = outputs.at("index_select").get_memory();
@@ -418,7 +418,7 @@ TEST(index_select_gpu, basic_along_x_3_executes_bfyx)
         net.set_input_data("indices", indices);
         auto outputs = net.execute();
 
-        EXPECT_EQ(outputs.size(), size_t(1));
+		ASSERT_EQ(outputs.size(), size_t(1));
         EXPECT_EQ(outputs.begin()->first, "index_select");
 
         auto output_mem = outputs.at("index_select").get_memory();
@@ -494,7 +494,7 @@ TEST(index_select_gpu, basic_along_y_3_executes_bfyx)
         net.set_input_data("indices", indices);
         auto outputs = net.execute();
 
-        EXPECT_EQ(outputs.size(), size_t(1));
+		ASSERT_EQ(outputs.size(), size_t(1));
         EXPECT_EQ(outputs.begin()->first, "index_select");
 
         auto output_mem = outputs.at("index_select").get_memory();
@@ -571,7 +571,7 @@ TEST(index_select_gpu, basic_along_b_3_executes_yxfb)
         net.set_input_data("indices", indices);
         auto outputs = net.execute();
 
-        EXPECT_EQ(outputs.size(), size_t(1));
+		ASSERT_EQ(outputs.size(), size_t(1));
         EXPECT_EQ(outputs.begin()->first, "index_select");
 
         auto output_mem = outputs.at("index_select").get_memory();
@@ -648,7 +648,7 @@ TEST(index_select_gpu, basic_along_f_3_executes_yxfb)
         net.set_input_data("indices", indices);
         auto outputs = net.execute();
 
-        EXPECT_EQ(outputs.size(), size_t(1));
+		ASSERT_EQ(outputs.size(), size_t(1));
         EXPECT_EQ(outputs.begin()->first, "index_select");
 
         auto output_mem = outputs.at("index_select").get_memory();
@@ -725,7 +725,7 @@ TEST(index_select_gpu, basic_along_x_3_executes_yxfb)
         net.set_input_data("indices", indices);
         auto outputs = net.execute();
 
-        EXPECT_EQ(outputs.size(), size_t(1));
+		ASSERT_EQ(outputs.size(), size_t(1));
         EXPECT_EQ(outputs.begin()->first, "index_select");
 
         auto output_mem = outputs.at("index_select").get_memory();
@@ -801,7 +801,7 @@ TEST(index_select_gpu, basic_along_y_3_executes_yxfb)
         net.set_input_data("indices", indices);
         auto outputs = net.execute();
 
-        EXPECT_EQ(outputs.size(), size_t(1));
+		ASSERT_EQ(outputs.size(), size_t(1));
         EXPECT_EQ(outputs.begin()->first, "index_select");
 
         auto output_mem = outputs.at("index_select").get_memory();
