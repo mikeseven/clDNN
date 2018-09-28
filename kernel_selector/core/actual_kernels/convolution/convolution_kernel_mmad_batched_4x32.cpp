@@ -29,7 +29,6 @@ namespace kernel_selector {
         k.EnableOutputLayout(DataLayout::fs_bs_yx_bsv4_fsv32);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
-        k.EnableDilation();
         k.EnableBiasPerFeature();
         k.EnableNonBiasTerm();
         k.EnableBatching();
@@ -68,7 +67,7 @@ namespace kernel_selector {
 
         runInfo.gws0 = arg.output.X().v / 2;
         runInfo.gws1 = arg.output.Y().v / 2;
-        runInfo.gws2 = (arg.output.Feature().v) * ((arg.output.Batch().v+3) / 4);
+        runInfo.gws2 = (arg.output.Feature().v) * ((arg.output.Batch().v+3) / 4) / 4; // process 4 output channels per Workitem
 
         runInfo.lws0 = 1;
         runInfo.lws1 = 1;

@@ -29,6 +29,7 @@
 #define OBH 2
 #define NEEDED_INPUT_X ((OBS-1) * (STRIDE_SIZE_X) + (3 - 1) + 1)
 #define NEEDED_INPUT_Y ((OBH-1) * (STRIDE_SIZE_Y) + (3 - 1) + 1)
+#define WEIGHTS_PER_WORKITEM 4
 
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
 KERNEL(convolution_mmad_batched)(
@@ -47,17 +48,16 @@ KERNEL(convolution_mmad_batched)(
     const uint x = get_global_id(0) * OBS;
     const uint y = get_global_id(1) * OBH;
 
-    const uint f = get_global_id(2) % FILTER_OFM_ALIGNED;
-    const uint b_block = get_global_id(2) / FILTER_OFM_ALIGNED;
-    const uint f_block = f / 32;
+    const uint f = ((get_group_id(2) * WEIGHTS_PER_WORKITEM * 8) + get_sub_group_local_id() ) % FILTER_OFM_ALIGNED;
+    const uint b_block = (get_group_id(2) * 8 * WEIGHTS_PER_WORKITEM) / FILTER_OFM_ALIGNED;
 
     int4 preloaded_input[NEEDED_INPUT_X * NEEDED_INPUT_Y];
-    int4 dotProd[OBS * OBH] = { 0 };
+    int4 dotProd[OBS * OBH * WEIGHTS_PER_WORKITEM] = { 0 };
 
     const int input_x = x * STRIDE_SIZE_X - PADDING_SIZE_X;
     const int input_y = y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
 
-    const uint filter_offset = (get_group_id(2) % FILTER_OFM_MMAD_NUM) * FILTER_OFM_BLOCK_PITCH;
+    const uint filter_offset = ((get_group_id(2) * WEIGHTS_PER_WORKITEM) % FILTER_OFM_MMAD_NUM) * FILTER_OFM_BLOCK_PITCH;
     const uint input_offset = IN_OFFSET + IN_B_BLOCK_PITCH * b_block;
 
     uint filter_idx = filter_offset;
@@ -80,34 +80,44 @@ KERNEL(convolution_mmad_batched)(
             __attribute__((opencl_unroll_hint(FILTER_SIZE_X)))
             for (uint i = 0; i < FILTER_SIZE_X; ++i)
             {
-                int8 weights_data = as_int8(intel_sub_group_block_read8((const __global uint*)(weights + filter_idx)));
+                int8 weights_data[WEIGHTS_PER_WORKITEM];
+                for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
+                {
+                    weights_data[w] = as_int8(intel_sub_group_block_read8((const __global uint*) (weights + (filter_idx + w * FILTER_OFM_BLOCK_PITCH) ) ));
+                }
+
+                for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
                 for(uint h = 0; h < OBH; h++)
                 for(uint o = 0; o < OBS; o++)
                 {
-                    dotProd[o + h * OBS] = MMAD_4x8(preloaded_input[o * STRIDE_SIZE_X + i + NEEDED_INPUT_X * (h * STRIDE_SIZE_Y + j)], weights_data, dotProd[o + h * OBS]);
+                    const uint out_idx = o + OBS * (h + w * OBH);
+                    const uint preloaded_idx =o * STRIDE_SIZE_X + i + NEEDED_INPUT_X * (h * STRIDE_SIZE_Y + j);
+                    dotProd[out_idx] = MMAD_4x8(preloaded_input[preloaded_idx], weights_data[w], dotProd[out_idx]);
                 }
                 filter_idx += FILTER_X_PITCH;
             }
         }
     }
 
+for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
 for(uint h = 0; h < OBH; h++)
 for(uint o = 0; o < OBS; o++)
 {
+    const uint out_idx = o + OBS * (h + w * OBH);
     for(uint b = 0; b < 4; b++)
     {
 
     #if BIAS_TERM
-        const uint bias_index = f;
+        const uint bias_index = f + w * 8;
     #if CALIBRATION_TERM
-        dotProd[h * OBS + o][b] = (UNIT_TYPE)round(((float)dotProd[h * OBS + o][b] * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
+        dotProd[out_idx][b] = (UNIT_TYPE)round(((float)dotProd[out_idx][b] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
     #else  // CALIBRATION_TERM
-        dotProd[h * OBS + o][b] = (UNIT_TYPE)round(((float)dotProd[h * OBS + o][b] * quantizations[f] * I_QF + biases[bias_index]) * O_QF);
+        dotProd[out_idx][b] = (UNIT_TYPE)round(((float)dotProd[out_idx][b] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
     #endif // CALIBRATION_TERM
     #endif // BIAS_TERM
 
-        const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4 + b, f, y + h, x + o);
-        output[dst_index] = ACTIVATION(convert_char(dotProd[h * OBS + o][b]), NL_M, NL_N);
+        const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4 + b, f + w * 8, y + h, x + o);
+        output[dst_index] = ACTIVATION(convert_char(dotProd[out_idx][b]), NL_M, NL_N);
     }
 }
 }
