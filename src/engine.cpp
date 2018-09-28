@@ -149,11 +149,12 @@ void engine_impl::compile_program(program_impl& program)
 
 bool engine_impl::use_memory_pool() const
 {
+	return true;/*
     if (configuration().enable_memory_pool && get_context()->is_neo_driver())
     {
         return true;
     }
-    return false;
+    return false;*/
 }
 
 }
