@@ -25,8 +25,8 @@
 // input data is in blocks 4batch x 32 features
 // each SIMD process 4 batches and 8 output features
 
-#define OBS 2
-#define OBH 2
+#define OBS OUT_BLOCK_WIDTH
+#define OBH OUT_BLOCK_HEIGHT
 #define NEEDED_INPUT_X ((OBS-1) * (STRIDE_SIZE_X) + (3 - 1) + 1)
 #define NEEDED_INPUT_Y ((OBH-1) * (STRIDE_SIZE_Y) + (3 - 1) + 1)
 #define WEIGHTS_PER_WORKITEM 4 // mmust be 4!
