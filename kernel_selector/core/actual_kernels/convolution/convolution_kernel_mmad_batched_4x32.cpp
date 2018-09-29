@@ -44,15 +44,15 @@ namespace kernel_selector {
             if (p.output.X().v == 7)
                 return std::make_pair(7, 1);
             else if (p.output.X().v == 14)
-                return std::make_pair(14, 1);
-            else if (p.output.X().v == 28 && (p.output.Y().v % 2 == 0))
-                return std::make_pair(7, 2);
-            else if (p.output.X().v == 56 && p.output.Y().v % 2 == 0)
-                return std::make_pair(7, 2);
+                return std::make_pair(7, 1);
+            else if (p.output.X().v == 28)
+                return std::make_pair(7, 1);
+            else if (p.output.X().v == 56)
+                return std::make_pair(7, 1);
         }
         else if (p.filterSize.x == 3 && p.filterSize.y == 3)
         {
-            return std::make_pair(2, 2);
+            return std::make_pair(4, 1);
         }
 
         return std::make_pair(1, 1);
