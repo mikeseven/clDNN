@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "convolution_kernel_mmad_batched_4x32.h"
+#include "convolution_kernel_mmad_batched_block_1x1.h"
 #include "kernel_selector_utils.h"
 
 namespace kernel_selector {
     
-    ParamsKey ConvolutionKernel_mmad_batched_4x32::GetSupportedKey() const
+    ParamsKey ConvolutionKernel_mmad_batched_block_1x1::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::INT8);
@@ -46,22 +46,19 @@ namespace kernel_selector {
 
     static block_params get_out_block_size(const convolution_params& p)
     {
-        if (p.filterSize.x == 3 && p.filterSize.y == 3)
-        {
-            if (p.output.X().v == 7)
-                return { 7,1,1 };
-            else if (p.output.X().v == 14)
-                return { 7, 1, 1 };
-            else if (p.output.X().v == 28)
-                return { 7, 1, 1 };
-            else if (p.output.X().v == 56)
-                return{ 7, 1, 1 };
-        }
+        if (p.output.X().v == 7)
+            return { 7,1,2 };
+        else if (p.output.X().v == 14)
+            return { 2,2,4 };
+        else if (p.output.X().v == 28)
+            return { 4,1,4 };
+        else if (p.output.X().v == 56)
+            return { 4,1,4 };
 
         return { 1,1,1 };
     }
 
-    bool ConvolutionKernel_mmad_batched_4x32::Validate(const Params& p, const optional_params& o) const
+    bool ConvolutionKernel_mmad_batched_block_1x1::Validate(const Params& p, const optional_params& o) const
     {
         if (!ConvolutionKernelBase::Validate(p, o) ||
             !CovolutionCheckInput(p, o))
@@ -69,6 +66,14 @@ namespace kernel_selector {
             return false;
         }
         const convolution_params& cp = static_cast<const convolution_params&>(p);
+
+        // only for conv 1x1
+        if (cp.filterSize.x != 1 || cp.filterSize.y != 1)
+            return false;
+
+        // only for stride 1x1
+        if (cp.stride.x != 1 || cp.stride.y != 1)
+            return false;
 
         // if block sizes are 1x1, then this algorithm is probably not the best
         auto block = get_out_block_size(cp);
@@ -80,13 +85,10 @@ namespace kernel_selector {
         if (cp.output.Y().v % block.out_height != 0)
             return false;
 
-        if (cp.filterSize.x == 1)
-            return false;
-
         return true;
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_mmad_batched_4x32::SetDefault(const convolution_params& arg, int) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_mmad_batched_block_1x1::SetDefault(const convolution_params& arg, int) const
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
@@ -110,7 +112,7 @@ namespace kernel_selector {
         return runInfo;
     }
 
-    JitConstants ConvolutionKernel_mmad_batched_4x32::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
+    JitConstants ConvolutionKernel_mmad_batched_block_1x1::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
     {
         auto jit = Parent::GetJitConstants(params, runInfo);
 
@@ -141,7 +143,7 @@ namespace kernel_selector {
         return jit;
     }
 
-    KernelsData ConvolutionKernel_mmad_batched_4x32::GetKernelsData(const Params& params, const optional_params& options) const
+    KernelsData ConvolutionKernel_mmad_batched_block_1x1::GetKernelsData(const Params& params, const optional_params& options) const
     {
         KernelsData kd = GetCommonKernelsData(params, options, " -Dcl_intel_subgroups_char");
         if(!kd.empty())
