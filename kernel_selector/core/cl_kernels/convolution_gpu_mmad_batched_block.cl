@@ -24,7 +24,7 @@
 #define NEEDED_INPUT_X ((OUT_BLOCK_WIDTH-1) * (STRIDE_SIZE_X) + (3 - 1) + 1)
 
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
-KERNEL(convolution_mmad_batched)(
+KERNEL(convolution_mmad_batched_block)(
     __global INPUT0_TYPE* input, 
     __global OUTPUT_TYPE* output, 
     __global FILTER_TYPE* weights, 

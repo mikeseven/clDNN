@@ -20,12 +20,12 @@
  
 namespace kernel_selector {
     
-    class ConvolutionKernel_mmad_batched_4x32 : public ConvolutionKernelBase
+    class ConvolutionKernel_mmad_batched_block : public ConvolutionKernelBase
     {
     public:
         using Parent = ConvolutionKernelBase;
-        ConvolutionKernel_mmad_batched_4x32() : ConvolutionKernelBase("convolution_gpu_mmad_batched_4x32") {}
-        virtual ~ConvolutionKernel_mmad_batched_4x32() {}
+        ConvolutionKernel_mmad_batched_block() : ConvolutionKernelBase("convolution_gpu_mmad_batched_block") {}
+        virtual ~ConvolutionKernel_mmad_batched_block() {}
 
         virtual KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         virtual ParamsKey GetSupportedKey() const override;

@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "convolution_kernel_mmad_batched_4x32.h"
+#include "convolution_kernel_mmad_batched_block.h"
 #include "kernel_selector_utils.h"
 
 namespace kernel_selector {
     
-    ParamsKey ConvolutionKernel_mmad_batched_4x32::GetSupportedKey() const
+    ParamsKey ConvolutionKernel_mmad_batched_block::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::INT8);
@@ -61,7 +61,7 @@ namespace kernel_selector {
         return { 1,1,1 };
     }
 
-    bool ConvolutionKernel_mmad_batched_4x32::Validate(const Params& p, const optional_params& o) const
+    bool ConvolutionKernel_mmad_batched_block::Validate(const Params& p, const optional_params& o) const
     {
         if (!ConvolutionKernelBase::Validate(p, o) ||
             !CovolutionCheckInput(p, o))
@@ -86,7 +86,7 @@ namespace kernel_selector {
         return true;
     }
 
-    ConvolutionKernelBase::DispatchData ConvolutionKernel_mmad_batched_4x32::SetDefault(const convolution_params& arg, int) const
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_mmad_batched_block::SetDefault(const convolution_params& arg, int) const
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
@@ -110,7 +110,7 @@ namespace kernel_selector {
         return runInfo;
     }
 
-    JitConstants ConvolutionKernel_mmad_batched_4x32::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
+    JitConstants ConvolutionKernel_mmad_batched_block::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
     {
         auto jit = Parent::GetJitConstants(params, runInfo);
 
@@ -141,7 +141,7 @@ namespace kernel_selector {
         return jit;
     }
 
-    KernelsData ConvolutionKernel_mmad_batched_4x32::GetKernelsData(const Params& params, const optional_params& options) const
+    KernelsData ConvolutionKernel_mmad_batched_block::GetKernelsData(const Params& params, const optional_params& options) const
     {
         KernelsData kd = GetCommonKernelsData(params, options, " -Dcl_intel_subgroups_char");
         if(!kd.empty())
