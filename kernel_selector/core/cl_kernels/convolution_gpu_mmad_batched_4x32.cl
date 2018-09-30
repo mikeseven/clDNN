@@ -57,9 +57,9 @@ KERNEL(convolution_mmad_batched)(
         __attribute__((opencl_unroll_hint(FILTER_SIZE_Y)))
         for (uint j = 0; j < FILTER_SIZE_Y; ++j)
         {
+            
+            ////// preloading input data //////
             int4 preloaded_input[NEEDED_INPUT_X];
-
-            // preloading data
             for(int p = 0; p < NEEDED_INPUT_X; p++)
             {
                 const int input_offset_y = input_y + j;
@@ -69,120 +69,54 @@ KERNEL(convolution_mmad_batched)(
                 preloaded_input[p] = as_int4(intel_sub_group_block_read4((const __global uint*)(input + input_idx)));
             }
 
-#if FILTER_SIZE_X != 1
             __attribute__((opencl_unroll_hint(WEIGHTS_PER_WORKITEM)))
             for(uint wi = 0; wi < WEIGHTS_PER_WORKITEM; wi++)
             {
-                int8 weights_data[FILTER_SIZE_X];
+                ////// preloading weights data //////
+                int8 preloaded_weights[FILTER_SIZE_X];
                 uint tmp_filter_idx = filter_idx;
                 for(uint w = 0; w < FILTER_SIZE_X; w++)
                 {
-                    weights_data[w] = as_int8(intel_sub_group_block_read8((const __global uint*) (weights + tmp_filter_idx + (wi * FILTER_OFM_BLOCK_PITCH))));
+                    preloaded_weights[w] = as_int8(intel_sub_group_block_read8((const __global uint*) (weights + tmp_filter_idx + (wi * FILTER_OFM_BLOCK_PITCH))));
                     tmp_filter_idx += FILTER_X_PITCH;
                 }
-
+                ////// computing //////
                 __attribute__((opencl_unroll_hint(FILTER_SIZE_X)))
                 for (uint i = 0; i < FILTER_SIZE_X; ++i)
                 {
-                    for(uint o = 0; o < OUT_BLOCK_WIDTH; o++)
+                    for(uint ox = 0; ox < OUT_BLOCK_WIDTH; ox++)
                     {
-                        const uint w_idx = (o + i) % FILTER_SIZE_X;
-                        const uint i_idx = o * STRIDE_SIZE_X + (o + i) % FILTER_SIZE_X;
-                        dotProd[o + wi * OUT_BLOCK_WIDTH] = MMAD_4x8(preloaded_input[i_idx], weights_data[w_idx], dotProd[o + wi * OUT_BLOCK_WIDTH]);
+                        const uint w_idx = (ox + i) % FILTER_SIZE_X;
+                        const uint out_idx = ox + wi * OUT_BLOCK_WIDTH;
+                        const uint in_idx = ox * STRIDE_SIZE_X + (ox + i) % FILTER_SIZE_X;
+                        dotProd[out_idx] = MMAD_4x8(preloaded_input[in_idx], preloaded_weights[w_idx], dotProd[out_idx]);
                     }
                 }
             }
             filter_idx += FILTER_X_PITCH * FILTER_SIZE_X;
-#else // FILTER_SIZE_X == 1
-            __attribute__((opencl_unroll_hint(FILTER_SIZE_X)))
-            for (uint i = 0; i < FILTER_SIZE_X; ++i)
-            {
-                int8 weights_data[WEIGHTS_PER_WORKITEM];
-                for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
-                {
-                    weights_data[w] = as_int8(intel_sub_group_block_read8((const __global uint*) (weights + (filter_idx + w * FILTER_OFM_BLOCK_PITCH) ) ));
-                }
-
-                for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
-                for(uint o = 0; o < OUT_BLOCK_WIDTH; o++)
-                {
-                    const uint w_idx = (o + w) % WEIGHTS_PER_WORKITEM;
-                    const uint out_idx = o + OUT_BLOCK_WIDTH * w_idx;
-                    const uint preloaded_idx =o * STRIDE_SIZE_X + i;
-                    dotProd[out_idx] = MMAD_4x8(preloaded_input[preloaded_idx], weights_data[w_idx], dotProd[out_idx]);
-
-                    //const uint out_idx = o + OUT_BLOCK_WIDTH * (h + w * OBH);
-                    //const uint preloaded_idx =o * STRIDE_SIZE_X + i + NEEDED_INPUT_X * (h * STRIDE_SIZE_Y + j);
-                    //dotProd[out_idx] = MMAD_4x8(preloaded_input[preloaded_idx], weights_data[w], dotProd[out_idx]);
-                }
-                filter_idx += FILTER_X_PITCH;
-            }
-#endif
         }
     }
 
+////// QUANTIZE & OUTPUT //////
 for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
-for(uint o = 0; o < OUT_BLOCK_WIDTH; o++)
 {
-    const uint out_idx = o + OUT_BLOCK_WIDTH * w;
-    for(uint b = 0; b < 4; b++)
+    for(uint o = 0; o < OUT_BLOCK_WIDTH; o++)
     {
+        const uint out_idx = o + OUT_BLOCK_WIDTH * w;
+        for(uint b = 0; b < 4; b++)
+        {
+            const uint bias_index = f + w * 8;
+        #if CALIBRATION_TERM
+            dotProd[out_idx][b] = (UNIT_TYPE)round(((float)dotProd[out_idx][b] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
+        #else  // CALIBRATION_TERM
+            dotProd[out_idx][b] = (UNIT_TYPE)round(((float)dotProd[out_idx][b] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
+        #endif // CALIBRATION_TERM
 
-    #if BIAS_TERM
-        const uint bias_index = f + w * 8;
-    #if CALIBRATION_TERM
-        dotProd[out_idx][b] = (UNIT_TYPE)round(((float)dotProd[out_idx][b] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
-    #else  // CALIBRATION_TERM
-        dotProd[out_idx][b] = (UNIT_TYPE)round(((float)dotProd[out_idx][b] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
-    #endif // CALIBRATION_TERM
-    #endif // BIAS_TERM
-
-        const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4 + b, f + w * 8, y, x + o);
-        output[dst_index] = ACTIVATION(convert_char(dotProd[out_idx][b]), NL_M, NL_N);
+            const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4 + b, f + w * 8, y, x + o);
+            output[dst_index] = ACTIVATION(convert_char(dotProd[out_idx][b]), NL_M, NL_N);
+        }
     }
 }
-
-
-
-/*for(uint h = 0; h < OBH; h++)
-for(uint o = 0; o < OUT_BLOCK_WIDTH; o++)
-{
-    char4 out_char_b0;
-    char4 out_char_b1;
-    char4 out_char_b2;
-    char4 out_char_b3;
-
-    for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
-    {
-        const uint out_idx = o + OUT_BLOCK_WIDTH * (h + w * OBH);
-
-        const uint bias_index = f + w * 8;
-    #if CALIBRATION_TERM
-        dotProd[out_idx][0] = (UNIT_TYPE)round(((float)dotProd[out_idx][0] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
-        dotProd[out_idx][1] = (UNIT_TYPE)round(((float)dotProd[out_idx][1] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
-        dotProd[out_idx][2] = (UNIT_TYPE)round(((float)dotProd[out_idx][2] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
-        dotProd[out_idx][3] = (UNIT_TYPE)round(((float)dotProd[out_idx][3] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
-    #else  // CALIBRATION_TERM
-        dotProd[out_idx][0] = (UNIT_TYPE)round(((float)dotProd[out_idx][0] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
-        dotProd[out_idx][1] = (UNIT_TYPE)round(((float)dotProd[out_idx][1] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
-        dotProd[out_idx][2] = (UNIT_TYPE)round(((float)dotProd[out_idx][2] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
-        dotProd[out_idx][3] = (UNIT_TYPE)round(((float)dotProd[out_idx][3] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
-    #endif // CALIBRATION_TERM
-
-        out_char_b0[w] = ACTIVATION(convert_char(dotProd[out_idx][0]), NL_M, NL_N);
-        out_char_b1[w] = ACTIVATION(convert_char(dotProd[out_idx][1]), NL_M, NL_N);
-        out_char_b2[w] = ACTIVATION(convert_char(dotProd[out_idx][2]), NL_M, NL_N);
-        out_char_b3[w] = ACTIVATION(convert_char(dotProd[out_idx][3]), NL_M, NL_N);
-    }
-    uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4, f, y + h, x + o);
-    intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index), as_uchar4(out_char_b0));
-    dst_index += 32;
-    intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index), as_uchar4(out_char_b1));
-    dst_index += 32;
-    intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index), as_uchar4(out_char_b2));
-    dst_index += 32;
-    intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index), as_uchar4(out_char_b3));
-}*/
 
 }
 
