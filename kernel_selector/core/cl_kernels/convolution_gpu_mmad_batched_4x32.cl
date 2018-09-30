@@ -27,7 +27,7 @@
 
 #define OBS OUT_BLOCK_WIDTH
 #define NEEDED_INPUT_X ((OBS-1) * (STRIDE_SIZE_X) + (3 - 1) + 1)
-#define WEIGHTS_PER_WORKITEM 4 // mmust be 4!
+#define WEIGHTS_PER_WORKITEM 1 // mmust be 4!
 
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
 KERNEL(convolution_mmad_batched)(
@@ -59,6 +59,7 @@ KERNEL(convolution_mmad_batched)(
     const uint input_offset = IN_OFFSET + IN_B_BLOCK_PITCH * b_block;
 
     uint filter_idx = filter_offset;
+    __attribute__((opencl_unroll_hint(1)))
     for (uint k = 0; k < FILTER_IFM_MMAD_NUM; ++k)
     {
         __attribute__((opencl_unroll_hint(FILTER_SIZE_Y)))
@@ -73,6 +74,32 @@ KERNEL(convolution_mmad_batched)(
                 uint input_idx = input_offset + input_offset_y * IN_Y_PITCH + input_offset_x * IN_X_PITCH + k * IN_F_BLOCK_PITCH;
                 preloaded_input[p] = as_int4(intel_sub_group_block_read4((const __global uint*)(input + input_idx)));
             }
+
+#if FILTER_SIZE_X != 1
+            __attribute__((opencl_unroll_hint(WEIGHTS_PER_WORKITEM)))
+            for(uint wi = 0; wi < WEIGHTS_PER_WORKITEM; wi++)
+            {
+                int8 weights_data[FILTER_SIZE_X];
+                uint tmp_filter_idx = filter_idx;
+                for(uint w = 0; w < FILTER_SIZE_X; w++)
+                {
+                    weights_data[w] = as_int8(intel_sub_group_block_read8((const __global uint*) (weights + tmp_filter_idx + (wi * FILTER_OFM_BLOCK_PITCH))));
+                    tmp_filter_idx += FILTER_X_PITCH;
+                }
+
+                __attribute__((opencl_unroll_hint(FILTER_SIZE_X)))
+                for (uint i = 0; i < FILTER_SIZE_X; ++i)
+                {
+                    for(uint o = 0; o < OBS; o++)
+                    {
+                        const uint w_idx = (o + i) % FILTER_SIZE_X;
+                        const uint i_idx = o * STRIDE_SIZE_X + (o + i) % FILTER_SIZE_X;
+                        dotProd[o + wi * OBS] = MMAD_4x8(preloaded_input[i_idx], weights_data[w_idx], dotProd[o + wi * OBS]);
+                    }
+                }
+            }
+            filter_idx += FILTER_X_PITCH * FILTER_SIZE_X;
+#else // FILTER_SIZE_X == 1
             __attribute__((opencl_unroll_hint(FILTER_SIZE_X)))
             for (uint i = 0; i < FILTER_SIZE_X; ++i)
             {
@@ -96,6 +123,7 @@ KERNEL(convolution_mmad_batched)(
                 }
                 filter_idx += FILTER_X_PITCH;
             }
+#endif
         }
     }
 
