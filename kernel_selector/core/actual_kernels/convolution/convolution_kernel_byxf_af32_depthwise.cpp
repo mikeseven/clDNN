@@ -37,7 +37,7 @@ namespace kernel_selector {
         k.EnableSplitSupport();
         k.EnableInt8Quantization();
         k.EnableOutputCalibration();
-        k.Enabledepthwise_separable_opt();
+        k.EnableDepthwiseSeparableOpt();
         k.DisableTuning();
         return k;
     }

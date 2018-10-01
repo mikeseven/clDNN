@@ -263,7 +263,7 @@ namespace kernel_selector
         void EnablePoolRemainder(PoolRemainder r);
         void EnableSplitSupport() { key.restrict.val.dedicated.conv.split = 1; }
         void EnableDilation() { key.restrict.val.dedicated.conv.dilation = 1; }
-        void Enabledepthwise_separable_opt() { key.restrict.val.dedicated.conv.depthwise_separable_opt = 1; }
+        void EnableDepthwiseSeparableOpt() { key.restrict.val.dedicated.conv.depthwise_separable_opt = 1; }
         void EnableLocalConvolution() { key.restrict.val.dedicated.conv.local = 1; }
         void EnableTranspose() { key.restrict.val.dedicated.conv.transposed = 1; }
         void EnableInt8Quantization() { key.restrict.val.dedicated.conv.quantization = 1; }

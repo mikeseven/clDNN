@@ -59,7 +59,7 @@ namespace kernel_selector {
         k.EnableSplitSupport();
 
         // Supported convoltuion with depth separable optimization flag
-        k.Enabledepthwise_separable_opt();
+        k.EnableDepthwiseSeparableOpt();
 
         return k;
     }

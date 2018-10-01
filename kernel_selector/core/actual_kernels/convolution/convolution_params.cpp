@@ -58,7 +58,7 @@ namespace kernel_selector
 
         if (depthwise_separable_opt)
         {
-            k.Enabledepthwise_separable_opt();
+            k.EnableDepthwiseSeparableOpt();
         }
 
         if (transposed)
