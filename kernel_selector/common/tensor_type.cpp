@@ -45,7 +45,7 @@ namespace kernel_selector
 
         std::array<std::array<int, 6>, WeightsLayout::WeightsLayoutCount> WeightsTensor::weightsChannelArray
         { {
-            //X, Y, I, O
+            // X, Y,   I,  O, LX, LY,
             { -1, -1,  0,  1, -1, -1 }, // WeightsLayout::oi
             { -1, -1,  1,  0, -1, -1 }, // WeightsLayout::io
             {  0,  1,  2,  3, -1, -1 }, // WeightsLayout::oiyx

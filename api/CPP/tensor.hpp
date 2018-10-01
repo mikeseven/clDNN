@@ -377,11 +377,13 @@ public:
     /// @details Example:
     /*! @code
     *
-    tensor my_tensor( 2, 3, 4, 5 );   // b=2, f=3, x=4, y=5
+    tensor my_tensor( 2, 3, 4, 5, 6, 7 );   // b=2, f=3, x=4, y=5, lx= 6, ly =7
     cout << my_tensor.batch[0] << endl;           // 2
     cout << my_tensor.feature[0] << endl;         // 3
     cout << "x=" << my_tensor.spatial[0] << endl; // x=4
     cout << "y=" << my_tensor.spatial[1] << endl; // y=5
+	cout << "local x=" << my_tensor.local[0] << endl; // local x=6
+	cout << "loxal y=" << my_tensor.local[1] << endl; // local y=7
     *
     * @endcode
     */
