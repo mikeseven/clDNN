@@ -699,10 +699,20 @@ void program_impl::handle_lstm()
                     has_lstm_children = true;
                 }
             }
+            
+            std::cout << "LSTM order : " << lstm_prim->output_selection << std::endl;
+            bool emit_last_hidden = lstm_prim->output_selection == cldnn_lstm_output_hidden || 
+                                    lstm_prim->output_selection == cldnn_lstm_output_hidden_cell;
+            bool emit_last_cell = lstm_prim->output_selection == cldnn_lstm_output_hidden_cell ||
+                                  lstm_prim->output_selection == cldnn_lstm_output_sequence_cell;
+            bool emit_sequence = lstm_prim->output_selection == cldnn_lstm_output_sequence_cell || 
+                                 lstm_prim->output_selection == cldnn_lstm_output_sequence;
+            std::cout << "Emit last hidden = " << emit_last_hidden << "  emit_last_cell = " << emit_last_cell
+                      << "  emit sequence = " << emit_sequence << std::endl;
 
             std::vector<program_node*> cell_list(directions * sequence_len);
-            std::vector<program_node*> concat_depends(directions * sequence_len);
-            std::vector<primitive_id> output_ids_offsets(directions * sequence_len);
+            std::vector<program_node*> hidden_list(directions * sequence_len);
+            std::map<size_t, std::pair<primitive_id, program_node*>> output_map;
 
             primitive_id hidden_fwd_id = initial_hidden_id;
             primitive_id hidden_bwd_id = initial_hidden_id;
@@ -776,7 +786,7 @@ void program_impl::handle_lstm()
                     if (i > 0)
                     {
                         add_connection(*cell_list[size_t(i - 1) * directions + dir], n2);
-                        add_connection(*(concat_depends[size_t(i - 1) * directions + dir]), n1);
+                        add_connection(*hidden_list[size_t(i - 1) * directions + dir], n1);
                     }
                     //if initial values are present
                     else
@@ -788,58 +798,88 @@ void program_impl::handle_lstm()
                     }
 
                     //lstm_hidden
-                    hidden_id = crop_id + ":hidden";
-                    auto crop_hidden = std::make_shared<crop>(hidden_id, lstm_elt_id, hidden_size, tensor{ 0,0,0,0 });
-                    auto &n3 = get_or_create(crop_hidden);
-                    //adding eltwise as dependency to hidden
-                    add_connection(n2, n3);
-
-                    //if parent is lstm adding hiddens as dependency
-                    if (has_lstm_children)
                     {
-                        for (auto& user : node->get_users())
+                        hidden_id = crop_id + ":hidden";
+                        auto crop_hidden = std::make_shared<crop>(hidden_id, lstm_elt_id, hidden_size, tensor{ 0,0,0,0 });
+                        auto &n3 = get_or_create(crop_hidden);
+                        //adding eltwise as dependency to hidden
+                        add_connection(n2, n3);
+
+                        //if parent is lstm adding hiddens as dependency
+                        if (has_lstm_children)
                         {
-                            add_connection(n3, *user);
+                            for (auto& user : node->get_users())
+                            {
+                                add_connection(n3, *user);
+                            }
+                        }
+                        hidden_list[i * directions + dir] = &n3;
+                        if (i == sequence_len - 1 || emit_sequence)
+                        {
+                            output_map[i * directions + dir] = {hidden_id, &n3};
                         }
                     }
-                    concat_depends[i * directions + dir] = &n3;
 
                     //lstm_cell
-                    if (i < sequence_len - 1) {
+                    if (i < sequence_len - 1 || emit_last_cell)
+                    {
                         cell_id = crop_id + ":cell";
                         auto crop_cell = std::make_shared<crop>(cell_id, lstm_elt_id, hidden_size, tensor{ 0,1,0,0 });
                         auto &n4 = get_or_create(crop_cell);
                         add_connection(n2, n4);
                         cell_list[i * directions + dir] = &n4;
+                        if (i == sequence_len - 1)
+                        {
+                            output_map[sequence_len * directions + dir] = {cell_id, &n4};
+                        }
                     }
-                    output_ids_offsets[i * directions + dir] = hidden_id;
                 }
             }
 
             //if there is no next lstm, concatenation is created
             if (!has_lstm_children)
             {
+                std::vector<primitive_id> output_ids_offsets;
+                for (auto& e : output_map)
+                {
+                    output_ids_offsets.push_back(e.second.first);
+                }
+                for (auto& e : output_ids_offsets)
+                    std::cout << e << std::endl;
                 primitive_id original_id = node->id();
                 primitive_id concatenation_id = original_id + ":concat";
                 auto concatenation_primitive = std::make_shared<concatenation>(concatenation_id, output_ids_offsets, concatenation::along_f);
                 auto &concatenation_node = get_or_create(concatenation_primitive);
-                for (auto sub_dependency : concat_depends)
+                for (auto& e : output_map)
                 {
-                    add_connection(*sub_dependency, concatenation_node);
+                    add_connection(*e.second.second, concatenation_node);
                 }
+
+                auto add_user_connections = [&](program_node& output_node) {
+                    for (auto& user : node->get_users())
+                    {
+                        add_connection(output_node, *user);
+                    }
+                };
                 if (directions == 2) {
                     // bidirectional support requires concatenations along the direction and sequence axis
                     // instead we can concatenate along the sequence axis and reshape the tensor to the account
                     // for the direction
-                    tensor output_size {input_size.batch[0], (int32_t)sequence_len, hidden_size.spatial[0], (int32_t)directions};
+                    int32_t concatenate_len = 0;
+                    if (emit_sequence) concatenate_len = sequence_len;
+                    if (emit_last_hidden) concatenate_len++;
+                    if (emit_last_cell) concatenate_len++;
+                    tensor output_size {input_size.batch[0], concatenate_len, hidden_size.spatial[0], (int32_t)directions};
+                    std::cout << "Output Size = " << output_size << std::endl;
                     primitive_id reshape_id = original_id + ":reshape";
                     auto reshape_primitive = std::make_shared<reshape>(reshape_id, concatenation_id, output_size);
                     auto &reshape_node = get_or_create(reshape_primitive);
                     add_connection(concatenation_node, reshape_node);
-                    for (auto& user : node->get_users())
-                    {
-                        add_connection(reshape_node, *user);
-                    }
+                    add_user_connections(reshape_node);
+                } 
+                else 
+                {
+                    add_user_connections(concatenation_node);
                 }
             }
 

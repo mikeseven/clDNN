@@ -104,6 +104,7 @@ topology build_char_level(const std::string& weights_dir, const cldnn::engine& e
 		0,
 		{},
 		{},
+        cldnn_lstm_output::cldnn_lstm_output_sequence,
 		cldnn_lstm_offset_order::cldnn_lstm_offset_order_ifoz);
     
     auto lstm_2 = cldnn::lstm(
@@ -119,6 +120,7 @@ topology build_char_level(const std::string& weights_dir, const cldnn::engine& e
 		0,
 		{},
 		{},
+        cldnn_lstm_output::cldnn_lstm_output_sequence,
 		cldnn_lstm_offset_order::cldnn_lstm_offset_order_ifoz);
 
     //we care only about last hidden state (we could run time_distrubted_dense <lstm_gemm without reccurent weights>, if we would care about every hidden state)
