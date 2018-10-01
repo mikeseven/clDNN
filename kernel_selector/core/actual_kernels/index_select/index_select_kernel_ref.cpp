@@ -34,8 +34,10 @@ namespace kernel_selector
         k.EnableOutputDataType(Datatype::INT32);
 
         k.EnableInputLayout(DataLayout::bfyx);
+        k.EnableInputLayout(DataLayout::yxfb);
 
         k.EnableOutputLayout(DataLayout::bfyx);
+        k.EnableOutputLayout(DataLayout::yxfb);
 
         k.EnableBatching();
 

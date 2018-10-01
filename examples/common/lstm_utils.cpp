@@ -29,7 +29,7 @@ void lstm_utils::pre_processing(std::vector<std::string> input_files, const std:
 void lstm_utils::prepare_input_vector_for_new_prediction()
 {
     _input_vector = std::vector<float>(_seq_length * _batch, 0.0f);
-    for (int j = 0; j < _seq_length * _batch; ++j)
+    for (uint32_t j = 0; j < _seq_length * _batch; ++j)
     {
         _input_vector.at(j) = static_cast<float>(_input.at(j));
     }

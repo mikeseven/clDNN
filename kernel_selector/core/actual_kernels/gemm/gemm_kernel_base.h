@@ -25,7 +25,13 @@ namespace kernel_selector
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct gemm_params : public base_params
     {
-        gemm_params() : base_params(KernelType::GEMM) {}
+        gemm_params() :
+			base_params(KernelType::GEMM),
+			alpha(1.0f),
+			beta(0.0f),
+			transpose_input1(false),
+			transpose_input2(false)
+		{}
 
         float alpha;
         float beta;

@@ -31,41 +31,30 @@ KERNEL(index_select_gpu_ref)(
     const uint feature_idx   = (uint) get_global_id(2);
     const uint indices_value = indices[indices_idx];
 
-    uint output_idx = 0;
-    uint input_idx  = 0;
-
     // [LOGIC]:
 #ifdef INDEX_SELECT_AXIS_BATCH
-    const uint input_size = input_sf * input_sy * input_sx;
-    output_idx = indices_idx * input_size;
-    input_idx  = GET_DATA_INDEX(INPUT0, indices_value, 0, 0, 0);
-
-    for(uint i = 0; i < input_size; i++)
-    {
-    output[output_idx + i] = input[input_idx + i];
+    for(uint x = 0; x < input_sx; x++)
+    { 
+        for(uint y = 0; y < input_sy; y++)
+        {  
+            output[GET_DATA_INDEX(OUTPUT, indices_idx, feature_idx, y, x)] = input[GET_DATA_INDEX(INPUT0, indices_value, feature_idx, y, x)];
+        }
     }
 #elif defined INDEX_SELECT_AXIS_FEATURE
-    const uint feature_size = input_sy * input_sx;
-    output_idx = GET_DATA_INDEX(OUTPUT, out_b, 0, 0, 0) + indices_idx * feature_size;
-    input_idx  = GET_DATA_INDEX(INPUT0, out_b, indices_value, 0, 0);
-
-    for(uint i = 0; i < feature_size; i++)
+    for(uint x = 0; x < input_sx; x++)
     {
-        output[output_idx + i] = input[input_idx + i];
+        output[GET_DATA_INDEX(OUTPUT, out_b, indices_idx, feature_idx, x)] = input[GET_DATA_INDEX(INPUT0, out_b, indices_value, feature_idx, x)];
     }
 #elif defined INDEX_SELECT_AXIS_X
-    for(uint i = 0; i < input_sy; i++)
-    {
-        output_idx = GET_DATA_INDEX(OUTPUT, out_b, feature_idx, i, indices_idx);
-        input_idx  = GET_DATA_INDEX(INPUT0, out_b, feature_idx, i, indices_value);
-        output[output_idx] = input[input_idx];
-    }
-#elif defined INDEX_SELECT_AXIS_Y
-    output_idx = GET_DATA_INDEX(OUTPUT, out_b, feature_idx, indices_idx, 0);
-    input_idx  = GET_DATA_INDEX(INPUT0, out_b, feature_idx, indices_value, 0);
     for(uint i = 0; i < input_sx; i++)
     {
-        output[output_idx+i] = input[input_idx+i];
+        output[GET_DATA_INDEX(OUTPUT, out_b, feature_idx, i, indices_idx)] = input[GET_DATA_INDEX(INPUT0, out_b, feature_idx, i, indices_value)];
+    }
+#elif defined INDEX_SELECT_AXIS_Y
+
+    for(uint i = 0; i < input_sx; i++)
+    {
+        output[GET_DATA_INDEX(OUTPUT, out_b, feature_idx, indices_idx, i)] = input[GET_DATA_INDEX(INPUT0, out_b, feature_idx, indices_value, i)];
     }
 #endif
 }
