@@ -49,14 +49,14 @@ public:
     void set_transposed(bool node_transposed) { transposed = node_transposed; }
     bool get_transposed() const { return transposed; }
 
-    decltype(auto) input(size_t idx = 0) const { return get_dependency(idx); }
+    decltype(auto) input() const { return get_dependency(0); }
 
     decltype(auto) weights(size_t idx = 0) const
     {
         if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("weights offset too big");
 
-        return get_dependency(desc->input.size() + idx);
+        return get_dependency(1 + idx);
     }
 
     decltype(auto) bias(size_t idx = 0) const
@@ -64,7 +64,7 @@ public:
         if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("bias offset too big");
 
-        return get_dependency(desc->input.size() + this->get_split() + idx);
+        return get_dependency(1 + this->get_split() + idx);
     }
 
     decltype(auto) weights_quantization_factors(size_t idx = 0) const
@@ -72,7 +72,7 @@ public:
         if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("quantization factor offset too big");
 
-        return get_dependency(desc->input.size() + 2*this->get_split() + idx);
+        return get_dependency(1 + 2*this->get_split() + idx);
     }
 
     decltype(auto) output_calibration_factors(size_t idx = 0) const
@@ -80,7 +80,7 @@ public:
         if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("calibration factor offset too big");
 
-        return get_dependency(desc->input.size() + 3 * this->get_split() + idx);
+        return get_dependency(1 + 3 * this->get_split() + idx);
     }
 
     bool bias_term() const
@@ -96,16 +96,6 @@ public:
     bool output_calibration_term() const
     {
         return get_primitive()->output_calibration_factors.size() > 0;
-    }
-
-    bool is_fused_batch_norm_scale() const
-    {
-        return get_primitive()->fused_batch_norm_scale;
-    }
-
-    bool is_fused_in_training() const
-    {
-        return is_fused_batch_norm_scale() && !get_primitive()->inv_variance.empty();
     }
     
     float get_input_qf() const { return input_qf; }
@@ -138,7 +128,7 @@ public:
         if (static_cast<int32_t>(index) >= node.get_split())
             throw std::range_error("weights offset too big");
         
-        return dep_memory(inputs_memory_count() + index);
+        return dep_memory(1 + index);
     }
 
     decltype(auto) bias_memory(size_t index) const
@@ -146,7 +136,7 @@ public:
         if (static_cast<int32_t>(index) >= node.get_split())
             throw std::range_error("bias offset too big");
 
-        return dep_memory(inputs_memory_count() + node.get_split() + index);
+        return dep_memory(1 + node.get_split() + index);
     }
 
     decltype(auto) weights_quantization_factors_memory(size_t index) const
@@ -154,7 +144,7 @@ public:
         if (static_cast<int32_t>(index) >= node.get_split())
             throw std::range_error("quantization factors offset too big");
 
-        return dep_memory(inputs_memory_count() + 2*node.get_split() + index);
+        return dep_memory(1 + 2*node.get_split() + index);
     }
 
     decltype(auto) output_calibration_factors_memory(size_t index) const
@@ -162,7 +152,7 @@ public:
         if (static_cast<int32_t>(index) >= node.get_split())
             throw std::range_error("quantization factors offset too big");
 
-        return dep_memory(inputs_memory_count() + 3 * node.get_split() + index);
+        return dep_memory(1 + 3 * node.get_split() + index);
     }
 
     bool bias_term() const
@@ -178,16 +168,6 @@ public:
     bool output_calibration_factors_term() const
     {
         return node.output_calibration_term();
-    }
-
-    bool is_fused_batch_norm_scale() const
-    {
-        return node.is_fused_batch_norm_scale();
-    }
-
-    bool is_fused_in_training() const
-    {
-        return node.is_fused_in_training();
     }
 };
 

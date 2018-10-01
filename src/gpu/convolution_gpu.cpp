@@ -46,37 +46,11 @@ protected:
     virtual kernel::kernel_arguments_data get_arguments(typed_primitive_inst<convolution>& instance, int32_t split) const override
     {
         kernel::kernel_arguments_data args = parent::get_arguments(instance, split);
-        auto desc = std::static_pointer_cast<const convolution>(instance.desc());
 
         args.weights              = &instance.weights_memory(split);
         args.bias                 = instance.bias_term() ? &instance.bias_memory(split) : nullptr;
         args.weights_quantization_factors = instance.weights_quantization_factors_term() ? &instance.weights_quantization_factors_memory(split) : nullptr;
         args.output_calibration_factors = instance.output_calibration_factors_term() ? &instance.output_calibration_factors_memory(split) : nullptr;
-
-        if (instance.is_fused_batch_norm_scale())
-        {
-            if (!desc->scale_bias.empty())
-            {
-                if (instance.is_fused_in_training())
-                {
-                    args.inputs.push_back(&instance.dep_memory(instance.dependencies().size() - 4));
-                    args.inputs.push_back(&instance.dep_memory(instance.dependencies().size() - 3));
-                    args.inputs.push_back(&instance.dep_memory(instance.dependencies().size() - 2));
-                    args.inputs.push_back(&instance.dep_memory(instance.dependencies().size() - 1));
-                }
-                else
-                {
-                    args.inputs.push_back(&instance.dep_memory(instance.dependencies().size() - 1));
-                }
-            }
-            else if (instance.is_fused_in_training())
-            {
-                args.inputs.push_back(&instance.dep_memory(instance.dependencies().size() - 3));
-                args.inputs.push_back(&instance.dep_memory(instance.dependencies().size() - 2));
-                args.inputs.push_back(&instance.dep_memory(instance.dependencies().size() - 1));
-            }
-        }
-
         return args;
     }
 
@@ -114,15 +88,6 @@ public:
         {
             conv_params.inputs[0] = convert_data_tensor(input_layout, actual_split, additional_offset);
         }
-
-        if (arg.is_fused_batch_norm_scale())
-        {
-            conv_params.fused_bn_scale = true;
-            conv_params.epsilon = arg.get_primitive()->epsilon;
-        }
-
-        conv_params.fused_in_training = arg.is_fused_in_training();
-        conv_params.scale_bias = !arg.get_primitive()->scale_bias.empty();
 
         if(primitive->with_activation)
             convert_activation_func_params(primitive, conv_params);

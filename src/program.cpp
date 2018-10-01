@@ -39,6 +39,7 @@
 #include "data_inst.h"
 #include "eltwise_inst.h"
 #include "fully_connected_inst.h"
+#include "fused_conv_bn_scale_inst.h"
 #include "mutable_data_inst.h"
 #include "deconvolution_inst.h"
 #include "detection_output_inst.h"
@@ -2026,7 +2027,7 @@ void program_impl::fuse_skip_layers(program_node* node)
 
 void program_impl::fuse_conv_bn_scale(program_node* node)
 {
-    do_for_types<convolution>(*node, [this](convolution_node& node)
+    program_helpers::do_for_types<convolution>(*node, [this](convolution_node& node)
     {
         if (node.users.size() > 2)
             return;
@@ -2077,9 +2078,9 @@ void program_impl::fuse_conv_bn_scale(program_node* node)
                     add_intermediate(bn_out_node, **sc_backw, 0, true);
                 }
 
-                auto new_conv = std::make_shared<convolution>(prim->id + "_fused", prim->input[0], prim->weights.ref(), prim->bias.ref(), bn_prim->epsilon,
-                                                        scale_prim->input[1], scale_prim->bias, prim->stride, prim->input_offset, prim->dilation,
-                                                        bn_prim->inv_variance, prim->with_activation, prim->activation_negative_slope, prim->output_padding);
+                auto new_conv = std::make_shared<fused_conv_bn_scale>(prim->id + "_fused", prim->input[0], prim->weights.ref(), prim->bias.ref(), bn_prim->epsilon,
+                                                        scale_prim->input[1], scale_prim->bias, prim->stride, prim->dilation, prim->input_offset, bn_prim->inv_variance, 
+                                                        prim->with_activation, prim->activation_negative_slope, prim->output_padding);
                 auto& new_node = get_or_create(new_conv);
                 replace(node, new_node, false, false);
 
@@ -2111,11 +2112,7 @@ void program_impl::fuse_conv_bn_scale(program_node* node)
                     reverse_connection(new_node, **user);
                     user = std::find_if(new_node.users.begin(), new_node.users.end(), [](auto& node){ return node->id().find("_fused_bn_out") != std::string::npos; });
                     reverse_connection(new_node, **user);
-                    auto new_node_itr = std::find(this->processing_order.begin(), this->processing_order.end(), &new_node);
-                    auto swap_itr = new_node_itr;
-                    std::advance(swap_itr, 2);
-                    std::swap(*new_node_itr, *swap_itr);
-                    new_node.processing_num += 2;
+                    processing_order.calculate_BFS_processing_order();
                 }
             }
         }
@@ -2528,7 +2525,7 @@ void program_impl::dump_memory_pool() const
 //TODO: break this function into number of smaller ones + add per-primitive fields (possibly use primitive_inst::to_string?)
 void program_impl::dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter) const
 {
-    std::string path = "C:\\graphs\\";//get_dir_path(options);
+    std::string path = get_dir_path(options);
     if (path.empty())
     {
         return;

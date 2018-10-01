@@ -48,9 +48,9 @@ std::string batch_norm_inst::to_string(batch_norm_node const& node)
     json_composite batch_norm_info;
     if (node.use_global_stats())
     {
-        batch_norm_info.add("mean_id", node.mean().id());
+        batch_norm_info.add("mean_id", mean.id());
 
-        if (node.variance_term())
+        if (variance_term)
         {
             batch_norm_info.add("variance_id", node.variance().id());
         }
@@ -62,7 +62,7 @@ std::string batch_norm_inst::to_string(batch_norm_node const& node)
 	}
     if (node.forwad_pass())
     {
-        batch_norm_info.add("inv_var", node.inv_variance().id());
+        batch_norm_info.add("inv_var", inv_var.id());
     }
     batch_norm_info.add("epsilon", desc->epsilon);
 

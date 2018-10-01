@@ -16,29 +16,29 @@
 
 #pragma once
 
-#include "convolution_kernel_base.h"
+#include "fused_conv_bn_scale_kernel_base.h"
  
 namespace kernel_selector {
     
-    class convolution_kernel_fused_bn_scale_ref : public ConvolutionKernelBase
+    class fused_conv_bn_scale_kernel_ref : public fused_conv_bn_scale_kernel_base
     {
     public:
-        using Parent = ConvolutionKernelBase;
+        using Parent = fused_conv_bn_scale_kernel_base;
 
-        convolution_kernel_fused_bn_scale_ref() : ConvolutionKernelBase("convolution_kernel_fused_bn_scale_ref") {}
-        virtual ~convolution_kernel_fused_bn_scale_ref() {}
+        fused_conv_bn_scale_kernel_ref() : fused_conv_bn_scale_kernel_base("fused_conv_bn_scale_kernel_ref") {}
+        virtual ~fused_conv_bn_scale_kernel_ref() {}
 
         KernelsData GetKernelsData(const Params& params, const optional_params& options) const override;
         ParamsKey GetSupportedKey() const override;
 
     protected:
-        std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&) const override
+        std::vector<WeightsLayout> GetSupportedWeightLayouts(const fused_conv_bn_scale_params&) const override
         {
             return{
                 WeightsLayout::oiyx,
             };
         }
-        DispatchData SetDefault(const convolution_params& arg, int autoTuneIndex = -1) const override;
-        JitConstants GetJitConstants(const convolution_params& params, const DispatchData& kd) const override;
+        DispatchData SetDefault(const fused_conv_bn_scale_params& arg) const override;
+        JitConstants GetJitConstants(const fused_conv_bn_scale_params& params, const DispatchData& kd) const override;
     };
 }

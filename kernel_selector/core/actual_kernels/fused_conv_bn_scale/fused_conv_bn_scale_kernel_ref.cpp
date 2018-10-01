@@ -14,12 +14,12 @@
 // limitations under the License.
 */
 
-#include "convolution_kernel_fused_bn_scale_ref.h"
+#include "fused_conv_bn_scale_kernel_ref.h"
 #include "kernel_selector_utils.h"
 
 namespace kernel_selector {
     
-    ParamsKey convolution_kernel_fused_bn_scale_ref::GetSupportedKey() const
+    ParamsKey fused_conv_bn_scale_kernel_ref::GetSupportedKey() const
     {
         ParamsKey k;
         k.EnableInputDataType(Datatype::F32);
@@ -29,21 +29,17 @@ namespace kernel_selector {
         k.EnableOutputLayout(DataLayout::bfyx);
         k.EnableTensorOffset();
         k.EnableTensorPitches();
-        k.EnableDilation();
         k.EnableBiasPerFeature();
-        k.EnableBiasPerOutput();
         k.EnableNonBiasTerm();
         k.EnableSplitSupport();
         k.EnableBatching();
-        k.EnableOutputCalibration();
-        k.EnableFusedBNScale();
         k.DisableTuning();
         return k;
     }
 
-    ConvolutionKernelBase::DispatchData convolution_kernel_fused_bn_scale_ref::SetDefault(const convolution_params& arg, int) const
+    fused_conv_bn_scale_kernel_base::DispatchData fused_conv_bn_scale_kernel_ref::SetDefault(const fused_conv_bn_scale_params& arg) const
     {
-        DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
+        DispatchData runInfo = fused_conv_bn_scale_kernel_base::SetDefault(arg);
 
         runInfo.effiency = DONT_USE_IF_HAVE_SOMETHING_ELSE;
 
@@ -62,37 +58,16 @@ namespace kernel_selector {
         return runInfo;
     }
 
-    JitConstants convolution_kernel_fused_bn_scale_ref::GetJitConstants(const convolution_params& params, const DispatchData& runInfo) const
+    JitConstants fused_conv_bn_scale_kernel_ref::GetJitConstants(const fused_conv_bn_scale_params& params, const DispatchData& runInfo) const
     {
         auto jit = Parent::GetJitConstants(params, runInfo);
-
-        if (params.fused_in_training)
-            jit.AddConstant(MakeJitConstant("FUSED_TRAINING", 1));
-        if (params.scale_bias)
-            jit.AddConstant(MakeJitConstant("SCALE_BIAS_TERM", 1));
-        jit.AddConstant(MakeJitConstant("EPSILON", params.epsilon));
 
         return jit;
     }
 
-    KernelsData convolution_kernel_fused_bn_scale_ref::GetKernelsData(const Params& params, const optional_params& options) const
+    KernelsData fused_conv_bn_scale_kernel_ref::GetKernelsData(const Params& params, const optional_params& options) const
     {
-        KernelsData kd = GetCommonKernelsData(params, options);
-        if(!kd.empty())
-            kd[0].estimatedTime = DONT_USE_IF_HAVE_SOMETHING_ELSE;
-
-        auto& conv_params = static_cast<const convolution_params&>(params);
-        auto& kernel = kd[0].kernels[0];
-
-        kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 1 });
-        if (conv_params.scale_bias)
-            kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 2 });
-        if (conv_params.fused_in_training)
-        {
-            kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 3 });
-            kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 4 });
-            kernel.arguments.push_back({ ArgumentDescriptor::Types::INPUT, 5 });
-        }
+        KernelsData kd = GetCommonKernelsData(params, options, DONT_USE_IF_HAVE_SOMETHING_ELSE);
  
         return kd;
     }
