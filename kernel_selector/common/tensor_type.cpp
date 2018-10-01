@@ -68,8 +68,8 @@ namespace kernel_selector
             {  0,  1,  2,  3, -1, -1 }, // WeightsLayout::image_2d_weights_winograd_6x3_s1_fbxyb
             {  0,  1,  2,  3, -1, -1 }, // WeightsLayout::image_2d_weights_winograd_6x3_s1_xfbyb
             {  0,  1,  2,  3, -1, -1 }, // WeightsLayout::os_is_yx_isa8_osv8_isv4
-            {  0,  1,  2,  3,  4,  5 },  // WeightsLayout::bf_lyx_yx 
             {  1,  2,  0,  3, -1, -1 },  // WeightsLayout::is_o_yx_isv32
+            {  0,  1,  2,  3,  4,  5 },  // WeightsLayout::bf_lyx_yx 
         } };
 
         NDims DataTensor::GetSimpleDims(const std::vector<size_t>& d, DataLayout l)
