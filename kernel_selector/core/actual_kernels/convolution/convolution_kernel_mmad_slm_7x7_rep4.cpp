@@ -52,13 +52,16 @@ namespace kernel_selector {
         if (cp.filterSize.x != 3 || cp.filterSize.y != 3)
             return false;
 
-        if (cp.inputs[0].X().v != 7 || cp.inputs[0].Y().v != 7)
-            return false;
-
         if (cp.stride.x != 1 || cp.stride.y != 1)
             return false;
 
-        return true;
+        if (cp.inputs[0].X().v == 7 && cp.inputs[0].Y().v == 7)
+            return true;
+
+        if (cp.inputs[0].X().v == 14 && cp.inputs[0].Y().v == 14)
+            return true;
+
+        return false;
     }
 
     ConvolutionKernelBase::DispatchData ConvolutionKernel_mmad_slm_7x7_rep4::SetDefault(const convolution_params& arg, int) const
@@ -76,7 +79,7 @@ namespace kernel_selector {
         runInfo.gws0 = (arg.output.Feature().v * arg.output.Batch().v) / (rep_count * batch_per_wi); // number of tiles needed to cover output width
         runInfo.gws1 = ((arg.inputs[0].X().v / arg.stride.x) + (out_block_width - 1)) / out_block_width;
         // since this kernel only apply to 7x7 sizes we need to manually set gws2 to 8
-        runInfo.gws2 = 8;//((arg.inputs[0].Y().v / arg.stride.y) + (out_block_height - 1)) / out_block_height;
+        runInfo.gws2 = Align(arg.inputs[0].Y().v, 8);//8;//((arg.inputs[0].Y().v / arg.stride.y) + (out_block_height - 1)) / out_block_height;
 
         runInfo.lws0 = 16; // depth
         runInfo.lws1 = 1; // width
@@ -102,17 +105,21 @@ namespace kernel_selector {
         const size_t in_f_block_pitch = in_b_block_pitch * ((params.inputs[0].Batch().v + 3) / 4);
         const size_t in_offset = in_x_pitch * params.inputs[0].X().pad.before + in_y_pitch * params.inputs[0].Y().pad.before;
 
+        const size_t out_y_pitch = 32 * 4 * params.output.X().LogicalDimPadded();
+
         jit.AddConstant(MakeJitConstant("IN_X_PITCH", in_x_pitch));
         jit.AddConstant(MakeJitConstant("IN_Y_PITCH", in_y_pitch));
         jit.AddConstant(MakeJitConstant("IN_B_BLOCK_PITCH", in_b_block_pitch));
         jit.AddConstant(MakeJitConstant("IN_F_BLOCK_PITCH", in_f_block_pitch));
         jit.AddConstant(MakeJitConstant("IN_OFFSET", in_offset));
 
+        jit.AddConstant(MakeJitConstant("OUT_X_PITCH", in_x_pitch));
+        jit.AddConstant(MakeJitConstant("OUT_Y_PITCH", out_y_pitch));
         jit.AddConstant(MakeJitConstant("OUT_BLOCK_WIDTH", 7));
         jit.AddConstant(MakeJitConstant("OUT_BLOCK_HEIGHT", 1));
         jit.AddConstant(MakeJitConstant("LOCAL_SIZE_X", runInfo.lws0));
         jit.AddConstant(MakeJitConstant("LOCAL_SIZE_Y", runInfo.lws1));
-        jit.AddConstant(MakeJitConstant("LOCAL_SIZE_Z", runInfo.lws2));
+        jit.AddConstant(MakeJitConstant("LOCAL_SIZE_Z", 7)); // must be 7 since we process 7 in Y per workgroup
 
         return jit;
     }

@@ -23,7 +23,6 @@
 
  */
 
-#include "include/data_types.cl"
 #include "include/mmad.cl"
 
 // mapping to clDNN
@@ -943,9 +942,11 @@ __global int8* weights,
 			
 			/* Each WG produces entire 7x7 output, hence no group_y, group_z tiling */
 			
+            uint output_offset_x = groupy_tile * OUT_X_PITCH;
+            uint output_offset_y = groupz_tile * OUT_Y_PITCH;
 			uint slice_pack_addr_bytes  = output_depth_index * slice_pack_size_bytes * ( BATCH_SIZE / BATCH_PACK ) + batch_index * slice_pack_size_bytes + lid_z * row_size_bytes;
 						
-			__global uchar* output_write_ptr = (__global uchar *) &outputs [ slice_pack_addr_bytes ];
+			__global uchar* output_write_ptr = (__global uchar *) &outputs [ slice_pack_addr_bytes + output_offset_x + output_offset_y ];
 
 				for (int col = 0; col < OUT_BLOCK_WIDTH; col++)
                 {
