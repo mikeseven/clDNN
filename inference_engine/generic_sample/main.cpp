@@ -181,7 +181,6 @@ std::vector<std::string> CollectImageNames(const std::vector<std::string>& files
             while (nullptr != (ep = readdir(dp))) {
                 std::string fileName = ep->d_name;
                 if (fileName == "." || fileName == "..") continue;
-                std::cout << "[INFO] Add file  " << ep->d_name << " from directory " << name << "." << std::endl;
                 imageNames.push_back(name + "/" + ep->d_name);
             }
         }
@@ -189,6 +188,8 @@ std::vector<std::string> CollectImageNames(const std::vector<std::string>& files
             imageNames.push_back(name);
         }
     }
+    std::sort(imageNames.begin(),imageNames.end());
+    for(int i = 0; i < imageNames.size(); i++) std::cout << "[INFO] Add file " << imageNames[i] << std::endl;
     return imageNames;
 }
 
