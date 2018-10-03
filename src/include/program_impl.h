@@ -24,6 +24,7 @@
 #include "program_node.h"
 #include "memory_impl.h"
 #include "error_handler.h"
+#include "program_helpers.h"
 
 #include <list>
 #include <algorithm>
@@ -34,6 +35,8 @@ namespace cldnn
 struct primitive_impl;
 class layout_optimizer;
 class constants_propagator;
+class trim_to_outputs;
+class reorder_inputs;
 
 /*
     cldnn_program implementation
@@ -41,6 +44,9 @@ class constants_propagator;
 struct program_impl : public refcounted_obj<program_impl>
 {
     friend struct program_node;
+    friend class trim_to_outputs;   // to be removed when possible
+    friend class propagate_constants; // to be removed when possible
+    friend class reorder_inputs;  // to be removed when possible
 public:
     struct nodes_ordering
     {
@@ -66,6 +72,25 @@ public:
         std::map<program_node*, const_iterator> processing_order_iterators;
     };
 
+    template <class T>
+    struct single_element_container
+    {
+        single_element_container(T& t) : elem(&t)
+        {}
+        constexpr size_t size() const { return 1; }
+        auto begin() const { return single_element_container(elem); }
+        auto end() const { return single_element_container(nullptr); }
+        auto& operator ++() { elem = nullptr; return *this; }
+        bool operator !=(single_element_container const& sec) { return elem != sec.elem; }
+
+        decltype(auto) operator *() { return *elem; }
+
+    private:
+        single_element_container(T* t) : elem(t)
+        {}
+
+        T* elem;
+    };
     program_impl(engine_impl& engine_ref, topology_impl const& topology, build_options const& options, bool is_internal);
     auto& get_engine() const { return *engine; }
     auto get_options() const { return options; }
@@ -127,14 +152,11 @@ private:
     /*
     ** Optimization functions
     */
-    void trim_to_outputs();
     void remove_redundant_reorders();
-    void reorder_inputs(layout_optimizer& lo);
     void pre_optimize_bias(layout_optimizer& lo);
     void post_optimize_weights(layout_optimizer& lo);
     void apply_needed_padding(program_node& node, program_node& prev_node, const padding& needed_padding);
     void prepare_padding();
-    void propagate_constants();
     void prepare_buffer_fusing();
     void fuse_skip_layers(program_node* node);
     void prepare_primitive_fusing();

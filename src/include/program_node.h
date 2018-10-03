@@ -22,10 +22,12 @@
 
 #include "meta_utils.h"
 
+
 namespace cldnn
 {
 
 struct program_impl;
+class reorder_inputs;
 
 template <class T>
 struct typed_program_node;
@@ -51,6 +53,9 @@ struct program_node
 {
     friend struct program_impl;
     friend class constants_propagator;
+    friend class trim_to_outputs;      //to be removed
+    friend class propagate_constants; // to be removed
+    friend class reorder_inputs;  // to be removed
 
     template <class PType>
     friend struct typed_program_node;
@@ -282,7 +287,7 @@ namespace details
     {
         static_assert(meta::is_api_primitive_v<PType>, "PType should name a non-const, non-volatile type derived from cldnn::primitive but not from cldnn::internal_primitive");
         friend struct cldnn::program_impl;
-
+        friend class cldnn::reorder_inputs;
     public:
         using program_node::program_node;
 

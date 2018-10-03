@@ -19,7 +19,6 @@
 #include "program_impl.h"
 #include "primitive_inst.h"
 #include "layout_optimizer.h"
-#include "constants_propagator.h"
 
 #include "primitive_type.h"
 #include "api/CPP/activation.hpp"
@@ -28,7 +27,6 @@
 #include "api/CPP/pooling.hpp"
 #include "api/CPP/proposal.hpp"
 #include "api/CPP/roi_pooling.hpp"
-#include "api/CPP/reorg_yolo.hpp"
 
 #include "activation_inst.h"
 #include "batch_norm_inst.h"
@@ -65,6 +63,7 @@
 #include "kernel_selector_helper.h"
 #include "sliding_window_utils.h"
 #include "error_handler.h"
+#include "pass_manager.h"
 
 #include <fstream>
 #include <algorithm>
@@ -73,66 +72,8 @@
 #include <sstream>
 #include <iomanip>
 
-
-namespace {
-
-    //helper function for selecting function basing on the type of the given primitive
-    //this is the termination case for parameter pack recurrence, see overload below for logic
-    template <class... T>
-    void do_for_types(program_node&)
-    {
-        return;
-    }
-
-    //helper function for selecting function basing on the type of the given primitive
-    //this function should be explicitly given set of types and implicitly set of functions.
-    //both sets should have equal size. First function will be called if type of the given primitive
-    //will match first explicitly given type, second will be called if it matches second explicitly given
-    //type etc.
-    //Functions given as arguments should themselves take std::shared_ptr<const T> as argument
-    //where T is the type that should be match if this function should be called
-    //
-    //example:
-    // do_for_types<
-    //      convolution,
-    //      pooling
-    //  >(primitive,
-    //      [](typed_program_node<convolution>&){ do something if 'primitive' is a convolution },
-    //      [](typed_program_node<pooling>&)    { do something if 'primitive' is a pooling }
-    //  );
-    template <class T, class... RestOfT, class Func, class... RestOfFuncs>
-    decltype(static_cast<void>(std::declval<Func>()(std::declval<typed_program_node<T>&>()))) do_for_types(
-        program_node& node,
-        Func const& func,
-        RestOfFuncs const&... rest)
-    {
-        if (node.type() == T::type_id())
-            func(node.as<T>());
-        else
-            do_for_types<RestOfT...>(node, rest...);
-    }
-
-    template <class T>
-    struct single_element_container
-    {
-        single_element_container(T& t) : elem(&t)
-        {}
-
-        constexpr size_t size() const { return 1; }
-        auto begin() const { return single_element_container(elem); }
-        auto end() const { return single_element_container(nullptr); }
-        auto& operator ++() { elem = nullptr; return *this; }
-        bool operator !=(single_element_container const& sec) { return elem != sec.elem; }
-
-        decltype(auto) operator *() { return *elem; }
-
-    private:
-        single_element_container(T* t) : elem(t)
-        {}
-
-        T* elem;
-    };
-
+namespace
+{
     //helper function which creates single-element array if it's given anything
     //other than std::vector.
     //It should be used in generic code when there's a need to force vector usage
@@ -149,7 +90,7 @@ namespace {
     template <class T>
     auto wrap_if_single(T& t)
     {
-        return single_element_container<T>(t);
+        return program_impl::single_element_container<T>(t);
     }
 
     //helper function which creates single-element array if it's given anything
@@ -158,7 +99,7 @@ namespace {
     template <class T>
     auto wrap_if_single(T const& t)
     {
-        return single_element_container<T const>(t);
+        return program_impl::single_element_container<T const>(t);
     }
 
     //helper function which creates single-element array if it's given anything
@@ -168,7 +109,7 @@ namespace {
     auto wrap_if_single(T&& t)
     {
         static_assert(meta::always_false_v<T>, "Wrapping temporary object into single_element_container is an error (requires valid reference)");
-        return single_element_container<T>(t);
+        return program_impl::single_element_container<T>(t);
     }
 
     //helper function which creates single-element array if it's given anything
@@ -177,72 +118,6 @@ namespace {
     decltype(auto) wrap_if_single(primitive::fixed_size_vector_ref const& t)
     {
         return t;
-    }
-
-    //helper function for merging the weights/biases buffers on cpu side for depthwise separable convolution optimization
-    void merge_buffers(engine_impl::ptr engine, program_node &node, layout target_layout, size_t begin_offset, size_t end_offset)
-    {
-        memory_impl::ptr data_to_allocate = engine->allocate_memory(target_layout);
-
-        for (size_t i = begin_offset; i < end_offset; i++)
-        {
-            auto& weights = node.get_dependency(i).as<data>();
-            mem_lock<char> src{ weights.get_attached_memory() };
-            mem_lock<char> dst{ data_to_allocate };
-            std::copy(src.begin(), src.end(), dst.begin() + (i - begin_offset)*src.size());
-        }
-
-        for (size_t i = 0; i < end_offset - begin_offset - 1; i++)
-            node.remove_dependency(begin_offset + 1);
-
-        auto& data_node = node.get_dependency(begin_offset).as<data>();
-        data_node.attach_memory(*data_to_allocate, false);
-    }
-
-    //helper function for getting target layout used in depthwise sep optimization
-    layout get_weights_layout(typed_program_node<cldnn::data> &data_node, int32_t split)
-    {
-        auto mem_layout = data_node.get_output_layout();
-
-        return layout(mem_layout.data_type, mem_layout.format, { split * mem_layout.size.batch[0], mem_layout.size.feature[0], mem_layout.size.spatial[0], mem_layout.size.spatial[1] });
-    }
-
-    // pair.first tells whether l1 and l2 are absolutely identical
-    // pair.second tells whether l1 and l2 can be reinterpreted to each other without need of reordering
-    // note: layouts can only be considered identical if data size described by both layouts match (so no data are genereted nor dropped)
-    // note: if layouts describe two buffers with different size, consider them not to be identical even if smaller buffer can be considered to hold subsequence of larger buffer,
-    //       this behavior is required to force buffer allocation for smaller buffer which, currently, should always be performed
-    std::pair<bool, bool> are_layouts_identical(layout const& l1, layout const& l2)
-    {
-        if (l1 == l2)
-            return{ true, true };
-        if (l1.data_type != l2.data_type)
-            return{ false, false };
-        if (l1.size != l2.size)
-            return{ false, false };
-        if (l1.get_linear_size() != l2.get_linear_size())
-            return{ false, false };
-        if ((l1.format == format::bf8_xy16 && l2.format != format::bf8_xy16) ||
-            (l2.format == format::bf8_xy16 && l1.format != format::bf8_xy16))
-            return{ false, false };
-
-        auto l1_pitch = l1.get_pitches();
-        auto l2_pitch = l2.get_pitches();
-
-        //ignore pitches which will never be used (for dims with size == 1)
-        for (size_t i = 0; i < CLDNN_TENSOR_DIM_MAX; ++i)
-            if (l1.size.raw[i] == 1)
-                l1_pitch.raw[i] = 0;
-        for (size_t i = 0; i < CLDNN_TENSOR_DIM_MAX; ++i)
-            if (l2.size.raw[i] == 1)
-                l2_pitch.raw[i] = 0;
-
-        auto l1_offset = l1.get_linear_offset();
-        auto l2_offset = l2.get_linear_offset();
-        if (l1_pitch == l2_pitch && l1_offset == l2_offset)
-            return{ false, true };
-
-        return{ false, false };
     }
 }
 
@@ -431,7 +306,9 @@ void program_impl::init_graph(topology_impl const& topology)
 
 void program_impl::pre_optimize_graph()
 {
-    trim_to_outputs(); dump_program("3_trimmed", true);
+    trim_to_outputs trim_pass; //trim to outputs
+    trim_pass.run(*this); // ToDo remove hidden dependencies from trimm pass
+    dump_program("3_trimmed", true);
     processing_order.calculate_BFS_processing_order();
     analyze_output_size_handling_need();
     for (auto& node : processing_order)
@@ -444,7 +321,8 @@ void program_impl::pre_optimize_graph()
     {
         prepare_primitive_fusing();
         layout_optimizer lo(output_size_handling_enabled);
-        reorder_inputs(lo);
+        reorder_inputs reorder_inputs_pass(lo);
+        reorder_inputs_pass.run(*this);
         // this code should move to post compilation after kernel selector will support handling reorder bias
         pre_optimize_bias(lo);
         dump_program("4_reordered_inputs", true);
@@ -455,7 +333,9 @@ void program_impl::pre_optimize_graph()
     prepare_padding();
     prepare_depthwise_sep_opt();
 
-    propagate_constants(); dump_program("6_propagated_constants", true);
+    propagate_constants propagate_constants_pass;  // ToDo remove hidden dependencies from propagate_constants pass, consider merging propagate constants and constant propagator classes
+    propagate_constants_pass.run(*this);
+    dump_program("6_propagated_constants", true);
 
     //try to fuse buffers (i.e. depth_concat in bfyx format) after padding calculations
     if (options.get<build_option_type::optimize_data>()->enabled())
@@ -486,7 +366,9 @@ void program_impl::post_optimize_graph()
     layout_optimizer lo;
     post_optimize_weights(lo); dump_program("9_reordered_weights", true);
     remove_redundant_reorders(); dump_program("10_removed_redundant_reorders", true); //TODO: do we need it at this place also?
-    propagate_constants(); dump_program("11_propagated_constants", true);
+    propagate_constants propagate_constants_pass;  // ToDo remove hidden dependencies from propagate_constants pass, consider merging propagate constants and constant propagator classes
+    propagate_constants_pass.run(*this);
+    dump_program("11_propagated_constants", true);
     prep_opt_depthwise_sep_post();
     processing_order.update_processing_numbers(); dump_program("12_validated_processing_order", true);
     prepare_memory_dependencies();
@@ -1050,8 +932,6 @@ void program_impl::calc_prior_boxes()
     }
 }
 
-
-
 void program_impl::mark_constants()
 {
     for (auto& node : processing_order)
@@ -1124,63 +1004,6 @@ void program_impl::mark_data_flow()
     {
         assert(!node->constant || !node->data_flow); //node which is constant cannot be marked as data flow
         node->unmark();
-    }
-}
-
-void program_impl::trim_to_outputs()
-{
-    size_t actual_nodes = processing_order.size();
-    if (!actual_nodes) //degenerated case but can happen
-        return;
-
-    if (outputs.size() == actual_nodes)
-        return;
-
-    //do backward bfs starting from all outputs
-    std::list<const std::vector<program_node*>*> stack = { &outputs };
-    while (!stack.empty())
-    {
-        auto nodes_list = stack.front();
-        stack.pop_front();
-
-        for (auto node : *nodes_list)
-        {
-            if (!node->is_marked())
-            {
-                node->mark();
-                if (!node->get_dependencies().empty())
-                    stack.push_back(&node->get_dependencies());
-            }
-        }
-    }
-
-    //all not-marked nodes should be removed
-    std::list<program_node*> to_rem;
-    for (auto node : processing_order)
-    {
-        if (node->is_type<input_layout>()) //input layout may become disconnected during prior boxes calculations so it may have not been marked at this place but we don't want to remove it
-            node->mark();
-        else if (!node->is_marked())
-            to_rem.push_back(node);
-    }
-
-    for (auto const& node : to_rem)
-    {
-        if (node->is_input())
-            inputs.remove(node);
-        else
-        {
-            for (auto dep : node->dependencies)
-                if (dep->is_marked())
-                    dep->users.remove(node);
-        }
-
-        for (auto user : node->users)
-            if (user->is_marked())
-                user->dependencies.erase(std::remove(user->dependencies.begin(), user->dependencies.end(), node), user->dependencies.end());
-
-        optimized_out.push_back(node->id());
-        nodes_map.erase(node->id());
     }
 }
 
@@ -1392,7 +1215,7 @@ void program_impl::remove_redundant_reorders()
         auto o_layout = r_output->get_output_layout();
         auto i_layout = r_input.get_output_layout();
 
-        auto ident = are_layouts_identical(o_layout, i_layout);
+        auto ident = program_helpers::are_layouts_identical(o_layout, i_layout);
         if (!ident.second)
             continue;
 
@@ -1419,237 +1242,6 @@ void program_impl::remove_redundant_reorders()
             if (ident.first) //no need of reshape
                 extract_and_remove(r_node); //try to remove if possible (with respect to r_node not being marked as output)
         }
-    }
-}
-
-
-void program_impl::reorder_inputs(layout_optimizer& lo)
-{
-    //first pass to set layout optimization_attributes for topology
-    for (auto& p : nodes_map)
-    {
-        auto& prim = *p.second;
-        if (prim.type() == cldnn::convolution::type_id())
-        {
-            if (prim.as<convolution>().get_primitive()->split() > 1)
-                lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::splitted_convolution, 1);
-        }
-
-        //list of layers that do not support yxfb or perform worse than bfyx
-        if (prim.type() == cldnn::detection_output::type_id() || prim.type() == cldnn::proposal::type_id() ||
-            prim.type() == cldnn::roi_pooling::type_id() || prim.type() == cldnn::deconvolution::type_id() ||
-            prim.type() == cldnn::upsampling::type_id() || prim.type() == cldnn::reorg_yolo::type_id())
-            lo.set_optimization_attribute(layout_optimizer::optimization_attributes_type::bfyx_only_layer, 1);
-    }
-
-    const auto reorder_input = [this, &lo](typed_program_node<convolution>& conv_node)
-    {
-        auto conv_prim = conv_node.get_primitive();
-        auto& input_node = conv_node.get_dependency(0);
-        auto&& weights_layout = conv_node.weights(0).get_output_layout();
-        auto&& input_layout = input_node.get_output_layout();
-
-        std::shared_ptr<reorder> new_input = nullptr;
-
-        if (input_node.type() == reorder::type_id()) //convolution's input is a reorder
-        {
-            auto reorder_prim = input_node.as<reorder>().typed_desc();
-            auto& reorder_input = input_node.get_dependency(0);
-            auto reorder_layout = input_node.get_output_layout();
-            reorder_layout.data_type = reorder_prim->output_data_type;
-            new_input = lo.get_reorder(
-                reorder_layout,
-                reorder_prim->id,
-                layout_optimizer::data_type::input,
-                conv_node,
-                weights_layout).first;
-
-            auto reorder_removed = false;
-            if (new_input && new_input->output_format != format::winograd_2x3_s1_data && new_input->output_format != format::bf8_xy16 && new_input->output_format != format::byxf) //output format is not optimal
-            {
-                auto reorder_input_layout = reorder_input.get_output_layout();
-
-                auto opt_layout = layout(new_input->output_data_type, new_input->output_format, reorder_input_layout.size);
-                if (reorder_input_layout == opt_layout) //reorder 'breaks' optimal format
-                {
-                    if (reorder_prim->subtract_per_feature.empty() &&
-                        reorder_prim->mean.empty() &&
-                        !reorder_prim->output_padding) //just plain reorder
-                    {
-                        conv_node.replace_dependency(0, reorder_input);
-                        if (input_node.get_users().size() == 0 && !input_node.is_output())
-                        {
-                            reorder_removed = extract_and_remove(input_node);
-                        }
-                        new_input = nullptr;
-                    }
-                    else //change reorder's output layout
-                    {
-                        reorder_prim->output_format = opt_layout.format;
-                        reorder_prim->output_data_type = opt_layout.data_type;
-                        new_input = nullptr;
-                    }
-                }
-                else //current reorder gives bad output, simply change it
-                {
-                    reorder_prim->output_format = opt_layout.format;
-                    reorder_prim->output_data_type = opt_layout.data_type;
-                    new_input = nullptr;
-                }
-            }
-
-            if (!reorder_removed)
-                input_node.recalc_output_layout();
-            else
-                conv_node.recalc_output_layout();
-        }
-        else
-        {
-            new_input = lo.get_reorder(
-                input_node.get_output_layout(),
-                input_node.id(),
-                layout_optimizer::data_type::input,
-                conv_node,
-                weights_layout).first;
-        }
-
-        if (new_input && new_input->output_format == format::winograd_2x3_s1_data)
-        {
-            auto lower_size = (conv_prim->input_offset.negate() + input_layout.size);
-
-            tensor upper_input_padding = tensor{ 0 };
-            upper_input_padding.spatial[0] = (2 - (lower_size.spatial[0] % 2)) % 2;          //winograd conv requires input's x to be in form 4 + 2n, with restriction that x >= 3, we can shortage it to x % 2 == 0
-            upper_input_padding.spatial[1] = (8 - ((lower_size.spatial[1] - 2) % 8)) % 8;    //for y, y - 2 % 8 == 0 must hold
-
-            apply_needed_padding(conv_node, input_node, padding{ conv_prim->input_offset.negate().sizes(), upper_input_padding.sizes() });
-
-            auto winograd_output = std::make_shared<reorder>("_winograd_" + conv_node.id(), conv_node.id(), input_layout.format,
-                input_layout.data_type, std::vector<float>{}, cldnn_reorder_mean_mode::mean_subtract, conv_node.output_layout.data_padding);
-            conv_node.output_layout.data_padding = padding{};
-            program_node& back_node = get_or_create(winograd_output);
-            processing_order.insert(std::next(processing_order.get_processing_iterator(conv_node)), &back_node);
-
-            auto bias_term = conv_node.bias_term();
-            //create additional eltwise node after reorder to compute bias
-            if (bias_term)
-            {
-                auto& bias_node = conv_node.get_dependency(2);
-                std::vector<primitive_id> inputs = { back_node.id(), bias_node.id() };
-                auto winograd_output_biases = std::make_shared<eltwise>(back_node.id() + "_bias", inputs,
-                    cldnn::eltwise_mode::sum, conv_prim->with_activation, conv_prim->activation_negative_slope,
-                    back_node.output_layout.data_padding);
-                back_node.output_layout.data_padding = padding{};
-                auto& back_bias_node = get_or_create(winograd_output_biases);
-                processing_order.insert(std::next(processing_order.get_processing_iterator(back_node)), &back_bias_node);
-                replace_all_usages(back_node, back_bias_node);
-                add_connection(back_node, back_bias_node);
-                add_connection(bias_node, back_bias_node);
-                conv_node.invalidate_users();
-                replace_all_usages(conv_node, back_bias_node);
-            }
-
-            if (conv_prim->with_activation)
-            {
-                conv_node.typed_desc()->with_activation = false;
-                if (!bias_term)
-                    back_node.set_fused_activation(activation_relu_negative_slope, cldnn_activation_additional_params_t{ conv_prim->activation_negative_slope });
-            }
-
-            if (!bias_term)
-            {
-                conv_node.invalidate_users();
-                replace_all_usages(conv_node, back_node);
-            }
-            add_connection(conv_node, back_node);
-
-            auto& r_node = get_or_create(new_input);
-            r_node.as<reorder>().set_input_offset(conv_prim->input_offset);
-
-            if (!bias_term)
-            {
-                swap_names(conv_node, back_node);
-                if (conv_node.is_output())
-                {
-                    conv_node.set_output(false);
-                    back_node.set_output(true);
-                    for (auto& output : outputs)
-                    {
-                        if (output == &conv_node)
-                        {
-                            output = &back_node;
-                            break;
-                        }
-                    }
-                }
-            }
-            else
-            {
-                conv_node.remove_dependency(2);
-                auto& back_bias_node = *nodes_map.find(back_node.id() + "_bias")->second;
-                swap_names(conv_node, back_bias_node);
-                if (conv_node.is_output())
-                {
-                    conv_node.set_output(false);
-                    back_bias_node.set_output(true);
-                    for (auto& output : outputs)
-                    {
-                        if (output == &conv_node)
-                        {
-                            output = &back_bias_node;
-                            break;
-                        }
-                    }
-                }
-            }
-        }
-
-        if (new_input && (new_input->output_format == format::bf8_xy16 || new_input->output_format == format::byxf))
-        {
-            auto conv1x1_output = std::make_shared<reorder>("_conv1x1_reorder_back_" + conv_node.id(), conv_node.id(), input_layout.format, input_layout.data_type);
-            auto& back_node = get_or_create(conv1x1_output);
-            processing_order.insert(std::next(processing_order.get_processing_iterator(conv_node)), &back_node);
-            conv_node.invalidate_users();
-            replace_all_usages(conv_node, back_node);
-            add_connection(conv_node, back_node);
-        }
-
-        if (new_input)
-        {
-            auto& r_node = get_or_create(new_input);
-            add_intermediate(r_node, conv_node, 0, r_node.dependencies.empty());
-            conv_node.recalc_output_layout();
-        }
-    };
-
-    const auto reorder_input_detection_output = [this, &lo](typed_program_node<detection_output>& detection_output_node)
-    {
-        auto detection_output_prim = detection_output_node.get_primitive();
-
-        for (size_t i = 0; i < detection_output_node.get_dependencies().size(); i++)
-        {
-            auto& input = detection_output_node.get_dependency(i);
-            std::shared_ptr<reorder> new_input = lo.get_reorder(
-                input.get_output_layout(),
-                input.id(),
-                layout_optimizer::data_type::input,
-                detection_output_node,
-                layout{ data_types::f32, format::bfyx, tensor{} }).first;
-
-            if (new_input)
-            {
-                add_intermediate(new_input, detection_output_node, i);
-            }
-        }
-    };
-
-    for (auto& prim : processing_order)
-    {
-        //there's an assumption that only convolution will take data/input_layout as input
-        //exception to that rule would be a convolution which takes a reorder as input - see reoder_input above
-        do_for_types<convolution, detection_output>(*prim,
-            reorder_input,                  //case for convolution
-            reorder_input_detection_output  //case for detection-output
-            );
     }
 }
 
@@ -1690,9 +1282,9 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
         }
     };
 
-    for (auto& p : nodes_map)
+    for (auto& nm : nodes_map)
     {
-        auto& prim = *p.second;
+        auto& prim = *nm.second;
         if (prim.type() == convolution::type_id())
         {
             if (!prim.as<convolution>().weights_quantization_term())
@@ -1738,7 +1330,7 @@ void program_impl::prepare_depthwise_sep_opt()
     for (auto& p : nodes_map)
     {
         auto& prim = *p.second;
-        do_for_types<deconvolution, convolution>(prim,
+        program_helpers::do_for_types<deconvolution, convolution>(prim,
             prepare_depthwise_sep_opt,   //case for deconvolution
             prepare_depthwise_sep_opt    //case for convolution
             );
@@ -1836,7 +1428,7 @@ void program_impl::handle_reshape()
                 auto bfyx_layout = layout({ reshape_layout.data_type, cldnn::format::bfyx, reshape_layout.size });
                 //when some primitive does an implicit reorder to some other format then we lose the info about pitches in reshape stage
                 //we assume user provides the input vector in bfyx
-                if (!are_layouts_identical(reshape_layout, bfyx_layout).second)
+                if (!program_helpers::are_layouts_identical(reshape_layout, bfyx_layout).second)
                 {
                     auto reshape_input = std::make_shared<reorder>("_reshape_input_" + node->id(), input_node.id(), cldnn::format::bfyx, reshape_layout.data_type);
                     auto& reshape_input_node = get_or_create(reshape_input);
@@ -1947,8 +1539,8 @@ void program_impl::prep_opt_depthwise_sep_post()
         //concatenate weights
         {
             //if weights were optimized it is needed to use the sizes after optimization
-            auto target_layout = get_weights_layout(node.get_dependency(dependency_offset), split);
-            merge_buffers(engine, node, target_layout, dependency_offset, dependency_offset + split);
+            auto target_layout = program_helpers::get_weights_layout(node.get_dependency(dependency_offset), split);
+            program_helpers::merge_buffers(engine, node, target_layout, dependency_offset, dependency_offset + split);
             dependency_offset++;
         }
 
@@ -1957,7 +1549,7 @@ void program_impl::prep_opt_depthwise_sep_post()
         {
             const auto& bias_layout = node.get_dependency(dependency_offset).get_output_layout();
             auto target_layout = layout(bias_layout.data_type, cldnn::format::bfyx, { 1, 1, bias_layout.size.spatial[0] * split, 1 });
-            merge_buffers(engine, node, target_layout, dependency_offset, dependency_offset + split);
+            program_helpers::merge_buffers(engine, node, target_layout, dependency_offset, dependency_offset + split);
             dependency_offset++;
         }
 
@@ -1971,7 +1563,7 @@ void program_impl::prep_opt_depthwise_sep_post()
             {
                 const auto& weights_quantization_layout = node.get_dependency(dependency_offset).get_output_layout();
                 auto target_layout = layout(weights_quantization_layout.data_type, cldnn::format::bfyx, { 1, 1, weights_quantization_layout.size.batch[0] * split, 1 });
-                merge_buffers(engine, node, target_layout, dependency_offset, dependency_offset + split);
+                program_helpers::merge_buffers(engine, node, target_layout, dependency_offset, dependency_offset + split);
                 dependency_offset++;
             }
             // concatenate output callibration factors
@@ -1979,7 +1571,7 @@ void program_impl::prep_opt_depthwise_sep_post()
             {
                 const auto& output_callibration_layout = node.get_dependency(dependency_offset).get_output_layout();
                 auto target_layout = layout(output_callibration_layout.data_type, cldnn::format::bfyx, { 1, 1, output_callibration_layout.size.batch[0] * split, 1 });
-                merge_buffers(engine, node, target_layout, dependency_offset, dependency_offset + split);
+                program_helpers::merge_buffers(engine, node, target_layout, dependency_offset, dependency_offset + split);
                 dependency_offset++;
             }
         }
@@ -1993,7 +1585,7 @@ void program_impl::prep_opt_depthwise_sep_post()
     for (auto& p : nodes_map)
     {
         auto& prim = *p.second;
-        do_for_types<deconvolution, convolution>(prim,
+        program_helpers::do_for_types<deconvolution, convolution>(prim,
             prep_opt_depthwise_sep,   //case for deconvolution
             prep_opt_depthwise_sep    //case for convolution
             );
@@ -2138,90 +1730,6 @@ void program_impl::prepare_padding()
     }
 }
 
-void program_impl::propagate_constants()
-{
-    constants_propagator prop(this);
-
-    for (auto& node : processing_order)
-        prop.visit_node(*node);
-
-    auto&& to_replace = prop.calculate();
-
-    //remove all nodes which are no longer relevant, i.e. nodes which:
-    // 1. are constants, and
-    // 2. do not have non-const user (so their data are not used during inference), and
-    // 3. are not marked as outputs.
-    // in case if node has either non-const user or is marked as output, it should be replace with cldnn::data rather than removed (see next loop)
-    auto proc_itr = processing_order.begin();
-    while (proc_itr != processing_order.end())
-    {
-        auto& node = (*proc_itr++);
-        if (!node->is_constant())
-            continue;
-        if (node->has_non_const_user() || (node->is_output() && !node->is_type<data>()))
-            continue;
-
-        auto& users = node->users;
-        auto& deps = node->dependencies;
-
-        for (size_t idx = 0; idx < deps.size(); idx++)
-        {
-            deps.at(idx)->users.remove(node);
-        }
-        deps.clear();
-
-        for (auto& usr : users) {
-            auto& usr_deps = usr->dependencies;
-            usr_deps.erase(std::remove(usr_deps.begin(), usr_deps.end(), node), usr_deps.end());
-        }
-        users.clear();
-
-        if (!node->is_output())
-        {
-            auto rem = remove_if_dangling(*node);
-            assert(rem && "Non-output constant node which has only constant users should have been removed during constants propagation pass");
-            (void)rem;
-        }
-    }
-
-    //replace all constant nodes which are relevant for inference (either used by non-const user or marked as output) with recomputed cldnn::data
-    for (auto& cout : to_replace)
-    {
-        auto& id_to_replace = cout.first;
-
-        //TODO: do not use API primitives internally and get rid of this last 'cldnn::memory' internal usage
-        memory api_memory = details::memory_c_to_cpp_converter::convert(api_cast(cout.second.get()));
-        //c-cpp converter does not retain since normally it is done inside API-impl layer (cldnn.cpp) so we need to do it manually
-        cout.second->add_ref();
-
-        auto const_data = std::make_shared<data>("_cldnn_const_prop_" + id_to_replace, api_memory /* <<< REMOVE ME WHEN POSSIBLE */);
-        auto& new_node = get_or_create(const_data);
-        auto& curr_node = *nodes_map.at(id_to_replace);
-
-        if (!curr_node.is_type<generic_layer>())
-        {
-            auto curr_node_deps = curr_node.get_dependencies();
-            for (auto& dep : curr_node_deps)
-            {
-                auto dep_users = dep->get_users();
-                for (auto& dep_user : dep_users)
-                {
-                    if (dep_user == &curr_node)
-                        remove_connection(*dep, curr_node);
-                }
-            }
-        }
-
-        curr_node.dependencies.clear();
-        //remove all constant users (as they will be either removed or replaced by cldnn::data which does not have any dependencies)
-        curr_node.users.erase(
-            std::remove_if(curr_node.users.begin(), curr_node.users.end(), [](program_node* node) { return node->is_constant(); }),
-            curr_node.users.end()
-        );
-        replace(curr_node, new_node, false, false);
-    }
-}
-
 void program_impl::prepare_buffer_fusing()
 {
     bool is_debug = options.get<build_option_type::debug>()->enabled();
@@ -2230,7 +1738,7 @@ void program_impl::prepare_buffer_fusing()
     {
         auto& node = (*itr++);
 
-        do_for_types<concatenation>(*node, [this, is_debug](concatenation_node& node)
+        program_helpers::do_for_types<concatenation>(*node, [this, is_debug](concatenation_node& node)
         {
             // buffer fusing should not be performed if one of inputs produces padded output since
             // it could break desired memory alignment. On the other hand, if this node uses all inputs
@@ -2331,7 +1839,7 @@ void program_impl::prepare_buffer_fusing()
         });
 
         // zero copy
-        do_for_types<crop>(*node, [this, is_debug](crop_node& node)
+        program_helpers::do_for_types<crop>(*node, [this, is_debug](crop_node& node)
         {
             //if the node is marked as network output, prevent optimizations which would affect a form of its output, unless debug flag is set
             if (node.is_output() && !is_debug)
@@ -2387,13 +1895,13 @@ void program_impl::prepare_buffer_fusing()
             }
         });
 
-        do_for_types<reshape>(*node, [this](reshape_node& node)
+        program_helpers::do_for_types<reshape>(*node, [this](reshape_node& node)
         {
             node.get_output_layout();
             if (node.is_in_place())
                 node.can_be_optimized(true);
         });
-        do_for_types<reorder>(*node, [this](reorder_node& node)
+        program_helpers::do_for_types<reorder>(*node, [this](reorder_node& node)
         {
             auto& input = node.input();
             auto output_layout = node.get_output_layout();
@@ -2463,7 +1971,7 @@ void program_impl::prepare_buffer_fusing()
 
 void program_impl::fuse_skip_layers(program_node* node)
 {
-    do_for_types<eltwise>(*node, [this](eltwise_node& node)
+    program_helpers::do_for_types<eltwise>(*node, [this](eltwise_node& node)
     {
         bool skippable = false;
         int index = 0;
@@ -2525,7 +2033,7 @@ void program_impl::prepare_primitive_fusing()
         auto node_itr = itr++;
         auto& node = (*node_itr);
 
-        do_for_types<activation>(*node, [this, is_debug](activation_node& node)
+        program_helpers::do_for_types<activation>(*node, [this, is_debug](activation_node& node)
         {
 
             auto& input = node.input();
@@ -2566,7 +2074,7 @@ void program_impl::prepare_primitive_fusing()
         auto node_itr = itr++;
         auto& node = (*node_itr);
 
-        do_for_types<reorder>(*node, [this, is_debug](reorder_node& node)
+        program_helpers::do_for_types<reorder>(*node, [this, is_debug](reorder_node& node)
         {
             auto& input = node.input();
 
