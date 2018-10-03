@@ -284,7 +284,7 @@ namespace tests
         return{ p, calc_offfset(layout, p) };
     }
 
-    size_t generic_test::get_linear_index(const layout & layout, size_t b, size_t f, size_t y, size_t x, const memory_desc& desc)
+    size_t generic_test::get_linear_index(const layout&, size_t b, size_t f, size_t y, size_t x, const memory_desc& desc)
     {
         return 
             desc.offset + 

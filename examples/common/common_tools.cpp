@@ -462,13 +462,11 @@ template void load_data_from_file_list_lenet<half_t>(const std::vector<std::stri
 template <typename MemElemTy>
 void load_data_from_file_list_imagenet(
     const std::vector<std::string>& images_list, const std::string& input_dir,
-    cldnn::memory& memory, const uint32_t images_offset, const uint32_t images_number, const bool train, cldnn::memory& memory_labels)
+    cldnn::memory& memory, const uint32_t images_offset, const uint32_t images_number, const bool, cldnn::memory& memory_labels)
 {
     auto dst_ptr = memory.pointer<MemElemTy>();
-    auto it = dst_ptr.begin();
 
     auto memory_layout = memory.get_layout();
-    int count = 0;
     if (!cldnn::data_type_match<MemElemTy>(memory_layout.data_type))
         throw std::runtime_error("Memory format expects different type of elements than specified");
 
@@ -497,7 +495,6 @@ void load_data_from_file_list_imagenet(
 
     //read in labels
     auto labels_ptr = memory_labels.pointer<MemElemTy>();
-    auto labels_it = labels_ptr.begin();
 
     auto labels_file = join_path(get_executable_info()->dir(), "synset_words.txt");
     std::ifstream rfile_labels(labels_file, std::ios::binary);

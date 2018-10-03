@@ -36,10 +36,6 @@ namespace cldnn
 struct primitive_impl;
 class layout_optimizer;
 class constants_propagator;
-class trim_to_outputs;
-class reorder_inputs;
-class post_optimize_weights;
-
 /*
     cldnn_program implementation
 */

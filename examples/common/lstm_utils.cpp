@@ -35,14 +35,14 @@ void lstm_utils::prepare_input_vector_for_new_prediction()
     }
 }
 
-std::pair<unsigned, float> lstm_utils::get_predicted_character_and_its_value(size_t batch_index)
+std::pair<size_t, float> lstm_utils::get_predicted_character_and_its_value(size_t batch_index)
 {
     auto& out_vector_batch = _output_vector.at(batch_index);
     auto max_element = std::max_element(out_vector_batch.begin(), out_vector_batch.end()); //iterator
     if (_temperature == 0.0f)
     {
         auto result = std::distance(out_vector_batch.begin(), max_element);
-        return{ result, *max_element };
+        return{ static_cast<size_t>(result), *max_element };
     } 
 	else //else if temparture (0.0f, 1.0f>
 	{
@@ -60,7 +60,7 @@ std::pair<unsigned, float> lstm_utils::get_predicted_character_and_its_value(siz
 		accumulated_proba[0] = proba[0];
 		float random_number = std::uniform_real_distribution<float>(0.0f, 1.0f)(random_engine);
 
-		for (int i = 1; i < proba.size(); ++i)
+		for (size_t i = 1; i < proba.size(); ++i)
 		{
 			//We shouuld return the first number, which probability is higher then random number. 
 			if (accumulated_proba[i - 1] > random_number)
@@ -71,11 +71,11 @@ std::pair<unsigned, float> lstm_utils::get_predicted_character_and_its_value(siz
 			accumulated_proba[i] = accumulated_proba[i - 1] + proba[i];
 		}
         //Not found number? Return last number.
-        return{ (proba.size() - 1), accumulated_proba.back() };
+        return{ proba.size() - 1, accumulated_proba.back() };
 	}
 }
 
-char lstm_utils::random_char() { return _int_to_char[std::uniform_int_distribution<int>(0, _int_to_char.size() - 1)(random_engine)]; }
+char lstm_utils::random_char() { return _int_to_char[std::uniform_int_distribution<int32_t>(0, static_cast<int32_t>(_int_to_char.size() - 1))(random_engine)]; }
 
 void lstm_utils::load_input_sequence(std::vector<std::string> files)
 {
@@ -85,7 +85,7 @@ void lstm_utils::load_input_sequence(std::vector<std::string> files)
     }
     _seed.resize(files.size());
 	auto inp_seq_size = _seq_length;
-	for (auto i = 0; i < files.size(); i++) {
+	for (size_t i = 0; i < files.size(); i++) {
 		auto input = files.at(i);
 		std::ifstream input_file(input.c_str(), std::ios::binary | std::ios::ate);
 		int file_size = (int)input_file.tellg();
@@ -114,8 +114,8 @@ void lstm_utils::load_input_sequence(std::vector<std::string> files)
 	}
 	if (files.size() < _batch)
 	{
-		auto dummyDataSize = (_batch - files.size()) * inp_seq_size;
-		for (int i = 0; i < dummyDataSize; i++)
+		auto dummy_data_size = (_batch - files.size()) * inp_seq_size;
+		for (size_t i = 0; i < dummy_data_size; i++)
 		{
 			_input_sequence.push_back(' ');
 		}
@@ -135,13 +135,13 @@ void lstm_utils::load_vocabulary_file(const std::string& vocab_file)
 
 void lstm_utils::prepare_processing_input_vector()
 {
-    for (int i = 0; i < _input_sequence.size(); ++i)
+    for (size_t i = 0; i < _input_sequence.size(); ++i)
     {
-        for (int j = 0; j < _int_to_char.size(); ++j)
+        for (size_t j = 0; j < _int_to_char.size(); ++j)
         {
             if (_input_sequence.at(i) == _int_to_char.at(j))
             {
-                _input.push_back(j);
+                _input.push_back(static_cast<int>(j));
                 break;
             }
             if (j == _int_to_char.size()-1)

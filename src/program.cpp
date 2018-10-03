@@ -1443,9 +1443,12 @@ void program_impl::add_intermediate(program_node& node, program_node& next, size
         if (tmp != processing_order.end())
             processing_order.erase(tmp);   
 */
-        auto itr = processing_order.get_processing_iterator(prev);
-        processing_order.insert(std::next(itr), &node);
-        node.processing_num = prev.processing_num;                    //LK: avoid direct manipulation on processing_num
+        if (processing_order.size() != 0)
+        {
+            auto itr = processing_order.get_processing_iterator(prev);
+            processing_order.insert(std::next(itr), &node);
+            node.processing_num = prev.processing_num;                    //LK: avoid direct manipulation on processing_num
+        }
     }
 
     next.replace_dependency(prev_idx, node);

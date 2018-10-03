@@ -18,9 +18,9 @@
 
 #include "program_impl.h"
 #include "program_node.h"
-#include "data_inst.h"
 #include <fstream>
 
+class kernels_binaries_container;
 namespace cldnn
 {
     std::string get_dir_path(build_options);

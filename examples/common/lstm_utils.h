@@ -83,7 +83,7 @@ public:
             size_t start_idx_in_input = b*_seq_length;
             size_t end_idx_in_input = start_idx_in_input + _seq_length;
             std::rotate(_input.begin() + start_idx_in_input, _input.begin() + start_idx_in_input + 1, _input.begin() + end_idx_in_input);
-            _input.at(end_idx_in_input - 1) = prediction.first;
+            _input.at(end_idx_in_input - 1) = static_cast<int32_t>(prediction.first);
             predct_vector_batch.push_back({_int_to_char[prediction.first], prediction.second});
         }
         prepare_input_vector_for_new_prediction();
@@ -103,6 +103,11 @@ public:
     }
 
 private:
+    uint32_t _seq_length;
+    uint32_t _batch;
+    uint32_t _predictions_count;
+    float    _temperature;
+    std::mt19937 random_engine;
     std::vector<char> _int_to_char;
     std::vector<float> _clip; //used in lstm 
     std::vector<char> _correct_length_sequence; // proper sized input sequence
@@ -112,17 +117,12 @@ private:
     std::vector<std::vector<float>> _output_vector;
     std::vector<std::vector<char>> _seed;
     std::vector<std::vector<std::pair<char, float>>> _predictions;
-	std::mt19937 random_engine;
-    uint32_t _seq_length;
-    uint32_t _batch;
-    uint32_t _predictions_count;
-    float    _temperature;
 
     void load_input_sequence(std::vector<std::string> input_files);
     void load_vocabulary_file(const std::string& vocab_file);
     void prepare_processing_input_vector();
     void prepare_input_vector_for_new_prediction();
-    std::pair<unsigned, float> get_predicted_character_and_its_value(size_t batch_index);
+    std::pair<size_t, float> get_predicted_character_and_its_value(size_t batch_index);
     char random_char();
     template<typename MemElemTy = float>
     void check_memory(const cldnn::memory& mem)
