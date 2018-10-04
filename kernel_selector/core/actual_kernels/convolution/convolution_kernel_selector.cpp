@@ -43,6 +43,9 @@
 #include "convolution_kernel_byxf_fs_bs_yx_bsv4_fsv32.h"
 #include "convolution_kernel_mmad_batched_block.h"
 #include "convolution_kernel_mmad_batched_block_1x1.h"
+#include "convolution_kernel_mmad_32x32sg_128x128wg_slm_int8.h"
+#include "convolution_kernel_mmad_32x32sg_224x128wg_slm_int8.h"
+#include "convolution_kernel_mmad_32x32sg_slm_int8.h"
 
 namespace kernel_selector 
 {
@@ -71,7 +74,10 @@ namespace kernel_selector
         Attach<ConvolutionKernel_bfyx_depthwise_weights_lwg>();
 //        Attach<convolution_kernel_gemm_mmad8_32x3sg_128x128wg_slm_int8>();
 //        Attach<ConvolutionKernel_mmad_slm_2x14_rep4>();
-        Attach<ConvolutionKernel_mmad_slm_7x7_rep4>();
+//        Attach<ConvolutionKernel_mmad_slm_7x7_rep4>();
+        Attach<ConvolutionKernel_mmad_32x32sg_slm_int8>();
+        Attach<ConvolutionKernel_mmad_32x32sg_128x128wg_slm_int8>();
+        Attach<ConvolutionKernel_mmad_32x32sg_224x128wg_slm_int8>();
         Attach<ConvolutionKernel_byxf_fs_bs_yx_bsv4_fsv32>();
         Attach<ConvolutionKernel_mmad_batched_block>();
         Attach<ConvolutionKernel_mmad_batched_block_1x1>();

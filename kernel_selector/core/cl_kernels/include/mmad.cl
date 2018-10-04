@@ -116,6 +116,26 @@ inline int8 FUNC(mmad8x8)(int8 A_vectors, int8 B_vectors, int8 acc)
     return ret;
 }
 
+// TODO: remove it when cl_intel_subgroups_char extension will work
+inline void FUNC(sub_group_block_write_uchar8)(__global uchar* outPtr, uchar8 v)
+{
+#ifdef cl_intel_subgroups_char
+    intel_sub_group_block_write_uc8(outPtr, v);
+#else
+    uint idx = get_sub_group_local_id();
+
+	outPtr[idx] = v.s0; idx += get_max_sub_group_size();
+    outPtr[idx] = v.s1; idx += get_max_sub_group_size();
+    outPtr[idx] = v.s2; idx += get_max_sub_group_size();
+    outPtr[idx] = v.s3; idx += get_max_sub_group_size();
+    outPtr[idx] = v.s4; idx += get_max_sub_group_size();
+    outPtr[idx] = v.s5; idx += get_max_sub_group_size();
+    outPtr[idx] = v.s6; idx += get_max_sub_group_size();
+    outPtr[idx] = v.s7; idx += get_max_sub_group_size();
+#endif
+}
+//
+
 // ## PROCESS PPC BEGIN (DPAS)
 
 #if MMAD_SUPPORTED == 1

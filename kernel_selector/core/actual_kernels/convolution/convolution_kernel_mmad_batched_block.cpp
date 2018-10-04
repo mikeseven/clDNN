@@ -95,7 +95,7 @@ namespace kernel_selector {
         const auto of_maps = arg.output.Feature().v;
         const size_t of_threads_per_batch = RoundUp(of_maps, sub_group_size);
 
-        runInfo.effiency = FORCE_PRIORITY_2;
+        runInfo.effiency = FORCE_PRIORITY_5;
 
         auto block = get_out_block_size(arg);
 
@@ -145,7 +145,7 @@ namespace kernel_selector {
     {
         KernelsData kd = GetCommonKernelsData(params, options, " -Dcl_intel_subgroups_char");
         if(!kd.empty())
-            kd[0].estimatedTime = FORCE_PRIORITY_2;
+            kd[0].estimatedTime = FORCE_PRIORITY_5;
         return kd;
     }
 }

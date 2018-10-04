@@ -158,10 +158,6 @@ private:
     void apply_needed_padding(program_node& node, program_node& prev_node, const padding& needed_padding);
     void prepare_padding(bool output_size_handling_enabled);
 
-    void eltwise_shrinking_pass();
-    void eltwise_remove_stride_pass();
-    void conv_stride_extend(program_node& node, cldnn::tensor& tensor);
-
     /*
     ** Memory pool functions
     */
