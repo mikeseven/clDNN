@@ -17,11 +17,12 @@
 #pragma once
 
 #include "jitter.h"
-#include "tensor_type.h"
 
 namespace kernel_selector {
 
     struct weight_bias_params;
+    struct optional_params;
+    struct WeightsReorderParams;
 
     std::vector<size_t> GetImageSizes(const kernel_selector::WeightsTensor& dimensions, const WeightsLayout layout);
     bool CheckImageSize(const weight_bias_params& newParams, const WeightsLayout layout);
