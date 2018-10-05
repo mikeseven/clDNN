@@ -26,16 +26,17 @@
 #include "program_node.h"
 #include "layout_optimizer.h"
 #include "program_impl.h"
+#include "program_helpers.h"
 
 using namespace cldnn;
 
 //ToDo remove friendship relation from  program_node and program_impl
 
 reorder_inputs::reorder_inputs(layout_optimizer& lo_ref) : _lo(lo_ref) {}
+
 void reorder_inputs::run(program_impl &p) {
     run(p, _lo);
 }
-
 
 void reorder_inputs::run(program_impl &p, layout_optimizer& lo)
 {

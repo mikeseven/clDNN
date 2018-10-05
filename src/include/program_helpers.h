@@ -20,11 +20,58 @@
 
 #include "program_node.h"
 #include "engine_impl.h"
+#include "program_impl.h"
 
 namespace cldnn
 {
     struct program_helpers
     {
+        //helper function which creates single-element array if it's given anything
+        //other than std::vector.
+        //It should be used in generic code when there's a need to force vector usage
+        //in foreach loop over variable which can in one context be a vector or a scalar
+        //in another.
+        //example:
+        // T t;
+        // for (auto& string : wrap_if_single(t.dump()))
+        //depending on type T, t.dump() may return either std::string or std::vector<std::string>,
+        //to ensure compatibility between these cases, wrap_if_single will create single-element
+        //container in case t.dump() would return plain std::string.
+        //
+        // T& case -> returns container which holds T&
+        template <class T>
+        static auto wrap_if_single(T& t)
+        {
+            return program_impl::single_element_container<T>(t);
+        }
+
+        //helper function which creates single-element array if it's given anything
+        //other than std::vector.
+        // T const& case -> returns container which holds T const&
+        template <class T>
+        static auto wrap_if_single(T const& t)
+        {
+            return program_impl::single_element_container<T const>(t);
+        }
+
+        //helper function which creates single-element array if it's given anything
+        //other than std::vector.
+        // T&& case -> returns container which holds new instance of T created by moving given param
+        template <class T>
+        static auto wrap_if_single(T&& t)
+        {
+            static_assert(meta::always_false_v<T>, "Wrapping temporary object into single_element_container is an error (requires valid reference)");
+            return program_impl::single_element_container<T>(t);
+        }
+
+        //helper function which creates single-element array if it's given anything
+        //other than std::vector.
+        // std::vector case -> does not wrap, returns t as-is
+        static decltype(auto) wrap_if_single(primitive::fixed_size_vector_ref const& t)
+        {
+            return t;
+        }
+
         //helper function for selecting function basing on the type of the given primitive
         //this is the termination case for parameter pack recurrence, see overload below for logic
         template <class... T>

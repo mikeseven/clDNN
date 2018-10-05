@@ -15,7 +15,9 @@
 */
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
+
 #pragma once
+
 #include "api/CPP/program.hpp"
 
 #include "refcounted_obj.h"
@@ -24,7 +26,6 @@
 #include "program_node.h"
 #include "memory_impl.h"
 #include "error_handler.h"
-#include "program_helpers.h"
 
 #include <list>
 #include <algorithm>
@@ -37,7 +38,7 @@ class layout_optimizer;
 class constants_propagator;
 class trim_to_outputs;
 class reorder_inputs;
-
+class post_optimize_weights;
 /*
     cldnn_program implementation
 */
@@ -47,6 +48,9 @@ struct program_impl : public refcounted_obj<program_impl>
     friend class trim_to_outputs;   // to be removed when possible
     friend class propagate_constants; // to be removed when possible
     friend class reorder_inputs;  // to be removed when possible
+    friend class post_optimize_weights; // to be removed when possible
+    friend class remove_redundant_reorders; // to be removed when possible
+
 public:
     struct nodes_ordering
     {
@@ -91,6 +95,7 @@ public:
 
         T* elem;
     };
+
     program_impl(engine_impl& engine_ref, topology_impl const& topology, build_options const& options, bool is_internal);
     auto& get_engine() const { return *engine; }
     auto get_options() const { return options; }
@@ -116,11 +121,7 @@ private:
     nodes_ordering processing_order;
 
     std::map<primitive_id, std::shared_ptr<program_node>> nodes_map;
-
     std::list<primitive_id> optimized_out;
-
-    // TODO: Remove once we will get full support for input/output padding in all primitive implementations.
-    bool output_size_handling_enabled;
 
     /*
     ** High-level functions, in order of usage
@@ -143,7 +144,7 @@ private:
     void mark_constants();
     void mark_data_flow();
     // TODO: Remove once we will get full support for input/output padding in all primitive implementations.
-    void analyze_output_size_handling_need();
+    bool analyze_output_size_handling_need();
     void replace_nodes_pre();
     void replace_nodes_post();
 	void handle_lstm();
@@ -152,11 +153,9 @@ private:
     /*
     ** Optimization functions
     */
-    void remove_redundant_reorders();
     void pre_optimize_bias(layout_optimizer& lo);
-    void post_optimize_weights(layout_optimizer& lo);
     void apply_needed_padding(program_node& node, program_node& prev_node, const padding& needed_padding);
-    void prepare_padding();
+    void prepare_padding(bool output_size_handling_enabled);
     void prepare_buffer_fusing();
     void fuse_skip_layers(program_node* node);
 

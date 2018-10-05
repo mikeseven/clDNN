@@ -55,6 +55,7 @@
 #include "split_inst.h"
 #include "program_dump_graph.h"
 #include "scale_grad_weights_inst.h"
+#include "program_helpers.h"
 #include "upsampling_inst.h"
 #include "mvn_inst.h"
 #include "lstm_inst.h"
@@ -74,57 +75,9 @@
 #include <sstream>
 #include <iomanip>
 
-namespace
-{
-    //helper function which creates single-element array if it's given anything
-    //other than std::vector.
-    //It should be used in generic code when there's a need to force vector usage
-    //in foreach loop over variable which can in one context be a vector or a scalar
-    //in another.
-    //example:
-    // T t;
-    // for (auto& string : wrap_if_single(t.dump()))
-    //depending on type T, t.dump() may return either std::string or std::vector<std::string>,
-    //to ensure compatibility between these cases, wrap_if_single will create single-element
-    //container in case t.dump() would return plain std::string.
-    //
-    // T& case -> returns container which holds T&
-    template <class T>
-    auto wrap_if_single(T& t)
-    {
-        return program_impl::single_element_container<T>(t);
-    }
-
-    //helper function which creates single-element array if it's given anything
-    //other than std::vector.
-    // T const& case -> returns container which holds T const&
-    template <class T>
-    auto wrap_if_single(T const& t)
-    {
-        return program_impl::single_element_container<T const>(t);
-    }
-
-    //helper function which creates single-element array if it's given anything
-    //other than std::vector.
-    // T&& case -> returns container which holds new instance of T created by moving given param
-    template <class T>
-    auto wrap_if_single(T&& t)
-    {
-        static_assert(meta::always_false_v<T>, "Wrapping temporary object into single_element_container is an error (requires valid reference)");
-        return program_impl::single_element_container<T>(t);
-    }
-
-    //helper function which creates single-element array if it's given anything
-    //other than std::vector.
-    // std::vector case -> does not wrap, returns t as-is
-    decltype(auto) wrap_if_single(primitive::fixed_size_vector_ref const& t)
-    {
-        return t;
-    }
-}
 
 program_impl::program_impl(engine_impl& engine_ref, topology_impl const& topology, build_options const& options, bool is_internal)
-    : engine(&engine_ref), options(options), processing_order(* new nodes_ordering), output_size_handling_enabled(true)
+    : engine(&engine_ref), options(options), processing_order(* new nodes_ordering)
 {
     static std::atomic<uint32_t> id_gen{ 0 };
     prog_id = ++id_gen;
@@ -180,7 +133,7 @@ program_node const& program_impl::get_node(primitive_id const& id) const
 }
 
 // TODO: Remove once we will get full support for input/output padding in all primitive implementations.
-void program_impl::analyze_output_size_handling_need()
+bool program_impl::analyze_output_size_handling_need()
 {
     bool handling_needed = false;
 
@@ -245,7 +198,7 @@ void program_impl::analyze_output_size_handling_need()
         }
     }
 
-    output_size_handling_enabled = handling_needed;
+    return handling_needed;
 }
 
 std::list<std::shared_ptr<program_node>> program_impl::get_nodes() const
@@ -311,8 +264,8 @@ void program_impl::pre_optimize_graph()
     trim_to_outputs trim_pass; //trim to outputs
     trim_pass.run(*this); // ToDo remove hidden dependencies from trimm pass
     dump_program("3_trimmed", true);
-    processing_order.calculate_BFS_processing_order();
-    analyze_output_size_handling_need();
+    processing_order.calculate_BFS_processing_order(); // this method makes sense only for OOOQ (out of order execution queue) 
+    bool output_size_handling_enabled = analyze_output_size_handling_need();
     for (auto& node : processing_order)
     {
         if (!node->is_type<internal_primitive>() && !node->is_type<data>())
@@ -330,14 +283,16 @@ void program_impl::pre_optimize_graph()
         layout_optimizer lo(output_size_handling_enabled);
         reorder_inputs reorder_inputs_pass(lo);
         reorder_inputs_pass.run(*this);
-        // this code should move to post compilation after kernel selector will support handling reorder bias
+        // this code should be moved to post compilation after kernel selector will support handling reorder bias
         pre_optimize_bias(lo);
         dump_program("4_reordered_inputs", true);
     }
 
     handle_reshape();
-    remove_redundant_reorders(); dump_program("5_removed_redundant_reorders", true);
-    prepare_padding();
+    remove_redundant_reorders remove_redundant_reorders_pass; 
+    remove_redundant_reorders_pass.run(*this);
+    dump_program("5_removed_redundant_reorders", true);
+    prepare_padding(output_size_handling_enabled);
     prepare_depthwise_sep_opt();
 
     propagate_constants propagate_constants_pass;  // ToDo remove hidden dependencies from propagate_constants pass, consider merging propagate constants and constant propagator classes
@@ -522,8 +477,13 @@ void program_impl::compile_graph()
 void program_impl::post_optimize_graph()
 {
     layout_optimizer lo;
-    post_optimize_weights(lo); dump_program("9_reordered_weights", true);
-    remove_redundant_reorders(); dump_program("10_removed_redundant_reorders", true); //TODO: do we need it at this place also?
+    post_optimize_weights post_optimize_weights_pass(lo); 
+    post_optimize_weights_pass.run(*this);
+    dump_program("9_reordered_weights", true);
+
+    remove_redundant_reorders remove_redundant_reorders_pass;
+    remove_redundant_reorders_pass.run(*this);
+    dump_program("10_removed_redundant_reorders", true); //TODO: do we need it at this place also?
     propagate_constants propagate_constants_pass;  // ToDo remove hidden dependencies from propagate_constants pass, consider merging propagate constants and constant propagator classes
     propagate_constants_pass.run(*this);
     dump_program("11_propagated_constants", true);
@@ -1334,75 +1294,6 @@ std::string program_impl::get_memory_dependencies_string() const
     return mem_dep;
 }
 
-void program_impl::remove_redundant_reorders()
-{
-    auto itr = processing_order.begin(); //note we need to use iterators since currently processed element can be removed
-    while (itr != processing_order.end())
-    {
-        auto& node = (*itr++); //post-inc to avoid invalidation due to possible erase
-        if (!node->is_type<reorder>()) //only care for reorders
-            continue;
-
-        program_node* current_node = node;
-        std::vector<program_node*> r_nodes_to_remove;
-
-        auto optimize = true;
-        while (current_node)
-        {
-            auto& r_node = current_node->as<reorder>();
-            current_node = nullptr;
-
-            if (r_node.has_mean() || !r_node.get_primitive()->subtract_per_feature.empty() ||  //do not optimize if mean of subtract are present
-                (r_node.is_output() && r_node.get_dependency(0).is_output())) //do not optimize when both reorder and layer before are outputs
-            {
-                optimize = false;
-                break;
-            }
-
-            r_nodes_to_remove.push_back(&r_node);
-
-            if (r_node.get_dependency(0).is_type<reorder>() && r_node.get_dependencies().size() == 1 && r_node.get_users().size() == 1 && r_node.get_dependency(0).get_users().size() == 1)
-                current_node = &r_node.get_dependency(0);
-        }
-        if (!optimize)
-            continue;
-
-        assert(node->dependencies.size() == 1 && "reorder without mean should have exactly one dependecy (input)");
-        auto& r_output = r_nodes_to_remove.front();
-        auto& r_input = r_nodes_to_remove.back()->get_dependency(0);
-        auto o_layout = r_output->get_output_layout();
-        auto i_layout = r_input.get_output_layout();
-
-        auto ident = program_helpers::are_layouts_identical(o_layout, i_layout);
-        if (!ident.second)
-            continue;
-
-        for (auto remove_reorder_node : r_nodes_to_remove)
-        {
-            auto& r_node = remove_reorder_node->as<reorder>();
-
-            if (ident.first && ident.second && r_node.is_output() && r_node.get_dependency(0).is_input()) //do not optimize when reorder is output and layer before is input
-            {
-                optimize = false;
-                break;
-            }
-        }
-        if (!optimize)
-            continue;
-
-        for (auto remove_reorder_node : r_nodes_to_remove)
-        {
-            auto& r_node = remove_reorder_node->as<reorder>();
-
-            //mark as optimized
-            r_node.can_be_optimized(true);
-            r_node.requires_reinterpret(!ident.first);
-            if (ident.first) //no need of reshape
-                extract_and_remove(r_node); //try to remove if possible (with respect to r_node not being marked as output)
-        }
-    }
-}
-
 void program_impl::pre_optimize_bias(layout_optimizer& lo)
 {
     //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
@@ -1433,7 +1324,7 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
         auto output_layout = node.get_output_layout();
 
         auto weights_offset = node.get_primitive()->input.size();
-        auto bias_offset = weights_offset + wrap_if_single(node.get_primitive()->weights).size();
+        auto bias_offset = weights_offset + program_helpers::wrap_if_single(node.get_primitive()->weights).size();
         for (auto i = bias_offset; i < node.get_dependencies().size(); ++i)
         {
             add_bias(node.get_dependency(i), node, output_layout, i);
@@ -1463,6 +1354,7 @@ void program_impl::pre_optimize_bias(layout_optimizer& lo)
         }
     }
 }
+
 void program_impl::prepare_depthwise_sep_opt()
 {
     const auto prepare_depthwise_sep_opt = [this](auto& node) -> void
@@ -1614,76 +1506,6 @@ void program_impl::handle_reshape()
     }
 }
 
-void program_impl::post_optimize_weights(layout_optimizer& lo)
-{
-    //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
-    //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
-    //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
-    const auto add_weights = [this, &lo](program_node const& weights, auto& node, size_t dep_idx)
-    {
-        auto* impl = node.get_selected_impl().get();
-        auto output_layout = node.get_output_layout();
-        auto& weights_node = node.get_dependency(1);
-        auto weights_layout = weights_node.get_output_layout();
-        const auto weights_type = layout_optimizer::data_type::weights;
-
-        auto reorders = lo.get_generic_layer(
-            impl->_weights_reorder_params,
-            weights.id(),
-            weights_layout,
-            weights_type);
-
-        for (auto& reorder : reorders)
-        {
-            //insert new generic_layer node to topology
-            this->add_intermediate(reorder.first, node, dep_idx, !reorder.second);
-            //set generic_layer's node output layout and implementation
-            auto& g_node = node.get_dependency(dep_idx);
-            g_node.get_output_layout(false);
-            g_node.selected_impl = g_node.type()->choose_impl(*engine, g_node);
-        }
-        //set the old output layout and do not invalidate users as change of weights will not affect output layout
-        node.set_output_layout(output_layout, false);
-    };
-
-    //generic lambda function which prepares given primitive for weights optimization
-    //it deduces the type of weights from the type of the argument and calls 'add_weights' for all
-    //weights used by given primitive.
-    //argument should match requirements:
-    // - it should be of a form 'typed_program_node<T>&'
-    // - 'T.weights' should be either of type 'primitive_id' or 'std::vector<primitive_id>'
-    const auto prep_opt = [this, &add_weights](auto& node) -> void
-    {
-        auto weights_offset = node.get_primitive()->input.size();
-        auto bias_offset = weights_offset + wrap_if_single(node.get_primitive()->weights).size();
-        for (auto i = weights_offset; i < bias_offset; i++)
-        {
-            add_weights(node.get_dependency(i), node, i);
-        }
-    };
-
-    for (auto& p : nodes_map)
-    {
-        auto& prim = *p.second;
-        if (prim.type() == convolution::type_id())
-        {
-            prep_opt(prim.as<convolution>());
-        }
-        else if (prim.type() == deconvolution::type_id())
-        {
-            prep_opt(prim.as<deconvolution>());
-        }
-        else if (prim.type() == fully_connected::type_id())
-        {
-            prep_opt(prim.as<fully_connected>());
-        }
-        //else if (prim.type() == lstm_gemm::type_id())//TODO: Enable postoptimize weights for lstm
-        //{
-        //    prep_opt(prim.as<lstm_gemm>()); //we should take care of weights and reccurent
-        //}
-    }
-}
-
 void program_impl::prep_opt_depthwise_sep_post()
 {
     const auto prep_opt_depthwise_sep = [this](auto& node) -> void
@@ -1772,7 +1594,7 @@ void program_impl::apply_needed_padding(program_node& node, program_node& prev_n
     prev_node.merge_output_padding(needed_padding);
 }
 
-void program_impl::prepare_padding()
+void program_impl::prepare_padding(bool output_size_handling_enabled)
 {
     if (output_size_handling_enabled)
     {

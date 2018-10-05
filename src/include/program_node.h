@@ -56,6 +56,8 @@ struct program_node
     friend class trim_to_outputs;      //to be removed
     friend class propagate_constants; // to be removed
     friend class reorder_inputs;  // to be removed
+    friend class post_optimize_weights; // to be removed when possible
+    friend class remove_redundant_reorders; // to be removed when possible
 
     template <class PType>
     friend struct typed_program_node;
