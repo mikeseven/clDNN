@@ -1765,7 +1765,7 @@ void program_impl::prepare_buffer_fusing()
                         for (auto& user : input->get_users())
                             if (user->is_type<concatenation>())
                                 user_count--;
-                        if (user_count > 1)
+                        if (user_count != 1) // user_cout == 0 means that input will be used only by concatenations, so we cannot apply concat in place for it
                             return;
                     }
 
