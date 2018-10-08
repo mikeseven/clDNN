@@ -289,7 +289,7 @@ static void run_topology(const transform_execution_params& exec_params)
 
         if (exec_params.run_until_primitive_name.empty() && exec_params.run_single_kernel_name.empty() && !exec_params.rnn_type_of_topology && exec_params.topology_name != "lenet" && exec_params.topology_name != "lenet_train")
         {
-            output_file.batch(output, join_path(get_executable_info()->dir(), neurons_list_filename), input_files_in_batch, exec_params.print_type);
+            output_file.batch(output, join_path(get_executable_info()->dir(), ""), input_files_in_batch, exec_params.print_type);
         }
         else if (!exec_params.run_until_primitive_name.empty())
         {

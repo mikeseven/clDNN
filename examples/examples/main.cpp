@@ -179,7 +179,7 @@ void run_topology(const execution_params &ep)
     else if (ep.topology_name == "gender")
         primitives = build_gender(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "resnet50")
-        primitives = build_fns_instance_norm(ep.weights_dir, engine, input_layout, gpu_batch_size);
+        primitives = build_resnet50(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "resnet50-i8")
         primitives = build_resnet50_i8(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "lstm_char")
