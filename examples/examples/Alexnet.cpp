@@ -27,6 +27,7 @@
 #include <api/CPP/softmax.hpp>
 
 using namespace cldnn;
+using namespace cldnn::utils::examples;
 
 // Building AlexNet network with loading weights & biases from file
 topology build_alexnet(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)

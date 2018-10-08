@@ -25,6 +25,7 @@
 #include <api/CPP/softmax.hpp>
 
 using namespace cldnn;
+using namespace cldnn::utils::examples;
 
 
 template<typename T>

@@ -13,24 +13,20 @@
 // limitations under the License.
 
 #include "common_tools.h"
-#include "neural_memory.h"
 #include "command_line_utils.h"
-#include "output_parser.h"
+#include "transform_output_printer.h"
 
-#include "api/CPP/memory.hpp"
 #include "topologies.h"
 
+#include <api/CPP/layout.hpp>
+#include <api/CPP/memory.hpp>
+
 #include <boost/filesystem.hpp>
-#include <boost/lexical_cast.hpp>
-#include <boost/numeric/conversion/cast.hpp>
-#include <boost/program_options.hpp>
 #include <boost/optional.hpp>
 
 #include <cstdint>
 #include <iostream>
-#include <regex>
 #include <string>
-#include <type_traits>
 
 using namespace cldnn::utils::examples;
 using namespace cldnn::utils::examples::cmdline;
@@ -50,11 +46,25 @@ namespace cmdline
 } // namespace utils
 } // namespace cldnn
 
+namespace
+{
 
+/// @brief Type that can store image dimensions (alias).
+using img_dims_type = cmdline::pair<unsigned, unsigned>;
+
+/// @brief Extended execution parameters (for transformation / segmentation).
 struct transform_execution_params : execution_params
 {
+    cmdline::pair<unsigned, unsigned> expected_image_dims = {0, 0};
+    bool use_image_dims                                   = false;
+    bool lossless                                         = false;
+
     std::string compare_ref_img_dir;
+    bool compare_per_channel = false;
+    bool compare_histograms  = false;
 };
+
+} // unnamed namespace
 
   /// Prepares command-line options for current application.
   ///
@@ -78,8 +88,31 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Non-absolute paths are computed in relation to <executable-dir> (not working directory).\n"
             "If not specified, the \"<executable-dir>/<model-name>\" path is used in first place with "
             "\"<executable-dir>/weights\" as fallback.")
+        ("dims", bpo::value<img_dims_type>()->value_name("<img-dims>")->default_value({0, 0}),
+            "Expected dimensions (width and height) of input images. The dimensions are specified in the following "
+            "form:\n  \t\"<image-width> x <image-height>\"."
+            "\nIf dimensions are specified (both non-zero), the input images are normalized to these dimensions. "
+            "Otherwise, the expected input sizes are calculated from topology default spatial sizes or from "
+            "sizes of first listed image found in input directory (if --use_image_dims is present) and the rest "
+            "of images is normalized to those sizes."
+            "\nNOTE: If topology / model does not support multiple input dimensions or specific input dimension, "
+            "it can overwrite the passed / calculated expected dimensions.")
+        ("use_image_dims", bpo::bool_switch(),
+            "Indicates that expected dimensions of input images should be calculated / taken from first listed image "
+            "found in input directory. If not present, the default spatial dimensions of used model / topology "
+            "will be applied as expected dimensions of input images."
+            "\nNOTE: If topology / model does not support multiple input dimensions or specific input dimension, "
+            "it can overwrite the passed / calculated expected dimensions.")
+        ("lossless", bpo::bool_switch(),
+            "Indicates that output should be written to files in loss-less format (PNG)."
+            "\nAll output files will be written with full name of input file (including original extension) plus "
+            "additional PNG file extension.")
         ("compare,C", bpo::value<std::string>()->value_name("<ref-images-dir>"),
-            "Path to directory containing reference output images to compare with actual output.");
+            "Path to directory containing reference output images to compare with actual output.")
+        ("compare_per_channel", bpo::bool_switch(),
+            "Indicates that comparison should incorporate per-channel comparison.\nIgnored if --compare is absent.")
+        ("compare_histograms", bpo::bool_switch(),
+            "Indicates that comparison should incorporate comparison histograms.\nIgnored if --compare is absent.");
 
     const auto help_msg_formatter =
         [](std::ostream& out, const std::shared_ptr<const executable_info>& exec_info) -> std::ostream&
@@ -182,7 +215,9 @@ static void run_topology(const transform_execution_params& exec_params)
         }
     }
 
-    html output_file(exec_params.topology_name, exec_params.topology_name + " run");
+    transform::output_printer printer(exec_params.topology_name, exec_params.topology_name,
+                                      !exec_params.compare_ref_img_dir.empty(), exec_params.compare_per_channel,
+                                      exec_params.compare_histograms);
 
     // Building topology.
     cldnn::topology selected_topology;
@@ -192,19 +227,37 @@ static void run_topology(const transform_execution_params& exec_params)
     else if (exec_params.print_type == print_type::extended_testing)
         std::cout << "Extended testing of \"" << exec_params.topology_name << "\" started..." << std::endl;
 
+    // Calculating properties of input.
+    auto input_paths = list_input_files(exec_params.input_dir, input_file_type::image);
+    if (input_paths.empty())
+        throw std::runtime_error("Specified input images / files directory is empty "
+                                 "(does not contain any useful data / files)");
+
+    auto expected_img_dims = exec_params.expected_image_dims;
+    if (exec_params.use_image_dims)
+    {
+        auto image_dims = get_image_dims(input_paths, 1);
+        if (!image_dims.empty())
+            expected_img_dims = cmdline::make_pair(std::get<1>(image_dims.front()), std::get<2>(image_dims.front()));
+    }
+
     // --- Measurement: build time (start).
     cldnn::instrumentation::timer<> timer_build;
 
     auto input_layout = cldnn::layout{
         exec_params.use_half ? cldnn::data_types::f16 : cldnn::data_types::f32,
-        cldnn::format::byxf, {}
+        cldnn::format::byxf, {
+            static_cast<std::int32_t>(gpu_preferred_batch_size),
+            3,
+            static_cast<std::int32_t>(expected_img_dims.first),
+            static_cast<std::int32_t>(expected_img_dims.second)
+        }
     };
 
     if (exec_params.topology_name == "fns-candy")
-        selected_topology = build_fns_instance_norm(exec_params.weights_dir, selected_engine, input_layout,
-                                                    gpu_preferred_batch_size);
+        selected_topology = build_fns_instance_norm(exec_params.weights_dir, selected_engine, input_layout);
     else
-        throw std::runtime_error("Topology \"" + exec_params.topology_name + "\" not implemented!");
+        throw std::runtime_error("Topology \"" + exec_params.topology_name + "\" not implemented");
 
     const auto build_time = timer_build.uptime();
     // --- Measurement: build time (stop).
@@ -216,101 +269,69 @@ static void run_topology(const transform_execution_params& exec_params)
     }
     if (!exec_params.run_single_kernel_name.empty())
     {
-        auto all_ids = selected_topology.get_primitive_ids();
-        if (std::find(all_ids.begin(), all_ids.end(), exec_params.run_single_kernel_name) == all_ids.end())
-            throw std::runtime_error("Topology does not contain primitive with name specified by run_single_kernel");
+        const auto ids = selected_topology.get_primitive_ids();
+        if (std::find(ids.cbegin(), ids.cend(), exec_params.run_single_kernel_name) == ids.cend())
+            throw std::runtime_error("Topology does not contain primitive with name specified by "
+                                     "\"--run_single_kernel\"");
     }
 
     auto network = build_network(selected_engine, selected_topology, exec_params);
-    //TODO check if we can define the 'empty' memory
+
     float zero = 0;
-    cldnn::layout zero_layout(cldnn::data_types::f32, cldnn::format::bfyx, { 1,1,1,1 });
+    cldnn::layout zero_layout(cldnn::data_types::f32, cldnn::format::bfyx, cldnn::tensor(1));
     auto output = cldnn::memory::attach(zero_layout, &zero, 1);
 
     auto input = cldnn::memory::allocate(selected_engine, input_layout);
 
-    auto input_list = list_input_files(exec_params.input_dir);
-    if (input_list.empty())
-        throw std::runtime_error("specified input images directory is empty (does not contain image data)");
-
-    auto number_of_batches = (input_list.size() % batch_size == 0)
-        ? input_list.size() / batch_size : input_list.size() / batch_size + 1;
-    std::vector<std::string> input_files_in_batch;
-    auto input_list_iterator = input_list.begin();
-    auto input_list_end = input_list.end();
-
-    for (decltype(number_of_batches) batch = 0; batch < number_of_batches; batch++)
+    auto img_paths_it         = input_paths.cbegin();
+    const auto img_paths_last = input_paths.cend();
+    while (img_paths_it != img_paths_last)
     {
-        input_files_in_batch.clear();
-        for (uint32_t i = 0; i < batch_size && input_list_iterator != input_list_end; ++i, ++input_list_iterator)
-        {
-            input_files_in_batch.push_back(*input_list_iterator);
-        }
-        double time_in_sec = 0.0;
-        lstm_utils lstm_data(exec_params.sequence_length, batch_size, (unsigned int)exec_params.loop, exec_params.temperature);
-        // load croped and resized images into input
+        std::pair<std::vector<std::string>::const_iterator, std::vector<std::string>> loaded_image_info;
         if (!exec_params.rnn_type_of_topology)
         {
             if (exec_params.use_half)
-            {
-                load_images_from_file_list<half_t>(input_files_in_batch, input);
-            }
+                loaded_image_info = load_image_files<half_t>(img_paths_it, img_paths_last, input);
             else
-            {
-                load_images_from_file_list(input_files_in_batch, input);
-            }
+                loaded_image_info = load_image_files(img_paths_it, img_paths_last, input);
 
+            img_paths_it = loaded_image_info.first;
         }
         else
-        {
-            prepare_data_for_lstm(lstm_data, input_files_in_batch, exec_params.vocabulary_file);
-            if (exec_params.use_half)
-            {
-                lstm_data.fill_memory<half_t>(input);
-            }
-            else
-            {
-                lstm_data.fill_memory<float>(input);
-            }
-        }
+            throw std::runtime_error("Recurrent neural networks are not supported");
+
         network.set_input_data("input", input);
 
-        std::chrono::nanoseconds time;
+        fp_seconds_type time{0.0};
         if (!exec_params.rnn_type_of_topology)
-        {
             time = execute_cnn_topology(network, exec_params, power_measure_lib, output);
-        }
-        else
-        {
-            time = execute_rnn_topology(network, exec_params, power_measure_lib, output, input, lstm_data);
-        }
+        // NOTE: Leaving place for future RNN topologies.
 
-        time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
-
-        if (exec_params.run_until_primitive_name.empty() && exec_params.run_single_kernel_name.empty() && !exec_params.rnn_type_of_topology && exec_params.topology_name != "lenet" && exec_params.topology_name != "lenet_train")
+        if (!exec_params.rnn_type_of_topology &&
+            exec_params.run_until_primitive_name.empty() && exec_params.run_single_kernel_name.empty())
         {
-            output_file.batch(output, join_path(get_executable_info()->dir(), ""), input_files_in_batch, exec_params.print_type);
+            printer.batch(loaded_image_info.second, output, exec_params.input_dir, exec_params.print_type,
+                          exec_params.compare_ref_img_dir);
         }
         else if (!exec_params.run_until_primitive_name.empty())
         {
-            std::cout << "Finished at user custom primtive: " << exec_params.run_until_primitive_name << std::endl;
+            std::cout << "Finished at user-specified primitive: \""
+                << exec_params.run_until_primitive_name << "\"." << std::endl;
         }
         else if (!exec_params.run_single_kernel_name.empty())
         {
-            std::cout << "Run_single_layer finished correctly." << std::endl;
+            std::cout << "Run of single layer \"" << exec_params.run_single_kernel_name
+                << "\" finished correctly." << std::endl;
         }
 
-        if (time_in_sec != 0.0)
+        if (exec_params.print_type != print_type::extended_testing && time.count() > 0.0)
         {
-            if (exec_params.print_type != print_type::extended_testing)
-            {
-                std::cout << "Frames per second:" << (double)(exec_params.loop * batch_size) / time_in_sec << std::endl;
+            std::cout << "Frames per second: " << exec_params.loop * batch_size / time.count() << std::endl;
 
-                if (exec_params.perf_per_watt)
-                {
-                    if (!power_measure_lib.print_power_results((double)(exec_params.loop * batch_size) / time_in_sec))
-                        std::cout << "WARNING: power file parsing failed." << std::endl;
-                }
+            if (exec_params.perf_per_watt)
+            {
+                if (!power_measure_lib.print_power_results(exec_params.loop * batch_size / time.count()))
+                    std::cerr << "WARNING: Parsing of results file from power measurement tool failed!!!" << std::endl;
             }
         }
     }
@@ -321,7 +342,6 @@ static void run_topology(const transform_execution_params& exec_params)
 
 int main(const int argc, char* argv[])
 {
-    namespace bpo = boost::program_options;
     namespace bfs = boost::filesystem;
 
     set_executable_info(argc, argv); // Must be set before using get_executable_info().
@@ -394,6 +414,26 @@ int main(const int argc, char* argv[])
             return 1;
         }
 
+        // Validate expected image dimensions.
+        auto expected_img_dims = parsed_args["dims"].as<img_dims_type>();
+        if ((expected_img_dims.first == 0 || expected_img_dims.second == 0) &&
+            expected_img_dims.first != expected_img_dims.second)
+        {
+            std::cerr << "WARNING: specified expected image dimensions are incorrect (\"" << expected_img_dims
+                << "\"). Either both or none dimensions must be zero. Ignoring --dims parameter!!!" << std::endl;
+
+            expected_img_dims.first = 0;
+            expected_img_dims.second = 0;
+        }
+
+        auto use_image_dims = parsed_args["use_image_dims"].as<bool>();
+        if (use_image_dims && (expected_img_dims.first != 0 || expected_img_dims.second != 0))
+        {
+            std::cerr << "WARNING: --use_image_dims parameter is ignored (--dims parameter is specified)!!!" << std::endl;
+
+            use_image_dims = false;
+        }
+
         // Validate reference images directory.
         std::string cmp_ref_img_dir;
         if (parsed_args.count("compare"))
@@ -410,7 +450,12 @@ int main(const int argc, char* argv[])
         ep.input_dir           = input_dir;
         ep.topology_name       = parsed_args["model"].as<std::string>();
         ep.weights_dir         = weights_dir;
+        ep.expected_image_dims = expected_img_dims;
+        ep.use_image_dims      = use_image_dims;
+        ep.lossless            = parsed_args["lossless"].as<bool>();
         ep.compare_ref_img_dir = cmp_ref_img_dir;
+        ep.compare_per_channel = parsed_args["compare_per_channel"].as<bool>();
+        ep.compare_histograms  = parsed_args["compare_histograms"].as<bool>();
 
         // Validate and run topology.
         if (ep.topology_name == "fns-candy")

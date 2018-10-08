@@ -1,5 +1,4 @@
-/*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,16 +11,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-*/
+
 #pragma once
 
-#include "api/CPP/topology.hpp"
+#include <api/CPP/engine.hpp>
+#include <api/CPP/layout.hpp>
+#include <api/CPP/topology.hpp>
 
 
-/**
-* \brief Builds topologies
-* \param input_layout - will be set to the layout of the "input" primitive
-* \return topology where final primitive has id "output"
-*/
-
-cldnn::topology build_fns_instance_norm(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, std::int32_t batch_size, bool mean_subtract = false);
+/// @brief Builds FNS (Fast Neural Style) instance normalization (Feed-Forward) topology
+///        based on FNS-Candy.
+cldnn::topology build_fns_instance_norm(const std::string& weights_dir, const cldnn::engine& engine,
+                                        cldnn::layout& input_layout, bool mean_subtract = false);

@@ -253,11 +253,11 @@ void run_topology(const execution_params &ep)
         {
             if (ep.use_half)
             {
-                load_images_from_file_list<half_t>(input_files_in_batch, input);
+                load_image_files<half_t>(input_files_in_batch, input);
             }
             else
             {
-                load_images_from_file_list(input_files_in_batch, input);
+                load_image_files(input_files_in_batch, input);
             }
 
         }

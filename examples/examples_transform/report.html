@@ -1,0 +1,402 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN"
+"http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xml:lang="en" xmlns="http://www.w3.org/1999/xhtml"
+      xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+      xsi:schemaLocation="http://www.w3.org/1999/xhtml
+                          http://www.w3.org/MarkUp/SCHEMA/xhtml11.xsd">
+<head>
+  <meta charset="utf-8"/>
+  <title>"$$report_title$$" results</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      background-color: whitesmoke;
+    }
+
+    table.recognitions { padding: 0.5em }
+
+    .heading {
+      font-family: monospace;
+      font-weight: bold;
+      font-size: 24pt;
+      color: dimgray;
+      padding: 3pt 0 1pt 12pt;
+      vertical-align: middle;
+    }
+
+    .heading-sep {
+      border: none;
+      height: 2pt;
+      color: darkgray;
+      background-color: darkgray;
+      -moz-box-shadow: 0 1pt 6pt 1pt darkgray;
+      -webkit-box-shadow: 0 1pt 6pt 1pt darkgray;
+      box-shadow: 0 1pt 6pt 1pt darkgray;
+    }
+
+    .thright { text-align: right }
+
+    .trans-items td { padding: 6pt 0 }
+
+    .trans-items-sep {
+      border-top: 2pt dashed darkgray;
+      border-bottom: 2pt dashed darkgray;
+      padding: 3pt;
+      color: darkgray;
+      text-align: center;
+      font-family: monospace;
+      font-size: 12pt;
+      font-weight: bold;
+    }
+
+    .trans-item {
+      font-family: monospace;
+      vertical-align: top;
+      -moz-box-shadow: 5pt 5pt 9pt 1pt black;
+      -moz-box-shadow: 5pt 5pt 9pt 1pt rgba(0, 0, 0, 0.79);
+      -webkit-box-shadow: 5pt 5pt 9pt 1pt black;
+      -webkit-box-shadow: 5pt 5pt 9pt 1pt rgba(0, 0, 0, 0.79);
+      box-shadow: 5pt 5pt 9pt 1pt black;
+      box-shadow: 5pt 5pt 9pt 1pt rgba(0, 0, 0, 0.79);
+    }
+
+    .trans-item td {
+      border-collapse: collapse;
+      vertical-align: top;
+      min-width: 300px;
+      width: 33%;
+    }
+
+    .trans-item div {
+      font-size: 8pt;
+      padding: 6pt 12pt;
+    }
+
+    .trans-item-head {
+      font-size: 12pt;
+      font-weight: bold;
+      padding: 3pt 0 3pt 6pt;
+    }
+
+    .trans-item-info {
+      font-size: 10pt;
+      vertical-align: top;
+      padding: 3pt 6pt;
+    }
+
+    .trans-item-info span {
+      font-size: 12pt;
+      font-weight: bold;
+    }
+
+    .trans-item-vsep { border-left: 1pt dashed gray }
+
+    .trans-item-hsep { border-top: 1pt dashed gray }
+  </style>
+</head>
+<body>
+<h2 class="heading">Results from "$$report_title$$" run</h2>
+<hr class="heading-sep"/>
+<table class="trans-items">
+<tr>
+  <td>
+    <table class="trans-item">
+      <tr>
+        <td class="trans-item-head" colspan="3">$$input_image_rel_path$$</td>
+      </tr>
+      <tr>
+        <td>
+          <div>
+            input:
+            <br />
+            <a href="$$input_image_path$$" target="_blank">
+              <img height="180" alt="$$input_image_name$$" src="$$input_image_path$$" />
+            </a>
+          </div>
+        </td>
+        <td class="trans-item-vsep">
+          <div>
+            output:
+            <br />
+            <a href="$$output_image_path$$" target="_blank">
+              <img height="180" alt="$$output_image_name$$" src="$$output_image_path$$" />
+            </a>
+          </div>
+        </td>
+        <!-- if (compare) -->
+        <td class="trans-item-vsep">
+          <div>
+            reference:
+            <br />
+            <a href="$$reference_image_path$$" target="_blank">
+              <img height="180" alt="$$reference_image_name$$" src="$$output_image_path$$" />
+            </a>
+          </div>
+        </td>
+        <!-- else (compare) -->
+        <!--<td/>-->
+        <!-- endif (compare) -->
+      </tr>
+      <!-- if (compare) -->
+      <tr>
+        <td class="trans-item-hsep trans-item-info" rowspan="4">
+          <p>
+            Image difference:
+            <ul>
+              <li><a title="sum of absolute difference">SAD:</a> $$sad$$ (<a title="per-pixel mean value of SAD">mean:</a> $$mean_sad$$)</li>
+              <li><a title="sum of squared difference">SSD:</a> $$ssd$$ (<a title="per-pixel mean value of SSD">mean:</a> $$mean_ssd$$)</li>
+              <li><a title="percentage of different pixels">% of diff. pixels:</a>&nbsp;&nbsp;&nbsp;&nbsp; $$pixel_freq$$</li>
+              <li><a title="percentage of pixels different more than 1% of max difference (above 1-percentile)">% of >1% diff. pixels:</a> $$pixel_freq$$</li>
+              <li><a title="percentage of pixels different more than 5% of max difference (above 5-percentile)">% of >5% diff. pixels:</a> $$pixel_freq$$</li>
+            </ul>
+            <span>Match: $$is_matching$$</span>
+          </p>
+        </td>
+        <td class="trans-item-vsep trans-item-hsep">
+          <div>
+            difference:
+            <br />
+            <a href="$$diff_image_path$$" target="_blank">
+              <img height="180" alt="$$diff_image_name$$" src="$$diff_image_path$$" />
+            </a>
+          </div>
+        </td>
+        <td class="trans-item-hsep">
+          <!-- if (histogram) -->
+          <div>
+            histogram:
+            <br />
+            <a href="$$hist_image_path$$" target="_blank">
+              <img height="180" alt="$$hist_image_name$$" src="$$hist_image_path$$" />
+            </a>
+          </div>
+          <!-- endif (histogram) -->
+        </td>
+      </tr>
+      <!-- if (compare_rgb) -->
+      <tr>
+        <td class="trans-item-vsep trans-item-hsep">
+          <div>
+            difference (<span style="color: red">red</span>):
+            <br />
+            <a href="$$diff_r_image_path$$" target="_blank">
+              <img height="180" alt="$$diff_r_image_name$$" src="$$diff_r_image_path$$" />
+            </a>
+          </div>
+        </td>
+        <td class="trans-item-hsep">
+          <!-- if (histogram) -->
+          <div>
+            histogram (<span style="color: red">red</span>):
+            <br />
+            <a href="$$hist_r_image_path$$" target="_blank">
+              <img height="180" alt="$$hist_r_image_name$$" src="$$hist_r_image_path$$" />
+            </a>
+          </div>
+          <!-- endif (histogram) -->
+        </td>
+      </tr>
+      <tr>
+        <td class="trans-item-vsep trans-item-hsep">
+          <div>
+            difference (<span style="color: green">green</span>):
+            <br />
+            <a href="$$diff_g_image_path$$" target="_blank">
+              <img height="180" alt="$$diff_g_image_name$$" src="$$diff_g_image_path$$" />
+            </a>
+          </div>
+        </td>
+        <td class="trans-item-hsep">
+          <!-- if (histogram) -->
+          <div>
+            histogram (<span style="color: green">green</span>):
+            <br />
+            <a href="$$hist_g_image_path$$" target="_blank">
+              <img height="180" alt="$$hist_g_image_name$$" src="$$hist_g_image_path$$" />
+            </a>
+          </div>
+          <!-- endif (histogram) -->
+        </td>
+      </tr>
+      <tr>
+        <td class="trans-item-vsep trans-item-hsep">
+          <div>
+            difference (<span style="color: blue">blue</span>):
+            <br />
+            <a href="$$diff_b_image_path$$" target="_blank">
+              <img height="180" alt="$$diff_b_image_name$$" src="$$diff_b_image_path$$" />
+            </a>
+          </div>
+        </td>
+        <td class="trans-item-hsep">
+          <!-- if (histogram) -->
+          <div>
+            histogram (<span style="color: blue">blue</span>):
+            <br />
+            <a href="$$hist_b_image_path$$" target="_blank">
+              <img height="180" alt="$$hist_b_image_name$$" src="$$hist_b_image_path$$" />
+            </a>
+          </div>
+          <!-- endif (histogram) -->
+        </td>
+      </tr>
+      <!-- endif (compare_rgb) -->
+      <!-- endif (compare) -->
+    </table>
+  </td>
+</tr>
+<tr>
+  <td class="trans-items-sep">BATCH</td>
+</tr>
+  <tr>
+    <td>
+      <table class="trans-item">
+        <tr>
+          <td class="trans-item-head" colspan="3">$$input_image_rel_path$$</td>
+        </tr>
+        <tr>
+          <td>
+            <div>
+              input:
+              <br />
+              <a href="$$input_image_path$$" target="_blank">
+                <img height="180" alt="$$input_image_name$$" src="$$input_image_path$$" />
+              </a>
+            </div>
+          </td>
+          <td class="trans-item-vsep">
+            <div>
+              output:
+              <br />
+              <a href="$$output_image_path$$" target="_blank">
+                <img height="180" alt="$$output_image_name$$" src="$$output_image_path$$" />
+              </a>
+            </div>
+          </td>
+          <!-- if (compare) -->
+          <td class="trans-item-vsep">
+            <div>
+              reference:
+              <br />
+              <a href="$$reference_image_path$$" target="_blank">
+                <img height="180" alt="$$reference_image_name$$" src="$$output_image_path$$" />
+              </a>
+            </div>
+          </td>
+          <!-- else (compare) -->
+          <!--<td/>-->
+          <!-- endif (compare) -->
+        </tr>
+        <!-- if (compare) -->
+        <tr>
+          <td class="trans-item-hsep trans-item-info" rowspan="4">
+            <p>
+              Image difference:
+              <ul>
+                <li><a title="sum of absolute difference">SAD:</a> $$sad$$ (<a title="per-pixel mean value of SAD">mean:</a> $$mean_sad$$)</li>
+                <li><a title="sum of squared difference">SSD:</a> $$ssd$$ (<a title="per-pixel mean value of SSD">mean:</a> $$mean_ssd$$)</li>
+                <li><a title="percentage of different pixels">% of diff. pixels:</a>&nbsp;&nbsp;&nbsp;&nbsp; $$pixel_freq$$</li>
+                <li><a title="percentage of pixels different more than 1% of max difference (above 1-percentile)">% of >1% diff. pixels:</a> $$pixel_freq$$</li>
+                <li><a title="percentage of pixels different more than 5% of max difference (above 5-percentile)">% of >5% diff. pixels:</a> $$pixel_freq$$</li>
+              </ul>
+              <span>Match: $$is_matching$$</span>
+            </p>
+          </td>
+          <td class="trans-item-vsep trans-item-hsep">
+            <div>
+              difference:
+              <br />
+              <a href="$$diff_image_path$$" target="_blank">
+                <img height="180" alt="$$diff_image_name$$" src="$$diff_image_path$$" />
+              </a>
+            </div>
+          </td>
+          <td class="trans-item-hsep">
+            <!-- if (histogram) -->
+            <div>
+              histogram:
+              <br />
+              <a href="$$hist_image_path$$" target="_blank">
+                <img height="180" alt="$$hist_image_name$$" src="$$hist_image_path$$" />
+              </a>
+            </div>
+            <!-- endif (histogram) -->
+          </td>
+        </tr>
+        <!-- if (compare_rgb) -->
+        <tr>
+          <td class="trans-item-vsep trans-item-hsep">
+            <div>
+              difference (<span style="color: red">red</span>):
+              <br />
+              <a href="$$diff_r_image_path$$" target="_blank">
+                <img height="180" alt="$$diff_r_image_name$$" src="$$diff_r_image_path$$" />
+              </a>
+            </div>
+          </td>
+          <td class="trans-item-hsep">
+            <!-- if (histogram) -->
+            <div>
+              histogram (<span style="color: red">red</span>):
+              <br />
+              <a href="$$hist_r_image_path$$" target="_blank">
+                <img height="180" alt="$$hist_r_image_name$$" src="$$hist_r_image_path$$" />
+              </a>
+            </div>
+            <!-- endif (histogram) -->
+          </td>
+        </tr>
+        <tr>
+          <td class="trans-item-vsep trans-item-hsep">
+            <div>
+              difference (<span style="color: green">green</span>):
+              <br />
+              <a href="$$diff_g_image_path$$" target="_blank">
+                <img height="180" alt="$$diff_g_image_name$$" src="$$diff_g_image_path$$" />
+              </a>
+            </div>
+          </td>
+          <td class="trans-item-hsep">
+            <!-- if (histogram) -->
+            <div>
+              histogram (<span style="color: green">green</span>):
+              <br />
+              <a href="$$hist_g_image_path$$" target="_blank">
+                <img height="180" alt="$$hist_g_image_name$$" src="$$hist_g_image_path$$" />
+              </a>
+            </div>
+            <!-- endif (histogram) -->
+          </td>
+        </tr>
+        <tr>
+          <td class="trans-item-vsep trans-item-hsep">
+            <div>
+              difference (<span style="color: blue">blue</span>):
+              <br />
+              <a href="$$diff_b_image_path$$" target="_blank">
+                <img height="180" alt="$$diff_b_image_name$$" src="$$diff_b_image_path$$" />
+              </a>
+            </div>
+          </td>
+          <td class="trans-item-hsep">
+            <!-- if (histogram) -->
+            <div>
+              histogram (<span style="color: blue">blue</span>):
+              <br />
+              <a href="$$hist_b_image_path$$" target="_blank">
+                <img height="180" alt="$$hist_b_image_name$$" src="$$hist_b_image_path$$" />
+              </a>
+            </div>
+            <!-- endif (histogram) -->
+          </td>
+        </tr>
+        <!-- endif (compare_rgb) -->
+        <!-- endif (compare) -->
+      </table>
+    </td>
+  </tr>
+</table>
+</body>
+</html>

@@ -43,6 +43,7 @@
 
 
 using namespace cldnn;
+using namespace cldnn::utils::examples;
 using namespace std;
 
 
