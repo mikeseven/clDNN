@@ -18,6 +18,7 @@
 #include "api/CPP/program.hpp"
 
 #include "program_impl.h"
+#include "gpu/ocl_toolkit.h"
 
 #include "kernel_selector_params.h"
 #include "kernel_selector_common.h"
