@@ -40,7 +40,9 @@ typedef enum /*:int32_t*/
     /// @brief Average-pooling method without values which are outside of the input.
     cldnn_pooling_average_no_padding,
     /// @brief Maximum-pooling method with additional buffer to store argmax indices.
-    cldnn_pooling_max_with_argmax
+    cldnn_pooling_max_with_argmax,
+    /// @brief Pooling with bilinear interpolation
+    cldnn_pooling_bilinear
 } cldnn_pooling_mode;
 
 /// @brief Performs "pooling" operation which is a form of non-linear down-sampling.

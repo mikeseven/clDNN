@@ -30,24 +30,24 @@ struct typed_program_node<batch_norm> : public typed_program_node_base<batch_nor
 public:
     using parent::parent;
 
-    decltype(auto) input() const { return get_dependency(0); }
-    decltype(auto) mean() const { return get_dependency(1); }
-    decltype(auto) variance() const { return get_dependency(2); }
-    decltype(auto) scale() const 
+    program_node& input() const { return get_dependency(0); }
+    program_node& mean() const { return get_dependency(1); }
+    program_node& variance() const { return get_dependency(2); }
+    program_node& scale() const 
 	{ 
 		if(get_dependencies().size() >= 5)
 			return get_dependency(3); 
 		else
 			return get_dependency(1);
 	}
-    decltype(auto) shift() const 
+    program_node& shift() const 
 	{ 
 		if (get_dependencies().size() >= 5)
 			return get_dependency(4); 
 		else
 			return get_dependency(2);
 	}
-    decltype(auto) inv_variance() const 
+    program_node& inv_variance() const 
 	{ 
 		if (get_dependencies().size() == 2)
 			return get_dependency(1);
@@ -77,23 +77,23 @@ public:
 public:
     typed_primitive_inst(network_impl& network, batch_norm_node const& node);
 
-    decltype(auto) mean_memory() const { return dep_memory(1); }
-    decltype(auto) variance_memory() const { return dep_memory(2); }
-    decltype(auto) scale_memory() const 
+    memory_impl& mean_memory() const { return dep_memory(1); }
+    memory_impl& variance_memory() const { return dep_memory(2); }
+    memory_impl& scale_memory() const 
 	{
 		if (dependencies().size() >= 5)
 			return dep_memory(3);
 		else
 			return dep_memory(1);
 	}
-    decltype(auto) shift_memory() const 
+    memory_impl& shift_memory() const 
 	{
 		if (dependencies().size() >= 5)
 			return dep_memory(4);
 		else
 			return dep_memory(2);
 	}
-    decltype(auto) inv_variance_memory() const
+    memory_impl& inv_variance_memory() const
 	{
 		if (dependencies().size() == 2)
 			return dep_memory(1);

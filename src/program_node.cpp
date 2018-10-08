@@ -87,7 +87,7 @@ void program_node::add_memory_dependency(std::vector<primitive_id> prim_list)
 //Function used by serialization. Not working yet, in progress.
 std::unique_ptr<xml_composite> program_node::desc_to_xml() const
 {
-    std::unique_ptr<xml_composite> node_info = std::make_unique<xml_composite>();
+    std::unique_ptr<xml_composite> node_info = std::unique_ptr<xml_composite>(new xml_composite());
     node_info->add("id", id());
     node_info->add("valid_output_layout", bool_to_str(valid_output_layout));
 
@@ -148,7 +148,7 @@ std::unique_ptr<xml_composite> program_node::desc_to_xml() const
 
 std::unique_ptr<json_composite> program_node::desc_to_json() const
 {
-    std::unique_ptr<json_composite> node_info = std::make_unique<json_composite>();
+    std::unique_ptr<json_composite> node_info = std::unique_ptr<json_composite>(new json_composite());
     node_info->add("ptr", "node_" + std::to_string(reinterpret_cast<uintptr_t>(this)));
     node_info->add("id", id());
     node_info->add("type", get_extr_type(typeid(*this).name()));

@@ -117,7 +117,8 @@ void network_impl::allocate_primitives()
     auto nodes = _program->get_nodes();
     std::vector<std::shared_ptr<program_node>> nodes_to_allocate{};
     nodes_to_allocate.insert(nodes_to_allocate.begin(), nodes.begin(), nodes.end());
-    std::sort(nodes_to_allocate.begin(), nodes_to_allocate.end(), [](auto const& lhs, auto const& rhs)
+    std::sort(nodes_to_allocate.begin(), nodes_to_allocate.end(), [](std::shared_ptr<program_node> const& lhs,
+                                                                     std::shared_ptr<program_node> const& rhs)
     {
         return (lhs->get_output_layout().bytes_count() > rhs->get_output_layout().bytes_count());
     });
