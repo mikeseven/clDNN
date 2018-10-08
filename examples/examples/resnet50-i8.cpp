@@ -20,6 +20,7 @@
 #include <api/CPP/fully_connected.hpp>
 #include <api/CPP/softmax.hpp>
 #include <api/CPP/eltwise.hpp>
+#include <api/CPP/permute.hpp>
 
 #include "common_tools.h"
 #include "file.h"
@@ -180,8 +181,9 @@ cldnn::topology build_resnet50_i8(const std::string& weights_dir, const cldnn::e
         fc1000_cf_data,
         1.0f);
 
+    auto permute_decalib_data = cldnn::permute("reshape_decalib_data", fc1000_decalibf_data, {0,3,1,2});
     auto decalibrated_fc1000 = reorder("decalib_fc1000", fc1000,
-        format::bfyx, data_types::f32, fc1000_decalibf_data, cldnn_reorder_mean_mode::mean_div);
+        format::bfyx, data_types::f32, permute_decalib_data, cldnn_reorder_mean_mode::mean_div);
 
     auto softmax = cldnn::softmax(
         "output",
@@ -189,7 +191,7 @@ cldnn::topology build_resnet50_i8(const std::string& weights_dir, const cldnn::e
 
     topology_inst.add(pool5,
                       fc1000_weights_data, fc1000_bias_data, fc1000_cf_data, fc1000_qf_data, fc1000,
-                      fc1000_decalibf_data, decalibrated_fc1000,
+                      fc1000_decalibf_data, permute_decalib_data, decalibrated_fc1000,
                       softmax);
     return topology_inst;
 }
