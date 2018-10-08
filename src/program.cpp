@@ -110,7 +110,7 @@ namespace
     template <class T>
     auto wrap_if_single(T&& t)
     {
-        static_assert(meta::always_false<T>, "Wrapping temporary object into single_element_container is an error (requires valid reference)");
+        static_assert(meta::always_false<T>::value, "Wrapping temporary object into single_element_container is an error (requires valid reference)");
         return program_impl::single_element_container<T>(t);
     }
 
