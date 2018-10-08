@@ -49,7 +49,7 @@ namespace kernel_selector
 
     std::unique_ptr<FullyConnectedKernelBase::DispatchData> FullyConnectedKernelBase::SetDefault(const fully_connected_params& params) const
     {
-        std::unique_ptr<DispatchData> dispatchData = std::make_unique<DispatchData>();
+        std::unique_ptr<DispatchData> dispatchData = std::unique_ptr<DispatchData>(new DispatchData());
         dispatchData->fp16UnitUsed = params.inputs[0].GetDType() == Datatype::F16;
 
         // Determine global work sizes.
