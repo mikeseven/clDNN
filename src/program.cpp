@@ -865,11 +865,13 @@ void program_impl::handle_lstm()
                     // bidirectional support requires concatenations along the direction and sequence axis
                     // instead we can concatenate along the sequence axis and reshape the tensor to the account
                     // for the direction
-                    int32_t concatenate_len = 0;
-                    if (emit_sequence) concatenate_len = sequence_len;
-                    if (emit_last_hidden) concatenate_len++;
-                    if (emit_last_cell) concatenate_len++;
-                    tensor output_size {input_size.batch[0], concatenate_len, hidden_size.spatial[0], (int32_t)directions};
+                    size_t concatenate_len = 0;
+                    if (emit_sequence)			concatenate_len = sequence_len;
+                    else if (emit_last_hidden)	concatenate_len++;
+                    
+					if (emit_last_cell)			concatenate_len++;
+
+                    tensor output_size {input_size.batch[0], static_cast<int32_t>(concatenate_len), hidden_size.spatial[0], (int32_t)directions};
                     std::cout << "Output Size = " << output_size << std::endl;
                     primitive_id reshape_id = original_id + ":reshape";
                     auto reshape_primitive = std::make_shared<reshape>(reshape_id, concatenation_id, output_size);
