@@ -61,27 +61,27 @@ inline void FUNC(mmad_32x32_int8)(  __local uint* l_tileA, const uint l_offsetTi
     for (uint j = 0; j < (SG_TILE_M / 8); ++j)
     {
         // Compute partial C
-        regC[0*(SIMD_LANE_M / 8) + j] = FUNC_CALL(mmad8x8)( rowA[j], colB[0], regC[0*(SIMD_LANE_M / 8) + j]);
+        regC[0*(SIMD_LANE_M / 8) + j] = MMAD_8x8( rowA[j], colB[0], regC[0*(SIMD_LANE_M / 8) + j]);
     }
     colB[0] = l_tileB[l_offsetTileB_col2];
     __attribute__((opencl_unroll_hint(SG_TILE_M / 8)))
     for (uint j = 0; j < (SG_TILE_M / 8); ++j)
     {
         // Compute partial C
-        regC[1*(SIMD_LANE_M / 8) + j] = FUNC_CALL(mmad8x8)( rowA[j], colB[1], regC[1*(SIMD_LANE_M / 8) + j] );
+        regC[1*(SIMD_LANE_M / 8) + j] = MMAD_8x8( rowA[j], colB[1], regC[1*(SIMD_LANE_M / 8) + j] );
 	}
     colB[1] = l_tileB[l_offsetTileB_col3];
     __attribute__((opencl_unroll_hint(SG_TILE_M / 8)))
     for (uint j = 0; j < (SG_TILE_M / 8); ++j)
     {
         // Compute partial C
-        regC[2*(SIMD_LANE_M / 8) + j] = FUNC_CALL(mmad8x8)(rowA[j], colB[0], regC[2*(SIMD_LANE_M / 8) + j]);
+        regC[2*(SIMD_LANE_M / 8) + j] = MMAD_8x8(rowA[j], colB[0], regC[2*(SIMD_LANE_M / 8) + j]);
     }
     __attribute__((opencl_unroll_hint(SG_TILE_M / 8)))
     for (uint j = 0; j < (SG_TILE_M / 8); ++j)
     {
         // Compute partial C
-        regC[3*(SIMD_LANE_M / 8) + j] = FUNC_CALL(mmad8x8)(rowA[j], colB[1], regC[3*(SIMD_LANE_M / 8) + j]);
+        regC[3*(SIMD_LANE_M / 8) + j] = MMAD_8x8(rowA[j], colB[1], regC[3*(SIMD_LANE_M / 8) + j]);
     }
 }
 
