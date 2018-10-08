@@ -37,6 +37,24 @@
 #include <type_traits>
 #include <random>
 
+using namespace cldnn::utils::examples;
+using namespace cldnn::utils::examples::cmdline;
+
+
+namespace cldnn
+{
+namespace utils
+{
+namespace examples
+{
+namespace cmdline
+{
+    const unsigned long app_version = 0x10000L;
+} // namespace cmdline
+} // namespace examples
+} // namespace utils
+} // namespace cldnn
+
 
   /// Prepares command-line options for current application.
   ///
@@ -45,13 +63,10 @@
   /// @return Helper class with basic messages and command-line options.
 static cmdline_options prepare_cmdline_options(const std::shared_ptr<const executable_info>& exec_info)
 {
-    namespace bpo = boost::program_options;
-
     // ----------------------------------------------------------------------------------------------------------------
     // Standard options.
-    bpo::options_description standard_cmdline_options("Standard options");
-    add_base_options(standard_cmdline_options);
-    standard_cmdline_options.add_options()
+    auto standard_cmdline_options = cmdline_options::create_group("Standard options");
+    standard_cmdline_options->add_options()
         ("input", bpo::value<std::string>()->value_name("<input-dir>"),
             "Path to input directory containing images to classify (mandatory when running classification).")
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("lenet"),
@@ -81,8 +96,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Number of epochs that will be done for traning. Default value is 1.");
 
     // Conversions options.
-    bpo::options_description weights_conv_cmdline_options("Weights conversion options");
-    weights_conv_cmdline_options.add_options()
+    auto weights_conv_cmdline_options = cmdline_options::create_group("Weights conversion options");
+    weights_conv_cmdline_options->add_options()
         ("convert", bpo::value<cldnn::backward_comp::neural_memory::nnd_layout_format::type>()->value_name("<nnd_layout_format-type>"),
             "Convert weights of a neural network to given nnd_layout_format (<nnd_layout_format-type> represents numeric value of "
             "cldnn::neural_memory::nnd_layout_format enum).")
@@ -90,19 +105,7 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Name or part of the name of weight file(s) to be converted.\nFor example:\n"
             "  \"conv1\" - first convolution,\n  \"fc\" - every fully connected.");
 
-    // All options.
-    bpo::options_description all_cmdline_options;
-    all_cmdline_options.add(standard_cmdline_options).add(weights_conv_cmdline_options);
-    // All visible options.
-    bpo::options_description all_visible_cmdline_options;
-    all_visible_cmdline_options.add(standard_cmdline_options).add(weights_conv_cmdline_options);
-
-    auto version_msg_out = print_version_message(exec_info);
-
-    auto help_msg_out = print_help_message(exec_info);
-    help_msg_out << all_visible_cmdline_options;
-
-    return {all_cmdline_options, help_msg_out.str(), version_msg_out.str()};
+    return {exec_info, standard_cmdline_options, true, {}, {standard_cmdline_options, weights_conv_cmdline_options}};
 }
 
 template<typename MemElemTy>
@@ -192,11 +195,11 @@ void run_topology(const execution_params &ep)
 
     cldnn::topology primitives;
 
-    if (ep.print_type == Verbose)
+    if (ep.print_type == print_type::verbose)
     {
         std::cout << "Building " << ep.topology_name << " started" << std::endl;
     }
-    else if (ep.print_type == ExtendedTesting)
+    else if (ep.print_type == print_type::extended_testing)
     {
         std::cout << "Extended testing of " << ep.topology_name << std::endl;
     }
@@ -232,7 +235,7 @@ void run_topology(const execution_params &ep)
 
     auto build_time = timer_build.uptime();
 
-    if (ep.print_type == Verbose)
+    if (ep.print_type == print_type::verbose)
     {
         std::cout << "Building " << ep.topology_name << " finished in " << instrumentation::to_string(build_time) << std::endl;
     }
@@ -255,7 +258,7 @@ void run_topology(const execution_params &ep)
         if (ep.topology_name == "vgg16_test")
             neurons_list_filename = "names.txt";
 
-        auto input_list = get_input_list(ep.input_dir);
+        auto input_list = list_input_files(ep.input_dir);
         if (input_list.empty())
             throw std::runtime_error("specified input images directory is empty (does not contain image data)");
 
@@ -503,7 +506,7 @@ void run_topology(const execution_params &ep)
 
             if (time_in_sec != 0.0)
             {
-                if (ep.print_type != ExtendedTesting)
+                if (ep.print_type != print_type::extended_testing)
                 {
                     std::cout << "Frames per second:" << (double)(ep.loop * batch_size) / time_in_sec << std::endl;
 
@@ -538,7 +541,7 @@ int main(int argc, char* argv[])
     {
         parsed_args = parse_cmdline_options(options, argc, argv);
 
-        if (parse_help_version(parsed_args, options))
+        if (parse_version_help_options(parsed_args, options))
             return 0;
 
         if (!parsed_args.count("input") && !parsed_args.count("convert"))
@@ -575,7 +578,7 @@ int main(int argc, char* argv[])
 
         // Execute network otherwise.
         execution_params ep;
-        parse_common_args(parsed_args, ep);
+        parse_common_options(parsed_args, ep);
 
         if (parsed_args.count("input"))
         {

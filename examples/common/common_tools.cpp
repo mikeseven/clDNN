@@ -24,28 +24,30 @@
 
 #include <iostream>
 
+#include <algorithm>
+#include <cstdint>
 #include <regex>
 #include <string>
-#include <algorithm>
 #include <limits>
 #include <api/CPP/data.hpp>
 #include <api/CPP/network.hpp>
 #include "file.h"
 
 using namespace boost::filesystem;
+using namespace cldnn::utils::examples;
 
 
 /// Global weak pointer to executable information.
 ///
 /// Used to detect misuses:
 ///  * Using get_executable_info() before set_executable_info().
-///  * Using get_executable_info() after destructon of global info object (during global destruction).
+///  * Using get_executable_info() after destruction of global info object (during global destruction).
 static std::weak_ptr<const executable_info> exec_info_ptr;
 
-/// Sets information about executable based on "main"'s command-line arguments.
+/// @brief Sets information about executable based on "main"'s command-line arguments.
 ///
-/// It works only once (if successful). Next calls to this function will not modify
-/// global executable's information object.
+/// @details It works only once (if successful). Next calls to this function will not modify
+///          global executable's information object.
 ///
 /// @param argc Main function arguments count.
 /// @param argv Main function argument values.
@@ -69,10 +71,10 @@ void set_executable_info(int argc, const char* const argv[])
     exec_info_ptr = info;
 }
 
-/// Gets information about executable.
+/// @brief Gets information about executable.
 ///
-/// Information is fetched only if information was set using set_executable_info() and not yet
-/// destroyed (during global destruction). Otherwise, exception is thrown.
+/// @details Information is fetched only if information was set using set_executable_info() and not yet
+///          destroyed (during global destruction). Otherwise, exception is thrown.
 ///
 /// @return Shared pointer pointing to valid executable information.
 ///
@@ -86,47 +88,51 @@ std::shared_ptr<const executable_info> get_executable_info()
     return exec_info; // NRVO
 }
 
-
-/// Joins path using native path/directory separator.
-///
-/// @param parent Parent path.
-/// @param child  Child part of path.
-///
-/// @return Joined path.
 std::string join_path(const std::string& parent, const std::string& child)
 {
     return (path(parent) / child).string();
 }
 
-// returns list of files (path+filename) from specified directory
-static inline std::vector<std::string> get_directory_files(const std::string& images_path, const std::regex& extension)
+
+/// @brief Returns list of all files from specified directory (recursive) which extensions are matching
+///        specified extension pattern.
+///
+/// @param root_dir  Root directory to scan.
+/// @param extension Extension pattern to match.
+/// @return          List of file paths (paths are normalized and returned as absolute paths).
+static std::vector<std::string> list_dir_files(const std::string& root_dir, const std::regex& extension)
 {
     std::vector<std::string> result;
-
-    for (const directory_entry& dir_entry : recursive_directory_iterator(images_path))
+    for (const auto& dir_entry : recursive_directory_iterator(root_dir))
     {
-        if (dir_entry.status().type() == file_type::regular_file && std::regex_match(dir_entry.path().extension().string(), extension))
+        if (dir_entry.status().type() == file_type::regular_file &&
+            std::regex_match(dir_entry.path().extension().string(), extension))
         {
             result.push_back(absolute(dir_entry.path()).string());
         }
     }
+
     return result;
 }
 
-// returns list of files (path+filename) from specified directory
-std::vector<std::string> get_input_list(const std::string& images_path)
+std::vector<std::string> list_input_files(const std::string& root_dir, const bool image_files_only)
 {
-    std::regex allowed_exts("^\\.(jpe?g|png|bmp|gif|j2k|jp2|tiff|txt|idx3\\-ubyte|mdb|bin)$",
-                            std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
-    return get_directory_files(images_path, allowed_exts);
+    const auto allowed_exts_pattern = image_files_only
+                                          ? "^\\.(?:jpe?g|png|bmp|gif|j2k|jp2|tiff)$"
+                                          : "^\\.(?:jpe?g|png|bmp|gif|j2k|jp2|tiff|txt|idx3\\-ubyte|bin)$";
+    const std::regex allowed_exts(
+        allowed_exts_pattern,
+        std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
+    return list_dir_files(root_dir, allowed_exts);
 }
 
 // returns list of files (path+filename) from specified directory
 std::vector<std::string> get_directory_weights(const std::string& images_path)
 {
-    std::regex allowed_exts("^\\.nnd$",
+    const std::regex allowed_exts(
+        "^\\.nnd$",
         std::regex_constants::ECMAScript | std::regex_constants::icase | std::regex_constants::optimize);
-    return get_directory_files(images_path, allowed_exts);
+    return list_dir_files(images_path, allowed_exts);
 }
 
 //get_model_name (subtract _train or _test from topology string)
@@ -140,58 +146,24 @@ std::string get_model_name(const std::string& topology_name)
     return model_name;
 }
 
-void nn_data_load_from_image(
-    std::string  filename,                       // Load of all data from a image filename
-    cldnn::pointer<float>::iterator dst_buffer,
-    uint32_t                   std_size,         // size of image both: height and width
-    bool                       RGB_order,        // if true - image have RGB order, otherwise BGR
-    uint32_t                   min_size = 0)     // optional min_size to which image will be resized without aspect ratio change
-                                                 // supported formats: JPEG, J2K, JP2, PNG, BMP, WEBP, GIF, TIFF
+
+/// @brief Converts pixel channel value (8-bit) to corresponding element type.
+///
+/// @param val Input value.
+/// @return    Element representation with the same numerical value.
+template <typename ElemTy = float>
+static ElemTy convert_pixel_channel(const std::uint8_t val)
 {
-    FIBITMAP *bitmap_load;
-
-    if (min_size)
-        bitmap_load = fi::resize_image(fi::load_image_from_file(filename), min_size);
-    else
-        bitmap_load = fi::load_image_from_file(filename);
-
-    if (FIBITMAP *bitmap_raw = fi::crop_image_to_square_and_resize(bitmap_load, std_size)) {
-        FIBITMAP *bitmap;
-        if (FreeImage_GetBPP(bitmap_raw) != 24) {
-            bitmap = FreeImage_ConvertTo24Bits(bitmap_raw);
-            FreeImage_Unload(bitmap_raw);
-        }
-        else bitmap = bitmap_raw;
-
-        auto bytes_per_pixel = FreeImage_GetLine(bitmap) / std_size;
-        auto data_buffer = dst_buffer;
-        if (RGB_order) {
-            for (uint32_t y = 0u; y<std_size; ++y) {
-                uint8_t *pixel = FreeImage_GetScanLine(bitmap, std_size - y - 1);
-                for (uint32_t x = 0u; x<std_size; ++x) {
-                    *(data_buffer + 0 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_RED];
-                    *(data_buffer + 1 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_GREEN];
-                    *(data_buffer + 2 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_BLUE];
-                    pixel += bytes_per_pixel;
-                }
-            }
-        }
-        else {
-            for (uint32_t y = 0u; y<std_size; ++y) {
-                uint8_t *pixel = FreeImage_GetScanLine(bitmap, std_size - y - 1);
-                for (uint32_t x = 0u; x<std_size; ++x) {
-                    *(data_buffer + 0 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_BLUE];
-                    *(data_buffer + 1 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_GREEN];
-                    *(data_buffer + 2 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_RED];
-                    pixel += bytes_per_pixel;
-                }
-            }
-        }
-        FreeImage_Unload(bitmap);
-    }
+    return val;
 }
 
-static half_t convert_pixel_channel_to_half(uint8_t val)
+/// @brief Converts pixel channel value (8-bit) to corresponding half-precision floating
+///        point value (no normalization).
+///
+/// @param val Input value.
+/// @return    Half representation with the same numerical value.
+template <>
+half_t convert_pixel_channel<half_t>(const std::uint8_t val)
 {
 #if defined HALF_HALF_HPP
     return val;
@@ -232,106 +204,107 @@ static half_t convert_pixel_channel_to_half(uint8_t val)
 #endif
 }
 
-void nn_data_load_from_image(
-    std::string  filename,                       // Load of all data from a image filename
-    cldnn::pointer<half_t>::iterator dst_buffer,
-    uint32_t                   std_size,         // size of image both: height and width
-    bool                       RGB_order,        // if true - image have RGB order, otherwise BGR
-    uint32_t                   min_size = 0)     // optional min_size to which image will be resized without aspect ratio change
-                                                 // supported formats: JPEG, J2K, JP2, PNG, BMP, WEBP, GIF, TIFF
+
+/// @brief Loads data from image file into clDNN allocation / memory buffer (store layout YXFB; FP16).
+///
+/// @details The loaded image is normalized before reading actual data:
+///           -# Image is optionally resized (aspect ratio is kept) when the @p min_size is not @c 0.
+///           -# Image is optionally normalized to square image (aspect ratio is preserved).
+///              The parts of images outside square (square side is set to minimum of image width and height)
+///              are cut out.
+///           -# If image is not 24-bit RGB, it is converted to 24-bit RGB.
+///           .
+///          If any of these steps failed, the image is not read and the @c false is returned.
+///
+/// @param image_file_path  Path (relative or absolute) to image file.
+/// @param output_buffer_it Iterator (output iterator, copy-constructible) that points to
+///                         buffer where data from image should be stored.
+/// @param rgb_order        Indicates that color channels should be stored in features in RGB order.
+///                         If @c true then RGB order is used; otherwise, BGR order is applied.
+/// @param normalized_size  Size of image square to which image will be normalized.
+///                         If @c 0 is specified, the image is not normalized to square.
+/// @param min_size         Size of either width or height (which is lower) to which image
+///                         should be resized (keeping aspect ratio) before normalization.
+///                         If @c 0 is specified, the image is not resized.
+/// @return                 @c true if image load was successful; otherwise, @c false.
+template <typename OutIterTy>
+static auto load_data_from_image(const std::string& image_file_path,
+                                 OutIterTy output_buffer_it,
+                                 const bool rgb_order           = false,
+                                 const unsigned normalized_size = 0,
+                                 const unsigned min_size        = 0)
+    -> std::enable_if_t<std::is_arithmetic<typename std::iterator_traits<OutIterTy>::value_type>::value ||
+                        std::is_same<typename std::iterator_traits<OutIterTy>::value_type, half_t>::value, bool>
 {
-    FIBITMAP *bitmap_load;
+    using out_elem_type = typename std::iterator_traits<OutIterTy>::value_type;
 
-    if (min_size)
-        bitmap_load = fi::resize_image(fi::load_image_from_file(filename), min_size);
-    else
-        bitmap_load = fi::load_image_from_file(filename);
 
-    if (FIBITMAP *bitmap_raw = fi::crop_image_to_square_and_resize(bitmap_load, std_size)) {
-        FIBITMAP *bitmap;
-        if (FreeImage_GetBPP(bitmap_raw) != 24) {
-            bitmap = FreeImage_ConvertTo24Bits(bitmap_raw);
-            FreeImage_Unload(bitmap_raw);
-        }
-        else bitmap = bitmap_raw;
-
-        auto bytes_per_pixel = FreeImage_GetLine(bitmap) / std_size;
-        auto data_buffer = dst_buffer;
-        if (RGB_order) {
-            for (uint32_t y = 0u; y<std_size; ++y) {
-                uint8_t *pixel = FreeImage_GetScanLine(bitmap, std_size - y - 1);
-                for (uint32_t x = 0u; x<std_size; ++x) {
-                    *(data_buffer + 0 + x * 3 + y * 3 * std_size) = convert_pixel_channel_to_half(pixel[FI_RGBA_RED]);
-                    *(data_buffer + 1 + x * 3 + y * 3 * std_size) = convert_pixel_channel_to_half(pixel[FI_RGBA_GREEN]);
-                    *(data_buffer + 2 + x * 3 + y * 3 * std_size) = convert_pixel_channel_to_half(pixel[FI_RGBA_BLUE]);
-                    pixel += bytes_per_pixel;
-                }
-            }
-        }
-        else {
-            for (uint32_t y = 0u; y<std_size; ++y) {
-                uint8_t *pixel = FreeImage_GetScanLine(bitmap, std_size - y - 1);
-                for (uint32_t x = 0u; x<std_size; ++x) {
-                    *(data_buffer + 0 + x * 3 + y * 3 * std_size) = convert_pixel_channel_to_half(pixel[FI_RGBA_BLUE]);
-                    *(data_buffer + 1 + x * 3 + y * 3 * std_size) = convert_pixel_channel_to_half(pixel[FI_RGBA_GREEN]);
-                    *(data_buffer + 2 + x * 3 + y * 3 * std_size) = convert_pixel_channel_to_half(pixel[FI_RGBA_RED]);
-                    pixel += bytes_per_pixel;
-                }
-            }
-        }
-        FreeImage_Unload(bitmap);
+    std::shared_ptr<fipImage> normalized_image;
+    try
+    {
+        const auto loaded_image = min_size != 0
+                                      ? itk::resize_keep_ar(itk::load(image_file_path), min_size)
+                                      : itk::load(image_file_path);
+        normalized_image = normalized_size != 0
+                               ? itk::crop_resize_to_square(loaded_image, normalized_size)
+                               : loaded_image;
     }
-}
-
-void nn_data_load_from_image(
-    std::string  filename,                       // Load of all data from a image filename
-    std::vector<float>::iterator dst_buffer,
-    uint32_t                   std_size,         // size of image both: height and width
-    bool                       RGB_order,        // if true - image have RGB order, otherwise BGR
-    uint32_t                   min_size = 0)     // optional min_size to which image will be resized without aspect ratio change
-                                                 // supported formats: JPEG, J2K, JP2, PNG, BMP, WEBP, GIF, TIFF
-{
-    FIBITMAP *bitmap_load;
-
-    if (min_size)
-        bitmap_load = fi::resize_image(fi::load_image_from_file(filename), min_size);
-    else
-        bitmap_load = fi::load_image_from_file(filename);
-
-    if (FIBITMAP *bitmap_raw = fi::crop_image_to_square_and_resize(bitmap_load, std_size)) {
-        FIBITMAP *bitmap;
-        if (FreeImage_GetBPP(bitmap_raw) != 24) {
-            bitmap = FreeImage_ConvertTo24Bits(bitmap_raw);
-            FreeImage_Unload(bitmap_raw);
-        }
-        else bitmap = bitmap_raw;
-
-        auto bytes_per_pixel = FreeImage_GetLine(bitmap) / std_size;
-        auto data_buffer = dst_buffer;
-        if (RGB_order) {
-            for (uint32_t y = 0u; y<std_size; ++y) {
-                uint8_t *pixel = FreeImage_GetScanLine(bitmap, std_size - y - 1);
-                for (uint32_t x = 0u; x<std_size; ++x) {
-                    *(data_buffer + 0 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_RED];
-                    *(data_buffer + 1 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_GREEN];
-                    *(data_buffer + 2 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_BLUE];
-                    pixel += bytes_per_pixel;
-                }
-            }
-        }
-        else {
-            for (uint32_t y = 0u; y<std_size; ++y) {
-                uint8_t *pixel = FreeImage_GetScanLine(bitmap, std_size - y - 1);
-                for (uint32_t x = 0u; x<std_size; ++x) {
-                    *(data_buffer + 0 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_BLUE];
-                    *(data_buffer + 1 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_GREEN];
-                    *(data_buffer + 2 + x * 3 + y * 3 * std_size) = pixel[FI_RGBA_RED];
-                    pixel += bytes_per_pixel;
-                }
-            }
-        }
-        FreeImage_Unload(bitmap);
+    catch (const std::runtime_error&)
+    {
+        return false;
     }
+
+    if (!normalized_image->isValid() || normalized_image->accessPixels() == nullptr)
+        return false;
+    if (normalized_image->getBitsPerPixel() != 24)
+    {
+        const auto convert_success = normalized_image->convertTo24Bits();
+        if (!convert_success)
+            return false;
+    }
+
+    const auto width = normalized_image->getWidth();
+    const auto height = normalized_image->getHeight();
+
+    const auto bytes_per_pixel = normalized_image->getLine() / width;
+    auto buffer_it = output_buffer_it;
+
+    if (rgb_order)
+    {
+        for (unsigned y = 0; y < height; ++y)
+        {
+            auto image_pixel = reinterpret_cast<std::uint8_t*>(normalized_image->getScanLine(height - y - 1));
+            if (image_pixel == nullptr)
+                return false;
+
+            for (unsigned x = 0; x < width; ++x)
+            {
+                *buffer_it = convert_pixel_channel<out_elem_type>(image_pixel[FI_RGBA_RED]);   ++buffer_it;
+                *buffer_it = convert_pixel_channel<out_elem_type>(image_pixel[FI_RGBA_GREEN]); ++buffer_it;
+                *buffer_it = convert_pixel_channel<out_elem_type>(image_pixel[FI_RGBA_BLUE]);  ++buffer_it;
+                image_pixel += bytes_per_pixel;
+            }
+        }
+    }
+    else
+    {
+        for (unsigned y = 0; y < height; ++y)
+        {
+            auto image_pixel = reinterpret_cast<std::uint8_t*>(normalized_image->getScanLine(height - y - 1));
+            if (image_pixel == nullptr)
+                return false;
+
+            for (unsigned x = 0; x < width; ++x)
+            {
+                *buffer_it = convert_pixel_channel<out_elem_type>(image_pixel[FI_RGBA_BLUE]);  ++buffer_it;
+                *buffer_it = convert_pixel_channel<out_elem_type>(image_pixel[FI_RGBA_GREEN]); ++buffer_it;
+                *buffer_it = convert_pixel_channel<out_elem_type>(image_pixel[FI_RGBA_RED]);   ++buffer_it;
+                image_pixel += bytes_per_pixel;
+            }
+        }
+    }
+
+    return true;
 }
 
 std::string get_image_file(const std::string& img_name, const std::vector<std::string>& images_list)
@@ -373,7 +346,7 @@ void load_images_from_file_list(
     for (auto img : images_list)
     {
         // "false" because we want to load images in BGR format because weights are in BGR format and we don't want any conversions between them.
-        nn_data_load_from_image(img, it, dim[0], false, min_size);
+        load_data_from_image(img, it, false, dim[0], min_size);
         it += single_image_size;
     }
 }
@@ -628,7 +601,7 @@ void compute_image_mean(const execution_params &ep, cldnn::engine& engine, bool 
     const uint32_t size_x = use_cifar10 ? 32 : 256;
     const uint32_t size_y = use_cifar10 ? 32 : 256;
 
-    auto input_list = get_input_list(ep.input_dir);
+    auto input_list = list_input_files(ep.input_dir);
 
     std::vector<std::string> requested_images;
     if(!use_cifar10)
@@ -657,7 +630,7 @@ void compute_image_mean(const execution_params &ep, cldnn::engine& engine, bool 
         for (auto img : requested_images)
         {
             // "false" because we want to load images in BGR format because weights are in BGR format and we don't want any conversions between them.
-            nn_data_load_from_image(img, img_tmp_it, size_x, false, 256);
+            load_data_from_image(img, img_tmp_it, false, size_x, 256);
 
             for (uint32_t i = 0; i < img_sum.size(); i++)
                 img_sum[i] += img_tmp[i];
@@ -790,7 +763,7 @@ void print_profiling_table(std::ostream& os, const std::vector<cldnn::instrument
 // Create worker
 cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology& topology, const execution_params &ep, const std::vector<cldnn::primitive_id> &output_ids)
 {
-    if (ep.print_type == Verbose)
+    if (ep.print_type == print_type::verbose)
     {
         std::cout << "GPU Program compilation started" << std::endl;
     }
@@ -842,7 +815,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
             }
         }
         else
-            outputs.push_back("output");
+            outputs.emplace_back("output");
 
         outputs.push_back(ep.dump_layer_name);
     }
@@ -854,7 +827,7 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
         cldnn::program program(engine, topology, options);
         auto compile_time = timer_compilation.uptime();
 
-        if (ep.print_type == Verbose)
+        if (ep.print_type == print_type::verbose)
         {
             std::cout << "GPU Program compilation finished in " << instrumentation::to_string(compile_time) << std::endl;
             std::cout << "Network allocation started" << std::endl;
@@ -864,12 +837,12 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
 
         auto allocation_time = timer_compilation.uptime() - compile_time;
 
-        if (ep.print_type == Verbose)
+        if (ep.print_type == print_type::verbose)
         {
             std::cout << "Network allocation finished in " << instrumentation::to_string(allocation_time) << std::endl;
         }
 
-        if (ep.print_type == ExtendedTesting)
+        if (ep.print_type == print_type::extended_testing)
         {
             std::cout << "All primitives information: " << std::endl;
             std::vector<std::string> primitives_id = topology.get_primitive_ids();
@@ -961,7 +934,7 @@ std::chrono::nanoseconds execute_cnn_topology(cldnn::network network,
 {
     bool log_energy = do_log_energy(ep, energyLib);
 
-    if (ep.print_type == Verbose)
+    if (ep.print_type == print_type::verbose)
     {
         std::cout << "Start execution";
         if (ep.loop > 1)
@@ -992,7 +965,7 @@ std::chrono::nanoseconds execute_rnn_topology(cldnn::network network,
 {
     bool log_energy = do_log_energy(ep, energyLib);
 
-    if (ep.print_type == Verbose)
+    if (ep.print_type == print_type::verbose)
     {
         std::cout << "Start execution.";
         if (ep.loop > 1)
@@ -1025,7 +998,7 @@ std::chrono::nanoseconds execute_rnn_topology(cldnn::network network,
     for (size_t i = 0; i < ep.batch; i++)
     {
         std::cout << "BATCH: " << i << " results: " << std::endl;
-        std::cout << lstm_data.get_predictions(i, ep.print_type == PrintType::ExtendedTesting ? true : false) << std::endl;
+        std::cout << lstm_data.get_predictions(i, ep.print_type == print_type::extended_testing ? true : false) << std::endl;
     }
 
     return get_execution_time(timer_execution, ep, output, outputs, log_energy, energyLib);
@@ -1078,7 +1051,7 @@ std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& tim
         energyLib.StopLog();
     }
 
-    if (ep.print_type == Verbose)
+    if (ep.print_type == print_type::verbose)
     {
         std::cout << ep.topology_name << " scheduling finished in " << instrumentation::to_string(scheduling_time) << std::endl;
         std::cout << ep.topology_name << " execution finished in " << instrumentation::to_string(execution_time) << std::endl;

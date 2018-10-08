@@ -15,7 +15,7 @@
 
 # ========================================= Name / Output settings =====================================
 
-set(CLDNN_BUILD__PROJ             "microbench")
+set(CLDNN_BUILD__PROJ             "examples_transform")
 set(CLDNN_BUILD__PROJ_LABEL       "${CLDNN_BUILD__PROJ}")
 set(CLDNN_BUILD__PROJ_OUTPUT_NAME "${CLDNN_BUILD__PROJ}${CLDNN__OUT_CPU_SUFFIX}")
 
@@ -46,7 +46,7 @@ source_group("${__CLDNN_Label__main}"   FILES ${__CLDNN_Sources__main})
 include_directories(
     "${CLDNN__MAIN_DIR}"
     "${CMAKE_CURRENT_SOURCE_DIR}"
-	"${CMAKE_CURRENT_SOURCE_DIR}/../common"
+    "${CMAKE_CURRENT_SOURCE_DIR}/../common"
   )
 
 # =================================== Link targets and dependencies ====================================

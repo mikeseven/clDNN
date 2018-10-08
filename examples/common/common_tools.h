@@ -34,14 +34,26 @@
 
 using cldnn_output = std::map<cldnn::primitive_id, cldnn::network_output>;
 
-enum PrintType
+namespace cldnn
 {
-    Verbose,
-    Perf,
-    ExtendedTesting,
+namespace utils
+{
+namespace examples
+{
 
-    PrintType_count // must be last
+enum class print_type
+{
+    verbose,
+    performance,
+    extended_testing,
+
+    // ReSharper disable once CppInconsistentNaming
+    _enum_count
 };
+
+} // namespace examples
+} // namespace utils
+} // namespace cldnn
 
 /// Information about executable.
 class executable_info
@@ -64,7 +76,7 @@ public:
         return _file_name_wo_ext;
     }
 
-    /// Gets aboulte path to executable directory.
+    /// Gets absolute path to executable directory.
     const std::string& dir() const
     {
         return _dir;
@@ -72,21 +84,21 @@ public:
 
     /// Creates new instance of information about current executable.
     ///
-    /// @tparam StrTy1_ Type of first string argument (std::string constructible; use for forwarding).
-    /// @tparam StrTy2_ Type of second string argument (std::string constructible; use for forwarding).
-    /// @tparam StrTy3_ Type of third string argument (std::string constructible; use for forwarding).
+    /// @tparam Str1Ty Type of first string argument (std::string constructible; use for forwarding).
+    /// @tparam Str2Ty Type of second string argument (std::string constructible; use for forwarding).
+    /// @tparam Str3Ty Type of third string argument (std::string constructible; use for forwarding).
     ///
     /// @param path             Absolute path to executable.
     /// @param file_name_wo_ext Executable file name without extension (stem name).
     /// @param dir              Absolute path to executable directory.
-    template <typename StrTy1_, typename StrTy2_, typename StrTy3_,
-              typename = std::enable_if_t<std::is_constructible<std::string, StrTy1_>::value &&
-                                          std::is_constructible<std::string, StrTy2_>::value &&
-                                          std::is_constructible<std::string, StrTy3_>::value, void>>
-    executable_info(StrTy1_&& path, StrTy2_&& file_name_wo_ext, StrTy3_&& dir)
-        : _path(std::forward<StrTy1_>(path)),
-          _file_name_wo_ext(std::forward<StrTy2_>(file_name_wo_ext)),
-          _dir(std::forward<StrTy3_>(dir))
+    template <typename Str1Ty, typename Str2Ty, typename Str3Ty,
+              typename = std::enable_if_t<std::is_constructible<std::string, Str1Ty>::value &&
+                                          std::is_constructible<std::string, Str2Ty>::value &&
+                                          std::is_constructible<std::string, Str3Ty>::value, void>>
+    executable_info(Str1Ty&& path, Str2Ty&& file_name_wo_ext, Str3Ty&& dir)
+        : _path(std::forward<Str1Ty>(path)),
+          _file_name_wo_ext(std::forward<Str2Ty>(file_name_wo_ext)),
+          _dir(std::forward<Str3Ty>(dir))
     {}
 };
 
@@ -161,9 +173,8 @@ struct execution_params {
     bool        dump_sources;
     std::string serialization;
     std::string load_program;
-
-    PrintType print_type = PrintType::Verbose; // printing modes - to support Verbose, vs Perf ony, vs ImageNet testing prints
-    size_t loop = 1; // running the same input in a loop for smoothing perf results
+    cldnn::utils::examples::print_type print_type; // printing modes - to support Verbose, vs performance ony, vs ImageNet testing prints
+    size_t loop;            // running the same input in a loop for smoothing perf results
 
     bool perf_per_watt; // power instrumentation
     bool disable_mem_pool; // memory 
@@ -210,7 +221,13 @@ struct memory_filler
     }
 };
 
-std::vector<std::string> get_input_list(const std::string& images_path);
+/// @brief Returns list of all input files from specified directory (recursive).
+///
+/// @param root_dir         Root directory to scan for input files.
+/// @param image_files_only Indicates that only (single) image files should
+///                         be returned (exclude text files and image archives).
+/// @return                 List of file paths (paths are normalized and returned as absolute paths).
+std::vector<std::string> list_input_files(const std::string& root_dir, bool image_files_only = false);
 std::vector<std::string> get_directory_weights(const std::string& images_path);
 
 template <typename MemElemTy = float>

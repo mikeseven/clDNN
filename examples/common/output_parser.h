@@ -11,7 +11,7 @@ struct html
     void batch(const cldnn::memory& mem_primitive,
                const std::string& categories_file,
                const std::vector<std::string>& image_names,
-               PrintType printType = PrintType::Verbose);
+               cldnn::utils::examples::print_type printType = cldnn::utils::examples::print_type::verbose);
     ~html( );
 
 private:
