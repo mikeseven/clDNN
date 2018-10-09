@@ -54,10 +54,16 @@ struct program_node
     friend struct program_impl;
     friend class constants_propagator;
     friend class trim_to_outputs;      //to be removed
+    friend class prepare_buffer_fusing; // to be removed when possible
+    friend class prepare_primitive_fusing; // to be removed when possible
     friend class propagate_constants; // to be removed
     friend class reorder_inputs;  // to be removed
-    friend class post_optimize_weights; // to be removed when possible
-    friend class remove_redundant_reorders; // to be removed when possible
+    friend class post_optimize_weights; // to be removed when possible - requires an access to selected_impl
+    friend class pre_optimize_bias; // to be removed when possible
+    friend class prepare_depthwise_sep_opt; // to be removed when possible
+    friend class prep_opt_depthwise_sep_post; // to be removed when possible
+    friend class eltwise_shrinking; // to be removed when possible
+    friend class eltwise_remove_stride; // to be removed when possible
 
     template <class PType>
     friend struct typed_program_node;

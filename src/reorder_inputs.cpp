@@ -30,6 +30,7 @@
 
 using namespace cldnn;
 
+
 //ToDo remove friendship relation from  program_node and program_impl
 
 reorder_inputs::reorder_inputs(layout_optimizer& lo_ref) : _lo(lo_ref) {}
@@ -257,7 +258,7 @@ void reorder_inputs::run(program_impl &p, layout_optimizer& lo)
         }
     };
 
-    for (auto& prim : p.processing_order)
+    for (auto& prim : p.get_processing_order())
     {
         //there's an assumption that only convolution will take data/input_layout as input
         //exception to that rule would be a convolution which takes a reorder as input - see reoder_input above

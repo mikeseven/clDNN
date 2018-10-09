@@ -16,10 +16,11 @@
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 
+
 #include "pass_manager.h"
 #include "program_helpers.h"
 
-//ToDo remove friendship relation from  program_node and program_impl
+//ToDo remove friendship relation from program_node and program_impl
 
 post_optimize_weights::post_optimize_weights(layout_optimizer& lo_ref) : _lo(lo_ref) {}
 

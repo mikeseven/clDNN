@@ -21,7 +21,7 @@
 
 using namespace cldnn;
 
-//ToDo remove friendship relation from  program_node and program_impl
+//ToDo remove friendship relation from program_impl (requires an access to extract_and_remove from program_impl, which is private)
 void remove_redundant_reorders::run(program_impl &p)
 {
     auto itr = p.processing_order.begin(); //note we need to use iterators since currently processed element can be removed
@@ -55,7 +55,7 @@ void remove_redundant_reorders::run(program_impl &p)
         if (!optimize)
             continue;
 
-        assert(node->dependencies.size() == 1 && "reorder without mean should have exactly one dependecy (input)");
+        assert(node->get_dependencies().size() == 1 && "reorder without mean should have exactly one dependecy (input)");
         auto& r_output = r_nodes_to_remove.front();
         auto& r_input = r_nodes_to_remove.back()->get_dependency(0);
         auto o_layout = r_output->get_output_layout();
