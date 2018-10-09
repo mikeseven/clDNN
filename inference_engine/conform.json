@@ -128,7 +128,7 @@
         "Perc_ZF_fasterRCNN_fp32": {
             "bbox_pred": "0xD072E13E79CAA17AEB152851FE752C6F",
             "loss_cls": "0x73AB7DF50B024CDDB929D4DB20F10044",
-            "proposal": "0x4EE01CCC6653A27EE1EE05B57F92B9DB"
+            "proposal": "0xD8A9F0C4B5FAF121CFC76D6DE61380F1"
         },
         "ResNet-101_fp16": {
             "1": "0x295158C521F1642BA91A923951059A6C",
