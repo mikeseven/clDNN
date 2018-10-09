@@ -278,6 +278,7 @@ struct lstm_elt : public primitive_base<lstm_elt, CLDNN_PRIMITIVE_DESC(lstm_elt)
         const std::vector<cldnn_activation_func> activations = {},
         const std::vector<cldnn_activation_additional_params> activation_params = {},
         const cldnn_lstm_offset_order offset_order = cldnn_lstm_offset_order_iofz,
+        const uint32_t direction = 0,
         const padding& output_padding = padding()
         )
         : primitive_base(id, {input}, output_padding)
@@ -287,6 +288,7 @@ struct lstm_elt : public primitive_base<lstm_elt, CLDNN_PRIMITIVE_DESC(lstm_elt)
         , activations(activations)
         , activation_params(activation_params)
         , offset_order(offset_order)
+        , direction(direction)
     {
     }
 
@@ -299,6 +301,7 @@ struct lstm_elt : public primitive_base<lstm_elt, CLDNN_PRIMITIVE_DESC(lstm_elt)
 		, activations(dto->activations, std::end(dto->activations))
 		, activation_params(dto->activation_params, std::end(dto->activation_params))
         , offset_order(dto->offset_order)
+        , direction(dto->direction)
     {
     }
 
@@ -314,6 +317,9 @@ struct lstm_elt : public primitive_base<lstm_elt, CLDNN_PRIMITIVE_DESC(lstm_elt)
     std::vector<cldnn_activation_additional_params> activation_params;
     /// @brief Weights, recurrent weights, and biases order. [iofz] : ONNX, [ifoz] : Caffe
     cldnn_lstm_offset_order offset_order;
+    /// @brief direction default = 0, bidirectional = 1.
+    uint32_t direction;
+
 protected:
     std::vector<std::reference_wrapper<const primitive_id>> get_dependencies() const override
     {
@@ -335,6 +341,7 @@ protected:
         if (activation_params.size() == 3) {
             std::copy_n(activation_params.begin(), 3, dto.activation_params);
         }
+        dto.direction = direction;
     }
 };
 

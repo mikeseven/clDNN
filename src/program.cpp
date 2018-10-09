@@ -700,49 +700,19 @@ void program_impl::handle_lstm()
                 }
             }
             
-            std::cout << "LSTM order : " << lstm_prim->output_selection << std::endl;
-            bool emit_last_hidden = lstm_prim->output_selection == cldnn_lstm_output_hidden || 
-                                    lstm_prim->output_selection == cldnn_lstm_output_hidden_cell;
             bool emit_last_cell = lstm_prim->output_selection == cldnn_lstm_output_hidden_cell ||
                                   lstm_prim->output_selection == cldnn_lstm_output_sequence_cell;
             bool emit_sequence = lstm_prim->output_selection == cldnn_lstm_output_sequence_cell || 
                                  lstm_prim->output_selection == cldnn_lstm_output_sequence;
-            std::cout << "Emit last hidden = " << emit_last_hidden << "  emit_last_cell = " << emit_last_cell
-                      << "  emit sequence = " << emit_sequence << std::endl;
 
             std::vector<program_node*> cell_list(directions * sequence_len);
             std::vector<program_node*> hidden_list(directions * sequence_len);
             std::map<size_t, std::pair<primitive_id, program_node*>> output_map;
 
-            primitive_id hidden_fwd_id = initial_hidden_id;
-            primitive_id hidden_bwd_id = initial_hidden_id;
-            primitive_id cell_fwd_id = initial_cell_id;
-            primitive_id cell_bwd_id = initial_cell_id;
-
-            auto split_direction = [&](const std::string gate, bool initial_term, primitive_id& fwd_id, primitive_id& bwd_id) {
-                if (initial_term) {
-                    primitive_id initial_id = fwd_id;
-                    fwd_id = node->id() + ":" + gate + "_fwd";
-                    auto fwd_node = std::make_shared<crop>(fwd_id, initial_id, hidden_size, tensor{ 0,0,0,0 });
-                    auto &n1 = get_or_create(fwd_node);
-                    add_connection(*nodes_map.at(initial_id), n1);
-                    bwd_id = node->id() + ":" + gate + "_bwd";
-                    auto bwd_node = std::make_shared<crop>(bwd_id, initial_id, hidden_size, tensor{ 0,1,0,0 });
-                    auto &n2 = get_or_create(bwd_node);
-                    add_connection(*nodes_map.at(initial_id), n2);
-                }
-            };
-
-            //if bidirectional lstm then initial_hidden and initial_cell terms need to be split
-            if (directions > 1) {
-                split_direction("hidden", initial_hidden_term, hidden_fwd_id, hidden_bwd_id);
-                split_direction("cell", initial_cell_term, cell_fwd_id, cell_bwd_id);
-            }
-
             //lstm expanding
             for (size_t dir = 0; dir < directions; ++dir) {
-                auto hidden_id = dir == 0 ? hidden_fwd_id : hidden_bwd_id;
-                auto cell_id = dir == 0 ? cell_fwd_id : cell_bwd_id;
+                auto hidden_id = initial_hidden_id;
+                auto cell_id = initial_cell_id;
                 for (size_t i = 0; i < sequence_len; ++i) {
                     size_t idx = i + dir * sequence_len;
                     primitive_id lstm_gemm_id = node->id() + ":lstm_gemm" + get_id_string(idx);
@@ -769,7 +739,7 @@ void program_impl::handle_lstm()
                     auto &n1 = get_or_create(lstm_gemm_node);
 
                     auto lstm_elt_node = std::make_shared<lstm_elt>(lstm_elt_id, lstm_gemm_id, cell_id, lstm_prim->clip, lstm_prim->input_forget,
-                        lstm_prim->activations, lstm_prim->activation_params, lstm_prim->offset_order);
+                        lstm_prim->activations, lstm_prim->activation_params, lstm_prim->offset_order, (uint32_t)dir);
                     auto &n2 = get_or_create(lstm_elt_node);
                     //adding lstm_elt as user
                     add_connection(n1, n2);
@@ -844,8 +814,6 @@ void program_impl::handle_lstm()
                 {
                     output_ids_offsets.push_back(e.second.first);
                 }
-                for (auto& e : output_ids_offsets)
-                    std::cout << e << std::endl;
                 primitive_id original_id = node->id();
                 primitive_id concatenation_id = original_id + ":concat";
                 auto concatenation_primitive = std::make_shared<concatenation>(concatenation_id, output_ids_offsets, concatenation::along_f);
@@ -865,14 +833,10 @@ void program_impl::handle_lstm()
                     // bidirectional support requires concatenations along the direction and sequence axis
                     // instead we can concatenate along the sequence axis and reshape the tensor to the account
                     // for the direction
-                    size_t concatenate_len = 0;
-                    if (emit_sequence)			concatenate_len = sequence_len;
-                    else if (emit_last_hidden)	concatenate_len++;
-                    
+                    size_t concatenate_len = emit_sequence ? sequence_len : 1;
 					if (emit_last_cell)			concatenate_len++;
 
                     tensor output_size {input_size.batch[0], static_cast<int32_t>(concatenate_len), hidden_size.spatial[0], (int32_t)directions};
-                    std::cout << "Output Size = " << output_size << std::endl;
                     primitive_id reshape_id = original_id + ":reshape";
                     auto reshape_primitive = std::make_shared<reshape>(reshape_id, concatenation_id, output_size);
                     auto &reshape_node = get_or_create(reshape_primitive);

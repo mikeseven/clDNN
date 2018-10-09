@@ -507,11 +507,11 @@ void generic_lstm_gpu_test(int layers, int sequence_len, int direction, int batc
             set_values(biases[i], ref_bias_vec[i]);
         }
         if (hasInitialHidden) {
-            hidden.push_back(memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { batch_size,  direction, hidden_size, 1 } }));
+            hidden.push_back(memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { batch_size, 1, hidden_size, direction } }));
             set_values(hidden[i], ref_hidden_vec[i]);
         }
         if (hasInitialCell) {
-            cell.push_back(memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { batch_size, direction, hidden_size, 1 } }));
+            cell.push_back(memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { batch_size, 1, hidden_size, direction} }));
             set_values(cell[i], ref_cell_vec[i]);
         }
     }
@@ -601,10 +601,10 @@ void generic_lstm_gpu_test(int layers, int sequence_len, int direction, int batc
 template<typename T>
 void lstm_gpu_output_test(const cldnn_lstm_output& output_selection, int directions) {
     int layers = 1;
-    int sequence_len = 2;
-    int batch_size = 1;
-    int input_size = 1;
-    int hidden_size = 1;
+    int sequence_len = 4;
+    int batch_size = 3;
+    int input_size = 3;
+    int hidden_size = 4;
 
     std::cout << "Layers = " << layers << " Input Size = " << input_size << " Hidden Size = " << hidden_size
             << " Sequence Len = " << sequence_len << " Directions = " << directions << " Batch Size = " << batch_size 
@@ -635,13 +635,13 @@ void lstm_gpu_output_test(const cldnn_lstm_output& output_selection, int directi
 
     engine engine;
 
-    memory input = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, {batch_size, sequence_len, input_size, 1} });
-    
+    memory input = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, {batch_size, sequence_len, input_size, 1} }); 
     memory weights = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { 1, directions, input_size , 4 * hidden_size } });
     memory recurrent = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { 1, directions, hidden_size, 4 * hidden_size } });
-    memory biases = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { 1, 1, 4 * hidden_size, directions } });;
-    memory hidden = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { batch_size,  directions, hidden_size, 1 } });;
-    memory cell = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { batch_size, directions, hidden_size, 1 } });;
+    memory biases = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { 1, 1, 4 * hidden_size, directions } });
+    memory hidden = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { batch_size, 1, hidden_size, directions } });
+    memory cell = memory::allocate(engine, { type_to_data_type<T>::value, format::bfyx, { batch_size, 1, hidden_size, directions } });
+
     set_values(input, ref_input_vec);
     set_values(weights, ref_weights_vec);
     set_values(recurrent, ref_recurrent_vec);
@@ -653,8 +653,6 @@ void lstm_gpu_output_test(const cldnn_lstm_output& output_selection, int directi
                           output_selection == cldnn_lstm_output_sequence_cell;
     bool emit_last_hidden = output_selection == cldnn_lstm_output_hidden || 
                             output_selection == cldnn_lstm_output_hidden_cell;
-
-    std::cout << "emit_last_cell = " << emit_last_cell << "  emit_last_hidden = " << emit_last_hidden << std::endl;                            
 
     topology topology;
     std::vector<std::pair<primitive_id, tensor>> input_ids_offsets;
@@ -681,14 +679,11 @@ void lstm_gpu_output_test(const cldnn_lstm_output& output_selection, int directi
         int32_t concatenation_len = emit_last_hidden ? 2 : sequence_len + 1;
         tensor hidden_tensor {batch_size, concatenation_len - 1, hidden_size, directions};
         tensor cell_tensor {batch_size, 1, hidden_size, directions};
-        std::cout << "Hidden_tensor = " << hidden_tensor << "  cell_tensor = " << cell_tensor << "  concatenation_len = " << concatenation_len << std::endl;
         topology.add(crop(emit_last_hidden ? "crop:last_hidden" : "crop:sequence", "lstm", hidden_tensor, tensor {0, 0, 0, 0}));
         topology.add(crop("crop:last_cell", "lstm", cell_tensor, tensor {0, concatenation_len - 1, 0, 0}));	
     }
 
-
-    build_options options = build_option::graph_dumps_dir("dumps");
-    network network(engine, topology, options);
+    network network(engine, topology);
     network.set_input_data("input", input);
     network.set_input_data("hidden", hidden);
     network.set_input_data("cell", cell);
@@ -696,9 +691,7 @@ void lstm_gpu_output_test(const cldnn_lstm_output& output_selection, int directi
     auto outputs = network.execute();
 	uint32_t ref_num_output_primitives = 1;  // Output will return atleast 1 primitive
 	
-	if (   output_selection == cldnn_lstm_output::cldnn_lstm_output_hidden_cell
-		|| output_selection == cldnn_lstm_output::cldnn_lstm_output_sequence_cell) {
-		
+	if (emit_last_cell) {
 		// add another primitve to account for cell state if the output selection includes cell state
 		ref_num_output_primitives += 1;  
 	}
@@ -709,34 +702,26 @@ void lstm_gpu_output_test(const cldnn_lstm_output& output_selection, int directi
 	for (auto itr = outputs.begin(); itr != outputs.end(); itr++) 
 	{
         auto output_tensor = itr->second.get_memory().get_layout().size;
-		primitive_id primitive_name = itr->first;
-		int32_t ref_output_size;
+        primitive_id primitive_name = itr->first;
+
 		cldnn::memory output_memory = itr->second.get_memory();
-        size_t output_size = itr->second.get_memory().size() / sizeof(T);
-		cldnn::layout input_layout = input.get_layout();
-		cldnn::tensor input_tensor = input_layout.size; 
+        int32_t output_size = (int32_t)(itr->second.get_memory().size() / sizeof(T));
 		cldnn::tensor ref_output_tensor;
 		VVVVF<T> ref_primitive_output;
-		int32_t ref_batch_size, ref_seq_len, ref_directions, ref_hidden_size;
+		
+		int32_t ref_batch_size = batch_size;
+		int32_t ref_hidden_size = hidden_size;
+		int32_t ref_directions = directions;
 
-		ref_batch_size = batch_size;
-		ref_hidden_size = hidden_size;
-		ref_directions = directions;
-
-		// If the primitive is a cell value
-		if (   (emit_last_cell == true)
-			&& (primitive_name.find("crop:last_cell") != std::string::npos))
+        int32_t ref_seq_len = 1;
+        // Set the reference output against which the primitive's output will be compared
+		if (primitive_name.find("crop:last_cell") != std::string::npos)
 		{
-			std::cout << "found last cell or last cell: " << primitive_name << std::endl;
-			ref_seq_len = 1;
-			ref_primitive_output = last_cell;  // This is the reference output against which the primitive's output will be compared
+			ref_primitive_output = last_cell;  
 		}
-		else if (   (   (emit_last_cell == true)
-			         && (primitive_name.find("crop:last_hidden") != std::string::npos))
-				 || (emit_last_hidden == true)) // if one of the output modes that might contain only the last hidden
+		else if (emit_last_hidden || primitive_name.find("crop:last_hidden") != std::string::npos)
 		{
-			ref_seq_len = 1;
-			ref_primitive_output = last_hidden;  // This is the reference output against which the primitive's output will be compared
+			ref_primitive_output = last_hidden;  
 		}
 		else
 		{
@@ -745,7 +730,7 @@ void lstm_gpu_output_test(const cldnn_lstm_output& output_selection, int directi
 		}
 
 		ref_output_tensor = { ref_batch_size, ref_seq_len, ref_hidden_size, ref_directions };
-		ref_output_size = ref_batch_size * ref_seq_len * ref_hidden_size * ref_directions;
+		int32_t ref_output_size = ref_batch_size * ref_seq_len * ref_hidden_size * ref_directions;
 
 		// The number of elements in reference should match the number of elements in the primitive's output
 		ASSERT_EQ(ref_output_size , output_size);  
@@ -771,40 +756,6 @@ void lstm_gpu_output_test(const cldnn_lstm_output& output_selection, int directi
         }
     }
 }
-
-
-TEST(lstm_gpu, output_test_f32) {
-    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_sequence, 1);
-}
-
-TEST(lstm_gpu, output_test_f32_1) {
-    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_hidden, 1);
-}
-
-TEST(lstm_gpu, output_test_f32_2) {
-    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_hidden_cell, 1);
-}
-
-TEST(lstm_gpu, output_test_f32_3) {
-    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_sequence_cell, 1);
-}
-
-TEST(lstm_gpu, output_test_f32_4) {
-    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_sequence, 2);
-}
-
-TEST(lstm_gpu, output_test_f32_5) {
-    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_hidden, 2);
-}
-
-TEST(lstm_gpu, output_test_f32_6) {
-    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_hidden_cell, 2);
-}
-
-TEST(lstm_gpu, output_test_f32_7) {
-    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_sequence_cell, 2);
-}
-
 
 TEST(lstm_gemm_gpu, generic_lstm_gemm_test_f32) {
     generic_lstm_gemm_gpu_test<float>(1, 1, 3, 6, 2, true, true);
@@ -964,9 +915,39 @@ TEST(lstm_gpu, generic_lstm_stacked_seq_bi_f32) {
     generic_lstm_gpu_test<float>(4, 7, 2, 3, 3, 2, true, true, true);
 }
 
+// optional outputs support
+TEST(lstm_gpu, output_test_sequence_f32) {
+    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_sequence, 1);
+}
+
+TEST(lstm_gpu, output_test_hidden_f32) {
+    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_hidden, 1);
+}
+
+TEST(lstm_gpu, output_test_hidden_cell_f32) {
+    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_hidden_cell, 1);
+}
+
+TEST(lstm_gpu, output_test_sequence_cell_f32) {
+    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_sequence_cell, 1);
+}
+
+TEST(lstm_gpu, output_test_sequence_bi_f32) {
+    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_sequence, 2);
+}
+
+TEST(lstm_gpu, output_test_hidden_bi_f32) {
+    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_hidden, 2);
+}
+
+TEST(lstm_gpu, output_test_hidden_cell_bi_f32) {
+    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_hidden_cell, 2);
+}
+
+TEST(lstm_gpu, output_test_sequence_cell_bi_f32) {
+    lstm_gpu_output_test<float>(cldnn_lstm_output::cldnn_lstm_output_sequence_cell, 2);
+}
+
 // TODO: Add tests for the following:
-// optional concatenate output
-// optional last hidden
-// optional last cell
 // optional activation list
 

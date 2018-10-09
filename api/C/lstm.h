@@ -133,6 +133,8 @@ cldnn_activation_func activations[3];
 cldnn_activation_additional_params activation_params[3];
 /// @brief Weights, recurrent weights, and biases order. [iofz] : ONNX, [ifoz] : Caffe
 cldnn_lstm_offset_order offset_order;
+/// @brief direction default = 0, bidirectional = 1.
+uint32_t direction;
 // NOT SUPPORTED YET
 // uint32_t output_sequence;
 CLDNN_END_PRIMITIVE_DESC(lstm_elt)
