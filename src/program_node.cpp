@@ -22,6 +22,8 @@
 #include "json_object.h"
 #include "xml_object.h"
 
+#include "boost/make_unique.hpp"
+
 using namespace cldnn;
 
 program_node::program_node(std::shared_ptr<primitive> prim, program_impl & prog) : desc(prim), myprog(prog)
@@ -87,7 +89,7 @@ void program_node::add_memory_dependency(std::vector<primitive_id> prim_list)
 //Function used by serialization. Not working yet, in progress.
 std::unique_ptr<xml_composite> program_node::desc_to_xml() const
 {
-    std::unique_ptr<xml_composite> node_info = std::unique_ptr<xml_composite>(new xml_composite());
+    std::unique_ptr<xml_composite> node_info = boost::make_unique<xml_composite>();
     node_info->add("id", id());
     node_info->add("valid_output_layout", bool_to_str(valid_output_layout));
 

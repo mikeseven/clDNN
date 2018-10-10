@@ -92,12 +92,12 @@ public:
     primitive_id id() const { return _node.id(); }
     primitive_id org_id() const { return _node.get_org_primitive_id(); }
     bool can_be_optimized() const { return _node.can_be_optimized(); }
-    const std::shared_ptr<const primitive> desc() const { return _node.get_primitive(); }
+    std::shared_ptr<const primitive> desc() const { return _node.get_primitive(); }
     network_impl& get_network() const { return _network; }
     uint32_t get_network_id() const;
 
     //return pointer to const to prevent arbitrary 'execute' call -> use primitive_inst.execute() instead
-    const primitive_impl* get_impl() const { return _impl.get(); }
+    primitive_impl* get_impl() const { return _impl.get(); }
 
     memory_impl& input_memory(size_t index = 0)  const 
     { 
