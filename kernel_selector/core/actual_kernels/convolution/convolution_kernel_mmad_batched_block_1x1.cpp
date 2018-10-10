@@ -18,7 +18,7 @@
 #include "kernel_selector_utils.h"
 
 namespace kernel_selector {
-    
+
     ParamsKey ConvolutionKernel_mmad_batched_block_1x1::GetSupportedKey() const
     {
         ParamsKey k;
@@ -51,9 +51,9 @@ namespace kernel_selector {
         else if (p.output.X().v == 14)
             return { 2,2,4 };
         else if (p.output.X().v == 28)
-            return { 4,1,4 };
+            return { 4,2,2 };
         else if (p.output.X().v == 56)
-            return { 4,1,4 };
+            return { 4,2,2 };
 
         return { 1,1,1 };
     }
@@ -103,7 +103,7 @@ namespace kernel_selector {
 
         runInfo.gws0 = arg.output.X().v / block.out_width;
         runInfo.gws1 = arg.output.Y().v / block.out_height;
-        runInfo.gws2 = (arg.output.Feature().v) * ((arg.output.Batch().v+3) / 4) / block.out_depth; // process 4 output channels per Workitem
+        runInfo.gws2 = (arg.output.Feature().v) * ((arg.output.Batch().v + 3) / 4) / block.out_depth; // process 4 output channels per Workitem
 
         runInfo.lws0 = 1;
         runInfo.lws1 = 1;
@@ -146,7 +146,7 @@ namespace kernel_selector {
     KernelsData ConvolutionKernel_mmad_batched_block_1x1::GetKernelsData(const Params& params, const optional_params& options) const
     {
         KernelsData kd = GetCommonKernelsData(params, options, " -Dcl_intel_subgroups_char");
-        if(!kd.empty())
+        if (!kd.empty())
             kd[0].estimatedTime = FORCE_PRIORITY_3;
         return kd;
     }

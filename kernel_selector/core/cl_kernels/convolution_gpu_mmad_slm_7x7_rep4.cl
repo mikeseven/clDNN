@@ -69,9 +69,9 @@ __global int8* weights,
 )
 {
 	const uint TILE_H = OUT_BLOCK_HEIGHT*LOCAL_SIZE_Z;
-	const uint TILE_W = OUT_BLOCK_WIDTH*LOCAL_SIZE_Y; 
-	
-	ushort fmg     = get_group_id(0);   // Output Depth 
+	const uint TILE_W = OUT_BLOCK_WIDTH*LOCAL_SIZE_Y;
+
+	ushort fmg     = get_group_id(0);   // Output Depth
 	ushort group_y = get_group_id(1);   // Output Width
 	ushort group_z = get_group_id(2);   // Output Height
 
@@ -82,7 +82,7 @@ __global int8* weights,
 	threads 12-13: ( lid_x:0-15, lid_y:0,lid_z:6)
 	threads 14-15: ( lid_x:0-15, lid_y:0,lid_z:7)
 	*/
-	
+
 	/* Thread, local IDs */
 	ushort thread_id 		= get_sub_group_id();
 	ushort threadid_mod_2   = thread_id % 2;
@@ -95,7 +95,7 @@ __global int8* weights,
 
 	/* 32-bit signed accumulator , 112 output registers for 1Px7Qx4Nx32K output tile size
 	   Will be converted to 8-bits before final write */
-	 
+
 	int4  out_07 [ OUT_BLOCK_HEIGHT * OUT_BLOCK_WIDTH ]   = {0}; // For output channels 0-7
 	int4  out_815[ OUT_BLOCK_HEIGHT * OUT_BLOCK_WIDTH ]   = {0}; // For output channels 8-15
 	int4  out_1623[ OUT_BLOCK_HEIGHT * OUT_BLOCK_WIDTH ]  = {0}; // For output channels 16-23
@@ -106,27 +106,27 @@ __global int8* weights,
 	ushort batch 	= ( fmg*LOCAL_SIZE_X*4 ) /_OD; // Each thread processing 32 output_channels and each fmg processing 64 output channels , LOCAL_SIZE_X is only 16
 
 	// Size calculated for int8 elements
-	uint input_size = (_IH + IHPAD) * (_IW + IWPAD) * BATCH_PACK ;  
-	
+	uint input_size = (_IH + IHPAD) * (_IW + IWPAD) * BATCH_PACK ;
+
 	uint in_addr_offset = batch*input_size;
-	
+
 	/* Goto activation tile for work group, offset is w.r.t int8 array */
-	
+
 	uint groupy_tile = TILE_W*group_y;
 	uint groupz_tile = TILE_H*group_z;
-	
+
     in_addr_offset += (groupz_tile * K_STRIDE) * (_IW + IWPAD) * BATCH_PACK + (groupy_tile * K_STRIDE) * BATCH_PACK;
-	 
+
 	 	/* SLM space for Activation, Weights
 	       ( 16,1,8 ) Workgroup - 7 tiles along Y direction and 64 different output channels
 		    2 threads used to load global memory
 	        Activation - 9Hx9Wx4Nx32C Weights -3Rx3Sx64Kx32C	*/
-	
+
 	__local int8 act_slm      [  9*9*4 ];
 	__local int8 weight_slm   [  9*64  ];
-   
+
    /* 9Hx9Wx4Nx32C activation tile written into SLM.  Distribute among 14 threads in Workgroup
-	   threads 0-1 write 9x4x32 of  H=0, W=0...8 
+	   threads 0-1 write 9x4x32 of  H=0, W=0...8
 	   threads 2-3 write 9x4x32 of H=1, W=0...8
 	   threads 4-5 write 9x4x32 of H=2, W=0...8
 	   threads 6-7  write 9x4x32 of H=3, W=0...8
@@ -135,23 +135,23 @@ __global int8* weights,
 	   threads 12-13 write 9x4x32 of H=6,W=0...8
 	   threads 14 write 9x4x32 of H=7,W=0...8
 	   threads 15 write 9x4x32 of H=8,W=0...8 */
-	    
+
 	/* Goto activation tile for thread in group */
-	
+
 	uint row_offset   =  thread_id / 2;
-	
+
 	if ( thread_id >= 14 )
     {
-        row_offset = 7; 
+        row_offset = 7;
 	}
-		
+
 	// In addr offset for the particular thread
 	in_addr_offset    += row_offset * K_STRIDE * (_IW + IWPAD ) * BATCH_PACK ;
 
    /* Activation SLM indices */
     uint act_slm_write =  row_offset * ( TILE_W + 2) * BATCH_PACK;
 	uint act_slm_read  =  OUT_BLOCK_HEIGHT * lid_z * ( TILE_W + 2) * BATCH_PACK ;
-	
+
 	/* 9RSx64Kx32C Weight Block in SLM
 	   thread0 handles ( reads from global ) w(0,0),w(0,1),w(0,2) of K=0,1 ( k=0..15 )
 	   thread1 handles w(0,0),w(0,1),w(0,2) of K=2,3 ( k=16..31)
@@ -161,108 +161,108 @@ __global int8* weights,
 	   thread5 handles w(1,2),w(2,0) of K=2,3 ( k=16..31)
 	   thread6 handles w(2,1),w(2,2) of K=0,1 ( k=0..15)
 	   thread7 handles w(2,1),w(2,2) of K=2,3 ( k=16..31)
-	   
+
 	   Similarly threads8-15 handles for K=4,5,6,7
-	   
+
 	   Weight Layout in SLM
-	   
+
 	   w(R=0,S=0,k=0..7,C=0..15),w(R=0,S=0,k=32..39,C=0..15)
 	   w(R=0,S=0,k=0..7,C=16..31),w(R=0,S=0,k=32..39,C=16..31)
-	   
+
 	   Above interleaving present to avoid SLM Bank conflicts when fused threads read from SLM
 	   Thread0 will read k=0..31, thread1 will read k=32..63
-	   
+
 	   First all output channels are present in SLM, then next weight pixel is present in SLM */
-	  
+
 	 #define NUM_FILTERS (K_HEIGHT * K_WIDTH)
-	  
+
 	 uint output_depth    = fmg % ( _OD / ( LOCAL_SIZE_X * 4 ) ); //LOCAL_SIZE_X=16, 64 output channels used
-	 	  
+
 	 uint weight_size_CRS =  ( _ID / PACK ) * NUM_FILTERS * 8; //8 output channels packed inside
-	 
+
 	 // Global weight addr for workgroup
 	 uint weight_global_addr_offset =  output_depth * 8 * weight_size_CRS ; //64 output channels per workgroup
-	 
+
 	 /* Global weight address for thread */
-	 
+
 	 // Goto appropriate output channel in weights
 	 uint weight_global_channel_offset = threadid_mod_2 * 2 * weight_size_CRS ;
-	 
+
 	uint slm_channel_offset     = threadid_mod_2;
 	uint bc_fused_thread_offset = 0;
-	 
+
 	 if ( thread_id >= 8 )
     {
 		bc_fused_thread_offset =  1;
-				
-		weight_global_channel_offset =  4 * weight_size_CRS + slm_channel_offset * weight_size_CRS * 2 ;	
+
+		weight_global_channel_offset =  4 * weight_size_CRS + slm_channel_offset * weight_size_CRS * 2 ;
     }
-	 
+
 	 // Goto appropriate pixel in weights
 
 	 uint weight_global_pixel_offset = 0;
 	 uint slm_pixel_offset = 0;
-	 
+
     if ( threadid_mod_8 >=2  )
     {
 	 /* First three pixels handled by threads 0-1, then 2 pixels handled by two threads */
-	 
+
 		weight_global_pixel_offset = 3*8 +  ( ( (threadid_mod_8/2) - 1 )*2*8 );
 		slm_pixel_offset 		   = 3*64 + ( ( (threadid_mod_8/2) - 1 )*2*64 );
     }
-	 
+
     weight_global_addr_offset += weight_global_channel_offset + weight_global_pixel_offset;
-	 
+
 	 /* Weight slm write index */
-	 
+
 	 uint slm_write_weight = slm_pixel_offset + slm_channel_offset * 32 + bc_fused_thread_offset * 4;
-	 
+
 	 /* Weight slm read index */
-	 
+
 	 /* Thread 0  reads output channels 0-15, thread 1 handles output channels 16-31, data present in interleaved
-	    manner in SLM 
+	    manner in SLM
 		Data layout in SLM
-		
+
 		w(0,0) C=0..7, K = 0..7 | w(0,0) C=0..7, K = 32..39
 		w(0,0) C=8..15,K=0..7   | w(0,0) C=8..15,K = 32..39
 		w(0,0) C=0..7, K=8..15  | w(0,0) C=0..7, K = 40..47
 		w(0,0) C=8..15,K=8..15  | w(0,0) C=8..15,K=  40..47
-		
+
 		*/
     uint wt_slm_rd_offset = threadid_mod_2*4;
 
 	int kd;
-	
+
 	__attribute__((opencl_unroll_hint(1)))
-	for(kd = 0; kd <  ( _ID / PACK ) ; kd++) 
+	for(kd = 0; kd <  ( _ID / PACK ) ; kd++)
 	{
 		{
 			/* Load Activation from global to SLM */
-				
+
 			int in_addr = kd * (_IH + IHPAD) * (_IW + IWPAD) * BATCH_SIZE + in_addr_offset;
-		
+
 			__global uint *activation_tile = (__global uint*)&inputs[ in_addr ];
-			
+
 			__local uint *act_slm_ptr   = (__local uint *) &act_slm [ act_slm_write  ];
-			
+
 			/* The odd thread in fused pair will start from next 4x8 block */
-			
+
 			activation_tile += threadid_mod_2*4*8;
 			act_slm_ptr 	+= threadid_mod_2*4*8;
-					
-			int4 act_col_0 =  as_int4( intel_sub_group_block_read4(activation_tile) );//col 0		
-			int4 act_col_1 =  as_int4( intel_sub_group_block_read4(activation_tile + 8*8) );//col 2				
-			int4 act_col_2 =  as_int4( intel_sub_group_block_read4(activation_tile + 2*8*8) );//col 4				
+
+			int4 act_col_0 =  as_int4( intel_sub_group_block_read4(activation_tile) );//col 0
+			int4 act_col_1 =  as_int4( intel_sub_group_block_read4(activation_tile + 8*8) );//col 2
+			int4 act_col_2 =  as_int4( intel_sub_group_block_read4(activation_tile + 2*8*8) );//col 4
 			int4 act_col_3 =  as_int4( intel_sub_group_block_read4(activation_tile + 3*8*8) );//col 6
-										
-			SLM_BLOCK_WRITE_4 ( act_slm_ptr , as_uint4 ( act_col_0 ) );				
+
+			SLM_BLOCK_WRITE_4 ( act_slm_ptr , as_uint4 ( act_col_0 ) );
 			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 8*8 ) , as_uint4 ( act_col_1 ) );
 			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 2*8*8 ) , as_uint4 ( act_col_2 ) );
 			SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 3*8*8 ) , as_uint4 ( act_col_3 ) );
-		
+
 			if ( threadid_mod_2  == 0 )
             {
-				int4 act_col_4 =  as_int4( intel_sub_group_block_read4(activation_tile + 4*8*8) );								
+				int4 act_col_4 =  as_int4( intel_sub_group_block_read4(activation_tile + 4*8*8) );
 
 				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 4*8*8 ) , as_uint4 ( act_col_4 ) );
 			}
@@ -270,58 +270,58 @@ __global int8* weights,
 			if ( thread_id >=14)
             {
 				activation_tile  = activation_tile + 1 * (_IW + IWPAD ) * BATCH_PACK * 8;
-				act_slm_ptr 	 = act_slm_ptr + (TILE_W + 2)  * BATCH_PACK *8;		
-	
-				int4 act_col_9 =  as_int4( intel_sub_group_block_read4(activation_tile) );				
-				int4 act_col_10 =  as_int4( intel_sub_group_block_read4(activation_tile + 8*8) );				
-				int4 act_col_11 =  as_int4( intel_sub_group_block_read4(activation_tile + 2*8*8) );				
+				act_slm_ptr 	 = act_slm_ptr + (TILE_W + 2)  * BATCH_PACK *8;
+
+				int4 act_col_9 =  as_int4( intel_sub_group_block_read4(activation_tile) );
+				int4 act_col_10 =  as_int4( intel_sub_group_block_read4(activation_tile + 8*8) );
+				int4 act_col_11 =  as_int4( intel_sub_group_block_read4(activation_tile + 2*8*8) );
 				int4 act_col_12 =  as_int4( intel_sub_group_block_read4(activation_tile + 3*8*8) );
 
-				SLM_BLOCK_WRITE_4 ( act_slm_ptr  , as_uint4 ( act_col_9 ) );				
+				SLM_BLOCK_WRITE_4 ( act_slm_ptr  , as_uint4 ( act_col_9 ) );
 				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 8*8 )   , as_uint4 ( act_col_10 ) );
 				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 2*8*8 ) , as_uint4 ( act_col_11 ) );
 				SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 3*8*8 ) , as_uint4 ( act_col_12 ) );
-				
+
 				if ( threadid_mod_2  == 0 )
                 {
-					int4 act_col_13 =  as_int4( intel_sub_group_block_read4(activation_tile + 4*8*8) );								
+					int4 act_col_13 =  as_int4( intel_sub_group_block_read4(activation_tile + 4*8*8) );
 
 					SLM_BLOCK_WRITE_4 ( ( act_slm_ptr + 4*8*8 ) , as_uint4 ( act_col_13 ) );
 				}
 			}
 
 		/* load weights from global to weight_slm */
-		
+
 			int weight_addr = kd * NUM_FILTERS * 8 + weight_global_addr_offset;
-	 
+
 			__global uint *weight_tile   = (__global uint*)&weights    [ weight_addr ];
 			__local  uint *wt_slm_ptr    = (__local uint *)&weight_slm [ slm_write_weight  ];
-			
+
 			__global uint *weight_tile_2   = weight_tile;
 			__local uint *wt_slm_ptr_2     = wt_slm_ptr;
-			
-			int4 w0 = as_int4 ( intel_sub_group_block_read4( weight_tile ) );	// Pixel1 K=0..7 C=0..15					
-			int4 w1 = as_int4 ( intel_sub_group_block_read4( weight_tile + 4*8 ) );	// Pixel1 K=0..7 C=16..31		
+
+			int4 w0 = as_int4 ( intel_sub_group_block_read4( weight_tile ) );	// Pixel1 K=0..7 C=0..15
+			int4 w1 = as_int4 ( intel_sub_group_block_read4( weight_tile + 4*8 ) );	// Pixel1 K=0..7 C=16..31
 			int4 w2 = as_int4 ( intel_sub_group_block_read4( weight_tile + 8*8 ) );	// Pixel2 K=0..7 C=0..15
 			int4 w3 = as_int4 ( intel_sub_group_block_read4( weight_tile + 12*8 ) );// Pixel2 K=0..7 C=16..31
 
 			// Goto next output channel
 			weight_tile += weight_size_CRS*8;
-			
-			int4 w4 = as_int4 ( intel_sub_group_block_read4( weight_tile ) );	// Pixel1 K=8..15 C=0..15					
-			int4 w5 = as_int4 ( intel_sub_group_block_read4( weight_tile + 4*8 ) );	// Pixel1 K=8..15 C=16..31		
+
+			int4 w4 = as_int4 ( intel_sub_group_block_read4( weight_tile ) );	// Pixel1 K=8..15 C=0..15
+			int4 w5 = as_int4 ( intel_sub_group_block_read4( weight_tile + 4*8 ) );	// Pixel1 K=8..15 C=16..31
 			int4 w6 = as_int4 ( intel_sub_group_block_read4( weight_tile + 8*8 ) );	// Pixel2 K=8..15 C=0..15
 			int4 w7 = as_int4 ( intel_sub_group_block_read4( weight_tile + 12*8 ) );// Pixel2 K=8..15 C=16..31
-			
+
 			SLM_BLOCK_WRITE_4 ( wt_slm_ptr, as_uint4 ( w0 ) );
-			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 8*8 ) , as_uint4 ( w1 ) );		
+			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 8*8 ) , as_uint4 ( w1 ) );
 			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 64*8 ), as_uint4 ( w2 ) );
 			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 64*8 + 8*8 ), as_uint4 ( w3 ) );
-			
+
 			wt_slm_ptr  += 16*8;
-		
+
 			SLM_BLOCK_WRITE_4 ( wt_slm_ptr , as_uint4 ( w4 ) );
-			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 8*8 )   , as_uint4 ( w5 ) );		
+			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 8*8 )   , as_uint4 ( w5 ) );
 			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 64*8 ) , as_uint4 ( w6 ) );
 			SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr + 64*8 + 8*8 ) , as_uint4 ( w7 ) );
 
@@ -331,28 +331,28 @@ __global int8* weights,
 				weight_tile_2 += 16*8;
 				wt_slm_ptr_2  += 2*64*8;
 
-				int4 w0 = as_int4 ( intel_sub_group_block_read4( weight_tile_2 ) );	// Pixel1 K=0..7 C=0..15					
-				int4 w1 = as_int4 ( intel_sub_group_block_read4( weight_tile_2 + 4*8 ) );	// Pixel1 K=0..7 C=16..31		
+				int4 w0 = as_int4 ( intel_sub_group_block_read4( weight_tile_2 ) );	// Pixel1 K=0..7 C=0..15
+				int4 w1 = as_int4 ( intel_sub_group_block_read4( weight_tile_2 + 4*8 ) );	// Pixel1 K=0..7 C=16..31
 
 				// Goto next output channel
 				weight_tile_2 += weight_size_CRS*8;
-			
-				int4 w4 = as_int4 ( intel_sub_group_block_read4( weight_tile_2 ) );	// Pixel1 K=8..15 C=0..15					
-				int4 w5 = as_int4 ( intel_sub_group_block_read4( weight_tile_2 + 4*8 ) );	// Pixel1 K=8..15 C=16..31		
-		
+
+				int4 w4 = as_int4 ( intel_sub_group_block_read4( weight_tile_2 ) );	// Pixel1 K=8..15 C=0..15
+				int4 w5 = as_int4 ( intel_sub_group_block_read4( weight_tile_2 + 4*8 ) );	// Pixel1 K=8..15 C=16..31
+
 				SLM_BLOCK_WRITE_4 ( wt_slm_ptr_2, as_uint4 ( w0 ) );
-				SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr_2 + 8*8 ) , as_uint4 ( w1 ) );		
-						
+				SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr_2 + 8*8 ) , as_uint4 ( w1 ) );
+
 				wt_slm_ptr_2  += 16*8;
-   		
+
 				SLM_BLOCK_WRITE_4 ( wt_slm_ptr_2 , as_uint4 ( w4 ) );
-				SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr_2 + 8*8 )   , as_uint4 ( w5 ) );		
+				SLM_BLOCK_WRITE_4 ( ( wt_slm_ptr_2 + 8*8 )   , as_uint4 ( w5 ) );
 			}
-	}		
+	}
 
 		// Synchronize SLM writes across workgroup
-		 barrier(CLK_LOCAL_MEM_FENCE);		
-		 
+		 barrier(CLK_LOCAL_MEM_FENCE);
+
 		if ( lid_z <= 6 )
         {
 			uint wt_slm_rd = wt_slm_rd_offset;
@@ -364,42 +364,42 @@ __global int8* weights,
 			int8 weights_reg[3]; //24 registers
 			int4 act_reg[18];    //72 registers
 			uint slm_read_pixel_offset = 64*8;
-			
+
 			/**********************************************************************************************************
-			  First phase - multiply first row of weights  and 1st row of activations 
+			  First phase - multiply first row of weights  and 1st row of activations
 			***********************************************************************************************************/
-				
+
 	                 /* Load weights from SLM into registers - row0, output channels 0..7  */
-				
+
 				{
 					 	__local uint *slm_ptrw0  = slm_ptr1;
-						
+
 					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
 					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
-						slm_ptrw0   			 += slm_read_pixel_offset;	
-						
+						slm_ptrw0   			 += slm_read_pixel_offset;
+
 						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
 					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
-						slm_ptrw0   			 += slm_read_pixel_offset;	
-						
+						slm_ptrw0   			 += slm_read_pixel_offset;
+
 						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
 					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 				}
 
 			/* load 1Hx9Wx4N inputs, Activation row0   */
-			
+
 				__attribute__((opencl_unroll_hint(9)))
 				for (int ic = 0; ic < 9; ic++)
 				{
 	                 /* Load activations from SLM into registers  */
-					 
+
 					 uint slm_offset = ic * BATCH_PACK * 8 ;
-					 
-    				 act_reg [ ic ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset)) ; 
+
+    				 act_reg [ ic ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset)) ;
 				}
-			
-			/* Convolve */ 
-			
+
+			/* Convolve */
+
 			   /* order the dpas instructions to minimize dependency on src0,dst - also try to maximise reuse of weights-reg*/
 
 				/*  Output channels 0-7 */
@@ -432,15 +432,15 @@ __global int8* weights,
 
 				{
 					 	__local uint *slm_ptrw0 = slm_ptr1 + 2*8*8;
-						
+
 					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
 					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
-						slm_ptrw0   			 += slm_read_pixel_offset;	
-						
+						slm_ptrw0   			 += slm_read_pixel_offset;
+
 						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
 					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
-						slm_ptrw0   			 += slm_read_pixel_offset;	
-						
+						slm_ptrw0   			 += slm_read_pixel_offset;
+
 						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
 					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 				}
@@ -472,19 +472,19 @@ __global int8* weights,
 				/* Load weights from SLM into registers - row0, output channels 16..23  */
 				{
 					 	__local uint *slm_ptrw0 = slm_ptr1 + 4*8*8;
-						
+
 					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
 					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
-						slm_ptrw0   			 += slm_read_pixel_offset;	
-						
+						slm_ptrw0   			 += slm_read_pixel_offset;
+
 						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
 					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
-						slm_ptrw0   			 += slm_read_pixel_offset;	
-						
+						slm_ptrw0   			 += slm_read_pixel_offset;
+
 						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
 					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 				}
-				
+
 				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[0], weights_reg[0] );
 				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[1], weights_reg[0] );
 				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[2], weights_reg[0] );
@@ -494,19 +494,19 @@ __global int8* weights,
 				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[6], weights_reg[0] );
 
 				/* load 1Hx9Wx4N inputs, Activation row1   */
-			
-				uint slm_row_offset_2 	  = 1*(TILE_W + 2)*BATCH_PACK*8;	 
+
+				uint slm_row_offset_2 	  = 1*(TILE_W + 2)*BATCH_PACK*8;
 
 				__attribute__((opencl_unroll_hint(9)))
 				for (int ic = 0; ic < 9; ic++)
 				{
 	                 /* Load activations from SLM into registers  */
-					 
+
 					 uint slm_offset = slm_row_offset_2 + ic * BATCH_PACK * 8 ;
-					 
-    				 act_reg [ ic + 9 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset)) ; 
+
+    				 act_reg [ ic + 9 ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset)) ;
 				}
-				
+
 				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[1], weights_reg[1] );
 				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[2], weights_reg[1] );
 				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[3], weights_reg[1] );
@@ -514,7 +514,7 @@ __global int8* weights,
 				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[5], weights_reg[1] );
 				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[6], weights_reg[1] );
 				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[7], weights_reg[1] );
-				
+
 				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[2], weights_reg[2] );
 				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[3], weights_reg[2] );
 				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[4], weights_reg[2] );
@@ -522,23 +522,23 @@ __global int8* weights,
 				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[6], weights_reg[2] );
 				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[7], weights_reg[2] );
 				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[8], weights_reg[2] );
-				
+
 				/* Load weights from SLM into registers - row0, output channels 24..31  */
 				{
 					 	__local uint *slm_ptrw0 = slm_ptr1 + 6*8*8;
-						
+
 					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
 					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
-						slm_ptrw0   			 += slm_read_pixel_offset;	
-						
+						slm_ptrw0   			 += slm_read_pixel_offset;
+
 						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
 					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
-						slm_ptrw0   			 += slm_read_pixel_offset;	
-						
+						slm_ptrw0   			 += slm_read_pixel_offset;
+
 						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 ) );
 					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw0 + 64 ) );
 				}
-				
+
 				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[0], weights_reg[0] );
 				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[1], weights_reg[0] );
 				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[2], weights_reg[0] );
@@ -546,7 +546,7 @@ __global int8* weights,
 				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[4], weights_reg[0] );
 				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[5], weights_reg[0] );
 				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[6], weights_reg[0] );
-				
+
 				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[1], weights_reg[1] );
 				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[2], weights_reg[1] );
 				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[3], weights_reg[1] );
@@ -554,7 +554,7 @@ __global int8* weights,
 				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[5], weights_reg[1] );
 				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[6], weights_reg[1] );
 				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[7], weights_reg[1] );
-				
+
 				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[2], weights_reg[2] );
 				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[3], weights_reg[2] );
 				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[4], weights_reg[2] );
@@ -564,25 +564,25 @@ __global int8* weights,
 				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[8], weights_reg[2] );
 
 			/**********************************************************************************************************
-			  Second phase - multiply second row of weights  and second row of activations 
+			  Second phase - multiply second row of weights  and second row of activations
 			***********************************************************************************************************/
-		
+
 			 /* Load weights from SLM into registers - row1, output channels 0..7  */
 				{
 					 	__local uint *slm_ptrw1  = slm_ptr1 + 3*slm_read_pixel_offset;
-						
+
 					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
 					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
-						slm_ptrw1   			 += slm_read_pixel_offset;	
-						
+						slm_ptrw1   			 += slm_read_pixel_offset;
+
 						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
 					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
-						slm_ptrw1  			     += slm_read_pixel_offset;	
-						
+						slm_ptrw1  			     += slm_read_pixel_offset;
+
 						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
 					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
-				}				
-		
+				}
+
 				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[9], weights_reg[0] );
 				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[10], weights_reg[0] );
 				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[11], weights_reg[0] );
@@ -590,7 +590,7 @@ __global int8* weights,
 				out_07[ 4 ] = _MMAD_4x8 ( out_07[ 4 ], act_reg[13], weights_reg[0] );
 				out_07[ 5 ] = _MMAD_4x8 ( out_07[ 5 ], act_reg[14], weights_reg[0] );
 				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[15], weights_reg[0] );
-				
+
 				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[10], weights_reg[1] );
 				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[11], weights_reg[1] );
 				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[12], weights_reg[1] );
@@ -598,7 +598,7 @@ __global int8* weights,
 				out_07[ 4 ] = _MMAD_4x8 ( out_07[ 4 ], act_reg[14], weights_reg[1] );
 				out_07[ 5 ] = _MMAD_4x8 ( out_07[ 5 ], act_reg[15], weights_reg[1] );
 				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[16], weights_reg[1] );
-				
+
 				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[11], weights_reg[2] );
 				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[12], weights_reg[2] );
 				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[13], weights_reg[2] );
@@ -606,23 +606,23 @@ __global int8* weights,
 				out_07[ 4 ] = _MMAD_4x8 ( out_07[ 4 ], act_reg[15], weights_reg[2] );
 				out_07[ 5 ] = _MMAD_4x8 ( out_07[ 5 ], act_reg[16], weights_reg[2] );
 				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[17], weights_reg[2] );
-				
+
 				    /* Load weights from SLM into registers - row1, output channels 8..15  */
 				{
 					 	__local uint *slm_ptrw1 = slm_ptr1 + 3*slm_read_pixel_offset + 2*8*8;
-						
+
 					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
 					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
-						slm_ptrw1   			   += slm_read_pixel_offset;	
-						
+						slm_ptrw1   			   += slm_read_pixel_offset;
+
 						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
 					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
-						slm_ptrw1   			   += slm_read_pixel_offset;	
-						
+						slm_ptrw1   			   += slm_read_pixel_offset;
+
 						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
 					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 				}
-				
+
 				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[9], weights_reg[0] );
 				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[10], weights_reg[0] );
 				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[11], weights_reg[0] );
@@ -630,7 +630,7 @@ __global int8* weights,
 				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[13], weights_reg[0] );
 				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[14], weights_reg[0] );
 				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[15], weights_reg[0] );
-				
+
 				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[10], weights_reg[1] );
 				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[11], weights_reg[1] );
 				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[12], weights_reg[1] );
@@ -638,7 +638,7 @@ __global int8* weights,
 				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[14], weights_reg[1] );
 				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[15], weights_reg[1] );
 				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[16], weights_reg[1] );
-				
+
 				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[11], weights_reg[2] );
 				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[12], weights_reg[2] );
 				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[13], weights_reg[2] );
@@ -646,23 +646,23 @@ __global int8* weights,
 				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[15], weights_reg[2] );
 				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[16], weights_reg[2] );
 				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[17], weights_reg[2] );
-				
+
 				/* Load weights from SLM into registers - row1, output channels 16..23  */
 				{
 					 	__local uint *slm_ptrw1 = slm_ptr1 + 3*slm_read_pixel_offset + 4*8*8;
-						
+
 					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
 					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
-						slm_ptrw1   			   += slm_read_pixel_offset;	
-						
+						slm_ptrw1   			   += slm_read_pixel_offset;
+
 						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
 					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
-						slm_ptrw1   			   += slm_read_pixel_offset;	
-						
+						slm_ptrw1   			   += slm_read_pixel_offset;
+
 						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
 					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 				}
-				
+
 				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[9], weights_reg[0] );
 				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[10], weights_reg[0] );
 				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[11], weights_reg[0] );
@@ -670,21 +670,21 @@ __global int8* weights,
 				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[13], weights_reg[0] );
 				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[14], weights_reg[0] );
 				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[15], weights_reg[0] );
-				
+
 				/* load 1Hx9Wx4N inputs, Activation row2  */
-			
-				uint slm_row_offset_3	  = 2*(TILE_W + 2)*BATCH_PACK*8;	 
+
+				uint slm_row_offset_3	  = 2*(TILE_W + 2)*BATCH_PACK*8;
 
 				__attribute__((opencl_unroll_hint(9)))
 				for (int ic = 0; ic < 9; ic++)
 				{
 	                 /* Load activations from SLM into registers  */
-					 
+
 					 uint slm_offset = slm_row_offset_3 + ic * BATCH_PACK * 8 ;
-					 
-    				 act_reg [ ic ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset)) ; 
+
+    				 act_reg [ ic ] = as_int4 (SLM_BLOCK_READ_4 (slm_ptr0 + slm_offset)) ;
 				}
-				
+
 				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[10], weights_reg[1] );
 				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[11], weights_reg[1] );
 				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[12], weights_reg[1] );
@@ -692,7 +692,7 @@ __global int8* weights,
 				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[14], weights_reg[1] );
 				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[15], weights_reg[1] );
 				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[16], weights_reg[1] );
-				
+
 				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[11], weights_reg[2] );
 				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[12], weights_reg[2] );
 				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[13], weights_reg[2] );
@@ -700,23 +700,23 @@ __global int8* weights,
 				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[15], weights_reg[2] );
 				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[16], weights_reg[2] );
 				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[17], weights_reg[2] );
-				
+
 				/* Load weights from SLM into registers - row1, output channels 24..31  */
 				{
 					 	__local uint *slm_ptrw1 = slm_ptr1 + 3*slm_read_pixel_offset + 6*8*8;
-						
+
 					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
 					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
-						slm_ptrw1   			   += slm_read_pixel_offset;	
-						
+						slm_ptrw1   			   += slm_read_pixel_offset;
+
 						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
 					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
-						slm_ptrw1   			   += slm_read_pixel_offset;	
-						
+						slm_ptrw1   			   += slm_read_pixel_offset;
+
 						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 ) );
 					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw1 + 64 ) );
 				}
-				
+
 				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[9], weights_reg[0] );
 				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[10], weights_reg[0] );
 				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[11], weights_reg[0] );
@@ -724,7 +724,7 @@ __global int8* weights,
 				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[13], weights_reg[0] );
 				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[14], weights_reg[0] );
 				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[15], weights_reg[0] );
-				
+
 				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[10], weights_reg[1] );
 				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[11], weights_reg[1] );
 				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[12], weights_reg[1] );
@@ -732,7 +732,7 @@ __global int8* weights,
 				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[14], weights_reg[1] );
 				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[15], weights_reg[1] );
 				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[16], weights_reg[1] );
-				
+
 				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[11], weights_reg[2] );
 				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[12], weights_reg[2] );
 				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[13], weights_reg[2] );
@@ -740,27 +740,27 @@ __global int8* weights,
 				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[15], weights_reg[2] );
 				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[16], weights_reg[2] );
 				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[17], weights_reg[2] );
-		
+
 			/**********************************************************************************************************
-			  Third phase - multiply third row of weights  and third row of activations 
-			***********************************************************************************************************/			   
-			
+			  Third phase - multiply third row of weights  and third row of activations
+			***********************************************************************************************************/
+
 				 /* Load weights from SLM into registers - row2, output channels 0..7  */
 				{
 					 	__local uint *slm_ptrw2  = slm_ptr1 + 6*slm_read_pixel_offset;
-						
+
 					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
 					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
-						slm_ptrw2   			   += slm_read_pixel_offset;	
-						
+						slm_ptrw2   			   += slm_read_pixel_offset;
+
 						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
 					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
-						slm_ptrw2 			     += slm_read_pixel_offset;	
-						
+						slm_ptrw2 			     += slm_read_pixel_offset;
+
 						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
 					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
-				}				
-			
+				}
+
 				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[0], weights_reg[0] );
 				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[1], weights_reg[0] );
 				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[2], weights_reg[0] );
@@ -768,7 +768,7 @@ __global int8* weights,
 				out_07[ 4 ] = _MMAD_4x8 ( out_07[ 4 ], act_reg[4], weights_reg[0] );
 				out_07[ 5 ] = _MMAD_4x8 ( out_07[ 5 ], act_reg[5], weights_reg[0] );
 				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[6], weights_reg[0] );
-				
+
 				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[1], weights_reg[1] );
 				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[2], weights_reg[1] );
 				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[3], weights_reg[1] );
@@ -776,7 +776,7 @@ __global int8* weights,
 				out_07[ 4 ] = _MMAD_4x8 ( out_07[ 4 ], act_reg[5], weights_reg[1] );
 				out_07[ 5 ] = _MMAD_4x8 ( out_07[ 5 ], act_reg[6], weights_reg[1] );
 				out_07[ 6 ] = _MMAD_4x8 ( out_07[ 6 ], act_reg[7], weights_reg[1] );
-				
+
 				out_07[ 0 ] = _MMAD_4x8 ( out_07[ 0 ], act_reg[2], weights_reg[2] );
 				out_07[ 1 ] = _MMAD_4x8 ( out_07[ 1 ], act_reg[3], weights_reg[2] );
 				out_07[ 2 ] = _MMAD_4x8 ( out_07[ 2 ], act_reg[4], weights_reg[2] );
@@ -788,19 +788,19 @@ __global int8* weights,
 				     /* Load weights from SLM into registers - row2, output channels 8..15  */
 				{
 					 	__local uint *slm_ptrw2 = slm_ptr1 + 6*slm_read_pixel_offset + 2*8*8;
-						
+
 					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
 					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
-						slm_ptrw2   			   += slm_read_pixel_offset;	
-						
+						slm_ptrw2   			   += slm_read_pixel_offset;
+
 						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
 					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
-						slm_ptrw2   			   += slm_read_pixel_offset;	
-						
+						slm_ptrw2   			   += slm_read_pixel_offset;
+
 						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
 					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 				}
-				
+
 				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[0], weights_reg[0] );
 				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[1], weights_reg[0] );
 				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[2], weights_reg[0] );
@@ -808,39 +808,39 @@ __global int8* weights,
 				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[4], weights_reg[0] );
 				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[5], weights_reg[0] );
 				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[6], weights_reg[0] );
-							
+
 				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[1], weights_reg[1] );
 				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[2], weights_reg[1] );
 				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[3], weights_reg[1] );
 				out_815[ 3 ] = _MMAD_4x8 ( out_815[ 3 ], act_reg[4], weights_reg[1] );
 				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[5], weights_reg[1] );
 				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[6], weights_reg[1] );
-				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[7], weights_reg[1] );			
-			
+				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[7], weights_reg[1] );
+
 				out_815[ 0 ] = _MMAD_4x8 ( out_815[ 0 ], act_reg[2], weights_reg[2] );
 				out_815[ 1 ] = _MMAD_4x8 ( out_815[ 1 ], act_reg[3], weights_reg[2] );
 				out_815[ 2 ] = _MMAD_4x8 ( out_815[ 2 ], act_reg[4], weights_reg[2] );
 				out_815[ 3 ] = _MMAD_4x8 ( out_815[ 3 ], act_reg[5], weights_reg[2] );
 				out_815[ 4 ] = _MMAD_4x8 ( out_815[ 4 ], act_reg[6], weights_reg[2] );
 				out_815[ 5 ] = _MMAD_4x8 ( out_815[ 5 ], act_reg[7], weights_reg[2] );
-				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[8], weights_reg[2] );	
+				out_815[ 6 ] = _MMAD_4x8 ( out_815[ 6 ], act_reg[8], weights_reg[2] );
 
 				/* Load weights from SLM into registers - row2, output channels 16..23  */
 				{
 					 	__local uint *slm_ptrw2 = slm_ptr1 + 6*slm_read_pixel_offset + 4*8*8;
-						
+
 					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
 					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
-						slm_ptrw2   			   += slm_read_pixel_offset;	
-						
+						slm_ptrw2   			   += slm_read_pixel_offset;
+
 						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
 					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
-						slm_ptrw2   			   += slm_read_pixel_offset;	
-						
+						slm_ptrw2   			   += slm_read_pixel_offset;
+
 						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
 					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 				}
-				
+
 				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[0], weights_reg[0] );
 				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[1], weights_reg[0] );
 				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[2], weights_reg[0] );
@@ -848,39 +848,39 @@ __global int8* weights,
 				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[4], weights_reg[0] );
 				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[5], weights_reg[0] );
 				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[6], weights_reg[0] );
-							
+
 				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[1], weights_reg[1] );
 				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[2], weights_reg[1] );
 				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[3], weights_reg[1] );
 				out_1623[ 3 ] = _MMAD_4x8 ( out_1623[ 3 ], act_reg[4], weights_reg[1] );
 				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[5], weights_reg[1] );
 				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[6], weights_reg[1] );
-				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[7], weights_reg[1] );			
-			
+				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[7], weights_reg[1] );
+
 				out_1623[ 0 ] = _MMAD_4x8 ( out_1623[ 0 ], act_reg[2], weights_reg[2] );
 				out_1623[ 1 ] = _MMAD_4x8 ( out_1623[ 1 ], act_reg[3], weights_reg[2] );
 				out_1623[ 2 ] = _MMAD_4x8 ( out_1623[ 2 ], act_reg[4], weights_reg[2] );
 				out_1623[ 3 ] = _MMAD_4x8 ( out_1623[ 3 ], act_reg[5], weights_reg[2] );
 				out_1623[ 4 ] = _MMAD_4x8 ( out_1623[ 4 ], act_reg[6], weights_reg[2] );
 				out_1623[ 5 ] = _MMAD_4x8 ( out_1623[ 5 ], act_reg[7], weights_reg[2] );
-				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[8], weights_reg[2] );	
-				
+				out_1623[ 6 ] = _MMAD_4x8 ( out_1623[ 6 ], act_reg[8], weights_reg[2] );
+
 				/* Load weights from SLM into registers - row3, output channels 24..31  */
 				{
 					 	__local uint *slm_ptrw2 = slm_ptr1 + 6*slm_read_pixel_offset + 6*8*8;
-						
+
 					    weights_reg[0].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
 					    weights_reg[0].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
-						slm_ptrw2   			   += slm_read_pixel_offset;	
-						
+						slm_ptrw2   			   += slm_read_pixel_offset;
+
 						weights_reg[1].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
 					    weights_reg[1].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
-						slm_ptrw2   			   += slm_read_pixel_offset;	
-						
+						slm_ptrw2   			   += slm_read_pixel_offset;
+
 						weights_reg[2].s0123     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 ) );
 					    weights_reg[2].s4567     = as_int4 ( SLM_BLOCK_READ_4 ( slm_ptrw2 + 64 ) );
 				}
-				
+
 				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[0], weights_reg[0] );
 				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[1], weights_reg[0] );
 				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[2], weights_reg[0] );
@@ -888,41 +888,41 @@ __global int8* weights,
 				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[4], weights_reg[0] );
 				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[5], weights_reg[0] );
 				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[6], weights_reg[0] );
-							
+
 				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[1], weights_reg[1] );
 				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[2], weights_reg[1] );
 				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[3], weights_reg[1] );
 				out_2431[ 3 ] = _MMAD_4x8 ( out_2431[ 3 ], act_reg[4], weights_reg[1] );
 				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[5], weights_reg[1] );
 				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[6], weights_reg[1] );
-				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[7], weights_reg[1] );			
-			
+				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[7], weights_reg[1] );
+
 				out_2431[ 0 ] = _MMAD_4x8 ( out_2431[ 0 ], act_reg[2], weights_reg[2] );
 				out_2431[ 1 ] = _MMAD_4x8 ( out_2431[ 1 ], act_reg[3], weights_reg[2] );
 				out_2431[ 2 ] = _MMAD_4x8 ( out_2431[ 2 ], act_reg[4], weights_reg[2] );
 				out_2431[ 3 ] = _MMAD_4x8 ( out_2431[ 3 ], act_reg[5], weights_reg[2] );
 				out_2431[ 4 ] = _MMAD_4x8 ( out_2431[ 4 ], act_reg[6], weights_reg[2] );
 				out_2431[ 5 ] = _MMAD_4x8 ( out_2431[ 5 ], act_reg[7], weights_reg[2] );
-				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[8], weights_reg[2] );	
-		}	
+				out_2431[ 6 ] = _MMAD_4x8 ( out_2431[ 6 ], act_reg[8], weights_reg[2] );
+		}
 
 			// To make sure all threads in WG have finished compute before next depth tile of activation and weights are loaded into SLM
-			barrier(CLK_LOCAL_MEM_FENCE);	
+			barrier(CLK_LOCAL_MEM_FENCE);
 	} //for kd
 
         /****************************************************************************************************************
 		*******************************Output Write Stage****************************************************************
 		****************************************************************************************************************/
-			/* 
-		   Outputs will be passed through activation function and quantized to 8 bits before writing 
+			/*
+		   Outputs will be passed through activation function and quantized to 8 bits before writing
 		   Output will be in same format as input [K/32][N/4][P][Q][4N][32K] */
-		   
-			/******************* Write output to SLM *************************************/	
-			
+
+			/******************* Write output to SLM *************************************/
+
 		/*  Quantize and pack 4x1 byte - from consectuive n-coordinates
 			Each thread produces [1P][7Q][4N][32K]
-         	Write uint32 from each lane to SLM , the entire thread will write 32-consecutive K-coorindates	
-			
+         	Write uint32 from each lane to SLM , the entire thread will write 32-consecutive K-coorindates
+
 			Assume one SLM row as 32 uints ( 32 channels , four batches for each channel - 4NK )
 			In SLM 7x7x4x32 present first then the next 32 channels
 		*/
@@ -931,23 +931,24 @@ __global int8* weights,
         {
 			/* feature maps are an array of slicePacks, each H,W position within the slice pack contains 32 8bit feature maps(channels) of 8 different batches */
 			uint row_size_bytes        = (_OW + OWPAD) * PACK * BATCH_PACK;
-			
+
 			/* slice_pack is a pack of 32 feature map tiles that are [OH][OW][4][32] that are stored within the full [K/32][N/4][OH][OW][4][32] output */
-			uint slice_pack_size_bytes = row_size_bytes * (_OH + OHPAD); 
-			
+			uint slice_pack_size_bytes = row_size_bytes * (_OH + OHPAD);
+
 			/* Each output_depth WG writes 64 output channels */
-		
+
 		 	uint output_depth_index      =  output_depth*2 + threadid_mod_2;
 			uint batch_index			 =  batch;
-			
+
 			/* Each WG produces entire 7x7 output, hence no group_y, group_z tiling */
-			
+
             uint output_offset_x = groupy_tile * OUT_X_PITCH;
             uint output_offset_y = groupz_tile * OUT_Y_PITCH;
 			uint slice_pack_addr_bytes  = output_depth_index * slice_pack_size_bytes * ( BATCH_SIZE / BATCH_PACK ) + batch_index * slice_pack_size_bytes + lid_z * row_size_bytes;
 						
 			__global uchar* output_write_ptr = (__global uchar *) &outputs [ slice_pack_addr_bytes + output_offset_x + output_offset_y ];
 
+                __attribute__((opencl_unroll_hint(OUT_BLOCK_WIDTH)))
 				for (int col = 0; col < OUT_BLOCK_WIDTH; col++)
                 {
 
@@ -955,9 +956,9 @@ __global int8* weights,
 					int4 outvec1 = out_815[col];
 					int4 outvec2 = out_1623[col];
 					int4 outvec3 = out_2431[col];
-					
+
 					/* Non-Linear Activation & Quantization code */
-		
+
 					uchar8 out_write_N2K4[2];
 
                     const uint _batch = batch * BATCH_PACK;
@@ -982,7 +983,7 @@ __global int8* weights,
                     out_write_N2K4[1].s7 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec3.s3) * quantizations[_feature + 24] * I_QF + biases[_feature + 24]) * calibrations[_feature + 24])), NL_M, NL_N)); //K= lane_id + 24,N=3
 
 					intel_sub_group_block_write_uc4 (  output_write_ptr  , out_write_N2K4[0].lo );
-					
+
 					output_write_ptr += 32;
 					intel_sub_group_block_write_uc4 (  output_write_ptr  , out_write_N2K4[0].hi );
 					output_write_ptr += 32;
@@ -990,7 +991,7 @@ __global int8* weights,
 					output_write_ptr += 32;
 					intel_sub_group_block_write_uc4 (  output_write_ptr  , out_write_N2K4[1].hi );
 					output_write_ptr += 32;
-										
+
 				} // out_block_width-for loop
 		}//lid_z loop
 } //end of kernel

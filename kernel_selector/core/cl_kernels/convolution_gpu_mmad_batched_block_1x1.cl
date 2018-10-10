@@ -21,14 +21,14 @@
 #define FILTER_OFM_ALIGNED (FILTER_OFM_MMAD_NUM * 8)
 // input data is in blocks 4batch x 32 features
 
-#define NEEDED_INPUT_X ((OUT_BLOCK_WIDTH-1) * (STRIDE_SIZE_X) + (3 - 1) + 1)
-#define NEEDED_INPUT_Y ((OUT_BLOCK_HEIGHT-1) * (STRIDE_SIZE_Y) + (3 - 1) + 1)
+#define NEEDED_INPUT_X ((OUT_BLOCK_WIDTH-1) * (STRIDE_SIZE_X) + (FILTER_SIZE_X - 1) + 1)
+#define NEEDED_INPUT_Y ((OUT_BLOCK_HEIGHT-1) * (STRIDE_SIZE_Y) + (FILTER_SIZE_Y - 1) + 1)
 
 __attribute__((intel_reqd_sub_group_size(SUB_GROUP_SIZE)))
 KERNEL(convolution_mmad_batched_block_1x1)(
-    __global INPUT0_TYPE* input, 
-    __global OUTPUT_TYPE* output, 
-    __global FILTER_TYPE* weights, 
+    __global INPUT0_TYPE* input,
+    __global OUTPUT_TYPE* output,
+    __global FILTER_TYPE* weights,
     __global BIAS_TYPE* biases,
     const __global float* quantizations,
 #if CALIBRATION_TERM
@@ -75,25 +75,27 @@ KERNEL(convolution_mmad_batched_block_1x1)(
             {
                 ////// preloading weights data //////
                 int8 preloaded_weights[WEIGHTS_PER_WORKITEM];
+                __attribute__((opencl_unroll_hint(WEIGHTS_PER_WORKITEM)))
                 for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
                 {
                     preloaded_weights[w] = as_int8(intel_sub_group_block_read8((const __global uint*) (weights + (filter_idx + w * FILTER_OFM_BLOCK_PITCH) ) ));
                 }
 
                 ////// computing //////
+                __attribute__((opencl_unroll_hint(WEIGHTS_PER_WORKITEM)))
                 for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
                 {
+                    __attribute__((opencl_unroll_hint(OUT_BLOCK_HEIGHT)))
                     for(uint oy = 0; oy < OUT_BLOCK_HEIGHT; oy++)
                     {
+                        __attribute__((opencl_unroll_hint(OUT_BLOCK_WIDTH)))
                         for(uint ox = 0; ox < OUT_BLOCK_WIDTH; ox++)
                         {
-                            const uint w_idx = (ox + oy * OUT_BLOCK_WIDTH + w) % WEIGHTS_PER_WORKITEM;
-                            const uint out_idx = ox + OUT_BLOCK_WIDTH * (oy + w_idx * OUT_BLOCK_HEIGHT);
-                            const uint in_idx = ox * STRIDE_SIZE_X + i + NEEDED_INPUT_X * (oy * STRIDE_SIZE_Y + j);
-                            dotProd[out_idx] = MMAD_4x8(preloaded_input[in_idx], preloaded_weights[w_idx], dotProd[out_idx]);
+                            const uint out_idx = ox + OUT_BLOCK_WIDTH * (oy + w * OUT_BLOCK_HEIGHT);
+                            const uint preloaded_idx =ox * STRIDE_SIZE_X + i + NEEDED_INPUT_X * (oy * STRIDE_SIZE_Y + j);
+                            dotProd[out_idx] = MMAD_4x8(preloaded_input[preloaded_idx], preloaded_weights[w], dotProd[out_idx]);
                         }
                     }
-
                 }
                 filter_idx += FILTER_X_PITCH;
             }
@@ -101,21 +103,28 @@ KERNEL(convolution_mmad_batched_block_1x1)(
     }
 
 ////// QUANTIZE & OUTPUT //////
+__attribute__((opencl_unroll_hint(WEIGHTS_PER_WORKITEM)))
 for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
 {
+    float quant_f = quantizations[f + w * 8];
+    float bias_f = biases[f + w * 8];
+#if CALIBRATION_TERM
+    float calib_f = calibrations[f + w * 8];
+#endif
+    __attribute__((opencl_unroll_hint(OUT_BLOCK_HEIGHT)))
     for(uint h = 0; h < OUT_BLOCK_HEIGHT; h++)
     {
+        __attribute__((opencl_unroll_hint(OUT_BLOCK_WIDTH)))
         for(uint o = 0; o < OUT_BLOCK_WIDTH; o++)
         {
             const uint out_idx = o + OUT_BLOCK_WIDTH * (h + w * OUT_BLOCK_HEIGHT);
             for(uint b = 0; b < 4; b++)
             {
 
-                const uint bias_index = f + w * 8;
             #if CALIBRATION_TERM
-                dotProd[out_idx][b] = (UNIT_TYPE)round(((float)dotProd[out_idx][b] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * calibrations[f + w * 8]);
+                dotProd[out_idx][b] = (UNIT_TYPE)round(((float)dotProd[out_idx][b] * quant_f * I_QF + bias_f) * calib_f);
             #else  // CALIBRATION_TERM
-                dotProd[out_idx][b] = (UNIT_TYPE)round(((float)dotProd[out_idx][b] * quantizations[f + w * 8] * I_QF + biases[bias_index]) * O_QF);
+                dotProd[out_idx][b] = (UNIT_TYPE)round(((float)dotProd[out_idx][b] * quant_f * I_QF + bias_f) * O_QF);
             #endif // CALIBRATION_TERM
 
                 const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4 + b, f + w * 8, y + h, x + o);

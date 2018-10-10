@@ -55,7 +55,7 @@ namespace kernel_selector {
             else if (p.output.X().v == 28)
                 return { 7, 1, 1 };
             else if (p.output.X().v == 56)
-                return{ 7, 1, 1 };
+                return{ 7, 1, 2 };
         }
 
         return { 1,1,1 };
