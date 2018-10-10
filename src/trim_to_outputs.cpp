@@ -23,11 +23,11 @@ using namespace cldnn;
 //ToDo remove friendship relation from  program_node and program_impl
 void trim_to_outputs::run(program_impl &p) 
 {
-        size_t actual_nodes = p.processing_order.size();
+        size_t actual_nodes = p.get_processing_order().size();
         if (!actual_nodes) //degenerated case but can happen
             return;
 
-        if (p.outputs.size() == actual_nodes)
+        if (p.get_outputs().size() == actual_nodes)
             return;
 
         //do backward bfs starting from all outputs
@@ -49,8 +49,9 @@ void trim_to_outputs::run(program_impl &p)
         }
 
         //all not-marked nodes should be removed
+        //dependency: trim_to_outputs manipulates optimized_out and nodes_map which are private in program_impl
         std::list<program_node*> to_rem;
-        for (auto node : p.processing_order)
+        for (auto node : p.get_processing_order())
         {
             if (node->is_type<input_layout>()) //input layout may become disconnected during prior boxes calculations so it may have not been marked at this place but we don't want to remove it
                 node->mark();
@@ -62,7 +63,7 @@ void trim_to_outputs::run(program_impl &p)
         {
             //ToDo: replace by remove_node method in p
             if (node->is_input())
-                p.inputs.remove(node);
+                p.get_inputs().remove(node);
             else
             {
                 for (auto dep : node->dependencies)
@@ -80,7 +81,7 @@ void trim_to_outputs::run(program_impl &p)
 
         //unmark all nodes
         //ToDo: mark()/unmark() methods might cause hidden dependencies in between optimization passed. They shoud be encapsulated within the opt pass itself.
-        for (auto& node : p.processing_order)
+        for (auto& node : p.get_processing_order())
         {
             node->unmark();
         }

@@ -39,6 +39,7 @@ class constants_propagator;
 class trim_to_outputs;
 class reorder_inputs;
 class post_optimize_weights;
+
 /*
     cldnn_program implementation
 */
@@ -46,10 +47,17 @@ struct program_impl : public refcounted_obj<program_impl>
 {
     friend struct program_node;
     friend class trim_to_outputs;   // to be removed when possible
+    friend class prepare_buffer_fusing; // to be removed when possible
+    friend class prepare_primitive_fusing; // to be removed when possible
     friend class propagate_constants; // to be removed when possible
     friend class reorder_inputs;  // to be removed when possible
     friend class post_optimize_weights; // to be removed when possible
-    friend class remove_redundant_reorders; // to be removed when possible
+    friend class remove_redundant_reorders; // to be removed when possible, remove_redundant_reorders uses extract_and_remove which is private
+    friend class pre_optimize_bias; // to be removed when possible
+    friend class prepare_depthwise_sep_opt; // to be removed when possible
+    friend class prep_opt_depthwise_sep_post; // to be removed when possible
+    friend class eltwise_shrinking; // to be removed when possible
+    friend class eltwise_remove_stride; // to be removed when possible
 
 public:
     struct nodes_ordering
@@ -153,20 +161,8 @@ private:
     /*
     ** Optimization functions
     */
-    void pre_optimize_bias(layout_optimizer& lo);
     void apply_needed_padding(program_node& node, program_node& prev_node, const padding& needed_padding);
     void prepare_padding(bool output_size_handling_enabled);
-    void prepare_buffer_fusing();
-    void fuse_skip_layers(program_node* node);
-
-    void fuse_conv_bn_scale(program_node* node);
-    void prepare_primitive_fusing();
-    void prepare_depthwise_sep_opt();
-    void prep_opt_depthwise_sep_post();
-
-    void eltwise_shrinking_pass();
-    void eltwise_remove_stride_pass();
-    void conv_stride_extend(program_node& node, cldnn::tensor& tensor);
 
     /*
     ** Memory pool functions
