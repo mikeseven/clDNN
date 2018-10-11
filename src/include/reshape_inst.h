@@ -30,7 +30,7 @@ struct typed_program_node<reshape> : public typed_program_node_base<reshape>
 public:
     using parent::parent;
 
-    decltype(auto) input() const { return get_dependency(0); }
+    program_node& input() const { return get_dependency(0); }
 
     bool is_in_place() const
     {

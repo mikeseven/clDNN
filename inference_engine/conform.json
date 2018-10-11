@@ -111,24 +111,24 @@
             "128": "x"
         },
         "PVANET_fp16": {
-            "bbox_pred_reshape": "0xC0162B2AABD32D05A8B5AED8D08088C2",
-            "cls_prob_reshape": "0xB7AF9D4046094550F6364E1F4AC4AAD7",
-            "proposal": "0x63CB8A6479B374D0A10D68FD45082C69"
+            "bbox_pred_reshape": "0xD3CFBBDB3F22E952985FB9F6A5096715",
+            "cls_prob_reshape": "0x8C0D19483FCE55EC93F581BD2D8ECDAE",
+            "proposal": "0x03314DB6AECDE11840392AAF1896466A"
         },
         "PVANET_fp32": {
             "bbox_pred_reshape": "0x40D5B02C2C445F19D6BA1FBFDA281FF3",
             "cls_prob_reshape": "0x69C94CAD1836657A3ACA3CA0A1F2C70B",
-            "proposal": "0x396816558D25A0D7FC7CE5A0D07ED1F7"
+            "proposal": "0xBEC8C15A296D22640D59209CF6BF0DE5"
         },
         "Perc_ZF_fasterRCNN_fp16": {
-            "bbox_pred": "0x93B89D345F3746ED618E4E7E48A4CA8D",
-            "loss_cls": "0x77B9A52CBC268455C77A204DE91EBB11",
-            "proposal": "0xCEAD295012CD08023813A53541976E54"
+            "bbox_pred": "0xCE63F68A5DBE17EF6D13F113B506D727",
+            "loss_cls": "0x85A9EA3E1F55E74E7C75E8D8A0DC01D8",
+            "proposal": "0xB9768F5DE975965354AD6C4C05EF0806"
         },
         "Perc_ZF_fasterRCNN_fp32": {
             "bbox_pred": "0xD072E13E79CAA17AEB152851FE752C6F",
             "loss_cls": "0x73AB7DF50B024CDDB929D4DB20F10044",
-            "proposal": "0x4EE01CCC6653A27EE1EE05B57F92B9DB"
+            "proposal": "0xD8A9F0C4B5FAF121CFC76D6DE61380F1"
         },
         "ResNet-101_fp16": {
             "1": "0x295158C521F1642BA91A923951059A6C",
