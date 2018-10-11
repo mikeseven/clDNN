@@ -285,6 +285,26 @@ inline uint FUNC(get_is_o_yx_isv32_index)(uint o, uint i, uint y, uint x, uint i
         CAT(prefix, _SIZE_X),\
         CAT(prefix, _SIZE_Y))
 
+inline uint FUNC(get_os_is_y_x8_osv8_isv4_index)(uint o, uint i, uint y, uint x, uint i_size, uint o_size, uint x_size, uint y_size)
+{
+    const uint i_aligned_to_4 = ((i_size + 3) / 4) * 4;
+    const uint o_aligned_to_8 = ((o_size + 7) / 8) * 8;
+    const uint x_aligned_to_8 = ((x_size + 7) / 8) * 8;
+    const uint i_val = i % 4;
+    const uint i_slice = i / 4;
+    const uint o_val = o % 8;
+    const uint o_slice = o / 8;
+    const size_t idx = i_val + 4 * (o_val + 8 * ( x + x_aligned_to_8 * (y + y_size * (i_slice + i_aligned_to_4 * (o_slice)))));
+    return idx;
+}
+
+#define GET_FILTER_OS_IS_Y_X8_OSV8_ISV4(prefix, o, i, y, x)\
+    FUNC_CALL(get_os_is_y_x8_osv8_isv4_index)(\
+        o, i, y, x, CAT(prefix, _IFM_NUM),\
+        CAT(prefix, _OFM_NUM),\
+        CAT(prefix, _SIZE_X),\
+        CAT(prefix, _SIZE_Y))
+
 #define DECLARE_SAMPLER const sampler_t imageSampler = CLK_NORMALIZED_COORDS_FALSE | CLK_ADDRESS_CLAMP | CLK_FILTER_NEAREST
 
 #if FP16_UNIT_USED

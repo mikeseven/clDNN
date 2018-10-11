@@ -82,6 +82,7 @@ namespace kernel_selector
             image_2d_weights_winograd_6x3_s1_xfbyb, // image 2d winograd convolution weights for fused kernel, F(2, 3) --filter 3x3 with stride 1
             os_is_yx_isa8_osv8_isv4, // for MMAD convolution
             is_o_yx_isv32,           // for MMAD 1x1 convolutions
+            os_is_y_x8_osv8_isv4, // for MMAD convolutions
             bf_lyx_yx,               // local convolution
             WeightsLayoutCount       // NMBER OF ELEMENTS IN ENUM
         };
