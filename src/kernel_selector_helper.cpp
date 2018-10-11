@@ -222,15 +222,15 @@ kernel_selector::data_tensor convert_data_tensor(const layout& l, uint32_t split
     {
         new_vals[3] = align_to(vals[3], 32);
     }
-    if (ks_layout == kernel_selector::Tensor::byx8_f4)
-    {
-        new_vals[3] = align_to(vals[3], 4);
-        new_vals[2] = align_to(vals[2], 8);
-    }
     if (ks_layout == kernel_selector::Tensor::fs_bs_yx_bsv4_fsv32)
     {
         new_vals[3] = align_to(vals[3], 32);
         new_vals[2] = align_to(vals[2], 4);
+    }
+    if (ks_layout == kernel_selector::Tensor::byx8_f4)
+    {
+        new_vals[3] = align_to(vals[3], 4);
+        new_vals[2] = align_to(vals[2], 8);
     }
 
     for (size_t i = 0; i < vec.size(); i++)

@@ -120,7 +120,7 @@ cldnn::topology build_resnet50_i8(const std::string& weights_dir, const cldnn::e
 
     auto input_cf_data    = file::create({engine, join_path(weights_dir, "input_cf.nnd")});
     auto calibrated_input = reorder("calib_input", corrected_input,
-        format::byxf, data_types::i8, input_cf_data, cldnn_reorder_mean_mode::mean_mul);
+        format::byx8_f4, data_types::i8, input_cf_data, cldnn_reorder_mean_mode::mean_mul);
     topology_inst.add(input_cf_data, calibrated_input);
 
     auto conv1 = add_conv_layer(weights_dir, engine, topology_inst, "conv1", calibrated_input,

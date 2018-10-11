@@ -197,6 +197,45 @@ namespace instrumentation {
     }
 
     template<typename elemType>
+    void dump_byx8_f4(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id, std::vector<std::vector<std::stringstream>> & streams)
+    {
+        auto mem_ptr = mem.pointer<elemType>();
+        const auto& layout = mem.get_layout();
+        auto size = layout.size;
+
+        size.feature[0] = ((size.feature[0] + 3) / 4) * 4;
+        size.spatial[0] = ((size.spatial[0] + 7) / 8) * 8;
+
+        const auto b_size = size.batch[0];
+        const auto f_size = size.feature[0];
+        const auto x_size = size.spatial[0] + layout.data_padding.lower_size().spatial[0] + layout.data_padding.upper_size().spatial[0];
+        const auto y_size = size.spatial[1] + layout.data_padding.lower_size().spatial[1] + layout.data_padding.upper_size().spatial[1];
+
+        unsigned int input_it = 0;
+        for (cldnn::tensor::value_type b = 0; b < b_size; b++)
+        {
+            for (cldnn::tensor::value_type y = 0; y < y_size; y++)
+            {
+                for (cldnn::tensor::value_type x = 0; x < x_size; x++)
+                {
+                    for (cldnn::tensor::value_type f = 0; f < f_size; f++)
+                    {
+                        if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
+                        {
+                            streams[b][f] << convert_element(mem_ptr[input_it]) << " ";
+                            if (x == x_size - 1)
+                            {
+                                streams[b][f] << std::endl;
+                            }
+                        }
+                        input_it++;
+                    }
+                }
+            }
+        }
+    }
+
+    template<typename elemType>
     void dump_fs_bs_yx_bsv4_fsv32(const cldnn::memory& mem, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id, std::vector<std::vector<std::stringstream>> & streams)
     {
         auto mem_ptr = mem.pointer<elemType>();
@@ -510,10 +549,16 @@ namespace instrumentation {
     {        
         boost::filesystem::create_directories(dump_dir);
         auto batch = mem.get_layout().size.batch[0];
+        auto x = mem.get_layout().size.spatial[0];
         auto feature = mem.get_layout().size.feature[0];
         if (mem.get_layout().format == cldnn::format::byxf_af32)
         {
             feature = ((feature + 31) / 32) * 32;
+        }
+        if (mem.get_layout().format == cldnn::format::byx8_f4)
+        {
+            feature = ((feature + 3) / 4) * 4;
+            x = ((x + 7) / 8) * 8;
         }
         if (mem.get_layout().format == cldnn::format::fs_bs_yx_bsv4_fsv32)
         {
@@ -539,6 +584,19 @@ namespace instrumentation {
                 dump_fs_bs_yx_bsv4_fsv32<unsigned char>(mem, single_batch, batch_id, single_feature, feature_id, streams);
             else
                 dump_fs_bs_yx_bsv4_fsv32<char>(mem, single_batch, batch_id, single_feature, feature_id, streams);
+        }
+        else if (mem.get_layout().format == cldnn::format::byx8_f4)
+        {
+            if (mem.get_layout().data_type == cldnn::data_types::f32)
+                dump_byx8_f4<float>(mem, single_batch, batch_id, single_feature, feature_id, streams);
+            else if (mem.get_layout().data_type == cldnn::data_types::f16)
+                dump_byx8_f4<half_t>(mem, single_batch, batch_id, single_feature, feature_id, streams);
+            else if (mem.get_layout().data_type == cldnn::data_types::i8)
+                dump_byx8_f4<signed char>(mem, single_batch, batch_id, single_feature, feature_id, streams);
+            else if (mem.get_layout().data_type == cldnn::data_types::u8)
+                dump_byx8_f4<unsigned char>(mem, single_batch, batch_id, single_feature, feature_id, streams);
+            else
+                dump_byx8_f4<char>(mem, single_batch, batch_id, single_feature, feature_id, streams);
         }
         else
         {

@@ -381,10 +381,14 @@ struct layout
         {
             sizes[1] = align_to(sizes[1], 32);
         }
-        else if (this->format == cldnn::format::byx8_f4 && !(is_aligned_to(sizes[1], 4)) || !(is_aligned_to(sizes[2], 8)))
+        else if (this->format == cldnn::format::byx8_f4 && (!is_aligned_to(sizes[1], 4) || !is_aligned_to(sizes[2], 8)))
         {
+            // for this case we want to make sure, that with padding we're aligned to 8 in x
+            auto lp = data_padding.lower_size().spatial[0];
+            auto up = data_padding.upper_size().spatial[0];
             sizes[1] = align_to(sizes[1], 4);
-            sizes[2] = align_to(sizes[2], 8);
+            sizes[2] = align_to(lp + up + sizes[2], 8);
+            sizes[2] -= lp + up;
         }
         else if (this->format == cldnn::format::fs_bs_yx_bsv4_fsv32 && (!(is_aligned_to(sizes[1], 32)) || !(is_aligned_to(sizes[0], 4)) ) )
         {
