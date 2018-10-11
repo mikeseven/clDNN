@@ -276,8 +276,9 @@ KERNEL(Kernel_GEMM_MMAD8_32x32SG_224x128WG_SLM_INT8)
 	const uint workgroup_id_x = get_group_id(0); 
 	uint feature_off = 32*(sub_group_id % (WG_TILE_N / 32)) + WG_TILE_N*workgroup_id_x; //=32*{0,1,2,3} + WG_TILE_N * workgroup_id_x 
 	uint feature = get_sub_group_local_id() + feature_off;
-
+#if MMAD_SUPPORTED == 1
     __attribute__((opencl_unroll_hint( SG_TILE_M / (sizeof(int8) / sizeof(int)) )))
+#endif
     for (uint i = 0; i < SG_TILE_M / (sizeof(int8) / sizeof(int)); i++)
     {
         // begin of account for output PADDING
