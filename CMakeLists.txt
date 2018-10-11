@@ -526,7 +526,7 @@ mark_as_advanced(CLDNN__INCLUDE_GENERIC_SAMPLE)
 # ======================================================================================================
 
 # Minimum versions of compilers.
-set(CLDNN__MIN_COMPILER_VERSION__MSVC  "17.0")
+set(CLDNN__MIN_COMPILER_VERSION__MSVC  "11.0")
 set(CLDNN__MIN_COMPILER_VERSION__CLANG "3.5")
 set(CLDNN__MIN_COMPILER_VERSION__ICC   "17.0")
 set(CLDNN__MIN_COMPILER_VERSION__GCC   "4.8")
