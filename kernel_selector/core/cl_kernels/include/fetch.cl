@@ -72,6 +72,25 @@ inline uint FUNC(get_byxf_af32_index)(uint b, uint f, uint y, uint x, uint y_pit
 		CAT(prefix, _FEATURE_NUM),                 \
 		CAT(prefix, _OFFSET))
 
+inline uint FUNC(get_byx8_f4_index)(uint b, uint f, uint y, uint x, uint y_pitch, uint b_pitch, uint f_size, uint x_size, uint offset)
+{
+    const uint f_aligned_to_4 = ((f_size + 3) / 4) * 4;
+    const uint x_aligned_to_8 = ((x_size + 7) / 8) * 8;
+    const uint b_offset = b * b_pitch;
+    const uint xy_offset = f_aligned_to_4 * (x + x_aligned_to_8 * y);
+    const uint f_offset = f;
+    const size_t idx = offset + xy_offset + b_offset + f_offset;
+    return idx;
+}
+
+#define GET_DATA_BYX8_F4_INDEX(prefix, b, f, y, x)\
+	FUNC_CALL(get_byx8_f4_index)(                 \
+		b, f, y, x, CAT(prefix, _Y_PITCH),          \
+		CAT(prefix, _BATCH_PITCH),                      \
+		CAT(prefix, _FEATURE_NUM),                 \
+		CAT(prefix, _SIZE_X),                 \
+		CAT(prefix, _OFFSET))
+
 #define GET_DATA_BF8_XY16_INDEX(prefix, b, f, y, x)     \
     FUNC_CALL(get_bf8_xy16_index)(                      \
         b, f, y, x, CAT(prefix, _SIZE_X ),              \

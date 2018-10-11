@@ -30,17 +30,18 @@ namespace kernel_selector
             //X, Y, F, R, B
             {-1,-1, 0,-1, 1 }, // DataLayout::bf
             {-1,-1, 1,-1, 0 }, // DataLayout::fb
-            { 0, 1, 2,-1, 3 },  // DataLayout::bfyx
-            { 2, 3, 1,-1, 0 },  // DataLayout::yxfb
-            { 1, 2, 0,-1, 3 },  // DataLayout::byxf
-            { 1, 2, 3,-1, 0 },  // DataLayout::fyxb
-            {-1,-1, 0,-1, 1 },  // DataLayout::bs_f_bsv8__af8
-            {-1,-1, 0,-1, 1 },  // DataLayout::bs_f_bsv16__af8
-            { 0, 1, 2,-1, 3 },  // DataLayout::bf8_xy16
-            { 0, 1, 2, 3, 4 },  // DataLayout::brfyx
-            { 2, 1, 0,-1, 3 },  // DataLayout::winograd_2x3_s1_data
-            { 1, 2, 0,-1, 3 },  // DataLayout::byxf_af32
-            { 0, 1, 3,-1, 2 },  // DataLayout::fs_bs_yx_bsv4_fsv32
+            { 0, 1, 2,-1, 3 }, // DataLayout::bfyx
+            { 2, 3, 1,-1, 0 }, // DataLayout::yxfb
+            { 1, 2, 0,-1, 3 }, // DataLayout::byxf
+            { 1, 2, 3,-1, 0 }, // DataLayout::fyxb
+            {-1,-1, 0,-1, 1 }, // DataLayout::bs_f_bsv8__af8
+            {-1,-1, 0,-1, 1 }, // DataLayout::bs_f_bsv16__af8
+            { 0, 1, 2,-1, 3 }, // DataLayout::bf8_xy16
+            { 0, 1, 2, 3, 4 }, // DataLayout::brfyx
+            { 2, 1, 0,-1, 3 }, // DataLayout::winograd_2x3_s1_data
+            { 1, 2, 0,-1, 3 }, // DataLayout::byxf_af32
+            { 1, 2, 0,-1, 3 }, // DataLayout::byx8_f8
+            { 0, 1, 3,-1, 2 }, // DataLayout::fs_bs_yx_bsv4_fsv32
         } };
 
         std::array<std::array<int, 6>, WeightsLayout::WeightsLayoutCount> WeightsTensor::weightsChannelArray
@@ -99,6 +100,10 @@ namespace kernel_selector
                 assert(newDims.size() == 4);
                 newDims[0] = RoundUp(newDims[0], 32);
                 break;
+            case byx8_f4:
+                assert(newDims.size() == 4);
+                newDims[0] = RoundUp(newDims[0], 4);
+                newDims[1] = RoundUp(newDims[1], 8);
             case fs_bs_yx_bsv4_fsv32:
                 assert(newDims.size() == 4);
                 newDims[3] = RoundUp(newDims[3], 32);
@@ -118,7 +123,7 @@ namespace kernel_selector
                 pitch *= newDims[i];
             }
 
-            if (l == byxf_af32 || l == fs_bs_yx_bsv4_fsv32)
+            if (l == byxf_af32 || l == fs_bs_yx_bsv4_fsv32 || l == byx8_f4)
             {
                 ret[0].pitch = 1;
                 ret[1].pitch = ret[0].pitch * newDims[0];

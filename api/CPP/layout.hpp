@@ -312,6 +312,11 @@ struct layout
             sizes[3] = align_to(sizes[3], 32);
         }
 
+        if (format == format::byx8_f4)
+        {
+            sizes[3] = align_to(sizes[3], 4);
+            sizes[2] = align_to(sizes[2], 8);
+        }
         std::vector<tensor::value_type> pitches(sizes.size(), tensor::value_type(1));
         std::partial_sum(sizes.rbegin(), sizes.rend() - 1, pitches.rbegin() + 1, std::multiplies<tensor::value_type>());
         return{ format, pitches };
@@ -375,6 +380,11 @@ struct layout
         else if (this->format == cldnn::format::byxf_af32 && !(is_aligned_to(sizes[1], 32)))
         {
             sizes[1] = align_to(sizes[1], 32);
+        }
+        else if (this->format == cldnn::format::byx8_f4 && !(is_aligned_to(sizes[1], 4)) || !(is_aligned_to(sizes[2], 8)))
+        {
+            sizes[1] = align_to(sizes[1], 4);
+            sizes[2] = align_to(sizes[2], 8);
         }
         else if (this->format == cldnn::format::fs_bs_yx_bsv4_fsv32 && (!(is_aligned_to(sizes[1], 32)) || !(is_aligned_to(sizes[0], 4)) ) )
         {
