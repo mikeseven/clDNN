@@ -51,10 +51,12 @@ KERNEL(convolution_gpu_byx8_f4_fs_bs_yx_bsv4_fsv32)(
 
     for (uint k = 0; k < FILTER_IFM_SLICES; ++k)
     {
+        __attribute__((opencl_unroll_hint(FILTER_SIZE_Y)))
         for (uint j = 0; j < FILTER_SIZE_Y ; ++j)
         {
             const int input_offset_y = input_y + j * DILATION_SIZE_Y;
 
+            __attribute__((opencl_unroll_hint(FILTER_SIZE_X_SLICES)))
             for(uint i = 0; i < FILTER_SIZE_X_SLICES; i++)
             {
                 uint input_idx = GET_DATA_BYX8_F4_INDEX(INPUT0, b, k * 4, input_offset_y, input_x + i * 8);
@@ -71,6 +73,7 @@ KERNEL(convolution_gpu_byx8_f4_fs_bs_yx_bsv4_fsv32)(
                 act_reg[6] = intel_sub_group_shuffle_down(_input_data_01[1], _input_data_2, STRIDE_SIZE_X * 2);
                 act_reg[7] = intel_sub_group_shuffle_down(_input_data_01[1], _input_data_2, STRIDE_SIZE_X * 3);
 
+                __attribute__((opencl_unroll_hint(4)))
                 for(uint w = 0; w < 4; w++) // iterate over output feature channels for weights
                 {
                     uint filter_idx = GET_FILTER_OS_IS_Y_X8_OSV8_ISV4(FILTER, f + w * 8, k * 4, j, i * 8);
@@ -90,9 +93,11 @@ float4 bias_f = as_float4(intel_sub_group_block_read4((__global uint*) (biases +
 float4 calib_f = as_float4(intel_sub_group_block_read4((__global uint*) (calibrations + f) ));
 #endif
 
+__attribute__((opencl_unroll_hint(4)))
 for(uint w = 0; w < 4; w++)
 {
     const uint _f = f + 8 * w + get_sub_group_local_id();
+    __attribute__((opencl_unroll_hint(8)))
     for(uint i = 0; i < 8; i++)
     {
     #if CALIBRATION_TERM
