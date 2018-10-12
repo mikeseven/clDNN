@@ -32,7 +32,6 @@ namespace kernel_selector {
         k.EnableDilation();
         k.EnableBiasPerFeature();
         k.EnableBiasPerOutput();
-        k.EnableNonBiasTerm();
         k.EnableBatching();
         k.EnableInt8Quantization();
         k.EnableOutputCalibration();
@@ -66,7 +65,7 @@ namespace kernel_selector {
         runInfo.effiency = FORCE_PRIORITY_1;
 
         runInfo.gws0 = (arg.output.Batch().v * arg.output.Feature().v) / 1;
-        runInfo.gws1 = arg.output.X().v / 1;
+        runInfo.gws1 = arg.output.X().v / 8;
         runInfo.gws2 = arg.output.Y().v;
 
         runInfo.lws0 = 8;
