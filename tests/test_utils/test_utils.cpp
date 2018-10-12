@@ -85,7 +85,7 @@ namespace tests
                     {
                         values.push_back(static_cast<float>(multipler + j));
                     }
-                    tests::set_values_per_batch_and_feature<float>(input_mems[i], generic_params->input_layouts[i], values);
+                    tests::set_values_per_batch_and_feature<float>(input_mems[i], values);
                     multipler = values.size();
                 }
                 else
@@ -95,7 +95,7 @@ namespace tests
                     {
                         values.push_back(FLOAT16(static_cast<float>(multipler + j)));
                     }
-                    tests::set_values_per_batch_and_feature<FLOAT16>(input_mems[i], generic_params->input_layouts[i], values);
+                    tests::set_values_per_batch_and_feature<FLOAT16>(input_mems[i], values);
                     multipler = values.size();
                 }        
             }                        
