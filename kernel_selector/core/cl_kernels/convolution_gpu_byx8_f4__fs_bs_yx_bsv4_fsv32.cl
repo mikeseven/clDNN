@@ -18,6 +18,10 @@
 #include "include/fetch.cl"
 #include "include/mmad.cl"
 
+#define FILTER_IFM_SLICES ((FILTER_IFM_NUM + 3) /4)
+#define FILTER_SIZE_X_SLICES ((FILTER_SIZE_X + 7) / 8)
+
+__attribute__((intel_reqd_sub_group_size(8)))
 KERNEL(convolution_gpu_byx8_f4_fs_bs_yx_bsv4_fsv32)(
     __global INPUT0_TYPE* input, 
     __global OUTPUT_TYPE* output, 
@@ -59,18 +63,33 @@ KERNEL(convolution_gpu_byx8_f4_fs_bs_yx_bsv4_fsv32)(
     const uint filter_offset = f*FILTER_OFM_PITCH;
     const uint input_offset = b*INPUT0_BATCH_PITCH + INPUT0_OFFSET + in_split_offset;
 
-    for (uint k = 0; k < FILTER_IFM_NUM; ++k)
+    for (uint k = 0; k < FILTER_IFM_SLICES; ++k)
     {
         for (uint j = 0; j < FILTER_SIZE_Y ; ++j)
         {
             const int input_offset_y = input_y + j * DILATION_SIZE_Y;
-            for (uint i = 0; i < FILTER_SIZE_X ; ++i)
+
+            for(uint i = 0; i < FILTER_SIZE_X_SLICES; i++)
             {
-                const int input_offset_x = input_x + i * DILATION_SIZE_X;
-         
-                uint input_idx = GET_DATA_BYX8_F4_INDEX(INPUT0, b, k, input_offset_y, input_offset_x);
-                uint filter_idx = GET_FILTER_OS_IS_Y_X8_OSV8_ISV4(FILTER, f, k, j, i);
-                dotProd += (int)input[input_idx] * (int)weights[filter_idx];
+                uint input_idx = GET_DATA_BYX8_F4_INDEX(INPUT0, b, k * 4, input_offset_y, input_x + i * 8);
+                int _in = as_int(intel_sub_group_block_read((__global uint*)(input + input_idx)));
+
+                uint filter_idx = GET_FILTER_OS_IS_Y_X8_OSV8_ISV4(FILTER, f, k * 4, j, i * 8);
+                int8 _w = as_int8(intel_sub_group_block_read8((__global uint*)(weights + filter_idx)));
+
+                int8 activations;  //activations of all lanes
+                activations.s0 = sub_group_broadcast(_in, 0); 
+                activations.s1 = sub_group_broadcast(_in, 1); 
+                activations.s2 = sub_group_broadcast(_in, 2); 
+                activations.s3 = sub_group_broadcast(_in, 3); 
+                activations.s4 = sub_group_broadcast(_in, 4); 
+                activations.s5 = sub_group_broadcast(_in, 5); 
+                activations.s6 = sub_group_broadcast(_in, 6); 
+                activations.s7 = sub_group_broadcast(_in, 7); 
+
+                // MMAD on 8x 4 input channels elements in WI
+                dotProd = MMAD_8(activations, _w, dotProd);
+
             }
         }
     }
@@ -103,3 +122,6 @@ KERNEL(convolution_gpu_byx8_f4_fs_bs_yx_bsv4_fsv32)(
 #endif   
     
 }
+
+#undef FILTER_SIZE_X_SLICES
+#undef FILTER_IFM_SLICES

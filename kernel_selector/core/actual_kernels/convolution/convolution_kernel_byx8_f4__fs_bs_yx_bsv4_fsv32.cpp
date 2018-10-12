@@ -56,6 +56,26 @@ namespace kernel_selector {
         return true;
     }
 
+    ConvolutionKernelBase::DispatchData ConvolutionKernel_byx8_f4__fs_bs_yx_bsv4_fsv32::SetDefault(const convolution_params& arg, int) const
+    {
+        DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
+
+        const auto of_maps = arg.output.Feature().v;
+        const size_t of_threads_per_batch = RoundUp(of_maps, 8);
+
+        runInfo.effiency = FORCE_PRIORITY_1;
+
+        runInfo.gws0 = (arg.output.Batch().v * arg.output.Feature().v) / 1;
+        runInfo.gws1 = arg.output.X().v / 1;
+        runInfo.gws2 = arg.output.Y().v;
+
+        runInfo.lws0 = 8;
+        runInfo.lws1 = 1;
+        runInfo.lws2 = 1;
+
+        return runInfo;
+    }
+
     KernelsData ConvolutionKernel_byx8_f4__fs_bs_yx_bsv4_fsv32::GetKernelsData(const Params& params, const optional_params& options) const
     {
         KernelsData kd = GetCommonKernelsData(params, options);
