@@ -36,10 +36,10 @@ KERNEL(convolution_gpu_byx8_f4_fs_bs_yx_bsv4_fsv32)(
     const uint x = get_global_id(1) * 8;
     const uint y = get_global_id(2);
 
-    const uint f = get_global_id(0) % OUTPUT_FEATURE_NUM;
-    const uint b = get_global_id(0) / OUTPUT_FEATURE_NUM;
+    const uint f = (get_group_id(0) * 8 * 4 ) % OUTPUT_FEATURE_NUM;
+    const uint b = (get_group_id(0) * 8 * 4) / OUTPUT_FEATURE_NUM;
 
-    int8 dotProd = 0;
+    int8 dotProd[4] =  { 0 };
 
     const int input_x = x * STRIDE_SIZE_X - PADDING_SIZE_X;
     const int input_y = y * STRIDE_SIZE_Y - PADDING_SIZE_Y;
@@ -71,34 +71,44 @@ KERNEL(convolution_gpu_byx8_f4_fs_bs_yx_bsv4_fsv32)(
                 act_reg[6] = intel_sub_group_shuffle_down(_input_data_01[1], _input_data_2, STRIDE_SIZE_X * 2);
                 act_reg[7] = intel_sub_group_shuffle_down(_input_data_01[1], _input_data_2, STRIDE_SIZE_X * 3);
 
-                uint filter_idx = GET_FILTER_OS_IS_Y_X8_OSV8_ISV4(FILTER, f, k * 4, j, i * 8);
-                int8 _w = as_int8(intel_sub_group_block_read8((__global uint*)(weights + filter_idx)));
-                // MMAD on 8x 4 input channels elements for 8x outputs in WI
-                dotProd = MMAD_8x8(act_reg, _w, dotProd);
+                for(uint w = 0; w < 4; w++) // iterate over output feature channels for weights
+                {
+                    uint filter_idx = GET_FILTER_OS_IS_Y_X8_OSV8_ISV4(FILTER, f + w * 8, k * 4, j, i * 8);
+                    int8 _w = as_int8(intel_sub_group_block_read8((__global uint*)(weights + filter_idx)));
+                    // MMAD on 8x 4 input channels elements for 8x outputs in WI
+                    dotProd[w] = MMAD_8x8(act_reg, _w, dotProd[w]);
+                }
             }
         }
     }
 
-#if BIAS_PER_OUTPUT
-    const uint bias_index = GET_DATA_INDEX(BIAS, b, f, y, x);
-#elif BIAS_PER_OFM
-    const uint bias_index = f;
+
+
+float4 quant_f = as_float4(intel_sub_group_block_read4((__global uint*) (quantizations + f) ));
+float4 bias_f = as_float4(intel_sub_group_block_read4((__global uint*) (biases + f) ));
+#if CALIBRATION_TERM
+float4 calib_f = as_float4(intel_sub_group_block_read4((__global uint*) (calibrations + f) ));
 #endif
 
-for(uint i = 0; i < 8; i++)
+for(uint w = 0; w < 4; w++)
 {
-#if CALIBRATION_TERM
-    dotProd[i] = (UNIT_TYPE)round(((float)dotProd[i] * quantizations[f] * I_QF + biases[bias_index]) * calibrations[f]);
-#else  // CALIBRATION_TERM
-    dotProd[i] = (UNIT_TYPE)round(((float)dotProd[i] * quantizations[f] * I_QF + biases[bias_index]) * O_QF);
-#endif // CALIBRATION_TERM
+    const uint _f = f + 8 * w + get_sub_group_local_id();
+    for(uint i = 0; i < 8; i++)
+    {
+    #if CALIBRATION_TERM
+        dotProd[w][i] = (UNIT_TYPE)round(((float)dotProd[w][i] * quant_f[w] * I_QF + bias_f[w]) * calib_f[w]);
+    #else  // CALIBRATION_TERM
+        dotProd[w][i] = (UNIT_TYPE)round(((float)dotProd[w][i] * quant_f[w] * I_QF + bias_f[w]) * O_QF);
+    #endif // CALIBRATION_TERM
 
-    const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * OUTPUT_FEATURE_NUM;
-    const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b, f, y, x+ i) + out_split_offset;
+        const uint out_split_offset = split_idx * OUTPUT_FEATURE_PITCH * OUTPUT_FEATURE_NUM;
+        const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b, _f, y, x+ i) + out_split_offset;
 
-    output[dst_index] = ACTIVATION(convert_char(dotProd[i]), NL_M, NL_N);
+        output[dst_index] = ACTIVATION(convert_char(dotProd[w][i]), NL_M, NL_N);
 
+    }
 }
+
 }
 
 #undef FILTER_SIZE_X_SLICES
