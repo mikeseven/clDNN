@@ -61,7 +61,7 @@ topology generate_simple_branch (bool branch_true_false, const primitive_id& inp
         );
     }
     return branch;
-};
+}
 
 
 TEST(condition_gpu, basic_equal_comp) {
