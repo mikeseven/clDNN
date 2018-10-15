@@ -156,17 +156,19 @@ void prepare_buffer_fusing::run(program_impl &p)
             if (node.get_dependencies().size() == 1 &&
                 node.get_users().size() > 0)
             {
-                // optimization is avaiable for croping across depth(features) only
-                // if output padding has defined padding accross featuers already it wouldn't
+                // optimization is available for cropping across depth(features) only
+                // if output padding has defined padding across features already it wouldn't
                 // work because it expect to have zeros in the padded area.
-                auto format = node.get_output_layout().format;
+                const auto& crop_layout = node.get_output_layout();
+                auto format = crop_layout.format;
                 auto crop_prim = node.get_primitive();
                 auto input_layout = node.get_dependency(0).get_output_layout();
-                auto out_padd = node.get_output_layout().data_padding;
+                const auto& crop_size = crop_layout.size;
+                const auto& out_padd = crop_layout.data_padding;
                 if (format == format::bfyx &&
-                    crop_prim->reference_input.batch[0] == input_layout.size.batch[0] &&
-                    crop_prim->reference_input.spatial[0] == input_layout.size.spatial[0] &&
-                    crop_prim->reference_input.spatial[1] == input_layout.size.spatial[1] &&
+                    crop_size.batch[0] == input_layout.size.batch[0] &&
+                    crop_size.spatial[0] == input_layout.size.spatial[0] &&
+                    crop_size.spatial[1] == input_layout.size.spatial[1] &&
                     out_padd.lower_size().feature[0] == 0 &&
                     out_padd.upper_size().feature[0] == 0 &&
                     out_padd.lower_size().batch[0] == 0 &&
@@ -186,13 +188,13 @@ void prepare_buffer_fusing::run(program_impl &p)
                     //             <------------>
                     //           reference size
                     //
-                    //  Inplace crop
+                    //  In-place crop
                     //  crop output buffer
                     //  |_low_pad_|__data_size__|___|<-upper pad
 
                     node.set_output_padding(padding(
                     { out_padd.lower_size().batch[0], crop_prim->offsets.feature[0], out_padd.lower_size().spatial[0], out_padd.lower_size().spatial[1] },
-                    { out_padd.upper_size().batch[0], input_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_prim->reference_input.feature[0],
+                    { out_padd.upper_size().batch[0], input_layout.size.feature[0] - crop_prim->offsets.feature[0] - crop_size.feature[0],
                         out_padd.upper_size().spatial[0], out_padd.upper_size().spatial[1] }));
                     node.can_be_optimized(true);
                 }

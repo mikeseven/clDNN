@@ -722,7 +722,7 @@ namespace cmdline
 template <typename Elem1Ty = unsigned, typename Elem2Ty = unsigned>
 auto validate(boost::any& out_var, const std::vector<std::string>& values,
               pair<Elem1Ty, Elem2Ty>*, int)
-    -> std::enable_if_t<std::is_unsigned<Elem1Ty>::value && std::is_unsigned<Elem1Ty>::value>
+    -> std::enable_if_t<std::is_unsigned<Elem1Ty>::value && std::is_unsigned<Elem2Ty>::value>
 {
     static_assert(static_cast<unsigned>(print_type::_enum_count) == 3,
         "Some cases from print_type enum are not handled. Please provide handling in validate().");
@@ -765,7 +765,7 @@ auto validate(boost::any& out_var, const std::vector<std::string>& values,
 /// @brief Prints value representation to stream.
 template <typename Elem1Ty = unsigned, typename Elem2Ty = unsigned>
 auto operator <<(std::ostream& out, const pair<Elem1Ty, Elem2Ty>& val)
-    -> std::enable_if_t<std::is_unsigned<Elem1Ty>::value && std::is_unsigned<Elem1Ty>::value, std::ostream&>
+    -> std::enable_if_t<std::is_unsigned<Elem1Ty>::value && std::is_unsigned<Elem2Ty>::value, std::ostream&>
 {
     using std::to_string;
 

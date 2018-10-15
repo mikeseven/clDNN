@@ -165,16 +165,16 @@ struct diff_results
     /// @brief Sum of squared difference of all pixels between images.
     double ssd      = 0.0;
     /// @brief Per pixel mean value of sum of squared difference.
-    double ssd_mean = 0.0;;
+    double ssd_mean = 0.0;
 
     /// @brief Ratio of number of different pixels to the number of all pixels in compared images.
-    double diff_pixel_freq     = 0.0;;
+    double diff_pixel_freq     = 0.0;
     /// @brief Ratio of number of moderately different pixels (more than 1 percentile of possible difference)
     ///        to the number of all pixels in compared images.
-    double diff_1pc_pixel_freq = 0.0;;
+    double diff_1pc_pixel_freq = 0.0;
     /// @brief Ratio of number of highly different pixels (more than 5 percentile of possible difference)
     ///        to the number of all pixels in compared images.
-    double diff_5pc_pixel_freq = 0.0;;
+    double diff_5pc_pixel_freq = 0.0;
 
     /// @brief Difference image. 24-bit image where each pixel is calculated as absolute difference
     ///        of compared images.

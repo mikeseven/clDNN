@@ -19,7 +19,11 @@
 #include <api/CPP/topology.hpp>
 
 
+/// @brief Builds simple test transpose transformation of image.
+cldnn::topology build_test_transpose(const std::string& weights_dir, const cldnn::engine& engine,
+                                     cldnn::layout& input_layout, bool mean_subtract = false);
+
 /// @brief Builds FNS (Fast Neural Style) instance normalization (Feed-Forward) topology
 ///        based on FNS-Candy.
 cldnn::topology build_fns_instance_norm(const std::string& weights_dir, const cldnn::engine& engine,
-                                        cldnn::layout& input_layout, bool mean_subtract = false);
+                                        cldnn::layout& input_layout, bool mean_subtract = true);

@@ -82,7 +82,8 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "transformation / segmentation).")
         ("model,m", bpo::value<std::string>()->value_name("<model-name>")->default_value("fns-candy"),
             "Name of a neural network model that is used for transformation / segmentation.\n"
-            "It can be one of:\n  \tfns-candy.")
+            "It can be one of:\n  \tfns-candy, fns-feathers, fns-lamuse, fns-mosaic, fns-thescream, "
+            "fns-udnie, test-transpose.")
         ("weights,w", bpo::value<std::string>()->value_name("<weights-dir>"),
             "Path to directory containing weights used in classification.\n"
             "Non-absolute paths are computed in relation to <executable-dir> (not working directory).\n"
@@ -128,14 +129,14 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
     return {exec_info, standard_cmdline_options, true, help_msg_formatter};
 }
 
-static void run_topology(const transform_execution_params& exec_params)
+static bool run_topology(const transform_execution_params& exec_params)
 {
     // Calculating preferred batch size.
     const auto batch_size               = exec_params.batch;
     const auto gpu_preferred_batch_size = get_gpu_batch_size(batch_size);
     if (gpu_preferred_batch_size != batch_size && !exec_params.rnn_type_of_topology)
     {
-        std::cout << "WARNING: This is not the optimal batch size. You have "
+        std::cerr << "WARNING: This is not the optimal batch size. You have "
             << (gpu_preferred_batch_size - batch_size)
             << " dummy images per batch!!! Please use --batch=" << gpu_preferred_batch_size
             << " for best performance." << std::endl;
@@ -157,7 +158,7 @@ static void run_topology(const transform_execution_params& exec_params)
             sources_dump_dir = instrumentation::logger::create_sources_dumps_dir(err);
             if (!err.empty())
             {
-                std::cout << "WARNING: Could not create directory for dump of sources. Path to directory: \""
+                std::cerr << "WARNING: Could not create directory for dump of sources. Path to directory: \""
                     << sources_dump_dir << "\" does not exist and cannot be created."
                     << "\n    Error: " << err
                     << "\n    --- dumping will be disabled." << std::endl;
@@ -189,13 +190,13 @@ static void run_topology(const transform_execution_params& exec_params)
         }
         catch (cldnn::error& ex)
         {
-            std::cout << "WARNING: Could not initialize cldnn::engine with out-of-order queue."
+            std::cerr << "WARNING: Could not initialize cldnn::engine with out-of-order queue."
                 << "\n    Error (" << std::to_string(ex.status()) << "): " << ex.what()
                 << "\n    --- falling back to in-order queue." << std::endl;
         }
         catch (std::exception& ex)
         {
-            std::cout << "WARNING: Could not initialize cldnn::engine with out-of-order queue."
+            std::cerr << "WARNING: Could not initialize cldnn::engine with out-of-order queue."
                 << "\n    Error: " << ex.what()
                 << "\n    --- falling back to in-order queue." << std::endl;
         }
@@ -210,7 +211,7 @@ static void run_topology(const transform_execution_params& exec_params)
     {
         if (!power_measure_lib.IntelEnergyLibInitialize())
         {
-            std::cout << "WARNING: Intel(C) Power Gadget(C) is not initialized."
+            std::cerr << "WARNING: Intel(C) Power Gadget(C) is not initialized."
                 << "\n    Error: " << power_measure_lib.GetLastError() << std::endl;
         }
     }
@@ -254,8 +255,10 @@ static void run_topology(const transform_execution_params& exec_params)
         }
     };
 
-    if (exec_params.topology_name == "fns-candy")
+    if (exec_params.topology_name.compare(0, 4, "fns-") == 0)
         selected_topology = build_fns_instance_norm(exec_params.weights_dir, selected_engine, input_layout);
+    else if(exec_params.topology_name == "test-transpose")
+        selected_topology = build_test_transpose(exec_params.weights_dir, selected_engine, input_layout);
     else
         throw std::runtime_error("Topology \"" + exec_params.topology_name + "\" not implemented");
 
@@ -283,6 +286,7 @@ static void run_topology(const transform_execution_params& exec_params)
 
     auto input = cldnn::memory::allocate(selected_engine, input_layout);
 
+    auto is_all_matched       = true;
     auto img_paths_it         = input_paths.cbegin();
     const auto img_paths_last = input_paths.cend();
     while (img_paths_it != img_paths_last)
@@ -310,8 +314,11 @@ static void run_topology(const transform_execution_params& exec_params)
         if (!exec_params.rnn_type_of_topology &&
             exec_params.run_until_primitive_name.empty() && exec_params.run_single_kernel_name.empty())
         {
-            printer.batch(loaded_image_info.second, output, exec_params.input_dir, exec_params.print_type,
-                          exec_params.compare_ref_img_dir);
+            auto is_batch_matched = printer.batch(loaded_image_info.second, output, exec_params.input_dir,
+                                                  exec_params.print_type, exec_params.compare_ref_img_dir);
+
+            if (!is_batch_matched && !exec_params.compare_ref_img_dir.empty())
+                is_all_matched = false;
         }
         else if (!exec_params.run_until_primitive_name.empty())
         {
@@ -336,6 +343,7 @@ static void run_topology(const transform_execution_params& exec_params)
         }
     }
 
+    return is_all_matched;
 }
 
 // --------------------------------------------------------------------------------------------------------------------
@@ -458,10 +466,17 @@ int main(const int argc, char* argv[])
         ep.compare_histograms  = parsed_args["compare_histograms"].as<bool>();
 
         // Validate and run topology.
-        if (ep.topology_name == "fns-candy")
+        if (ep.topology_name == "fns-candy" ||
+            ep.topology_name == "fns-feathers" ||
+            ep.topology_name == "fns-lamuse" ||
+            ep.topology_name == "fns-mosaic" ||
+            ep.topology_name == "fns-thescream" ||
+            ep.topology_name == "fns-udnie" ||
+            ep.topology_name == "test-transpose")
         {
-            run_topology(ep);
-            return 0;
+            if (run_topology(ep))
+                return 0;
+            return 100; // Comparision is enabled and matching/diff failed.
         }
         std::cerr << "ERROR: model / topology (\"" << ep.topology_name << "\") is not implemented!!!" << std::endl;
     }

@@ -245,12 +245,12 @@ class NndFile(object):
         :raise RuntimeError: Specified type-code of data type cannot be parsed. Data type is not supported.
         """
         hdr_data_type_map = {
-            'F': (NndFile.DT_FP32,   4, 'f'),
-            'H': (NndFile.DT_FP16,   2, 'H'),
-            's': (NndFile.DT_INT16,  2, 'h'),
-            'S': (NndFile.DT_UINT16, 2, 'H'),
-            'b': (NndFile.DT_INT8,   1, 'b'),
-            'B': (NndFile.DT_UINT8,  1, 'B'),
+            b'F': (NndFile.DT_FP32,   4, 'f'),
+            b'H': (NndFile.DT_FP16,   2, 'H'),
+            b's': (NndFile.DT_INT16,  2, 'h'),
+            b'S': (NndFile.DT_UINT16, 2, 'H'),
+            b'b': (NndFile.DT_INT8,   1, 'b'),
+            b'B': (NndFile.DT_UINT8,  1, 'B'),
         }
         if hdr_data_type in hdr_data_type_map:
             return hdr_data_type_map[hdr_data_type]
@@ -268,12 +268,12 @@ class NndFile(object):
                            * size of element of data type in bytes.
         """
         data_type_map = {
-            NndFile.DT_FP32:   ('F', 4),
-            NndFile.DT_FP16:   ('H', 2),
-            NndFile.DT_INT16:  ('s', 2),
-            NndFile.DT_UINT16: ('S', 2),
-            NndFile.DT_INT8:   ('b', 1),
-            NndFile.DT_UINT8:  ('B', 1),
+            NndFile.DT_FP32:   (b'F', 4),
+            NndFile.DT_FP16:   (b'H', 2),
+            NndFile.DT_INT16:  (b's', 2),
+            NndFile.DT_UINT16: (b'S', 2),
+            NndFile.DT_INT8:   (b'b', 1),
+            NndFile.DT_UINT8:  (b'B', 1),
         }
         return data_type_map[data_type]
 
@@ -665,7 +665,7 @@ class NndFile(object):
 
         nnd_hdr_data_type, nnd_hdr_elem_size = NndFile.__encode_hdr_data_type(self.__data_type)
         nnd_hdr_layout = NndFile.__encode_hdr_layout(self.__layout, self.__data_type, use_old_layout_format)
-        nnd_hdr_data = ('nnd', nnd_hdr_data_type, self.__version, len(self.__sizes), nnd_hdr_elem_size, nnd_hdr_layout)
+        nnd_hdr_data = (b'nnd', nnd_hdr_data_type, self.__version, len(self.__sizes), nnd_hdr_elem_size, nnd_hdr_layout)
         nnd_hdr_bytes = struct.pack(NndFile.__header_format, *nnd_hdr_data)
 
         nnd_hdr_sizes = list(self.__sizes)
@@ -766,7 +766,7 @@ class NndFile(object):
                 for row_data in feature_data:
                     nnd_data.extend(row_data)
 
-        nnd_flat_size = reduce(lambda x, y: x * y, nnd_sizes)
+        nnd_flat_size = functools.reduce(lambda x, y: x * y, nnd_sizes)
         if nnd_flat_size <= 0:
             raise ValueError('Provided raw data is invalid (calculated size is 0): "{0}" file.'
                              .format(proposed_file_path))
@@ -822,7 +822,7 @@ class NndFile(object):
         assert max(dump_reorder) <= len(self.__sizes)
         dump_sizes = [self.__sizes[-bfyx_pos] if bfyx_pos > 0 else 1
                       for bfyx_pos in dump_reorder]
-        dump_steps = [reduce(lambda x, y: x * y, self.__sizes[1 - bfyx_pos:] if bfyx_pos > 1 else [], 1)
+        dump_steps = [functools.reduce(lambda x, y: x * y, self.__sizes[1 - bfyx_pos:] if bfyx_pos > 1 else [], 1)
                       for bfyx_cmp_idx, bfyx_pos in enumerate(dump_reorder)]
 
         dump_files = []
@@ -1683,8 +1683,9 @@ class CalibCalculator(object):
             return vals_size_x, vals_size_y, dump_vals_parts
 
     @staticmethod
-    def __extract_props_from_dump_file_name((dump_file_name, dump_file_dir)):
+    def __extract_props_from_dump_file_name(dump_file_loc):
         # type: (typing.Tuple[typing.AnyStr, typing.AnyStr]) -> typing.Tuple[typing.AnyStr, int, int, typing.AnyStr, typing.AnyStr]
+        dump_file_name, dump_file_dir = dump_file_loc
         name_parts = CalibCalculator.__dump_file_name_matcher.match(dump_file_name)
         return name_parts.group(1), int(name_parts.group(2)), int(name_parts.group(3)), dump_file_name, dump_file_dir
 
@@ -1722,8 +1723,9 @@ class CalibCalculator(object):
         return map(CalibCalculator.__extract_props_from_dump_file_name, candidate_files)
 
     @staticmethod
-    def __extract_props_from_weights_file_name((weights_file_name, weights_file_dir)):
+    def __extract_props_from_weights_file_name(weights_file_loc):
         # type: (typing.Tuple[typing.AnyStr, typing.AnyStr]) -> typing.Tuple[typing.AnyStr, typing.Optional[int], int, typing.AnyStr, typing.AnyStr]
+        weights_file_name, weights_file_dir = weights_file_loc
         name_parts = CalibCalculator.__weights_file_name_matcher.match(weights_file_name)
         group_idx = int(name_parts.group(2)) if name_parts.group(2) is not None and name_parts.group(2) != '' else None
         group_idx = group_idx - 1 if group_idx is not None and group_idx > 0 else None
@@ -2979,7 +2981,7 @@ def prepare_main():
     parsed_args = cmd_parser.parse_args()
 
     if 'subcmd_name' in parsed_args and parsed_args.subcmd_name.startswith('about-'):
-        print about_descriptions[parsed_args.subcmd_name]
+        print (about_descriptions[parsed_args.subcmd_name])
         exit(0)
 
     log_level = logging.WARNING

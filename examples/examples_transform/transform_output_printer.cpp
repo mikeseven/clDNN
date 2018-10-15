@@ -365,6 +365,8 @@ bool output_printer::batch(const std::vector<std::string>& input_file_paths, con
             is_image_matched = results.diff_pixel_freq < diff_threshold &&
                 results.diff_1pc_pixel_freq < diff_1pc_threshold &&
                 results.diff_5pc_pixel_freq < diff_5pc_threshold;
+            if (!is_image_matched)
+                is_batch_matched = false;
         }
         else
             is_batch_matched = false; // If image cannot be compared, batch is considered as failed to matched.
