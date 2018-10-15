@@ -128,7 +128,10 @@ public:
         deconv_params.gradient = primitive->gradient();
 
         if (arg.get_dependencies().size() > primitive->weights.size() + primitive->bias.size() + 1)
+        {
             deconv_params.fused_eltwise = true;
+            deconv_params.inputs.push_back(convert_data_tensor(arg.fused_sum().get_output_layout()));
+        }
 
         auto& kernel_selector = kernel_selector::deconvolution_kernel_selector::Instance();
         auto best_kernels = kernel_selector.GetBestKernels(deconv_params, deconv_optional_params);
