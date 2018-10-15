@@ -19,7 +19,7 @@ using namespace cldnn::utils::examples;
 
 // returns a vector with size equal to number of images in batch and each subvector contains sorted pairs of 
 // values specifying match percentage and category number
-std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldnn::memory& input_mem)
+static std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldnn::memory& input_mem)
 {
     // Check format for types that need to be converted to float.
     auto mem_layout = input_mem.get_layout();

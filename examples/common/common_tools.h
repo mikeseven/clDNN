@@ -1,5 +1,4 @@
-/*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2016-2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,7 +11,6 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-*/
 
 
 #pragma once
@@ -21,11 +19,16 @@
 #include "instrumentation.h"
 #include "lstm_utils.h"
 
+// TODO: [FUTURE] The common tools should contain only inclusion of other utilities headers.
+#include "executable_utils.h"
+#include "file_system_utils.h"
+
 #include "api/CPP/topology.hpp"
 #include "api/CPP/network.hpp"
 #include "api/CPP/profiling.hpp"
 #include "api/CPP/memory.hpp"
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <type_traits>
@@ -41,6 +44,9 @@ namespace utils
 namespace examples
 {
 
+/// @brief Time duration represented as floating-point (double precision) time in seconds (alias).
+using fp_seconds_type = std::chrono::duration<double, std::chrono::seconds::period>;
+
 enum class print_type
 {
     verbose,
@@ -55,84 +61,9 @@ enum class print_type
 } // namespace utils
 } // namespace cldnn
 
-/// Information about executable.
-class executable_info
-{
-    std::string _path;
-    std::string _file_name_wo_ext;
-    std::string _dir;
-
-
-public:
-    /// Gets absolute path to executable.
-    const std::string& path() const
-    {
-        return _path;
-    }
-
-    /// Gets executable file name without extension (stem name).
-    const std::string& file_name_wo_ext() const
-    {
-        return _file_name_wo_ext;
-    }
-
-    /// Gets absolute path to executable directory.
-    const std::string& dir() const
-    {
-        return _dir;
-    }
-
-    /// Creates new instance of information about current executable.
-    ///
-    /// @tparam Str1Ty Type of first string argument (std::string constructible; use for forwarding).
-    /// @tparam Str2Ty Type of second string argument (std::string constructible; use for forwarding).
-    /// @tparam Str3Ty Type of third string argument (std::string constructible; use for forwarding).
-    ///
-    /// @param path             Absolute path to executable.
-    /// @param file_name_wo_ext Executable file name without extension (stem name).
-    /// @param dir              Absolute path to executable directory.
-    template <typename Str1Ty, typename Str2Ty, typename Str3Ty,
-              typename = std::enable_if_t<std::is_constructible<std::string, Str1Ty>::value &&
-                                          std::is_constructible<std::string, Str2Ty>::value &&
-                                          std::is_constructible<std::string, Str3Ty>::value, void>>
-    executable_info(Str1Ty&& path, Str2Ty&& file_name_wo_ext, Str3Ty&& dir)
-        : _path(std::forward<Str1Ty>(path)),
-          _file_name_wo_ext(std::forward<Str2Ty>(file_name_wo_ext)),
-          _dir(std::forward<Str3Ty>(dir))
-    {}
-};
-
-
-/// Sets information about executable based on "main"'s command-line arguments.
-///
-/// It works only once (if successful). Next calls to this function will not modify
-/// global executable's information object.
-///
-/// @param argc Main function arguments count.
-/// @param argv Main function argument values.
-///
-/// @exception std::runtime_error Main function arguments do not contain executable name.
-/// @exception boost::filesystem::filesystem_error Cannot compute absolute path to executable.
-void set_executable_info(int argc, const char* const argv[]);
-
-/// Gets information about executable.
-///
-/// Information is fetched only if information was set using set_executable_info() and not yet
-/// destroyed (during global destruction). Otherwise, exception is thrown.
-///
-/// @return Shared pointer pointing to valid executable information.
-///
-/// @exception std::runtime_error Executable information was not set or it is no longer valid.
-std::shared_ptr<const executable_info> get_executable_info();
-
-
-/// Joins path using native path/directory separator.
-///
-/// @param parent Parent path.
-/// @param child  Child part of path.
-///
-/// @return Joined path.
-std::string join_path(const std::string& parent, const std::string& child);
+// --------------------------------------------------------------------------------------------------------------------
+// 
+// --------------------------------------------------------------------------------------------------------------------
 
 /// LSTM execution params
 struct lstm_execution_params {
@@ -220,27 +151,6 @@ struct memory_filler
         }
     }
 };
-
-/// @brief Returns list of all input files from specified directory (recursive).
-///
-/// @param root_dir         Root directory to scan for input files.
-/// @param image_files_only Indicates that only (single) image files should
-///                         be returned (exclude text files and image archives).
-/// @return                 List of file paths (paths are normalized and returned as absolute paths).
-std::vector<std::string> list_input_files(const std::string& root_dir, bool image_files_only = false);
-std::vector<std::string> get_directory_weights(const std::string& images_path);
-
-template <typename MemElemTy = float>
-void load_images_from_file_list(const std::vector<std::string>& images_list, cldnn::memory& memory, const uint32_t min_size = 0); 
-
-template <typename MemElemTy = float>
-void load_data_from_file_list_lenet(const std::vector<std::string>& images_list, cldnn::memory& memory, const uint32_t images_offset, const uint32_t images_number, const bool train, cldnn::memory& memory_labels);
-
-template <typename MemElemTy = float>
-void load_data_from_file_list_imagenet(const std::vector<std::string>& images_list, const std::string& input_dir, cldnn::memory& memory, const uint32_t images_offset, const uint32_t images_number, const bool train, cldnn::memory& memory_labels);
-
-template <typename MemElemTy = float>
-void load_data_from_file_list_cifar10(const std::vector<std::string>& images_list, const std::string& input_dir, cldnn::memory& memory, const uint32_t images_offset, const uint32_t images_number, const bool train, cldnn::memory& memory_labels);
 
 void compute_image_mean(const execution_params &ep, cldnn::engine& engine, bool use_cifar10);
 

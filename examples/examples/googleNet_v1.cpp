@@ -28,6 +28,7 @@
 #include <api/CPP/softmax.hpp>
 
 using namespace cldnn;
+using namespace cldnn::utils::examples;
 
 // Building GoogLeNet v1 network with loading weights & biases from file
 cldnn::topology build_googlenetv1(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)

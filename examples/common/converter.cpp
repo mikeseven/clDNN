@@ -21,6 +21,8 @@
 #include "common_tools.h"
 #include "file.h"
 
+using namespace cldnn::utils::examples;
+
 
 /// @brief Converts weights to new data type and layout. Weights are assumed to be
 ///        in "weights" directory.
@@ -44,7 +46,7 @@ void convert_weights(cldnn::data_types data_type, cldnn::format::type format_typ
         throw std::runtime_error("Specified layout format is not supported in converter.");
 
     engine engine;
-    std::vector<std::string> weights = get_directory_weights("weights");
+    std::vector<std::string> weights = list_weight_files("weights");
     for (const auto& w : weights)
     {
         if (w.find(conv_path_filter) != std::string::npos)

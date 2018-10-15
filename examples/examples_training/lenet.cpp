@@ -36,6 +36,7 @@
 #include <api/CPP/softmax_loss_grad.hpp>
 
 using namespace cldnn;
+using namespace cldnn::utils::examples;
 
 // Building lenet network with loading weights & biases from file
 cldnn::topology build_lenet(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)

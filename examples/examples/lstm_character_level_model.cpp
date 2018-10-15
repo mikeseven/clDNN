@@ -26,6 +26,7 @@
 #include <string>
 
 using namespace cldnn;
+using namespace cldnn::utils::examples;
 
 
 // Building basic lstm network with loading weights & biases from file

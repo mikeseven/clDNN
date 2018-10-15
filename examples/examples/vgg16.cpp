@@ -34,6 +34,7 @@
 #include <api/CPP/activation_grad.hpp>
 
 using namespace cldnn;
+using namespace cldnn::utils::examples;
 
 // Building vgg16 network with loading weights & biases from file
 cldnn::topology build_vgg16(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size)

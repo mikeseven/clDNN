@@ -282,7 +282,7 @@ void run_topology(const execution_params &ep)
             // load croped and resized images into input
             if (ep.topology_name != "lenet" && ep.topology_name != "lenet_train" && ep.topology_name != "vgg16_train" && ep.topology_name != "vgg16_test" && ep.topology_name != "resnet50_train")
             {
-                load_images_from_file_list(input_files_in_batch, input);
+                load_image_files(input_files_in_batch, input);
             }
             else if (ep.topology_name == "lenet")
             {

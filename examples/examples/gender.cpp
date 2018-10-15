@@ -26,6 +26,7 @@
 #include <api/CPP/softmax.hpp>
 
 using namespace cldnn;
+using namespace cldnn::utils::examples;
 
 // Building age_gender network with loading weights & biases from file
 // !!! commented layers will be used in the future !!!
