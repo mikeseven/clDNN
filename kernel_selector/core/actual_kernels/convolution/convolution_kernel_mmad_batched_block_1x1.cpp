@@ -47,13 +47,13 @@ namespace kernel_selector {
     static block_params get_out_block_size(const convolution_params& p)
     {
         if (p.output.X().v == 7)
-            return { 7,1,2 };
+            return { 7,1,4 };
         else if (p.output.X().v == 14)
             return { 2,2,4 };
         else if (p.output.X().v == 28)
-            return { 4,2,2 };
+            return { 2,2,4 };
         else if (p.output.X().v == 56)
-            return { 4,2,2 };
+            return { 2,2,4 };
 
         return { 1,1,1 };
     }

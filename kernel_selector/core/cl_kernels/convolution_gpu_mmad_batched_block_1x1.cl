@@ -120,17 +120,53 @@ for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
             const uint out_idx = o + OUT_BLOCK_WIDTH * (h + w * OUT_BLOCK_HEIGHT);
             for(uint b = 0; b < 4; b++)
             {
-
             #if CALIBRATION_TERM
                 dotProd[out_idx][b] = (UNIT_TYPE)round(((float)dotProd[out_idx][b] * quant_f * I_QF + bias_f) * calib_f);
             #else  // CALIBRATION_TERM
                 dotProd[out_idx][b] = (UNIT_TYPE)round(((float)dotProd[out_idx][b] * quant_f * I_QF + bias_f) * O_QF);
             #endif // CALIBRATION_TERM
-
-                const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4 + b, f + w * 8, y + h, x + o);
-                char char_val = ACTIVATION(convert_char(dotProd[out_idx][b]), NL_M, NL_N);
-                output[dst_index] = char_val;
             }
+        }
+    }
+}
+
+////// OUTPUT STAGE //////
+__attribute__((opencl_unroll_hint(OUT_BLOCK_HEIGHT)))
+for(uint h = 0; h < OUT_BLOCK_HEIGHT; h++)
+{
+    __attribute__((opencl_unroll_hint(OUT_BLOCK_WIDTH)))
+    for(uint o = 0; o < OUT_BLOCK_WIDTH; o++)
+    {
+        const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4, f, y + h, x + o);
+        __attribute__((opencl_unroll_hint(4)))
+        for(uint b = 0; b < 4; b++)
+        {
+            #if WEIGHTS_PER_WORKITEM == 4
+                char4 out;
+                const uint out_idx = o + OUT_BLOCK_WIDTH * h;
+                out[0] = ACTIVATION(convert_char(dotProd[out_idx][b]), NL_M, NL_N);
+                out[1] = ACTIVATION(convert_char(dotProd[out_idx + OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT][b]), NL_M, NL_N);
+                out[2] = ACTIVATION(convert_char(dotProd[out_idx + OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT * 2][b]), NL_M, NL_N);
+                out[3] = ACTIVATION(convert_char(dotProd[out_idx + OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT * 3][b]), NL_M, NL_N);
+
+                intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index + b * 32), as_uchar4(out));
+            #elif WEIGHTS_PER_WORKITEM == 2
+                char2 out;
+                const uint out_idx = o + OUT_BLOCK_WIDTH * h;
+                out[0] = ACTIVATION(convert_char(dotProd[out_idx][b]), NL_M, NL_N);
+                out[1] = ACTIVATION(convert_char(dotProd[out_idx + OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT][b]), NL_M, NL_N);
+
+                intel_sub_group_block_write_uc2((__global uchar*)(output + dst_index + b * 32), as_uchar2(out));
+            #else
+            __attribute__((opencl_unroll_hint(WEIGHTS_PER_WORKITEM)))
+            for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
+            {
+                const uint out_idx = o + OUT_BLOCK_WIDTH * (h + w * OUT_BLOCK_HEIGHT);
+                const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4, f + w * 8, y + h, x + o);
+                char char_val = ACTIVATION(convert_char(dotProd[out_idx][b]), NL_M, NL_N);
+                output[dst_index + b * 32] = char_val;
+            }
+            #endif
         }
     }
 }
