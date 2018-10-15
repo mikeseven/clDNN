@@ -65,7 +65,7 @@ namespace kernel_selector {
 
         runInfo.gws0 = (arg.output.Batch().v * arg.output.Feature().v) / 4;
         runInfo.gws1 = arg.output.X().v / 8;
-        runInfo.gws2 = arg.output.Y().v;
+        runInfo.gws2 = arg.output.Y().v / 4;
 
         runInfo.lws0 = 8;
         runInfo.lws1 = 1;
@@ -76,7 +76,7 @@ namespace kernel_selector {
 
     KernelsData ConvolutionKernel_byx8_f4__fs_bs_yx_bsv4_fsv32::GetKernelsData(const Params& params, const optional_params& options) const
     {
-        KernelsData kd = GetCommonKernelsData(params, options);
+        KernelsData kd = GetCommonKernelsData(params, options, " -Dcl_intel_subgroups_char");
         if (!kd.empty())
             kd[0].estimatedTime = FORCE_PRIORITY_3;
         return kd;
