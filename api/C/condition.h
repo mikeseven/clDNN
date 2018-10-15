@@ -41,9 +41,9 @@ typedef enum /*:int32_t*/
 /// @brief Adds primitive, which works like "if".
 ///
 /// @details
-///     Applies comparision between 2 inputs.
-///     Compare data - sizes of that input specifes the range of the comparison.
-///     Offset - offset in memory, when comparing values.
+/// @n   Applies comparision between 2 inputs.
+/// @n   Compare data - sizes of that input specifes the range of the comparison.
+/// @n   Offset - offset in memory, when comparing values.
 CLDNN_BEGIN_PRIMITIVE_DESC(condition)
 /// @brief An identifier of topology, which will be executed when comparison returns true.
 cldnn_topology topology_true;

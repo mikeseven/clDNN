@@ -24,26 +24,7 @@ namespace cldnn
 {
 namespace details
 {
-    class branch
-    {
-    public:
-        branch(topology_impl& tpl) : _topology(tpl) {}
 
-        void set(const program_node& node) 
-        { 
-            auto layout = node.get_dependency(0).get_output_layout();
-            if (_program == nullptr) //if first run, create input_layout
-                _topology.add(std::make_shared<input_layout>(node.id(), layout));
-            else
-                _topology.change_input_layout(node.id(), layout);
-            _program = node.get_program().get_engine().build_program(_topology, node.get_program().get_options(), true); //rebuild program every time
-        }
-        decltype(auto) get() const { return _program; }
-
-    private:
-        topology_impl& _topology;
-        program_impl::ptr _program = nullptr;
-    };
 }
 
 template <>
@@ -51,6 +32,45 @@ struct typed_program_node<condition> : public typed_program_node_base<condition>
 {
 private:
     using parent = typed_program_node_base<condition>;
+
+    class branch
+    {
+    public:
+        branch(topology_impl& tpl) : _topology(tpl) {}
+
+        void set(const program_node& node)
+        {
+            add_or_change_input_layout(node);
+            _program = node.get_program().get_engine().build_program(_topology, node.get_program().get_options(), true); //rebuild program 
+        }
+        decltype(auto) get() const { return _program; }
+
+    private:
+        topology_impl & _topology;
+        program_impl::ptr _program = nullptr;
+
+        void add_or_change_input_layout(const program_node& node)
+        {
+            auto layout = node.get_dependency(0).get_output_layout();
+            auto input_id = node.as<condition>().result_id();
+            if (_program == nullptr) //if first run, create input_layout
+            {
+                _topology.add(std::make_shared<input_layout>(input_id, layout));
+                for (auto& prim : _topology.get_primitives())
+                {
+                    for (auto& inp : prim.second->input)
+                    {
+                        if (inp == node.id())
+                            inp = input_id;
+                    }
+                }
+            }
+            else
+            {
+                _topology.change_input_layout(input_id, layout);
+            }
+        }
+    };
 
 public:
     using parent::parent;
@@ -73,10 +93,11 @@ public:
     }
     decltype(auto) get_branch_true() const { return _branch_true.get(); }
     decltype(auto) get_branch_false() const{ return _branch_false.get(); }
+    primitive_id result_id() const { return id() + ":result"; }
 
 private:
-    mutable details::branch _branch_true;
-    mutable details::branch _branch_false;
+    mutable branch _branch_true;
+    mutable branch _branch_false;
 };
 
 using condition_node = typed_program_node<condition>;
@@ -96,6 +117,7 @@ public:
     decltype(auto) compare_memory() const { return dep_memory(1); }
     decltype(auto) get_net_true() const { return _net_true; }
     decltype(auto) get_net_false() const { return _net_false; }
+    primitive_id result_id() const { return node.result_id(); }
 private:
     network_impl::ptr _net_true;
     network_impl::ptr _net_false;

@@ -40,9 +40,9 @@ struct condition_gpu : typed_primitive_impl<condition>
         bool exec_branch = choose_branch_to_exec(instance);
         memory_impl::ptr memory_to_copy;
         if (exec_branch)
-            memory_to_copy = &execute_branch(instance.get_net_true(), instance.id(), instance.input_memory());
+            memory_to_copy = &execute_branch(instance.get_net_true(), instance.result_id(), instance.input_memory());
         else
-            memory_to_copy = &execute_branch(instance.get_net_false(), instance.id(), instance.input_memory());
+            memory_to_copy = &execute_branch(instance.get_net_false(), instance.result_id(), instance.input_memory());
         //just copy memory
         mem_lock<float> inp_ptr{ memory_to_copy };
         mem_lock<float> out_ptr{ instance.output_memory() };

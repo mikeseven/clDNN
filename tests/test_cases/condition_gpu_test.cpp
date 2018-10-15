@@ -581,3 +581,37 @@ TEST(condition_gpu, negative_not_same_layouts) {
 
     EXPECT_ANY_THROW(network net(engine, topology, bs););
 }
+
+TEST(condition_gpu, negative_same_names_within_different_networks) {
+    engine engine;
+    build_options bs;
+    bs.set_option(build_option::optimize_data(true));
+    auto input = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 4, 1 } });
+    auto compare = memory::allocate(engine, { data_types::f32, format::bfyx,{ 1, 1, 1, 1 } });
+
+    topology branch_true;
+    branch_true.add(
+        pooling("pooling_check_name", "condi", cldnn::pooling_mode::max, { 0, 0, 2, 1 }, { 0, 0, 2, 1 })
+    );
+
+    topology branch_false;
+    branch_false.add(
+        pooling("pooling_when_false", "condi", cldnn::pooling_mode::max, { 0, 0, 2, 1 }, { 0, 0, 2, 1 })
+    );
+
+    topology topology;
+    topology.add(
+        input_layout("input", input.get_layout())
+    );
+    topology.add(
+        input_layout("compare", compare.get_layout())
+    );
+    topology.add(
+        condition("condi", "input", branch_true, branch_false, "compare", cond_functions::EQUAL)
+    );
+    topology.add(
+        pooling("pooling_check_name", "condi", cldnn::pooling_mode::max, { 0, 0, 2, 1 }, { 0, 0, 2, 1 })
+    );
+    
+    EXPECT_ANY_THROW(network net(engine, topology, bs););
+}

@@ -46,6 +46,7 @@ network_impl::network_impl(const program_impl& program, bool is_internal)
     }
 
     allocate_primitives();
+    check_names();
     build_insts_deps();
     build_exec_order();
 
@@ -79,17 +80,12 @@ void network_impl::reset_execution(bool wait)
 void network_impl::set_input_data(const primitive_id& id, memory_impl& data)
 {
     std::shared_ptr<primitive_inst> primitive_inst;
-    try {
-        primitive_inst = _primitives.at(id);
-    }
-    catch (...)
-    {
-        primitive_inst = find_in_internal_networks(id);
-        if (primitive_inst == nullptr)
-        {
-            throw std::runtime_error("topology doesn't contain prmitive:" + id);
-        }
-    }
+
+    primitive_inst = find_primitive(id);
+    
+    if(primitive_inst == nullptr)
+        throw std::runtime_error("topology doesn't contain prmitive:" + id);
+
     if (primitive_inst->type() != input_layout::type_id())
     {
         CLDNN_ERROR_MESSAGE(id, "primitive " + id + " is not an input");
@@ -102,23 +98,39 @@ void network_impl::set_input_data(const primitive_id& id, memory_impl& data)
     input->set_data(data);
 }
 
+void cldnn::network_impl::check_names()
+{
+    for (auto const& prim : _primitives)
+    {
+        if (find_in_internal_networks(prim.first) != nullptr)
+            CLDNN_ERROR_MESSAGE("Network_impl", "Found primitive with id: " + prim.first
+                + "in anotother network.");
+    }
+}
+
+std::shared_ptr<primitive_inst> cldnn::network_impl::find_primitive(const primitive_id& id)
+{
+    std::shared_ptr<primitive_inst> ret;
+
+    if (_primitives.find(id) != _primitives.end())
+        return _primitives.at(id);
+
+    return find_in_internal_networks(id);
+}
+
 std::shared_ptr<primitive_inst> cldnn::network_impl::find_in_internal_networks(const primitive_id& id)
 {
     std::shared_ptr<primitive_inst> ret;
 
     for (auto const& prim : _primitives)
     {
-        if (prim.first == id)
-        {
-            return prim.second;
-        }
         if (prim.second->type() == condition::type_id()) //currently only condition inst contains mini networks
         {
             auto cond_inst = std::static_pointer_cast<condition_inst>(prim.second);
-            ret = cond_inst->get_net_true()->find_in_internal_networks(id);
+            ret = cond_inst->get_net_true()->find_primitive(id);
             if (ret != nullptr)
                 return ret;
-            ret = cond_inst->get_net_false()->find_in_internal_networks(id);
+            ret = cond_inst->get_net_false()->find_primitive(id);
             if (ret != nullptr)
                 return ret;
         }
@@ -158,7 +170,6 @@ void network_impl::allocate_primitives()
         allocate_primitive_instance(*node);
     }
 }
-
 
 void network_impl::build_insts_deps()
 {
@@ -262,7 +273,6 @@ std::vector<primitive_id> network_impl::get_executed_primitive_ids() const
     }
     return ret;
 }
-
 
 std::vector<primitive_id> network_impl::get_all_primitive_ids() const
 {

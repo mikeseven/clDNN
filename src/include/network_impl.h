@@ -91,6 +91,8 @@ private:
     void allocate_primitive_instance(program_node const& node);
     void add_to_exec_order(const primitive_id& id);
     std::shared_ptr<primitive_inst> find_in_internal_networks(const primitive_id& id);
+    std::shared_ptr<primitive_inst> find_primitive(const primitive_id& id);
+    void check_names();
 };
 }
 
