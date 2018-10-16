@@ -695,6 +695,7 @@ void program_impl::handle_lstm()
             auto input_size = node->get_dependency(0).get_output_layout().size;
             auto recurrent_size = nodes_map.at(recurrent_id)->get_output_layout().size;
             auto hidden_size = tensor(input_size.batch[0], 1, recurrent_size.spatial[0], input_size.feature[0]);
+
             size_t directions = recurrent_size.feature[0];
             size_t input_dependencies = node->get_dependencies().size();
             size_t sequence_len = node->as<lstm>().sequence_len();
@@ -713,10 +714,10 @@ void program_impl::handle_lstm()
                     has_lstm_children = true;
                 }
             }
-            
+
             bool emit_last_cell = lstm_prim->output_selection == cldnn_lstm_output_hidden_cell ||
                                   lstm_prim->output_selection == cldnn_lstm_output_sequence_cell;
-            bool emit_sequence = lstm_prim->output_selection == cldnn_lstm_output_sequence_cell || 
+            bool emit_sequence = lstm_prim->output_selection == cldnn_lstm_output_sequence_cell ||
                                  lstm_prim->output_selection == cldnn_lstm_output_sequence;
 
             std::vector<program_node*> cell_list(directions * sequence_len);
@@ -819,7 +820,6 @@ void program_impl::handle_lstm()
                     }
                 }
             }
-
             //if there is no next lstm, concatenation is created
             if (!has_lstm_children)
             {
@@ -848,7 +848,7 @@ void program_impl::handle_lstm()
                     // instead we can concatenate along the sequence axis and reshape the tensor to the account
                     // for the direction
                     size_t concatenate_len = emit_sequence ? sequence_len : 1;
-					if (emit_last_cell)			concatenate_len++;
+                    if (emit_last_cell) concatenate_len++;
 
                     tensor output_size {input_size.batch[0], static_cast<int32_t>(concatenate_len), hidden_size.spatial[0], (int32_t)directions};
                     primitive_id reshape_id = original_id + ":reshape";
@@ -856,8 +856,8 @@ void program_impl::handle_lstm()
                     auto &reshape_node = get_or_create(reshape_primitive);
                     add_connection(concatenation_node, reshape_node);
                     add_user_connections(reshape_node);
-                } 
-                else 
+                }
+                else
                 {
                     add_user_connections(concatenation_node);
                 }
@@ -1250,7 +1250,7 @@ void program_impl::handle_reshape()
                     */
                     auto& reorder_reshape_node = reorder_reshape_nodes[reshape_reorder_id];
                     auto reshape_in_layout = reorder_node->get_output_layout();
-                    auto reshape_input = std::make_shared<reorder>("_reshape_input_" + reorder_node->id() + "_" + reorder_reshape_node->id(), input_node.id(), 
+                    auto reshape_input = std::make_shared<reorder>("_reshape_input_" + reorder_node->id() + "_" + reorder_reshape_node->id(), input_node.id(),
                         reshape_in_layout.format, reshape_in_layout.data_type);
                     auto& reshape_input_node = get_or_create(reshape_input);
                     add_intermediate(reshape_input_node, *reorder_reshape_node, 0, reshape_input_node.dependencies.empty());
@@ -1463,11 +1463,11 @@ void program_impl::add_intermediate(program_node& node, program_node& next, size
     if (connect_int_node_with_old_dep)
     {
         add_connection(prev, node);
-/*   
+/*
         // LK: I assume here that the node which is added does not exist yet, is it true?
         auto tmp = processing_order.get_processing_iterator(node);
         if (tmp != processing_order.end())
-            processing_order.erase(tmp);   
+            processing_order.erase(tmp);
 */
         if (processing_order.size() != 0)
         {
