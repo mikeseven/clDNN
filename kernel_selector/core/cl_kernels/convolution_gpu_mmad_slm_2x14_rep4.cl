@@ -796,6 +796,11 @@ __global int8* weights,
 
 			uchar outchar = (uchar)max(((float)outint) * scale, 0.0f); */
 
+            const uint _feature = ((fmg * 32) % _OD) + get_local_id(0);
+            float quant_f = as_float(intel_sub_group_block_read((__global uint*) (quantizations + _feature) ));
+            float bias_f = as_float(intel_sub_group_block_read((__global uint*) (biases + _feature) ));
+            float calib_f = as_float(intel_sub_group_block_read((__global uint*) (calibrations + _feature) ));
+
 			__attribute__((opencl_unroll_hint(OUT_BLOCK_HEIGHT)))
 			for (int r = 0; r < OUT_BLOCK_HEIGHT; r++)
             {
@@ -809,13 +814,11 @@ __global int8* weights,
 					int slm_addr = c * 32 + r * TILE_W * 32;
 					
 					/*TODO - Activation & Quantization  code goes here -  presently applying ReLU and  taking lower 8-bits */
-                    const uint _batch = batch * BATCH_PACK;
-                    const uint _feature = ((fmg * 32) % _OD) + get_local_id(0);
 
-                    slm_write0.s0 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec.s0) * quantizations[_feature + 0] * I_QF + biases[_feature + 0]) * calibrations[_feature + 0])), NL_M, NL_N));
-                    slm_write0.s1 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec.s1) * quantizations[_feature + 0] * I_QF + biases[_feature + 0]) * calibrations[_feature + 0])), NL_M, NL_N));
-                    slm_write0.s2 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec.s2) * quantizations[_feature + 0] * I_QF + biases[_feature + 0]) * calibrations[_feature + 0])), NL_M, NL_N));
-                    slm_write0.s3 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec.s3) * quantizations[_feature + 0] * I_QF + biases[_feature + 0]) * calibrations[_feature + 0])), NL_M, NL_N));
+                    slm_write0.s0 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec.s0) * quant_f * I_QF + bias_f) * calib_f)), NL_M, NL_N));
+                    slm_write0.s1 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec.s1) * quant_f * I_QF + bias_f) * calib_f)), NL_M, NL_N));
+                    slm_write0.s2 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec.s2) * quant_f * I_QF + bias_f) * calib_f)), NL_M, NL_N));
+                    slm_write0.s3 = as_uchar(ACTIVATION(convert_char(round(((float)(outvec.s3) * quant_f * I_QF + bias_f) * calib_f)), NL_M, NL_N));
 					
 					out_slm_2[ slm_addr ]   = slm_write0;
 
