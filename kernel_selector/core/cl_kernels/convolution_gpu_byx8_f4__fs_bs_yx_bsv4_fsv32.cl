@@ -22,7 +22,7 @@
 #define FILTER_SIZE_X_SLICES ((FILTER_SIZE_X + 7) / 8)
 
 #define OUT_BLOCK_HEIGHT 4
-#define WEIGHTS_PER_WORKITEM 4
+#define WEIGHTS_PER_WORKITEM 4 // currently needs to be set to 4, check output stage and float4 on quantizations etc.
 
 __attribute__((intel_reqd_sub_group_size(8)))
 KERNEL(convolution_gpu_byx8_f4_fs_bs_yx_bsv4_fsv32)(
@@ -96,7 +96,6 @@ KERNEL(convolution_gpu_byx8_f4_fs_bs_yx_bsv4_fsv32)(
             }
         }
     }
-
 
 float4 quant_f = as_float4(intel_sub_group_block_read4((__global uint*) (quantizations + f) ));
 float4 bias_f = as_float4(intel_sub_group_block_read4((__global uint*) (biases + f) ));
