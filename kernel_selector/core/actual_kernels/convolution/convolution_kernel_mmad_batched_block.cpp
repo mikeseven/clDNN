@@ -49,13 +49,13 @@ namespace kernel_selector {
         if (p.filterSize.x == 3 && p.filterSize.y == 3)
         {
             if (p.output.X().v == 7)
-                return { 7,1,1 };
+                return { 7, 1, 4 };
             else if (p.output.X().v == 14)
-                return { 7, 1, 1 };
+                return { 7, 1, 4 };
             else if (p.output.X().v == 28)
-                return { 7, 1, 1 };
+                return { 7, 1, 4 };
             else if (p.output.X().v == 56)
-                return{ 7, 1, 2 };
+                return { 7, 1, 4 };
         }
 
         return { 1,1,1 };

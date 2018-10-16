@@ -75,6 +75,7 @@ KERNEL(convolution_mmad_batched_block)(
                 ////// preloading weights data //////
                 int8 preloaded_weights[FILTER_SIZE_X];
                 uint tmp_filter_idx = filter_idx;
+                __attribute__((opencl_unroll_hint(FILTER_SIZE_X)))
                 for(uint w = 0; w < FILTER_SIZE_X; w++)
                 {
                     preloaded_weights[w] = as_int8(intel_sub_group_block_read8((const __global uint*) (weights + tmp_filter_idx + (wi * FILTER_OFM_BLOCK_PITCH))));
@@ -84,6 +85,7 @@ KERNEL(convolution_mmad_batched_block)(
                 __attribute__((opencl_unroll_hint(FILTER_SIZE_X)))
                 for (uint i = 0; i < FILTER_SIZE_X; ++i)
                 {
+                    __attribute__((opencl_unroll_hint(OUT_BLOCK_WIDTH)))
                     for(uint ox = 0; ox < OUT_BLOCK_WIDTH; ox++)
                     {
                         const uint out_idx = ox + wi * OUT_BLOCK_WIDTH;
@@ -97,6 +99,44 @@ KERNEL(convolution_mmad_batched_block)(
     }
 
 ////// QUANTIZE & OUTPUT //////
+
+#if WEIGHTS_PER_WORKITEM == 4
+
+float4 quant_f = as_float4(intel_sub_group_block_read4((__global uint*) (quantizations + f) ));
+float4 bias_f = as_float4(intel_sub_group_block_read4((__global uint*) (biases + f) ));
+float4 calib_f = as_float4(intel_sub_group_block_read4((__global uint*) (calibrations + f) ));
+////// QUANTIZATION //////
+__attribute__((opencl_unroll_hint(OUT_BLOCK_WIDTH)))
+for(uint o = 0; o < OUT_BLOCK_WIDTH; o++)
+{
+    __attribute__((opencl_unroll_hint(4)))
+    for(uint b = 0; b < 4; b++)
+    {
+        dotProd[o + OUT_BLOCK_WIDTH * 0][b] = (UNIT_TYPE)round(((float)dotProd[o + OUT_BLOCK_WIDTH * 0][b] * quant_f.s0 * I_QF + bias_f.s0) * calib_f.s0);
+        dotProd[o + OUT_BLOCK_WIDTH * 1][b] = (UNIT_TYPE)round(((float)dotProd[o + OUT_BLOCK_WIDTH * 1][b] * quant_f.s1 * I_QF + bias_f.s1) * calib_f.s1);
+        dotProd[o + OUT_BLOCK_WIDTH * 2][b] = (UNIT_TYPE)round(((float)dotProd[o + OUT_BLOCK_WIDTH * 2][b] * quant_f.s2 * I_QF + bias_f.s2) * calib_f.s2);
+        dotProd[o + OUT_BLOCK_WIDTH * 3][b] = (UNIT_TYPE)round(((float)dotProd[o + OUT_BLOCK_WIDTH * 3][b] * quant_f.s3 * I_QF + bias_f.s3) * calib_f.s3);
+    }
+}
+////// OUTPUT //////
+__attribute__((opencl_unroll_hint(OUT_BLOCK_WIDTH)))
+for(uint o = 0; o < OUT_BLOCK_WIDTH; o++)
+{
+    const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b_block*4, f, y, x + o);
+    __attribute__((opencl_unroll_hint(4)))
+    for(uint b = 0; b < 4; b++)
+    {
+        char4 out;
+        out[0] = ACTIVATION(convert_char(dotProd[o][b]), NL_M, NL_N);
+        out[1] = ACTIVATION(convert_char(dotProd[o + OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT][b]), NL_M, NL_N);
+        out[2] = ACTIVATION(convert_char(dotProd[o + OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT * 2][b]), NL_M, NL_N);
+        out[3] = ACTIVATION(convert_char(dotProd[o + OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT * 3][b]), NL_M, NL_N);
+
+        intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index + b * 32), as_uchar4(out));
+    }
+}
+#else
+__attribute__((opencl_unroll_hint(WEIGHTS_PER_WORKITEM)))
 for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
 {
     float quant_f = quantizations[f + w * 8];
@@ -104,10 +144,11 @@ for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
 #if CALIBRATION_TERM
     float calib_f = calibrations[f + w * 8];
 #endif
-
+    __attribute__((opencl_unroll_hint(OUT_BLOCK_WIDTH)))
     for(uint o = 0; o < OUT_BLOCK_WIDTH; o++)
     {
         const uint out_idx = o + OUT_BLOCK_WIDTH * w;
+        __attribute__((opencl_unroll_hint(4)))
         for(uint b = 0; b < 4; b++)
         {
         #if CALIBRATION_TERM
@@ -121,6 +162,7 @@ for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
         }
     }
 }
+#endif
 
 }
 
