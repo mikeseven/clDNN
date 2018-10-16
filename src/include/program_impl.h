@@ -61,7 +61,6 @@ public:
     public:
         typedef std::list<program_node*> list_of_nodes;
         typedef list_of_nodes::const_iterator const_iterator;
-        list_of_nodes get_processing_order() const { return _processing_order; }
         const_iterator begin() const { return _processing_order.begin(); }
         const_iterator end() const { return _processing_order.end(); }
         const_iterator get_processing_iterator(program_node& node);
@@ -102,13 +101,14 @@ public:
 
     program_impl(engine_impl& engine_ref, topology_impl const& topology, build_options const& options, bool is_internal);
     auto& get_engine() const { return *engine; }
-    auto get_options() const { return options; }
-    auto get_inputs() const { return inputs; }
-    auto get_outputs() const { return outputs; }
+    auto& get_options() const { return options; }
+    auto& get_inputs() { return inputs; }     // ToDo: redesign trim to ouptut pass to make it const as_well as get_engine and get options 
+    auto& get_outputs() { return outputs; }  // ToDo: redesign reorder-inputs pass to make it const as_well as get_engine and get options 
     bool is_debug_build() const { return options.get<build_option_type::debug>()->enabled(); }
     std::list<std::shared_ptr<program_node>> get_nodes() const;
-    std::list<program_node*> get_processing_order() const;
-    auto get_optimized_out() const { return optimized_out; }
+    const nodes_ordering& get_processing_order() const;
+    nodes_ordering& get_processing_order();
+    auto& get_optimized_out() const { return optimized_out; }
     bool has_node(const primitive_id& prim) const { return nodes_map.count(prim) > 0; }
     program_node& get_node(primitive_id const& id);
     program_node const& get_node(primitive_id const& id) const;

@@ -21,7 +21,6 @@
 #include "api/CPP/concatenation.hpp"
 
 #include "event_impl.h"
-#include "program_impl.h"
 #include "memory_impl.h"
 #include "meta_utils.h"
 #include "kernel_selector_helper.h"

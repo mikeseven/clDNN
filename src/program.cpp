@@ -875,9 +875,15 @@ void program_impl::set_outputs()
     }
 }
 
-std::list<program_node*> program_impl::get_processing_order() const
+program_impl::nodes_ordering& program_impl::get_processing_order()
 {
-    return processing_order.get_processing_order();
+    return processing_order;
+}
+
+
+const program_impl::nodes_ordering& program_impl::get_processing_order() const
+{
+    return processing_order;
 }
 
 void program_impl::calc_prior_boxes()

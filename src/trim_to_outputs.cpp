@@ -20,10 +20,11 @@
 
 using namespace cldnn;
 
+//This pass optimizes out nodes which have no impact on outputs
 //ToDo remove friendship relation from  program_node and program_impl
 void trim_to_outputs::run(program_impl &p) 
 {
-        size_t actual_nodes = p.get_processing_order().size();
+        const size_t actual_nodes = p.get_processing_order().size();
         if (!actual_nodes) //degenerated case but can happen
             return;
 
@@ -37,7 +38,7 @@ void trim_to_outputs::run(program_impl &p)
             auto nodes_list = stack.front();
             stack.pop_front();
 
-            for (auto node : *nodes_list)
+            for (auto& node : *nodes_list)
             {
                 if (!node->is_marked())
                 {
@@ -51,7 +52,7 @@ void trim_to_outputs::run(program_impl &p)
         //all not-marked nodes should be removed
         //dependency: trim_to_outputs manipulates optimized_out and nodes_map which are private in program_impl
         std::list<program_node*> to_rem;
-        for (auto node : p.get_processing_order())
+        for (auto& node : p.get_processing_order())
         {
             if (node->is_type<input_layout>()) //input layout may become disconnected during prior boxes calculations so it may have not been marked at this place but we don't want to remove it
                 node->mark();
@@ -66,21 +67,19 @@ void trim_to_outputs::run(program_impl &p)
                 p.get_inputs().remove(node);
             else
             {
-                for (auto dep : node->dependencies)
-                    if (dep->is_marked())
-                        dep->users.remove(node);
+                for (auto& dep : node->dependencies)
+                    dep->users.remove(node);
             }
+            for (auto& user : node->users)
+                user->dependencies.erase(std::remove(user->dependencies.begin(), user->dependencies.end(), node), user->dependencies.end());
 
-            for (auto user : node->users)
-                if (user->is_marked())
-                    user->dependencies.erase(std::remove(user->dependencies.begin(), user->dependencies.end(), node), user->dependencies.end());
-
+            p.processing_order.erase(p.processing_order.get_processing_iterator(*node));
             p.optimized_out.push_back(node->id());
             p.nodes_map.erase(node->id());
         }
 
         //unmark all nodes
-        //ToDo: mark()/unmark() methods might cause hidden dependencies in between optimization passed. They shoud be encapsulated within the opt pass itself.
+        //ToDo: mark()/unmark() methods might cause hidden dependencies in between optimization passes. They shoud be encapsulated within the opt pass itself.
         for (auto& node : p.get_processing_order())
         {
             node->unmark();
