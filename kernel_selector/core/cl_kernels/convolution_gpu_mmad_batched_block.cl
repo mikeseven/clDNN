@@ -105,20 +105,7 @@ KERNEL(convolution_mmad_batched_block)(
 float4 quant_f = as_float4(intel_sub_group_block_read4((__global uint*) (quantizations + f) ));
 float4 bias_f = as_float4(intel_sub_group_block_read4((__global uint*) (biases + f) ));
 float4 calib_f = as_float4(intel_sub_group_block_read4((__global uint*) (calibrations + f) ));
-////// QUANTIZATION //////
-__attribute__((opencl_unroll_hint(OUT_BLOCK_WIDTH)))
-for(uint o = 0; o < OUT_BLOCK_WIDTH; o++)
-{
-    __attribute__((opencl_unroll_hint(4)))
-    for(uint b = 0; b < 4; b++)
-    {
-        dotProd[o + OUT_BLOCK_WIDTH * 0][b] = (UNIT_TYPE)round(((float)dotProd[o + OUT_BLOCK_WIDTH * 0][b] * quant_f.s0 * I_QF + bias_f.s0) * calib_f.s0);
-        dotProd[o + OUT_BLOCK_WIDTH * 1][b] = (UNIT_TYPE)round(((float)dotProd[o + OUT_BLOCK_WIDTH * 1][b] * quant_f.s1 * I_QF + bias_f.s1) * calib_f.s1);
-        dotProd[o + OUT_BLOCK_WIDTH * 2][b] = (UNIT_TYPE)round(((float)dotProd[o + OUT_BLOCK_WIDTH * 2][b] * quant_f.s2 * I_QF + bias_f.s2) * calib_f.s2);
-        dotProd[o + OUT_BLOCK_WIDTH * 3][b] = (UNIT_TYPE)round(((float)dotProd[o + OUT_BLOCK_WIDTH * 3][b] * quant_f.s3 * I_QF + bias_f.s3) * calib_f.s3);
-    }
-}
-////// OUTPUT //////
+
 __attribute__((opencl_unroll_hint(OUT_BLOCK_WIDTH)))
 for(uint o = 0; o < OUT_BLOCK_WIDTH; o++)
 {
@@ -127,10 +114,10 @@ for(uint o = 0; o < OUT_BLOCK_WIDTH; o++)
     for(uint b = 0; b < 4; b++)
     {
         char4 out;
-        out[0] = ACTIVATION(convert_char(dotProd[o][b]), NL_M, NL_N);
-        out[1] = ACTIVATION(convert_char(dotProd[o + OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT][b]), NL_M, NL_N);
-        out[2] = ACTIVATION(convert_char(dotProd[o + OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT * 2][b]), NL_M, NL_N);
-        out[3] = ACTIVATION(convert_char(dotProd[o + OUT_BLOCK_WIDTH * OUT_BLOCK_HEIGHT * 3][b]), NL_M, NL_N);
+        out[0] = ACTIVATION(convert_char(round(((float)dotProd[o + OUT_BLOCK_WIDTH * 0][b] * quant_f.s0 * I_QF + bias_f.s0) * calib_f.s0)), NL_M, NL_N);
+        out[1] = ACTIVATION(convert_char(round(((float)dotProd[o + OUT_BLOCK_WIDTH * 1][b] * quant_f.s1 * I_QF + bias_f.s1) * calib_f.s1)), NL_M, NL_N);
+        out[2] = ACTIVATION(convert_char(round(((float)dotProd[o + OUT_BLOCK_WIDTH * 2][b] * quant_f.s2 * I_QF + bias_f.s2) * calib_f.s2)), NL_M, NL_N);
+        out[3] = ACTIVATION(convert_char(round(((float)dotProd[o + OUT_BLOCK_WIDTH * 3][b] * quant_f.s3 * I_QF + bias_f.s3) * calib_f.s3)), NL_M, NL_N);
 
         intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index + b * 32), as_uchar4(out));
     }
