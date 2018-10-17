@@ -114,7 +114,7 @@ for(uint h = 0; h < OUT_BLOCK_HEIGHT; h++)
 
     #if WEIGHTS_PER_WORKITEM == 4
     
-    char4 out;
+        char4 out;
         __attribute__((opencl_unroll_hint(WEIGHTS_PER_WORKITEM)))
         for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
         {
