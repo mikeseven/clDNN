@@ -106,25 +106,30 @@ float4 calib_f = as_float4(intel_sub_group_block_read4((__global uint*) (calibra
 __attribute__((opencl_unroll_hint(OUT_BLOCK_HEIGHT)))
 for(uint h = 0; h < OUT_BLOCK_HEIGHT; h++)
 {
+    const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b, f + get_sub_group_local_id(), y + h, x);
+
     __attribute__((opencl_unroll_hint(8)))
     for(uint i = 0; i < 8; i++)
     {
+
     #if WEIGHTS_PER_WORKITEM == 4
-        char4 out;
-        const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b, f, y + h, x + i);
+    
+    char4 out;
         __attribute__((opencl_unroll_hint(WEIGHTS_PER_WORKITEM)))
         for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
         {
         #if CALIBRATION_TERM
-            dotProd[w*OUT_BLOCK_HEIGHT + h][i] = (UNIT_TYPE)round(((float)dotProd[w*OUT_BLOCK_HEIGHT + h][i] * quant_f[w] * I_QF + bias_f[w]) * calib_f[w]);
+            out[w] = convert_char(round(((float)dotProd[w*OUT_BLOCK_HEIGHT + h][i] * quant_f[w] * I_QF + bias_f[w]) * calib_f[w]));
         #else  // CALIBRATION_TERM
-            dotProd[w*OUT_BLOCK_HEIGHT + h][i] = (UNIT_TYPE)round(((float)dotProd[w*OUT_BLOCK_HEIGHT + h][i] * quant_f[w] * I_QF + bias_f[w]) * O_QF);
+            out[w] = convert_char(round(((float)dotProd[w*OUT_BLOCK_HEIGHT + h][i] * quant_f[w] * I_QF + bias_f[w]) * O_QF));
         #endif // CALIBRATION_TERM
             
-            out[w] = ACTIVATION(convert_char(dotProd[w*OUT_BLOCK_HEIGHT + h][i]), NL_M, NL_N);
+            out[w] = ACTIVATION(out[w], NL_M, NL_N);
         }
-        intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index), as_uchar4(out));
+        intel_sub_group_block_write_uc4((__global uchar*)(output + dst_index + 32 * 4 * i), as_uchar4(out));
+    
     #else
+    
         __attribute__((opencl_unroll_hint(WEIGHTS_PER_WORKITEM)))
         for(uint w = 0; w < WEIGHTS_PER_WORKITEM; w++)
         {
@@ -133,15 +138,16 @@ for(uint h = 0; h < OUT_BLOCK_HEIGHT; h++)
         #else  // CALIBRATION_TERM
             dotProd[w*OUT_BLOCK_HEIGHT + h][i] = (UNIT_TYPE)round(((float)dotProd[w*OUT_BLOCK_HEIGHT + h][i] * quant_f[w] * I_QF + bias_f[w]) * O_QF);
         #endif // CALIBRATION_TERM
-            const uint dst_index = GET_DATA_FS_BS_YX_BSV4_FSV32_INDEX(OUTPUT, b, f + get_sub_group_local_id() + 8 * w, y + h, x + i);
-            output[dst_index] = ACTIVATION(convert_char(dotProd[w*OUT_BLOCK_HEIGHT + h][i]), NL_M, NL_N);
+            output[dst_index + 32 * 4 * i + 8 * w] = ACTIVATION(convert_char(dotProd[w*OUT_BLOCK_HEIGHT + h][i]), NL_M, NL_N);
         }
+    
     #endif
     }
 }
 
 }
 
+#undef OUT_BLOCK_HEIGHT
 #undef WEIGHTS_PER_WORKITEM
 
 #undef FILTER_SIZE_X_SLICES
