@@ -93,7 +93,7 @@ void run_topology(const execution_params &ep)
     uint32_t batch_size = ep.batch;
 
     uint32_t gpu_batch_size = get_gpu_batch_size(batch_size);
-    if (gpu_batch_size != batch_size && !ep.rnn_type_of_topology)
+    if (gpu_batch_size != batch_size)
     {
         std::cout << "WARNING: This is not the optimal batch size. You have " << (gpu_batch_size - batch_size)
             << " dummy images per batch!!! Please use batch=" << gpu_batch_size << "." << std::endl;

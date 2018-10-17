@@ -134,7 +134,7 @@ static bool run_topology(const transform_execution_params& exec_params)
     // Calculating preferred batch size.
     const auto batch_size               = exec_params.batch;
     const auto gpu_preferred_batch_size = get_gpu_batch_size(batch_size);
-    if (gpu_preferred_batch_size != batch_size && !exec_params.rnn_type_of_topology)
+    if (gpu_preferred_batch_size != batch_size)
     {
         std::cerr << "WARNING: This is not the optimal batch size. You have "
             << (gpu_preferred_batch_size - batch_size)
@@ -292,27 +292,20 @@ static bool run_topology(const transform_execution_params& exec_params)
     while (img_paths_it != img_paths_last)
     {
         std::pair<std::vector<std::string>::const_iterator, std::vector<std::string>> loaded_image_info;
-        if (!exec_params.rnn_type_of_topology)
-        {
-            if (exec_params.use_half)
-                loaded_image_info = load_image_files<half_t>(img_paths_it, img_paths_last, input);
-            else
-                loaded_image_info = load_image_files(img_paths_it, img_paths_last, input);
-
-            img_paths_it = loaded_image_info.first;
-        }
+        if (exec_params.use_half)
+            loaded_image_info = load_image_files<half_t>(img_paths_it, img_paths_last, input);
         else
-            throw std::runtime_error("Recurrent neural networks are not supported");
+            loaded_image_info = load_image_files(img_paths_it, img_paths_last, input);
+
+        img_paths_it = loaded_image_info.first;
 
         network.set_input_data("input", input);
 
         fp_seconds_type time{0.0};
-        if (!exec_params.rnn_type_of_topology)
-            time = execute_cnn_topology(network, exec_params, power_measure_lib, output);
+        time = execute_cnn_topology(network, exec_params, power_measure_lib, output);
         // NOTE: Leaving place for future RNN topologies.
 
-        if (!exec_params.rnn_type_of_topology &&
-            exec_params.run_until_primitive_name.empty() && exec_params.run_single_kernel_name.empty())
+        if (exec_params.run_until_primitive_name.empty() && exec_params.run_single_kernel_name.empty())
         {
             auto is_batch_matched = printer.batch(loaded_image_info.second, output, exec_params.input_dir,
                                                   exec_params.print_type, exec_params.compare_ref_img_dir);

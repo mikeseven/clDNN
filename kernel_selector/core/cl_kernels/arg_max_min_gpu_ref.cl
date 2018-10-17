@@ -19,12 +19,6 @@
 #define GLOBAL_SIZE 128
 #define LOCAL_SIZE GLOBAL_SIZE
 
-typedef struct /* Index and Value type that holds index and value used in this kernel */
-{
-    uint index; 
-    UNIT_TYPE value; 
-} iav_type;
-
 #ifdef MAX_OUT
     #define COMPARE_SIGN <
     #define UNIT_FILL_VAL UNIT_VAL_MIN
@@ -36,6 +30,13 @@ typedef struct /* Index and Value type that holds index and value used in this k
 __attribute__((reqd_work_group_size(LOCAL_SIZE, 1, 1)))
 KERNEL(arg_max_gpu_top_k)(const __global UNIT_TYPE* input, __global float* output)
 {
+
+typedef struct /* Index and Value type that holds index and value used in this kernel */
+{
+    uint index; 
+    UNIT_TYPE value; 
+} iav_type;
+
     uint results[TOP_K];
     __local iav_type scratch[LOCAL_SIZE];
 

@@ -17,7 +17,6 @@
 #include "common_tools.h"
 #include "image_toolkit.h"
 #include "output_parser.h"
-#include "lstm_utils.h"
 
 #include <boost/filesystem.hpp>
 #include <boost/optional.hpp>
@@ -355,12 +354,6 @@ uint32_t get_gpu_batch_size(int number)
     return nearest_power_of_two;
 }
 
-template<>
-void prepare_data_for_lstm(lstm_utils& lstm_data, const std::vector<std::string>& input_files, const std::string& vocabulary_file)
-{
-    lstm_data.pre_processing(input_files, vocabulary_file);
-}
-
 bool do_log_energy(const execution_params &ep, CIntelPowerGadgetLib& energyLib) 
 { 
     bool log_energy = ep.perf_per_watt && energyLib.IntelEnergyLibInitialize();
@@ -408,55 +401,6 @@ std::chrono::nanoseconds execute_cnn_topology(cldnn::network network,
 
     return get_execution_time(timer_execution, ep, output, outputs, log_energy, energyLib, iteration, execution_count);
 }
-
-std::chrono::nanoseconds execute_rnn_topology(cldnn::network network,
-    const execution_params &ep,
-    CIntelPowerGadgetLib& energyLib,
-    cldnn::memory& output,
-    cldnn::memory& input,
-    lstm_utils& lstm_data)
-{
-    bool log_energy = do_log_energy(ep, energyLib);
-
-    if (ep.print_type == print_type::verbose)
-    {
-        std::cout << "Start execution.";
-        if (ep.loop > 1)
-        {
-            std::cout << " Will make " << ep.loop << " predictions.";
-        }
-        std::cout << std::endl;
-    }
-    decltype(network.execute()) outputs;
-    cldnn::instrumentation::timer<> timer_execution;
-
-    for (decltype(ep.loop) i = 0; i < ep.loop; i++)
-    {
-        outputs = network.execute();
-        lstm_data.post_process_output(outputs.at("output").get_memory());
-        if (ep.use_half)
-        {
-            lstm_data.fill_memory<half_t>(input);  
-        }
-        else
-        {
-            lstm_data.fill_memory<float>(input);
-        }
-        network.set_input_data("input", input);
-		
-        if (log_energy)
-            energyLib.ReadSample();
-
-    }
-    for (size_t i = 0; i < ep.batch; i++)
-    {
-        std::cout << "BATCH: " << i << " results: " << std::endl;
-        std::cout << lstm_data.get_predictions(i, ep.print_type == print_type::extended_testing ? true : false) << std::endl;
-    }
-
-    return get_execution_time(timer_execution, ep, output, outputs, log_energy, energyLib);
-}
-
 
 std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& timer_execution,
                                           const execution_params &ep,

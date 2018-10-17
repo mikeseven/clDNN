@@ -29,6 +29,7 @@ using namespace cldnn;
 using namespace cldnn::utils::examples;
 
 
+
 // Building basic lstm network with loading weights & biases from file
 topology build_char_level(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, int32_t sequence_length)
 {
@@ -40,11 +41,11 @@ topology build_char_level(const std::string& weights_dir, const cldnn::engine& e
 
     auto lstm_1_weights = file::create({ engine, join_path(weights_dir, "lstm1_0.nnd") });
     auto lstm_1_bias = file::create({ engine, join_path(weights_dir, "lstm1_1.nnd") });
-    auto lstm_1_recurrent = file::create({ engine, join_path(weights_dir, "lstm1_2.nnd") });;
+    auto lstm_1_recurrent = file::create({ engine, join_path(weights_dir, "lstm1_2.nnd") });
 
     auto lstm_2_weights = file::create({ engine, join_path(weights_dir, "lstm2_0.nnd") });
     auto lstm_2_bias = file::create({ engine, join_path(weights_dir, "lstm2_1.nnd") });
-    auto lstm_2_recurrent = file::create({ engine, join_path(weights_dir, "lstm2_2.nnd") });;
+    auto lstm_2_recurrent = file::create({ engine, join_path(weights_dir, "lstm2_2.nnd") });
 
     auto ip_1_weights = file::create({ engine, join_path(weights_dir, "ip1_0.nnd") });
     auto ip_1_bias = file::create({ engine, join_path(weights_dir, "ip1_1.nnd") });
@@ -63,12 +64,12 @@ topology build_char_level(const std::string& weights_dir, const cldnn::engine& e
     );
 
     //Prepare input to lstm_1
-    input_layout.size = { batch_size, 1, 1, sequence_length };
+    input_layout.size = { batch_size, 1, sequence_length, 1 };
     input_layout.format = cldnn::format::bfyx;
     std::vector<primitive_id> lstm_inputs;
     std::vector<primitive_id> output_ids_offsets;
     std::vector<std::pair<primitive_id, tensor>> input_ids_offsets;
-    for (int i = 0; i < sequence_length; ++i)
+    for (int32_t i = 0; i < sequence_length; ++i)
     {
         input_ids_offsets.push_back({ std::to_string(i),{ 0, i, 0, 0 } });
         lstm_inputs.push_back("lstm_input_:" + std::to_string(i));
@@ -102,9 +103,9 @@ topology build_char_level(const std::string& weights_dir, const cldnn::engine& e
         "",
         0.0f,
 		0,
+        {},
 		{},
-		{},
-        cldnn_lstm_output::cldnn_lstm_output_sequence,
+        cldnn_lstm_output::cldnn_lstm_output_hidden,
 		cldnn_lstm_offset_order::cldnn_lstm_offset_order_ifoz);
     
     auto lstm_2 = cldnn::lstm(
@@ -120,26 +121,12 @@ topology build_char_level(const std::string& weights_dir, const cldnn::engine& e
 		0,
 		{},
 		{},
-        cldnn_lstm_output::cldnn_lstm_output_sequence,
+        cldnn_lstm_output::cldnn_lstm_output_hidden,
 		cldnn_lstm_offset_order::cldnn_lstm_offset_order_ifoz);
-
-    //we care only about last hidden state (we could run time_distrubted_dense <lstm_gemm without reccurent weights>, if we would care about every hidden state)
-    auto hidden_size = cldnn::tensor(
-        input_layout.size.batch[0],
-        lstm_2_recurrent.mem.get_layout().size.feature[0],
-        lstm_2_recurrent.mem.get_layout().size.spatial[0],
-        1);
-
-    auto last_hidden_state = cldnn::crop(
-        "last_hidden_state",
-        lstm_2,
-        hidden_size,
-        {0, sequence_length-1, 0, 0}
-    );
 
     auto ip_1 = cldnn::fully_connected(
         "output",
-        last_hidden_state,
+        lstm_2,
         ip_1_weights,
         ip_1_bias
     );
@@ -150,7 +137,6 @@ topology build_char_level(const std::string& weights_dir, const cldnn::engine& e
         splited_embeded_input,
         lstm_1,
         lstm_2,
-        last_hidden_state,
         ip_1
     );
 

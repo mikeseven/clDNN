@@ -69,19 +69,13 @@ static cmdline_options prepare_cmdline_options(const std::shared_ptr<const execu
             "Path to input directory containing images to classify (mandatory when running classification).")
         ("model", bpo::value<std::string>()->value_name("<model-name>")->default_value("alexnet"),
             "Name of a neural network model that is used for classification.\n"
-            "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, resnet50, resnet50-i8, ssd_mobilenet, ssd_mobilenet-i8, lstm_char.")
+            "It can be one of:\n  \talexnet, vgg16, vgg16_face, googlenet, gender, squeezenet, resnet50, resnet50-i8, ssd_mobilenet, ssd_mobilenet-i8")
         ("weights", bpo::value<std::string>()->value_name("<weights-dir>"),
             "Path to directory containing weights used in classification.\n"
             "Non-absolute paths are computed in relation to <executable-dir> (not working directory).\n"
             "If not specified, the \"<executable-dir>/<model-name>\" path is used in first place with \"<executable-dir>/weights\" as fallback.")
         ("use_calibration", bpo::bool_switch(),
-            "Uses int8 precision and output calibration. Supported topologies: squeezenet")
-        ("sequence_length", bpo::value<std::uint32_t>()->value_name("<sequence-length>")->default_value(0),
-            "Used in RNN topologies (LSTM).")
-        ("vocabulary_file", bpo::value<std::string>()->value_name("<vocabulary-file>"),
-            "Path to vocabulary file (.txt format). File has to contain all the characters, which model recognizes.")
-        ("temperature", bpo::value<float>()->value_name("<temperature-value>")->default_value(0.0f),
-            "Temperature for character selection at the output <range from 0.0 to 1.0>. (default 0.0f)");
+            "Uses int8 precision and output calibration. Supported topologies: squeezenet");
 
     // Conversions options.
     auto weights_conv_cmdline_options = cmdline_options::create_group("Weights conversion options");
@@ -101,7 +95,7 @@ void run_topology(const execution_params &ep)
     uint32_t batch_size = ep.batch;
 
     uint32_t gpu_batch_size = get_gpu_batch_size(batch_size);
-    if (gpu_batch_size != batch_size && !ep.rnn_type_of_topology)
+    if (gpu_batch_size != batch_size)
     {
         std::cout << "WARNING: This is not the optimal batch size. You have " << (gpu_batch_size - batch_size)
             << " dummy images per batch!!! Please use batch=" << gpu_batch_size << "." << std::endl;
@@ -182,8 +176,6 @@ void run_topology(const execution_params &ep)
         primitives = build_resnet50(ep.weights_dir, engine, input_layout, gpu_batch_size);
     else if (ep.topology_name == "resnet50-i8")
         primitives = build_resnet50_i8(ep.weights_dir, engine, input_layout, gpu_batch_size);
-    else if (ep.topology_name == "lstm_char")
-        primitives = build_char_level(ep.weights_dir, engine, input_layout, gpu_batch_size, ep.sequence_length);
     else if (ep.topology_name == "squeezenet")
     {
         if (ep.calibration)
@@ -247,47 +239,25 @@ void run_topology(const execution_params &ep)
             input_files_in_batch.push_back(*input_list_iterator);
         }
         double time_in_sec = 0.0;
-        lstm_utils lstm_data(ep.sequence_length, batch_size, (unsigned int)ep.loop, ep.temperature);
-        // load croped and resized images into input
-        if (!ep.rnn_type_of_topology)
-        {
-            if (ep.use_half)
-            {
-                load_image_files<half_t>(input_files_in_batch, input);
-            }
-            else
-            {
-                load_image_files(input_files_in_batch, input);
-            }
 
+        // load croped and resized images into input
+        if (ep.use_half)
+        {
+            load_image_files<half_t>(input_files_in_batch, input);
         }
         else
         {
-            prepare_data_for_lstm(lstm_data, input_files_in_batch, ep.vocabulary_file);
-            if (ep.use_half)
-            {
-                lstm_data.fill_memory<half_t>(input);
-            }
-            else
-            {
-                lstm_data.fill_memory<float>(input);
-            }
+            load_image_files(input_files_in_batch, input);
         }
         network.set_input_data("input", input);
 
         std::chrono::nanoseconds time;
-        if (!ep.rnn_type_of_topology)
-        {
-            time = execute_cnn_topology(network, ep, energyLib, output);
-        }
-        else
-        {
-            time = execute_rnn_topology(network, ep, energyLib, output, input, lstm_data);
-        }
+
+        time = execute_cnn_topology(network, ep, energyLib, output);
 
         time_in_sec = std::chrono::duration_cast<std::chrono::duration<double, std::chrono::seconds::period>>(time).count();
 
-        if (ep.run_until_primitive_name.empty() && ep.run_single_kernel_name.empty() && !ep.rnn_type_of_topology && ep.topology_name != "lenet" && ep.topology_name != "lenet_train")
+        if (ep.run_until_primitive_name.empty() && ep.run_single_kernel_name.empty() && ep.topology_name != "lenet" && ep.topology_name != "lenet_train")
         {
             output_file.batch(output, join_path(get_executable_info()->dir(), neurons_list_filename), input_files_in_batch, ep.print_type);
         }
@@ -428,45 +398,12 @@ int main(int argc, char* argv[])
                 return 1;
             }
 
-            auto seq_length = parsed_args["sequence_length"].as<std::uint32_t>();;
-            if (seq_length != 0) ep.rnn_type_of_topology = true;
-            ep.sequence_length = seq_length;
-            if (ep.rnn_type_of_topology && parsed_args["model"].as<std::string>() != "lstm_char")
-                std::cerr << "lstm type params are allowed for lstm type topologies" << std::endl;;
-            if (seq_length > 0)
-            {
-                auto vocab_file = parsed_args["vocabulary_file"].as<std::string>();
-                if (!bfs::exists(vocab_file) || !bfs::is_regular_file(vocab_file) || bfs::extension(vocab_file) != ".txt")
-                {
-                    std::cerr << "ERROR: specified vocabulary file (\"" << vocab_file
-                        << "\") does not exist or is not .txt type of file !!!" << std::endl;
-                    return 1;
-                }
-                ep.vocabulary_file = vocab_file;
-            }
-
             ep.input_dir = input_dir;
             ep.weights_dir = weights_dir;
         }
 
         ep.topology_name = parsed_args["model"].as<std::string>();
         ep.calibration = parsed_args["use_calibration"].as<bool>();
-        ep.sequence_length = parsed_args["sequence_length"].as<std::uint32_t>();
-        ep.temperature = parsed_args["temperature"].as<float>();
-
-        if (ep.rnn_type_of_topology) //we care about temperature for some rnn topologies.
-        {
-            if (ep.temperature > 1.0f)
-            {
-                std::cout << "[WARNING] Temperature too high. Lowered to max value = 1.0f." << std::endl;
-                ep.temperature = 1.0f;
-            }
-            if (ep.temperature < 0.0f)
-            {
-                std::cout << "[WARNING] Temperature can't be negative. Higered to min. value = 0.0f." << std::endl;
-                ep.temperature = 0.0f;
-            }
-        }
 
         if (ep.topology_name == "alexnet" ||
             ep.topology_name == "vgg16" ||
@@ -476,7 +413,6 @@ int main(int argc, char* argv[])
             ep.topology_name == "squeezenet" ||
             ep.topology_name == "resnet50" ||
             ep.topology_name == "resnet50-i8" ||
-            ep.topology_name == "lstm_char" || 
             ep.topology_name == "ssd_mobilenet" ||
             ep.topology_name == "ssd_mobilenet-i8")
         {

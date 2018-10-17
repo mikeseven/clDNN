@@ -46,6 +46,7 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES ${__CLDNN_FindLibSuffixes})
 add_subdirectory(common)
 add_subdirectory(examples)
 add_subdirectory(examples_training)
+add_subdirectory(examples_rnn)
 add_subdirectory(examples_transform)
 add_subdirectory(microbench)
 
