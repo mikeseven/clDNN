@@ -88,7 +88,7 @@ public:
         single_element_container& operator ++() { elem = nullptr; return *this; }
         bool operator !=(single_element_container const& sec) { return elem != sec.elem; }
 
-        decltype(auto) operator *() { return *elem; }
+       T operator *() { return *elem; }
 
     private:
         single_element_container(T* t) : elem(t)
