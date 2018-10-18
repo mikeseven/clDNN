@@ -218,7 +218,7 @@ static bool run_topology(const transform_execution_params& exec_params)
 
     transform::output_printer printer(exec_params.topology_name, exec_params.topology_name,
                                       !exec_params.compare_ref_img_dir.empty(), exec_params.compare_per_channel,
-                                      exec_params.compare_histograms);
+                                      exec_params.compare_histograms, exec_params.lossless);
 
     // Building topology.
     cldnn::topology selected_topology;
