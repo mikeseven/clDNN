@@ -73,6 +73,8 @@ namespace cldnn
     {
     public:
         virtual void run(program_impl &p) override;
+        template <typename T>
+        void optimize_depthwise_sep_pre(T& node);
     };
 
     class propagate_constants : base_pass
