@@ -34,6 +34,8 @@ public:
 
     bool is_in_place() const
     {
+        if (this->is_output())
+            return false;
         return (!this->get_output_layout().data_padding && !input().get_output_layout(false).data_padding);
     }
 };
