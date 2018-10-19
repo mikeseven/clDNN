@@ -43,7 +43,7 @@ private:
             add_or_change_input_layout(node);
             _program = node.get_program().get_engine().build_program(_topology, node.get_program().get_options(), true); //rebuild program 
         }
-        decltype(auto) get() const { return _program; }
+        program_impl::ptr get() const { return _program; }
 
     private:
         topology_impl & _topology;
@@ -82,10 +82,10 @@ public:
     {
     }
 
-    decltype(auto) input() const { return get_dependency(0); }
-    decltype(auto) compare() const { return get_dependency(1); }
-    decltype(auto) func() const { return get_primitive()->function; }
-    decltype(auto) offset() const { return get_primitive()->offset; }
+    program_node& input() const { return get_dependency(0); }
+    program_node& compare() const { return get_dependency(1); }
+    cond_functions func() const { return get_primitive()->function; }
+    tensor offset() const { return get_primitive()->offset; }
     void set_branches() const
     {
         _branch_true.set(*this);
@@ -113,10 +113,10 @@ public:
     static std::string to_string(condition_node const& node);
     typed_primitive_inst(network_impl& network, condition_node const& node);
 
-    decltype(auto) input_memory() const { return dep_memory(0); }
-    decltype(auto) compare_memory() const { return dep_memory(1); }
-    decltype(auto) get_net_true() const { return _net_true; }
-    decltype(auto) get_net_false() const { return _net_false; }
+    memory_impl& input_memory() const { return dep_memory(0); }
+    memory_impl& compare_memory() const { return dep_memory(1); }
+    network_impl::ptr get_net_true() const { return _net_true; }
+    network_impl::ptr get_net_false() const { return _net_false; }
     primitive_id result_id() const { return node.result_id(); }
 private:
     network_impl::ptr _net_true;

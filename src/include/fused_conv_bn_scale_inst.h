@@ -39,7 +39,7 @@ public:
     void set_split(int32_t node_split) { split = node_split; }
     int32_t get_split() const { return split; }
 
-    decltype(auto) input(size_t idx = 0) const
+    program_node& input(size_t idx = 0) const
     {
         if (static_cast<int32_t>(idx) >= static_cast<int32_t>(desc->input.size()))
             throw std::range_error("input index too big");
@@ -47,7 +47,7 @@ public:
         return get_dependency(idx);
     }
 
-    decltype(auto) weights(size_t idx = 0) const
+    program_node& weights(size_t idx = 0) const
     {
         if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("weights offset too big");
@@ -55,7 +55,7 @@ public:
         return get_dependency(desc->input.size() + idx);
     }
 
-    decltype(auto) bias(size_t idx = 0) const
+    program_node& bias(size_t idx = 0) const
     { 
         if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("bias offset too big");
@@ -63,7 +63,7 @@ public:
         return get_dependency(desc->input.size() + this->get_split() + idx);
     }
 
-    decltype(auto) weights_quantization_factors(size_t idx = 0) const
+    program_node& weights_quantization_factors(size_t idx = 0) const
     {
         if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("quantization factor offset too big");
@@ -71,7 +71,7 @@ public:
         return get_dependency(desc->input.size() + 2*this->get_split() + idx);
     }
 
-    decltype(auto) output_calibration_factors(size_t idx = 0) const
+    program_node& output_calibration_factors(size_t idx = 0) const
     {
         if (static_cast<int32_t>(idx) >= this->get_split())
             throw std::range_error("calibration factor offset too big");
@@ -112,7 +112,7 @@ public:
 public:
     typed_primitive_inst(network_impl& network, fused_conv_bn_scale_node const& node);
 
-    decltype(auto)weights_memory(size_t index) const
+    memory_impl& weights_memory(size_t index) const
     {
         if (static_cast<int32_t>(index) >= node.get_split())
             throw std::range_error("weights offset too big");
@@ -120,7 +120,7 @@ public:
         return dep_memory(inputs_memory_count() + index);
     }
 
-    decltype(auto) bias_memory(size_t index) const
+    memory_impl& bias_memory(size_t index) const
     { 
         if (static_cast<int32_t>(index) >= node.get_split())
             throw std::range_error("bias offset too big");
