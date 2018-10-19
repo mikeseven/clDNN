@@ -65,23 +65,6 @@ template void pre_optimize_bias::optimize_bias<embed_node>(embed_node& node, lay
 
 void pre_optimize_bias::run(program_impl &p, layout_optimizer& lo)
 {
-    //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
-    //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
-    //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
-    const auto add_bias = [&p, &lo](program_node& bias, auto& node, layout const& output_layout, size_t dep_idx)
-    {
-        const auto bias_type = layout_optimizer::data_type::bias;
-        auto reorder = lo.get_reorder(
-            bias.get_output_layout(),
-            bias.id(),
-            bias_type,
-            node,
-            output_layout);
-
-        if (reorder.first)
-            p.add_intermediate(reorder.first, node, dep_idx, !reorder.second);
-    };
-
     for (auto& nm : p.nodes_map)
     {
         auto& prim = *nm.second;
