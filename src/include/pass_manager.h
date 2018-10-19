@@ -95,6 +95,8 @@ namespace cldnn
         pre_optimize_bias(layout_optimizer& lo_ref);
         virtual void run(program_impl &p) override;
         virtual void run(program_impl &p, layout_optimizer& lo);
+        template <typename T>
+        void optimize_bias(T& node, layout_optimizer& lo, program_impl& p);
     private:
         layout_optimizer& _lo;
     };
@@ -113,6 +115,8 @@ namespace cldnn
     {
     public:
         post_optimize_weights(layout_optimizer& lo_ref);
+        template <typename T>
+        void optimize_weights(T& node, layout_optimizer& lo, program_impl &p);
         virtual void run(program_impl &p) override;
         virtual void run(program_impl &p, layout_optimizer& lo);
     private:
