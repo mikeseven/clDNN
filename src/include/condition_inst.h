@@ -91,8 +91,8 @@ public:
         _branch_true.set(*this);
         _branch_false.set(*this);
     }
-    decltype(auto) get_branch_true() const { return _branch_true.get(); }
-    decltype(auto) get_branch_false() const{ return _branch_false.get(); }
+    program_impl::ptr get_branch_true() const { return _branch_true.get(); }
+    program_impl::ptr get_branch_false() const{ return _branch_false.get(); }
     primitive_id result_id() const { return id() + ":result"; }
 
 private:
