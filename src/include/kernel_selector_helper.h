@@ -15,9 +15,7 @@
 #pragma once
 
 #include "api/C/cldnn.h"
-#include "api/CPP/program.hpp"
-
-#include "program_impl.h"
+#include "api/CPP/tensor.hpp"
 
 #include "kernel_selector_params.h"
 #include "kernel_selector_common.h"
@@ -26,6 +24,16 @@
 #include <cstdint>
 
 using namespace cldnn;
+
+namespace cldnn
+{
+    enum class data_types : size_t;
+    enum class tuning_mode;
+    struct format;
+    struct layout;
+    struct program_impl;
+    struct program_node;
+}
 
 namespace kernel_selector
 {
