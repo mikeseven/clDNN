@@ -76,7 +76,7 @@ namespace cldnn
     public:
         virtual void run(program_impl &p) override;
     private:
-        template <typename T> void optimize_depthwise_sep_pre(T& node);
+        template <typename T> void optimize_depthwise_sep_pre(program_impl &p, T& node);
     };
 
     class propagate_constants : base_pass
