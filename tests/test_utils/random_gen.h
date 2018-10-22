@@ -18,7 +18,7 @@
 #include <random>
 #include <stdexcept>
 #include "float16.h"
-
+#include "api\CPP\meta_utils.hpp"
 // NOTE: Needed only for possibly imported type (always_false).
 #include <type_traits>
 
@@ -30,7 +30,7 @@ namespace rnd_generators
         template <typename Ty> struct always_false : std::false_type {};
 
         template <typename Ty>
-        constexpr bool always_false_v = always_false<Ty>::value;
+        constexpr bool always_false_v = meta::always_false<Ty>::value;
     }
 
     template <typename NumberTy>
