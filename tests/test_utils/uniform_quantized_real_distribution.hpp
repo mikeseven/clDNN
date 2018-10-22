@@ -155,6 +155,11 @@ struct estimate_repr_size_helper1_<DataType, true>
 template <typename DataType>
 struct estimate_repr_size : estimate_repr_size_helper1_<DataType> {};
 
+/// @brief Estimates size in bits (rounded to byte) of representation of specified DataType (template variable).
+///
+/// @tparam DataType Data type which size of representation will be estimated.
+template <typename DataType>
+static constexpr std::size_t estimate_repr_size_v = estimate_repr_size<DataType>::value;
 
 // --------------------------------------------------------------------------------------------------------------------
 
@@ -314,7 +319,7 @@ private:
     static constexpr part_type part_ones  = ~part_zeros;
 
     /// @brief Number of bits in representation of data_type (without padding).
-    static constexpr std::size_t data_repr_bit_size = estimate_repr_size<DataType>::value;
+    static constexpr std::size_t data_repr_bit_size    = estimate_repr_size_v<data_type>;
     /// @brief Number of bits in representation of part_type (part type is used to store mask).
     static constexpr std::size_t data_part_bit_size    = CHAR_BIT * sizeof(part_type);
     /// @brief Number of parts needed to store representation of data_type.
