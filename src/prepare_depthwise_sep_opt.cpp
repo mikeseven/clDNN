@@ -20,6 +20,30 @@
 #include "program_helpers.h"
 
 
+
+template <typename T>
+void prepare_depthwise_sep_opt::optimize_depthwise_sep_pre(T& node)
+{
+    //enable optimization only when IFM / split <= 8 (otherwise scheduling multiple opt kernels is better) and split >= 16
+    if (!(node.get_dependency(0).get_output_layout().size.feature[0] / node.get_primitive()->split() <= 8) ||
+        !(node.get_primitive()->split() >= 16))
+        return;
+
+    //make sure the weights and biases are data type and
+    //are not reused in other primitives as they will be overriden with concatenated ones
+    for (size_t i = 1; i < node.get_dependencies().size(); i++)
+    {
+        auto& weights_or_biases = node.get_dependency(i);
+        if (weights_or_biases.get_users().size() > 1 || weights_or_biases.type() != data::type_id())
+            return;
+    }
+
+    node.set_depthwise_sep_opt(true);
+}
+
+template void prepare_depthwise_sep_opt::optimize_depthwise_sep_pre<convolution_node>(convolution_node& node);
+template void prepare_depthwise_sep_opt::optimize_depthwise_sep_pre<deconvolution_node>(deconvolution_node& node);
+
 void prepare_depthwise_sep_opt::run(program_impl &p)
 {
     const auto prepare_depthwise_sep_opt = [&p](auto& node) -> void
@@ -45,10 +69,14 @@ void prepare_depthwise_sep_opt::run(program_impl &p)
     for (auto& nm : p.nodes_map)
     {
         auto& prim = *nm.second;
-        program_helpers::do_for_types<deconvolution, convolution>(prim,
-            prepare_depthwise_sep_opt,   //case for deconvolution
-            prepare_depthwise_sep_opt    //case for convolution
-            );
+        if (prim.type() == convolution::type_id())
+        {
+            optimize_depthwise_sep_pre(prim.as<convolution>());
+        }
+        else if (prim.type() == deconvolution::type_id())
+        {
+            optimize_depthwise_sep_pre(prim.as<deconvolution>());
+        }
     }
 }
 
