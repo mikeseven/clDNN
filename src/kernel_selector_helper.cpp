@@ -17,6 +17,8 @@
 
 #include "gpu/ocl_toolkit.h"
 
+#include "program_node.h"
+
 kernel_selector::data_type to_data_type(data_types dt)
 {
     switch (dt)

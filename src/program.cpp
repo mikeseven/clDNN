@@ -1473,6 +1473,35 @@ void program_impl::add_intermediate(program_node& node, program_node& next, size
     }
 }
 
+void program_impl::add_intermediate(std::shared_ptr<primitive> prim, program_node& next, size_t prev_idx, bool connect_int_node_with_old_dep)
+{
+    add_intermediate(get_or_create(prim), next, prev_idx, connect_int_node_with_old_dep);
+}
+
+void program_impl::add_connection(program_node& prev, program_node& next)
+{
+    prev.users.push_back(&next);
+    next.dependencies.push_back(&prev);
+}
+
+void program_impl::remove_connection(program_node& prev, program_node& next)
+{
+    prev.users.remove(&next);
+    next.dependencies.erase(std::remove(next.dependencies.begin(), next.dependencies.end(), &prev), next.dependencies.end());
+}
+
+void program_impl::remove_all_connections(program_node& node) {
+    // since the graph is not topological sorted, we need to remove the node from both dependencies and users
+    for (auto &e : node.users) {
+        e->dependencies.erase(std::remove(e->dependencies.begin(), e->dependencies.end(), &node), e->dependencies.end());
+    }
+    for (auto &e : node.dependencies) {
+        e->users.remove(&node);
+    }
+    node.dependencies.clear();
+    node.users.clear();
+}
+
 void program_impl::rename(program_node & node, primitive_id const & new_id)
 {
     if (nodes_map.count(new_id))
@@ -1692,17 +1721,6 @@ bool program_impl::extract_and_remove(program_node& node)
         remove_if_dangling(node);
 
     return true;
-}
-
-void program_impl::replace_data_with_optimized(std::map<primitive_id, memory_impl::ptr> const & replace_map)
-{
-    for (auto& result : replace_map)
-    {
-        auto& node = *nodes_map.at(result.first);
-        assert(node.is_type<data>() && "Optimized primitive is not a cldnn::data");
-        assert(result.second != nullptr && "Memory which handles result of optimization should not be nullptr");
-        node.as<data>().attach_memory(*result.second, false);
-    }
 }
 
 void program_impl::dump_memory_pool() const

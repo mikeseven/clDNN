@@ -21,18 +21,14 @@
 #include "api/CPP/program.hpp"
 
 #include "refcounted_obj.h"
-#include "topology_impl.h"
 #include "engine_impl.h"
-#include "program_node.h"
-#include "memory_impl.h"
-#include "error_handler.h"
 
 #include <list>
-#include <algorithm>
 
 namespace cldnn
 {
 
+struct topology_impl;
 struct primitive_impl;
 class layout_optimizer;
 class constants_propagator;
@@ -186,34 +182,13 @@ private:
 
     // Gets or creates program_node for given primitive 'prim' and inserts it as an intermediate
     // node between 'next' and it's dependency at 'prev_idx' index.
-    void add_intermediate(std::shared_ptr<primitive> prim, program_node& next, size_t prev_idx, bool connect_int_node_with_old_dep = true)
-    {
-        add_intermediate(get_or_create(prim), next, prev_idx, connect_int_node_with_old_dep);
-    }
+    void add_intermediate(std::shared_ptr<primitive> prim, program_node& next, size_t prev_idx, bool connect_int_node_with_old_dep = true);
 
-    void add_connection(program_node& prev, program_node& next)
-    {
-        prev.users.push_back(&next);
-        next.dependencies.push_back(&prev);
-    }
+    void add_connection(program_node& prev, program_node& next);
 
-    void remove_connection(program_node& prev, program_node& next)
-    {
-        prev.users.remove(&next);
-        next.dependencies.erase(std::remove(next.dependencies.begin(), next.dependencies.end(), &prev), next.dependencies.end());
-    }
+    void remove_connection(program_node& prev, program_node& next);
 
-    void remove_all_connections(program_node& node) {
-        // since the graph is not topological sorted, we need to remove the node from both dependencies and users
-        for (auto &e : node.users) {
-            e->dependencies.erase(std::remove(e->dependencies.begin(), e->dependencies.end(), &node), e->dependencies.end());
-        }
-        for(auto &e : node.dependencies) {
-            e->users.remove(&node);
-        }
-        node.dependencies.clear();
-		node.users.clear();
-    }
+    void remove_all_connections(program_node& node);
 
     void rename(program_node & node, primitive_id const & new_id);
     void swap_names(program_node& node1, program_node& node2);
@@ -232,7 +207,6 @@ private:
     //prereq: node cannot be marked as output and has to have exactly one dependency
     //returns if 'node' has been extracted and removed successfully
     bool extract_and_remove(program_node& node);
-    void replace_data_with_optimized(std::map<primitive_id, memory_impl::ptr> const& replace_map);
     void dump_program(const char* stage, bool with_full_info, std::function<bool(program_node const&)> const& filter = nullptr) const;
     //Dumps weights and biasses in serialization process, not working yet, in progress.
     void dump_weights_and_biasses(std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names, std::ofstream& file_stream) const;
