@@ -18,7 +18,6 @@
 #include "api/CPP/program.hpp"
 
 #include "program_impl.h"
-#include "gpu/ocl_toolkit.h"
 
 #include "kernel_selector_params.h"
 #include "kernel_selector_common.h"
@@ -74,6 +73,8 @@ namespace kernel_selector
     using params                            = kernel_selector::Params;
     using weights_reorder_params            = kernel_selector::WeightsReorderParams;
     using generic_kernel_params             = kernel_selector::GenericKernelParams;
+
+    struct training_params;
 }
 
 kernel_selector::data_type to_data_type(data_types dt);
@@ -174,21 +175,13 @@ inline params_t get_weights_bias_default_params(const arg_t& arg, uint32_t split
     return params;
 }
 
+void set_learning_params(const program_node& node, kernel_selector::training_params& params, bool use_momentum);
+
 template <typename params_t, typename arg_t>
 inline params_t get_default_learning_params(const arg_t& arg, uint32_t split = 1)
 {
 	params_t params = get_weights_bias_default_params<params_t>(arg, split);
-
-	const auto learning_params = arg.get_program().get_options().template get<build_option_type::learning_config>()->params;
-
-	if (arg.use_momentum())
-	{
-		params.use_momentum = true;
-	}
-
-	params.momentum_factor = learning_params.momentum;
-	params.weights_decay = learning_params.weights_decay;
-
+    set_learning_params(arg, params, arg.use_momentum());
 	return params;
 }
 
@@ -198,13 +191,7 @@ template <typename optional_params_t>
 inline optional_params_t get_default_optional_params(const program_impl& program)
 {
     optional_params_t params;
-    
     set_optional_params(program, params);
-    
-    const auto& tuning_config = program.get_options().get<build_option_type::tuning_config>();
-    params.tuningParams.mode = to_tuning_mode(tuning_config->config.mode);
-    params.tuningParams.cacheFilePath = tuning_config->config.cache_file_path;
-
     return params;
 }
 

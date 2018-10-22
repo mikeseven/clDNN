@@ -22,6 +22,8 @@
 #include "data_inst.h"
 #include "condition_inst.h"
 
+#include "gpu/ocl_toolkit.h"
+
 #include <algorithm>
 #include <vector>
 
@@ -435,7 +437,7 @@ namespace cldnn
     }
 
     //Function used by serialization. Not working yet, in progress.
-    void dump_kernels(kernels_binaries_container program_binaries, std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names, std::ofstream& file_stream)
+    void dump_kernels(const kernels_binaries_container& program_binaries, std::vector<unsigned long long>& offsets, std::vector<std::string>& data_names, std::ofstream& file_stream)
     {
         auto offset_temp = 0ull;
         for (unsigned int i = 0; i < (unsigned int)program_binaries.size(); i++)

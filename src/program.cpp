@@ -52,6 +52,8 @@
 #include "split_inst.h"
 #include "upsampling_inst.h"
 
+#include "gpu/ocl_toolkit.h"
+
 #include <fstream>
 #include <algorithm>
 #include <stdio.h>

@@ -30,6 +30,8 @@
 #include "kernel_selector_helper.h"
 #include <algorithm>
 
+#include "gpu/ocl_toolkit.h"
+
 namespace cldnn
 {
 /*
