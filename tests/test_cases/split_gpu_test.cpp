@@ -101,56 +101,6 @@ TEST(split_gpu, basic_in2x3x2x2_split_feature_bfyx) {
     }
 }
 
-
-TEST(split_gpu, basic_in1x4x1x1_split_feature_bfyx) {
-    //  Input      : 1x4x1x1
-    //  Output1    : 1x1x1x1
-    //  Output2    : 1x3x1x1
-    //  Split params:
-    //  id: "out0", offsets: { 0, 0, 0, 0 }
-    //  id: "out1", offsets: { 0, 1, 0, 0 }
-
-
-    engine engine;
-
-    auto batch_num = 1;
-    auto feature_num = 4;
-    auto x_size = 1;
-    auto y_size = 1;
-
-    auto input = memory::allocate(engine, { data_types::f32,format::bfyx,{ batch_num, feature_num, x_size, y_size } });
-
-    topology topology;
-    topology.add(input_layout("input", input.get_layout()));
-    topology.add(split("split", "input",
-        {
-            { "out0", { 0, 0, 0, 0 } },
-            { "out1", { 0, 1, 0, 0 } },
-        }));
-
-    std::vector<float> input_vec = generate_random_input<float>(batch_num, feature_num, y_size, x_size, -10, 10);
-    set_values(input, input_vec);
-
-    network network(engine, topology);
-
-    network.set_input_data("input", input);
-
-    auto outputs = network.execute();
-
-    EXPECT_EQ(outputs.size(), size_t(2));
-    std::vector<int> exp_sizes = { 1, 3 };
-    for (unsigned int i = 0; i < 2; i++)
-    {
-        auto split_id = "split:out" + std::to_string(i);
-        auto output = outputs.at(split_id).get_memory();
-        auto prim = output.get_layout();
-        EXPECT_EQ(prim.size.feature[0], exp_sizes[i]);
-        auto output_ptr = output.pointer<float>();
-        check_feature_map<float>(output_ptr, input_vec, batch_num, feature_num, y_size, x_size, i, 1);
-    }
-}
-
-
 TEST(split_gpu, basic_in2x3x2x2_split_scale_feature_bfyx) {
     //  Input      : 6x3x4x3
     //  3 x Outputs: 6x1x4x3
