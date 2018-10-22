@@ -67,14 +67,16 @@ namespace cldnn
     {
     public:
         virtual void run(program_impl &p) override;
+    private:
+        template <typename T> void optimize_depthwise_sep_pre(T& node);
     };
 
     class prep_opt_depthwise_sep_post : base_pass
     {
     public:
         virtual void run(program_impl &p) override;
-        template <typename T>
-        void optimize_depthwise_sep_pre(T& node);
+    private:
+        template <typename T> void optimize_depthwise_sep_pre(T& node);
     };
 
     class propagate_constants : base_pass
@@ -115,11 +117,11 @@ namespace cldnn
     {
     public:
         post_optimize_weights(layout_optimizer& lo_ref);
-        template <typename T>
-        void optimize_weights(T& node, layout_optimizer& lo, program_impl &p);
         virtual void run(program_impl &p) override;
         virtual void run(program_impl &p, layout_optimizer& lo);
     private:
+        template <typename T>
+        void optimize_weights(T& node, layout_optimizer& lo, program_impl &p);
         layout_optimizer& _lo;
     };
 }
