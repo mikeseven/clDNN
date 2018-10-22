@@ -30,6 +30,8 @@ namespace cldnn
 
 struct topology_impl;
 struct primitive_impl;
+struct program_node;
+
 class layout_optimizer;
 class constants_propagator;
 /*
