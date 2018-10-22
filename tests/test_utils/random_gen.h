@@ -28,7 +28,9 @@ namespace rnd_generators
     {
         // NOTE: Should be imported from clDNN API headers.
         template <typename Ty> struct always_false : std::false_type {};
-        constexpr bool always_false_v = false;
+
+        template <typename Ty>
+        constexpr bool always_false_v = always_false<Ty>::value;
     }
 
     template <typename NumberTy>
