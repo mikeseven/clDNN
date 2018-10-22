@@ -179,12 +179,12 @@ void prepare_primitive_fusing::fuse_conv_bn_scale(program_impl &p, program_node*
                 }
                 p.extract_and_remove(*bn_node);
                 std::vector<program_node*>::iterator inv_var_node = std::find_if(new_node.dependencies.begin(), new_node.dependencies.end(),
-                    [&new_conv](auto& node) { return node->id().find(new_conv->inv_variance) != std::string::npos; });
+                    [&new_conv](program_node*& node) { return node->id().find(new_conv->inv_variance) != std::string::npos; });
                 (*inv_var_node)->users.push_back(&new_node);
 
                 if (training)
                 {
-                    std::list<program_node*>::iterator user = std::find_if(new_node.users.begin(), new_node.users.end(), [](auto& node) { return node->id().find("_fused_conv_out") != std::string::npos; });
+                    std::list<program_node*>::iterator user = std::find_if(new_node.users.begin(), new_node.users.end(), [](program_node*& node) { return node->id().find("_fused_conv_out") != std::string::npos; });
                     p.reverse_connection(new_node, **user);
                     user = std::find_if(new_node.users.begin(), new_node.users.end(), [](auto& node) { return node->id().find("_fused_bn_out") != std::string::npos; });
                     p.reverse_connection(new_node, **user);
