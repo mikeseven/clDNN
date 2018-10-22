@@ -184,9 +184,10 @@ void prepare_primitive_fusing::fuse_conv_bn_scale(program_impl &p, program_node*
 
                 if (training)
                 {
-                    std::list<program_node*>::iterator user = std::find_if(new_node.users.begin(), new_node.users.end(), [](program_node*& node) { return node->id().find("_fused_conv_out") != std::string::npos; });
+                    std::list<program_node*>::iterator user = 
+                        std::find_if(new_node.users.begin(), new_node.users.end(), [](program_node*& node) { return node->id().find("_fused_conv_out") != std::string::npos; });
                     p.reverse_connection(new_node, **user);
-                    user = std::find_if(new_node.users.begin(), new_node.users.end(), [](auto& node) { return node->id().find("_fused_bn_out") != std::string::npos; });
+                    user = std::find_if(new_node.users.begin(), new_node.users.end(), [](program_node*& node) { return node->id().find("_fused_bn_out") != std::string::npos; });
                     p.reverse_connection(new_node, **user);
                     p.processing_order.calculate_BFS_processing_order();
                 }
