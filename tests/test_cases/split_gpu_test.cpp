@@ -79,7 +79,7 @@ void split_test(int batch_num, int feature_num, int x_size, int y_size, std::vec
 	};
 
 	// Create the splits with the split ids for the topology
-	for (int splitNum = 0; splitNum < split_offsets.size(); splitNum++) 
+	for (size_t splitNum = 0; splitNum < split_offsets.size(); splitNum++) 
 	{
 		input_ids_offsets.push_back({ create_split_id(splitNum), split_offsets[splitNum]});
 	}
@@ -99,7 +99,7 @@ void split_test(int batch_num, int feature_num, int x_size, int y_size, std::vec
 	EXPECT_EQ(outputs.size(), size_t(split_offsets.size()));
 	
 	std::vector<cldnn::tensor> expected_sizes;
-	for (int splitNum = 0; splitNum < split_offsets.size(); splitNum++)  // Calculate the expected sizes
+	for (size_t splitNum = 0; splitNum < split_offsets.size(); splitNum++)  // Calculate the expected sizes
 	{
 		cldnn::tensor size;
 
@@ -150,19 +150,19 @@ void split_test(int batch_num, int feature_num, int x_size, int y_size, std::vec
 		auto input_y_itr = input_y_offset;
 		auto input_x_itr = input_x_offset;
 		
-		for (size_t b = 0; b < output_batch; ++b) {  // B
+		for (auto b = 0; b < output_batch; ++b) {  // B
 			
 				// reset the input feature iterator
 			input_feature_itr = input_feature_offset; 
-			for (size_t f = 0; f < output_feature; f++) {  // F
+			for (auto f = 0; f < output_feature; f++) {  // F
 				
 				// reset the input y iterator
 				input_y_itr = input_y_offset;  
-				for (size_t y = 0; y < output_y; y++) {  // Y
+				for (auto y = 0; y < output_y; y++) {  // Y
 					
 					// reset the input x iterator
 					input_x_itr = input_x_offset;  
-					for (size_t x = 0; x < output_x; x++) {  // X
+					for (auto x = 0; x < output_x; x++) {  // X
 						auto linear_id = input_x_itr + x_size * (input_y_itr + y_size * (input_feature_itr + feature_num * input_batch_itr)); // index in input
 						auto output_linear_id = x + output_x * (y + output_y * (f + output_feature * b)); // index in output
 						EXPECT_EQ(output_ptr[output_linear_id], input_vec[linear_id]);
