@@ -526,7 +526,7 @@ mark_as_advanced(CLDNN__INCLUDE_GENERIC_SAMPLE)
 # ======================================================================================================
 
 # Minimum versions of compilers.
-set(CLDNN__MIN_COMPILER_VERSION__MSVC  "17.0")
+set(CLDNN__MIN_COMPILER_VERSION__MSVC  "19.0")
 set(CLDNN__MIN_COMPILER_VERSION__CLANG "3.5")
 set(CLDNN__MIN_COMPILER_VERSION__ICC   "17.0")
 set(CLDNN__MIN_COMPILER_VERSION__GCC   "4.8")
@@ -1097,16 +1097,8 @@ intel_config_flag_apply_settings(
     ALL_PATTERN ""
     SET
       RttiDisabled
+	  StandardCxx11
   )
-
-  intel_config_flag_apply_settings(
-      CompilerOptions
-      CMAKE_CXX_FLAGS
-      ALL_PATTERN ""
-      SET
-        StandardCxx11
-    )
-
 
 
 ## PROCESS PPC BEGIN (Android)
