@@ -96,7 +96,7 @@ void prepare_primitive_fusing::fuse_skip_layers(program_impl &p, program_node* n
 }
 
 template<typename T>
-bool node_is_type(program_node* n)
+static bool node_is_type(program_node* n)
 {
     return n->is_type<T>();
 }
