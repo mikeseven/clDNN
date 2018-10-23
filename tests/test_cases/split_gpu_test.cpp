@@ -122,15 +122,15 @@ void split_test(int batch_num, int feature_num, int x_size, int y_size, std::vec
 		expected_sizes.push_back(size);
 	}
 
-	auto input_ptr = input.pointer<T>();
+	pointer<T> input_ptr = input.pointer<T>();
 
-	for (unsigned int splitNum = 0; splitNum < split_offsets.size(); splitNum++)
+	for (size_t splitNum = 0; splitNum < split_offsets.size(); splitNum++)
 	{
-		auto split_id = "split:" + create_split_id(splitNum);
-		auto output = outputs.at(split_id).get_memory();
+		primitive_id split_id = "split:" + create_split_id(splitNum);
+		cldnn::memory output = outputs.at(split_id).get_memory();
 		auto prim = output.get_layout();
 		EXPECT_EQ(prim.size, expected_sizes[splitNum]);
-		auto output_ptr = output.pointer<float>();
+		auto output_ptr = output.pointer<T>();
 
 		// Output tensor size
 		auto output_batch = prim.size.batch[0];
