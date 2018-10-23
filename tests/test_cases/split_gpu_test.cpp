@@ -71,7 +71,7 @@ void split_test(int batch_num, int feature_num, int x_size, int y_size, std::vec
 	topology.add(input_layout("input", input.get_layout()));
 	
 	// lambda exoression to create the primitive id for the splits
-	auto create_split_id = [](int splitNum) {
+	auto create_split_id = [](size_t splitNum) {
 		std::stringstream ss;
 		ss << std::setw(5) << std::setfill('0') << splitNum;
 
