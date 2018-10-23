@@ -911,11 +911,6 @@ cldnn_dmsg("    + version:        ${CMAKE_C_COMPILER_VERSION}")
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/CMakeCompilerLinkerOpts.txt" NO_POLICY_SCOPE)
 
-# ======================================= Handle C++14 Stuffs ==========================================
-
-# set(__CLDNN_UseCxx14 ${CLDNN__COMPILER_SUPPORTS_CXX14})
-
-
 # ======================================= Generic compiler options =====================================
 # Selecting C++ Runtime.
 if(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME)
