@@ -67,7 +67,7 @@ namespace cldnn
         //helper function which creates single-element array if it's given anything
         //other than std::vector.
         // std::vector case -> does not wrap, returns t as-is
-        static primitive::fixed_size_vector_ref wrap_if_single(primitive::fixed_size_vector_ref const& t)
+        static const primitive::fixed_size_vector_ref& wrap_if_single(primitive::fixed_size_vector_ref const& t)
         {
             return t;
         }
