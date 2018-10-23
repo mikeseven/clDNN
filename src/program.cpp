@@ -680,8 +680,6 @@ void program_impl::handle_lstm()
             primitive_id bias_id = bias_term ? lstm_prim->bias : "";
             primitive_id initial_hidden_id = initial_hidden_term ? lstm_prim->initial_hidden : "";
             primitive_id initial_cell_id = initial_cell_term ? lstm_prim->initial_cell : "";
-            
-			dump_program("DEBUG_graph", true);
 
 			//removing connection with weights to get proper dependency order for next operations
             remove_connection(*nodes_map.at(weights_id), *node);
