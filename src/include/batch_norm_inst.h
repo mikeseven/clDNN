@@ -18,6 +18,7 @@
 #pragma once
 #include "api/CPP/batch_norm.hpp"
 #include "primitive_inst.h"
+#include "mutable_data_inst.h"
 
 namespace cldnn
 {
@@ -60,6 +61,7 @@ public:
     bool use_global_stats() const { return !get_primitive()->mean.empty() && !get_primitive()->variance.empty(); };
     bool use_scale_shift() const { return !get_primitive()->scale.empty() && !get_primitive()->shift.empty(); };
     bool forwad_pass() const { return !get_primitive()->inv_variance.empty(); };
+    bool calc_mean_var() const { return (use_global_stats() && mean().is_type<mutable_data>() && variance().is_type<mutable_data>()); };
 
 };
 
@@ -105,6 +107,7 @@ public:
     bool use_global_stats() const { return !argument.mean.empty() && !argument.variance.empty(); };
     bool use_scale_shift() const { return !argument.scale.empty() && !argument.scale.empty(); };
     bool forwad_pass() const { return !argument.inv_variance.empty(); };
+    bool calc_mean_var() const { return node.calc_mean_var(); };
 };
 
 using batch_norm_inst = typed_primitive_inst<batch_norm>;
