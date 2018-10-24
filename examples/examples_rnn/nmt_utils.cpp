@@ -39,7 +39,7 @@ std::string nmt_utils::get_predictions()
 std::vector<float> nmt_utils::get_input_to_iteration(const uint32_t seq_len, const size_t batch_nr)
 {
     std::vector<float> ret;
-    auto& current_beam_last_ys = _packed_mini_batches.at(seq_len).get_mini_batches().at(batch_nr)->get_last_next_ys();
+    auto current_beam_last_ys = _packed_mini_batches.at(seq_len).get_mini_batches().at(batch_nr)->get_last_next_ys();
     for (size_t i = 0; i < current_beam_last_ys.size(); i++)
     {
         ret.push_back(static_cast<float>(current_beam_last_ys.at(i)));
