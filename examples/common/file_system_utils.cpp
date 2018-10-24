@@ -413,6 +413,8 @@ void load_data_from_file_list_imagenet(
     auto class_num = 0;
     auto images_per_class = 0;
 
+    if (class_num == 0) class_num++;
+
     for (directory_iterator it(input_dir); it != directory_iterator(); ++it)
         class_num++;
 
