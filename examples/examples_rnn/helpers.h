@@ -81,8 +81,7 @@ namespace helper
     {
     public:
         mini_batch(const std::string& sentence, const std::vector<std::string>& src_vocab, const std::vector<std::string>& tgt_vocab,
-            const std::pair<uint32_t, std::string>& unk, const std::pair<uint32_t, std::string>& pad,
-            const std::pair<uint32_t, std::string>& sos, const std::pair<uint32_t, std::string>& eos)
+             const std::pair<uint32_t, std::string>& pad, const std::pair<uint32_t, std::string>& sos)
             : _beam(5, sos.first, pad.first)
             , _tgt_vocab(tgt_vocab)
         {
@@ -154,7 +153,7 @@ namespace helper
 
             for (auto const& mb : _mini_batches)
             {
-                auto& values = mb->get_values();
+                auto values = mb->get_values();
                 ret.insert(ret.end(), values.begin(), values.end());
             }
             return ret;

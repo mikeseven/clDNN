@@ -212,7 +212,7 @@ fp_seconds_type execute_word_type_network(const cldnn::engine& selected_engine, 
         auto& input = inputs.at(i);
         uint32_t current_seq_len = input.get_layout().size.spatial[0];
 
-        for (size_t b = 0; b < input.get_layout().size.batch[0]; b++)
+        for (int32_t b = 0; b < input.get_layout().size.batch[0]; b++)
         {
             std::string prefix = "b_" + std::to_string(input.get_layout().size.batch[0]) + "_s_" + std::to_string(input.get_layout().size.spatial[0]) + "_";
             auto hidden_to_decoder_lstm_0_memory = enc_output.at(prefix + "initial_hidden_to_decoder_0_batch_" + std::to_string(b)).get_memory();
@@ -401,7 +401,6 @@ void run_topology(const rnn_execution_params& exec_params)
     cldnn::instrumentation::timer<> timer_build;
 
     std::shared_ptr<rnn_base> rnn_utils;
-    uint32_t seq_len = 0;
     if (exec_params.word_type)
     {
         rnn_utils = std::make_shared<nmt_utils>(

@@ -81,7 +81,7 @@ void nmt_utils::load_input_sequence(const std::string & file)
             ++it_start;
         }
         //[2] Create and add mini batch object.
-        _mini_batches.push_back(std::make_shared<helper::mini_batch>(transfomed_mini_batch, _src_vocab, _tgt_vocab, _unk, _pad, _sos, _eos));
+        _mini_batches.push_back(std::make_shared<helper::mini_batch>(transfomed_mini_batch, _src_vocab, _tgt_vocab, _pad, _sos));
     }
 
     //Create packed mini btaches - they are packed by sequnce length (we are creating batches here).

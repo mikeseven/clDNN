@@ -93,15 +93,15 @@ public:
     std::vector<std::pair<size_t, size_t>> batches_and_seq_lens() override { return { {_batch, _seq_length} }; };
 private:
     uint32_t _seq_length;
-    size_t _batch;
     uint32_t _loop;
+    size_t _batch;
+    float _temperature;
+    std::mt19937 _random_engine;
     std::vector<char> _int_to_char;
     std::vector<char> _correct_length_sequence; // proper sized input sequence
     std::vector<char> _input_sequence; //sequence from input file
     std::vector<std::vector<std::pair<char, float>>> _predictions;
     std::vector<std::vector<char>> _seed;
-    std::mt19937 _random_engine;
-    float _temperature;
     std::deque<int> _input; //represent current processed input sequence
     std::vector<std::vector<float>> _output_vector;
 
@@ -142,7 +142,7 @@ public:
         _eos = { 3, _tgt_vocab.at(3) };
     }
 
-    std::string nmt_utils::get_predictions() override;
+    std::string get_predictions() override;
 
     void pre_process(const std::vector<std::string>& input_files) override;
     
