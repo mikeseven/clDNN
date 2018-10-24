@@ -33,13 +33,18 @@ void pre_optimize_bias::run(program_impl &p) {
     run(p, _lo);
 }
 
-void pre_optimize_bias::run(program_impl &p, layout_optimizer& lo)
+//function which prepares given primitive for weights optimization
+template <typename T>
+void pre_optimize_bias::optimize_bias(T& node, layout_optimizer& lo, program_impl& p)
 {
-    //lambda function which finds weights primitive with given pimitive_id and adds it to weights_optimizer
-    //this function is reused in all cases (convolution weights, convolution bias, fc weights and fc bias) and does
-    //some basic sanity checks about existence of the primitive and it's type. throws std::logic_error
-    const auto add_bias = [&p, &lo](program_node& bias, auto& node, layout const& output_layout, size_t dep_idx)
+    layout output_layout = node.get_output_layout();
+
+    size_t weights_offset = node.get_primitive()->input.size();
+    size_t bias_offset = weights_offset + program_helpers::wrap_if_single(node.get_primitive()->weights).size();
+    for (size_t i = bias_offset; i < node.get_dependencies().size(); ++i)
     {
+        //find weights primitive with given pimitive_id and add it to weights_optimizer
+        const program_node& bias = node.get_dependency(i);
         const auto bias_type = layout_optimizer::data_type::bias;
         auto reorder = lo.get_reorder(
             bias.get_output_layout(),
@@ -49,47 +54,37 @@ void pre_optimize_bias::run(program_impl &p, layout_optimizer& lo)
             output_layout);
 
         if (reorder.first)
-            p.add_intermediate(reorder.first, node, dep_idx, !reorder.second);
-    };
+            p.add_intermediate(reorder.first, node, i, !reorder.second);
+    }
+}
+template void pre_optimize_bias::optimize_bias<convolution_node>(convolution_node& node, layout_optimizer& lo, program_impl& p);
+template void pre_optimize_bias::optimize_bias<deconvolution_node>(deconvolution_node& node, layout_optimizer& lo, program_impl& p);
+template void pre_optimize_bias::optimize_bias<fully_connected_node>(fully_connected_node& node, layout_optimizer& lo, program_impl& p);
+template void pre_optimize_bias::optimize_bias<embed_node>(embed_node& node, layout_optimizer& lo, program_impl& p);
 
-    //generic lambda function which prepares given primitive for weights optimization
-    //it deduces the type of weights from the type of the argument and calls 'add_weights' for all
-    //weights and biases used by given primitive.
-    //argument should match few requirements:
-    // - it should be of a form 'typed_program_node<T>&'
-    // - both 'T.weights' and 'T.bias' should be either of type 'primitive_id' or 'std::vector<primitive_id>'
-    const auto prep_opt = [&p, &add_bias](auto& node) -> void
-    {
-        auto output_layout = node.get_output_layout();
 
-        auto weights_offset = node.get_primitive()->input.size();
-        auto bias_offset = weights_offset + program_helpers::wrap_if_single(node.get_primitive()->weights).size();
-        for (auto i = bias_offset; i < node.get_dependencies().size(); ++i)
-        {
-            add_bias(node.get_dependency(i), node, output_layout, i);
-        }
-    };
-
+void pre_optimize_bias::run(program_impl &p, layout_optimizer& lo)
+{
     for (auto& nm : p.nodes_map)
     {
         auto& prim = *nm.second;
         if (prim.type() == convolution::type_id())
         {
             if (!prim.as<convolution>().weights_quantization_term())
-                prep_opt(prim.as<convolution>());
+                optimize_bias(prim.as<convolution>(), lo, p);
         }
         else if (prim.type() == deconvolution::type_id())
         {
-            prep_opt(prim.as<deconvolution>());
+            optimize_bias(prim.as<deconvolution>(), lo, p);
         }
         else if (prim.type() == fully_connected::type_id())
         {
             if (!prim.as<fully_connected>().weights_quantization_term())
-                prep_opt(prim.as<fully_connected>());
+                optimize_bias(prim.as<fully_connected>(), lo, p);
         }
         else if (prim.type() == embed::type_id())
         {
-            prep_opt(prim.as<embed>());
+            optimize_bias(prim.as<embed>(), lo, p);
         }
     }
 }

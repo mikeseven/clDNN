@@ -66,7 +66,7 @@ public:
         void calc_processing_order(program_impl &p);
         void update_processing_numbers();
         void calculate_BFS_processing_order();
-        auto size() { return _processing_order.size(); }
+        size_t size() { return _processing_order.size(); }
         bool is_correct(program_node* node);
         void clear();
         void erase(const_iterator i);
@@ -83,12 +83,12 @@ public:
         single_element_container(T& t) : elem(&t)
         {}
         constexpr size_t size() const { return 1; }
-        auto begin() const { return single_element_container(elem); }
-        auto end() const { return single_element_container(nullptr); }
-        auto& operator ++() { elem = nullptr; return *this; }
+        single_element_container begin() const { return single_element_container(elem); }
+        single_element_container end() const { return single_element_container(nullptr); }
+        single_element_container& operator ++() { elem = nullptr; return *this; }
         bool operator !=(single_element_container const& sec) { return elem != sec.elem; }
 
-        decltype(auto) operator *() { return *elem; }
+       T operator *() { return *elem; }
 
     private:
         single_element_container(T* t) : elem(t)
@@ -98,15 +98,15 @@ public:
     };
 
     program_impl(engine_impl& engine_ref, topology_impl const& topology, build_options const& options, bool is_internal);
-    auto& get_engine() const { return *engine; }
-    auto& get_options() const { return options; }
-    auto& get_inputs() { return inputs; }     // ToDo: redesign trim to ouptut pass to make it const as_well as get_engine and get options 
-    auto& get_outputs() { return outputs; }  // ToDo: redesign reorder-inputs pass to make it const as_well as get_engine and get options 
+    engine_impl& get_engine() const { return *engine; }
+    const build_options& get_options() const { return options; }
+    std::list<program_node*>& get_inputs() { return inputs; }     // ToDo: redesign trim to ouptut pass to make it const as_well as get_engine and get options 
+    std::vector<program_node*>& get_outputs() { return outputs; }  // ToDo: redesign reorder-inputs pass to make it const as_well as get_engine and get options 
     bool is_debug_build() const { return options.get<build_option_type::debug>()->enabled(); }
     std::list<std::shared_ptr<program_node>> get_nodes() const;
     const nodes_ordering& get_processing_order() const;
     nodes_ordering& get_processing_order();
-    auto& get_optimized_out() const { return optimized_out; }
+    const std::list<primitive_id>& get_optimized_out() const { return optimized_out; }
     bool has_node(const primitive_id& prim) const { return nodes_map.count(prim) > 0; }
     program_node& get_node(primitive_id const& id);
     program_node const& get_node(primitive_id const& id) const;
