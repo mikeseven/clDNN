@@ -12,6 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+# =========================================== Compiler options ========================================= 
+
+intel_config_flag_apply_settings(
+    CompilerOptions
+    CMAKE_CXX_FLAGS
+    ALL_PATTERN ""
+    SET
+      StandardCxx14
+  )
 
 # =================================== Custom pre- and post-steps =======================================
 
@@ -37,6 +46,7 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES ${__CLDNN_FindLibSuffixes})
 add_subdirectory(common)
 add_subdirectory(examples)
 add_subdirectory(examples_training)
+add_subdirectory(examples_rnn)
 add_subdirectory(examples_transform)
 add_subdirectory(microbench)
 

@@ -42,5 +42,3 @@ cldnn::topology build_resnet50_i8(const std::string& weights_dir, const cldnn::e
 cldnn::topology build_ssd_mobilenet(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, std::int32_t batch_size);
 
 cldnn::topology build_ssd_mobilenet_i8(const std::string& weights_dir, const cldnn::engine& wo, cldnn::layout& input_layout, std::int32_t batch_size);
-
-cldnn::topology build_char_level(const std::string& weights_dir, const cldnn::engine& engine, cldnn::layout& input_layout, int32_t batch_size, int32_t sequence_length);

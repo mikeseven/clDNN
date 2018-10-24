@@ -529,12 +529,7 @@ mark_as_advanced(CLDNN__INCLUDE_GENERIC_SAMPLE)
 set(CLDNN__MIN_COMPILER_VERSION__MSVC  "19.0")
 set(CLDNN__MIN_COMPILER_VERSION__CLANG "3.5")
 set(CLDNN__MIN_COMPILER_VERSION__ICC   "17.0")
-
-if (CLDNN__INCLUDE_CORE OR CLDNN__INCLUDE_TESTS)
-  set(CLDNN__MIN_COMPILER_VERSION__GCC "5.2")
-else()
-  set(CLDNN__MIN_COMPILER_VERSION__GCC "4.8")
-endif()
+set(CLDNN__MIN_COMPILER_VERSION__GCC   "4.8")
 
 # ======================================================================================================
 
@@ -916,22 +911,6 @@ cldnn_dmsg("    + version:        ${CMAKE_C_COMPILER_VERSION}")
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/CMakeCompilerLinkerOpts.txt" NO_POLICY_SCOPE)
 
-# ======================================= Handle C++14 Stuffs ==========================================
-
-set(__CLDNN_UseCxx14 ${CLDNN__COMPILER_SUPPORTS_CXX14})
-
-if(NOT __CLDNN_UseCxx14)
-  if(CLDNN__INCLUDE_CORE OR CLDNN__INCLUDE_TESTS)
-    message(WARNING "Due to lack of support of c++14 switch cldnn_core/examples/tests projects will not be included in created solution")
-  endif()
-
-  set(CLDNN__INCLUDE_CORE OFF CACHE BOOL "" FORCE)
-## PROCESS PPC BEGIN (Examples)
-  set(CLDNN__INCLUDE_EXAMPLES OFF CACHE BOOL "" FORCE)
-## PROCESS PPC END
-  set(CLDNN__INCLUDE_TESTS OFF CACHE BOOL "" FORCE)
-endif()
-
 # ======================================= Generic compiler options =====================================
 # Selecting C++ Runtime.
 if(CLDNN__COMPILE_LINK_USE_STATIC_RUNTIME)
@@ -1118,26 +1097,8 @@ intel_config_flag_apply_settings(
     ALL_PATTERN ""
     SET
       RttiDisabled
+	  StandardCxx11
   )
-
-if(__CLDNN_UseCxx14)
-  intel_config_flag_apply_settings(
-      CompilerOptions
-      CMAKE_CXX_FLAGS
-      ALL_PATTERN ""
-      SET
-        StandardCxx14
-    )
-else()
-  intel_config_flag_apply_settings(
-      CompilerOptions
-      CMAKE_CXX_FLAGS
-      ALL_PATTERN ""
-      SET
-        StandardCxx11
-    )
-endif()
-unset(__CLDNN_UseCxx14)
 
 
 ## PROCESS PPC BEGIN (Android)

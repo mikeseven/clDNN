@@ -1,3 +1,4 @@
+/*
 // Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -11,24 +12,15 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+*/
 
-#include "include/include_all.cl"
+/* Index and Value type that holds index and value used in this kernel */
 
-KERNEL(embed_ref)(const __global UNIT_TYPE* input0,
-    __global UNIT_TYPE* output,
-    const __global UNIT_TYPE* weights
-#if BIAS_TERM
-    ,const __global UNIT_TYPE* biases
+#ifndef IAV_STRUCT_DEFINED
+    typedef struct 
+    {
+        uint index; 
+        UNIT_TYPE value; 
+    } iav_type;
+    #define IAV_STRUCT_DEFINED
 #endif
-)
-{
-    const uint x = (uint)get_global_id(0);
-	const uint y = (uint)get_global_id(1);
-	const uint b = (uint)get_global_id(2);
-
-	uint output_idx = (b*INPUT0_ELEMENTS_COUNT*NUM_OUTPUT_SIZE)+(uint)(x*NUM_OUTPUT_SIZE+y);
-    output[output_idx] = weights[(uint)(input0[(b*INPUT0_ELEMENTS_COUNT)+x]*NUM_OUTPUT_SIZE+y)];
-#if BIAS_TERM
-    output[output_idx] += biases[y];
-#endif
-}

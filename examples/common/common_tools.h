@@ -17,7 +17,6 @@
 
 #include "power_instrumentation.h"
 #include "instrumentation.h"
-#include "lstm_utils.h"
 
 // TODO: [FUTURE] The common tools should contain only inclusion of other utilities headers.
 #include "executable_utils.h"
@@ -36,7 +35,6 @@
 #include <vector>
 
 using cldnn_output = std::map<cldnn::primitive_id, cldnn::network_output>;
-
 namespace cldnn
 {
 namespace utils
@@ -112,12 +110,6 @@ struct execution_params {
     bool calibration; // int8 precission
     lstm_execution_params lstm_ep; // LSTM microbench parameters
 
-    //RNN specific
-    bool        rnn_type_of_topology = false;
-    float       temperature;
-    std::string vocabulary_file;
-    uint32_t    sequence_length;
-
     //training
     uint32_t image_number;
     uint32_t image_offset;
@@ -150,6 +142,18 @@ struct memory_filler
             it = T(val);
         }
     }
+
+    template<typename Fp, typename T>
+    static void fill_memory(const cldnn::memory& memory, std::vector<T> values)
+    {
+        auto mem_ptr = memory.pointer<Fp>();
+        auto it = mem_ptr.begin();
+
+        for (auto x : values)
+        {
+            *it++ = x;
+        }
+    }
 };
 
 void compute_image_mean(const execution_params &ep, cldnn::engine& engine, bool use_cifar10);
@@ -160,10 +164,9 @@ cldnn::network build_network(const cldnn::engine& engine, const cldnn::topology&
 uint32_t get_next_nearest_power_of_two(int number);
 uint32_t get_gpu_batch_size(int number);
 
-void make_instrumentations(const execution_params&, cldnn::memory&, std::map<cldnn::primitive_id, cldnn::network_output>&);
+bool do_log_energy(const execution_params&, CIntelPowerGadgetLib&);
 
-template<typename MemElemTy = float>
-void prepare_data_for_lstm(lstm_utils& lstm_data, const std::vector<std::string>& input_files, const std::string& vocabulary_file);
+void make_instrumentations(const execution_params&, cldnn::memory&, std::map<cldnn::primitive_id, cldnn::network_output>&);
 
 std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& timer_execution,
                                             const execution_params &ep,
@@ -175,18 +178,11 @@ std::chrono::nanoseconds get_execution_time(cldnn::instrumentation::timer<>& tim
                                             const uint32_t execution_count = 0);
 
 std::chrono::nanoseconds execute_cnn_topology(cldnn::network network,
-                                                const execution_params &ep,
-                                                CIntelPowerGadgetLib& energyLib,
-                                                cldnn::memory& output,
-                                                const uint32_t iteration = 0,
-                                                const uint32_t execution_count = 0);
-
-std::chrono::nanoseconds execute_rnn_topology(cldnn::network network,
-                                                const execution_params &ep,
-                                                CIntelPowerGadgetLib& energyLib,
-                                                cldnn::memory& output,
-                                                cldnn::memory& input,
-                                                lstm_utils& lstm_data);
+                                            const execution_params &ep,
+                                            CIntelPowerGadgetLib& energyLib,
+                                            cldnn::memory& output,
+                                            const uint32_t iteration = 0,
+                                            const uint32_t execution_count = 0);
 
 void run_topology(const execution_params &ep);
 

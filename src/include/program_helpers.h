@@ -40,7 +40,7 @@ namespace cldnn
         //
         // T& case -> returns container which holds T&
         template <class T>
-        static auto wrap_if_single(T& t)
+        static program_impl::single_element_container<T> wrap_if_single(T& t)
         {
             return program_impl::single_element_container<T>(t);
         }
@@ -49,7 +49,7 @@ namespace cldnn
         //other than std::vector.
         // T const& case -> returns container which holds T const&
         template <class T>
-        static auto wrap_if_single(T const& t)
+        static program_impl::single_element_container<T const> wrap_if_single(T const& t)
         {
             return program_impl::single_element_container<T const>(t);
         }
@@ -58,7 +58,7 @@ namespace cldnn
         //other than std::vector.
         // T&& case -> returns container which holds new instance of T created by moving given param
         template <class T>
-        static auto wrap_if_single(T&& t)
+        static program_impl::single_element_container<T> wrap_if_single(T&& t)
         {
             static_assert(meta::always_false<T>::value, "Wrapping temporary object into single_element_container is an error (requires valid reference)");
             return program_impl::single_element_container<T>(t);
@@ -67,7 +67,7 @@ namespace cldnn
         //helper function which creates single-element array if it's given anything
         //other than std::vector.
         // std::vector case -> does not wrap, returns t as-is
-        static decltype(auto) wrap_if_single(primitive::fixed_size_vector_ref const& t)
+        static const primitive::fixed_size_vector_ref& wrap_if_single(primitive::fixed_size_vector_ref const& t)
         {
             return t;
         }
