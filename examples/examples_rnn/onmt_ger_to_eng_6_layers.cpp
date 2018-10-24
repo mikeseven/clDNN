@@ -567,7 +567,7 @@ void build_decoder(cldnn::topology& topo_decoder, const std::string& weights_dir
     (
         "best_scores_broadcasted",
         input_best_scores,
-        {5, 1, 24725, 1}
+        { beam_size, 1, 24725, 1}
     );
     topo_decoder.add(best_scores_broadcasted);
 
@@ -900,7 +900,7 @@ void build_decoder(cldnn::topology& topo_decoder, const std::string& weights_dir
         {
             "cropped_arg_max",
             arg_max,
-            { 1, 1, beam_size,1 },
+            { 1, 1, beam_size, 1 },
             { 0, 0, 0, 0 }
         };
         topo_decoder.add(cropped_arg_max);

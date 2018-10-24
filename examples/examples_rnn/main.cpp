@@ -189,9 +189,9 @@ fp_seconds_type execute_word_type_network(const cldnn::engine& selected_engine, 
    
     bool log_energy = do_log_energy(exec_params, power_measure_lib);
 
-
     decltype(encoder_network.execute()) enc_output;
     decltype(decoder_network.execute()) dec_output;
+
     cldnn::instrumentation::timer<> timer_execution;
 
     auto beam_size = utils->get_beam_size();
@@ -229,7 +229,9 @@ fp_seconds_type execute_word_type_network(const cldnn::engine& selected_engine, 
             auto indicies_to_index_select_memory = cldnn::memory::allocate(selected_engine, { cldnn::data_types::i32, cldnn::format::bfyx,{ 1, 1, beam_size, 1 } });
             memory_filler::fill_memory<int32_t>(indicies_to_index_select_memory, std::vector<int32_t>({ 0, 1, 2, 3, 4 })); //initial run do nothing
 
-            for (size_t j = 0; j < 100; j++)
+            size_t max_translation_length = 100;// translation length can't be bigger then this
+
+            for (size_t j = 0; j < max_translation_length; j++)
             {
                 if (j == 0) //First iteration, connect encoder to decoder
                 {

@@ -17,7 +17,6 @@
 #include "lstm_elt_kernel_base.h"
 #include "kernel_selector_utils.h"
 #include "common_tools.h"
-#include <iostream>
 
 namespace kernel_selector
 {

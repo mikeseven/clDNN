@@ -1,5 +1,5 @@
 /*
-// Copyright (c) 2016 Intel Corporation
+// Copyright (c) 2018 Intel Corporation
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -64,13 +64,13 @@ private:
         }
     }
 
-    template<typename MemElemTy>
+    template<typename T>
     void check_memory(const cldnn::memory& mem)
     {
         auto memory_layout = mem.get_layout();
         if (memory_layout.format != cldnn::format::bfyx) throw std::runtime_error("Only bfyx format is supported as input for text files.");
 
-        if (!cldnn::data_type_match<MemElemTy>(memory_layout.data_type))
+        if (!cldnn::data_type_match<T>(memory_layout.data_type))
             throw std::runtime_error("Memory format expects different type of elements than specified");
     }
 };
@@ -112,10 +112,10 @@ private:
     std::pair<size_t, float> get_predicted_character_and_its_value(size_t batch_index);
     char random_char();
 
-    template<typename MemElemTy = float>
+    template<typename T = float>
     void prepare_output_vector(const cldnn::memory& memory)
     {
-        auto ptr = memory.pointer<MemElemTy>();
+        auto ptr = memory.pointer<T>();
         _output_vector.clear();
         _output_vector.resize(_batch);
         for (size_t i = 0; i < ptr.size(); i++)
