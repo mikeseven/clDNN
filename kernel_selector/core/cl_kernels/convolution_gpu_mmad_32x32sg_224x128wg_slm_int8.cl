@@ -213,8 +213,6 @@ KERNEL(Kernel_GEMM_MMAD8_32x32SG_224x128WG_SLM_INT8)
     __attribute__((opencl_unroll_hint(1)))
     for (uint k = 0; k < (MATRIX_K / MATRIX_SMALL_K) - 1; k++)
     {
-        //SLM setup - HDC read only
-        // Overlap HDC reads with DPAS compute
         hdcReadValueA[0] = g_matrixA[g_idxA[0]];
         hdcReadValueB[0] = g_matrixB[g_idxB[0]];
         hdcReadValueA[1] = g_matrixA[g_idxA[1]];

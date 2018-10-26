@@ -400,7 +400,7 @@ __global int8* weights,
 
 			/* Convolve */
 
-			   /* order the dpas instructions to minimize dependency on src0,dst - also try to maximise reuse of weights-reg*/
+			   /* order the mmad instructions to minimize dependency on src0,dst - also try to maximise reuse of weights-reg*/
 
 				/*  Output channels 0-7 */
 

@@ -372,7 +372,7 @@ __global int8* weights,
 			
 			/* Convolve */ 
 			
-			   /* order the dpas instructions to minimize dependency on src0,dst - also try to maximise reuse of weights-reg*/
+			   /* order the mmad instructions to minimize dependency on src0,dst - also try to maximise reuse of weights-reg*/
 
                 out[ 0 ] = _MMAD_4x8 ( out[ 0 ], act_reg[0], weights_reg0 );
 				out[ 1 ] = _MMAD_4x8 ( out[ 1 ], act_reg[1], weights_reg0 );

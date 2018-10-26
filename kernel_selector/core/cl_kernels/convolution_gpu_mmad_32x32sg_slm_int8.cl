@@ -230,7 +230,6 @@ KERNEL(Kernel_GEMM_MMAD8_32x32SG_128x128WG_SLM_INT8)
          */
 
 #if ((MATRIX_K / MATRIX_SMALL_K) > 1)
-        // Overlap HDC reads with DPAS compute
         uint g_idxATemp = g_idxA;
         for (uint i = l_tid, j = 0; i < (WG_TILE_M * MATRIX_SMALL_K / sizeof(int4)); i += WG_SIZE, ++j)
         {
