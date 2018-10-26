@@ -30,7 +30,7 @@ namespace kernel_selector {
         virtual ParamsKey GetSupportedKey() const override;
 
     protected:
-        ConvolutionKernelBase::DispatchData SetDefault(const convolution_params& arg, int) const;
+        ConvolutionKernelBase::DispatchData SetDefault(const convolution_params& arg, int) const override;
         virtual std::vector<WeightsLayout> GetSupportedWeightLayouts(const convolution_params&) const override
         {
             return{
