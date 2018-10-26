@@ -250,7 +250,7 @@ void program_impl::pre_optimize_graph()
     trim_to_outputs trim_pass; //trim to outputs
     trim_pass.run(*this); // ToDo remove hidden dependencies from trimm pass
     dump_program("3_trimmed", true);
-    processing_order.calculate_BFS_processing_order(); // this method makes sense only for OOOQ (out of order execution queue) 
+    processing_order.calculate_BFS_processing_order(); // this method makes sense only for OOOQ (out of order execution queue)
 
     bool output_size_handling_enabled = analyze_output_size_handling_need();
     for (auto& node : processing_order)
@@ -284,7 +284,7 @@ void program_impl::pre_optimize_graph()
 
     handle_reshape();
 
-    remove_redundant_reorders remove_redundant_reorders_pass; 
+    remove_redundant_reorders remove_redundant_reorders_pass;
     remove_redundant_reorders_pass.run(*this);
     dump_program("5_removed_redundant_reorders", true);
 
@@ -325,7 +325,7 @@ void program_impl::compile_graph()
 void program_impl::post_optimize_graph()
 {
     layout_optimizer lo;
-    post_optimize_weights post_optimize_weights_pass(lo); 
+    post_optimize_weights post_optimize_weights_pass(lo);
     post_optimize_weights_pass.run(*this);
     dump_program("9_reordered_weights", true);
 
@@ -333,7 +333,7 @@ void program_impl::post_optimize_graph()
     remove_redundant_reorders_pass.run(*this);
 
     dump_program("10_removed_redundant_reorders", true); //TODO: do we need it at this place also?
-    
+
     propagate_constants propagate_constants_pass;  // ToDo remove hidden dependencies from propagate_constants pass, consider merging propagate constants and constant propagator classes
     propagate_constants_pass.run(*this);
     dump_program("11_propagated_constants", true);
@@ -341,9 +341,9 @@ void program_impl::post_optimize_graph()
     prep_opt_depthwise_sep_post prep_opt_depthwise_sep_post_pass;
     prep_opt_depthwise_sep_post_pass.run(*this);
 
-    processing_order.update_processing_numbers(); 
+    processing_order.update_processing_numbers();
     dump_program("12_validated_processing_order", true);
-    
+
     prepare_memory_dependencies();
 }
 
@@ -694,7 +694,10 @@ void program_impl::handle_lstm()
             //calculating sizes
             auto input_size = node->get_dependency(0).get_output_layout().size;
             auto recurrent_size = nodes_map.at(recurrent_id)->get_output_layout().size;
-            auto hidden_size = tensor(input_size.batch[0], 1, recurrent_size.spatial[0], input_size.feature[0]);
+            // hidden tensor size = [batch, seq, hidden_size, direction]
+            // the output of the element wise operation is cropped and used in the next time step
+            // sequence_len = 1 and direction = 1. The backward pass is separated from the forward pass
+            auto hidden_size = tensor(input_size.batch[0], 1, recurrent_size.spatial[0], 1);
 
             size_t directions = recurrent_size.feature[0];
             size_t input_dependencies = node->get_dependencies().size();
@@ -836,13 +839,6 @@ void program_impl::handle_lstm()
                 {
                     add_connection(*e.second.second, concatenation_node);
                 }
-
-                auto add_user_connections = [&](program_node& output_node) {
-                    for (auto& user : node->get_users())
-                    {
-                        add_connection(output_node, *user);
-                    }
-                };
                 if (directions == 2) {
                     // bidirectional support requires concatenations along the direction and sequence axis
                     // instead we can concatenate along the sequence axis and reshape the tensor to the account
@@ -855,11 +851,11 @@ void program_impl::handle_lstm()
                     auto reshape_primitive = std::make_shared<reshape>(reshape_id, concatenation_id, output_size);
                     auto &reshape_node = get_or_create(reshape_primitive);
                     add_connection(concatenation_node, reshape_node);
-                    add_user_connections(reshape_node);
+                    replace_all_usages(*node, reshape_node);
                 }
                 else
                 {
-                    add_user_connections(concatenation_node);
+                    replace_all_usages(*node, concatenation_node);
                 }
             }
 
