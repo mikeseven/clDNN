@@ -92,9 +92,6 @@ namespace kernel_selector {
 
         constexpr size_t sub_group_size = 8;
 
-        const auto of_maps = arg.output.Feature().v;
-        const size_t of_threads_per_batch = RoundUp(of_maps, sub_group_size);
-
         runInfo.effiency = FORCE_PRIORITY_5;
 
         auto block = get_out_block_size(arg);

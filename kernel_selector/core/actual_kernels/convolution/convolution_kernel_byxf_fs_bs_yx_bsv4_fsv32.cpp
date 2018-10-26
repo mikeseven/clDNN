@@ -42,9 +42,6 @@ namespace kernel_selector {
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
-        const auto of_maps = arg.output.Feature().v;
-        const size_t of_threads_per_batch = RoundUp(of_maps, 8);
-
         runInfo.effiency = FORCE_PRIORITY_1;
 
         runInfo.gws0 = (arg.output.Batch().v * arg.output.Feature().v) / 4;
