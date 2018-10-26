@@ -1,27 +1,16 @@
-/* 
-   CONV 3x3 8-bit integer systolic kernel for RESNET50 dimension H=W=7 
-   Input  Tensor Format:  [C/32][N/4][H][W][4N][32C]
-   Weight Tensor Format:  [K/8][C/32][R][S][8C][8K][4C] 
-
-   Tiling 
-   
-   Per Thread - 1Px7Qx4Nx32K output tile
-			  - 3Hx9Wx4Nx32C input tile
-			  - 3Rx3Sx32Kx32C weight tile
-	
-   Per Workgroup - 7Px7Qx4Nx64K output tile
-				 - 9Hx9Wx4Nx32C input tile
-				 - 3Rx3Sx64Kx32C weight tile
-				
-   Workgroup Size - 16,1,8
-   
-   To make sure all threads in a DSS are filled, workgroup size is increased from 16,1,7 to 16,1,8.
-   Else with 14threads/WG, some thread in EU thread slot are left unoccupied.
-   
-   Last two threads ( thread_id=14,15 ) are not computing output tile, they will only help in loading from
-   global memory to SLM 
-
- */
+// Copyright (c) 2016-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "include/mmad.cl"
 

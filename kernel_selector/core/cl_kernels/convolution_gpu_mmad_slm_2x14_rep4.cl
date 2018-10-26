@@ -1,20 +1,16 @@
-/* CONV 3x3 8-bit integer systolic kernel for RESNET50 dimension H=W=56 
-   Input Tensor Format:  [C/32][N/4][H][W][4N][32C]
-   Weight Tensor Format: [K/8][C/32][R][S][8C][8K][4C]
-
-   Tiling 
-   
-   Per Thread - 2Px14Qx4Nx32K output tile
-			  - 4Hx16Wx4Nx32C input tile
-			  - 3Rx3Sx8Kx32C weight tile
-	
-   Per Workgroup - 8Px14Qx4Nx32K output tile
-				 - 10Hx16Wx4Nx32C input tile
-				 - 3Rx3Sx32Kx32C weight tile
-				
-   Workgroup Size - 32,1,4
-  
- */
+// Copyright (c) 2016-2017 Intel Corporation
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include "include/data_types.cl"
 #include "include/mmad.cl"
@@ -328,11 +324,6 @@ __global int8* weights,
 		
 			__local uint *slm_ptr0     = (__local uint *) &act_slm[ act_slm_read ];
 			__local uint *slm_ptr1     = (__local uint *) &weight_slm[ wt_slm_rd ];
-
-			/* 
-			  Balancing load of weights, activations - Upto 196 registers can be used for data without incurring spills
-			  112 registers used for output accumulator, 84 registers available for data
-			*/
 			
 			int8 weights_reg0, weights_reg1,weights_reg2;
 			
