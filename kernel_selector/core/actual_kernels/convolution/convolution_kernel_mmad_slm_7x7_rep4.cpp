@@ -68,14 +68,12 @@ namespace kernel_selector {
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
-        constexpr size_t sub_group_size = 8;
-
         runInfo.effiency = FORCE_PRIORITY_1;
 
         const size_t rep_count = 4;
         const size_t batch_per_wi = 4;
         const size_t out_block_width = 7;
-        const size_t out_block_height = 1;
+        //const size_t out_block_height = 1;
         runInfo.gws0 = (arg.output.Feature().v * arg.output.Batch().v) / (rep_count * batch_per_wi); // number of tiles needed to cover output width
         runInfo.gws1 = ((arg.inputs[0].X().v / arg.stride.x) + (out_block_width - 1)) / out_block_width;
         // since this kernel only apply to 7x7 sizes we need to manually set gws2 to 8

@@ -65,8 +65,6 @@ namespace kernel_selector {
     {
         DispatchData runInfo = ConvolutionKernelBase::SetDefault(arg);
 
-        constexpr size_t sub_group_size = 8;
-
         runInfo.effiency = FORCE_PRIORITY_1;
 
         const size_t rep_count = 4;
