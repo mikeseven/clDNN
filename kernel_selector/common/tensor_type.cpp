@@ -105,6 +105,7 @@ namespace kernel_selector
                 assert(newDims.size() == 4);
                 newDims[0] = RoundUp(newDims[0], 4);
                 newDims[1] = RoundUp(newDims[1], 8);
+                break;
             case fs_bs_yx_bsv4_fsv32:
                 assert(newDims.size() == 4);
                 newDims[3] = RoundUp(newDims[3], 32);
