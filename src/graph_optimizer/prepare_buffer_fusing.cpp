@@ -42,7 +42,8 @@ void prepare_buffer_fusing::run(program_impl &p)
     {
         auto& node = (*itr++);
 
-        if (node->is_output())
+        if (node->is_output() ||
+           (node->fused_activation.activation_func != cldnn_activation_func_t::activation_none))
             continue;
 
         program_helpers::do_for_types<concatenation>(*node, [&p, is_debug](concatenation_node& node)
@@ -51,8 +52,7 @@ void prepare_buffer_fusing::run(program_impl &p)
             // it could break desired memory alignment. On the other hand, if this node uses all inputs
             // exclusively (see check above) they should not have output padding set since concatenation
             // does not ask for any.
-            if (node.has_padded_dependency() ||
-			   (node.fused_activation.activation_func != cldnn_activation_func_t::activation_none))
+            if (node.has_padded_dependency())
                 return;
 
             auto concat_axis = node.get_primitive()->axis;
