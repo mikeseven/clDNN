@@ -663,16 +663,43 @@
             "32": "0x1B9132CF9497EEB6ABC842E70F81D7D8"
         }, 
         "mtcnn_det1_pnet_FP16": {
-            "1": "", 
-            "10": "", 
-            "2": "", 
-            "64": "", 
-            "4": "", 
-            "16": "", 
-            "128": "x", 
-            "8": "", 
-            "32": ""
-        }, 
+            "1": {
+                "prob1": "0xD6CB56F1AAE1013E0559EBE2BC92A371",
+                "conv4-2": "0xEC9BB7B5E5B1E8C7BF38B22BB5C288BC"
+            },
+            "2": {
+                "prob1": "0x733D262E69BE9FE0C909DDEF8F72E0CB",
+                "conv4-2": "0xD981B9E1CBFF0BF8E6B50BF32E0B73D6"
+            },
+            "4": {
+                "prob1": "0x91CA2C722D6C2B0B215B8A42E3C55A4F",
+                "conv4-2": "0x12B1C6B485C9576EB55DD990D70C24B0"
+            },
+            "8": {
+                "prob1": "0x439544BAF9DF67493B03C704FCCE5A4B",
+                "conv4-2": "0x66FC4A95EB08205693E122CBBC81F0ED"
+            },
+            "10": {
+                "prob1": "0xF47E89ACC9A7C5CA805973F52BF916DE",
+                "conv4-2": "0x2A00245014A06F4253B605D1C2365E51"
+            },
+            "16": {
+                "prob1": "0x4103897965CD0BEA09D4A9ADD08E3406",
+                "conv4-2": "0x0B35FA2DDD3845708598FED18698E909"
+            },
+            "32": {
+                "prob1": "0xF1B51CF67A09C94C996276016173D85E",
+                "conv4-2": "0x4B68B51B9E94C45B85E3BE7E605D8694"
+            },
+            "64": {
+                "prob1": "0xCDF825DFA446B6D47C7DE1E49DF95EA2",
+                "conv4-2": "0x37612B93F787C7C7E3E04D2BE9A52876"
+            },
+            "128": {
+                "prob1": "x",
+                "conv4-2": "x"
+            }
+        },
         "mxnet_resnet-152": {
             "1": "0x060506665A0E885083EBDC20ECCFD673", 
             "10": "0xA234F83B56F2A4ADA1284A91370686DB", 
