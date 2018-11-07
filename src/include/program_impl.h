@@ -40,6 +40,7 @@ class constants_propagator;
 struct program_impl : public refcounted_obj<program_impl>
 {
     friend struct program_node;
+    friend class add_required_reorders; // to be removed when possible
     friend class trim_to_outputs;   // to be removed when possible
     friend class prepare_buffer_fusing; // to be removed when possible
     friend class prepare_primitive_fusing; // to be removed when possible

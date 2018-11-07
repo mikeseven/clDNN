@@ -304,6 +304,10 @@ void program_impl::pre_optimize_graph()
         prepare_buffer_fusing_pass.run(*this);
     }
 
+    //check if there exists some layout incompatibilities and add an reorder node if required
+    add_required_reorders add_required_reorders_pass;
+    add_required_reorders_pass.run(*this);
+
     dump_program("7_pre_optimized", true);
 }
 

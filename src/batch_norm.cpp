@@ -47,11 +47,11 @@ std::string batch_norm_inst::to_string(batch_norm_node const& node)
             batch_norm_info.add("variance_id", node.variance().id());
         }
     }
-	if (node.use_scale_shift())
-	{
-		batch_norm_info.add("scale_id", node.scale().id());
-		batch_norm_info.add("shift_id", node.shift().id());
-	}
+    if (node.use_scale_shift())
+    {
+        batch_norm_info.add("scale_id", node.scale().id());
+        batch_norm_info.add("shift_id", node.shift().id());
+    }
     if (node.forwad_pass())
     {
         batch_norm_info.add("inv_var", node.inv_variance().id());
@@ -63,6 +63,7 @@ std::string batch_norm_inst::to_string(batch_norm_node const& node)
 
     return primitive_description.str();
 }
+
 
 batch_norm_inst::typed_primitive_inst(network_impl& network, batch_norm_node const& node)
     :parent(network, node) 
