@@ -78,6 +78,13 @@ public:
         return get_dependency(d_idx);
     }
 
+    bool has_fused_sum() const
+    {
+        size_t d_idx = 1 + this->get_split();
+        d_idx += bias_term() ? this->get_split() : 0;
+        return static_cast<int>(dependencies.size()) == (d_idx + 1);
+    }
+
 private:
     int32_t split;
     bool depthwise_sep_opt;
