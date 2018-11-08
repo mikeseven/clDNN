@@ -386,7 +386,7 @@ struct proposal_gpu : typed_primitive_impl<proposal>
         // - image_info[3] = { img_height, img_width, img_depth }
         // - image_info[4] = { img_height, img_width, scale_min_bbox_y, scale_min_bbox_x }
         // - image_info[6] = { img_height, img_width, img_depth, scale_min_bbox_y, scale_min_bbox_x, scale_depth_index }
-        if ((size_t)l.size.feature[0] != count || (count != 3 && count != 4 && count != 6)) {
+        if ((size_t)l.size.spatial[0] != count || (count != 3 && count != 4 && count != 6)) {
             CLDNN_ERROR_MESSAGE(arg.id(), "image_info must have either 3, 4 or 6 items");
         }
         CLDNN_ERROR_BOOL(arg.id(), "Batching", !hasSingleBatchOutput(arg.bbox_pred()), "Proposal doesn't support batching.");
