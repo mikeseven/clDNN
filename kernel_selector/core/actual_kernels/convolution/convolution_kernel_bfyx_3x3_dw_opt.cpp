@@ -21,7 +21,7 @@ namespace kernel_selector
     ConvolutionKernel_bfyx_3x3_dw_opt::ConvolutionKernel_bfyx_3x3_dw_opt() : ConvolutionKernelBase("convolution_gpu_bfyx_3x3_dw_opt")
     {
         // Generate the dispatch options to the auto-tuner.
-        std::vector<size_t> tileXDimSizes = { 1,2,4,5,6,8,10,12,14,16 };
+        std::vector<size_t> tileXDimSizes = { 1,2,4,5,6,8,10,12,14 };
         std::vector<size_t> tileYDimSizes = { 1,2,3,4,5,6,7 };
         std::vector<std::string> executionModes = ConvolutionKernelBase::autoTuneOptions;
 

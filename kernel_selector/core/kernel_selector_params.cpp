@@ -271,6 +271,8 @@ namespace kernel_selector {
         case PoolType::MAX_WITH_ARGMAX:
             key.restrict.val.dedicated.pooling.max_with_argmax = 1;
             break;
+        case PoolType::BILINEAR:
+            key.restrict.val.dedicated.pooling.bilinear = 1;
         default:
             break;
         }
