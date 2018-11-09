@@ -82,7 +82,7 @@ public:
     {
         size_t d_idx = 1 + this->get_split();
         d_idx += bias_term() ? this->get_split() : 0;
-        return static_cast<int>(dependencies.size()) == (d_idx + 1);
+        return dependencies.size() == (d_idx + 1);
     }
 
 private:
