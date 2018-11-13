@@ -238,6 +238,7 @@ public:
     JitDefinitions GetDefinitions() const;
 };
 
+JitConstants MakeActivationJitConstants(const ActivationFunction& func, const NonLinearParams& params, const std::string& suffix="");
 JitConstants MakeBaseParamsJitConstants(const base_params& params);
 JitConstants MakeLoopUnrollParamsJitConstants(uint32_t loopCount);
 JitConstants MakeUnitTypeJitConstants(Datatype dataType);
