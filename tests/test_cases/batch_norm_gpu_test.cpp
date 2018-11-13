@@ -937,6 +937,61 @@ TEST(batch_normalization_gpu, basic_in2x2x3x2_bfyx_padding) {
     }
 }
 
+TEST(batch_normalization_gpu, basic_to_string) {
+    engine engine;
+
+    auto input = memory::allocate(engine, { data_types::f32, format::yxfb,{ 2, 2, 3, 2 } });
+
+    auto mean = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, 2, 1, 1 } });
+    auto variance = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, 2, 1, 1 } });
+
+    auto scale = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, 2, 1, 1 } });
+    auto shift = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, 2, 1, 1 } });
+
+    auto inv_variance = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, 2, 1, 1 } });
+
+    auto mean_out = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, 2, 1, 1 } });
+    auto variance_out = memory::allocate(engine, { data_types::f32, format::yxfb,{ 1, 2, 1, 1 } });
+
+    float epsilon = 0.0001f;
+
+    topology topology;
+    topology.add(input_layout("input", input.get_layout()));
+
+    topology.add(data("mean", mean));
+    topology.add(data("variance", variance));
+
+    topology.add(data("scale", scale));
+    topology.add(data("shift", shift));
+
+    topology.add(mutable_data("inv_variance", inv_variance));
+
+    topology.add(mutable_data("mean_out", mean_out));
+    topology.add(mutable_data("variance_out", variance_out));
+
+    topology.add(batch_norm("batch_norm0", "input", "mean", "variance", epsilon));
+    topology.add(batch_norm("batch_norm1", "input", "mean", "variance", "scale", "shift", epsilon));
+    topology.add(batch_norm("batch_norm2", "input", epsilon));
+    topology.add(batch_norm("batch_norm3", "input", epsilon, "inv_variance"));
+    topology.add(batch_norm("batch_norm4", "input", epsilon, "scale", "shift"));
+    topology.add(batch_norm("batch_norm5", "input", epsilon, "scale", "shift", "inv_variance"));
+    topology.add(batch_norm("batch_norm6", "input", epsilon, "mean_out", "variance_out", "scale", "shift" ));
+    topology.add(batch_norm("batch_norm7", "input", epsilon, "mean_out", "variance_out", "scale", "shift", "inv_variance"));
+
+    network network(engine, topology);
+
+    size_t zero_length = 0;
+
+    EXPECT_NE(network.get_primitive_info("batch_norm0").length(), zero_length);
+    EXPECT_NE(network.get_primitive_info("batch_norm1").length(), zero_length);
+    EXPECT_NE(network.get_primitive_info("batch_norm2").length(), zero_length);
+    EXPECT_NE(network.get_primitive_info("batch_norm3").length(), zero_length);
+    EXPECT_NE(network.get_primitive_info("batch_norm4").length(), zero_length);
+    EXPECT_NE(network.get_primitive_info("batch_norm5").length(), zero_length);
+    EXPECT_NE(network.get_primitive_info("batch_norm6").length(), zero_length);
+    EXPECT_NE(network.get_primitive_info("batch_norm7").length(), zero_length);
+}                                         
+
 
 TEST(batch_normalization_gpu, basic_in2x3x2x2_yxfb_scale_shift_different_shapes) {
     engine engine;
