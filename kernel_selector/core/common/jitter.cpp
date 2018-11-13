@@ -351,12 +351,12 @@ namespace kernel_selector {
         };
     }
 
-    JitConstants MakeActivationJitConstants(const ActivationFunction& func, const NonLinearParams& params, const std::string& suffix)
+    JitConstants MakeActivationJitConstants(const base_activation_params& params, const std::string& suffix)
     {
         return JitConstants{
             MakeJitConstant("NL_M" + suffix, params.m),
             MakeJitConstant("NL_N" + suffix, params.n),
-            MakeActivationJitConstants(func, suffix)
+            MakeActivationJitConstants(params.function, suffix)
         };
     }
 
@@ -410,7 +410,7 @@ namespace kernel_selector {
         }
 
         // for activation function
-        jit.Merge(MakeActivationJitConstants(params.activationFunc, params.activationParams));
+        jit.Merge(MakeActivationJitConstants(params.activation));
 
         for (size_t i = 0; i < params.inputs.size(); i++)
         {

@@ -388,13 +388,6 @@ namespace kernel_selector
         default:                           return "";
         }
     }
-
-    std::string toString(NonLinearParams params)
-    {
-        std::stringstream s;
-        s << "m" << params.m << "_n" << params.n;
-        return s.str();
-    }
     
     std::string toString(const Tensor::Dim& dim)
     {

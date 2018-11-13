@@ -100,7 +100,7 @@ public:
         auto deconv_optional_params = get_default_weights_bias_optional_params<kernel_selector::deconvolution_optional_params>(arg.get_program());
 
         if(primitive->with_activation)
-            convert_activation_func_params(primitive, deconv_params);
+            convert_activation_func_params(primitive, deconv_params.activation);
 
         deconv_params.depthwise_separable_opt = depthwise_separable_opt;
 

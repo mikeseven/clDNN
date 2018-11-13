@@ -343,17 +343,31 @@ namespace kernel_selector
     };
 
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // base_activation_params
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    struct base_activation_params
+    {
+        ActivationFunction  function = ActivationFunction::NONE;
+        float m = 1.f;
+        float n = 0.f;
+
+        base_activation_params() = default;
+        base_activation_params(const float m, const float n) : m(m), n(n) {}
+
+        virtual std::string to_string() const;
+    };
+
+    ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // base_params
     ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     struct base_params : public Params
     {
         virtual ~base_params() {}
 
-        ActivationFunction  activationFunc = ActivationFunction::NONE;
-        NonLinearParams     activationParams;
-        MultiDataTensor     inputs;
-        DataTensor          output;
-        bool                gradient = false;
+        base_activation_params activation;
+        MultiDataTensor        inputs;
+        DataTensor             output;
+        bool                   gradient = false;
 
         virtual std::string to_string() const;
         virtual ParamsKey GetParamsKey() const;
