@@ -240,6 +240,7 @@ namespace kernel_selector
         case PoolType::MAX: return "MAX";
         case PoolType::AVG: return "AVG";
         case PoolType::MAX_WITH_ARGMAX: return "MAX_WITH_ARGMAX";
+        case PoolType::BILINEAR: return "BILINEAR";
         default: return "";
         }
     }

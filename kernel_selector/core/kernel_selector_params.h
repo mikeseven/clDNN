@@ -115,6 +115,7 @@ namespace kernel_selector
                             uint32_t floor : 1;
                             uint32_t max_with_argmax : 1;
                             uint32_t ceil : 1;
+                            uint32_t bilinear : 1;
                             uint32_t fixedKenrelDivider : 1;
                             uint32_t dynamicKenrelDivider : 1;
                             uint32_t dynamicKenrelDividerWithPadding : 1;

@@ -22,6 +22,7 @@
 
 #include "meta_utils.h"
 
+#define GCC_VERSION (__GNUC__ * 10000 + __GNUC_MINOR__ * 100 + __GNUC_PATCHLEVEL__)
 
 namespace cldnn
 {
@@ -260,7 +261,11 @@ protected:
     std::vector<program_node*> dependencies;
     std::list<program_node*> users;
 
+#if defined(__GNUC__) && (GCC_VERSION < 40900)
+    std::list<program_node*>::iterator processing_itr;
+#else
     std::list<program_node*>::const_iterator processing_itr;
+#endif
     uint32_t processing_num = 0;
 
     // list of primitives that can reuse same memory buffers due to execution order conflicts
