@@ -250,6 +250,10 @@ void program_impl::pre_optimize_graph()
     trim_to_outputs trim_pass; //trim to outputs
     trim_pass.run(*this); // ToDo remove hidden dependencies from trimm pass
     dump_program("3_trimmed", true);
+
+    add_reshape_to_primitives add_reshape_to_primitives_pass; // add reshape to input/parameters for some primitives
+    add_reshape_to_primitives_pass.run(*this);
+
     processing_order.calculate_BFS_processing_order(); // this method makes sense only for OOOQ (out of order execution queue)
 
     bool output_size_handling_enabled = analyze_output_size_handling_need();

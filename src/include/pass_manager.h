@@ -34,6 +34,12 @@ namespace cldnn
         virtual void run(program_impl &p) override;
     };
 
+    class add_reshape_to_primitives : base_pass
+    {
+    public:
+        virtual void run(program_impl &p) override;
+    };
+
     class prepare_buffer_fusing : base_pass
     {
     public:
