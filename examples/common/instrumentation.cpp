@@ -548,19 +548,20 @@ namespace instrumentation {
     void logger::log_memory_to_file(const cldnn::memory& mem, std::string prefix, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id)
     {        
         boost::filesystem::create_directories(dump_dir);
-        auto batch = mem.get_layout().size.batch[0];
-        auto x = mem.get_layout().size.spatial[0];
-        auto feature = mem.get_layout().size.feature[0];
-        if (mem.get_layout().format == cldnn::format::byxf_af32)
+        const auto layout = mem.get_layout();
+        auto batch = layout.size.batch[0];
+        auto x = layout.size.spatial[0];
+        auto feature = layout.size.feature[0];
+        if (layout.format == cldnn::format::byxf_af32)
         {
             feature = ((feature + 31) / 32) * 32;
         }
-        if (mem.get_layout().format == cldnn::format::byx8_f4)
+        if (layout.format == cldnn::format::byx8_f4)
         {
             feature = ((feature + 3) / 4) * 4;
             x = ((x + 7) / 8) * 8;
         }
-        if (mem.get_layout().format == cldnn::format::fs_bs_yx_bsv4_fsv32)
+        if (layout.format == cldnn::format::fs_bs_yx_bsv4_fsv32)
         {
             feature = ((feature + 31) / 32) * 32;
             batch = ((batch + 3) / 4) * 4;
@@ -572,58 +573,81 @@ namespace instrumentation {
             streams[b].resize(feature);
         }
 
-        if (mem.get_layout().format == cldnn::format::fs_bs_yx_bsv4_fsv32)
+        if (layout.format == cldnn::format::fs_bs_yx_bsv4_fsv32)
         {
-            if (mem.get_layout().data_type == cldnn::data_types::f32)
+            if (layout.data_type == cldnn::data_types::f32)
                 dump_fs_bs_yx_bsv4_fsv32<float>(mem, single_batch, batch_id, single_feature, feature_id, streams);
-            else if (mem.get_layout().data_type == cldnn::data_types::f16)
+            else if (layout.data_type == cldnn::data_types::f16)
                 dump_fs_bs_yx_bsv4_fsv32<half_t>(mem, single_batch, batch_id, single_feature, feature_id, streams);
-            else if (mem.get_layout().data_type == cldnn::data_types::i8)
+            else if (layout.data_type == cldnn::data_types::i8)
                 dump_fs_bs_yx_bsv4_fsv32<signed char>(mem, single_batch, batch_id, single_feature, feature_id, streams);
-            else if (mem.get_layout().data_type == cldnn::data_types::u8)
+            else if (layout.data_type == cldnn::data_types::u8)
                 dump_fs_bs_yx_bsv4_fsv32<unsigned char>(mem, single_batch, batch_id, single_feature, feature_id, streams);
             else
                 dump_fs_bs_yx_bsv4_fsv32<char>(mem, single_batch, batch_id, single_feature, feature_id, streams);
         }
-        else if (mem.get_layout().format == cldnn::format::byx8_f4)
+        else if (layout.format == cldnn::format::byx8_f4)
         {
-            if (mem.get_layout().data_type == cldnn::data_types::f32)
+            if (layout.data_type == cldnn::data_types::f32)
                 dump_byx8_f4<float>(mem, single_batch, batch_id, single_feature, feature_id, streams);
-            else if (mem.get_layout().data_type == cldnn::data_types::f16)
+            else if (layout.data_type == cldnn::data_types::f16)
                 dump_byx8_f4<half_t>(mem, single_batch, batch_id, single_feature, feature_id, streams);
-            else if (mem.get_layout().data_type == cldnn::data_types::i8)
+            else if (layout.data_type == cldnn::data_types::i8)
                 dump_byx8_f4<signed char>(mem, single_batch, batch_id, single_feature, feature_id, streams);
-            else if (mem.get_layout().data_type == cldnn::data_types::u8)
+            else if (layout.data_type == cldnn::data_types::u8)
                 dump_byx8_f4<unsigned char>(mem, single_batch, batch_id, single_feature, feature_id, streams);
             else
                 dump_byx8_f4<char>(mem, single_batch, batch_id, single_feature, feature_id, streams);
         }
         else
         {
-            if (mem.get_layout().data_type == cldnn::data_types::f32)
+            if (layout.data_type == cldnn::data_types::f32)
                 dump<float>(mem, streams);
-            else if (mem.get_layout().data_type == cldnn::data_types::f16)
+            else if (layout.data_type == cldnn::data_types::f16)
                 dump<half_t>(mem, streams);
-            else if (mem.get_layout().data_type == cldnn::data_types::i8)
+            else if (layout.data_type == cldnn::data_types::i8)
                 dump<signed char>(mem, streams);
-            else if (mem.get_layout().data_type == cldnn::data_types::u8)
+            else if (layout.data_type == cldnn::data_types::u8)
                 dump<unsigned char>(mem, streams);
             else
                 dump<char>(mem, streams);
         }
 
-        for (cldnn::tensor::value_type b = 0; b < batch; b++)
-            for (cldnn::tensor::value_type f = 0; f < feature; f++)
+        if (layout.size.spatial[0] == 1 && layout.size.spatial[1] == 1)
+        {
+            for (cldnn::tensor::value_type b = 0; b < batch; b++)
             {
-                if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
+                if (!single_batch || b == batch_id)
                 {
                     replace_forbidden_txt_characters(prefix);
-                    std::string filename((dump_dir + "/" + prefix + "_" + eng_type + "_b" + std::to_string(b) + "_f" + std::to_string(f) + ".txt"));
+                    std::string filename((dump_dir + "/" + prefix + "_" + eng_type + "_b" + std::to_string(b) + ".txt"));
                     std::ofstream file_stream = std::ofstream(filename, std::ios::out);
-                    file_stream << streams[b][f].str();
+                    for (cldnn::tensor::value_type f = 0; f < feature; f++)
+                    {
+                        file_stream << streams[b][f].str();
+                    }
                     file_stream.close();
                 }
+
             }
+        }
+        else
+        {
+            for (cldnn::tensor::value_type b = 0; b < batch; b++)
+            {
+                for (cldnn::tensor::value_type f = 0; f < feature; f++)
+                {
+                    if ((!single_batch || b == batch_id) && (!single_feature || f == feature_id))
+                    {
+                        replace_forbidden_txt_characters(prefix);
+                        std::string filename((dump_dir + "/" + prefix + "_" + eng_type + "_b" + std::to_string(b) + "_f" + std::to_string(f) + ".txt"));
+                        std::ofstream file_stream = std::ofstream(filename, std::ios::out);
+                        file_stream << streams[b][f].str();
+                        file_stream.close();
+                    }
+                }
+            }
+        }
     }
 
     void logger::log_weights_to_file(const cldnn::memory& mem, std::string prefix)

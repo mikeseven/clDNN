@@ -68,7 +68,7 @@ static std::vector<std::vector<std::pair<float, size_t>>> read_output(const cldn
 
     auto ptr = mem.pointer<float>();
     size_t image_count = mem.get_layout().size.batch[0];
-    size_t category_count = mem.get_layout().size.spatial[0];
+    size_t category_count = mem.get_layout().size.feature[0];
     std::vector<std::vector<std::pair<float, size_t>>> ret;
     size_t offset = 0;
     ret.resize(image_count);
