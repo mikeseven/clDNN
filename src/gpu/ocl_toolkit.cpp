@@ -190,7 +190,6 @@ gpu_toolkit::gpu_toolkit(const configuration& config)
     build_command_queues(config);
 
     _logger = std::unique_ptr<ocl_logger>(new ocl_logger());
-
     if (logging_enabled())
     {
         open_log()

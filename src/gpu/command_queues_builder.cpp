@@ -49,10 +49,16 @@ namespace cldnn { namespace gpu{
         // TODO: When cl_khr_create_command_queue will be availible the
         // function name will change to clCreateCommandQueueWithPropertiesKHR
         // in place of clCreateCommandQueueWithPropertiesINTEL.
+#ifndef WIN32
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wpedantic"
+#endif
         pfn_clCreateCommandQueueWithPropertiesINTEL clCreateCommandQueueWithPropertiesINTEL =
             (pfn_clCreateCommandQueueWithPropertiesINTEL)clGetExtensionFunctionAddressForPlatform(
                 _platform_id, "clCreateCommandQueueWithPropertiesINTEL");
-
+#ifndef WIN32
+#pragma GCC diagnostic pop
+#endif
         unsigned cl_queue_priority_value = CL_QUEUE_PRIORITY_MED_KHR;
 
         switch (_priority_mode)
