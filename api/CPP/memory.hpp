@@ -277,7 +277,7 @@ struct pointer
     /// Prevents to use pointer as temporary object
     void end() && {}
     /// Prevents to use pointer as temporary object
-    void operator[](size_t idx) && {}
+    void operator[](size_t) && {}
     // ReSharper restore CppMemberFunctionMayBeConst, CppMemberFunctionMayBeStatic
 
 private:

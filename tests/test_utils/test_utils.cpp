@@ -26,7 +26,7 @@
 #include "test_utils.h"
 #include "float16.h"
 #include "instrumentation.h"
-#include <boost/filesystem.hpp>
+#include <experimental/filesystem>
 #include <iostream>
 
 using namespace cldnn;
@@ -360,9 +360,9 @@ namespace tests
         const std::string dump_dir = graph_dump_dir + "/" + test_case_name() + "/" + name();
         try
         {
-            boost::filesystem::create_directories(dump_dir);
+            std::experimental::filesystem::create_directories(dump_dir);
         }
-        catch (boost::filesystem::filesystem_error const& err)
+        catch (std::experimental::filesystem::filesystem_error const& err)
         {
             str_err = err.what();
         }

@@ -21,7 +21,7 @@
 #include <string>
 #include <vector>
 #include <iostream>
-#include <boost/filesystem.hpp>
+#include <experimental/filesystem>
 
 
 namespace instrumentation {
@@ -398,8 +398,8 @@ namespace instrumentation {
     }
 
     void logger::log_memory_to_file(const cldnn::memory& mem, std::string prefix, bool single_batch, cldnn::tensor::value_type batch_id, bool single_feature, cldnn::tensor::value_type feature_id)
-    {        
-        boost::filesystem::create_directories(dump_dir);
+    {
+        std::experimental::filesystem::create_directories(dump_dir);
         auto batch = mem.get_layout().size.batch[0];
         auto feature = mem.get_layout().size.feature[0];
         auto eng_type =  "gpu" ;
@@ -429,7 +429,7 @@ namespace instrumentation {
 
     void logger::log_weights_to_file(const cldnn::memory& mem, std::string prefix)
     {
-        boost::filesystem::create_directories(dump_dir);
+        std::experimental::filesystem::create_directories(dump_dir);
         std::stringstream stream;
 
         if (mem.get_layout().data_type == cldnn::data_types::f32)

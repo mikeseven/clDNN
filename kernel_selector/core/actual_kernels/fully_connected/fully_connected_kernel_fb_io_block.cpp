@@ -14,8 +14,8 @@
 // limitations under the License.
 */
 
+#include <memory>
 #include "fully_connected_kernel_fb_io_block.h"
-#include "boost/make_unique.hpp"
 
 namespace kernel_selector 
 {
@@ -39,7 +39,7 @@ namespace kernel_selector
     std::unique_ptr<FullyConnected_fb_io_block::FullyConnectedKernelBase::DispatchData> FullyConnected_fb_io_block::SetDefault(const fully_connected_params& arg, int ) const
     {
 
-        auto kd = boost::make_unique<DispatchData>(*FullyConnectedKernelBase::SetDefault(arg));
+        auto kd = std::make_unique<DispatchData>(*FullyConnectedKernelBase::SetDefault(arg));
         const auto& output = arg.output;
         
         auto batch_size = output.Batch().v;

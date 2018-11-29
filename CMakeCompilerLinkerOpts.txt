@@ -153,6 +153,7 @@ elseif(CMAKE_COMPILER_IS_INTEL)
       ALIAS ExtensionsEnabled
       ALIAS StandardCxx11              "-std=c++11"
       ALIAS StandardCxx14              "-std=c++14"
+      ALIAS StandardCxx17              "-std=c++17"
       ALIAS StandardC99                "-std=c99"
       ALIAS StandardNone               Standard REMOVE_GROUP
       ALIAS FastMath                   
@@ -230,6 +231,7 @@ elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
       ALIAS ExtensionsEnabled
       ALIAS StandardCxx11              "-std=c++11"
       ALIAS StandardCxx14              "-std=c++14"
+      ALIAS StandardCxx17              "-std=c++17"
       ALIAS StandardC99                "-std=c99"
       ALIAS StandardNone               Standard REMOVE_GROUP
       ALIAS FastMath                   "-ffast-math"
@@ -262,7 +264,7 @@ elseif(CMAKE_COMPILER_IS_GNUCC OR CMAKE_COMPILER_IS_GNUCXX)
         ALIAS DeadCodePreserve   EmitDataSec EmitFuncSec REMOVE_GROUP
       )
   endif()
-elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES "^Clang$"))
+elseif((CMAKE_C_COMPILER_ID MATCHES ".*Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES ".*Clang$"))
   if(CMAKE_CXX_COMPILER_VERSION VERSION_LESS "${CLDNN__MIN_COMPILER_VERSION__CLANG}")
     message(FATAL_ERROR "[clDNN] Minimum required version of clang compiler is ${CLDNN__MIN_COMPILER_VERSION__CLANG}. Please update compiler.")
   endif()
@@ -319,6 +321,7 @@ elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES
       ALIAS ExtensionsEnabled
       ALIAS StandardCxx11              "-std=c++11"
       ALIAS StandardCxx14              "-std=c++14"
+      ALIAS StandardCxx17              "-std=c++17"
       ALIAS StandardC99                "-std=c99"
       ALIAS StandardNone               Standard REMOVE_GROUP
       ALIAS FastMath                   "-ffast-math"
@@ -343,7 +346,8 @@ elseif((CMAKE_C_COMPILER_ID MATCHES "^Clang$") OR (CMAKE_CXX_COMPILER_ID MATCHES
     endif()
   endif()
 else()
-  message(FATAL_ERROR "[clDNN] Unknown compiler. Please define support for it or use different compiler.")
+  message(FATAL_ERROR "[clDNN] Unknown compiler ${CMAKE_CXX_COMPILER_ID}. Please define support for it or use different
+  compiler.")
 endif()
 
 # =============================== Linker options (abstract configuration) ==============================
