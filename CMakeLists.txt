@@ -945,7 +945,6 @@ intel_config_flag_apply_settings(
     ALL_PATTERN ""
     SET
       RttiDisabled
-	  StandardCxx17
   )
 
 

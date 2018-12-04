@@ -19,8 +19,6 @@
 #include "api/CPP/prior_box.hpp"
 #include "primitive_inst.h"
 
-#include <boost/optional.hpp>
-
 namespace cldnn
 {
 
